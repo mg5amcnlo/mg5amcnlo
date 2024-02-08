@@ -9,6 +9,7 @@ c*****************************************************************************
       use pborn
       use ccalculatedborn
       use cnbody
+      use vectorize
       implicit none
 c
 c     Constants
@@ -22,7 +23,7 @@ c
       integer i,j,k,nmatch,ibase,ntry,icb(nexternal-1),jc(nexternal)
      $     ,use_config(0:lmaxconfigs)
       double precision diff,rwgt,p(0:3,nexternal),wgt,x(99),p_born1(0:3
-     $     ,nexternal-1),p_born_save(0:3,nexternal-1),saveamp(ngraphs)
+     $     ,nexternal-1),p_born_save(0:3,nexternal-1),saveamp_loc(ngraphs)
       double complex wgt1(2)
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -94,6 +95,9 @@ c other things-- in a wrong shower starting scale.
          write (*,*) 'unknown run_mode is gensym'
          stop 1
       endif
+
+      call allocate_storage(1)
+      amp_index=1
       
       multi_channel=.true.
       nbody(amp_index)=.true.
@@ -137,30 +141,30 @@ c
       enddo
       new_point=.true.
       wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
-      call set_cms_stuff(-100)
-      do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
+      call generate_momenta(ndim,iconfig,wgt,x,p,amp_index)
+      call set_cms_stuff(-100, amp_index)
+      do while ((.not.passcuts(p,rwgt,amp_index) .or. wgt.lt.0 .or. p(0,1).le.0d0
      $     .or. p_born(0,1,amp_index).le.0d0) .and. ntry.lt.10000)
          do j=1,ndim
             x(j)=ran2()
          enddo
          new_point=.true.
          wgt=1d0
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         call set_cms_stuff(-100)
+         call generate_momenta(ndim,iconfig,wgt,x,p,amp_index)
+         call set_cms_stuff(-100,amp_index)
          ntry=ntry+1
       enddo
       write(*,*) 'ntry',ntry
-      call set_alphaS(p)
+      call set_alphaS(p,amp_index)
 c
 c     Get and save base amplitudes
 c
       calculatedBorn(amp_index)=.false.
 c Call the Born twice to make sure that all common blocks are correctly filled.
-      call sborn(p_born(:,:,amp_index),wgt1)
-      call sborn(p_born(:,:,amp_index),wgt1)
+      call sborn(p_born(:,:,amp_index),wgt1,amp_index)
+      call sborn(p_born(:,:,amp_index),wgt1,amp_index)
       do j=1, mapconfig(0)
-         saveamp(mapconfig(j)) = amp2(mapconfig(j),amp_index)
+         saveamp_loc(mapconfig(j)) = amp2(mapconfig(j),amp_index)
       enddo
       write (*,*) 'born momenta'
       do j=1,nexternal-1
@@ -193,11 +197,11 @@ c nexternal is the number for the real configuration. Subtract 1 for the Born.
                enddo
             enddo
             calculatedBorn(amp_index)=.false.
-            call sborn(p_born(:,:,amp_index),wgt1)
+            call sborn(p_born(:,:,amp_index),wgt1,amp_index)
 c        Look for matches
             do j=2,mapconfig(0)
                do k=1,j-1
-                  diff=abs((amp2(mapconfig(j),amp_index)-saveamp(mapconfig(k)))
+                  diff=abs((amp2(mapconfig(j),amp_index)-saveamp_loc(mapconfig(k)))
      &                 /(amp2(mapconfig(j),amp_index)+1d-99))
                   if (diff .gt. 1d-8 ) cycle
                   if (use_config(j) .lt. 0 ) exit ! already found
@@ -223,6 +227,7 @@ c        Look for matches
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
       call write_bash(use_config,force_one_job)
+      call deallocate_storage()
       return
       end
 
