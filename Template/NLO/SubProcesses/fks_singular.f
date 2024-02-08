@@ -4637,7 +4637,6 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       common/fks_indices/i_fks,j_fks
 
       double precision amp_split(amp_split_size)
-      complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
 
 
 !      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
@@ -4687,25 +4686,33 @@ c entering this function
       if (1d0-y_ij_fks.lt.tiny)then
          if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
             call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+            amp_split_store_r(1:amp_split_size, amp_index)
+     & = amp_split_store_b(1:AMP_SPLIT_SIZE, amp_index)
          elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+            amp_split_store_r(1:amp_split_size, amp_index)
+     & = amp_split_store_b(1:AMP_SPLIT_SIZE, amp_index)
          else
             wgt=0d0
-            amp_split(1:amp_split_size) = 0d0
+            amp_split_store_r(1:amp_split_size,amp_index) = 0d0
          endif
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
 c has soft singularities
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+            amp_split_store_r(1:amp_split_size,amp_index)
+     & = amp_split_store_b(1:AMP_SPLIT_SIZE,amp_index)
          else
             wgt=0d0
-            amp_split(1:amp_split_size) = 0d0
+            amp_split_store_r(1:amp_split_size,amp_index) = 0d0
          endif
       else
          !call smatrix_real(pp,wgt)
-         amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
+         !amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
          !wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
-         amp_split(1:amp_split_size) = amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
+         amp_split_store_r(1:amp_split_size,amp_index)
+     &  = amp_split_store_r(1:amp_split_size,amp_index)
+     & *xi_i_fks**2*(1d0-y_ij_fks)
       endif
 
       return
@@ -4726,6 +4733,7 @@ c has soft singularities
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
+
       double precision amp_split(amp_split_size)
       complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
 
@@ -4906,8 +4914,8 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
          endif
       enddo
       wgt=wgt*iden_comp
-      amp_split(1:amp_split_size) = amp_split_local(1:amp_split_size)
-     $     *iden_comp
+      amp_split_store_b(1:amp_split_size,amp_index) 
+     $ = amp_split_local(1:amp_split_size)*iden_comp
       return
       end
 
@@ -5125,8 +5133,8 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
          endif
       enddo
       wgt=wgt*iden_comp
-      amp_split(1:amp_split_size) = amp_split_local(1:amp_split_size)
-     $     *iden_comp
+      amp_split_store_b(1:amp_split_size,amp_index) 
+     $ = amp_split_local(1:amp_split_size)*iden_comp
       return
       end
 
@@ -5824,6 +5832,8 @@ c Add minus sign to compensate the minus in the color factor
 c of the color-linked Borns (b_sf_0??.f)
 c Factor two to fix the limits.
       wgt=-2d0*wgt
+      amp_split_store_b(1:amp_split_size,amp_index) 
+     & = amp_split(1:amp_split_size)
       return
       end
 
