@@ -477,7 +477,7 @@ c PineAPPL
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          call set_alphaS(p_local(0,1,index),index)
          call smatrix_real(p_local(0,1,index), wgtdum(index),index)
-         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
+!         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
 !         write(*,*) 'p_local', p_local(:,:,index)
 !         write(*,*) 'amp_split', amp_split(:)
@@ -496,8 +496,8 @@ c PineAPPL
          call set_alphaS(p1_cnt(0,1,0,index),index)
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
-         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
-     & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
+!         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
+!     & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
          amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
          jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
          ! color-linked borns
@@ -508,7 +508,7 @@ c PineAPPL
              if (n.ne.i_fks.and.m.ne.i_fks) then
               ! MZ don't skip the case m=n and massless, it won't be used
                call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
-               amp_split_store_bsf(:,i,j,index) = amp_split_soft(:,index)
+               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
              endif
            enddo
          enddo

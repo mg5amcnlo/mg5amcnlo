@@ -180,6 +180,7 @@ enddo
 
 
 AMP_SPLIT_STORE_B(1:amp_split_size,AMP_INDEX) = amp_split(1:amp_split_size)
+AMP_SPLIT_STORE_CNT(1:AMP_SPLIT_SIZE, 1:2, 1:NSPLITORDERS,amp_index) = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
 
  999   return
 END

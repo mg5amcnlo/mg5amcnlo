@@ -35,6 +35,8 @@ endif
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
+	 nFKSconfigs.o nexternal.o orders.o born_nhel.o genps.o 		\
+	 vectorize.o											\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 genps_fks.o setcuts.o setscales.o veto_xsec.o		 	\
@@ -48,8 +50,6 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o	\
-	 nFKSconfigs.o nexternal.o orders.o born_nhel.o genps.o 		\
-	 vectorize.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\

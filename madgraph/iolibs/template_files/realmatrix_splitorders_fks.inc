@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX%(proc_prefix)s(P,ANS_SUMMED)
+      SUBROUTINE SMATRIX%(proc_prefix)s(P,ANS_SUMMED,amp_index)
 C  
 %(info_lines)s
 C
@@ -8,6 +8,8 @@ C
 C  
 %(process_lines)s
 C
+C MODULES
+      use camp_split_store
 C
 C CONSTANTS
 C 
@@ -20,13 +22,15 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      integer amp_index
 C
 C VARIABLES
 C
       INTEGER I,J
       REAL*8 ANS(0:NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
-      include 'orders.inc'
+!      include 'orders.inc'
+      double precision amp_split(AMP_SPLIT_SIZE)
       data keep_order / NSQAMPSO*.TRUE. /
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)
@@ -86,6 +90,8 @@ enddo
 
 C avoid fake non-zeros
 if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
+
+amp_split_store_r(1:amp_split_size, amp_index) = amp_split(1:amp_split_size)
 
 wgt_ME_real = ans_summed
 
