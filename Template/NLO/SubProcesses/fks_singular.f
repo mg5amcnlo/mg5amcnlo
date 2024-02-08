@@ -570,12 +570,13 @@ c its value to the list of weights using the add_wgt subroutine
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
       call cpu_time(tBefore)
+      amp_split(1:AMP_SPLIT_SIZE) = 0d0
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
       if (s_ev.le.0.d0) return
-      call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx_ev,amp_index)
+      call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx_ev,amp_split,amp_index)
 
-      amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
+!      amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
 
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -651,14 +652,15 @@ c the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer get_orders_tag
       call cpu_time(tBefore)
+      amp_split(1:amp_split_size) = 0d0
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_hat_ev(amp_index)*xiimax_cnt(0,amp_index).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
      $     return
       s_s = fks_Sij(p1_cnt(0,1,0,amp_index),i_fks,j_fks,zero,y_ij_fks_ev(amp_index),amp_index)
       if (s_s.le.0d0) return
-      call sreal(p1_cnt(0,1,0,amp_index),0d0,y_ij_fks_ev(amp_index),fx_s,amp_index)
+      call sreal(p1_cnt(0,1,0,amp_index),0d0,y_ij_fks_ev(amp_index),fx_s,amp_split,amp_index)
 
-      amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
+!      amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
 
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -760,11 +762,12 @@ c to the list of weights using the add_wgt subroutine
       if (s_c.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
+      amp_split(1:amp_split_size) = 0d0
       call sreal_deg(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,deg_xi_c
      $     ,deg_lxi_c,amp_index)
-      call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx_c,amp_index)
+      call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx_c,amp_split,amp_index)
 
-      amp_split(1:amp_split_size) = amp_split_store_r(1:amp_split_size,amp_index)
+!      amp_split(1:amp_split_size) = amp_split_store_r(1:amp_split_size,amp_index)
 
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
@@ -894,12 +897,13 @@ c value to the list of weights using the add_wgt subroutine
      $     pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2,amp_index),i_fks,j_fks,zero,one,amp_index)
       if (s_sc.le.0d0) return
+      amp_split(1:amp_split_size) = 0d0
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
       call sreal_deg(p1_cnt(0,1,2,amp_index),zero,one, deg_xi_sc,deg_lxi_sc,amp_index)
-      call sreal(p1_cnt(0,1,2,amp_index),zero,one,fx_sc,amp_index)
+      call sreal(p1_cnt(0,1,2,amp_index),zero,one,fx_sc,amp_split,amp_index)
 
-      amp_split(1:amp_split_size) = amp_split_store_r(1:amp_split_size,amp_index)
+!      amp_split(1:amp_split_size) = amp_split_store_r(1:amp_split_size,amp_index)
 
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
@@ -4610,7 +4614,7 @@ c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
 
 
 
-      subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+      subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,amp_split,amp_index)
       !use vectorize
       use parton_cms_stuff
       use camp_split_store
@@ -4686,31 +4690,31 @@ c entering this function
       if (1d0-y_ij_fks.lt.tiny)then
          if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
             call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
-            amp_split_store_r(1:amp_split_size, amp_index)
+            amp_split(1:amp_split_size)
      & = amp_split_store_b(1:AMP_SPLIT_SIZE, amp_index)
          elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
-            amp_split_store_r(1:amp_split_size, amp_index)
+            amp_split(1:amp_split_size)
      & = amp_split_store_b(1:AMP_SPLIT_SIZE, amp_index)
          else
             wgt=0d0
-            amp_split_store_r(1:amp_split_size,amp_index) = 0d0
+            amp_split(1:amp_split_size) = 0d0
          endif
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
 c has soft singularities
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
-            amp_split_store_r(1:amp_split_size,amp_index)
+            amp_split(1:amp_split_size)
      & = amp_split_store_b(1:AMP_SPLIT_SIZE,amp_index)
          else
             wgt=0d0
-            amp_split_store_r(1:amp_split_size,amp_index) = 0d0
+            amp_split(1:amp_split_size) = 0d0
          endif
       else
          !call smatrix_real(pp,wgt)
          !amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
          !wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
-         amp_split_store_r(1:amp_split_size,amp_index)
+         amp_split(1:amp_split_size)
      &  = amp_split_store_r(1:amp_split_size,amp_index)
      & *xi_i_fks**2*(1d0-y_ij_fks)
       endif

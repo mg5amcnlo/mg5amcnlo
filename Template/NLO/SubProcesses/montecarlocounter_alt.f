@@ -483,7 +483,10 @@ c G-function matrix element, to recover the real soft limit
 
 
       subroutine xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,wgt, amp_index)
-      use vectorize
+!      use vectorize
+      use counterevnts
+      use cxiifkscnt
+      use mod_orders
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -500,6 +503,8 @@ c G-function matrix element, to recover the real soft limit
       parameter (itwo=2)
 
       integer amp_index
+
+      double precision amp_split(AMP_SPLIT_SIZE)
 
 !      double precision p1_cnt(0:3,nexternal,-2:2)
 !      double precision wgt_cnt(-2:2)
@@ -525,7 +530,7 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       common /c_is_aorg/is_aorg
 
       ! amp split stuff
-      include 'orders.inc'
+!      include 'orders.inc'
       integer iamp
       double precision amp_split_gfunc(amp_split_size)
       common /to_amp_split_gfunc/amp_split_gfunc
@@ -535,6 +540,7 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
 
       include "pmass.inc"
 c
+      amp_split(1:amp_split_size) = 0d0
       wgt=0d0
       do iamp=1, amp_split_size
         amp_split_gfunc(iamp) = 0d0
@@ -543,18 +549,21 @@ c
       ! (soft limit)
       if (is_aorg(i_fks))then
 c i_fks is gluon/photon
-         call set_cms_stuff(izero)
-         call sreal(p1_cnt(0,1,0,amp_index),zero,y_ij_fks,wgts)
+         call set_cms_stuff(izero,amp_index)
+         call sreal(p1_cnt(0,1,0,amp_index),zero,y_ij_fks,wgts,
+     & ,amp_split,amp_index)
          do iamp=1, amp_split_size
            amp_split_s(iamp) = amp_split(iamp)
          enddo
-         call set_cms_stuff(ione)
-         call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks,one,wgtc)
+         call set_cms_stuff(ione,amp_index)
+         call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks,one,wgtc
+     & ,amp_split,amp_index)
          do iamp=1, amp_split_size
            amp_split_c(iamp) = amp_split(iamp)
          enddo
-         call set_cms_stuff(itwo)
-         call sreal(p1_cnt(0,1,2,amp_index),zero,one,wgtsc)
+         call set_cms_stuff(itwo,amp_index)
+         call sreal(p1_cnt(0,1,2,amp_index),zero,one,wgtsc
+     & ,amp_split,amp_index)
          do iamp=1, amp_split_size
            amp_split_sc(iamp) = amp_split(iamp)
          enddo
