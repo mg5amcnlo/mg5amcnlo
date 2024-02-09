@@ -3,7 +3,8 @@ c                 Effective Vector Boson Approximation
 c     /* ********************************************************* *      
 c     File: ElectroweakFluxNLP.f
 c     R. Ruiz (2024 February)
-c     For details, see companion paper by ..., et al [arXiv:]
+c     For details, see companion paper by Bigaran & Ruiz [arXiv:24xx.yyyyy]
+c     See also details in Ruiz, Costantini, et al [arXiv:2111.02442]
 c     /* ********************************************************* *
 c     /* ********************************************************* *      
 c     function evaNLP_fX_to_vV(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo):

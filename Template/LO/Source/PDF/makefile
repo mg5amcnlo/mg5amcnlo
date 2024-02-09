@@ -16,13 +16,13 @@ TOCOMPILE = # the libraries that should be compiled
 
 
 # check if we need to link to Electroweak PDF
-ifneq (,$(filter eva, $(pdlabel1) $(pdlabel2)))
-#  go trough here if pdlabel1 or pdlabel2 is on "eva"
+ifneq (,$(filter eva ieva, $(pdlabel1) $(pdlabel2)))
+#  go through here if pdlabel1 or pdlabel2 is on "eva" or "ieva"
   TOREMOVE += ElectroweakFlux_dummy.o
   # remove it to force recompilation of the library if back on it
-  PDF += ElectroweakFluxDriver.o ElectroweakFlux.o
+  PDF += ElectroweakFluxDriver.o ElectroweakFlux.o ElectroweakFluxNLP.o
 else
-#  go trough here if NEITHER pdlabel1 or pdlabel2 is on "eva"
+#  go through here if NEITHER pdlabel1 or pdlabel2 is on "eva" or "ieva"
    PDF += ElectroweakFlux_dummy.o
    TOREMOVE += ElectroweakFluxDriver.o
 endif
