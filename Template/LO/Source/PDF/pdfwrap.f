@@ -261,7 +261,8 @@ C
 
 c---------------------------------------------------------------
 c---------------------------------------------------------------
-      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'iww'.or.pdlabel.eq.'none') then
+      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'ieva'.or.
+     &        pdlabel.eq.'iww'.or.pdlabel.eq.'none') then
             asmz=asmz            
       else
          asmz=0.118d0
