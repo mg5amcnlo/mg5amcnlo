@@ -232,8 +232,8 @@ C
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
       REAL*8 borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
-      INTEGER NTRY(%(nconfs)d)
-      DATA NTRY /%(nconfs)d*0/
+      !INTEGER NTRY(%(nconfs)d)
+      !DATA NTRY /%(nconfs)d*0/
       COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
 %(helicity_lines)s
@@ -270,8 +270,8 @@ C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
-      NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
-      if (NTRY(nFKSprocess).lt.2) then
+      NTRY(nFKSprocess,AMP_INDEX)=NTRY(nFKSprocess,AMP_INDEX)+1
+      if (NTRY(nFKSprocess,AMP_INDEX).lt.2) then
        if (glu_ij.eq.0) then
          skip(nfksprocess,AMP_INDEX)=0
        else
@@ -323,7 +323,7 @@ C ----------
         if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess,AMP_INDEX) .OR. 
      & GOODHEL(IHEL+SKIP(nFKSprocess,AMP_INDEX),nFKSprocess,AMP_INDEX)
-     & .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
+     & .OR. NTRY(nFKSprocess,AMP_INDEX) .LT. 2) ) THEN
             
             CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns,AMP_INDEX)
             DO I=1,NSQAMPSO

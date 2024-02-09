@@ -1582,13 +1582,14 @@ c use the Born computed with those as the mapping.
          if (granny_is_res(amp_index)) p_born_used(:,:) = p_born_ev(:,:,amp_index) 
          if (.not.use_evpr) p_born_used(:,:) = p_born_norad(:,:,amp_index) 
          if (p_born_ev(0,1,amp_index).gt.0d0) then
-            calculatedBorn(amp_index)=.false.
+            !calculatedBorn(amp_index)=.false.
+            write(*,*) 'MZ FIX THIS '
             pas(0:3,nexternal)=0d0
             pas(0:3,1:nexternal-1)=p_born_used(0:3,1:nexternal-1)
             call set_alphas(pas)
-            call sborn(p_born_used,wgt_c)
+            call sborn(p_born_used,wgt_c,amp_index)
             call set_alphas(p_ev(:,:,amp_index))
-            calculatedBorn(amp_index)=.false.
+            !calculatedBorn(amp_index)=.false.
          elseif(p_born_used(0,1).lt.0d0)then
             if (enhance.ne.0d0) then 
                enhance_real=enhance
@@ -1978,9 +1979,9 @@ c        contribution
 !OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg
-      integer                                      ngluons,nquarks(-6:6)
+      integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                     fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
@@ -6123,7 +6124,7 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
-      calculatedBorn(amp_index)=.false.
+      !calculatedBorn(amp_index)=.false.
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
 
@@ -6196,7 +6197,7 @@ c has to be inserted here
         endif
 
       enddo
-      calculatedBorn(amp_index)=.false.
+      !calculatedBorn(amp_index)=.false.
 
       return
       end
@@ -7466,8 +7467,9 @@ c we need the pure NLO terms only
       endif
 
       if (ComputePoles) then
-         calculatedBorn(amp_index) = .false.
-         call sborn(p_born(:,:,amp_index),wgt1)
+         !calculatedBorn(amp_index) = .false.
+         !call sborn(p_born(:,:,amp_index),wgt1)
+         write(*,*) 'MZ FIX POLES'
 
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
@@ -7925,7 +7927,7 @@ C the following call to born is to setup the goodhel(nfksprocess)
             n=fks_j_from_i(i_fks,j)
             if( m.ne.n .and. n.ne.i_fks .and. m.ne.i_fks )then
 C wgt includes the gs/w^2 factor
-              call sborn_sf(p_born(:,:,amp_index),m,n,wgt)
+              call sborn_sf(p_born(:,:,amp_index),m,n,wgt,amp_index)
 c The factor -2 compensate for that missing in sborn_sf
               wgt=-2d0*wgt
               if(wgt.ne.0.d0)then

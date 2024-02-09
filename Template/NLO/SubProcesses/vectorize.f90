@@ -767,18 +767,22 @@ end module to_savemom
 module cBorn
   use mod_nfksconfigs
   double precision, allocatable :: hel_fac(:)
-  integer, allocatable :: get_hel(:), skip(:,:)
+  integer, allocatable :: get_hel(:), skip(:,:), ntry(:,:)
   contains
   subroutine allocate_cBorn(vector_size)
     integer, intent(in) :: vector_size
     allocate(hel_fac(vector_size))
     allocate(get_hel(vector_size))
     allocate(skip(FKS_CONFIGS_mod, vector_size))
+    allocate(ntry(FKS_CONFIGS_mod, vector_size))
+    skip(:,:) = -1
+    ntry(:,:) = 0
   end subroutine allocate_cBorn
   subroutine deallocate_cBorn
     if (allocated(hel_fac)) deallocate(hel_fac)
     if (allocated(get_hel)) deallocate(get_hel)
     if (allocated(skip)) deallocate(skip)
+    if (allocated(ntry)) deallocate(ntry)
   end subroutine deallocate_cBorn
 end module cBorn
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
