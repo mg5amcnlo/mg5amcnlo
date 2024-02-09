@@ -3017,13 +3017,13 @@ Parameters              %(params)s\n\
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col,amp_index)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
             else:
                 replace_dict['iflines_col'] += \
                 "c link partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb_sf_%(ilink)3.3d(p_born,wgt_col)\n" \
+                    call sb_sf_%(ilink)3.3d(p_born,wgt_col,amp_index)\n" \
                     % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink}
 
         

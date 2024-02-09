@@ -355,8 +355,8 @@ c timing statistics
       double precision, allocatable :: wgtdum(:)
       double precision, allocatable :: amp2_store(:,:)
       double precision, allocatable :: jamp2_store(:,:)
-      double precision amp_split(amp_split_size)
-      complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
+!      double precision amp_split(amp_split_size)
+!      complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
 
       ! common blocks for passing amp2/jamp2
       include 'genps.inc'
@@ -476,6 +476,8 @@ c PineAPPL
          ! real emission
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          call set_alphaS(p_local(0,1,index),index)
+         calculatedBorn(index)=.false.
+         call sborn(p_local(0,1,index), wgtdum(index),index)
          call smatrix_real(p_local(0,1,index), wgtdum(index),index)
 !         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
