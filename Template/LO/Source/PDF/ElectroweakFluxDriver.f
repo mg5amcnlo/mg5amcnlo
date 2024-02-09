@@ -194,7 +194,9 @@ c     /* ********************************************************* *
       logical doevaNLP
       integer vPID,fPID,vpol,ievo
       double precision fLpol,x,mu2
-      double precision eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
+      double precision eva_fX_to_vm, evaNLP_fX_to_vm
+      double precision eva_fX_to_v0, evaNLP_fX_to_v0
+      double precision eva_fX_to_vp, evaNLP_fX_to_vp
       
       double precision gg2,gL2,gR2,mv2,tmpPDF
       call eva_get_mv2_by_PID(mv2,vPID)
@@ -243,7 +245,8 @@ c     /* ********************************************************* *
       logical doevaNLP
       integer vPID,fPID,vpol,ievo
       double precision fLpol,x,mu2
-      double precision eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
+      double precision eva_fX_to_vm, evaNLP_fX_to_vm
+      double precision eva_fX_to_vp, evaNLP_fX_to_vp
       
       double precision gg2,gL2,gR2,mf2,tmpPDF
       call eva_get_mf2_by_PID(mf2,fPID)
@@ -290,7 +293,8 @@ c     /* ********************************************************* *
       integer vPID,fPID,vpol,ievo
       logical isAntiNu
       double precision fLpol,x,mu2
-      double precision eva_fX_to_fR,eva_fX_to_fL
+      double precision eva_fX_to_fR, evaNLP_fX_to_fR
+      double precision eva_fX_to_fL, evaNLP_fX_to_fL
 
       double precision gg2,gL2,gR2,mv2,tmpPDF
       call eva_get_mv2_by_PID(mv2,vPID)
