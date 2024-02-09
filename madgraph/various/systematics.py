@@ -129,7 +129,7 @@ class Systematics(object):
         isEVA=False
         isEVAxDIS=False
         # eva-on-eva or eva-on-parton
-        if self.banner.run_card['pdlabel']=='eva':      
+        if self.banner.run_card['pdlabel'] in ['eva','ieva']:      
             if (abs(beam1) == 11 or abs(beam1) == 13) and self.banner.run_card['lpp1'] != 0:
                 self.b1 = beam1
             else:
@@ -147,7 +147,7 @@ class Systematics(object):
             isEVA=True
             pdf='0'
         # eva-on-DIS(lhapdf)
-        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf'):
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1'] in ['eva','ieva']) and (self.banner.run_card['pdlabel2']=='lhapdf'):
             if abs(beam1) == 11 or abs(beam1) == 13:
                 self.b1 = beam1
             else:
@@ -155,7 +155,7 @@ class Systematics(object):
             #self.b2 = beam2//2212
             isEVAxDIS=True
         # DIS(lhapdf)-on-eva
-        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva'):
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf') and (self.banner.run_card['pdlabel2'] in ['eva','ieva']):
             if abs(beam2) == 11 or abs(beam2) == 13:
                 self.b2 = beam2
             else:
@@ -278,9 +278,9 @@ class Systematics(object):
         if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
             self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         elif isEVAxDIS:
-            self.log( "# Events generated with EVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+            self.log( "# Events generated with EVA/iEVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         elif isEVA:
-            self.log( "# Events generated with EVA PDF.")
+            self.log( "# Events generated with EVA/iEVA PDF.")
         # create all the function that need to be called
         self.get_all_fct() # define self.fcts and self.args
         
@@ -489,7 +489,7 @@ class Systematics(object):
         for i,arg in enumerate(self.args):
             
             to_print = list(arg)
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva','ieva']:
                 to_print[4] = 0
             else:
                 to_print[4] = to_print[4].lhapdfID
@@ -526,7 +526,7 @@ class Systematics(object):
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
-            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and self.banner.run_card['pdlabel']!='eva':
+            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and (self.banner.run_card['pdlabel'] not in ['eva','ieva']):
                 pdfset = pdf.set()
                 if pdfset.lhapdfID in self.pdfsets:
                     if pdfset.lhapdfID not in pdfs :
@@ -548,8 +548,8 @@ class Systematics(object):
             resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
-        if self.banner.run_card['pdlabel']=='eva':
-            resume.write( '# PDF variation not available for EVA.\n')
+        if self.banner.run_card['pdlabel'] in ['eva','ieva']:
+            resume.write( '# PDF variation not available for EVA/iEVA.\n')
         elif self.orig_pdf.lhapdfID in pdfs:
             lhapdfid = self.orig_pdf.lhapdfID
             values = pdfs[lhapdfid]
@@ -636,7 +636,7 @@ class Systematics(object):
                 text += "</weightgroup> # ALPS\n"
                 in_alps=False
             
-            if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
+            if mur == muf == 1 and dyn==-1 and alps ==1 and  (self.banner.run_card['pdlabel'] not in ['eva','ieva']):
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
@@ -680,7 +680,7 @@ class Systematics(object):
                 tag += 'DYN_SCALE="%s" ' % dyn
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva','ieva']:
                 tag += 'PDF="%s" ' % 0                
             elif pdf != self.orig_pdf:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
@@ -761,7 +761,7 @@ class Systematics(object):
                 info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva','ieva']:
                 info += 'PDF=%s MemberID=%s' % (0,0)
             elif pdf != self.orig_pdf:
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
@@ -776,7 +776,7 @@ class Systematics(object):
                 tags.append('ALPSFACT="%s" ' % alps)
             if dyn!=-1.:
                 tags.append('DYN_SCALE="%s" ' % dyn)
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva','ieva']:
                 tags.append('PDF="%s" ' % 0)
             else:
                 tags.append('PDF="%s" ' % pdf.lhapdfID)
@@ -823,7 +823,7 @@ class Systematics(object):
         self.args = [default] + [arg for arg in all_args if arg!= default]
 
         # add the default before the pdf scan to have a full grouping
-        if self.banner.run_card['pdlabel']!='eva': 
+        if self.banner.run_card['pdlabel'] not in ['eva','ieva']: 
             pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
             if pdfplusone:
                 pdfplusone = default[:-1] + [pdfplusone[0]] 
@@ -975,7 +975,7 @@ class Systematics(object):
                 loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
 
         # MUR part
-        if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
+        if self.b1 == 0 == self.b2 or (self.banner.run_card['pdlabel'] in ['eva','ieva']):
             if loinfo['n_qcd'] != 0:
                 wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
             else:
@@ -985,34 +985,36 @@ class Systematics(object):
 
         # MUF/PDF part
         if self.b1 and muf1 :
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel1']=='eva':
+            if (self.banner.run_card['pdlabel']  in ['eva','ieva']) or \
+               (self.banner.run_card['pdlabel1'] in ['eva','ieva']):
                 vPol = event[0].helicity
                 vPID = event[0].pid
                 ievo = self.banner.run_card['ievo_eva']
+                isNLP = ('ieva' in [self.banner.run_card['pdlabel'],self.banner.run_card['pdlabel1']])
                 if ievo != 0 and len(loinfo['pdf_x1']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo,isNLP)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel2']=='eva':
+            if (self.banner.run_card['pdlabel']  in ['eva','ieva']) or \
+               (self.banner.run_card['pdlabel2'] in ['eva','ieva']):
                 vPol = event[1].helicity
                 vPID = event[1].pid
                 ievo = self.banner.run_card['ievo_eva']
+                isNLP = ('ieva' in [self.banner.run_card['pdlabel'],self.banner.run_card['pdlabel2']])
                 if ievo != 0 and len(loinfo['pdf_x2']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo,isNLP)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:
-            if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
+            if self.b1 == 0 == self.b2 or (self.banner.run_card['pdlabel'] in ['eva','ieva']):
                 wgt = self.alpsrunner(Dalps*scale)
             else:
                 wgt *= pdf.alphasQ(Dalps*scale)
@@ -1101,18 +1103,38 @@ class Systematics(object):
         return wgt
 
 
-    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
+    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0, isNLP=False):
         if abs(vPol) == 1:
-            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
+            if(isNLP):
+                return self.call_evaNLP_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
+            else:
+                return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
         elif vPol == 0:
-            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+            if(isNLP):
+                return self.call_evaNLP_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+            else:
+                return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
         else:
             raise SystematicsError("unknow EVA vPol %s " % vPol)
 
     def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
         return 1e0
+        
+    def call_evaNLP_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        return 1e0
 
     def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        if ievo != 0:
+            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
+        if(mufMin<0):
+            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
+        elif(muf < mufMin*1.001):
+            return 0e0
+        else:
+            return math.log(muf/mufMin) 
+        
+    def call_evaNLP_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
         mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
         if ievo != 0:
             mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
