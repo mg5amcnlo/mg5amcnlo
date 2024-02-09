@@ -3557,7 +3557,9 @@ class RunCard(ConfigFile):
                 return lhaid
         else: 
             try:
-                return {'none': 0, 'iww': 0, 'eva':0, 'edff':0, 'chff':0,
+                return {'none': 0, 'iww': 0, 
+                    'eva':0, 'ieva':0, 
+                    'edff':0, 'chff':0,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
                     }[pdf] 
@@ -3946,7 +3948,7 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','ieva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
         self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
@@ -4261,16 +4263,16 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
-                if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
+                if self[pdlabelX] in ['eva','ieva','iww','edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
-                if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none','eva','ieva','iww'] + sum(self.allowed_lep_densities.values(),[]):
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
                 if self[pdlabelX] not in ['none','chff','edff', 'iww']:
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
 
@@ -4332,13 +4334,13 @@ class RunCardLO(RunCard):
         if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
             for i in [1,2]:
                 if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
+                    logger.warning("Weak boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
                     if self['pdlabel'] in ['edff','chff']:
                         logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
                     else:
-                        logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
+                        logger.warning("Since 2.7.1 elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
         if six.PY2 and self['hel_recycling']:

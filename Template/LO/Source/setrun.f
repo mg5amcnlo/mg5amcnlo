@@ -107,17 +107,17 @@ c     if no matching ensure that no pdfreweight are done
      $     sign((abs(pol(2))-1)*100,pol(2))
 
 
-      if(pdlabel.eq.'eva') then
-            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva)
-            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva)
-            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva)
+      if(pdlabel.eq.'eva'.or.pdlabel.eq.'ieva') then
+            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva/ieva)
+            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva/ieva)
+            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva/ieva)
             pol(1) = (-1d0/200d0)*pb1 + 0.5d0
             pol(2) = (-1d0/200d0)*pb2 + 0.5d0
       else
-            if(pdsublabel(1).eq.'eva') then
+            if(pdsublabel(1).eq.'eva'.or.pdsublabel(1).eq.'ieva') then
                   pol(1) = (-1d0/200d0)*pb1 + 0.5d0
             endif
-            if(pdsublabel(2).eq.'eva') then
+            if(pdsublabel(2).eq.'eva'.or.pdsublabel(2).eq.'ieva') then
                   pol(2) = (-1d0/200d0)*pb2 + 0.5d0
             endif
       endif
@@ -199,15 +199,16 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=21)
+      parameter (npdfs=22)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
      $   'eva',
+     $   'ieva',
      $   'iww',
      $   'edff',
      $   'chff',
-     $     'dressed', 
+     $   'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
      $   'cteq4_m',
@@ -225,6 +226,7 @@ C-------------------------------------------------
      $   'nn23nlo'/
       integer numspdf(npdfs)
       data numspdf/
+     $   00000,
      $   00000,
      $   00000,
      $   00000,
