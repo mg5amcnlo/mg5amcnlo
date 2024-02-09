@@ -3748,17 +3748,63 @@ plot \\"""
 
 
 
+        #Reg=0
+        #sqrtS = 0
+        #if os.path.exists('Cards/run_card.dat'):
+        #path_to_card = os.path.abspath('Cards/run_card.dat')
+        #sub_string = 'True = asymm_choice'
+        #with open(str(path_to_card)) as file:
+                #lines = file.readlines()
+                #for line in lines:
+                    #if sub_string in line:
+                        #Reg=Reg+1
+                    #else:
+                        #Reg=Reg+0
+
+
+
+
+
+        import numpy as np
         Reg=0
+        sqrtS=0
+        Energy1=0
+        Energy2=0
+        if 'rpa' in uncertainties:
+            Reg=Reg+1
+        else:
+            Reg=Reg+0
+            
+            
+        #import numpy as np
         if os.path.exists('Cards/run_card.dat'):
             path_to_card = os.path.abspath('Cards/run_card.dat')
-            sub_string = 'True = asymm_choice'
+            sub_string = 'ebeam1'
             with open(str(path_to_card)) as file:
                 lines = file.readlines()
                 for line in lines:
                     if sub_string in line:
-                        Reg=Reg+1
-                    else:
-                        Reg=Reg+0
+                        s=line
+            word_list = s.split()
+            Energy1=float(word_list[0])
+	
+            sub_string = 'ebeam2'
+            with open(str(path_to_card)) as file:
+                lines = file.readlines()
+                for line in lines:
+                    if sub_string in line:
+                        s=line
+            word_list = s.split()
+            Energy2=float(word_list[0])
+        
+        
+            if (Energy1<=0.938 or Energy2<=0.938):
+                sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
+            else: 
+                sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000) 
+
+
+
 
         
         if (Reg!=1):        
@@ -3783,16 +3829,19 @@ plot \\"""
         for i, histo in enumerate(self[:n_histograms]):
             if i==0: continue
         
-        PDFs=[]
-        PDFL=[]
-        PDFs=['','']
-        PDFL=['','']
-        for i in range(2):
-            if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1 or pdf[i].find("CT1")!=-1:
+        PDFs=['']*len(pdf)
+        PDFL=['']*len(pdf)
+        #PDFs=['','']
+        #PDFL=['','']
+        for i in range(len(pdf)):
+            if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1:
                 PDFs[i]='p'
                 PDFL[i]='p'
             elif pdf[i].find("D2")!=-1 or pdf[i].find("2_1")!=-1:
                 PDFs[i]='D'
+                PDFL[i]='A'
+            elif pdf[i].find("He4")!=-1 or pdf[i].find("4_2")!=-1:
+                PDFs[i]='He'
                 PDFL[i]='A'
             elif pdf[i].find("C12")!=-1 or pdf[i].find("12_6")!=-1:
                 PDFs[i]='C'
@@ -3809,40 +3858,43 @@ plot \\"""
             elif pdf[i].find("Pb208")!=-1 or pdf[i].find("208_82")!=-1:
                 PDFs[i]='Pb'
                 PDFL[i]='A'
+            elif pdf[i].find("CT18")!=-1 or pdf[i].find("CT14")!=-1:
+                PDFs[i]='p'
+                PDFL[i]='p'
             else:
                 PDFs[i]='X'
                 PDFL[i]='A'
                 
                 
                 
-        import numpy as np
-        sub_string = 'ebeam1'
-        with open(str(path_to_card)) as file:
-            lines = file.readlines()
-            for line in lines:
-                if sub_string in line:
-                    s=line
-        word_list = s.split()
-        Energy1=float(word_list[0])
+        #import numpy as np
+        #sub_string = 'ebeam1'
+        #with open(str(path_to_card)) as file:
+            #lines = file.readlines()
+            #for line in lines:
+                #if sub_string in line:
+                    #s=line
+        #word_list = s.split()
+        #Energy1=float(word_list[0])
 	
-        sub_string = 'ebeam2'
-        with open(str(path_to_card)) as file:
-            lines = file.readlines()
-            for line in lines:
-                if sub_string in line:
-                    s=line
-        word_list = s.split()
-        Energy2=float(word_list[0])
+        #sub_string = 'ebeam2'
+        #with open(str(path_to_card)) as file:
+            #lines = file.readlines()
+            #for line in lines:
+                #if sub_string in line:
+                    #s=line
+        #word_list = s.split()
+        #Energy2=float(word_list[0])
         
         
-        if (Energy1<=0.938 or Energy2<=0.938):
-                sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
-        else: 
-                sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
+        #if (Energy1<=0.938 or Energy2<=0.938):
+                #sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
+        #else: 
+                #sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
         
         
         
-
+        #sqrtS = 0
         #sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
         # Add a margin on upper and lower bound.
         #ymax = ymax# + 0.1# * (ymax - ymin)2
@@ -3873,8 +3925,31 @@ plot \\"""
         if s.find("pt")!=-1:
             gnuplot_out.extend(['set xlabel "%s"'%(ptlab)])
 
-        replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
+        #replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
 
+        #replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
+        #gnuplot_out.append(subhistogram_header1%replacement_dic)
+        
+        
+        
+        
+        replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
+               
+        if len(pdf)<=2:
+            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']
+        else:
+            replacement_dic['set_histo_label'] = 'set label "%s + \\\{'%(PDFs[0])
+            for i in range(1,len(pdf)):
+                if i!=(len(pdf)-1):
+                    replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s,'%(PDFs[i])
+                else:
+                    replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s'%(PDFs[i])
+            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] +'\\\}'
+            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] + ', {/Symbol=\\\%d}s = %.2f TeV, PDFs='%(326,sqrtS)
+            for i in range(len(pdf)):
+                replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s, '%(pdf[i].replace('_','\\\\_'))
+            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] +'" font ",9" at graph 0, graph 1.07'
+                 
         replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
         gnuplot_out.append(subhistogram_header1%replacement_dic)
 
