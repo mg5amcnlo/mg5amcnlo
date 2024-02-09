@@ -3770,7 +3770,7 @@ plot \\"""
         sqrtS=0
         Energy1=0
         Energy2=0
-        if 'rpa' in uncertainties:
+        if os.path.exists('Cards/run_card.dat'):
             Reg=Reg+1
         else:
             Reg=Reg+0
