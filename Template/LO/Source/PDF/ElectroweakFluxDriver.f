@@ -212,11 +212,11 @@ c
       if(doevaNLP) then
          select case (vpol)
          case (-1)
-            tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case (0)
-            tmpPDF = eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case (+1)
-            tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
@@ -225,11 +225,11 @@ c
       else ! leading power (normal EWA)
          select case (vpol)
          case (-1)
-            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case (0)
-            tmpPDF = evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case (+1)
-            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
@@ -262,9 +262,9 @@ c
       if(doevaNLP) then
          select case (vpol)
          case (-1)
-            tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
          case (+1)
-            tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
@@ -273,9 +273,9 @@ c
       else  ! leading power (normal EWA)
          select case (vpol)
          case (-1)
-            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
          case (+1)
-            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
