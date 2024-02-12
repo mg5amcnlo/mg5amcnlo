@@ -9,7 +9,9 @@ module pborn
        integer, intent(in) :: vector_size
        allocate(p_born(0:3,nexternal_mod-1,vector_size))
    end subroutine allocate_pborn
-
+   subroutine reset_pborn
+       p_born(:,:,:) = 0.d0
+   end subroutine reset_pborn
    subroutine deallocate_pborn
        if (allocated(p_born)) deallocate(p_born)
    end subroutine deallocate_pborn
@@ -25,7 +27,9 @@ module pborn_ev
        integer, intent(in) :: vector_size
        allocate(p_born_ev(0:3,nexternal_mod-1,vector_size))
    end subroutine allocate_pborn_ev
-
+   subroutine reset_pborn_ev
+       p_born_ev(:,:,:) = 0.d0
+   end subroutine reset_pborn_ev
    subroutine deallocate_pborn_ev
        if (allocated(p_born_ev)) deallocate(p_born_ev)
    end subroutine deallocate_pborn_ev
@@ -41,7 +45,9 @@ module pborn_l
        integer, intent(in) :: vector_size
        allocate(p_born_l(0:3,nexternal_mod-1,vector_size))
    end subroutine allocate_pborn_l
-
+   subroutine reset_pborn_l
+       p_born_l(:,:,:) = 0.d0
+   end subroutine reset_pborn_l
    subroutine deallocate_pborn_l
        if (allocated(p_born_l)) deallocate(p_born_l)
    end subroutine deallocate_pborn_l
@@ -57,7 +63,9 @@ module pborn_coll
        integer, intent(in) :: vector_size
        allocate(p_born_coll(0:3,nexternal_mod-1,vector_size))
    end subroutine allocate_pborn_coll
-
+    subroutine reset_pborn_coll
+        p_born_coll(:,:,:) = 0.d0
+    end subroutine reset_pborn_coll
    subroutine deallocate_pborn_coll
        if (allocated(p_born_coll)) deallocate(p_born_coll)
    end subroutine deallocate_pborn_coll
@@ -73,7 +81,9 @@ module pborn_norad
        integer, intent(in) :: vector_size
        allocate(p_born_norad(0:3,nexternal_mod-1,vector_size))
    end subroutine allocate_pborn_norad
-
+    subroutine reset_pborn_norad
+        p_born_norad(:,:,:) = 0.d0
+    end subroutine reset_pborn_norad
    subroutine deallocate_pborn_norad
        if (allocated(p_born_norad)) deallocate(p_born_norad)
    end subroutine deallocate_pborn_norad
@@ -95,7 +105,15 @@ contains
         jamp2b(0,0,index) = ncolor_mod
      end do
  end subroutine allocate_to_amps_born
-
+ subroutine reset_to_amps_born(vector_size)
+     integer, intent(in) :: vector_size
+     integer index
+     amp2b(:,:) = 0.d0
+     jamp2b(:,:,:) = 0.d0
+     do index=1,vector_size
+        jamp2b(0,0,index) = ncolor_mod
+     end do
+ end subroutine reset_to_amps_born
  subroutine deallocate_to_amps_born
       if (allocated(amp2b)) deallocate(amp2b)
       if (allocated(jamp2b)) deallocate(jamp2b)
@@ -113,7 +131,10 @@ module to_amps
        allocate(amp2(ngraphs_mod,vector_size)) !ZW: NGRAPHS MUST BE INCLUDED SOMEWHERE
        allocate(jamp2(0:ncolor_mod,vector_size)) !ZW: NCOLOR MUST BE INCLUDED SOMEWHERE
    end subroutine allocate_to_amps
-
+    subroutine reset_to_amps
+        amp2(:,:) = 0.d0
+        jamp2(:,:) = 0.d0
+    end subroutine reset_to_amps
    subroutine deallocate_to_amps
         if (allocated(amp2)) deallocate(amp2)
         if (allocated(jamp2)) deallocate(jamp2)
@@ -133,7 +154,12 @@ module counterevnts
        allocate(pswgt_cnt(-2:2,vector_size))
        allocate(jac_cnt(-2:2,vector_size))
    end subroutine allocate_counterevnts
-
+   subroutine reset_counterevnts
+       p1_cnt(:,:,:,:) = 0.d0
+       wgt_cnt(:,:) = 0.d0
+       pswgt_cnt(:,:) = 0.d0
+       jac_cnt(:,:) = 0.d0
+   end subroutine reset_counterevnts
    subroutine deallocate_counterevnts
         if (allocated(p1_cnt)) deallocate(p1_cnt)
         if (allocated(wgt_cnt)) deallocate(wgt_cnt)
@@ -153,7 +179,9 @@ module write_granny_resonance
          allocate(which_is_granny(fks_configs_mod,vector_size))
          allocate(write_granny(fks_configs_mod,vector_size))
    end subroutine allocate_write_granny_resonance
-
+   subroutine reset_write_granny_resonance
+       write_granny(:,:) = .false.
+   end subroutine reset_write_granny_resonance
    subroutine deallocate_write_granny_resonance
         if (allocated(which_is_granny)) deallocate(which_is_granny)
         if (allocated(write_granny)) deallocate(write_granny)
@@ -171,7 +199,12 @@ module parton_cms_stuff
        allocate(sqrtshat(vector_size))
        allocate(shat(vector_size))
    end subroutine allocate_parton_cms_stuff
-
+   subroutine reset_parton_cms_stuff
+       ybst_til_tolab(:) = 0.d0 
+       ybst_til_tocm(:) = 0.d0 
+       sqrtshat(:) = 0.d0 
+       shat(:) = 0.d0 
+   end subroutine reset_parton_cms_stuff
    subroutine deallocate_parton_cms_stuff
         if (allocated(ybst_til_tolab)) deallocate(ybst_til_tolab)
         if (allocated(ybst_til_tocm)) deallocate(ybst_til_tocm)
@@ -192,7 +225,12 @@ module fksvariables
        allocate(p_i_fks_ev(0:3,vector_size))
        allocate(p_i_fks_cnt(0:3,-2:2,vector_size))
    end subroutine allocate_fksvariables
-
+   subroutine reset_fksvariables
+       xi_i_fks_ev(:) = 0.d0
+       y_ij_fks_ev(:) = 0.d0
+       p_i_fks_ev(:,:) = 0.d0
+       p_i_fks_cnt(:,:,:) = 0.d0
+   end subroutine reset_fksvariables
    subroutine deallocate_fksvariables
         if (allocated(xi_i_fks_ev)) deallocate(xi_i_fks_ev)
         if (allocated(y_ij_fks_ev)) deallocate(y_ij_fks_ev)
@@ -209,7 +247,9 @@ module ccalculatedborn
        integer, intent(in) :: vector_size
        allocate(calculatedborn(vector_size))
    end subroutine allocate_ccalculatedborn
-
+   subroutine reset_ccalculatedborn
+       calculatedborn(:) = .false.
+   end subroutine reset_ccalculatedborn
    subroutine deallocate_ccalculatedborn
         if (allocated(calculatedborn)) deallocate(calculatedborn)
    end subroutine deallocate_ccalculatedborn
@@ -225,7 +265,9 @@ module pev
        integer, intent(in) :: vector_size
        allocate(p_ev(0:3,nexternal_mod,vector_size))
    end subroutine allocate_pev
-
+   subroutine reset_pev
+       p_ev(:,:,:) = 0.d0
+   end subroutine reset_pev
    subroutine deallocate_pev
         if (allocated(p_ev)) deallocate(p_ev)
    end subroutine deallocate_pev
@@ -244,7 +286,11 @@ module c_fxfx_scales
        allocate(FxFx_ren_scales(0:nexternal_mod,vector_size))
        allocate(FxFx_fac_scale(2,vector_size))
    end subroutine allocate_c_fxfx_scales
-
+   subroutine reset_c_fxfx_scales
+       nFxFx_ren_scales(:) = 0
+       FxFx_ren_scales(:,:) = 0.d0
+       FxFx_fac_scale(:,:) = 0.d0
+   end subroutine reset_c_fxfx_scales
    subroutine deallocate_c_fxfx_scales
         if (allocated(nFxFx_ren_scales)) deallocate(nFxFx_ren_scales)
         if (allocated(FxFx_ren_scales)) deallocate(FxFx_ren_scales)
@@ -261,7 +307,9 @@ module to_amp_split_soft
        integer, intent(in) :: vector_size
          allocate(amp_split_soft(AMP_SPLIT_SIZE,vector_size))
    end subroutine allocate_to_amp_split_soft
-
+   subroutine reset_to_amp_split_soft
+       amp_split_soft(:,:) = 0.d0
+   end subroutine reset_to_amp_split_soft
    subroutine deallocate_to_amp_split_soft
         if (allocated(amp_split_soft)) deallocate(amp_split_soft)
    end subroutine deallocate_to_amp_split_soft
@@ -275,7 +323,9 @@ module cnbody
        integer, intent(in) :: vector_size
          allocate(nbody(vector_size))
    end subroutine allocate_cnbody
-
+   subroutine reset_cnbody
+       nbody(:) = .false.
+   end subroutine reset_cnbody
    subroutine deallocate_cnbody
         if (allocated(nbody)) deallocate(nbody)
    end subroutine deallocate_cnbody
@@ -289,7 +339,9 @@ module cxiimaxcnt
        integer, intent(in) :: vector_size
        allocate(xiimax_cnt(-2:2,vector_size))
    end subroutine allocate_cxiimaxcnt
-
+   subroutine reset_cxiimaxcnt
+       xiimax_cnt(:,:) = 0.d0
+   end subroutine reset_cxiimaxcnt
    subroutine deallocate_cxiimaxcnt
         if (allocated(xiimax_cnt)) deallocate(xiimax_cnt)
    end subroutine deallocate_cxiimaxcnt
@@ -304,7 +356,10 @@ module cxi_i_hat
        allocate(xi_i_hat_ev(vector_size))
        allocate(xi_i_hat_cnt(-2:2,vector_size))
    end subroutine allocate_cxi_i_hat
-
+   subroutine reset_cxi_i_hat
+       xi_i_hat_ev(:) = 0.d0
+       xi_i_hat_cnt(:,:) = 0.d0
+   end subroutine reset_cxi_i_hat
    subroutine deallocate_cxi_i_hat
         if (allocated(xi_i_hat_ev)) deallocate(xi_i_hat_ev)
         if (allocated(xi_i_hat_cnt)) deallocate(xi_i_hat_cnt)
@@ -319,7 +374,9 @@ module cxiifkscnt
        integer, intent(in) :: vector_size
        allocate(xi_i_fks_cnt(-2:2,vector_size))
    end subroutine allocate_cxiifkscnt
-
+    subroutine reset_cxiifkscnt
+        xi_i_fks_cnt(:,:) = 0.d0
+    end subroutine reset_cxiifkscnt
    subroutine deallocate_cxiifkscnt
         if (allocated(xi_i_fks_cnt)) deallocate(xi_i_fks_cnt)
    end subroutine deallocate_cxiifkscnt
@@ -333,7 +390,9 @@ module cxinormev
        integer, intent(in) :: vector_size
        allocate(xinorm_ev(vector_size))
    end subroutine allocate_cxinormev
-
+   subroutine reset_cxinormev
+       xinorm_ev(:) = 0.d0
+   end subroutine reset_cxinormev
    subroutine deallocate_cxinormev
         if (allocated(xinorm_ev)) deallocate(xinorm_ev)
    end subroutine deallocate_cxinormev
@@ -346,7 +405,9 @@ module cxinormcnt
        integer, intent(in) :: vector_size
        allocate(xinorm_cnt(-2:2,vector_size))
    end subroutine allocate_cxinormcnt
-
+    subroutine reset_cxinormcnt
+        xinorm_cnt(:,:) = 0.d0
+    end subroutine reset_cxinormcnt
    subroutine deallocate_cxinormcnt
         if (allocated(xinorm_cnt)) deallocate(xinorm_cnt)
    end subroutine deallocate_cxinormcnt
@@ -360,7 +421,9 @@ module cxiimaxev
        integer, intent(in) :: vector_size
        allocate(xiimax_ev(vector_size))
    end subroutine allocate_cxiimaxev
-
+    subroutine reset_cxiimaxev
+        xiimax_ev(:) = 0.d0
+    end subroutine reset_cxiimaxev
    subroutine deallocate_cxiimaxev
         if (allocated(xiimax_ev)) deallocate(xiimax_ev)
    end subroutine deallocate_cxiimaxev
@@ -381,7 +444,13 @@ module c_granny_res
          allocate(granny_is_res(vector_size))
          allocate(granny_chain_real_final(-nexternal_mod:nexternal_mod,vector_size))
    end subroutine allocate_c_granny_res
-
+   subroutine reset_c_granny_res
+       igranny(:) = 0
+       iaunt(:) = 0
+       granny_chain(:,:) = .false.
+       granny_is_res(:) = .false.
+       granny_chain_real_final(:,:) = .false.
+   end subroutine reset_c_granny_res
    subroutine deallocate_c_granny_res
         if (allocated(igranny)) deallocate(igranny)
         if (allocated(iaunt)) deallocate(iaunt)
@@ -400,7 +469,10 @@ module parton_cms_ev
          allocate(sqrtshat_ev(vector_size))
          allocate(shat_ev(vector_size))
    end subroutine allocate_parton_cms_ev
-
+   subroutine reset_parton_cms_ev
+    sqrtshat_ev(:) = 0.d0 
+    shat_ev(:) = 0.d0 
+   end subroutine reset_parton_cms_ev
    subroutine deallocate_parton_cms_ev
         if (allocated(sqrtshat_ev)) deallocate(sqrtshat_ev)
         if (allocated(shat_ev)) deallocate(shat_ev)
@@ -416,7 +488,10 @@ module parton_cms_cnt
          allocate(sqrtshat_cnt(-2:2,vector_size))
          allocate(shat_cnt(-2:2,vector_size))
    end subroutine allocate_parton_cms_cnt
-
+   subroutine reset_parton_cms_cnt
+    sqrtshat_cnt(:,:) = 0.d0
+    shat_cnt(:,:) = 0.d0
+   end subroutine reset_parton_cms_cnt
    subroutine deallocate_parton_cms_cnt
         if (allocated(sqrtshat_cnt)) deallocate(sqrtshat_cnt)
         if (allocated(shat_cnt)) deallocate(shat_cnt)
@@ -433,14 +508,17 @@ module camp_split_store
  contains
    subroutine allocate_camp_split_store(vector_size)
        integer, intent(in) :: vector_size
-       ! ALLOCATE 
-       ! ALLOCATE 
        allocate(AMP_SPLIT_STORE_R(AMP_SPLIT_SIZE, vector_size))
        allocate(AMP_SPLIT_STORE_B(AMP_SPLIT_SIZE, vector_size))
        allocate(AMP_SPLIT_STORE_CNT(AMP_SPLIT_SIZE, 2, NSPLITORDERS, vector_size))
        allocate(AMP_SPLIT_STORE_BSF(AMP_SPLIT_SIZE, 5, 5, vector_size))
    end subroutine allocate_camp_split_store
-
+   subroutine reset_camp_split_store
+    AMP_SPLIT_STORE_R(:,:) = 0.d0
+    AMP_SPLIT_STORE_B(:,:) = 0.d0
+    AMP_SPLIT_STORE_BSF(:,:,:,:) = 0.d0
+    AMP_SPLIT_STORE_CNT(:,:,:,:) = 0.d0
+   end subroutine reset_camp_split_store
    subroutine deallocate_camp_split_store
         if (allocated(AMP_SPLIT_STORE_R)) deallocate(AMP_SPLIT_STORE_R)
         if (allocated(AMP_SPLIT_STORE_B)) deallocate(AMP_SPLIT_STORE_B)
@@ -459,7 +537,11 @@ module cgenps_fks
        allocate(veckbarn_ev(vector_size))
        allocate(xp0jfks(vector_size))
    end subroutine allocate_cgenps_fks
-
+   subroutine reset_cgenps_fks
+       veckn_ev(:) = 0.d0
+       veckbarn_ev(:) = 0.d0
+       xp0jfks(:) = 0.d0
+   end subroutine reset_cgenps_fks
    subroutine deallocate_cgenps_fks
         if (allocated(veckn_ev)) deallocate(veckn_ev)
         if (allocated(veckbarn_ev)) deallocate(veckbarn_ev)
@@ -476,7 +558,10 @@ module cbjorkenx
        allocate(xbjrk_ev(2,vector_size))
        allocate(xbjrk_cnt(2,-2:2,vector_size))
    end subroutine allocate_cbjorkenx
-
+   subroutine reset_cbjorkenx
+       xbjrk_ev(:,:) = 0.d0
+       xbjrk_cnt(:,:,:) = 0.d0
+   end subroutine reset_cbjorkenx
    subroutine deallocate_cbjorkenx
         if (allocated(xbjrk_ev)) deallocate(xbjrk_ev)
         if (allocated(xbjrk_cnt)) deallocate(xbjrk_cnt)
@@ -492,7 +577,10 @@ module cbjrk12_ev
        allocate(tau_ev(vector_size))
        allocate(ycm_ev(vector_size))
    end subroutine allocate_cbjrk12_ev
-
+   subroutine reset_cbjrk12_ev
+       tau_ev(:) = 0.d0
+       ycm_ev(:) = 0.d0
+   end subroutine reset_cbjrk12_ev
    subroutine deallocate_cbjrk12_ev
         if (allocated(tau_ev)) deallocate(tau_ev)
         if (allocated(ycm_ev)) deallocate(ycm_ev)
@@ -508,7 +596,10 @@ module cbjrk12_cnt
        allocate(tau_cnt(-2:2,vector_size))
        allocate(ycm_cnt(-2:2,vector_size))
    end subroutine allocate_cbjrk12_cnt
-
+   subroutine reset_cbjrk12_cnt
+       tau_cnt(:,:) = 0.d0
+       ycm_cnt(:,:) = 0.d0
+   end subroutine reset_cbjrk12_cnt
    subroutine deallocate_cbjrk12_cnt
         if (allocated(tau_cnt)) deallocate(tau_cnt)
         if (allocated(ycm_cnt)) deallocate(ycm_cnt)
@@ -525,7 +616,11 @@ module virtgranny_boost
          allocate(chybst(vector_size))
          allocate(chybstmo(vector_size))
    end subroutine allocate_virtgranny_boost
-
+   subroutine reset_virtgranny_boost
+       shybst(:) = 0.d0
+       chybst(:) = 0.d0
+       chybstmo(:) = 0.d0
+   end subroutine reset_virtgranny_boost
    subroutine deallocate_virtgranny_boost
         if (allocated(shybst)) deallocate(shybst)
         if (allocated(chybst)) deallocate(chybst)
@@ -548,7 +643,13 @@ module c_conflictingbw
          allocate(cBW(-nexternal_mod:-1,vector_size))
          allocate(cBW_level(-nexternal_mod:-1,vector_size))
    end subroutine allocate_c_conflictingbw
-
+   subroutine reset_c_conflictingbw
+       cBW_mass(:,:,:) = 0.d0
+       cBW_width(:,:,:) = 0.d0
+       cBW_level_max(:) = 0
+       cBW(:,:) = 0
+       cBW_level(:,:) = 0
+   end subroutine reset_c_conflictingbw
    subroutine deallocate_c_conflictingbw
         if (allocated(cBW_mass)) deallocate(cBW_mass)
         if (allocated(cBW_width)) deallocate(cBW_width)
@@ -566,7 +667,9 @@ module cxij_aor
        integer, intent(in) :: vector_size
        allocate(xij_aor(vector_size))
    end subroutine allocate_cxij_aor
-
+   subroutine reset_cxij_aor
+       xij_aor(:) = (0.d0,0.d0)
+   end subroutine reset_cxij_aor
    subroutine deallocate_cxij_aor
         if (allocated(xij_aor)) deallocate(xij_aor)
    end subroutine deallocate_cxij_aor
@@ -580,7 +683,9 @@ module cnocntevents
        integer, intent(in) :: vector_size
          allocate(nocntevents(vector_size))
    end subroutine allocate_cnocntevents
-
+    subroutine reset_cnocntevents
+        nocntevents(:) = .false.
+    end subroutine reset_cnocntevents
    subroutine deallocate_cnocntevents
         if (allocated(nocntevents)) deallocate(nocntevents)
    end subroutine deallocate_cnocntevents
@@ -594,7 +699,9 @@ module c_vegas_x
        integer, intent(in) :: vector_size
          allocate(xvar(99,vector_size))
    end subroutine allocate_c_vegas_x
-
+   subroutine reset_c_vegas_x
+       xvar(:,:) = 0.d0
+   end subroutine reset_c_vegas_x
    subroutine deallocate_c_vegas_x
         if (allocated(xvar)) deallocate(xvar)
    end subroutine deallocate_c_vegas_x
@@ -608,7 +715,9 @@ module c_rat_xi
        integer, intent(in) :: vector_size
          allocate(rat_xi_orig(vector_size))
    end subroutine allocate_c_rat_xi
-
+   subroutine reset_c_rat_xi
+       rat_xi_orig(:) = 0.d0
+   end subroutine reset_c_rat_xi
    subroutine deallocate_c_rat_xi
         if (allocated(rat_xi_orig)) deallocate(rat_xi_orig)
    end subroutine deallocate_c_rat_xi
@@ -622,7 +731,9 @@ module to_virtgranny
        integer, intent(in) :: vector_size
          allocate(granny_m2_red(-1:1,vector_size))
    end subroutine allocate_to_virtgranny
-
+   subroutine reset_to_virtgranny
+       granny_m2_red(:,:) = 0.d0
+   end subroutine reset_to_virtgranny
    subroutine deallocate_to_virtgranny
         if (allocated(granny_m2_red)) deallocate(granny_m2_red)
    end subroutine deallocate_to_virtgranny
@@ -637,7 +748,10 @@ module cgrannyrange
          allocate(xmbemin2(vector_size))
          allocate(xmbemax2(vector_size))
    end subroutine allocate_cgrannyrange
-
+   subroutine reset_cgrannyrange
+       xmbemin2(:) = 0.d0
+       xmbemax2(:) = 0.d0
+   end subroutine reset_cgrannyrange
    subroutine deallocate_cgrannyrange
         if (allocated(xmbemin2)) deallocate(xmbemin2)
         if (allocated(xmbemax2)) deallocate(xmbemax2)
@@ -652,7 +766,9 @@ module coffset
        integer, intent(in) :: vector_size
          allocate(offset(vector_size))
    end subroutine allocate_coffset
-
+   subroutine reset_coffset
+       offset(:) = 0.d0
+   end subroutine reset_coffset
    subroutine deallocate_coffset
         if (allocated(offset)) deallocate(offset)
    end subroutine deallocate_coffset
@@ -667,7 +783,10 @@ module c_skip_only_event_phsp
          allocate(only_event_phsp(vector_size))
          allocate(skip_event_phsp(vector_size))
    end subroutine allocate_c_skip_only_event_phsp
-
+   subroutine reset_c_skip_only_event_phsp
+       only_event_phsp(:) = .false.
+       skip_event_phsp(:) = .false.
+   end subroutine reset_c_skip_only_event_phsp
    subroutine deallocate_c_skip_only_event_phsp
         if (allocated(only_event_phsp)) deallocate(only_event_phsp)
         if (allocated(skip_event_phsp)) deallocate(skip_event_phsp)
@@ -682,7 +801,9 @@ module c_isolsign
        integer, intent(in) :: vector_size
          allocate(isolsign(vector_size))
    end subroutine allocate_c_isolsign
-
+   subroutine reset_c_isolsign
+       isolsign(:) = 0
+   end subroutine reset_c_isolsign
    subroutine deallocate_c_isolsign
         if (allocated(isolsign)) deallocate(isolsign)
    end subroutine deallocate_c_isolsign
@@ -698,7 +819,9 @@ module to_phase_space_s_channel
        integer, intent(in) :: vector_size
          allocate(s_mass(-nexternal_mod:nexternal_mod,vector_size))
    end subroutine allocate_to_phase_space_s_channel
-
+   subroutine reset_to_phase_space_s_channel
+       s_mass(:,:) = 0.d0
+   end subroutine reset_to_phase_space_s_channel
    subroutine deallocate_to_phase_space_s_channel
         if (allocated(s_mass)) deallocate(s_mass)
    end subroutine deallocate_to_phase_space_s_channel
@@ -712,7 +835,9 @@ module coupl_es
        integer, intent(in) :: vector_size
          allocate(qes2(vector_size))
    end subroutine allocate_coupl_es
-
+   subroutine reset_coupl_es
+       qes2(:) = 0.d0
+   end subroutine reset_coupl_es
    subroutine deallocate_coupl_es
         if (allocated(qes2)) deallocate(qes2)
    end subroutine deallocate_coupl_es
@@ -728,7 +853,9 @@ module c_goodhel
        integer, intent(in) :: vector_size
          allocate(goodhel(max_bhel_mod,FKS_CONFIGS_mod,vector_size))
    end subroutine allocate_c_goodhel
-
+    subroutine reset_c_goodhel
+        goodhel(:,:,:) = .false.
+    end subroutine reset_c_goodhel
    subroutine deallocate_c_goodhel
         if (allocated(goodhel)) deallocate(goodhel)
    end subroutine deallocate_c_goodhel
@@ -744,7 +871,9 @@ module to_saveamp
     integer, intent(in) :: vector_size
     allocate(saveamp(ngraphs_mod,max_bhel_mod,vector_size))
   end subroutine allocate_to_saveamp
-
+  subroutine reset_to_saveamp
+    saveamp(:,:,:) = (0.d0,0.d0)
+  end subroutine reset_to_saveamp
   subroutine deallocate_to_saveamp
     if (allocated(saveamp)) deallocate(saveamp)
   end subroutine deallocate_to_saveamp
@@ -759,6 +888,9 @@ module to_savemom
     integer, intent(in) :: vector_size
     allocate(savemom(nexternal_mod-1,2,vector_size))
   end subroutine allocate_to_savemom
+  subroutine reset_to_savemom
+    savemom(:,:,:) = 0.d0
+  end subroutine reset_to_savemom
   subroutine deallocate_to_savemom
     if (allocated(savemom)) deallocate(savemom)
   end subroutine deallocate_to_savemom
@@ -778,6 +910,12 @@ module cBorn
     skip(:,:) = -1
     ntry(:,:) = 0
   end subroutine allocate_cBorn
+  subroutine reset_cBorn
+!    hel_fac(:) = 0.d0
+!    get_hel(:) = 0
+    skip(:,:) = -1
+    ntry(:,:) = 0
+  end subroutine reset_cBorn
   subroutine deallocate_cBorn
     if (allocated(hel_fac)) deallocate(hel_fac)
     if (allocated(get_hel)) deallocate(get_hel)
@@ -889,6 +1027,58 @@ module vectorize
        call allocate_to_savemom(vector_size)
        call allocate_cBorn(vector_size)
     end subroutine allocate_storage
+
+    subroutine event_reset(vector_size)
+      implicit none 
+      integer, intent(in) :: vector_size
+!      call reset_pborn
+!      call reset_pborn_ev
+!      call reset_pborn_l
+!      call reset_pborn_coll
+!      call reset_pborn_norad
+!      call reset_to_amps
+!      call reset_to_amps_born(vector_size)
+!      call reset_counterevnts
+!      call reset_write_granny_resonance
+!      call reset_parton_cms_stuff
+!      call reset_fksvariables
+!      call reset_ccalculatedborn
+!      call reset_pev
+!      call reset_c_fxfx_scales
+!      call reset_to_amp_split_soft
+!      call reset_cnbody
+!      call reset_cxiimaxcnt
+!      call reset_cxi_i_hat
+!      call reset_cxiifkscnt
+!      call reset_cxinormev
+!      call reset_cxinormcnt
+!      call reset_cxiimaxev
+!      call reset_c_granny_res
+!      call reset_parton_cms_ev
+!      call reset_parton_cms_cnt
+!      call reset_camp_split_store
+!      call reset_cgenps_fks
+!      call reset_cbjorkenx
+!      call reset_cbjrk12_ev
+!      call reset_cbjrk12_cnt
+!      call reset_virtgranny_boost
+!      call reset_c_conflictingbw
+!      call reset_cxij_aor
+!      call reset_cnocntevents
+!      call reset_c_vegas_x
+!      call reset_c_rat_xi
+!      call reset_to_virtgranny
+!      call reset_cgrannyrange
+!      call reset_coffset
+!      call reset_c_skip_only_event_phsp
+!      call reset_c_isolsign
+!      call reset_to_phase_space_s_channel
+!      call reset_coupl_es
+!      call reset_c_goodhel
+!      call reset_to_saveamp
+!      call reset_to_savemom
+!      call reset_cBorn
+    end subroutine event_reset
 
     subroutine deallocate_storage
        call deallocate_pborn

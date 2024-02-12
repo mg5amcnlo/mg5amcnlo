@@ -37,7 +37,7 @@ C
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       common /c_keep_order_cnt/ keep_order_cnt 
-      common /c_born_cnt/ ans_cnt
+!      common /c_born_cnt/ ans_cnt
       integer ord_subtract
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)

@@ -298,6 +298,7 @@ c
       enddo
       close(12)
 
+!      call deallocate_storage
 
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
@@ -338,6 +339,14 @@ c timing statistics
       use extra_weights
       use mint_module
       use vectorize
+      !ZW: modules that define event-level amplitude local variables
+      !ZW try to make compiler understand that these cannot be deallocated freely
+      use cBorn
+      use to_amps_born
+      use c_goodhel
+      use to_saveamp
+      use to_savemom
+      !ZW
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -420,11 +429,16 @@ c PineAPPL
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
+
 !      allocate(x_local(99,vec_size))
       allocate(p_local(0:3,nexternal,vec_size))
       allocate(wgtdum(vec_size))
       allocate(amp2_store(ngraphs,vec_size))
       allocate(jamp2_store(0:ncolor,vec_size))
+
+      call event_reset(vec_size)
 
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -477,7 +491,7 @@ c PineAPPL
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          call set_alphaS(p_local(0,1,index),index)
          calculatedBorn(index)=.false.
-         call sborn(p_local(0,1,index), wgtdum(index),index)
+         if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
          call smatrix_real(p_local(0,1,index), wgtdum(index),index)
 !         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index

@@ -20,7 +20,7 @@ c
       include 'nFKSconfigs.inc'
       include 'born_conf.inc' ! needed for mapconfig
       logical mtc,even
-      integer i,j,k,nmatch,ibase,ntry,icb(nexternal-1),jc(nexternal)
+      integer i,j,k,nmatch,ibase,ntry_sym,icb(nexternal-1),jc(nexternal)
      $     ,use_config(0:lmaxconfigs)
       double precision diff,rwgt,p(0:3,nexternal),wgt,x(99),p_born1(0:3
      $     ,nexternal-1),p_born_save(0:3,nexternal-1),saveamp_loc(ngraphs)
@@ -135,7 +135,7 @@ c
 c     
 c     Get momentum configuration
 c
-      ntry = 1
+      ntry_sym = 1
       do j=1,ndim
          x(j)=ran2()
       enddo
@@ -144,7 +144,7 @@ c
       call generate_momenta(ndim,iconfig,wgt,x,p,amp_index)
       call set_cms_stuff(-100, amp_index)
       do while ((.not.passcuts(p,rwgt,amp_index) .or. wgt.lt.0 .or. p(0,1).le.0d0
-     $     .or. p_born(0,1,amp_index).le.0d0) .and. ntry.lt.10000)
+     $     .or. p_born(0,1,amp_index).le.0d0) .and. ntry_sym.lt.10000)
          do j=1,ndim
             x(j)=ran2()
          enddo
@@ -152,9 +152,9 @@ c
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p,amp_index)
          call set_cms_stuff(-100,amp_index)
-         ntry=ntry+1
+         ntry_sym=ntry_sym+1
       enddo
-      write(*,*) 'ntry',ntry
+      write(*,*) 'ntry_sym',ntry_sym
       call set_alphaS(p,amp_index)
 c
 c     Get and save base amplitudes
