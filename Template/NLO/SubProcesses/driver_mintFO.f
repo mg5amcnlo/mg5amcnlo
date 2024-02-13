@@ -482,25 +482,25 @@ c PineAPPL
 
       ! MZ
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
-!      iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
-!      do index=1,vec_size
-!         call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
-!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
-!      enddo
+      iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
+      do index=1,vec_size
+         call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+      enddo
 !OMP PARALLEL
 !OMP DO
-!      do index=1,vec_size
+      do index=1,vec_size
 !         ! real emission
 !         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
-!         call set_alphaS(p_local(0,1,index),index)
-!         calculatedBorn(index)=.false.
-!         if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
-!         call smatrix_real(p_local(0,1,index), wgtdum(index),index)
+         call set_alphaS(p_local(0,1,index),index)
+         calculatedBorn(index)=.false.
+         if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
+         call smatrix_real(p_local(0,1,index), wgtdum(index),index)
 !         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
 !         write(*,*) 'p_local', p_local(:,:,index)
 !         write(*,*) 'amp_split', amp_split(:)
-!      enddo
+      enddo
 !OMP END DO
 !OMP END PARALLEL
 
@@ -538,7 +538,7 @@ c PineAPPL
       ! ZW
       ! MZ
 
-      write(*,*) 'amp_split_born: ', amp_split_store_b(:,:)
+!      write(*,*) 'amp_split_born: ', amp_split_store_b(:,:)
 
       call reset_c_wgt_ME_tree
 
