@@ -924,6 +924,26 @@ module cBorn
   end subroutine deallocate_cBorn
 end module cBorn
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module c_wgt_ME_tree
+  implicit none
+  double precision, allocatable :: wgt_ME_born(:)
+  double precision, allocatable :: wgt_ME_real(:)
+contains
+  subroutine allocate_c_wgt_ME_tree(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(wgt_ME_born(vector_size))
+    allocate(wgt_ME_real(vector_size))
+  end subroutine allocate_c_wgt_ME_tree
+  subroutine reset_c_wgt_ME_tree
+    wgt_ME_born(:) = 0.d0
+    wgt_ME_real(:) = 0.d0
+  end subroutine reset_c_wgt_ME_tree
+  subroutine deallocate_c_wgt_ME_tree
+    if (allocated(wgt_ME_born)) deallocate(wgt_ME_born)
+    if (allocated(wgt_ME_real)) deallocate(wgt_ME_real)
+  end subroutine deallocate_c_wgt_ME_tree
+end module c_wgt_ME_tree
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module vectorize
   use pborn
   use pborn_ev
@@ -972,6 +992,7 @@ module vectorize
   use to_saveamp
   use to_savemom
   use cBorn
+  use c_wgt_ME_tree
   implicit none
   integer vec_size_store
     contains
@@ -1026,6 +1047,7 @@ module vectorize
        call allocate_to_saveamp(vector_size)
        call allocate_to_savemom(vector_size)
        call allocate_cBorn(vector_size)
+       call allocate_c_wgt_ME_tree(vector_size)
     end subroutine allocate_storage
 
     subroutine event_reset(vector_size)
@@ -1078,6 +1100,7 @@ module vectorize
 !      call reset_to_saveamp
 !      call reset_to_savemom
 !      call reset_cBorn
+!      call reset_c_wgt_ME_tree
     end subroutine event_reset
 
     subroutine deallocate_storage
@@ -1128,6 +1151,7 @@ module vectorize
        call deallocate_to_saveamp
        call deallocate_to_savemom
        call deallocate_cBorn
+       call deallocate_c_wgt_ME_tree
     end subroutine deallocate_storage
 end module vectorize
          

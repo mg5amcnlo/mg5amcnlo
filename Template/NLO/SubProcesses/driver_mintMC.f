@@ -664,6 +664,7 @@ c
       use weight_lines
       use mint_module
       use vectorize
+      use c_wgt_ME_tree
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -709,8 +710,8 @@ c
 !     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
 !      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 !OMP THREADPRIVATE (/COUNTEREVNTS/)
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+!      double precision       wgt_ME_born,wgt_ME_real
+!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
@@ -754,8 +755,9 @@ c "npNLO".
             virtual_over_born=0d0
          endif
          MCcntcalled=0
-         wgt_me_real=0d0
-         wgt_me_born=0d0
+!         wgt_me_real=0d0
+!         wgt_me_born=0d0
+         call reset_c_wgt_ME_tree
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          do i=1,nndim
@@ -821,8 +823,9 @@ c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn(index)=.false.
          nbody(index)=.false.
          do i=1,proc_map(proc_map(0,1),0)
-            wgt_me_real=0d0
-            wgt_me_born=0d0
+!            wgt_me_real=0d0
+!            wgt_me_born=0d0
+            call reset_c_wgt_ME_tree
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
             jac=1d0/vol1

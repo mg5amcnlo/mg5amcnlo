@@ -10,6 +10,7 @@ C
 C
 C MODULES
       use camp_split_store
+      use c_wgt_ME_tree
 C
 C CONSTANTS
 C 
@@ -36,8 +37,8 @@ C
       integer amp_orders(nsplitorders)
       double precision ans_max, tiny
       parameter (tiny = 1d-12)
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+!      double precision       wgt_ME_born,wgt_ME_real
+!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 C
 C     FUNCTIONS
 C
@@ -93,7 +94,7 @@ if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
 
 amp_split_store_r(1:amp_split_size, amp_index) = amp_split(1:amp_split_size)
 
-wgt_ME_real = ans_summed
+wgt_ME_real(amp_index) = ans_summed
 
 END
 

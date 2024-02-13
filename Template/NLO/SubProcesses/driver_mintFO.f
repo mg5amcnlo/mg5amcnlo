@@ -339,6 +339,7 @@ c timing statistics
       use extra_weights
       use mint_module
       use vectorize
+      use c_wgt_ME_tree
       !ZW: modules that define event-level amplitude local variables
       !ZW try to make compiler understand that these cannot be deallocated freely
       use cBorn
@@ -413,8 +414,8 @@ c timing statistics
 c PineAPPL
       logical pineappl
       common /for_pineappl/ pineappl
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+!      double precision       wgt_ME_born,wgt_ME_real
+!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ini_fin_fks_map(0:2,0:fks_configs)
@@ -464,8 +465,9 @@ c PineAPPL
       endif
       !ZW setting zeros here as well as in accumulation loop
       virtual_over_born=0d0
-      wgt_me_born=0d0
-      wgt_me_real=0d0
+!      wgt_me_born=0d0
+!      wgt_me_real=0d0
+      call reset_c_wgt_ME_tree
       if (ickkw.eq.-1) H1_factor_virt=0d0      
       do index=1,vec_size
 !         call update_vegas_x(x_local,index)
@@ -480,60 +482,66 @@ c PineAPPL
 
       ! MZ
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
-      iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
-      do index=1,vec_size
-         call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
-      enddo
-!$OMP PARALLEL
-!$OMP DO
-      do index=1,vec_size
-         ! real emission
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
-         call set_alphaS(p_local(0,1,index),index)
-         calculatedBorn(index)=.false.
-         if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
-         call smatrix_real(p_local(0,1,index), wgtdum(index),index)
+!      iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
+!      do index=1,vec_size
+!         call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
+!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+!      enddo
+!OMP PARALLEL
+!OMP DO
+!      do index=1,vec_size
+!         ! real emission
+!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+!         call set_alphaS(p_local(0,1,index),index)
+!         calculatedBorn(index)=.false.
+!         if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
+!         call smatrix_real(p_local(0,1,index), wgtdum(index),index)
 !         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
 !         write(*,*) 'p_local', p_local(:,:,index)
 !         write(*,*) 'amp_split', amp_split(:)
-      enddo
-!$OMP END DO
-!$OMP END PARALLEL
+!      enddo
+!OMP END DO
+!OMP END PARALLEL
 
       do index=1,vec_size
          call update_fks_dir(nFKS_born,index) ! right? (nFKS_picked?)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
       enddo
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
          ! the born
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          call set_alphaS(p1_cnt(0,1,0,index),index)
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
 !         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
 !     & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
-         amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
-         jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
+!         amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
+!         jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
          ! color-linked borns
-         do i=1,fks_j_from_i(i_fks,0)
-           do j=1,i
-             m=fks_j_from_i(i_fks,i)
-             n=fks_j_from_i(i_fks,j)
-             if (n.ne.i_fks.and.m.ne.i_fks) then
-              ! MZ don't skip the case m=n and massless, it won't be used
-               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
-               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
-             endif
-           enddo
-         enddo
+!         do i=1,fks_j_from_i(i_fks,0)
+!           do j=1,i
+!             m=fks_j_from_i(i_fks,i)
+!             n=fks_j_from_i(i_fks,j)
+!             if (n.ne.i_fks.and.m.ne.i_fks) then
+!              ! MZ don't skip the case m=n and massless, it won't be used
+!               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
+!               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
+!             endif
+!           enddo
+!         enddo
       enddo
 !$OMP END DO
 !$OMP END PARALLEL
       ! ZW
       ! MZ
-      
+
+      write(*,*) 'amp_split_born: ', amp_split_store_b(:,:)
+
+      call reset_c_wgt_ME_tree
+
       do index=1,vec_size      
          !ZW set zeros for each amp_index
          sigint=0d0
@@ -543,15 +551,15 @@ c PineAPPL
             born_wgt_mint(iamp)=0d0
          enddo
          virtual_over_born=0d0
-         wgt_me_born=0d0
-         wgt_me_real=0d0
+!         wgt_me_born=0d0
+!         wgt_me_real=0d0
          if (ickkw.eq.-1) H1_factor_virt=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p,index)
          !ZW
 
          ! recover amp2 and jamp2 for multichanneling
-         amp2(:,index) = amp2_store(:,index) 
-         jamp2(:,index) = jamp2_store(:,index) 
+!         amp2(:,index) = amp2_store(:,index) 
+!         jamp2(:,index) = jamp2_store(:,index) 
 
 c  The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -603,8 +611,8 @@ c The n+1-body contributions (including counter terms)
             ! MZ this is a temporary fix for processes without
             ! soft singularities associated to the initial state
             ! DO NOT extend this fix to event generation
-            wgt_me_born=0d0
-            wgt_me_real=0d0
+            wgt_me_born(index)=0d0
+            wgt_me_real(index)=0d0
             jac=MC_int_wgt
             call update_fks_dir(iFKS,index)
             call generate_momenta(nndim,iconfig,jac,x_local(:,index),p,index)

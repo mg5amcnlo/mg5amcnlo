@@ -1941,6 +1941,7 @@ c        contribution
       use weight_lines
       use extra_weights
       use FKSParams
+      use c_wgt_ME_tree
       !use vectorize
       use pborn
       use pev
@@ -1982,8 +1983,8 @@ c        contribution
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                     fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+!      double precision       wgt_ME_born,wgt_ME_real
+!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
       integer     fold,ifold_counter
@@ -2093,8 +2094,8 @@ C schemes; it is needed when there are tagged photons around
 c Compensate for the fact that in the Born matrix elements, we use the
 c identical particle symmetry factor of the corresponding real emission
 c matrix elements
-      wgt_ME_tree(1,icontr)=wgt_me_born
-      wgt_ME_tree(2,icontr)=wgt_me_real
+      wgt_ME_tree(1,icontr)=wgt_me_born(amp_index)
+      wgt_ME_tree(2,icontr)=wgt_me_real(amp_index)
       do i=1,nexternal
          do j=0,3
             if (p1_cnt(0,1,0,amp_index).gt.0d0.and.type.ne.5) then

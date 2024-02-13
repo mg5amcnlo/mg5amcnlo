@@ -14,6 +14,7 @@ C MODULES
       use to_amps
       use to_amps_born
       use camp_split_store
+      use c_wgt_ME_tree
 C CONSTANTS
 C 
       implicit none
@@ -44,8 +45,8 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
-      double precision       wgt_ME_born,wgt_ME_real
-      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+!      double precision       wgt_ME_born,wgt_ME_real
+!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 
       double precision amp_split(amp_split_size)
       complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
@@ -139,7 +140,7 @@ enddo
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 
-wgt_me_born=ans_summed
+wgt_me_born(amp_index)=ans_summed
 
 C fill the amp2 and jamp2 arrays
 amp2(1:ngraphs,AMP_INDEX)=amp2b(1:ngraphs,AMP_INDEX)! amp2 just needs to be copyed
@@ -529,16 +530,16 @@ C ----------
       END
        
 
-      BLOCK DATA GOODHELS
-      INTEGER     NCOMB
-      PARAMETER ( NCOMB=  %(ncomb)d )
-      INTEGER    THEL
-      PARAMETER (THEL=NCOMB*%(nconfs)d)
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
-      common /c_goodhel/goodhel
-!$OMP THREADPRIVATE (/C_GOODHEL/)
-      DATA GOODHEL/THEL*.FALSE./
-      end
+!      BLOCK DATA GOODHELS
+!      INTEGER     NCOMB
+!      PARAMETER ( NCOMB=  %(ncomb)d )
+!      INTEGER    THEL
+!      PARAMETER (THEL=NCOMB*%(nconfs)d)
+!      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+!      common /c_goodhel/goodhel
+!OMP THREADPRIVATE (/C_GOODHEL/)
+!      DATA GOODHEL/THEL*.FALSE./
+!      end
 
 
 
