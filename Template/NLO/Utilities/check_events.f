@@ -1892,6 +1892,7 @@ C
 C CERN PROGLIB# M101    SORTZV          .VERSION KERNFOR  3.15  820113
 C ORIG. 02/10/75
 C
+      integer a
       DIMENSION A(N1),INDEX(N1)
 C
 C
@@ -1923,6 +1924,7 @@ C
 *     ========================================
       SUBROUTINE SORTTF (A,INDEX,N1)
 C
+      integer a
       DIMENSION A(N1),INDEX(N1)
 C
       N = N1
