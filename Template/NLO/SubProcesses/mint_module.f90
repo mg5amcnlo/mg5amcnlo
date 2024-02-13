@@ -1053,7 +1053,7 @@ contains
     even_rn=.true.
     min_it=min_it0
     call reset_mint_grids
-    BornSpread(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:4)=0d0
+    BornSpread(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:3)=0d0
   end subroutine setup_imode_0
 
   subroutine reset_mint_grids
@@ -1113,7 +1113,6 @@ contains
              write (12,*) 'AVE',(BornSpread(i,j,iFKS,1),i=1,n_BS_yij)
              write (12,*) 'AVE',(BornSpread(i,j,iFKS,2),i=1,n_BS_yij)
              write (12,*) 'AVE',(BornSpread(i,j,iFKS,3),i=1,n_BS_yij)
-             write (12,*) 'AVE',(BornSpread(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then
@@ -1158,7 +1157,6 @@ contains
              read (12,*) dummy,(BornSpread(i,j,iFKS,1),i=1,n_BS_yij)
              read (12,*) dummy,(BornSpread(i,j,iFKS,2),i=1,n_BS_yij)
              read (12,*) dummy,(BornSpread(i,j,iFKS,3),i=1,n_BS_yij)
-             read (12,*) dummy,(BornSpread(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then
