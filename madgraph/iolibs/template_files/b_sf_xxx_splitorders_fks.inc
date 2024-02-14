@@ -30,12 +30,16 @@ C VARIABLES
 C
       INTEGER I,j
       REAL*8 ANS(0:NSQAMPSO)
+      save ANS
+!$OMP THREADPRIVATE (ANS)
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
       integer amp_orders(nsplitorders)
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
+      SAVE max_val
+!$OMP THREADPRIVATE (max_val)
 C
 C     FUNCTIONS
 C
@@ -50,7 +54,7 @@ C color-linked borns are called for QCD-type emissions
       max_val = 0d0
 
 C reset the amp_split_softarray
-      AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,:) = DCMPLX(0D0,0D0)
+      AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,AMP_INDEX) = DCMPLX(0D0,0D0)
 
 
 do i = 1, nsqampso
@@ -115,6 +119,8 @@ C LOCAL VARIABLES
 C  
       INTEGER IHEL,IDEN,i,j
       double precision T(NSQAMPSO)
+      SAVE T 
+!$OMP THREADPRIVATE (T)
 %(den_factor_lines)s
 C  
 C GLOBAL VARIABLES
@@ -205,6 +211,8 @@ C
       REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
+      SAVE CF, ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP
+!$OMP THREADPRIVATE (CF, ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP)
 C  
 C GLOBAL VARIABLES
 C  

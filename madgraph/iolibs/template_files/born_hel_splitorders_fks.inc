@@ -21,6 +21,8 @@ C
       INTEGER I, J
       include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
+      SAVE ANS
+!$OMP THREADPRIVATE (ANS)
       INCLUDE 'born_nhel.inc'
       DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL

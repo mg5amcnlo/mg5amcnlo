@@ -205,6 +205,15 @@ contains
       allocate(x_local(99,vector_size))
    end subroutine allocate_mint
 
+   subroutine deallocate_mint
+      if (allocated(icell)) deallocate(icell)
+      if (allocated(x_bjork)) deallocate(x_bjork)
+      if (allocated(jacobian)) deallocate(jacobian)
+      if (allocated(f_local)) deallocate(f_local)
+      if (allocated(f)) deallocate(f)
+      if (allocated(x_local)) deallocate(x_local)
+   end subroutine deallocate_mint
+
   subroutine mint(fun,vector_size)
     use vectorize
     implicit none
@@ -247,6 +256,7 @@ contains
        call update_accumulated_results
     enddo
     call finalise_mint
+    
   end subroutine mint
 
   subroutine initialise_mint

@@ -634,6 +634,8 @@ class ProcessExporterFortran(VirtualExporter):
         mv(model_path + '/param_card.dat', self.dir_path + '/Cards/param_card_default.dat')
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
+        ln(model_path + '/coupl.f90', self.dir_path + '/Source')
+        ln(model_path + '/coupl.f90', self.dir_path + '/SubProcesses')
         self.make_source_links()
         
     def make_source_links(self):
@@ -2836,7 +2838,7 @@ CF2PY integer, intent(in) :: new_value
                          matrix_element.get('processes')[0].nice_string())
             plot.draw()
 
-        linkfiles = ['check_sa.f', 'coupl.inc']
+        linkfiles = ['check_sa.f', 'coupl.inc', 'coupl.f90']
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
@@ -3631,7 +3633,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         #ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc', 'coupl.f90', 'madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -4390,6 +4392,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'cluster.f',
                      'cluster.inc',
                      'coupl.inc',
+                     'coupl.f90',
                      'cuts.f',
                      'cuts.inc',
                      'genps.f',
@@ -6741,6 +6744,7 @@ class UFO_model_to_mg4(object):
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
         self.create_coupl_inc()
+        self.create_mod_coupl()
         self.create_write_couplings()
         self.create_couplings()
         
@@ -6862,14 +6866,14 @@ class UFO_model_to_mg4(object):
         # Write header
         header = """double precision G
                 common/strong/ G
-          !$omp threadprivate (/strong/)
+          !omp threadprivate (/strong/)
                  
                 double complex gal(2)
                 common/weak/ gal
                 
                 double precision MU_R
                 common/rscale/ MU_R
-          !$omp threadprivate (/rscale/)
+          !omp threadprivate (/rscale/)
 
                 """        
         # Nf is the number of light quark flavours
@@ -6956,7 +6960,7 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
-        fsock.writelines('!$OMP THREADPRIVATE (/COUPLINGS/)\n')
+        fsock.writelines('!OMP THREADPRIVATE (/COUPLINGS/)\n')
         if self.opt['mp']:
             mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                    ','.join(coupling_list)+'\n')
@@ -6980,6 +6984,93 @@ class UFO_model_to_mg4(object):
                                 self.mp_prefix+cm for cm in complex_mass])+'\n')
                 mp_fsock.writelines('common/MP_complex_mass/ '+\
                     ','.join([self.mp_prefix+cm for cm in complex_mass])+'\n\n')                       
+        
+    
+    def create_mod_coupl(self):
+        """ write coupling.f90 """
+        
+        fsock = self.open('coupl.f90', format='fortran')
+        if self.opt['mp']:
+            mp_fsock = self.open('mp_coupl.inc', format='fortran')
+            mp_fsock_same_name = self.open('mp_coupl_same_name.inc',\
+                                            format='fortran')
+
+        # Write header
+        header = """module strong
+                implicit none
+                double precision, allocatable :: G(:)
+            contains
+                subroutine allocate_strong(vector_size)
+                    implicit none
+                    integer, intent(in) :: vector_size
+                    allocate(G(vector_size))
+                end subroutine allocate_strong
+                subroutine reset_strong()
+                    implicit none
+                    G(:) = 0.d0
+                end subroutine reset_strong
+                subroutine deallocate_strong()
+                    implicit none
+                    if(allocated(G)) deallocate(G)
+                end subroutine deallocate_strong
+            end module strong
+            
+            module rscale
+                implicit none
+                double precision, allocatable :: MU_R
+            contains
+                subroutine allocate_rscale(vector_size)
+                    implicit none
+                    integer, intent(in) :: vector_size
+                    allocate(MU_R(vector_size))
+                end subroutine allocate_rscale
+                subroutine reset_rscale()
+                    implicit none
+                    MU_R(:) = 0.d0
+                end subroutine reset_rscale
+                subroutine deallocate_rscale()
+                    implicit none
+                    if(allocated(MU_R)) deallocate(MU_R)
+                end subroutine deallocate_rscale
+            end module rscale
+            
+                """        
+        fsock.writelines(header)
+        
+        # Write the Couplings
+        coupling_list = [coupl.name+'(:)' for coupl in self.coups_dep + self.coups_indep]    
+        fsock.writelines('module couplings')
+        fsock.writelines('use strong')
+        fsock.writelines('use rscale')
+        fsock.writelines('implicit none')   
+        fsock.writelines('double complex, allocatable :: '+', '.join(coupling_list)+'')
+        fsock.writelines('contains')
+        fsock.writelines('subroutine allocate_couplings(vector_size)')
+        fsock.writelines('implicit none')
+        fsock.writelines('integer, intent(in) :: vector_size')
+        for coupl in coupling_list:
+            fsock.writelines('allocate(%s(vector_size))' % coupl)
+        fsock.writelines('end subroutine allocate_couplings')
+        fsock.writelines('subroutine reset_couplings()')
+        fsock.writelines('implicit none')
+        for coupl in coupling_list:
+            fsock.writelines('%s(:) = (0.d0,0.d0)' % coupl)
+        fsock.writelines('end subroutine reset_couplings')
+        fsock.writelines('subroutine deallocate_couplings()')
+        fsock.writelines('implicit none')
+        for coupl in coupling_list:
+            fsock.writelines('if(allocated(%s)) deallocate(%s)' % (coupl, coupl))
+        fsock.writelines('end subroutine deallocate_couplings')
+        fsock.writelines('end module couplings\n')
+        # if self.opt['mp']:
+            # mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
+                                                #    ','.join(coupling_list)+'\n')
+            # mp_fsock_same_name.writelines('common/MP_couplings/ '+\
+                                                #  ','.join(coupling_list)+'\n\n')                
+            # mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
+                                #  self.mp_prefix+c for c in coupling_list])+'\n')
+            # mp_fsock.writelines('common/MP_couplings/ '+\
+                    #  ','.join([self.mp_prefix+c for c in coupling_list])+'\n\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """

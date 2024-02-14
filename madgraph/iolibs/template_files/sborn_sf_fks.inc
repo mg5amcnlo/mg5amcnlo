@@ -18,6 +18,8 @@ C the charge-linked if it is a color singlet
           integer i,m,n 
 !      include 'orders.inc'
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
+      save ans_cnt
+!$OMP THREADPRIVATE (ANS_CNT)
 !      common /c_born_cnt/ ans_cnt
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 

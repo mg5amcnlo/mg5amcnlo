@@ -708,6 +708,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'MCmasses_PYTHIA8.inc',
                      'add_write_info.f',
                      'coupl.inc',
+                     'coupl.f90',
                      'cuts.f',
                      'dummy_fct.f',
                      'FKS_params.dat',
@@ -2681,7 +2682,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
-        linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
+        linkfiles = ['coupl.inc', 'coupl.f90', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopCommons.f','MadLoopParams.inc']
 
@@ -4644,7 +4645,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
-        linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
+        linkfiles = ['coupl.inc', 'coupl.f90', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopParams.inc','MadLoopCommons.f']
 

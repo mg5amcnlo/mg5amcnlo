@@ -29,6 +29,8 @@ C VARIABLES
 C
       INTEGER I,J
       REAL*8 ANS(0:NSQAMPSO)
+      SAVE ANS
+!$OMP THREADPRIVATE (ANS)
       LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
 !      include 'orders.inc'
       double precision amp_split(AMP_SPLIT_SIZE)
@@ -73,6 +75,7 @@ ans_max = 0d0
 
 C reset the amp_split array
 amp_split(1:amp_split_size) = 0d0
+amp_split_store_r(1:amp_split_size,amp_index) = 0d0
 
 do i = 1, nsqampso
  ans_max = max(dabs(ans(i)),ans_max)
@@ -85,14 +88,14 @@ C   keep track of the separate pieces correspoinding to different coupling combi
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX%(proc_prefix)s(j, i)
     enddo
-    if (abs(ans(i)).gt.ans_max*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(i)
+    if (abs(ans(i)).gt.ans_max*tiny) amp_split_store_r(orders_to_amp_split_pos(amp_orders),amp_index) = ans(i)
  endif
 enddo
 
 C avoid fake non-zeros
 if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
 
-amp_split_store_r(1:amp_split_size, amp_index) = amp_split(1:amp_split_size)
+!amp_split_store_r(1:amp_split_size, amp_index) = amp_split(1:amp_split_size)
 
 wgt_ME_real(amp_index) = ans_summed
 
@@ -129,6 +132,8 @@ C
       INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
       REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
       SAVE T_SAVE,T_IDENT
+      SAVE T 
+!$OMP THREADPRIVATE (T, T_SAVE, T_IDENT)
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
       LOGICAL GOODHEL(NCOMB)
@@ -232,6 +237,8 @@ C
       REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
+      SAVE CF, ZTEMP, AMP, JAMP, W, TMP_JAMP
+!$OMP THREADPRIVATE (CF, ZTEMP, AMP, JAMP, W, TMP_JAMP)
 C
 C FUNCTION
 C

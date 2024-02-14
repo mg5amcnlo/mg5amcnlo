@@ -6,6 +6,7 @@ c**************************************************************************
       use mint_module
       use FKSParams
       use vectorize
+      use camp_split_store
       implicit none
 C
 C     CONSTANTS
@@ -486,13 +487,13 @@ c PineAPPL
       do index=1,vec_size
          call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+         call set_alphaS(p_local(0,1,index),index)
       enddo
-!OMP PARALLEL
-!OMP DO
+!$OMP PARALLEL
+!$OMP DO
       do index=1,vec_size
 !         ! real emission
 !         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
-         call set_alphaS(p_local(0,1,index),index)
          calculatedBorn(index)=.false.
          if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
          call smatrix_real(p_local(0,1,index), wgtdum(index),index)
@@ -501,19 +502,19 @@ c PineAPPL
 !         write(*,*) 'p_local', p_local(:,:,index)
 !         write(*,*) 'amp_split', amp_split(:)
       enddo
-!OMP END DO
-!OMP END PARALLEL
+!$OMP END DO
+!$OMP END PARALLEL
 
       do index=1,vec_size
          call update_fks_dir(nFKS_born,index) ! right? (nFKS_picked?)
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+         call set_alphaS(p1_cnt(0,1,0,index),index)
       enddo
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
          ! the born
 !         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
-         call set_alphaS(p1_cnt(0,1,0,index),index)
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
 !         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
@@ -521,17 +522,17 @@ c PineAPPL
 !         amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
 !         jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
          ! color-linked borns
-!         do i=1,fks_j_from_i(i_fks,0)
-!           do j=1,i
-!             m=fks_j_from_i(i_fks,i)
-!             n=fks_j_from_i(i_fks,j)
-!             if (n.ne.i_fks.and.m.ne.i_fks) then
-!              ! MZ don't skip the case m=n and massless, it won't be used
-!               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
-!               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
-!             endif
-!           enddo
-!         enddo
+         do i=1,fks_j_from_i(i_fks,0)
+           do j=1,i
+             m=fks_j_from_i(i_fks,i)
+             n=fks_j_from_i(i_fks,j)
+             if (n.ne.i_fks.and.m.ne.i_fks) then
+              ! MZ don't skip the case m=n and massless, it won't be used
+               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
+               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
+             endif
+           enddo
+         enddo
       enddo
 !$OMP END DO
 !$OMP END PARALLEL

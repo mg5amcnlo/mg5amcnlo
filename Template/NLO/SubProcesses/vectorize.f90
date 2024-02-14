@@ -993,6 +993,9 @@ module vectorize
   use to_savemom
   use cBorn
   use c_wgt_ME_tree
+!  use strong
+!  use rscale
+!  use couplings
   implicit none
   integer vec_size_store
     contains
@@ -1048,6 +1051,9 @@ module vectorize
        call allocate_to_savemom(vector_size)
        call allocate_cBorn(vector_size)
        call allocate_c_wgt_ME_tree(vector_size)
+!       call allocate_strong(vector_size)
+!       call allocate_rscale(vector_size)
+!       call allocate_couplings(vector_size)
     end subroutine allocate_storage
 
     subroutine event_reset(vector_size)
@@ -1101,6 +1107,9 @@ module vectorize
 !      call reset_to_savemom
 !      call reset_cBorn
 !      call reset_c_wgt_ME_tree
+!      call reset_strong
+!      call reset_rscale
+!      call reset_couplings
     end subroutine event_reset
 
     subroutine deallocate_storage
@@ -1152,6 +1161,9 @@ module vectorize
        call deallocate_to_savemom
        call deallocate_cBorn
        call deallocate_c_wgt_ME_tree
+!       call deallocate_strong
+!       call deallocate_rscale
+!       call deallocate_couplings
     end subroutine deallocate_storage
 end module vectorize
          

@@ -35,6 +35,8 @@ C
 !      include 'orders.inc'
       double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
+      save ans, ans_cnt
+!$OMP THREADPRIVATE (ANS,ANS_CNT)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -123,8 +125,8 @@ ans_summed = 0d0
 max_val = 0d0
 
 C reset the amp_split array
-amp_split(1:amp_split_size) = 0d0
-amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
+AMP_SPLIT_STORE_B(1:amp_split_size,amp_index) = 0d0
+amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,amp_index) = dcmplx(0d0,0d0)
 
 do i = 1, nsqampso
  max_val = max(max_val, abs(ans(1,I)))
@@ -136,7 +138,7 @@ C   keep track of the separate pieces correspoinding to different coupling combi
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
     enddo
-    if(abs(ans(1,i)).gt.max_val*tiny) amp_split(orders_to_amp_split_pos(amp_orders)) = ans(1,i)
+    if(abs(ans(1,i)).gt.max_val*tiny) AMP_SPLIT_STORE_B(orders_to_amp_split_pos(amp_orders),amp_index) = ans(1,i)
  endif
 enddo
 C this is to avoid fake non-zero contributions 
@@ -172,8 +174,8 @@ C will be multiplied by the corresponding squared coupling
       if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
    enddo
 C this is to avoid fake non-zero contributions 
-   if (abs(ans(1,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
-   if (abs(ans(2,I)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
+   if (abs(ans(1,I)).gt.max_val*tiny) amp_split_store_cnt(orders_to_amp_split_pos(amp_orders),1,j,amp_index) = ans(1,I)
+   if (abs(ans(2,I)).gt.max_val*tiny) amp_split_store_cnt(orders_to_amp_split_pos(amp_orders),2,j,amp_index) = ans(2,I)
   endif
  enddo
 C this is to avoid fake non-zero contributions 
@@ -182,8 +184,8 @@ C this is to avoid fake non-zero contributions
 enddo
 
 
-AMP_SPLIT_STORE_B(1:amp_split_size,AMP_INDEX) = amp_split(1:amp_split_size)
-AMP_SPLIT_STORE_CNT(1:AMP_SPLIT_SIZE, 1:2, 1:NSPLITORDERS,amp_index) = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
+!AMP_SPLIT_STORE_B(1:amp_split_size,AMP_INDEX) = amp_split(1:amp_split_size)
+!AMP_SPLIT_STORE_CNT(1:AMP_SPLIT_SIZE, 1:2, 1:NSPLITORDERS,amp_index) = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
 
  999   return
 END
@@ -239,6 +241,8 @@ C
       !DATA NTRY /%(nconfs)d*0/
       COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
+      save borntilde, T
+!$OMP THREADPRIVATE (BORNTILDE,T)
 %(helicity_lines)s
 %(den_factor_lines)s
 %(ij_lines)s
@@ -365,6 +369,9 @@ C MODULES
       use ccalculatedborn
       use to_saveamp
       use cBorn
+!      use strong
+!      use rscale
+!      use couplings
 C
       IMPLICIT NONE
 C  
@@ -400,6 +407,8 @@ C
       REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
+      SAVE CF, ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP
+!$OMP THREADPRIVATE (CF, ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP)
 C  
 C GLOBAL VARIABLES
 C  
