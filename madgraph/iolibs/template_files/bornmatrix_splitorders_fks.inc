@@ -50,6 +50,8 @@ C
 
       double precision amp_split(amp_split_size)
       complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
+      save amp_split, amp_split_cnt
+!$OMP THREADPRIVATE (AMP_SPLIT,AMP_SPLIT_CNT)
 
 !      double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
 !      common/to_amps_born/  amp2b,       jamp2b

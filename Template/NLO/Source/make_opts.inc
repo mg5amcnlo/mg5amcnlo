@@ -11,7 +11,9 @@ ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
   #FFLAGS = -O -fopenmp -fno-align-commons
   #FFLAGS = -O -g -fno-align-commons
-  FFLAGS = -O -g -fopenmp -fno-align-commons
+  #FFLAGS = -O0 -g -fno-align-commons
+  #FFLAGS = -O -g -fopenmp -fno-align-commons
+  FFLAGS = -O0 -g -fopenmp -fno-align-commons
   #FFLAGS = -O0 -g -fbounds-check -fno-align-commons
   #FFLAGS = -O0 -fopenmp -g -fbounds-check -fno-align-commons
   #FFLAGS+= -g -O0 -fopenmp  -fbounds-check -fno-align-commons -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
