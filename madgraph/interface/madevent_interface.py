@@ -3726,6 +3726,7 @@ Beware that this can be dangerous for local multicore runs.""")
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
         Gdirs = self.get_Gdir()
         Gdirs.sort()
+        partials_info = []
         for Gdir in Gdirs:
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
@@ -3745,16 +3746,22 @@ Beware that this can be dangerous for local multicore runs.""")
                              )
  
                 if len(AllEvent) >= 80: #perform a partial unweighting
+                    nb_event = min(abs(1.01*self.run_card['nevents']*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                                 sum_xsec,
-                                 math.sqrt(sum(x**2 for x in sum_xerru)),
-                                 sum_axsec) 
+                    partials_info.append((pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                     sum_xsec, math.sqrt(sum(x**2 for x in sum_xerru)), sum_axsec))
+                    sum_xsec = 0 
+                    sum_xerru = [] 
+                    sum_axsec = 0
                     partials +=1
         
+        if partials:
+            for data in partials_info:
+                AllEvent.add(*data)
+             
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         if len(AllEvent) == 0:
@@ -6896,6 +6903,7 @@ class GridPackCmd(MadEventCmd):
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        partials_info = []
         Gdirs = self.get_Gdir()
         Gdirs.sort()
         for Gdir in Gdirs:
@@ -6914,16 +6922,21 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
+                    nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
+                    partials_info.append((pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                                  sum_xsec,
                                  math.sqrt(sum(x**2 for x in sum_xerru)),
-                                 sum_axsec) 
+                                 sum_axsec) )  
+                    sum_xsec, sum_xerru, sum_axsec = 0,[],0
                     partials +=1
         
+        for data in partials_info:
+            AllEvent.add(*data)
+
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         
