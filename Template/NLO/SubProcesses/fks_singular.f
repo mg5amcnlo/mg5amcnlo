@@ -4735,6 +4735,7 @@ c has soft singularities
       use ccalculatedborn
       use camp_split_store
       use mod_orders
+      use c_born_cnt
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4800,8 +4801,9 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
-      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      complex*16 wgt1(2)
+!      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+!      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -4844,8 +4846,8 @@ C check if any extra_cnt is needed
                amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
      & = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
                !MZ
-               wgt1(1) = ans_cnt(1,iord)
-               wgt1(2) = ans_cnt(2,iord)
+               wgt1(1) = ans_cnt(1,iord,amp_index)
+               wgt1(2) = ans_cnt(2,iord,amp_index)
             elseif (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born(:,:,amp_index), iextra_cnt, ans_extra_cnt)
@@ -4861,8 +4863,8 @@ C check if any extra_cnt is needed
             amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
      & = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
             !MZ
-            wgt1(1) = ans_cnt(1,iord)
-            wgt1(2) = ans_cnt(2,iord)
+            wgt1(1) = ans_cnt(1,iord,amp_index)
+            wgt1(2) = ans_cnt(2,iord,amp_index)
          endif
          if ((abs(j_type).eq.3 .and.i_type.eq.8) .or.
      #       (dabs(ch_j).ne.0d0 .and.ch_i.eq.0d0)) then
@@ -4937,6 +4939,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       use ccalculatedborn
       use camp_split_store
       use mod_orders
+      use c_born_cnt
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -5002,8 +5005,9 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       integer iamp
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
-      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      complex*16 wgt1(2)
+!      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+!      common /c_born_cnt/ ans_cnt
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -5056,7 +5060,7 @@ C check if any extra_cnt is needed
                amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
      & = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
                !MZ
-               wgt1(1:2) = ans_cnt(1:2,iord)
+               wgt1(1:2) = ans_cnt(1:2,iord,amp_index)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born_used, iextra_cnt, ans_extra_cnt)
@@ -5071,7 +5075,7 @@ C check if any extra_cnt is needed
             amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
      & = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
             !MZ
-            wgt1(1:2) = ans_cnt(1:2,iord)
+            wgt1(1:2) = ans_cnt(1:2,iord,amp_index)
         endif
         amp_split_cnt_local(1:amp_split_size,1,iord)=
      $       amp_split_cnt(1:amp_split_size,1,iord)
@@ -5941,6 +5945,7 @@ c Calculate the eikonal factor
       use parton_cms_stuff
       use ccalculatedborn
       use camp_split_store
+      use c_born_cnt
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -5989,8 +5994,9 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i, ch_j, ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
-      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
+      complex*16 wgt1(2)
+!      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
+!      common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       
@@ -6138,8 +6144,8 @@ C check if any extra_cnt is needed
                 amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
      &  = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
                 !MZ
-               wgt1(1) = ans_cnt(1,iord)
-               wgt1(2) = ans_cnt(2,iord)
+               wgt1(1) = ans_cnt(1,iord,amp_index)
+               wgt1(2) = ans_cnt(2,iord,amp_index)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born_used,iextra_cnt,ans_extra_cnt)
@@ -6155,8 +6161,8 @@ C check if any extra_cnt is needed
             amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) 
      & = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
             !MZ
-           wgt1(1) = ans_cnt(1,iord)
-           wgt1(2) = ans_cnt(2,iord)
+           wgt1(1) = ans_cnt(1,iord,amp_index)
+           wgt1(2) = ans_cnt(2,iord,amp_index)
         endif
         
         if (iord.eq.qcd_pos) iap = 1
@@ -6860,6 +6866,7 @@ c
       use camp_split_store
       use to_amp_split_soft
       use mod_orders
+      use c_born_cnt
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -6968,8 +6975,8 @@ c For the MINT folding
       common/to_split_type_used/split_type_used
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
-      complex*16 ans_cnt(2, nsplitorders)
-      common /c_born_cnt/ ans_cnt
+!      complex*16 ans_cnt(2, nsplitorders)
+!      common /c_born_cnt/ ans_cnt
       double precision oneo8pi2
       parameter(oneo8pi2 = 1d0/(8d0*pi**2))
       include 'nFKSconfigs.inc'
@@ -7164,13 +7171,13 @@ c 1+2+3+4
          enddo
 C end of the external particle loop
          if (ipos_ord.eq.qcd_pos) then 
-            bsv_wgt = bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
+            bsv_wgt = bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos,amp_index))
             amp_split_bsv(1:amp_split_size)=
      $           amp_split_bsv(1:amp_split_size)+aso2pi*Q
      $           *dble(amp_split_cnt(1:amp_split_size,1,qcd_pos))
          endif
          if (ipos_ord.eq.qed_pos) then
-            bsv_wgt = bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
+            bsv_wgt = bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos,amp_index))
             amp_split_bsv(1:amp_split_size)=
      $           amp_split_bsv(1:amp_split_size)+aeo2pi*Q
      $           *dble(amp_split_cnt(1:amp_split_size,1,qed_pos))
@@ -7741,6 +7748,7 @@ c
       use to_amp_split_soft
       use mod_orders
       use camp_split_store
+      use c_born_cnt
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -7789,8 +7797,8 @@ c      include "fks.inc"
 !      double precision amp_split_soft(amp_split_size)
 !      common /to_amp_split_soft/amp_split_soft
 !OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
-      complex*16 ans_cnt(2, nsplitorders)
-      common /c_born_cnt/ans_cnt
+!      complex*16 ans_cnt(2, nsplitorders)
+!      common /c_born_cnt/ans_cnt
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       double precision oneo8pi2
@@ -7842,7 +7850,7 @@ C links
 c QCD Born terms
       contr1 = 0d0
       contr2 = 0d0
-      born=dble(ans_cnt(1,qcd_pos))
+      born=dble(ans_cnt(1,qcd_pos,amp_index))
       do i=1,nexternal
         if(i.ne.i_fks .and. particle_type(i).ne.1)then
           if (particle_type(i).eq.8) then
@@ -7872,7 +7880,7 @@ c QCD Born terms
 c QED Born terms
       contr1 = 0d0
       contr2 = 0d0
-      born=dble(ans_cnt(1,qed_pos))
+      born=dble(ans_cnt(1,qed_pos,amp_index))
       do i=1,nexternal
         if(i.ne.i_fks.and.(particle_charge(i).ne.0d0.or.pdg_type(i).eq.22))then
           if(pmass(i).eq.ZERO)then

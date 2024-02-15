@@ -11,11 +11,10 @@ C
 C
 C  
 C MODULES
-
+      use to_amp_split_soft
 C
 C CONSTANTS
 C 
-      use to_amp_split_soft
 implicit none
       include 'nexternal.inc'
       INTEGER NSQAMPSO
@@ -54,7 +53,7 @@ C color-linked borns are called for QCD-type emissions
       max_val = 0d0
 
 C reset the amp_split_softarray
-      AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,AMP_INDEX) = DCMPLX(0D0,0D0)
+      AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,AMP_INDEX) = 0d0
 
 
 do i = 1, nsqampso

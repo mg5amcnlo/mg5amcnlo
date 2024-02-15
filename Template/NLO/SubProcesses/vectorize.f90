@@ -944,6 +944,23 @@ contains
   end subroutine deallocate_c_wgt_ME_tree
 end module c_wgt_ME_tree
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module c_born_cnt
+  use mod_orders
+  implicit none
+  complex*16, allocatable :: ans_cnt(:,:,:)
+  contains
+  subroutine allocate_c_born_cnt(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(ans_cnt(2,NSPLITORDERS,vector_size))
+  end subroutine allocate_c_born_cnt
+  subroutine reset_c_born_cnt
+    ans_cnt(:,:,:) = 0.d0
+  end subroutine reset_c_born_cnt
+  subroutine deallocate_c_born_cnt
+    if (allocated(ans_cnt)) deallocate(ans_cnt)
+  end subroutine deallocate_c_born_cnt
+end module c_born_cnt
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module vectorize
   use pborn
   use pborn_ev
@@ -993,6 +1010,7 @@ module vectorize
   use to_savemom
   use cBorn
   use c_wgt_ME_tree
+  use c_born_cnt
 !  use strong
 !  use rscale
 !  use couplings
@@ -1051,6 +1069,7 @@ module vectorize
        call allocate_to_savemom(vector_size)
        call allocate_cBorn(vector_size)
        call allocate_c_wgt_ME_tree(vector_size)
+       call allocate_c_born_cnt(vector_size)
 !       call allocate_strong(vector_size)
 !       call allocate_rscale(vector_size)
 !       call allocate_couplings(vector_size)
@@ -1107,6 +1126,7 @@ module vectorize
 !      call reset_to_savemom
 !      call reset_cBorn
 !      call reset_c_wgt_ME_tree
+!      call reset_c_born_cnt
 !      call reset_strong
 !      call reset_rscale
 !      call reset_couplings
@@ -1161,6 +1181,7 @@ module vectorize
        call deallocate_to_savemom
        call deallocate_cBorn
        call deallocate_c_wgt_ME_tree
+       call deallocate_c_born_cnt
 !       call deallocate_strong
 !       call deallocate_rscale
 !       call deallocate_couplings

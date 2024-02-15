@@ -1,6 +1,7 @@
 subroutine sborn_sf(p_born,m,n,wgt,amp_index)
           use to_amp_split_soft
           use camp_split_store
+          use c_born_cnt
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
@@ -17,9 +18,9 @@ C the charge-linked if it is a color singlet
           double precision chargeprod
           integer i,m,n 
 !      include 'orders.inc'
-      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
-      save ans_cnt
-!$OMP THREADPRIVATE (ANS_CNT)
+!      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
+!      save ans_cnt
+!OMP THREADPRIVATE (ANS_CNT)
 !      common /c_born_cnt/ ans_cnt
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -51,7 +52,7 @@ C update the amp_split_soft, which is summed in sbornsoft
       if ((m.le.nincoming.and.n.gt.nincoming) .or. (n.le.nincoming.and.m.gt.nincoming)) chargeprod = - chargeprod
 C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
-      wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
+      wgt = dble(ans_cnt(1,qed_pos,amp_index)) * chargeprod * dble(gal(1))**2
 C update the amp_split_soft, which is summed in sbornsoft
       amp_split_soft(1:amp_split_size,amp_index) = dble(amp_split_store_cnt(1:amp_split_size,1,qed_pos,amp_index)) * chargeprod * dble(gal(1))**2
 C CHECK THIS

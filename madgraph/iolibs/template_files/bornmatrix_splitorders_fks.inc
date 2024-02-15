@@ -15,6 +15,7 @@ C MODULES
       use to_amps_born
       use camp_split_store
       use c_wgt_ME_tree
+      use c_born_cnt
 C CONSTANTS
 C 
       implicit none
@@ -34,9 +35,11 @@ C
       INTEGER I,J,K
 !      include 'orders.inc'
       double precision ans_summed
-      COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
-      save ans, ans_cnt
-!$OMP THREADPRIVATE (ANS,ANS_CNT)
+      COMPLEX*16 ANS(2,0:NSQAMPSO)
+      save ans
+!      complex*16 ANS_CNT(2, NSPLITORDERS)
+!      save ans, ans_cnt
+!$OMP THREADPRIVATE (ANS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -160,12 +163,12 @@ enddo
 %(skip_amp_cnt)s
 C quantities for the counterterms
 do j = 1, nsplitorders
- ans_cnt(1:2,j) = (0d0, 0d0)
+ ans_cnt(1:2,j,amp_index) = (0d0, 0d0)
  if (.not.split_type_used(j)) cycle
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 
-   ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
-   ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
+   ANS_CNT(1,j,amp_index) = ANS_CNT(1,J,amp_index) + ANS(1,I)
+   ANS_CNT(2,j,amp_index) = ANS_CNT(2,J,amp_index) + ANS(2,I)
 C   keep track of the separate pieces also for counterterms
    do k = 1, nsplitorders
       amp_orders(k) = GETORDPOWFROMINDEX_B(k, i)
@@ -179,8 +182,8 @@ C this is to avoid fake non-zero contributions
   endif
  enddo
 C this is to avoid fake non-zero contributions 
- if (abs(ans_cnt(1,j)).lt.max_val*tiny) ans_cnt(1,j)=(0d0,0d0)
- if (abs(ans_cnt(2,j)).lt.max_val*tiny) ans_cnt(2,j)=(0d0,0d0)
+ if (abs(ans_cnt(1,j,amp_index)).lt.max_val*tiny) ans_cnt(1,j,amp_index)=(0d0,0d0)
+ if (abs(ans_cnt(2,j,amp_index)).lt.max_val*tiny) ans_cnt(2,j,amp_index)=(0d0,0d0)
 enddo
 
 
@@ -241,7 +244,8 @@ C
       !DATA NTRY /%(nconfs)d*0/
       COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
-      save borntilde, T
+      INTEGER NHEL_LOCAL(NEXTERNAL-1)
+      save borntilde, T 
 !$OMP THREADPRIVATE (BORNTILDE,T)
 %(helicity_lines)s
 %(den_factor_lines)s
@@ -331,8 +335,8 @@ C ----------
           IF ((GOODHEL(IHEL,nFKSprocess,AMP_INDEX) .OR. 
      & GOODHEL(IHEL+SKIP(nFKSprocess,AMP_INDEX),nFKSprocess,AMP_INDEX)
      & .OR. NTRY(nFKSprocess,AMP_INDEX) .LT. 2) ) THEN
-            
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns,AMP_INDEX)
+            NHEL_LOCAL(:) = NHEL(:,IHEL)
+            CALL BORN(P1,NHEL_LOCAL(1),IHEL,T,borns,AMP_INDEX)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)

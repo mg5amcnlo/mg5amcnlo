@@ -27,6 +27,10 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
+c     to know if we're using omp or not
+      logical oMP
+      common /c_omp/oMP
+
 c     Vegas stuff
       integer         nndim
       common/tosigint/nndim
@@ -87,8 +91,12 @@ C  BEGIN CODE
 C-----
 c Write the process PID in the log.txt files (i.e., to the screen)
       write (*,*) getpid()
-      
+      oMP = .false. ! ensure that we can check if we're using openMP or not
       useitmax=.false. ! to be overwritten in open_output_files.f if need be
+
+c     check if openMP and set number of threads
+!$ oMP = .true.
+!$ call omp_set_num_thread(vec_size)
 c
 c     Setup the timing variable
 c
@@ -341,6 +349,8 @@ c timing statistics
       use mint_module
       use vectorize
       use c_wgt_ME_tree
+      use to_amp_split_soft
+      use camp_split_store
       !ZW: modules that define event-level amplitude local variables
       !ZW try to make compiler understand that these cannot be deallocated freely
       use cBorn
