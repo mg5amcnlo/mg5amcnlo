@@ -989,7 +989,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     logger.warning("not all event are decaying the same particle, this is only supported if each event have ONE decaying particle (not checked) and that all particles have the same BR")        
                 else:
                     raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed: [%s %s ] " %(multi_br, multi_totevt))
-            else:
+            elif multi_br:
                 raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed. (%s %s)" % (multi_br, multi_totevt))
         else:
             br = 1

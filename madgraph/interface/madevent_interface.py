@@ -3731,7 +3731,6 @@ Beware that this can be dangerous for local multicore runs.""")
             p = subprocess.Popen(["ulimit", "-n"], stdout=subprocess.PIPE)
             out, err = p.communicate()
             max_G = out.decode()
-            misc.sprint(max_G)
             if max_G == "unlimited":
                 max_G =2500
             else:
