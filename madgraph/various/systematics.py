@@ -494,7 +494,13 @@ class Systematics(object):
             else:
                 to_print[4] = to_print[4].lhapdfID
 
-            to_print.append(all_cross[i])  
+            try: # tmp / to be removed
+                to_print.append(all_cross[i])
+            except: # tmp / to be removed
+                self.log("to_print.append(all_cross[i]) failed to execute. appending all_cross with 0") # tmp / to be removed
+                all_cross.append(0) # tmp / to be removed
+                to_print.append(all_cross[i]) # tmp / to be removed
+
             to_report = []  
             stdout.write('%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s\n' % tuple(to_print)) 
             
