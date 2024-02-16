@@ -497,7 +497,7 @@ class Systematics(object):
             try: # tmp / to be removed
                 to_print.append(all_cross[i])
             except: # tmp / to be removed
-                self.log("to_print.append(all_cross[i]) failed to execute. appending all_cross with 0") # tmp / to be removed
+                self.log("to_print.append(all_cross[i]) failed to execute. should not be here since PDF variation not available for EVA/iEVA. appending all_cross with 0") # tmp / to be removed
                 all_cross.append(0) # tmp / to be removed
                 to_print.append(all_cross[i]) # tmp / to be removed
 
