@@ -319,7 +319,7 @@ class Banner(dict):
     def get_lha_strategy(self):
         """get the lha_strategy: how the weight have to be handle by the shower"""
         
-        if not self["init"]:
+        if "init" not in self or not self["init"]:
             raise Exception("No init block define")
         
         data = self["init"].split('\n')[0].split()

@@ -162,6 +162,7 @@ class CombineRuns(object):
             fsock.write(line)
             old_line = line
         return nb_evt
+    
     def get_channels(self, proc_path):
         """Opens file symfact.dat to determine all channels"""
         sympath = os.path.join(proc_path, 'symfact.dat')
