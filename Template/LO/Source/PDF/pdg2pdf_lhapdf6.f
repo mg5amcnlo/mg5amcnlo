@@ -53,6 +53,11 @@ c     improved effective w/z/a (leading log + next-to-leading power fixed orderr
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
+c     collider configuration
+      integer lpp(2)
+      double precision ebeam(2),xbk(2),q2fact(2)
+      common/to_collider/ebeam,xbk,q2fact,lpp
+
       nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -144,7 +149,7 @@ c         write(*,*) 'running eva'
             else
                doevaNLP = .true.
             endif
-               pdg2pdf = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo,doevaNLP)
+               pdg2pdf = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,doevaNLP)
             return
          endif
       else

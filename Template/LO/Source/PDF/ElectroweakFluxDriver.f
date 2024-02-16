@@ -6,7 +6,7 @@ c     R. Ruiz (2021 February)
 c     R. Ruiz (2024 February -- update)
 c     For details, see companion papers by:
 c     -- EVA: Ruiz, Costantini, et al [arXiv:2111.02442]
-c     -- iEVA/+NLP: Bigaran & Ruiz [arXiv:24xx.yyyyy]
+c     -- iEVA(EVA@NLP): Bigaran & Ruiz [arXiv:24xx.yyyyy]
 c     /* ********************************************************* *
 c     function eva_get_pdf_by_PID:
 c     - wrapper for eva_get_pdf_by_PID_evo
@@ -27,12 +27,12 @@ c     - assign right couplings of fermion by vPID and fPID
 c     subroutine eva_get_gL2_by_PID
 c     - assign left couplings of fermion by vPID and fPID
 c     /* ********************************************************* *
-      double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+      double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       implicit none
       logical doevaNLP ! =.false. for normal EWA (=.true. for iEVA/NLP)
       integer ievo ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       integer vPID,fPID,vpol
-      double precision fLpol,x,mu2
+      double precision fLpol,x,mu2,ebeam
       double precision eva_get_pdf_by_PID_evo
       double precision eva_get_pdf_photon_evo
       double precision eva_get_pdf_neutrino_evo
@@ -177,11 +177,11 @@ c      endif
 
       select case (abs(vPID))
       case (7,22)
-         eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+         eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       case (12,14)
-         eva_get_pdf_by_PID = eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+         eva_get_pdf_by_PID = eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       case default
-         eva_get_pdf_by_PID = eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+         eva_get_pdf_by_PID = eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       end select
       return
       end      
@@ -189,11 +189,11 @@ c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *
-      double precision function eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+      double precision function eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       implicit none
       logical doevaNLP
       integer vPID,fPID,vpol,ievo
-      double precision fLpol,x,mu2
+      double precision fLpol,x,mu2,ebeam
       double precision eva_fX_to_vm, evaNLP_fX_to_vm
       double precision eva_fX_to_v0, evaNLP_fX_to_v0
       double precision eva_fX_to_vp, evaNLP_fX_to_vp
@@ -212,11 +212,11 @@ c
       if(doevaNLP) then
          select case (vpol)
          case (-1)
-            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
          case (0)
-            tmpPDF = evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
          case (+1)
-            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
@@ -240,11 +240,11 @@ c
       return
       end
 c     /* ********************************************************* *
-      double precision function eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+      double precision function eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       implicit none
       logical doevaNLP
       integer vPID,fPID,vpol,ievo
-      double precision fLpol,x,mu2
+      double precision fLpol,x,mu2,ebeam
       double precision eva_fX_to_vm, evaNLP_fX_to_vm
       double precision eva_fX_to_vp, evaNLP_fX_to_vp
       
@@ -262,9 +262,9 @@ c
       if(doevaNLP) then
          select case (vpol)
          case (-1)
-            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo)
          case (+1)
-            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+            tmpPDF = evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo)
          case default
             write(*,*) 'vPol out of range; should not be here',vPol
             stop
@@ -287,12 +287,12 @@ c
       end      
 c     /* ********************************************************* *   
 c     /* ********************************************************* *
-      double precision function eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+      double precision function eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,doevaNLP)
       implicit none
       logical doevaNLP
       integer vPID,fPID,vpol,ievo
       logical isAntiNu
-      double precision fLpol,x,mu2
+      double precision fLpol,x,mu2,ebeam
       double precision eva_fX_to_fR, evaNLP_fX_to_fR
       double precision eva_fX_to_fL, evaNLP_fX_to_fL
 
@@ -314,11 +314,11 @@ c     /* ********************************************************* *
             if(isAntiNu) then ! no LH antineutrinos
                tmpPDF = 0
             else  
-               tmpPDF = evaNLP_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+               tmpPDF = evaNLP_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
             endif
          case (+1)
             if(isAntiNu) then ! no RH neutrinos
-               tmpPDF = evaNLP_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+               tmpPDF = evaNLP_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
             else
                tmpPDF = 0
             endif

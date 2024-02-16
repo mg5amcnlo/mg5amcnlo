@@ -262,7 +262,7 @@ c         write(*,*) 'running eva'
             else
                doevaNLP = .true.
             endif
-            pdg2pdf = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo,doevaNLP)
+            pdg2pdf = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,doevaNLP)
             return
          endif
       else ! this ensure backwards compatibility

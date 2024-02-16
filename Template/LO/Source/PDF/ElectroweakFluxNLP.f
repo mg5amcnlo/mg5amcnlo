@@ -7,86 +7,87 @@ c     For details, see companion paper by Bigaran & Ruiz [arXiv:24xx.yyyyy]
 c     See also details in Ruiz, Costantini, et al [arXiv:2111.02442]
 c     /* ********************************************************* *
 c     /* ********************************************************* *      
-c     function evaNLP_fX_to_vV(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo):
+c     function evaNLP_fX_to_vV(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo):
 c     call electroweak PDF for for vector boson (hel=V=0,+,-) from fermion
 c     at next-to-leading power (NLP) in the collinear expansion      
 c     with fractional (0<pol<1) LH (RH) polarization of fLpol (1-fLpol)
 c     - fLpol = 0.5d0 = parent fermion is spin-averaged
 c     /* ********************************************************* *
 c     /* ********************************************************* *      
-c     function evaNLP_fF_to_vV(gg2,gF2,mv2,x,mu2,ievo):
+c     function evaNLP_fF_to_vV(gg2,gF2,mv2,x,mu2,ebeam,ievo):
 c     electroweak PDF for vector boson (hel=V=0,+,-) from fermion (hel=F=L/R)
 c     at next-to-leading power (NLP) in the collinear expansion
 c     - gg2 = (coupling)^2
 c     - gF2 = (L/R chiral coupling)^2
-c     - mv2 = (mass of boson)^2
+c     - mv2 = (mass of boson)^2 [GeV^2]
 c     - x = momentum fraction = (E_V / E_f)
 c     - mu2 = (max of evolution scale)^2
+c     - ebeam = energy of beam [GeV]
 c     - ievo = for evolution by virtuality (or !=0 for pT)      
 c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *            
 c     /* ********************************************************* *
-      double precision function evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function evaNLP_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo
-      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_vp,evaNLP_fR_to_vp
 
-      evaNLP_fX_to_vp =    fLpol*evaNLP_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*evaNLP_fR_to_vp(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fX_to_vp =    fLpol*evaNLP_fL_to_vp(gg2,gL2,mv2,x,mu2,ebeam,ievo)
+     &             + (1d0-fLpol)*evaNLP_fR_to_vp(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *
-      double precision function evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function evaNLP_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo
-      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_vm,evaNLP_fR_to_vm
 
-      evaNLP_fX_to_vm =    fLpol*evaNLP_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*evaNLP_fR_to_vm(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fX_to_vm =    fLpol*evaNLP_fL_to_vm(gg2,gL2,mv2,x,mu2,ebeam,ievo)
+     &             + (1d0-fLpol)*evaNLP_fR_to_vm(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *
-      double precision function evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function evaNLP_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo
-      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_v0,evaNLP_fR_to_v0
 
-      evaNLP_fX_to_v0 =    fLpol*evaNLP_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*evaNLP_fR_to_v0(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fX_to_v0 =    fLpol*evaNLP_fL_to_v0(gg2,gL2,mv2,x,mu2,ebeam,ievo)
+     &             + (1d0-fLpol)*evaNLP_fR_to_v0(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *
-      double precision function evaNLP_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function evaNLP_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo
-      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_fL,evaNLP_fR_to_fL
 
-      evaNLP_fX_to_fL =    fLpol*evaNLP_fL_to_fL(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*evaNLP_fR_to_fL(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fX_to_fL =    fLpol*evaNLP_fL_to_fL(gg2,gL2,mv2,x,mu2,ebeam,ievo)
+     &             + (1d0-fLpol)*evaNLP_fR_to_fL(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *
-      double precision function evaNLP_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function evaNLP_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo
-      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_fR,evaNLP_fR_to_fR
 
-      evaNLP_fX_to_fR =    fLpol*evaNLP_fL_to_fR(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*evaNLP_fR_to_fR(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fX_to_fR =    fLpol*evaNLP_fL_to_fR(gg2,gL2,mv2,x,mu2,ebeam,ievo)
+     &             + (1d0-fLpol)*evaNLP_fR_to_fR(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end      
 c     /* ********************************************************* *      
 c     EVA (1/6) for f_L > v_+
-      double precision function evaNLP_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fL_to_vp(gg2,gL2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gL2,mv2,x,mu2
+      double precision gg2,gL2,mv2,x,mu2,ebeam
       double precision coup2,split,xxlog,fourPiSq
       double precision tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
@@ -106,10 +107,10 @@ c      print*,'gg2,gL2,mv2,x,mu2,ievo',gg2 !3,gL2,mv2,x,mu2,ievo
       end
 c     /* ********************************************************* *
 c     EVA (2/6) for f_L > v_-
-      double precision function evaNLP_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fL_to_vm(gg2,gL2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gL2,mv2,x,mu2
+      double precision gg2,gL2,mv2,x,mu2,ebeam
       double precision coup2,split,xxlog,fourPiSq
       double precision tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
@@ -128,10 +129,10 @@ c     EVA (2/6) for f_L > v_-
       end
 c     /* ********************************************************* *
 c     EVA (3/6) for f_L > v_0
-      double precision function evaNLP_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fL_to_v0(gg2,gL2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gL2,mv2,x,mu2
+      double precision gg2,gL2,mv2,x,mu2,ebeam
       double precision coup2,split,xxlog,fourPiSq
       double precision tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
@@ -139,57 +140,57 @@ c
       coup2 = gg2*gL2/fourPiSq
       split = (1.d0-x) / x
       xxlog = 1.d0
-      tmpNLP = 2.d0
+      tmpNLP = mv2/(2.d0*x*x*ebeam*ebeam)
       
-      evaNLP_fL_to_v0 = coup2*split*xxlog * tmpNLP
+      evaNLP_fL_to_v0 = coup2*split*xxlog *(1.0d0 + tmpNLP)
       return
       end
 c     /* ********************************************************* *
 c     EVA (4/6) for f_R > v_+
-      double precision function evaNLP_fR_to_vp(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fR_to_vp(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gR2,mv2,x,mu2
+      double precision gg2,gR2,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_vm
 
-      evaNLP_fR_to_vp = evaNLP_fL_to_vm(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fR_to_vp = evaNLP_fL_to_vm(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *
 c     EVA (5/6) for f_R > v_-
-      double precision function evaNLP_fR_to_vm(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fR_to_vm(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gR2,mv2,x,mu2
+      double precision gg2,gR2,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_vp
 
-      evaNLP_fR_to_vm = evaNLP_fL_to_vp(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fR_to_vm = evaNLP_fL_to_vp(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end      
 c     /* ********************************************************* *
 c     EVA (6/6) for f_R > v_0
-      double precision function evaNLP_fR_to_v0(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fR_to_v0(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gR2,mv2,x,mu2
+      double precision gg2,gR2,mv2,x,mu2,ebeam
       double precision evaNLP_fL_to_v0
 
-      evaNLP_fR_to_v0 = evaNLP_fL_to_v0(gg2,gR2,mv2,x,mu2,ievo)
+      evaNLP_fR_to_v0 = evaNLP_fL_to_v0(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       return
       end
 c     /* ********************************************************* *  
 c     EVA () for f_L > f_L
 c     fL_to_fL(z) = fL_to_vp(1-z) + fL_to_vm(1-z) 
-      double precision function evaNLP_fL_to_fL(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fL_to_fL(gg2,gL2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gL2,mv2,x,mu2
+      double precision gg2,gL2,mv2,x,mu2,ebeam
       double precision tmpVp,tmpVm,z
       double precision evaNLP_fL_to_vp,evaNLP_fL_to_vm
 
       z = 1.d0 - x
-      tmpVp = evaNLP_fL_to_vp(gg2,gL2,mv2,z,mu2,ievo)
-      tmpVm = evaNLP_fL_to_vm(gg2,gL2,mv2,z,mu2,ievo)
+      tmpVp = evaNLP_fL_to_vp(gg2,gL2,mv2,z,mu2,ebeam,ievo)
+      tmpVm = evaNLP_fL_to_vm(gg2,gL2,mv2,z,mu2,ebeam,ievo)
 
       evaNLP_fL_to_fL = tmpVp + tmpVm
       return
@@ -197,36 +198,36 @@ c     fL_to_fL(z) = fL_to_vp(1-z) + fL_to_vm(1-z)
 c     /* ********************************************************* *  
 c     EVA () for f_R > f_R
 c     fR_to_fR(z) = fR_to_vp(1-z) + fR_to_vm(1-z) 
-      double precision function evaNLP_fR_to_fR(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fR_to_fR(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gR2,mv2,x,mu2
+      double precision gg2,gR2,mv2,x,mu2,ebeam
       double precision tmpVp,tmpVm,z
       double precision evaNLP_fR_to_vp,evaNLP_fR_to_vm
 
       z = 1.d0 - x
-      tmpVp = evaNLP_fR_to_vp(gg2,gR2,mv2,z,mu2,ievo)
-      tmpVm = evaNLP_fR_to_vm(gg2,gR2,mv2,z,mu2,ievo)
+      tmpVp = evaNLP_fR_to_vp(gg2,gR2,mv2,z,mu2,ebeam,ievo)
+      tmpVm = evaNLP_fR_to_vm(gg2,gR2,mv2,z,mu2,ebeam,ievo)
 
       evaNLP_fR_to_fR = tmpVp + tmpVm
       return
       end      
 c     /* ********************************************************* *  
 c     EVA () for f_L > f_R
-      double precision function evaNLP_fL_to_fR(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fL_to_fR(gg2,gL2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gL2,mv2,x,mu2
+      double precision gg2,gL2,mv2,x,mu2,ebeam
 
       evaNLP_fL_to_fR = 0d0
       return
       end
 c     /* ********************************************************* *       
 c     EVA () for f_R > f_L
-      double precision function evaNLP_fR_to_fL(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function evaNLP_fR_to_fL(gg2,gR2,mv2,x,mu2,ebeam,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      double precision gg2,gR2,mv2,x,mu2
+      double precision gg2,gR2,mv2,x,mu2,ebeam
 
       evaNLP_fR_to_fL = 0d0
       return
