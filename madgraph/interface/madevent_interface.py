@@ -5826,9 +5826,9 @@ tar -czf split_$1.tar.gz split_$1
         
         self.make_opts_var['pdlabel1'] = ''
         self.make_opts_var['pdlabel2'] = ''
-        if self.run_card['pdlabel1'] in ['eva', 'iww']:
+        if self.run_card['pdlabel1'] in ['eva','ieva','iww']:
             self.make_opts_var['pdlabel1'] = 'eva'
-        if self.run_card['pdlabel2'] in ['eva', 'iww']:
+        if self.run_card['pdlabel2'] in ['eva','ieva','iww']:
             self.make_opts_var['pdlabel2'] = 'eva'
         if self.run_card['pdlabel1'] in ['edff','chff']:
             self.make_opts_var['pdlabel1'] = self.run_card['pdlabel1']

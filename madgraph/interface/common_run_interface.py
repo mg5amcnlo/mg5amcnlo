@@ -6320,13 +6320,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception("Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\".")
             
-            # check for nhel if using eva
-            if  self.run_card['pdlabel']  ==  'eva' or \
-                self.run_card['pdlabel1'] ==  'eva' or \
-                self.run_card['pdlabel2'] ==  'eva' or \
-                self.run_card['pdlabel']  == 'ieva' or \
-                self.run_card['pdlabel1'] == 'ieva' or \
-                self.run_card['pdlabel2'] == 'ieva':
+            # check for nhel if using eva/ieva
+            if  (self.run_card['pdlabel']  in  ['eva','ieva']) or \
+                (self.run_card['pdlabel1'] in  ['eva','ieva']) or \
+                (self.run_card['pdlabel2'] in  ['eva','ieva']) :
                 logger.warning("Running with EVA/iEVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
 
                 if self.run_card['nhel'] == 0:
