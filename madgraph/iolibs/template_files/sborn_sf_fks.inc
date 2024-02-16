@@ -16,6 +16,8 @@ C the charge-linked if it is a color singlet
           double complex wgt_born(2,0:nsqampso)
           double precision wgt_col
           double precision chargeprod
+      save wgt_born, wgt_col, chargeprod
+!$OMP THREADPRIVATE (wgt_born,wgt_col,chargeprod)
           integer i,m,n 
 !      include 'orders.inc'
 !      COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
@@ -35,6 +37,9 @@ C the charge-linked if it is a color singlet
 !OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
 
       chargeprod = 0d0
+      wgt_born(:,:) = 0d0
+      wgt_col = 0d0
+      amp_split_soft(:,amp_index) = 0d0
 
       if (need_color_links.and.need_charge_links) then
          write(*,*) 'ERROR IN SBORN_SF, both color and charged links are needed'
@@ -57,6 +62,8 @@ C update the amp_split_soft, which is summed in sbornsoft
       amp_split_soft(1:amp_split_size,amp_index) = dble(amp_split_store_cnt(1:amp_split_size,1,qed_pos,amp_index)) * chargeprod * dble(gal(1))**2
 C CHECK THIS
       endif
+
+!      write(*,*) amp_index, "ans_cnt: ", ans_cnt(:,:,:)
 
       return 
       end

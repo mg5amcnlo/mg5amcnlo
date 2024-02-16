@@ -75,7 +75,8 @@ C
 C BEGIN CODE
 C
 C look for orders which match the born order constraint 
-
+      ans(:,:) = dcmplx(0d0,0d0)
+      ans_cnt(:,:,amp_index) = dcmplx(0d0,0d0)
 if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
@@ -245,8 +246,8 @@ C
       COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
       INTEGER NHEL_LOCAL(NEXTERNAL-1)
-      save borntilde, T 
-!$OMP THREADPRIVATE (BORNTILDE,T)
+      save borntilde, T,NHEL_LOCAL 
+!$OMP THREADPRIVATE (BORNTILDE,T,NHEL_LOCAL)
 %(helicity_lines)s
 %(den_factor_lines)s
 %(ij_lines)s
@@ -279,6 +280,9 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      borntilde = dcmplx(0d0,0d0)
+      T(:,:) = dcmplx(0d0,0d0)
+      NHEL_LOCAL(:) = 0
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
       NTRY(nFKSprocess,AMP_INDEX)=NTRY(nFKSprocess,AMP_INDEX)+1
@@ -411,8 +415,8 @@ C
       REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
-      SAVE CF, ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP
-!$OMP THREADPRIVATE (CF, ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP)
+      SAVE ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP
+!$OMP THREADPRIVATE (ZTEMP, AMP, JAMP, W, JAMPH, TMP_JAMP)
 C  
 C GLOBAL VARIABLES
 C  
@@ -447,6 +451,11 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      ztemp = dcmplx(0d0,0d0)
+      amp(:) = dcmplx(0d0,0d0)
+      W(:,:) = dcmplx(0d0,0d0)
+      jamph(:,:,:) = dcmplx(0d0,0d0)
+      tmp_jamp(:) = dcmplx(0d0,0d0)
       jamp(:,:) = (0d0,0d0)
       glu_ij = ij_values(nfksprocess)
       DO I = 1, NSQAMPSO

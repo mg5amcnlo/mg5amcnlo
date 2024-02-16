@@ -5853,6 +5853,7 @@ c     Returns the eikonal factor
       !use vectorize
       use fksvariables
       use parton_cms_stuff
+      use c_born_cnt
       implicit none
 
       include "nexternal.inc"

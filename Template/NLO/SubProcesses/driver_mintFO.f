@@ -539,7 +539,8 @@ c PineAPPL
              if (n.ne.i_fks.and.m.ne.i_fks) then
               ! MZ don't skip the case m=n and massless, it won't be used
                call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
-               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = amp_split_soft(1:AMP_SPLIT_SIZE,index)
+               amp_split_store_bsf(1:AMP_SPLIT_SIZE,i,j,index) = 
+     & amp_split_soft(1:AMP_SPLIT_SIZE,index)
              endif
            enddo
          enddo
@@ -550,6 +551,31 @@ c PineAPPL
       ! MZ
 
 !      write(*,*) 'amp_split_born: ', amp_split_store_b(:,:)
+
+      ! if(amp_split_soft(1,1).ne.amp_split_soft(1,2)) then
+      !    write(*,*) "amp_split_s=", amp_split_soft
+      ! endif
+      ! if(amp_split_store_r(2,1).ne.amp_split_store_r(2,2)) then
+      !    write(*,*) "amp_split_r = ", amp_split_store_r
+      ! endif
+      ! !      if(amp_split_store_b(1,1).ne.amp_split_store_b(1,2))
+      ! if(amp_split_store_b(1,1).ne.amp_split_store_b(1,2)) then
+      !       write(*,*) 'amp_split_b: ', amp_split_store_b(:,:)
+      ! endif
+
+      ! if(amp_split_store_cnt(2,1,1,1).ne.amp_split_store_cnt(2,1,1,2)) then
+      !       write(*,*) 'amp_split_cnt(1):', amp_split_store_cnt(2,1,1,1)
+      !       write(*,*) 'amp_split_cnt(2):', amp_split_store_cnt(2,1,1,2)
+      ! endif
+
+!      write(*,*) amp_split_store_bsf(2,1,1,1)
+!      do index=1,2
+!      if(amp_split_store_bsf(2,index,1,1).ne.
+!     $amp_split_store_bsf(2,index,1,2)) then
+!        write(*,*) 'amp_split_bsf(1):',amp_split_store_bsf(2,index,1,1)
+!        write(*,*) 'amp_split_bsf(2):',amp_split_store_bsf(2,index,1,2)
+!      endif
+!      enddo
 
       call reset_c_wgt_ME_tree
 

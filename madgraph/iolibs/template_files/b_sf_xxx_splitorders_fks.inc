@@ -47,6 +47,7 @@ C
 C
 C BEGIN CODE
 C
+      ans(:) = 0d0
 	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS,amp_index)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
@@ -138,6 +139,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      T(:) = 0d0
       iden=iden_values(nfksprocess)
       if (calculatedBorn(amp_index)) then
          do j=1,nexternal-1
@@ -210,8 +212,8 @@ C
       REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
-      SAVE CF, ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP
-!$OMP THREADPRIVATE (CF, ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP)
+      SAVE ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP
+!$OMP THREADPRIVATE (ZTEMP, AMP, JAMP1, JAMP2, TMP_JAMP)
 C  
 C GLOBAL VARIABLES
 C  
