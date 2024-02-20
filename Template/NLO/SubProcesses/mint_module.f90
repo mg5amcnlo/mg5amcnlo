@@ -1053,7 +1053,8 @@ contains
     even_rn=.true.
     min_it=min_it0
     call reset_mint_grids
-    BornSpread(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:3)=0d0
+!    BornSpread(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:3)=0d0
+    BornSpread(:,:,:,:)=0d0
   end subroutine setup_imode_0
 
   subroutine reset_mint_grids
