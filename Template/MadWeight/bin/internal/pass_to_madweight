@@ -51,6 +51,7 @@ mv ./Source/MadWeight ./temp/
 mv ./lib/Pdfdata ./temp/
 
 mv ./SubProcesses/setscales.f ./temp/
+mv ./SubProcesses/dummy_fct.f ./temp/
 
 rm -rf bin/* Cards/* Events HTML Source/* lib/* SubProcesses/*
 mkdir Source/MODEL
@@ -66,6 +67,7 @@ mv ./temp/mod_file.py ./bin/
 mv ./temp/proc_card.dat ./Cards/
 mv ./temp/makefile ./SubProcesses/
 mv ./temp/setscales.f SubProcesses/.
+mv ./temp/dummy_fct.f SubProcesses/.
 mv ./temp/alfas.inc ./Source/alfas.inc
 mv ./temp/make_opts ./Source/
 mv ./temp/PDF ./Source/

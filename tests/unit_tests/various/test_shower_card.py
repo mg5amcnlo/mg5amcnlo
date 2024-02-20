@@ -15,7 +15,9 @@
 from __future__ import absolute_import
 import os
 import sys
+import tempfile
 import tests.unit_tests as unittest
+
 
 import madgraph.various.shower_card as shower_card
 from six.moves import zip
@@ -282,10 +284,19 @@ TAUM_STABLE_PY8=.FALSE.
 MUP_STABLE_PY8=.FALSE.
 MUM_STABLE_PY8=.FALSE.
 B_MASS=-1.000
+QCUT=-1.000
+NJMAX=-1
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
+QED_SHOWER=.TRUE.
+PRIMORDIALKT=.FALSE.
+SPACE_SHOWER_ME_CORRECTIONS=.FALSE.
+TIME_SHOWER_ME_CORRECTIONS=.TRUE.
+TIME_SHOWER_ME_EXTENDED=.FALSE.
+TIME_SHOWER_ME_AFTER_FIRST=.FALSE.
+EXTRA_LINE=""
 """
         text = self.card.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -314,10 +325,19 @@ TAUM_STABLE_PY8=.FALSE.
 MUP_STABLE_PY8=.FALSE.
 MUM_STABLE_PY8=.FALSE.
 B_MASS=-1.000
+QCUT=-1.000
+NJMAX=-1
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
+QED_SHOWER=.TRUE.
+PRIMORDIALKT=.FALSE.
+SPACE_SHOWER_ME_CORRECTIONS=.FALSE.
+TIME_SHOWER_ME_CORRECTIONS=.TRUE.
+TIME_SHOWER_ME_EXTENDED=.FALSE.
+TIME_SHOWER_ME_AFTER_FIRST=.FALSE.
+EXTRA_LINE=""
 """
         text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -537,4 +557,14 @@ PYUTI="mcatnlo_pyan_stdhep.o"
         new_text = old_card.set_param('ue_enabled', '1', write_to=True)
         new_card = shower_card.ShowerCard(new_text, testing=True)
         self.assertTrue(new_card['ue_enabled'])
-        
+    
+    def test_shower_card_write(self):
+
+        #check that the banner can be written    
+        import io    
+        fsock = io.StringIO()
+        self.card.write(fsock)
+        #fsock.close()
+        text = fsock.getvalue()
+        self.assertIn("combine_td   = T # combine the topdrawer files if nsplit_jobs > 1", text)
+        self.assertIn("ANALYSE      =                    # User\'s analysis and histogramming", text)

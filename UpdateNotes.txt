@@ -1,5 +1,18 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+3.5.3 (22/12/23)
+      OM: Include Bug fix from 2.9.18
+      OM: Update inner representation of the shower_card allowing to support any py8 parameter
+
+3.5.2 (08/11/23)
+      MZ: fixing issue for 2>1 processes at NLO accuracy (like p p > Z [QCD])
+          For most compiler, the process was just crashing but some compiler were returning absurdly large cross-section
+      RF: update test at NLO to better include phase-space cut
+      OM: Change restriction model to be less sensitive to numerical accuracy
+      OM: bug fixing from LTS up to 2.9.17 (see below)
+      PT: added options for matrix-element corrections in shower card fot PY8
+      
 3.5.1 (11/07/23)
       SH+OM: Update interface for contur
       OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore
@@ -131,8 +144,31 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+2.9.18 (08/12/23):
+    OM: Fix a bug for processes extremelly close to threshold, where the 
+        the initial grid for some angle was wrongly biased towards \tetha=\pi.
+        In extreme case, the determination of the non-zero helicity was starting to 
+        remove helicity proportional to (1+\cos\theta) since theta was so close to \pi.
+        While the grid bias was corrected after the first iteration, the accidental removal of helicity
+        could lead to a bias in the cross-section. One way to detect if you are impacted by such bug is to 
+        run 5 times with different seed, if the cross-section fluctuates between two values then you are 
+        impacted by such issue.
+    OM: Implement better handling of the phase-space when you have a S-channel breit-wigner but that cut prevent 
+        such resonance to be onshell. (Thanks Sihyun Jeon)
+    OM: Implement better handling of the MMNL cut if the process has exactly two leptons (including neutrino).
+        This improves the phase-space integrator when MMNL is used for putting invariant mass cut on single W production
+    OM: Change the support of the function "cot" within ufo model to have it consistent with UFO convntion. 
+        It might potentially impact old UFO model, please contact us if this is the case    
+    OM: Fix a critical bug when exporting code with two different model where the second model was not correctly imported
+        (likely a python3 only bug)
+    OM: Fixing issue when using cluster_tmp_dir in multicore mode    
+    OM: add a warning concerning the status with python3.12        
 
-2.9.16(11/07/23):
+2.9.17(19/10/23):
+    OM: change integration strategy (SDE=1) for width computation
+    OM: clearer error message in some situation
+
+2.9.16(26/07/23):
      OM: fix for helicity recycling
      OM: Update numpy support to latest version
      OM: Fix some interface issue

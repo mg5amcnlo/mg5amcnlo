@@ -1,4 +1,4 @@
-################################################################################
+#############################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -1803,6 +1803,9 @@ class OrganizeModelExpression:
             depend_on = self.find_dependencies(expr)
             parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
             # Add consistently in the couplings/all_expr
+            if 'aS' in depend_on and 'QCD' not in coupling.order:
+                logger.warning('coupling %s=%s has direct dependence in aS but has QCD order set to 0. Automatic computation of scale uncertainty can be wrong for such model.',
+                               coupling.name, coupling.value)
             try:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
@@ -2053,7 +2056,13 @@ class RestrictModel(model_reader.ModelReader):
             self.get('order_hierarchy')
             self.get('expansion_order')
 
-
+        if os.path.exists(param_card.replace('restrict', 'param')):
+            path = param_card.replace('restrict', 'param')
+            logger.info('default value set as in file %s' % path)
+            self.set_parameters_and_couplings(path,
+                                              complex_mass_scheme=complex_mass_scheme,
+                                              auto_width=self.modify_autowidth)
+                          
 
         
     def locate_coupling(self):
@@ -2094,6 +2103,17 @@ class RestrictModel(model_reader.ModelReader):
         keys.sort()
         for name in keys:
             value = self['coupling_dict'][name]
+
+            def limit_to_6_digit(a):
+                x = a.real
+                if x != 0:
+                    x = round(x, int(abs(round(math.log(abs(x), 10),0))+10))
+                y = a.imag
+                if y !=0:
+                    y = round(y, int(abs(round(math.log(abs(y), 10),0))+10))
+                return complex(x,y)
+            
+
             if value == 0:
                 zero_coupling.append(name)
                 continue
@@ -2105,7 +2125,8 @@ class RestrictModel(model_reader.ModelReader):
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
-            
+            value = limit_to_6_digit(value)
+
             if value in dict_value_coupling or -1*value in dict_value_coupling:
                 if value in dict_value_coupling:
                     iden_key.add(value)
@@ -2332,6 +2353,7 @@ class RestrictModel(model_reader.ModelReader):
         logger_mod.log(self.log_level, ' Fuse the Following coupling (they have the same value): %s '% \
                         ', '.join([str(obj) for obj in couplings]))
 
+        #names = [name for (name,ratio) in couplings if ratio ==1]
         main = couplings[0][0]
         assert couplings[0][1] == 1
         self.del_coup += [c[0] for c in couplings[1:]] # add the other coupl to the suppress list
