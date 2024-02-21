@@ -7330,6 +7330,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 if self.options[key] in ['False', 'True']:
                     self.allow_notification_center = eval(self.options[key])
                     self.options[key] = self.allow_notification_center
+            elif key in ['lhapdf_py3', 'lhapdf_py2']:
+                if self.options[key] not in [None, 'none', 'None']:
+                    # Default: try to set parameter
+                    try:
+                        self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    except MadGraph5Error as error:
+                        print(error)
+                        logger.warning("Option %s from config file not understood" \
+                                    % key)
+                    else:
+                        if key in self.options_madgraph:
+                            self.history.append('set %s %s' % (key, self.options[key]))
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
