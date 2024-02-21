@@ -511,8 +511,15 @@ class UFOMG5Converter(object):
         
         self.ufomodel = model
         self.checked_lor = set()
+        if os.path.exists(pjoin(self.ufomodel.__path__[0], 'pyrate')):
+            all_external = [p for p in self.ufomodel.all_parameters if p.nature == 'external']
+            running_obj = self.ufomodel.object_library.Running(name='def', 
+                                                               run_objects= [all_external],
+                                                               value='external') 
 
-        if hasattr(self.ufomodel, 'all_running_elements'):
+            self.model.set('running_elements', [running_obj])
+
+        elif hasattr(self.ufomodel, 'all_running_elements'):
             misc.sprint("MODEL HAS RUNNING!!")
             self.model.set('running_elements', self.ufomodel.all_running_elements)
         

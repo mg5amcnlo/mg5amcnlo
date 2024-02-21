@@ -2269,8 +2269,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             fsock = open( pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 'r')
             text = fsock.read()
             fsock.close()
+            replace = ''
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+                replace =  '-larmadillo -lstdc++ -lm'
+                replace += ' -l`pkg-config --list-package-names | grep lapack -m1` '
+                replace += ' -l`pkg-config --list-package-names | grep blas -m1` '
+                replace += ' `gsl-config --libs` `gsl-config --cflags`'
+                replace += '-I../../Source/pyrate/Running/inc -I../../Source/pyrate/'
             fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
-            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning')
+            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning %s' % replace)
             text = text.replace('LIBS =', 'LIBS = $(LIBDIR)/librunning.$(libext)')
             fsock.write(text)
             fsock.close()
@@ -2696,9 +2703,20 @@ CF2PY integer, intent(in) :: new_value
 
         # Add file in SubProcesses
         if model['running_elements']:
-            text = open(template,'r').read()
-            text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning ')
-            text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning ')
+            misc.sprint(pjoin(self.model.get('modelpath')))
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+                replace =  '-larmadillo -lstdc++ -lm'
+                replace += ' -l`pkg-config --list-package-names | grep lapack -m1` '
+                replace += ' -l`pkg-config --list-package-names | grep blas -m1` '
+                replace += ' `gsl-config --libs` `gsl-config --cflags`'
+                replace += '-I../../Source/pyrate/Running/inc -I../../Source/pyrate/'
+                text = open(template,'r').read()
+                text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning %s ' % replace)
+                text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning %s' % replace) 
+            else:    
+                text = open(template,'r').read()
+                text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning ')
+                text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning ')
             open(destination, 'w').write(text)
         else:
              shutil.copy(template, destination)
@@ -2868,8 +2886,19 @@ CF2PY integer, intent(in) :: new_value
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
         if model['running_elements']:
-            running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
-            set_of_lib += ' $(LIBDIR)librunning.$(libext) '
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+               misc.sprint(self.output)
+               shutil.copytree(pjoin(self.model.get('modelpath'), 'pyrate'), pjoin(self.dir_path, 'Source', 'Pyrate'))
+               set_of_lib += ' $(LIBDIR)librunning.so '
+               #-larmadillo -lstdc++ -lm'
+               #set_of_lib += ' -l`pkg-config --list-package-names | grep lapack -m1` '
+               #set_of_lib += ' -l`pkg-config --list-package-names | grep blas -m1` '
+               #set_of_lib += ' `gsl-config --libs` `gsl-config --cflags`'
+               #set_of_lib += '-I./pyrate/Running/inc -I./pyrate/'
+               running_line = '''$(LIBDIR)librunning.so: Pyrate\n\t cd Pyrate; make; cp runDiag.so  ../$(LIBDIR)librunning.so\n''' 
+            else:
+                running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
+                set_of_lib += ' $(LIBDIR)librunning.$(libext) '
         else:
             running_line  = '' 
 
@@ -7394,36 +7423,12 @@ class UFO_model_to_mg4(object):
                          """)
         
         if self.model['running_elements']:
-            running_block = self.model.get_running(self.used_running_key) 
-            if running_block:
-                MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
-
-                
-                
-                fsock.write_comments('calculate the running parameter')
-                fsock.writelines(' if(fixed_extra_scale.and.first) then')
-                if self.MUE:
-                    fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
-                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
-                fsock.writelines(' first = .false.') 
-                for i in range(len(running_block)):
-                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
-                fsock.writelines(' elseif(.not.fixed_extra_scale) then')
-                fsock.writelines(' Gother = G')
-                
-                if self.MUE:
-                    fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
-                else:
-                    misc.sprint('NO MUE')
-                    #raise Exception
-                
-                fsock.writelines(' if(mue_over_ref.ne.1d0)then')
-                fsock.writelines('  Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*model_scale))')
-                fsock.writelines(' endif')
-                
-                for i in range(len(running_block)):
-                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
-                fsock.writelines('endif')
+            running_block = self.model.get_running(self.used_running_key)             
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+                self.write_couplings_main_pyrate(fsock)
+            else:
+                self.write_couplings_main_running_eft(fsock)
+            
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -7518,15 +7523,119 @@ class UFO_model_to_mg4(object):
         if self.model['running_elements'] and running_block:
             self.write_running_blocks(fsock, running_block)
     
-    def write_running_ext(self, fsock, running_block):
+
+    def write_couplings_main_running_eft(self, fsock): 
+        running_block = self.model.get_running(self.used_running_key) 
+
+        if not running_block:
+            return
+
+        MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+
+        fsock.write_comments('calculate the running parameter')
+        fsock.writelines(' if(fixed_extra_scale.and.first) then')
+        if self.MUE:
+            fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
+        fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
+        fsock.writelines(' first = .false.') 
+        for i in range(len(running_block)):
+            fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+        fsock.writelines(' elseif(.not.fixed_extra_scale) then')
+        fsock.writelines(' Gother = G')
+        
+        if self.MUE:
+            fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
+        else:
+            misc.sprint('NO MUE')
+            #raise Exception
+        
+        fsock.writelines(' if(mue_over_ref.ne.1d0)then')
+        fsock.writelines('  Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*model_scale))')
+        fsock.writelines(' endif')
+        
+        for i in range(len(running_block)):
+            fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+        fsock.writelines('endif')
+
+    def write_couplings_main_pyrate(self, fsock): 
+        running_block = self.model.get_running(self.used_running_key) 
+
+        if not running_block:
+            return 
+
+        fsock.write_comments('calculate the running parameter')
+        fsock.writelines(' if(fixed_extra_scale.and.first) then')
+        if self.MUE:
+            fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
+        #fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
+        fsock.writelines(' first = .false.') 
+        fsock.writelines(" call PYRATE_RUNNING(mue_ref_fixed) ! all \n" ) 
+        fsock.writelines(' elseif(.not.fixed_extra_scale) then')
+        fsock.writelines(" call PYRATE_RUNNING(mue_over_ref*model_scale) ! all \n" ) 
+        if self.MUE:
+            fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
+        else:
+            misc.sprint('NO MUE')
+            #raise Exception  
+        fsock.writelines('endif')
+
+    def write_running_pyrate(self, fsock, running_block):
         """ """
-        fsock.writelines('C TO ADD')
+
+        template_running_pyrate = \
+        """
+        SUBROUTINE %(mp)sPYRATE_RUNNING(MU)
+        IMPLICIT NONE
+        DOUBLE PRECISION PI, MU
+        PARAMETER  (PI=3.141592653589793D0)
+        include 'input.inc'
+        include 'coupl.inc'
+        
+        DOUBLE PRECISION MDL_G
+
+        Double Precision INPUT(%(nb)i), OUTPUT(%(nb)i)
+        LOGICAL FIRST
+        data first /.true./
+        SAVE INPUT, FIRST
+        
+        IF (FIRST) THEN
+           MDL_G = G
+           FIRST = .FALSE.
+           %(param_initialization)s
+        ENDIF
+        ! (double* externals, double* res, double* t0, double* t1, double* step);
+        ! step to zero is splitting the gap in 15
+        call eParamRunning(INPUT, OUTPUT, LOG10(mdl__%(scale)s__scale), LOG10(MU), 0)
+        %(param_assign)s
+
+        return 
+        end
+        """
+
+        running = running_block[0] # this is an ordered set
+        if not isinstance(running, misc.OrderedSet):
+            raise Exception("ordering need to be preserved!")
+        
+        #init_template = "      INPUT(%i) = %s\n"
+        param_init = []
+        param_assign = []
+        for i, param in enumerate(running):
+
+            param_init.append("      INPUT(%i) = MDL_%s" % (i+1, param))
+            param_assign.append("      MDL_%s = OUTPUT(%i) " %(param, i+1))
+        info_pyrate = {'mp': '',
+                       'nb' : len(running),
+                       'param_initialization': '\n'.join(param_init),
+                       'scale': self.model["running_elements"][0].run_objects[0][0].lhablock,
+                       'param_assign': '\n'.join(param_assign)}
+
+        fsock.writelines(template_running_pyrate % info_pyrate)
         return
     
     def write_running_blocks(self, fsock, running_block):
         
-        if os.path.exists(pjoin(self.model.get('modelpath'), 'Running')):
-            return self.write_running_ext(fsock, running_block)
+        if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+            return self.write_running_pyrate(fsock, running_block)
 
         for block_nb, runparams in enumerate(running_block):
             text = self.write_one_running_block(block_nb, runparams)
