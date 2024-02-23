@@ -2270,14 +2270,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             text = fsock.read()
             fsock.close()
             replace = ''
-            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
-                replace =  '-larmadillo -lstdc++ -lm'
-                replace += ' -l`pkg-config --list-package-names | grep lapack -m1` '
-                replace += ' -l`pkg-config --list-package-names | grep blas -m1` '
-                replace += ' `gsl-config --libs` `gsl-config --cflags`'
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
+                replace =  '-larmadillo -lstdc++ -lm '
+                replace += ' `gsl-config --libs` '
                 replace += '-I../../Source/pyrate/Running/inc -I../../Source/pyrate/'
             fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
-            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning %s' % replace)
+            text = text.replace('-lmodel', '-lmodel -lrunning %s' % replace)
             text = text.replace('LIBS =', 'LIBS = $(LIBDIR)/librunning.$(libext)')
             fsock.write(text)
             fsock.close()
@@ -2704,11 +2702,9 @@ CF2PY integer, intent(in) :: new_value
         # Add file in SubProcesses
         if model['running_elements']:
             misc.sprint(pjoin(self.model.get('modelpath')))
-            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
-                replace =  '-larmadillo -lstdc++ -lm'
-                replace += ' -l`pkg-config --list-package-names | grep lapack -m1` '
-                replace += ' -l`pkg-config --list-package-names | grep blas -m1` '
-                replace += ' `gsl-config --libs` `gsl-config --cflags`'
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
+                replace =  '-larmadillo -lstdc++  '
+                replace += ' `gsl-config --libs` '
                 replace += '-I../../Source/pyrate/Running/inc -I../../Source/pyrate/'
                 text = open(template,'r').read()
                 text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning %s ' % replace)
@@ -2886,16 +2882,16 @@ CF2PY integer, intent(in) :: new_value
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
         if model['running_elements']:
-            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp','PyRATE')):
                misc.sprint(self.output)
-               shutil.copytree(pjoin(self.model.get('modelpath'), 'pyrate'), pjoin(self.dir_path, 'Source', 'Pyrate'))
-               set_of_lib += ' $(LIBDIR)librunning.so '
+               shutil.copytree(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE'), pjoin(self.dir_path, 'Source', 'Pyrate'))
+               set_of_lib += ' $(LIBDIR)librunning.a '
                #-larmadillo -lstdc++ -lm'
                #set_of_lib += ' -l`pkg-config --list-package-names | grep lapack -m1` '
                #set_of_lib += ' -l`pkg-config --list-package-names | grep blas -m1` '
                #set_of_lib += ' `gsl-config --libs` `gsl-config --cflags`'
                #set_of_lib += '-I./pyrate/Running/inc -I./pyrate/'
-               running_line = '''$(LIBDIR)librunning.so: Pyrate\n\t cd Pyrate; make; cp runDiag.so  ../$(LIBDIR)librunning.so\n''' 
+               running_line = '''$(LIBDIR)librunning.a: Pyrate\n\t cd Pyrate; make; cp lib/librunning.a  ../$(LIBDIR)librunning.a\n''' 
             else:
                 running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
                 set_of_lib += ' $(LIBDIR)librunning.$(libext) '
@@ -7417,18 +7413,18 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
+        
+        if self.model['running_elements']:
+            running_block = self.model.get_running(self.used_running_key)             
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
+                self.write_couplings_main_pyrate(fsock)
+            else:
+                self.write_couplings_main_running_eft(fsock)
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
                             
                          """)
-        
-        if self.model['running_elements']:
-            running_block = self.model.get_running(self.used_running_key)             
-            if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
-                self.write_couplings_main_pyrate(fsock)
-            else:
-                self.write_couplings_main_running_eft(fsock)
-            
+
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -7578,6 +7574,7 @@ class UFO_model_to_mg4(object):
             misc.sprint('NO MUE')
             #raise Exception  
         fsock.writelines('endif')
+        fsock.writelines('  READLHA = .true.')
 
     def write_running_pyrate(self, fsock, running_block):
         """ """
@@ -7634,7 +7631,7 @@ class UFO_model_to_mg4(object):
     
     def write_running_blocks(self, fsock, running_block):
         
-        if os.path.exists(pjoin(self.model.get('modelpath'), 'pyrate')):
+        if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
             return self.write_running_pyrate(fsock, running_block)
 
         for block_nb, runparams in enumerate(running_block):
