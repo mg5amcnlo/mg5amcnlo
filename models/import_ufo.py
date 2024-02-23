@@ -519,6 +519,7 @@ class UFOMG5Converter(object):
                                                                value='external') 
 
             self.model.set('running_elements', [running_obj])
+            self.ufomodel.all_running_elements = [running_obj]
 
         elif hasattr(self.ufomodel, 'all_running_elements'):
             misc.sprint("MODEL HAS RUNNING!!")
