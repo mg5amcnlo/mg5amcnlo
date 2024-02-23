@@ -147,7 +147,13 @@ c
       split = (1.d0-x) / x
       xxlog = 1.d0
       tmpXLP = 1.0d0
-      tmpNLP = mv2/(2.d0*x*x*ebeam*ebeam) - mv2/mu2
+      tmpNLP = mv2/(2.d0*x*x*ebeam*ebeam)
+      if(ievo.eq.0) then
+            tmpNLP = tmpNLP - mv2/mu2
+      else
+            tmpNLP = tmpNLP - mv2*(1.d0-x)/mu2
+      endif
+      
       
       evaNLP_fL_to_v0 = coup2*split*xxlog *(tmpXLP + tmpNLP)
       return
