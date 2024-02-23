@@ -7574,7 +7574,6 @@ class UFO_model_to_mg4(object):
             misc.sprint('NO MUE')
             #raise Exception  
         fsock.writelines('endif')
-        fsock.writelines('  READLHA = .true.')
 
     def write_running_pyrate(self, fsock, running_block):
         """ """

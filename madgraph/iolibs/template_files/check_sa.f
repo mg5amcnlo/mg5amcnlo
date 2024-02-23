@@ -36,7 +36,13 @@ C     EXTERNAL
 C     
       REAL*8 DOT
       EXTERNAL DOT
-      
+c
+c     MODEL SCALE is the scale for the running of the parameter
+c     Note that this is used only for some specific model
+c     Most model does not have any running implemented      
+c      
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE 
 C-----
 C     BEGIN CODE
 C-----
@@ -70,6 +76,9 @@ c
             SQRTS = 2.0d0*TOTALMASS
          ENDIF
       ENDIF
+
+      MODEL_SCALE = SQRTS
+      call update_as_param()
 
       call printout()
 
