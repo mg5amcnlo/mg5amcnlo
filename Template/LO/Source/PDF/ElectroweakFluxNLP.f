@@ -88,21 +88,24 @@ c     EVA (1/6) for f_L > v_+
       implicit none
       integer ievo              ! evolution by q2 or pT2
       double precision gg2,gL2,mv2,x,mu2,ebeam
-      double precision coup2,split,xxlog,fourPiSq
-      double precision tmpNLP
+      double precision coup2,split,xxlog,fourPiSq,omzsq
+      double precision tmpXLP,tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
 
 c      print*,'gg2,gL2,mv2,x,mu2,ievo',gg2 !3,gL2,mv2,x,mu2,ievo
       coup2 = gg2*gL2/fourPiSq
-      split = (1.d0-x)**2 / 2.d0 / x
+      omzsq = (1.d0-x)**2 ! omzeq = one minus z -- squared
+      split =  omzsq / 2.d0 / x
       if(ievo.eq.0) then
          xxlog = dlog(mu2/mv2)
       else
          xxlog = dlog(mu2/mv2/(1.d0-x))
       endif
-      tmpNLP = 2.d0
+      tmpXLP = xxlog - 1.0d0
+      tmpNLP = (3.d0 + omzsq) / (12.0d0 * omzsq)
+      tmpNLP = - tmpNLP * mu2 / (x*x*ebeam*ebeam)
       
-      evaNLP_fL_to_vp = coup2*split*xxlog * tmpNLP
+      evaNLP_fL_to_vp = coup2*split*(tmpXLP + tmpNLP)
       return
       end
 c     /* ********************************************************* *
@@ -111,20 +114,23 @@ c     EVA (2/6) for f_L > v_-
       implicit none
       integer ievo              ! evolution by q2 or pT2
       double precision gg2,gL2,mv2,x,mu2,ebeam
-      double precision coup2,split,xxlog,fourPiSq
-      double precision tmpNLP
+      double precision coup2,split,xxlog,fourPiSq,omzsq
+      double precision tmpXLP,tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
       
       coup2 = gg2*gL2/fourPiSq
+      omzsq = (1.d0-x)**2 ! omzeq = one minus z -- squared
       split = 1.d0 / 2.d0 / x
       if(ievo.eq.0) then
          xxlog = dlog(mu2/mv2)
       else
          xxlog = dlog(mu2/mv2/(1.d0-x))
       endif
-      tmpNLP = 2.d0
+      tmpXLP = xxlog - 1.0d0
+      tmpNLP = (1.d0 + 3.d0*omzsq) / (12.0d0 * omzsq)
+      tmpNLP = - tmpNLP * mu2 / (x*x*ebeam*ebeam)
 
-      evaNLP_fL_to_vm = coup2*split*xxlog * tmpNLP
+      evaNLP_fL_to_vm = coup2*split*(tmpXLP + tmpNLP)
       return
       end
 c     /* ********************************************************* *
@@ -134,15 +140,16 @@ c     EVA (3/6) for f_L > v_0
       integer ievo              ! evolution by q2 or pT2
       double precision gg2,gL2,mv2,x,mu2,ebeam
       double precision coup2,split,xxlog,fourPiSq
-      double precision tmpNLP
+      double precision tmpXLP,tmpNLP
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
 c
       coup2 = gg2*gL2/fourPiSq
       split = (1.d0-x) / x
       xxlog = 1.d0
-      tmpNLP = mv2/(2.d0*x*x*ebeam*ebeam)
+      tmpXLP = 1.0d0
+      tmpNLP = mv2/(2.d0*x*x*ebeam*ebeam) - mv2/mu2
       
-      evaNLP_fL_to_v0 = coup2*split*xxlog *(1.0d0 + tmpNLP)
+      evaNLP_fL_to_v0 = coup2*split*xxlog *(tmpXLP + tmpNLP)
       return
       end
 c     /* ********************************************************* *
