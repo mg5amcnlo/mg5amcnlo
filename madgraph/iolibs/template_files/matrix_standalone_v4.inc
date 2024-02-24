@@ -7,8 +7,8 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
-CF2PY INTENT(OUT) :: ANS                                                                                                                                                                                     
-CF2PY INTENT(IN) :: HEL                                                                                                                                                                                    
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) ::HEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)  
 
 C  
@@ -194,7 +194,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      REAL*8 %(proc_prefix)sCF(NCOLOR,NCOLOR)
+      common /color_matrix/ %(proc_prefix)sCF
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -213,7 +214,7 @@ C BEGIN CODE
 C ----------
       call %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
       call %(proc_prefix)sGET_JAMP(AMP,JAMP)
-      call %(proc_prefix)sGET_MATRIX(JAMP,CF,%(proc_prefix)sMATRIX)
+      call %(proc_prefix)sGET_MATRIX(JAMP,%(proc_prefix)sMATRIX)
 
 %(amp2_lines)s
 
@@ -304,7 +305,7 @@ C
 %(jamp_lines)s
       END
 
-      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,CF,MATRIX) 
+      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,MATRIX) 
 C  
 %(process_lines)s
 C  
@@ -326,7 +327,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      REAL*8 %(proc_prefix)sCF(NCOLOR,NCOLOR)
+      COMMON /color_matrix/ %(proc_prefix)sCF
       COMPLEX*16 JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -335,19 +337,19 @@ C
 C COLOR DATA
 C  
 
-      %(proc_prefix)sMATRIX = 0.D0 
+      MATRIX = 0.D0 
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          ZTEMP = ZTEMP + %(proc_prefix)sCF(J,I)*JAMP(J)
         ENDDO
-        %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))
       ENDDO
       END
 
 
 
-      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2,CF, INTER)
+      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2, INTER)
 
 CF2PY INTENT(OUT) :: INTER   
 CF2PY INTENT(IN) :: JAMP_1
@@ -356,7 +358,8 @@ CF2PY INTENT(IN) :: JAMP_2
       INTEGER I,J
       INTEGER NCOLOR 
       PARAMETER (NCOLOR=%(ncolor)d)
-      REAL*8 CF(NCOLOR,NCOLOR)
+      REAL*8 %(proc_prefix)sCF(NCOLOR,NCOLOR)
+      COMMON /color_matrix/ %(proc_prefix)sCF 
       COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),ZTEMP,INTER
 
 C COLOR DATA
@@ -366,7 +369,7 @@ C
       DO I = 1, NCOLOR 
         ZTEMP = DCONJG(JAMP_2(I))
 	DO J=1, NCOLOR
-          INTER = INTER + CF(J,I) * JAMP_1(J) * ZTEMP 
+          INTER = INTER + %(proc_prefix)sCF(J,I) * JAMP_1(J) * ZTEMP 
         ENDDO 
       ENDDO
 

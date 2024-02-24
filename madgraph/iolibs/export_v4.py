@@ -1131,7 +1131,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+            return ["DATA Denom(1)/1/", "DATA (%(proc_prefix)sCF(i,1),i=1,1) /1/"]
         else:
             ret_list = []
             my_cs = color.ColorString()
@@ -1147,7 +1147,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 assert all([int(i)==i for i in num_list])
 
                 for k in range(0, len(num_list), n):
-                    ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
+                    ret_list.append("DATA (%%(proc_prefix)sCF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
                                      ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
                 
@@ -2964,7 +2964,7 @@ CF2PY integer, intent(in) :: new_value
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         if self.opt['export_format']=='standalone_msP':
         # For MadSpin need to return the AMP2
@@ -3709,7 +3709,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -4700,7 +4700,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
 
         # Set the size of Wavefunction

@@ -2028,7 +2028,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': ''}
 
         if self.opt['export_format']=='standalone_msP':
         # For MadSpin need to return the AMP2
@@ -2609,7 +2609,7 @@ Parameters              %(params)s\n\
     
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': ''}
     
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -2710,7 +2710,7 @@ Parameters              %(params)s\n\
     
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': ''}
    
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
@@ -2860,7 +2860,7 @@ Parameters              %(params)s\n\
         # Extract color data lines
         color_data_lines = self.get_color_data_lines_from_color_matrix(\
                                 link['link_matrix'])
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': ''}
     
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)

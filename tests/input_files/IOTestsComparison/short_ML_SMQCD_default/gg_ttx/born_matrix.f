@@ -8,7 +8,7 @@ C
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
 CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) ::HEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 
 C     
@@ -222,7 +222,8 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      REAL*8 ML5_0_CF(NCOLOR,NCOLOR)
+      COMMON /COLOR_MATRIX/ ML5_0_CF
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(0)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -232,18 +233,100 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'coupl.inc'
 
-C     
 C     COLOR DATA
-C     
-      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
+      DATA (ML5_0_CF(I,  1),I=  1,  2) /5.333333333333333D+00,
      $ -6.666666666666666D-01/
 C     1 T(1,2,3,4)
-      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+      DATA (ML5_0_CF(I,  2),I=  1,  2) /-6.666666666666666D-01
      $ ,5.333333333333333D+00/
 C     1 T(2,1,3,4)
+C     
+C     
 C     ----------
 C     BEGIN CODE
 C     ----------
+      CALL ML5_0_GET_AMP(P,NHEL,IC,AMP)
+      CALL ML5_0_GET_JAMP(AMP,JAMP)
+      CALL ML5_0_GET_MATRIX(JAMP,ML5_0_MATRIX)
+
+
+
+      END
+
+      SUBROUTINE ML5_0_GET_NHEL(IDEN_STAR,NHEL_STAR)
+C     CONSTANTS
+C     
+CF2PY INTENT(OUT) :: NHEL_STAR
+CF2PY INTENT(OUT) :: IDEN_STAR
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+
+      INTEGER NHEL(NEXTERNAL,NCOMB),NHEL_STAR(NEXTERNAL,NCOMB)
+      INTEGER IDEN,IDEN_STAR
+
+      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1, 1/
+      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1,-1/
+      DATA IDEN/256/
+      IDEN_STAR = IDEN
+      NHEL_STAR = NHEL
+      END
+
+      SUBROUTINE ML5_0_GET_AMP(P,NHEL,IC,AMP)
+C     
+C     Process: g g > t t~ QCD<=2 QED=0 [ virt = QCD ]
+C     
+CF2PY INTENT(OUT) :: AMP
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: IC
+
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=3)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=5, NCOLOR=2)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C     
+C     LOCAL VARIABLES 
+C     
+      COMPLEX*16 AMP(NGRAPHS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'coupl.inc'
+
+C     
+C     
       CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
       CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))
@@ -257,21 +340,104 @@ C     Amplitude(s) for diagram number 2
       CALL FFV1_2(W(1,4),W(1,1),GC_5,MDL_MT,MDL_WT,W(1,5))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_5,AMP(3))
+
+      END
+
+      SUBROUTINE ML5_0_GET_JAMP(AMP,JAMP)
+C     
+C     Process: g g > t t~ QCD<=2 QED=0 [ virt = QCD ]
+C     
+CF2PY INTENT(OUT) :: JAMP
+CF2PY INTENT(IN) :: AMP
+
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=3)
+      INTEGER    NCOLOR
+      PARAMETER ( NCOLOR=2)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(0)
+
       JAMP(1) = ((0.000000000000000D+00,1.000000000000000D+00))*AMP(1)
      $ +(-1.000000000000000D+00)*AMP(2)
       JAMP(2) = ((0.000000000000000D+00,-1.000000000000000D+00))*AMP(1)
      $ +(-1.000000000000000D+00)*AMP(3)
+      END
 
-      ML5_0_MATRIX = 0.D0
+      SUBROUTINE ML5_0_GET_MATRIX(JAMP,MATRIX)
+C     
+C     Process: g g > t t~ QCD<=2 QED=0 [ virt = QCD ]
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+CF2PY INTENT(OUT) :: MATRIX
+CF2PY INTENT(IN) :: JAMP
+
+
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=2)
+      REAL*8     ZERO,MATRIX
+      PARAMETER (ZERO=0D0)
+C     
+
+C     LOCAL VARIABLES 
+C     
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 ML5_0_CF(NCOLOR,NCOLOR)
+      COMMON /COLOR_MATRIX/ ML5_0_CF
+      COMPLEX*16 JAMP(NCOLOR), TMP_JAMP(0)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+C     
+
+C     COLOR DATA
+C     
+
+      MATRIX = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          ZTEMP = ZTEMP + ML5_0_CF(J,I)*JAMP(J)
         ENDDO
-        ML5_0_MATRIX = ML5_0_MATRIX+ZTEMP*DCONJG(JAMP(I))
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))
+      ENDDO
+      END
+
+
+
+      SUBROUTINE ML5_0_GET_INTER(JAMP_1,JAMP_2, INTER)
+
+CF2PY INTENT(OUT) :: INTER
+CF2PY INTENT(IN) :: JAMP_1
+CF2PY INTENT(IN) :: JAMP_2
+
+      INTEGER I,J
+      INTEGER NCOLOR
+      PARAMETER (NCOLOR=2)
+      REAL*8 ML5_0_CF(NCOLOR,NCOLOR)
+      COMMON /COLOR_MATRIX/ ML5_0_CF
+      COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),ZTEMP,INTER
+
+C     COLOR DATA
+C     
+
+      INTER = (0.D0,0.D0)
+      DO I = 1, NCOLOR
+        ZTEMP = DCONJG(JAMP_2(I))
+        DO J=1, NCOLOR
+          INTER = INTER + ML5_0_CF(J,I) * JAMP_1(J) * ZTEMP
+        ENDDO
       ENDDO
 
       END
+
 
       SUBROUTINE ML5_0_GET_VALUE(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE
