@@ -66,6 +66,18 @@
  %(ebeam1)s   = ebeam1  ! beam 1 energy in GeV
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
+# Choice of the collision system:
+#    True/False = asymmetric / symmetric
+#  
+# Works only with:
+#       lhapdf = pdlabel
+#	    and
+#    reweight_scale = True
+#	  or/and
+#     reweight_PDF  = True
+#***********************************************************************
+ %(asymm_choice)s = asymm_choice ! choice of the regime 
+#***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
  %(pdlabel)s = pdlabel ! PDF set

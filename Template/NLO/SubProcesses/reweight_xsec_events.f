@@ -23,6 +23,7 @@ c Compile with makefile_rwgt
       character*1000 buff
 c Parameters
       integer    izero
+      integer    l,jmax   !<<varibles for the pA hadronization<<<<<<<AntonS.
       parameter (izero=0)
 c Common blocks
       character*7         pdlabel,epa_label
@@ -244,9 +245,28 @@ c as XWGTUP
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
-                  do n=0,nmemPDF(nn)
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.               
+                 if (nn.eq.1) then    
+                        jmax=1
+                 else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                        jmax=3
+                 else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                        jmax=1
+                 endif
+                                   
+                 do n=0,nmemPDF(nn)
+                  do l=1,jmax
+                    if (l==1) then !pp
                      wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)/wgtref*XWGTUP
+                    else if (l==2) then !pA
+                     wgtxsecPDF1(n,nn)=wgtxsecPDF1(n,nn)/wgtref*XWGTUP
+                    else if (l==3) then !Ap
+                     wgtxsecPDF2(n,nn)=wgtxsecPDF2(n,nn)/wgtref*XWGTUP
+                    endif
                   enddo
+                 enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                 
+                 
                else
                   wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
                endif
@@ -499,7 +519,7 @@ c add the weights to the array
       return
       end
 
-      
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS      
       subroutine reweight_pdf_ext
       use weight_lines
       use extra_weights
@@ -507,19 +527,47 @@ c add the weights to the array
       include 'nexternal.inc'
       include 'run.inc'
       integer i,pd,lp,iwgt_save,izero,n,nn,iset,imem
+      integer j,jmax,counter  !<<<<<< needed couters for the pA case 
       parameter (izero=0)
       double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
      &     ,xlum,alphas,g,pi
+     
+      double precision, allocatable :: f1_pp(:),f2_pp(:)  !<<<<<allocatable arrays for the new cross sections
+      DOUBLE PRECISION xlum_mod1,xlum_mod2   !<<<<<< additional helpfull arrays 
+     
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
       do nn=1,lhaPDFid(0)
+      
+       if (nn.eq.1) then    
+           jmax=1
+       else if (asymm_choice.eqv..true.) then
+           jmax=3
+       else if (asymm_choice.eqv..false.) then
+           jmax=1
+       endif
+       
          do n=0,nmemPDF(nn)
             if ((.not. lpdfvar(nn)) .and. n.ne.0) exit
-            iwgt=iwgt+1
+            
+            iwgt=iwgt+jmax
+            counter = iwgt
+
             call weight_lines_allocated(nexternal,max_contr,iwgt
      $           ,max_iproc)
             call InitPDFm(nn,n)
-            do i=1,icontr
+            
+            if (jmax==3) then
+            iwgt=iwgt-2
+            endif
+            
+            if (nn.EQ.1 .and.n.EQ.0.and.asymm_choice.eqv..true.) then
+            allocate(f1_pp(icontr))
+            allocate(f2_pp(icontr))
+            endif
+            
+
+            do i=1,icontr            
                mu2_q=scales2(1,i)
                mu2_r=scales2(2,i)
                mu2_f=scales2(3,i)
@@ -527,29 +575,94 @@ c alpha_s
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c call the PDFs
                xlum=1d0
+               xlum_mod1=1d0
+               xlum_mod2=1d0
+  
                LP=SIGN(1,LPP(1))
                pd=pdg(1,i)
                if (pd.eq.21) pd=0
+
+               if (nn.EQ.1.and.n.EQ.0.and.asymm_choice.eqv..true.) then
+                      f1_pp(i)=1d0
+                      f1_pp(i)=f1_pp(i)*
+     &            PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
+               endif         
+     
                xlum=xlum*
      &            PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
+     
+               xlum_mod1=xlum_mod1*
+     &            PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
+     
+
                LP=SIGN(1,LPP(2))
                pd=pdg(2,i)
                if (pd.eq.21) pd=0
                xlum=xlum*
      &             PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
 c add the weights to the array
+
+               if (nn.EQ.1.and.n.EQ.0.and.asymm_choice.eqv..true.) then
+                      f2_pp(i)=1d0
+                      f2_pp(i)=f2_pp(i)*
+     &             PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
+               endif
+               
+               xlum_mod2=xlum_mod2*
+     &             PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
+
+               
+               
+              do j=1,jmax              
+                if (j==1) then!
+
                wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
      &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
+     
+                else if (j==2) then
+              iwgt=iwgt+1
+
+              
+              xlum_mod2=xlum_mod2*f1_pp(i)
+        wgts(iwgt,i)=xlum_mod2*(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+              wgts(iwgt,i)=wgts(iwgt,i)
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
+              
+                else if (j==3) then
+              iwgt=iwgt+1
+
+              xlum_mod1=xlum_mod1*f2_pp(i)
+        wgts(iwgt,i)=xlum_mod1*(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+              wgts(iwgt,i)=wgts(iwgt,i)
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
+     
+                endif
+              enddo
+              
+              if (jmax.eq.3.and.icontr.gt.1) then
+              iwgt=iwgt-2
+              endif 
+     
             enddo
+            
+            if (iwgt.ne.counter) then
+            iwgt=counter
+            endif
          enddo
       enddo
 c reset to the 0th member of the 1st set
       call InitPDFm(1,0)
+      if (asymm_choice.eqv..true.) then
+      deallocate(f1_pp)
+      deallocate(f2_pp)
+      endif
       return
       end
-      
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS      
 
       subroutine fill_rwgt_arrays
       use weight_lines
@@ -558,6 +671,7 @@ c reset to the 0th member of the 1st set
       include 'nexternal.inc'
       include 'run.inc'
       integer ii,jj,kk,oo,nn,n,iw,i
+      integer j,jmax  !<<<<<<<<<<<<<<<<varibles for the pA hadronization<<<<<AntonS.
       integer orderstag_this
       integer n_orderstags
       integer orderstags_glob(maxorders)
@@ -610,10 +724,30 @@ c reset to the 0th member of the 1st set
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.               
+                if (nn.eq.1) then    
+                    jmax=1
+                else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                    jmax=3
+                else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                    jmax=1
+                endif
+                
                   do n=0,nmemPDF(nn)
+                   do j=1,jmax
+                     if (j==1) then !pp
                      wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)+wgts(iw,i)
                      iw=iw+1
+                     else if (j==2) then !pA
+                     wgtxsecPDF1(n,nn)=wgtxsecPDF1(n,nn)+wgts(iw,i)
+                     iw=iw+1
+                     else if (j==3) then !Ap
+                     wgtxsecPDF2(n,nn)=wgtxsecPDF2(n,nn)+wgts(iw,i)
+                     iw=iw+1
+                     endif
+                   enddo
                   enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                else
                   wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
                   iw=iw+1

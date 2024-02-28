@@ -686,6 +686,7 @@ c
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*1000 buff
       integer ifile,i,kk,oo
+      integer l,jmax !<<<<<variables for the pA hadronization AntonS.
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -827,13 +828,36 @@ c
                      enddo
                   enddo
                endif
-               if (do_rwgt_pdf) then
+                if (do_rwgt_pdf) then
                   do j=1,lhaPDFid(0)
                      if (lpdfvar(j)) then
-                        do i=0,nmemPDF(j)
-                           idwgt=idwgt+1
-                           write(ifile,601) "   <wgt id='",idwgt,"'>"
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+                        if (j.eq.1) then    
+                            jmax=1
+                        else if (j.ne.1.and.asymm_choice.eqv..true.) then
+                            jmax=3
+                        else if (j.ne.1.and.asymm_choice.eqv..false.) then
+                            jmax=1
+                        endif
+                        
+                        do l=1,jmax
+                          do i=0,nmemPDF(j)
+
+                            if (l==1) then !pp
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
      $                          ,wgtxsecPDF(i,j)," </wgt>"
+                            else if (l==2) then !pA
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF1(i,j)," </wgt>"
+                            else if (l==3) then !pA
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF2(i,j)," </wgt>"
+                            endif
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                            
+                          enddo
                         enddo
                      else
                         idwgt=idwgt+1
@@ -916,6 +940,7 @@ c
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
+      integer l,jmax !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< varibles for the pA hadronization<<<AntonS.
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_i_process/i_process
@@ -1021,10 +1046,32 @@ c
                if (do_rwgt_pdf) then
                   do j=1,lhaPDFid(0)
                      if (lpdfvar(j)) then
-                        do i=0,nmemPDF(j)
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                                          
+                        if (j.eq.1) then    
+                            jmax=1
+                        else if (j.ne.1.and.asymm_choice.eqv..true.) then
+                            jmax=3
+                        else if (j.ne.1.and.asymm_choice.eqv..false.) then
+                            jmax=1
+                        endif
+                        
+                        do l=1,jmax
+                          do i=0,nmemPDF(j)
+
+                           if (l==1) then !pp
                            call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i
      $                          ,j))
+                           else if (l==2) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF1(i
+     $                          ,j))
+                           else if (l==3) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF2(i
+     $                          ,j))
+                           endif
+                           
+                          enddo
                         enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                        
                      else
                         call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
                      endif

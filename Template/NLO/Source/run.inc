@@ -102,3 +102,10 @@ C stuff for alpha running in lepton collisions
       common /to_afromee/ photons_from_lepton
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       common /to_has_bs/ has_bstrahl
+      
+      
+c
+c     Asym.system-choice
+c
+      logical    asymm_choice                                    
+      common/asymm_flag/ asymm_choice

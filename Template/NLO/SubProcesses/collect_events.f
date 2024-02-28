@@ -222,6 +222,7 @@ c
      # mx_of_evt(80),i0,i,j,jj,kk,n,nn
       double precision evwgt,evwgt_sign
       integer ione
+      integer l,jmax !<<<<<< varibles for the pA hadronization #AntonS.   
       parameter (ione=1)
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -446,10 +447,37 @@ c reweighting
            endif
            if (do_rwgt_pdf) then
               do nn=1,lhaPDFid(0)
-                 if (lpdfvar(nn)) then
-                    do n=0,nmemPDF(nn)
-                       wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)*evwgt_sign/XWGTUP
-                    enddo
+                if (lpdfvar(nn)) then
+                
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+                if (nn.eq.1) then    
+                        jmax=1
+                  else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                        jmax=3
+                  else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                        jmax=1
+                endif
+                    
+                    
+                do l=1,jmax
+                  do n=0,nmemPDF(nn)
+
+                  if (l==1) then !pp
+
+                  wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)*evwgt_sign/XWGTUP
+
+                  else if (l==2) then !pA
+
+                  wgtxsecPDF1(n,nn)=wgtxsecPDF1(n,nn)*evwgt_sign/XWGTUP
+
+                  else if (l==3) then !pA
+
+                  wgtxsecPDF2(n,nn)=wgtxsecPDF2(n,nn)*evwgt_sign/XWGTUP
+
+                  endif
+                  enddo
+                enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                  else
                     wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)*evwgt_sign/XWGTUP
                  endif

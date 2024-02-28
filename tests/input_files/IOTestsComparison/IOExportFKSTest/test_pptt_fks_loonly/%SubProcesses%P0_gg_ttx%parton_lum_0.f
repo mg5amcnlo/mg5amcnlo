@@ -44,6 +44,11 @@ C
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
+
+      INTEGER             IPROS, IPROSS
+      DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)
+      COMMON /PDFVALUES/ PD1, PD2
+
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
       INTEGER IMIRROR
@@ -92,6 +97,18 @@ C
       IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
      $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
      $ =EE_COMP_PROD(G1_COMPONENTS,G2_COMPONENTS)
+
+      PD2(0) = 0D0
+      IPROS = 0
+
+      IPROS=IPROS+1  ! g g > t t~
+      PD2(IPROS) = G2
+
+      PD1(0) = 0D0
+      IPROSS = 0
+
+      IPROSS=IPROSS+1  ! g g > t t~
+      PD1(IPROSS) = G1
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

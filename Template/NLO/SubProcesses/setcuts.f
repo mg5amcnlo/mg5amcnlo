@@ -416,7 +416,11 @@ c                    assume smin apply always on the same set of particle
                endif
                xw(i)=0d0
             enddo
-            stot = 4d0*ebeam(1)*ebeam(2)
+            if (ebeam(1).le.0.938.or.ebeam(2).le.0.938) then 
+                stot=2d0*ebeam(1)*ebeam(2)
+            else 
+                stot=4d0*ebeam(1)*ebeam(2)
+            endif
             tau_Born_lower_bound=taumin(iFKS,ichan)**2/stot
             tau_lower_bound=taumin_j(iFKS,ichan)**2/stot
 c         

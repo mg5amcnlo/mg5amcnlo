@@ -82,7 +82,6 @@ set style line  28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
 set style line  38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
 set style line  48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
 
-
 set style line 999 lt 1 lc rgb "gray" lw 1.3
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
@@ -169,6 +168,9 @@ plot \
 'HistoOut.HwU' index 2 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -304,6 +306,9 @@ plot \
 'HistoOut.HwU' index 6 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -439,6 +444,9 @@ plot \
 'HistoOut.HwU' index 10 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -574,6 +582,9 @@ plot \
 'HistoOut.HwU' index 14 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -709,6 +720,9 @@ plot \
 'HistoOut.HwU' index 18 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -844,6 +858,9 @@ plot \
 'HistoOut.HwU' index 22 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -979,6 +996,9 @@ plot \
 'HistoOut.HwU' index 26 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
@@ -1114,6 +1134,9 @@ plot \
 'HistoOut.HwU' index 30 using (($1+$2)/2):3 ls 2 title ''
 
 unset label
+unset multiplot
+unset xlabel
+set key spacing 1
 
 ################################################################################
 
