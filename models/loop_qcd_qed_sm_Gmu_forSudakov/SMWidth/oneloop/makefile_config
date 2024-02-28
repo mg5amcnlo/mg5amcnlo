@@ -1,0 +1,17 @@
+FC=gfortran
+FFLAGS = -O
+#FFLAGS = -Wall
+
+DPKIND = selected_real_kind(15)
+#QPKIND = 16
+#DDTYPE = ddfun90
+#DDTYPE = qdcpp
+#QDTYPE = qdcpp
+#MPTYPE = mpfun90
+#MPTYPE = arprec
+
+TLEVEL = no
+CPPINTF = no
+
+#DDF90MOD = ~/fortran/ddfun90/
+#MPF90MOD = ~/fortran/mpfun90/

@@ -1,0 +1,11 @@
+HERE   = $(PWD)/hdecay
+
+all: hdecaydir
+
+hdecaydir:
+	(cd $(HERE); make) 
+
+clean:
+	- rm -f *.o *.s *.prj *~
+	@(cd $(HERE); make clean)
+
