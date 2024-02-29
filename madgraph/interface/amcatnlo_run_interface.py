@@ -1777,6 +1777,52 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
 
+        self.run_generate_events(mode, options, argss, switch)
+ 
+        #check if the param_card defines a scan.
+        if False:# self.param_card_iterator:
+            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
+            param_card_iterator = self.param_card_iterator
+            self.param_card_iterator = [] #avoid to next generate go trough here
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'],
+                                            param_card_path=cpath)
+            orig_name = self.run_name
+            #go trough the scan
+            with misc.TMP_variable(self, 'allow_notification_center', False):
+                for i,card in enumerate(param_card_iterator):
+                    card.write(cpath)
+                    self.check_param_card(cpath, dependent=True)
+                    if not options['force']:
+                        options['force'] = True
+                    if options['run_name']:
+                        options['run_name'] = '%s_%s' % (orig_name, i+1)
+                    if not argss:
+                        argss = [mode, "-f"]
+                    elif argss[0] == "auto":
+                        argss[0] = mode
+                    self.do_launch("", options=options, argss=argss, switch=switch)
+                    #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'],
+                                                    param_card_path=cpath)
+            #restore original param_card
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
+            param_card_iterator.write_summary(path)
+            
+        if self.allow_notification_center:    
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                                                 self.results.current['cross'],
+                                                 self.results.current['error']))
+    
+    # this decorator handle the loop related to scan.
+    @common_run.scanparamcardhandling(run_card_scan=True)
+    def run_generate_events(self, mode, options, args, switch): 
+
         if '+' in mode:
             mode = mode.split('+')[0]
         self.compile(mode, options) 
@@ -1815,47 +1861,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You are running with FxFx merging enabled. To be able to merge samples of various multiplicities without double counting, you have to remove some events after showering 'by hand'. Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.store_result()
-        #check if the param_card defines a scan.
-        if self.param_card_iterator:
-            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
-            param_card_iterator = self.param_card_iterator
-            self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                            error=self.results.current['error'],
-                                            param_card_path=cpath)
-            orig_name = self.run_name
-            #go trough the scal
-            with misc.TMP_variable(self, 'allow_notification_center', False):
-                for i,card in enumerate(param_card_iterator):
-                    card.write(cpath)
-                    self.check_param_card(cpath, dependent=True)
-                    if not options['force']:
-                        options['force'] = True
-                    if options['run_name']:
-                        options['run_name'] = '%s_%s' % (orig_name, i+1)
-                    if not argss:
-                        argss = [mode, "-f"]
-                    elif argss[0] == "auto":
-                        argss[0] = mode
-                    self.do_launch("", options=options, argss=argss, switch=switch)
-                    #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                                    error=self.results.current['error'],
-                                                    param_card_path=cpath)
-            #restore original param_card
-            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-            name = misc.get_scan_name(orig_name, self.run_name)
-            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
-            param_card_iterator.write_summary(path)
-            
-        if self.allow_notification_center:    
-            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
-                                                 self.results.current['cross'],
-                                                 self.results.current['error']))
-    
-            
+
+
     ############################################################################      
     def do_compile(self, line):
         """Advanced commands: just compile the executables """

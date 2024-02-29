@@ -7736,6 +7736,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             else:
                 card_path = input_path(obj)
             
+            misc.sprint(card_path)
             #
             # This is the function that 
             #     1. compute the widths

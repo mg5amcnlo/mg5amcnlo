@@ -111,6 +111,7 @@ class Banner(dict):
 
    
         if banner_path:
+            misc.sprint(banner_path)
             self.read_banner(banner_path)
 
     ############################################################################
@@ -537,6 +538,7 @@ class Banner(dict):
             self.param_card = param_card_reader.ParamCard(param_card)
             return self.param_card
         elif tag == 'mgruncard':
+            misc.sprint(self.keys())
             self.run_card = RunCard(self[tag])
             return self.run_card
         elif tag == 'mg5proccard':
