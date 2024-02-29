@@ -23,6 +23,7 @@ from __future__ import absolute_import
 import ast
 import logging
 import math
+import copy
 import os
 import re
 import shutil
@@ -5058,7 +5059,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         
         try:
-            self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
+            with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+                self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
         except IOError:
             self.run_card = {}
         try:
@@ -6222,12 +6224,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
 
-        if self.mother_interface.inputfile:
-            self.run_card.set(name, value, user=True, raiseerror=True)
-        else:
-            self.run_card.set(name, value, user=True)
-        new_value = self.run_card.get(name)
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:BOLD')        
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            if self.mother_interface.inputfile:
+                self.run_card.set(name, value, user=True, raiseerror=True)
+            else:
+                self.run_card.set(name, value, user=True)
+            new_value = self.run_card.get(name)
+            logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:BOLD')        
 
 
     def setML(self, name, value, default=False):
@@ -7625,6 +7628,9 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                       iteratorclass=param_card_mod.ParamCardIterator,
                       summaryorder=lambda obj: lambda:None,
                       check_card=lambda obj: CommonRunCmd.static_check_param_card,
+                      run_card_scan=False,
+                      run_card_input= lambda obj: pjoin(obj.me_dir, 'Cards', 'run_card.dat'),
+                      run_card_iteratorclass=banner_mod.RunCardIterator,
                       ):
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
@@ -7672,9 +7678,57 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             return self.iterator
         
         def __exit__(self, ctype, value, traceback ):
-            self.iterator.write(self.path)
+             self.iterator.write(self.path)
     
-    def decorator(original_fct):
+    def scan_over_run_card(original_fct, obj, *args, **opts):
+
+        if isinstance(input_path, str):
+            card_path = run_card_input
+        else:
+            card_path = run_card_input(obj)
+
+        run_card_iterator = run_card_iteratorclass(card_path)
+        orig_card = copy.deepcopy(run_card_iterator.run_card)
+        if not run_card_iterator.run_card.scan_set:
+            return original_fct(obj, *args, **opts)
+        
+        
+        with restore_iterator(orig_card, card_path):
+            # this with statement ensure that the original card is restore
+            # whatever happens inside those block
+
+            if not hasattr(obj, 'allow_notification_center'):
+                obj.allow_notification_center = False
+            with misc.TMP_variable(obj, 'allow_notification_center', False):
+                orig_name = get_run_name(obj)
+                if not orig_name and args[1]:
+                    orig_name = args[1][0]
+                    args = (args[0], args[1][1:])
+                    #orig_name = "scan_%s" % len(obj.results)
+
+                next_name = orig_name
+
+                for card in run_card_iterator:
+                    card.write(card_path)
+                    # still have to check for the auto-wdith
+                    next_name = run_card_iterator.get_next_name(next_name)
+                    set_run_name(obj)(next_name)
+                    try:
+                        original_fct(obj, *args, **opts)
+                    except ignoreerror as error:
+                        run_card_iterator.store_entry(next_name, {'exception': error})
+                    else:
+                        run_card_iterator.store_entry(next_name, store_for_scan(obj)(), run_card_path=card_path)
+                        
+            #param_card_iterator.write(card_path) #-> this is done by the with statement
+            name = misc.get_scan_name(orig_name, next_name)
+            path = result_path(obj) % name 
+            logger.info("write scan results in %s" % path ,'$MG:BOLD')
+            order = summaryorder(obj)()
+            run_card_iterator.write_summary(path, order=order) 
+
+
+    def decorator(original_fct):        
         def new_fct(obj, *args, **opts):
             
             if isinstance(input_path, str):
@@ -7698,8 +7752,13 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             
             if not param_card_iterator:
                 #first run of the function
-                original_fct(obj, *args, **opts)
-                return
+                if run_card_scan:
+                    scan_over_run_card(original_fct, obj, *args, **opts)
+                    return
+                else:
+                    #first run of the function
+                    original_fct(obj, *args, **opts)
+                    return
             
             with restore_iterator(param_card_iterator, card_path):
                 # this with statement ensure that the original card is restore
