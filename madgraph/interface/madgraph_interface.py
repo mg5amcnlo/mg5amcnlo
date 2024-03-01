@@ -3497,7 +3497,7 @@ This implies that with decay chains:
                     raise self.InvalidCmd('no particle %s in current model' % arg)
 
                 print("Particle %s has the following properties:" % particle.get_name())
-                print(str(particle))
+                print(particle.nice_string())
 
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \

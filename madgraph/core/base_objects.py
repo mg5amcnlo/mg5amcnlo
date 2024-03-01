@@ -274,7 +274,7 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
-    def __str__(self):
+    def nice_string(self):
         """String representation of the object. Outputs valid Python 
         with improved format."""
 
@@ -286,7 +286,7 @@ class Particle(PhysicsObject):
                    spin_name = spin_name[self[prop]]
                else:
                    spin_name = 'unknown'
-               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %.2f (%s),\n' % \
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
                 (self[prop], spin_name)
             elif isinstance(self[prop], str):
                 mystr = mystr + '    \'' + prop + '\': \'' + \
