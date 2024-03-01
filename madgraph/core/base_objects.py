@@ -274,7 +274,33 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
+    def __str__(self):
+        """String representation of the object. Outputs valid Python 
+        with improved format."""
 
+        mystr = '{\n'
+        for prop in self.get_sorted_keys():
+            if prop == 'spin':
+               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               if self[prop] in spin_name:
+                   spin_name = spin_name[self[prop]]
+               else:
+                   spin_name = 'unknown'
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %.2f (%s),\n' % \
+                (self[prop], spin_name)
+            elif isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
