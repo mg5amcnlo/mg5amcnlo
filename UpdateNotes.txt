@@ -1,5 +1,16 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.5.4
+      MZ+RF: Bug fixes:
+        1) a bug related to event-generation, when virtual corrections include more than one
+        coupling combination (so NLO QCD to SM processes were **not** affected), in particular 
+        when the coupling combinations have different sign. The contribution
+        from the virtual amplitude was wrongly accounted for, resulting in unphysical distributions.
+        Thanks to Haoquan Ren for reporting it.
+        2) a bug related to NLO EW corrections at lepton colliders, for initial-state FKS configuration.
+        Phase-space points for which the real-emission momentum generation was failing but the Born one
+        was passing were thrown away altogether.
+        Thanks to Riccardo Lubello for leading to the identification of the bug.
 
 3.5.3 (22/12/23)
       OM: Include Bug fix from 2.9.18
