@@ -181,6 +181,23 @@ class HelpToCmd(object):
         logger.info('   threshold option allows to change the minimal value required to')
         logger.info('   a non zero value for the particle (default:1e-12s)')
 
+    def help_print_results(self):
+        logger.info("syntax: print_results [RUN_NAME] [OPTIONS]")
+        logger.info("-- print the results of the previous run on the screen")
+        logger.info("   If not RUN_NAME is provided, the information of all run")
+        logger.info("   are printed one after another.")
+        logger.info("")
+        logger.info("   supported options:")
+        logger.info("   ------------------")
+        logger.info("   --format=full|short # default is full")
+        logger.info("     full format contains banner/... ")
+        logger.info("     while short is a simple multi-column format (nice for plotting)")
+        logger.info("   --path=")
+        logger.info("     allow to write the information to a file.")
+        logger.info("   --mode=w|a  #default is w ")
+        logger.info("     when the information is printed to a file, you can choose ")
+        logger.info("     to either overwrite the file if already exists (w mode)")
+        logger.info("     to append the information at the end of the file (a mode)")
 
 
 class CheckValidForCmd(object):
@@ -2459,7 +2476,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     ############################################################################ 
     def do_print_results(self, line):
-        """Not in help:Print the cross-section/ number of events for a given run"""
+        """Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
         options={'path':None, 'mode':'w', 'format':'full'}

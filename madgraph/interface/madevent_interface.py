@@ -496,7 +496,6 @@ class HelpToCmd(object):
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
-
 class AskRun(cmd.ControlSwitch):
     """a class for the question on what to do on a madevent run"""
 
