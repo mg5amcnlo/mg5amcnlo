@@ -5735,21 +5735,28 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[0] in self.special_shortcut:
             targettypes , cmd = self.special_shortcut[args[0]]
             if len(args) != len(targettypes) +1:
-                logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
-                if len(args) < len(targettypes) +1:
-                    return
+                if len(targettypes) == 1 and args[len(targettypes)].startswith('scan'):
+                    args = args[:len(targettypes)] + [' '.join(args[len(targettypes):])]
+                    targettypes = [str]
                 else:
-                    logger.warning('additional argument will be ignored')
+                    logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
+                    if len(args) < len(targettypes) +1:
+                        return
+                    else:
+                        logger.warning('additional argument will be ignored')
             values ={}
             for i, argtype in enumerate(targettypes):           
                 try:  
-                    values = {str(i): banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])}
+                    values[str(i)] = banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])
                 except ValueError as e:
                     logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
                     return
                 except InvalidCmd as e:
-                    logger.warning(str(e))
-                    return
+                    if isinstance(args[i+1], str) and args[i+1].startswith('scan'):
+                        values[str(i)] = args[i+1]
+                    else:
+                        logger.warning(str(e))
+                        return
             #else:
             #    logger.warning("too many argument for this command")
             #    return
@@ -7693,7 +7700,8 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             return original_fct(obj, *args, **opts)
         
         
-        with restore_iterator(orig_card, card_path):
+        #with restore_iterator(orig_card, card_path):
+        if 1:
             # this with statement ensure that the original card is restore
             # whatever happens inside those block
 
@@ -7706,11 +7714,16 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                     args = (args[0], args[1][1:])
                     #orig_name = "scan_%s" % len(obj.results)
 
-                next_name = orig_name
+                try:
+                    os.mkdir(pjoin(obj.me_dir, 'Events', orig_name))
+                except Exception:
+                    pass
+                next_name = orig_name + "_00"
 
-                for card in run_card_iterator:
+                for i,card in enumerate(run_card_iterator):
                     card.write(card_path)
                     # still have to check for the auto-wdith
+                    #if i !=0:
                     next_name = run_card_iterator.get_next_name(next_name)
                     set_run_name(obj)(next_name)
                     try:

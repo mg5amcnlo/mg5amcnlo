@@ -508,8 +508,7 @@ class CheckValidForCmd(object):
         if tag: 
             arg.remove(tag[0])
             tag = tag[0][6:]
-        
-        
+         
         if len(arg) == 0 and not self.run_name:
             if self.results.lastrun:
                 arg.insert(0, self.results.lastrun)
@@ -935,7 +934,8 @@ class AskRunNLO(cmd.ControlSwitch):
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
                                            consistency='warning')
 
         hide_line = []
@@ -1742,19 +1742,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options = options.__dict__
             self.check_launch(argss, options)
 
-        
-        if 'run_name' in list(options.keys()) and options['run_name']:
-            self.run_name = options['run_name']
-            # if a dir with the given run_name already exists
-            # remove it and warn the user
-            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
-                logger.warning('Removing old run information in \n'+
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
-                self.results.delete_run(self.run_name)
-        else:
-            self.run_name = '' # will be set later
-
         if options['multicore']:
             self.cluster_mode = 2
         elif options['cluster']:
@@ -1769,9 +1756,23 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             mode = self.ask_run_configuration('auto', options, switch)
 
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
+        if 'run_name' in list(options.keys()) and options['run_name']:
+            self.run_name = options['run_name']
+            # if a dir with the given run_name already exists
+            # remove it and warn the user
+            if os.path.isdir(pjoin(self.me_dir, 'events', self.run_name)):
+                logger.warning('removing old run information in \n'+
+                                pjoin(self.me_dir, 'events', self.run_name))
+                files.rm(pjoin(self.me_dir, 'events', self.run_name))
+                self.results.delete_run(self.run_name)
+        else:
+            check = 0
+            while True:
+                check += 1
+                name = 'run_%02i' % check
+                if not os.path.exists(pjoin(self.me_dir, 'events', name)):
+                    self.run_name = name
+                    break
 
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
@@ -1822,6 +1823,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling(run_card_scan=True)
     def run_generate_events(self, mode, options, args, switch): 
+
+        self.results.add_detail('run_mode', mode)
+        self.update_status('Starting run', level=None, update_results=True)
 
         if '+' in mode:
             mode = mode.split('+')[0]
@@ -4359,7 +4363,8 @@ RESTART = %(mint_mode)s
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = banner_mod.RunCardNLO(run_card)
+                with misc.TMP_variable(banner_mod.RunCardNLO, 'allow_scan', True): 
+                    self.run_card = banner_mod.RunCardNLO(run_card)
 
             #check if we need to change the tag
             if tag:
@@ -4391,6 +4396,8 @@ RESTART = %(mint_mode)s
         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
         if 'mgruncard' in self.banner:
             self.run_card = self.banner.charge_card('run_card')
+        else:
+            self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True

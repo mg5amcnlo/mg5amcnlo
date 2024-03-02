@@ -538,8 +538,8 @@ class Banner(dict):
             self.param_card = param_card_reader.ParamCard(param_card)
             return self.param_card
         elif tag == 'mgruncard':
-            misc.sprint(self.keys())
-            self.run_card = RunCard(self[tag])
+            with misc.TMP_variable(RunCard, 'allow_scan', True):
+                self.run_card = RunCard(self[tag], consistency=False)
             return self.run_card
         elif tag == 'mg5proccard':
             proc_card = self[tag].split('\n')
@@ -5589,9 +5589,10 @@ class RunCardNLO(RunCard):
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
-            if self['lpp%s' % i ] not in [1,2]:
+            # do not for proton mass if not proton PDF (or when scan initialization)
+            if self['lpp%s' % i ] not in [1,2] or isinstance(self['ebeam%i' % i], str):
                 continue
-
+ 
             if self['ebeam%i' % i] < 0.938:
                 if self['ebeam%i' %i] == 0:
                     logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
