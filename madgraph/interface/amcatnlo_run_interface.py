@@ -1760,10 +1760,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.run_name = options['run_name']
             # if a dir with the given run_name already exists
             # remove it and warn the user
-            if os.path.isdir(pjoin(self.me_dir, 'events', self.run_name)):
+            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
                 logger.warning('removing old run information in \n'+
-                                pjoin(self.me_dir, 'events', self.run_name))
-                files.rm(pjoin(self.me_dir, 'events', self.run_name))
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
                 self.results.delete_run(self.run_name)
         else:
             self.run_name = ''
@@ -1774,7 +1774,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             while True:
                 check += 1
                 name = 'run_%02i%s' % (check, suffix)
-                if not os.path.exists(pjoin(self.me_dir, 'events', name)):
+                if not misc.glob('run_%02i*' % check, path= pjoin(self.me_dir, 'Events')): 
                     self.run_name = name
                     break
 
