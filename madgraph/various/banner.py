@@ -111,7 +111,6 @@ class Banner(dict):
 
    
         if banner_path:
-            misc.sprint(banner_path)
             self.read_banner(banner_path)
 
     ############################################################################

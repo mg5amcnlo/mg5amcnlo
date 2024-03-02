@@ -1766,10 +1766,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 files.rm(pjoin(self.me_dir, 'events', self.run_name))
                 self.results.delete_run(self.run_name)
         else:
+            self.run_name = ''
             check = 0
+            suffix = ''
+            if mode == 'LO':
+                suffix = '_%s' % mode
             while True:
                 check += 1
-                name = 'run_%02i' % check
+                name = 'run_%02i%s' % (check, suffix)
                 if not os.path.exists(pjoin(self.me_dir, 'events', name)):
                     self.run_name = name
                     break
