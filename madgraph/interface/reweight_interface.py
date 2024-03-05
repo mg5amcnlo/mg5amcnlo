@@ -1745,7 +1745,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.keep_ordering:
             old_tag = tuple(tag)
             tag = (tag[0], tuple(order[1])) 
-        tag = (tag[0], tuple(order[1])) 
         
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
