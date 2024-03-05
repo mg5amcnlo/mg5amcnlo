@@ -1,7 +1,5 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.6.0 
-      DP+TV+MZ: Implementation of EW Sudakov corrections. See 2110.03714 and 2309.00452
 
 3.5.3 (22/12/23)
       OM: Include Bug fix from 2.9.18
@@ -14,7 +12,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Change restriction model to be less sensitive to numerical accuracy
       OM: bug fixing from LTS up to 2.9.17 (see below)
       PT: added options for matrix-element corrections in shower card fot PY8
-     
+      
 3.5.1 (11/07/23)
       SH+OM: Update interface for contur
       OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore
