@@ -6677,6 +6677,9 @@ class UFO_model_to_mg4(object):
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings) and \
                                       any([tag in c.name.lower() for tag in ['uv', 'r2']])]
+
+        # keep track of all couplings (for backward compatibility and/or tests
+        self.coups_indep = self.coups_indep_noloop + self.coups_indep_loop
                
         #store the running parameter that are used
         self.used_running_key = used_running_key     
