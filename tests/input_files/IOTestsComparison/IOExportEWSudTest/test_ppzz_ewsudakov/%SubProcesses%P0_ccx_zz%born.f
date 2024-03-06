@@ -606,6 +606,7 @@ C     1 T(2,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      JAMP(:,:) = (0D0,0D0)
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       IF (FORCE_IJGLU_ZERO) GLU_IJ = 0
 
