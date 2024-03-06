@@ -349,7 +349,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
     def get_loop_filter(filterdef):
         """ Returns a function which applies the filter corresponding to the 
         conditional expression encoded in filterdef."""
-        
+
+        filterdef= filterdef.strip()
+        if (filterdef.startswith('\'') and filterdef.endswith('\'')) or \
+           (filterdef.startswith('"') and filterdef.endswith('"')):
+            filterdef=filterdef[1:-1]
+
         def filter(diag, structs, model, id):
             """ The filter function generated '%s'."""%filterdef
             

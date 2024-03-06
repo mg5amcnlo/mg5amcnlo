@@ -4282,6 +4282,7 @@ C dressed lepton stuff
 
       double precision get_ee_expo
       double precision tau_m, tau_w
+      double precision omtau_born
 
       ! these common blocks are never used
       ! we leave them here for the moment 
@@ -4379,10 +4380,12 @@ C dressed lepton stuff
         xjac0 = xjac0 * jac_ee
 
         tau_born = x1_ee * x2_ee
+        ! better numerical accuracy
+        omtau_born = omx_ee(1) + omx_ee(2) - omx_ee(1)*omx_ee(2)
         ! multiply the jacobian by a multichannel factor if the 
         ! generation with resonances is also possible
-        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
-     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+        if (bw_exists) xjac0 = xjac0 * (omtau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (omtau_born)**(1d0-2*get_ee_expo()))
       endif
 
       ! Check here if the bjorken x's are physical (may not be so

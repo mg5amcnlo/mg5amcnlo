@@ -1570,6 +1570,9 @@ class ReweightInterface(extended_cmd.Cmd):
             
         event.parse_reweight()
         event.parse_nlo_weight(threshold=self.soft_threshold) 
+        if not event.nloweight.ispureqcd():
+            raise Exception('NLO reweighting does not support mixed expansion mode. Only LO accurate mode is allowed.')
+        
         if self.output_type != 'default':
             event.nloweight.modified = True # the internal info will be changed
                                             # so set this flage to True to change

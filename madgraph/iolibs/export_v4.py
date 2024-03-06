@@ -1590,19 +1590,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             and recall itself (this is add to the X size)
         """
         self.myjamp_count +=1
-        
+
         if not nb_line:
             for i,j in all_element:
                 if i+1 > nb_line:
                     nb_line = i+1
                 if j+1> nb_col:
                     nb_col = j+1  
-
             if nb_col > 600 and added==0:
                 all_element1, all_element2 = {}, {}
                 for (k1,k2) in all_element:
                     if k2 >= nb_col//2:
-                        all_element2[(k1,1+k2-nb_col//2)] = all_element[(k1,k2)]
+                        all_element2[(k1,1+k2-(nb_col//2))] = all_element[(k1,k2)]
                     else:
                         all_element1[(k1,k2)] = all_element[(k1,k2)]
 
@@ -1613,7 +1612,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 for (k1,k2) in all_element2:
                     if k2 >= 0:
-                        all_element1[(k1,1+k2+nb_col//2)] = all_element2[(k1,k2)]
+                        all_element1[(k1,k2+(nb_col//2)-1)] = all_element2[(k1,k2)]
                     if k2 < 0: 
                         all_element1[(k1,k2-nb_added1)] = all_element2[(k1,k2)]
                 # new_def format: added,j1,j2,R, max_count
@@ -1627,9 +1626,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     else:
                         k1 = j1-nb_added1
                     newdef1.append((k+nb_added1, k1, k2, R, c))
-
-                all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
-                newdef1 = newdef1 + new_def
+                if newdef1:
+                    all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
+                    newdef1 = newdef1 + new_def
                 return all_element, newdef1
 
         max_count = 0
@@ -3162,7 +3161,10 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         pass
 
     def finalize(self, matrix_elements, history, mg5options, flaglist):
-        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        try:
+            misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        except OSError:
+            pass
         return super().finalize(matrix_elements, history, mg5options, flaglist)
     
 
@@ -3201,13 +3203,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb2 = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
         text += text2 
         
-        return text, 0
+        return text, max(nb,nb2)
 
 
 
@@ -3241,6 +3243,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
+        self.handle_cuts_inc()
+
         try:
             subprocess.call([os.path.join(self.dir_path, 'Source','MadWeight','bin','internal','pass_to_madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -3262,6 +3266,23 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_source_makefile(writers.FortranWriter(filename))
 
 
+
+    def handle_cuts_inc(self):
+
+        text = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'r').read()
+        text = text.replace('maxjetflavor','dummy_maxjetflavor')
+
+        fsock = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'w')
+        fsock.write(text)
+
+        fsock.write('''            
+                logical fixed_extra_scale
+                integer maxjetflavor
+                double precision mue_over_ref
+                double precision mue_ref_fixed
+                common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+                ''')
+        fsock.close()
 
         
     #===========================================================================
@@ -7949,7 +7970,7 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg",
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
@@ -9658,7 +9679,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
@@ -9672,7 +9693,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         if not tot_calls:
             tot_calls = 0
         return tot_calls
-
 
     #===========================================================================
     # Helper functions

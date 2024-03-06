@@ -529,6 +529,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      jamp(:,:) = (0d0,0d0)
       glu_ij = ij_values(nfksprocess)
       if (force_ijglu_zero) glu_ij = 0
 
