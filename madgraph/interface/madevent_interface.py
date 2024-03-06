@@ -4567,7 +4567,7 @@ Please install this tool with the following MG5_aMC command:
             else:
                 preamble = misc.get_HEPTools_location_setter(
                                                  pjoin(MG5DIR,'HEPTools'),'lib')
-        preamble += "\n unset PYTHIA8DATA\n"
+        #preamble += "\n unset PYTHIA8DATA\n"
         
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
