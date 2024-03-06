@@ -987,22 +987,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
-                no_width = []
-
-                if self.proc_characteristics['ew_sudakov']:
-                    # if the sudakov approximation is used, force all particle widths to zero
-                    # unless the complex mass scheme is used
-                    if not self.proc_characteristics['complex_mass_scheme']:
-                        no_width = [p for p in ufomodel.all_particles if p.width != zero]
-                        logger.info('''Setting all particle widhts to zero (needed for EW Sudakov approximation).''','$MG:BOLD')
-                    # also, check that the model features the 'ntadpole' parameter, and set it to 1
-                    try:
-                        param_card['tadpole'].get(1).value = 1.
-                        logger.info('''Setting the value of ntadpole to 1 (needed for EW Sudakov approximation).''','$MG:BOLD')
-                    except KeyError:
-                        logger.warning('''The model has no 'ntadpole' parameter. The Sudakov approximation for EW corrections may give wrong results.''')
-
-                elif self.proc_characteristics['nlo_mixed_expansion']:
+                if self.proc_characteristics['nlo_mixed_expansion']:
                     no_width = [p for p in ufomodel.all_particles
                             if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
                             and p.width != zero]
@@ -2087,12 +2072,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # ensure that the run_card is present
             if not hasattr(self, 'run_card'):
                 self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-            # Below reads the run_card in the LHE file rather than the Cards/run_card
-            import madgraph.various.lhe_parser as lhe_parser
-            args_path = list(args)
-            self.check_decay_events(args_path) 
-            self.run_card = banner_mod.RunCard(lhe_parser.EventFile(args_path[0]).get_banner()['mgruncard'])
-
             
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
@@ -2104,12 +2083,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append('--web')
             command.append('reweight')
             
-            ## TV: copy the event file as backup before starting reweighting
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
-            event_path_backup = pjoin(self.me_dir, 'Events', self.run_name, 'events_orig.lhe.gz')
-            if os.path.exists(event_path) and not os.path.exists(event_path_backup):
-                shutil.copyfile(event_path, event_path_backup)
-
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
                 if self.run_name:
@@ -2225,7 +2198,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cross_sections[key] = value / (nb_event+1)
                 lhe.remove()
                 for key in cross_sections:
-                    if key == 'orig' or (key.isdigit() and not (key[0] == '2')):
+                    if key == 'orig' or key.isdigit():
                         continue
                     logger.info('%s : %s pb' % (key, cross_sections[key]))
                 return

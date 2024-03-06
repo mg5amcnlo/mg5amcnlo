@@ -89,8 +89,7 @@ c     instead of stopping the code, as this might accidentally happen.
 
 C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
 C      and check that it is not a photon initial state --elastic photon is handle below --
-C MZ FIX THIS      if ((abs(ih).eq.3.or.abs(ih).eq.4).and.ipdg.ne.22) then
-      if ((abs(ih).eq.3.or.abs(ih).eq.4)) then
+      if ((abs(ih).eq.3.or.abs(ih).eq.4).and.ipdg.ne.22) then
 c         if (ibeam.lt.0) then
 c            ipart=sign(1,ih)*ipdg
 c         else
@@ -209,11 +208,9 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       ! importance-sampling transformation to sample
       ! the Bjorken x's
       implicit none
-      integer idbeam
-      double precision expo_e, expo_m
-      parameter (expo_e=0.96d0)
-      parameter (expo_m=0.975d0)
-      get_ee_expo = expo_m
+      double precision expo
+      parameter (expo=0.96d0)
+      get_ee_expo = expo
       return
       end
 
@@ -252,7 +249,6 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
 
       if (k_exp.gt.ps_expo) then
           write(*,*) 'WARNING, e+e- exponent exceeding limit', k_exp, ps_expo
-          stop 1
       endif
 
       compute_eepdf = compute_eepdf * (omx_ee)**(-k_exp+ps_expo)

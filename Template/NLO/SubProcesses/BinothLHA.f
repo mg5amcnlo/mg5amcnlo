@@ -74,9 +74,6 @@ c statistics for MadLoop
       common /to_ret_code/ret_code_common
       double precision born_hel_from_virt
 
-      logical cs_run
-      COMMON /to_cs_run/ cs_run
-
       logical updateloop
       common /to_updateloop/updateloop
 
@@ -88,6 +85,7 @@ c statistics for MadLoop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
+
 
       IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
@@ -256,12 +254,6 @@ c Average over initial state helicities
             stop
          endif
       endif
-
-      if(cs_run) then     
-        print*,"I am skipping checkpoles"
-        return
-      endif
-
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -467,9 +459,7 @@ c or more non-zero (independent) helicities
                endif
             endif
          enddo
-         !This is to prevent the code from hanging if one does MC over
-         ! helicities and the pole-check fails at the first PS point
-         firsttime = .false..or.cpol
+         firsttime = .false.
       endif
 c Update the statistics using the MadLoop return code (ret_code)
       ntot = ntot+1             ! total number of PS
