@@ -1,0 +1,13 @@
+
+Make sure you created libavh_olo.a in the directory ../
+
+Set the correct compiler and paths in the makefile here.
+
+The examples are set up to include LoopTools. If you do not have
+LoopTools available, choose "WITHLT = no" in the makefile.
+
+If you do want to use LoopTools, choose the right option for the
+version you use: is version>=2.6 yes or no?
+
+Then execute "make" followed by "./example.exe < input"
+

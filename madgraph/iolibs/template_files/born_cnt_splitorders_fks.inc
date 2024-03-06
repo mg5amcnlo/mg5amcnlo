@@ -59,7 +59,7 @@ C this is for the orders of the counterterms
  enddo
 
  do j = 1, nsplitorders
-  write(*,*) 'counterterm S.O', j, ordernames(j)
+  !write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
     write(*,*) 'CNT%(proc_prefix)s: keeping split order', i

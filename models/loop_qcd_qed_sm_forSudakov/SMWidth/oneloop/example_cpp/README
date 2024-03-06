@@ -1,0 +1,31 @@
+
+
+This is an example of the use of OneLOop in C++ with the gcc compilers.
+The file "example.cpp" includes the file "cavh_olo.h" in this directory
+establishing the interface. All available routines are listed as "#define"
+statements at the beginning of that file.
+
+Execute
+
+./create.py
+
+This will create the library "libavh_olo.a". Then execute
+
+g++ example.cpp -L./ -lavh_olo -lgfortran
+
+This will create the executable.
+
+Alternatively, you can execute
+
+./create.py source
+
+This will only create the source file "avh_olo.f90". Then you can
+execute
+
+g++ -c example.cpp
+gfortran -c avh_olo.f90
+g++ example.o avh_olo.o -lgfortran
+
+to create the executable.
+
+

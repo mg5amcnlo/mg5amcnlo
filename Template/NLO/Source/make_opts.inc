@@ -20,6 +20,11 @@ ifneq ($(UNAME), Darwin)
 endif
 
 
+# add -fPIC for EW sudakov Standalone
+ifdef ewsudsa
+  FFLAGS+= -fPIC
+endif
+
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
   CXXFLAGS = -O $(STDLIB_FLAG) $(MACFLAG)

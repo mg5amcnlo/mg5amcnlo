@@ -1,0 +1,19 @@
+
+
+Make sure you created libavh_olo.a with option DDTYPE=ddfun90 in
+the directory ../
+
+Set the correct compiler and paths in the makefile here.
+DDF90MOD should be the directory with the mod-files of ddfun90
+DDF90LIB should be the directory with the ddfun90 library
+DDF90 should be the ddfun90 library
+
+The example is set up to include LoopTools. If you do not have
+LoopTools available, choose "WITHLT = no" in the makefile.
+
+If you do want to use LoopTools, choose the right option for the
+version you use: is version>=2.6 yes or no?
+
+Then execute "make" followed by "./example.exe < input"
+
+

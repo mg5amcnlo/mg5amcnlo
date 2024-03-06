@@ -1,0 +1,16 @@
+FC = gfortran
+FFLAGS = -O
+#FFLAGS = -Wall
+
+DPKIND = selected_real_kind(15)
+QPKIND =
+KINDMOD =
+DDTYPE =
+QDTYPE =
+MPTYPE =
+
+TLEVEL = no
+CPPINTF = yes
+
+DDF90MOD =
+MPF90MOD =

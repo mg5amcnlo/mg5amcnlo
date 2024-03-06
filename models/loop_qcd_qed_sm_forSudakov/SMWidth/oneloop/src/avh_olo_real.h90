@@ -1,0 +1,4 @@
+  real(kindr2) &  !|RCTYPE=intrinsic
+!#  type(dd_real) & !|RCTYPE=ddtype
+!#  type(qd_real) & !|RCTYPE=qdtype
+!#  type(mp_real) & !|RCTYPE=mptype

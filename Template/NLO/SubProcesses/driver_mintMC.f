@@ -791,6 +791,8 @@ c 1/proc_map(0,0)*vol1)
             call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
                call compute_born
+               if(abrv.ne.'born'.and.abrv.ne.'bovi') call compute_ewsudakov
+
             endif
             if (abrv.ne.'born') then
                call compute_nbody_noborn

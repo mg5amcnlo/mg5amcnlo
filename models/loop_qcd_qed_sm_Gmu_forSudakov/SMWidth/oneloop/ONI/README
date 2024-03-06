@@ -1,0 +1,15 @@
+
+
+Set your fortran compiler and the version family of Cuba in the
+makefile, and execute make.
+
+If your compiler does not accept "cd"-functions, like "cdlog" and
+"cdsqrt", then choose "CDFUN = no" in the makefile.
+
+Now, you have the library available, and you can have a look at
+the example in the directory "example".
+
+Have a look at the file "src/avh_oni_hello.f" for information about
+the use of the program.
+
+

@@ -357,6 +357,7 @@ class TestMECmdShell(unittest.TestCase):
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
 
+        misc.sprint('start')
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
