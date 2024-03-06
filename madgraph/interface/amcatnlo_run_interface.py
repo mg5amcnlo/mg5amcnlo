@@ -5801,7 +5801,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         first_cmd = cmd_switch.get_cardcmd()
                 
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd, switch=switch)
 
         self.banner = banner_mod.Banner()
 
@@ -5978,8 +5978,10 @@ if '__main__' == __name__:
     import optparse
     # Get the directory of the script real path (bin)
     # and add it to the current PYTHONPATH
+    #root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
     #root_path = os.path.split(root_path)[0]
-    sys.path.insert(0, os.path.join(root_path,'bin'))
+    sys.path.insert(0, os.path.join(root_path,'bin'))                                                     
+
 
     class MyOptParser(optparse.OptionParser):    
         class InvalidOption(Exception): pass
@@ -6029,7 +6031,7 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        print(os.path.join(root_path, 'bin','internal', 'me5_logging.conf'))
         logging.config.fileConfig(os.path.join(root_path,'bin', 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)

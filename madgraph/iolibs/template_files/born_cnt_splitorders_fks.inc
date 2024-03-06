@@ -295,6 +295,7 @@ C ----------
 C don't chache for extra counterterms
       calculatedBorn=.false.
       glu_ij = ij_values(nfksprocess)
+      jamp(:,:) = (0d0,0d0)
       DO I = 1, NSQAMPSO
         ANS(1,I)=0D0
         ANS(2,I)=0D0
