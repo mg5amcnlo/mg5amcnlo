@@ -124,11 +124,11 @@ C     Counter-term amplitude(s) for loop diagram number 23
       CALL R2_GG_1_R2_GG_2_R2_GG_3_0(W(1,5),W(1,6),R2_WWBOSON1
      $ ,R2_WWBOSON2,R2_WWBOSON3,AMPL(1,9))
 C     Counter-term amplitude(s) for loop diagram number 34
-      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWCS1,AMPL(1,10))
-      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWCS1,AMPL(1,11))
+      CALL R2_GG_1_0(W(1,5),W(1,6),R2_QQCPCS,AMPL(1,10))
+      CALL R2_GG_1_0(W(1,5),W(1,6),R2_QQCPCS,AMPL(1,11))
 C     Counter-term amplitude(s) for loop diagram number 35
-      CALL R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_WWCS1,R2_WWTB3,AMPL(1,12)
-     $ )
+      CALL R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_QQCPCS,R2_WWTB3,AMPL(1
+     $ ,12))
 C     Counter-term amplitude(s) for loop diagram number 36
       CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWL,AMPL(1,13))
       CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWL,AMPL(1,14))

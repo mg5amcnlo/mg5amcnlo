@@ -987,22 +987,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
-                no_width = []
-
-                if self.proc_characteristics['ew_sudakov']:
-                    # if the sudakov approximation is used, force all particle widths to zero
-                    # unless the complex mass scheme is used
-                    if not self.proc_characteristics['complex_mass_scheme']:
-                        no_width = [p for p in ufomodel.all_particles if p.width != zero]
-                        logger.info('''Setting all particle widhts to zero (needed for EW Sudakov approximation).''','$MG:BOLD')
-                    # also, check that the model features the 'ntadpole' parameter, and set it to 1
-                    try:
-                        param_card['tadpole'].get(1).value = 1.
-                        logger.info('''Setting the value of ntadpole to 1 (needed for EW Sudakov approximation).''','$MG:BOLD')
-                    except KeyError:
-                        logger.warning('''The model has no 'ntadpole' parameter. The Sudakov approximation for EW corrections may give wrong results.''')
-
-                elif self.proc_characteristics['nlo_mixed_expansion']:
+                if self.proc_characteristics['nlo_mixed_expansion']:
                     no_width = [p for p in ufomodel.all_particles
                             if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
                             and p.width != zero]
@@ -1046,14 +1031,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None, from_banner=None,
-                       banner=None):
+                       banner=None, **opts):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
                                   self.ask, first_cmd=first_cmd, from_banner=from_banner,
-                                  banner=banner, lhapdf=self.options['lhapdf'])
+                                  banner=banner, lhapdf=self.options['lhapdf'], **opts)
         
         for c in cards:
             if not os.path.isabs(c):
@@ -2087,12 +2072,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # ensure that the run_card is present
             if not hasattr(self, 'run_card'):
                 self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-            # Below reads the run_card in the LHE file rather than the Cards/run_card
-            import madgraph.various.lhe_parser as lhe_parser
-            args_path = list(args)
-            self.check_decay_events(args_path) 
-            self.run_card = banner_mod.RunCard(lhe_parser.EventFile(args_path[0]).get_banner()['mgruncard'])
-
             
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
@@ -2104,12 +2083,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append('--web')
             command.append('reweight')
             
-            ## TV: copy the event file as backup before starting reweighting
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
-            event_path_backup = pjoin(self.me_dir, 'Events', self.run_name, 'events_orig.lhe.gz')
-            if os.path.exists(event_path) and not os.path.exists(event_path_backup):
-                shutil.copyfile(event_path, event_path_backup)
-
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
                 if self.run_name:
@@ -2225,7 +2198,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cross_sections[key] = value / (nb_event+1)
                 lhe.remove()
                 for key in cross_sections:
-                    if key == 'orig' or (key.isdigit() and not (key[0] == '2')):
+                    if key == 'orig' or key.isdigit():
                         continue
                     logger.info('%s : %s pb' % (key, cross_sections[key]))
                 return
@@ -4933,6 +4906,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.load_default()        
         self.define_paths(**opt)
         self.last_editline_pos = 0
+        self.update_dependent_done = False
 
         if 'allow_arg' not in opt or not opt['allow_arg']:
             # add some mininal content for this:
@@ -4969,8 +4943,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
-            self.all_vars.union(new_vars)
-            
+            self.all_vars.union(new_vars
+            )
+        
+        self.opt = opt
 
     def init_from_banner(self, from_banner, banner):
         """ defined card that need to be initialized from the banner file 
@@ -6130,10 +6106,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the shower_card' % args[start],'$MG:BOLD')
                     del self.shower_card[args[start]]
-            elif args[start+1].lower() in ['t','.true.','true']:
-                self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
-            elif args[start+1].lower() in ['f','.false.','false']:
-                self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
+            #elif args[start+1].lower() in ['t','.true.','true']:
+            #    self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
+            #elif args[start+1].lower() in ['f','.false.','false']:
+            #    self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
             elif args[start] in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or\
                                                   args[start].startswith('dm_'):
                 #case sensitive parameters
@@ -6423,19 +6399,42 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             # check that only quark/gluon/photon are in initial beam if lpp=+-1
             pdg_in_p = list(range(-6,7))+[21,22]
-            if (self.run_card['lpp1'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
-               or (self.run_card['lpp2'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):
+            if (abs(self.run_card['lpp1'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
+               or (abs(self.run_card['lpp2'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):
                 if 'pythia_card.dat' in self.cards or 'pythia8_card.dat' in self.cards:
-                    logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off')
+                    path_to_remove = None
                     if 'pythia_card.dat' in self.cards:
-                        os.remove(self.paths['pythia'])
-                        self.cards.remove('pythia_card.dat')
+                        path_to_remove = self.paths['pythia']
+                        card_to_remove = 'pythia_card.dat'
                     elif 'pythia8_card.dat' in self.cards:
-                        os.remove(self.paths['pythia8'])
-                        self.cards.remove('pythia8_card.dat')
+                        path_to_remove = self.paths['pythia8']
+                        card_to_remove = 'pythia8_card.dat'
+                    if path_to_remove:
+                        if 'partonshower' in self.run_card['bypass_check']:
+                            logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
+                        else:    
+                            logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
+                            os.remove(path_to_remove)
+                            self.cards.remove(card_to_remove)
                 else:
                     logger.info('Remember that Parton-Shower are not yet ready for such proton component definition (HW implementation in progress).', '$MG:BOLD' )
- 
+            elif (abs(self.run_card['lpp1'])==3 and abs(self.run_card['lpp2'])==3):
+                if 'pythia8_card.dat' in self.cards:
+                    if self.run_card['pdlabel'] == 'isronlyll':
+                       if 'partonshower' not in self.run_card['bypass_check']:
+                            # force that QED shower is on?
+                            for param in ['TimeShower:QEDshowerByQ', 'TimeShower:QEDshowerByL', 'TimeShower:QEDshowerByGamma', 'SpaceShower:QEDshowerByQ', 'SpaceShower:QEDshowerByL']:
+                                if param not in self.PY8Card or \
+                                   (not self.PY8Card[param] and param.lower() not in self.PY8Card.user_set):
+                                    logger.warning('Activating QED shower: setting %s to True', param)
+                                    self.PY8Card[param] = True
+                    elif 'partonshower' in self.run_card['bypass_check']:
+                        logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
+                    else:
+                        logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
+                        os.remove(self.paths['pythia8'])
+                        self.cards.remove('pythia8_card.dat')
+
                  
         ########################################################################
         #       NLO specific check
@@ -6453,6 +6452,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
             
+            # ensure that for fixed order ICKKW model are not set to FxFx and/or UNLOPS
+            if 'shower_cards' not in self.cards and self.opt['switch']['fixed_order'] == 'ON':
+                if self.run_card['ickkw'] in [3,4]:
+                    # 3 is FxFx and 4 is UNLOPS
+                    mergemode = {3:'FxFx', 4:'UNLOPS'}
+                    raise Exception("You are running in fixed order mode but ICKKW is set to %s (%s). This does not make sense. Please fix and retry" %(self.run_card['ickkw'], mergemode[self.run_card['ickkw']]))
+
+
             if 'fix_scale' in proc_charac['limitations']:
                 raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                                  "Your model does not have a SM like running of the strong coupling.")
@@ -6608,7 +6615,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.check_card_consistency()
             if self.param_consistency:
                 try:
-                    self.do_update('dependent', timer=20)
+                    if not self.update_dependent_done:
+                        self.do_update('dependent', timer=20)
+                    self.update_dependent_done = False
                 except MadGraph5Error as error:
                     if 'Missing block:' in str(error):
                         self.fail_due_to_format +=1
@@ -6661,6 +6670,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
                                    self.paths['param'], timer, run_card=self.run_card,
                                    lhapdfconfig=self.lhapdf)
+            self.update_dependent_done = True
+            
 
         elif args[0] == 'missing':
             self.update_missing()
@@ -6937,7 +6948,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def check_answer_consistency(self):
         """function called if the code reads a file"""
         self.check_card_consistency()
-        self.do_update('dependent', timer=20) 
+        if not self.update_dependent_done:
+            self.do_update('dependent', timer=20) 
       
     def help_set(self):
         '''help message for set'''

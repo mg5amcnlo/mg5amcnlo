@@ -295,6 +295,7 @@ C     1 T(3,4) T(5,1,2)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      JAMP(:,:) = (0D0,0D0)
       CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
       CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))

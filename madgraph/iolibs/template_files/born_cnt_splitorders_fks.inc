@@ -59,7 +59,7 @@ C this is for the orders of the counterterms
  enddo
 
  do j = 1, nsplitorders
-  !write(*,*) 'counterterm S.O', j, ordernames(j)
+  write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
     write(*,*) 'CNT%(proc_prefix)s: keeping split order', i
@@ -295,6 +295,7 @@ C ----------
 C don't chache for extra counterterms
       calculatedBorn=.false.
       glu_ij = ij_values(nfksprocess)
+      jamp(:,:) = (0d0,0d0)
       DO I = 1, NSQAMPSO
         ANS(1,I)=0D0
         ANS(2,I)=0D0

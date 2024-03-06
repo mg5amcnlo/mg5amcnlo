@@ -1590,19 +1590,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             and recall itself (this is add to the X size)
         """
         self.myjamp_count +=1
-        
+
         if not nb_line:
             for i,j in all_element:
                 if i+1 > nb_line:
                     nb_line = i+1
                 if j+1> nb_col:
                     nb_col = j+1  
-
             if nb_col > 600 and added==0:
                 all_element1, all_element2 = {}, {}
                 for (k1,k2) in all_element:
                     if k2 >= nb_col//2:
-                        all_element2[(k1,1+k2-nb_col//2)] = all_element[(k1,k2)]
+                        all_element2[(k1,1+k2-(nb_col//2))] = all_element[(k1,k2)]
                     else:
                         all_element1[(k1,k2)] = all_element[(k1,k2)]
 
@@ -1613,7 +1612,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 for (k1,k2) in all_element2:
                     if k2 >= 0:
-                        all_element1[(k1,1+k2+nb_col//2)] = all_element2[(k1,k2)]
+                        all_element1[(k1,k2+(nb_col//2)-1)] = all_element2[(k1,k2)]
                     if k2 < 0: 
                         all_element1[(k1,k2-nb_added1)] = all_element2[(k1,k2)]
                 # new_def format: added,j1,j2,R, max_count
@@ -1627,9 +1626,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     else:
                         k1 = j1-nb_added1
                     newdef1.append((k+nb_added1, k1, k2, R, c))
-
-                all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
-                newdef1 = newdef1 + new_def
+                if newdef1:
+                    all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
+                    newdef1 = newdef1 + new_def
                 return all_element, newdef1
 
         max_count = 0
@@ -3021,7 +3020,6 @@ CF2PY integer, intent(in) :: new_value
             writers.FortranWriter('nsqso_born.inc').writelines(
                 """INTEGER NSQSO_BORN
                    PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
-            files.cp('nsqso_born.inc', '..')
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
 
@@ -3162,7 +3160,10 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         pass
 
     def finalize(self, matrix_elements, history, mg5options, flaglist):
-        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        try:
+            misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        except OSError:
+            pass
         return super().finalize(matrix_elements, history, mg5options, flaglist)
     
 
@@ -3201,13 +3202,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb2 = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
         text += text2 
         
-        return text, 0
+        return text, max(nb,nb2)
 
 
 
@@ -3241,6 +3242,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
+        self.handle_cuts_inc()
+
         try:
             subprocess.call([os.path.join(self.dir_path, 'Source','MadWeight','bin','internal','pass_to_madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -3262,6 +3265,23 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_source_makefile(writers.FortranWriter(filename))
 
 
+
+    def handle_cuts_inc(self):
+
+        text = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'r').read()
+        text = text.replace('maxjetflavor','dummy_maxjetflavor')
+
+        fsock = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'w')
+        fsock.write(text)
+
+        fsock.write('''            
+                logical fixed_extra_scale
+                integer maxjetflavor
+                double precision mue_over_ref
+                double precision mue_ref_fixed
+                common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+                ''')
+        fsock.close()
 
         
     #===========================================================================
@@ -3540,7 +3560,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #    logger.error('Could not cd to directory %s' % dirpath)
         #    return 0
 
-        print('4',dirpath)
         logger.info('Creating files in directory %s' % dirpath)
 
         # Extract number of external particles
@@ -5945,6 +5964,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         except os.error:
             logger.error('Could not cd to directory %s' % subprocdir)
             return 0
+
         logger.info('Creating files in directory %s' % subprocdir)
 
         # Create the matrix.f files, auto_dsig.f files and all inc files
@@ -6518,8 +6538,7 @@ class UFO_model_to_mg4(object):
             self.opt.update(opt)
             
         self.coups_dep = []    # (name, expression, type)
-        self.coups_indep_noloop = []  # (name, expression, type)
-        self.coups_indep_loop = []  # (name, expression, type)
+        self.coups_indep = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
@@ -6648,15 +6667,9 @@ class UFO_model_to_mg4(object):
                     self.coups_dep += to_add
                     used_running_key.update(set(key))
             else:
-                self.coups_indep_noloop += [c for c in coup_list if
+                self.coups_indep += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
-                                      wanted_couplings) and \
-                                      not any([tag in c.name.lower() for tag in ['uv', 'r2']])]
-                self.coups_indep_loop += [c for c in coup_list if
-                                     (not wanted_couplings or c.name in \
-                                      wanted_couplings) and \
-                                      any([tag in c.name.lower() for tag in ['uv', 'r2']])]
-               
+                                      wanted_couplings)]
         #store the running parameter that are used
         self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
@@ -6938,7 +6951,7 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+w for w in widths])+'\n\n')
         
         # Write the Couplings
-        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
@@ -6977,7 +6990,7 @@ class UFO_model_to_mg4(object):
             return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
         
         # Write the Couplings
-        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
+        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('\n'.join(lines))
         
         
@@ -7272,38 +7285,19 @@ class UFO_model_to_mg4(object):
         nb_def_by_file = self.nb_def_by_file
         
         self.create_couplings_main(nb_def_by_file)
-        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file
-        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
-        for i in range(nb_coup_indep_noloop):
-            ##### For the independent couplings, we compute the double and multiple
-            ##### precision ones together
-            # For the EW sudakov approximation, because of the numerical derivatives
-            # we need to separate MP vs DP also here
-            data = self.coups_indep_noloop[nb_def_by_file * i: 
-                             min(len(self.coups_indep_noloop), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1, data, dp=True, mp=False)
-
-            if self.opt['mp']:
-                self.create_couplings_part( i + 1, data, dp=False,mp=True)
-
-        for i in range(nb_coup_indep_loop):
-            ##### For the independent couplings, we compute the double and multiple
-            ##### precision ones together
-            # For the EW sudakov approximation, because of the numerical derivatives
-            # we need to separate MP vs DP also here
-            data = self.coups_indep_loop[nb_def_by_file * i: 
-                             min(len(self.coups_indep_loop), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1 + nb_coup_indep_noloop, data, dp=True, mp=False)
-
-            if self.opt['mp']:
-                self.create_couplings_part( i + 1 + nb_coup_indep_noloop, data, dp=False,mp=True)
+        for i in range(nb_coup_indep):
+            # For the independent couplings, we compute the double and multiple
+            # precision ones together
+            data = self.coups_indep[nb_def_by_file * i: 
+                             min(len(self.coups_indep), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1, data, dp=True, mp=self.opt['mp'])
             
         for i in range(nb_coup_dep):
             # For the dependent couplings, we compute the double and multiple
             # precision ones in separate subroutines.
-            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
@@ -7340,47 +7334,23 @@ class UFO_model_to_mg4(object):
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
         if self.opt['mp']:
-            fsock.writelines("if (updateloop) then\n")
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
-            fsock.writelines("endif\n")
         
-        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
-        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
-        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep_noloop)]))
-
-        fsock.writelines('if (updateloop) then\n')
-        fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (i + 1 + nb_coup_indep_noloop) for i in range(nb_coup_indep_loop)]))
-        fsock.writelines('\nendif\n')
+                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
         
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
-
-        # the MP-version is there also for those couplings which do not depend 
-        #  on the PSP
         if self.opt['mp']:
-            fsock.write_comments('\ncouplings in multiple precision\n')
-
-            fsock.writelines('if (updateloop) then\n')
-
-            fsock.writelines('\n'.join(\
-                    ['call mp_coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
-        
-            fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
-
             fsock.writelines('\n'.join(\
                     ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
-
-            fsock.writelines('\nendif\n')
-
         fsock.writelines('''\n return \n end\n''')
 
         fsock.writelines("""subroutine update_as_param()
@@ -7454,10 +7424,7 @@ class UFO_model_to_mg4(object):
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
                 fsock.writelines('endif')
-
-        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
-        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
-        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
@@ -7530,9 +7497,7 @@ class UFO_model_to_mg4(object):
                                 include \'mp_intparam_definition.inc\'\n
                              """)
             
-            nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
-            nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
-            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
+            nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
 
             if self.model['running_elements']:
@@ -7949,7 +7914,7 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg",
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
@@ -9099,21 +9064,17 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
-        
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '
 
-        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // self.nb_def_by_file 
-        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // self.nb_def_by_file
-        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
-        nb_coup_dep = 1 + len(self.coups_dep) // self.nb_def_by_file
+
+        nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
-            # this part changed to include also the couplings which do not 
-            # depend on the PSP
-            couplings_files+=['mp_couplings%s.o' % (i+1) \
-                                for i in range(nb_coup_dep + nb_coup_indep) ]
+            couplings_files+=['mp_couplings%s.o' % (i+1) for i in \
+                               range(nb_coup_dep,nb_coup_dep + nb_coup_indep) ]
         text += ' '.join(couplings_files)
         fsock.writelines(text)
         
@@ -9424,18 +9385,6 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._export_dir, amcatnlo_options)
 
-    # Then treat the EW sudakov Standalone output     
-    elif output_type=='ewsudsa':
-        import madgraph.iolibs.export_fks as export_fks
-        ExporterClass=None
-        amcatnlo_options = dict(opt)
-        amcatnlo_options.update(MadLoop_SA_options)
-        amcatnlo_options['mp'] = False
-        logger.info("Writing out the EW Sudakov approximation in a standalone format")
-        ExporterClass = export_fks.ProcessExporterEWSudakovSA
-        amcatnlo_options['export_format']='FKS5_optimized'
-        return ExporterClass(cmd._export_dir, amcatnlo_options)
-
 
     # Then the default tree-level output
     elif output_type=='default':
@@ -9551,6 +9500,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         except os.error as error:
             logger.warning(error.strerror + " " + subprocdir)
 
+
         logger.info('Creating files in directory %s' % subprocdir)
         Ppath = pjoin(pathdir, subprocdir)
 
@@ -9658,7 +9608,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
@@ -9672,7 +9622,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         if not tot_calls:
             tot_calls = 0
         return tot_calls
-
 
     #===========================================================================
     # Helper functions

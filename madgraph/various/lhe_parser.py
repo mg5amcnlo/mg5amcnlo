@@ -101,7 +101,7 @@ class Particle(object):
             self.rwgt = 0
             return
 
-
+              
         self.event = event
         if event is not None: 
             self.event_id = len(event) #not yet in the event
@@ -1466,12 +1466,12 @@ class Event(list):
                 particle.mother2 -= 1  
         # re-call the function for the next potential change   
         return self.reorder_mother_child()
+         
         
-
-
-
-
-
+        
+        
+        
+   
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
@@ -1504,37 +1504,6 @@ class Event(list):
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type,
                                                threshold=threshold)
             return self.nloweight
-
-    def get_fks_pair(self, real_type=(1,11), threshold=None):
-        """ Gives the fks pair labels"""
-        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
-        if start != -1 != stop:
-            text = self.tag[start+8:stop]
-            all_line = text.split('\n')
-            text = text.lower().replace('d','e')
-            all_line = text.split('\n')
-            for line in all_line:
-                data = line.split()
-                if len(data)>16:
-                    wgt = OneNLOWeight(line, real_type=real_type)
-        return wgt.to_merge_pdg,wgt.nexternal
-
-    def get_born_momenta(self,real_type=(1,11), threshold=None):
-        """ Gets the underlying n+1 body kinematics"""
-        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
-        if start != -1 != stop:
-            text = self.tag[start+8:stop]
-            text = text.lower().replace('d','e')
-            all_line = text.split('\n')
-            for line in all_line:
-                data = line.split()
-                if len(data)>16:
-                    wgt = OneNLOWeight(line, real_type=real_type)
-            nexternal = wgt.nexternal
-            real_momenta = all_line[2:2+nexternal]
-        return real_momenta
-
-
 
     def rewrite_nlo_weight(self, wgt=None):
         """get the string associate to the weight"""
@@ -1875,7 +1844,7 @@ class Event(list):
                 if list(filter(p)):
                     pboost += p
         else:
-            pboost = FourMomentum(filter)
+            pboost = FourMomentum(pboost)
 
         # change sign of three-component due to helas convention
         pboost.px *=-1
@@ -1891,7 +1860,7 @@ class Event(list):
         """check various property of the events"""
         
         # check that relative error is under control
-        threshold = 1e-4
+        threshold = 1e-6
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1934,50 +1903,7 @@ class Event(list):
         self.check_color_structure() 
         
         #3. check mass
-
-    def check_kinematics_only(self):
-        """check various property of the events - only kinematics"""
-        
-        # check that relative error is under control
-        threshold = 1e-3
-       
-        #1. Check that the 4-momenta are conserved
-        E, px, py, pz = 0,0,0,0
-        absE, abspx, abspy, abspz = 0,0,0,0
-        for particle in self:
-            coeff = 1
-            if particle.status == -1:
-                coeff = -1
-            elif particle.status != 1:
-                continue
-            E += coeff * particle.E
-            absE += abs(particle.E)
-            px += coeff * particle.px
-            py += coeff * particle.py
-            pz += coeff * particle.pz
-            abspx += abs(particle.px)
-            abspy += abs(particle.py)
-            abspz += abs(particle.pz)
-            # check mass
-            fourmass = FourMomentum(particle).mass
-            
-            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                logger.critical(self)
-                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
-
-        if abs(E/absE) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
-        if abs(px/abspx) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
-        if abs(py/abspy) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
-        if abs(pz/abspz) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
-                 
+                   
          
     def assign_scale_line(self, line):
         """read the line corresponding to global event line
@@ -2809,7 +2735,7 @@ class FourMomentum(object):
         if isinstance(pboost, FourMomentum):
             E = pboost.E
             pz = pboost.pz
-
+        
         #beta = pz/E
         gamma = E / math.sqrt(E**2-pz**2)
         gammabeta = pz  / math.sqrt(E**2-pz**2)
@@ -2821,74 +2747,6 @@ class FourMomentum(object):
         
         if abs(out.pz) < 1e-6 * out.E:
             out.pz = 0
-        return out
-    
-    def zboost_inv(self, pboost=None, E=0, pz=0):
-        """Both momenta should be in the same frame. 
-           The boost perform correspond to the boost required to set pboost at 
-           rest (only z boost applied).
-        """
-        if isinstance(pboost, FourMomentum):
-            E = pboost.E
-            pz = pboost.pz
-
-        #beta = pz/E
-        gamma = E / math.sqrt(E**2-pz**2)
-        gammabeta = pz  / math.sqrt(E**2-pz**2)
-        
-        out =  FourMomentum([gamma*self.E + gammabeta*self.pz,
-                            self.px,
-                            self.py,
-                            gamma*self.pz + gammabeta*self.E])
-        
-        if abs(out.pz) < 1e-6 * out.E:
-            out.pz = 0
-        return out
-
-
-    def pt_boost(self, pboost=None, E=0, pz=0):
-        """Both momenta should be in the same frame. 
-           The boost perform correspond to the boost required to set pboost at 
-           rest (only pT boost applied).
-        """
-
-        if isinstance(pboost, FourMomentum):
-            E = pboost.E
-            px = pboost.px
-            py = pboost.py
-            mass = math.sqrt(E**2 - px**2 - py**2)
-
-        betax = px/E
-        betay = py/E
-        beta = math.sqrt(betax**2+betay**2)
-        gamma = 1 / math.sqrt(1.0-beta**2)
-        
-        out =  FourMomentum([gamma*self.E - gamma*betax*self.px - gamma*betay*self.py,
-                            -gamma*betax*self.E + (1.0 + (gamma-1.0)*betax**2/(beta**2))*self.px + (gamma-1.0)*betax*betay/(beta**2)*self.py,
-                            -gamma*betay*self.E + ((gamma-1.0)*betax*betay/(beta**2))*self.px + (1.0+(gamma-1.0)*(betay**2)/(beta**2))*self.py,
-                            self.pz])
-        
-        if abs(out.px) < 1e-6 * out.E:
-            out.px = 0
-        if abs(out.py) < 1e-6 * out.E:
-            out.py = 0
-        return out
-
-    def boost_beta(self,beta,mom):
-        """ Boost along the three-momentum of mom with a boost of size beta"""
-
-        unit = mom * (1.0/math.sqrt(mom.px**2+mom.py**2+mom.pz**2))
-        beta_vec = beta*unit
-        bx = beta_vec.px
-        by = beta_vec.py
-        bz = beta_vec.pz
-        gamma = 1.0 / math.sqrt(1.0-beta**2)
-
-        out =  FourMomentum([gamma*self.E - gamma*bx*self.px - gamma*by*self.py - gamma*bz*self.pz,
-                            -gamma*bx*self.E + (1.0 + (gamma-1.0)*bx**2/(beta**2))*self.px + (gamma-1.0)*bx*by/(beta**2)*self.py + (gamma-1.0)*bx*bz/(beta**2)*self.pz,
-                            -gamma*by*self.E + ((gamma-1.0)*bx*by/(beta**2))*self.px + (1.0+(gamma-1.0)*(by**2)/(beta**2))*self.py + (gamma-1.0)*by*bz/(beta**2)*self.pz,
-                            -gamma*bz*self.E + (gamma-1.0)*bx*bz/(beta**2)*self.px + (gamma-1.0)*(by*bz)/(beta**2)*self.py + (1.0+(gamma-1.0)*bz**2/(beta**2))*self.pz]) 
-
         return out
     
     def boost_to_restframe(self, pboost):
@@ -2921,49 +2779,8 @@ class FourMomentum(object):
         out = out.zboost(E=pboost.E,pz=p)
         return out
         
-    def rotate_to_z(self,prot):
-
-        import math
-        import numpy as np
-
-        z = np.array([0.,0.,1.])
-
-        px = self.px
-        py = self.py
-        pz = self.pz
-
-        refx = prot.px 
-        refy = prot.py
-        refz = prot.pz
-
-        prot_mom = np.array([px, py, pz])
-        ref_mom = np.array([refx, refy, refz])
-
-        # Create normal vector
-        n = np.array([refy, -refx, 0.])
-        n = n * 1./math.sqrt(self.threedot(n,n))
-        t = prot_mom - self.threedot(n,prot_mom)*n
-        p = ref_mom - self.threedot(ref_mom,z)*z
-        p = p/math.sqrt(self.threedot(p,p))
-
-        t_pz = np.array([self.threedot(t,p), self.threedot(t,z), 0.])
-        costheta = self.threedot(ref_mom,z)* 1./math.sqrt(self.threedot(ref_mom, ref_mom))
-        sintheta=math.sqrt(1.-costheta**2)
-
-        sgn = 1.
-        t_pz_p = np.array([0., 0., 0.])
-        t_pz_p[0] = costheta*t_pz[0] + sgn*(-sintheta) * t_pz[1]
-        t_pz_p[1] = sgn*sintheta*t_pz[0] + costheta * t_pz[1]
-
-        out_mom = self.threedot(n,prot_mom)*n + t_pz_p[0]*p + t_pz_p[1]*z
-
-        out = FourMomentum([self.E,out_mom[0], out_mom[1], out_mom[2] ] )
-
-        return out
         
-    def threedot(self,a,b):
-
-        return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
+        
 
 class OneNLOWeight(object):
         
@@ -3350,6 +3167,19 @@ class NLO_PARTIALWEIGHT(object):
             self.parse(input)
         
             
+    def ispureqcd(self):
+        """return True if the born does not correspond to a unique power of alphas
+           This allows to prevent to use re-weighting in mode where it is known to be 
+           failing to scale correctly.
+        """
+        for cevt in self.cevents:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
+                return False
+                nb_wgt_check += len(cevt.wgts)
+
+        return True
+
+       
         
     def parse(self, text):
         """create the object from the string information (see example below)"""
