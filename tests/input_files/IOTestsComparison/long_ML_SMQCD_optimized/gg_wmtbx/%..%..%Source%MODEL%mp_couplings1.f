@@ -2,7 +2,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      SUBROUTINE MP_COUP2()
+      SUBROUTINE MP_COUP1()
 
       IMPLICIT NONE
       INCLUDE 'model_functions.inc'
@@ -12,4 +12,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
+      MP__GC_11 = (MP__MDL_EE*MP__MDL_COMPLEXI)/(MP__MDL_SW
+     $ *MP__MDL_SQRT__2)
       END
