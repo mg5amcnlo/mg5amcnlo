@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.5.X 
+3.6.0 
       DP+TV+MZ: Implementation of EW Sudakov corrections. See 2110.03714 and 2309.00452
 
 3.5.1 (11/07/23)
