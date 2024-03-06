@@ -1673,7 +1673,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return wf_index + 1
     
     def get_call_key(self):
-        """Generate the (spin, number, C-state) tuple used as key for
+        """Generate the (spin, number, C-state, flavor) tuple used as key for
         the helas call dictionaries in HelasModel"""
 
         res = []
@@ -1683,7 +1683,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Sort according to spin and flow direction
         res.sort()
         res.append(self.get_spin_state_number())
-        outgoing =self.find_outgoing_number()
+        outgoing = self.find_outgoing_number()
         res.append(outgoing)
 
         if self['is_loop']:
@@ -1692,6 +1692,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 res.append(self.get('is_part'))
 
         res.append(tuple(self.get('polarization')) )
+        if self['particle'].get('flavor'): 
+            res.append(1)
+        else:
+            res.append(0)
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():

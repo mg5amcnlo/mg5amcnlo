@@ -211,7 +211,7 @@ class Particle(PhysicsObject):
     tells if the particle is its own antiparticle."""
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
-                   'charge', 'mass', 'width', 'pdg_code',
+                   'charge', 'mass', 'width', 'pdg_code', 'flavor',
                   'line', 'propagator',
                    'is_part', 'self_antipart', 'type', 'counterterm']
 
@@ -239,6 +239,7 @@ class Particle(PhysicsObject):
         # Counterterm defined as a dictionary with format:
         # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
         self['counterterm'] = {}
+        self['flavor'] = None
 
     def get(self, name):
         
@@ -281,13 +282,16 @@ class Particle(PhysicsObject):
         mystr = '{\n'
         for prop in self.get_sorted_keys():
             if prop == 'spin':
-               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               spin_name = {1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
                if self[prop] in spin_name:
                    spin_name = spin_name[self[prop]]
                else:
                    spin_name = 'unknown'
                mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
                 (self[prop], spin_name)
+            elif prop == 'flavor':
+               mystr = mystr + '    \'' + prop + '(related massless particle related by flavor)\': %s,\n' % \
+                  (self[prop])
             elif isinstance(self[prop], str):
                 mystr = mystr + '    \'' + prop + '\': \'' + \
                         self[prop] + '\',\n'
@@ -625,7 +629,7 @@ class Interaction(PhysicsObject):
     orders: dictionary listing order names (as keys) with their value
     """
 
-    sorted_keys = ['id', 'particles', 'color', 'lorentz', 'couplings',
+    sorted_keys = ['id', 'particles', 'color', 'lorentz', 'couplings', 'flavor',
                    'orders','loop_particles','type','perturbation_type']
 
     def default_setup(self):
@@ -694,6 +698,11 @@ class Interaction(PhysicsObject):
         self['loop_particles']=[[]]
         self['type'] = 'base'
         self['perturbation_type'] = None
+
+        #information for flavor handling if vertex does exists with different flavor
+        # the object is {(flavor1, flavor2,... ): couplings}
+        # couplings has the same format has self['couplings']
+        self['flavor'] = None
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
@@ -1007,8 +1016,9 @@ class InteractionList(PhysicsObjectList):
 
         interaction_dict = {}
 
-        for inter in self:
+        for inter in self[:]:
             interaction_dict[inter.get('id')] = inter
+  
 
         return interaction_dict
 
@@ -1422,6 +1432,93 @@ class Model(PhysicsObject):
                 pdg_list.append(self.get('particle_dict')[p].get_anti_pdg_code())
                 
         return sorted(pdg_list)
+
+    def pass_in_flavor_mode(self):
+        """generate a new model where particles/coupling/interaction are flavor aware.
+        """
+
+
+        # first merge the leptons this remove all flavor (but one)
+        # from the particle list, change the ihteractions to always refer to the
+        # same flavour and tag the interactions with the flavor
+        leptons = self.get_lepton_pdgs()
+        self.merge_particles_with_flavor([pdg for pdg in leptons if pdg >0 ], 'l-', 'l+')
+        # now we can do the same for the us(b)
+        # now we can do the same for the dc(t)
+        # now we can do the same for the neutrino
+
+        # merge interactions with same particle content (and keep track of the flavour)
+        self.merge_interactions_with_same_flavor()        
+
+
+        self.reset_dictionaries()
+        misc.sprint(len(self.get('interactions')))
+        #misc.sprint(leptons)
+        #quarks = self.get_quark_pdgs()
+        #misc.sprint(leptons)
+
+
+    def merge_particles_with_flavor(self, pdg_list, name, antiname):
+        """ merge the particles object and flag all the vertex objects.
+        """
+
+        pdg_list.sort(key=lambda x: abs(x))
+        particles = [self.get_particle(pdg) for pdg in pdg_list]
+
+        particles[0]['flavor'] = pdg_list[1:]
+        particles[0].set('name', name)
+        particles[0].set('antiname', antiname)
+        anti_particle = copy.copy(particles[0])
+        anti_particle['is_part'] =  not anti_particle['is_part'] 
+
+        # delete particle from particle list
+        for particle in particles[1:]:
+            self['particles'].remove(particle)
+            del self['particle_dict'][particle['pdg_code']]
+
+        # flag the associate vertex with flavor position
+        for vertex in self['interactions']:
+            flavor = []
+            for i, particle in enumerate(list(vertex['particles'])):
+                pdg = particle.get_pdg_code()
+                if pdg in pdg_list:
+                    flavor.append(pdg_list.index(pdg)+1)
+                    vertex['particles'][i] = particles[0]
+                elif -1*pdg in pdg_list:
+                   flavor.append(pdg_list.index(-1*pdg)+1) 
+                   vertex['particles'][i] = anti_particle
+                else:
+                    flavor.append(0)
+
+            if any(f != 0 for f in vertex):
+                if not vertex['flavor']:
+                    vertex['flavor'] = {tuple(flavor): vertex['couplings']}
+                else:
+                    assert len(vertex['flavor']) == 1
+                    vertex_flavor = vertex_flavor.keys()[0]
+                    for i, f in enumerate(vertex_flavor):
+                        if f:
+                            flavor = f
+                    vertex['flavor'] = {tuple(flavor): vertex['couplings']} 
+            # do not merge "identical" vertex here, This has to be done when all
+            # flavor of particles have been identified to be sure to not have 
+            # ambiguity in case of 4 fermion operator like mu+ mu- u u~
+
+    def merge_interactions_with_same_flavor(self):
+        """"""
+
+        pdg_to_vertex = {}
+
+        for vertex in self.get('interactions'):
+            pdg = tuple([p.get_pdg_code() for p in vertex.get('particles')])
+            orders = str(vertex.get('orders'))
+            if (pdg, orders) in pdg_to_vertex:
+                self.get('interactions').remove(vertex)
+                pdg_to_vertex[(pdg, orders)]['flavor'].update(vertex['flavor'])
+            else:
+                pdg_to_vertex[(pdg, orders)] = vertex
+
+
 
     
     def get_particles_hierarchy(self):

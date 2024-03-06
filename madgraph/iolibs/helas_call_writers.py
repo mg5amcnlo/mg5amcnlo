@@ -279,12 +279,12 @@ class HelasCallWriter(base_objects.PhysicsObject):
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction
         corresponding to the key"""
-
+        misc.sprint(wavefunction.get_call_key())
         try:
-            #misc.sprint(wavefunction['number_external'])
             call = self["wavefunctions"][wavefunction.get_call_key()](\
                                                                    wavefunction)
         except KeyError as error:
+            misc.sprint(error)
             return ""
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
@@ -596,7 +596,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         corresponding to the key. If the function doesn't exist,
         generate_helas_call is called to automatically create the
         function."""
-
+        misc.sprint('pass')   
         if wavefunction.get('spin') == 1 and \
                wavefunction.get('interaction_id') != 0:
             # Special feature: For HVS vertices with the two
@@ -1115,6 +1115,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
         if isinstance(argument, helas_objects.HelasWavefunction) and \
                not argument.get('mothers'):
+            misc.sprint("call external wfcts")
             self.generate_external_wavefunction(argument)
             return
                   
@@ -1135,15 +1136,20 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = call + HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
+            if argument['particle']['flavor']:
+                call += 'G' 
             # Fill out with X up to 6 positions
             call = call + 'X' * (11 - len(call))
             call = call + "(P(0,%(number_external)d),"
+            if argument['particle']['flavor']: 
+                call += 'FLAVOR(%(number_external)d),'
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "%(mass)s,NHEL(%(number_external)d),"
             call = call + "%(state_id)+d*IC(%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
-
+        misc.sprint(call, argument['particle']['flavor'])
+        misc.sprint(argument.get_call_key())
         call_function = lambda wf: call % wf.get_external_helas_call_dict()
         self.add_wavefunction(argument.get_call_key(), call_function)
 
@@ -1170,6 +1176,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
            (isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('type')=='loop')):
             flag.insert(0,"L")
+
+        flavor = ""
+        for i, particle in enumerate(argument['mother']):
+            if particle['flavor']:
+                flavor += 'G%d' % i
+        if particle['flavor']:
+            flavor += 'G%d' % argument.find_outgoing_number()
 
         # Creating line formatting:
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'

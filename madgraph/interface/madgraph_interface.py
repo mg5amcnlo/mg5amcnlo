@@ -5672,6 +5672,9 @@ This implies that with decay chains:
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
+            if '--no_flavor' not in args:
+               self._curr_model.pass_in_flavor_mode() 
+
             # Do post-processing of model
             self.process_model()
             # Reset amplitudes and matrix elements and global checks
