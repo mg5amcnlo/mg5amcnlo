@@ -4838,9 +4838,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     (return False to repeat the question)
     """
 
-    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
                      'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
-    to_init_card = ['param', 'run', 'madweight', 'madloop', 
+    to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
                     'shower', 'pythia8','delphes','madspin', 'rivet']
     special_shortcut = {}
     special_shortcut_help = {}
@@ -4870,6 +4870,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         self.has_delphes = False
         self.has_rivet = False
+        self.has_fo_card = False
         self.paths = {}
         self.update_block = []
 
@@ -4957,7 +4958,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
         # go trough the initialisation of each card and detect conflict
         for name in self.to_init_card:
+            misc.sprint(name)
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
+            misc.sprint(new_vars)
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
             self.all_vars.union(new_vars
@@ -5265,6 +5268,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_delphes = True
         return []
 
+    def init_fo_analysis(self, cards):
+        self.has_fo_card = False
+        if not self.get_path('FO_analyse', cards):
+            misc.sprint('no get path')
+            return []
+        self.has_fo_card = True
+        self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
+        self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
+        misc.sprint(self.fo_card.string_vars)
+        return list(self.fo_card.string_vars)
+
 
     def set_CM_velocity(self, line):
         """compute sqrts from the velocity in the center of mass frame"""
@@ -5525,6 +5539,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['delphes_card'] = ''
             if self.has_rivet:
                 allowed['rivet_card'] = ''
+            if self.has_fo_card:
+                allowed['fo_card'] = ''
         
         elif len(args) == 2:
             if args[1] == 'run_card':
@@ -5549,6 +5565,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'delphes_card':'default'}
             elif args[1] == 'rivet_card':
                 allowed = {'rivet_card':'default'}
+            elif args[1] == 'fo_card':
+                allowed = {'fo_card':'default'} 
             else:
                 allowed = {'value':''}
 
@@ -5556,6 +5574,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
+                            'fo_card',
                             'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
                 start = 2
 
@@ -5593,6 +5612,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('delphes_card')
             if self.has_rivet:
                 categories.append('rivet_card')
+            if self.has_fo_card:
+                categories.append('fo_card')
 
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -5647,7 +5668,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'delphes_card' in allowed:
             if allowed['delphes_card'] == 'default':
                 opts = ['default', 'atlas', 'cms']
-            possibilities['Delphes Card'] = self.list_completion(text, opts)              
+            possibilities['Delphes Card'] = self.list_completion(text, opts)
+
+        if 'fo_card' in allowed:
+            opts = self.fo_card.string_vars
+            if allowed['fo_card'] == 'default':
+                opts.append('default') 
+            possibilities['FO Card'] = self.list_completion(text, opts)               
 
         if 'value' in list(allowed.keys()):
             opts = ['default', 'scale']
@@ -5873,7 +5900,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
 
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
 
             if args[1] == 'default':
@@ -6192,6 +6219,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 default = False
             self.setRivet(args[start], value, default=default)
             self.rivet_card.write(self.paths['rivet'], self.paths['rivet_default'])
+
+        elif self.has_fo_card and (card in ['', 'fo_card'])\
+             and args[start].lower() in [k.lower() for k in self.fo_card.string_vars]:
+            
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.fo_card_default[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False 
+            self.fo_card[args[start]] = value
+            self.modified_card.add('fo_card') 
 
         #INVALID --------------------------------------------------------------
         else:      
@@ -6745,7 +6788,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ write the param_card """    
     
         self.param_card.write(self.paths['param'])
-        
+    
+    def write_card_fo_card(self):
+        """ write the fo_card"""
+        self.fo_card.write_card_from_template(self.paths['FO_analyse'], self.paths['FO_analyse_default'])
+
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0, run_card=None,
                     lhapdfconfig=None):
@@ -7547,9 +7594,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             answer = self.paths['ML']
         elif 'pythia8_card' in answer:
             answer = self.paths['pythia8']
+        elif 'FO_analyse' in answer:
+            path = self.paths['FO_analyse']
+            answer = 'fo_card'
         if os.path.exists(answer):
             path = answer
-        else:
+        elif not os.path.exists(path):
             if not '.dat' in answer and not '.lhco' in answer:
                 if answer != 'trigger':
                     path = self.paths[answer]
@@ -7568,6 +7618,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #security
         path = path.replace('_card_card','_card')
 
+        misc.sprint(answer, self.modified_card)
         if answer in self.modified_card:
             self.write_card(answer)
         elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
@@ -7627,6 +7678,8 @@ You can also copy/paste, your event file here.''')
             except:
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
+        elif path == self.paths['FO_analyse']:
+            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
         else:
             logger.debug('not keep in sync: %s', path)
         return path
