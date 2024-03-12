@@ -1,23 +1,113 @@
 module kinematics_module
+  ! Need to call fill_kinematics_module before anything else !
   implicit none
   integer,public :: ileg
   double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: sh,jmass
   double precision,private,parameter :: tiny=1d-5
+  character(len=10),private :: shower_code
+
+  public :: get_qMC, fill_kinematics_module
+  private
+
 contains
-  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass)
+  double precision function get_qMC(xi_i_fks,y_ij_fks)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks
+    if(ileg.eq.1)then
+       get_qMC=qMC_ileg1(xi_i_fks,y_ij_fks)
+    elseif(ileg.eq.2)then
+       get_qMC=qMC_ileg2(xi_i_fks,y_ij_fks)
+    elseif(ileg.eq.3)then
+       get_qMC=qMC_ileg3(xi_i_fks,y_ij_fks)
+    elseif(ileg.eq.4)then
+       get_qMC=qMC_ileg4(xi_i_fks,y_ij_fks)
+    endif
+  end function get_qMC
+  
+  double precision function qMC_ileg1(xi_i_fks,y_ij_fks)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks
+    if(shower_code.eq.'HERWIG6'  .or. &
+         shower_code.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+    if(shower_code.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
+    if(shower_code.eq.'PYTHIA6PT'.or. &
+         shower_code.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
+  end function qMC_ileg1
+
+  double precision function qMC_ileg2(xi_i_fks,y_ij_fks)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks
+    if(shower_code.eq.'HERWIG6'  .or. &
+         shower_code.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+    if(shower_code.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
+    if(shower_code.eq.'PYTHIA6PT'.or. &
+         shower_code.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
+  end function qMC_ileg2
+
+  double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
+    if(shower_code.eq.'HERWIG6'.or. &
+         shower_code.eq.'HERWIGPP')then
+       zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+       qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+       if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
+       if(qMCarg.lt.-tiny) then
+          write(*,*) 'Error 1 in qMC_ileg3: negtive sqrt'
+          write(*,*) qMCarg
+          stop 1
+       endif
+       qMC_ileg3=sqrt(qMCarg)
+    elseif(shower_code.eq.'PYTHIA6Q')then
+       qMC_ileg3=sqrt(w1+xm12)
+    elseif(shower_code.eq.'PYTHIA6PT')then
+       write(*,*)'PYTHIA6PT not available for FSR'
+       stop
+    elseif(shower_code.eq.'PYTHIA8')then
+       z=1d0-sh*xi_i_fks*(xm12+w1)/w1/(sh+w1+xm12-xm22)
+       qMC_ileg3=sqrt(z*(1-z)*w1)
+    endif
+  end function qMC_ileg3
+
+  double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
+    if(shower_code.eq.'HERWIG6'.or.shower_code.eq.'HERWIGPP')then
+       zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+       qMCarg=zeta2*(1d0-zeta2)*w2
+       if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
+       if(qMCarg.lt.-tiny)then
+          write(*,*)'Error 1 in qMC_ileg4: negtive sqrt'
+          write(*,*)qMCarg
+          stop 1
+       endif
+       qMC_ileg4=sqrt(qMCarg)
+    elseif(shower_code.eq.'PYTHIA6Q')then
+       qMC_ileg4=sqrt(w2)
+    elseif(shower_code.eq.'PYTHIA6PT')then
+       write(*,*)'PYTHIA6PT not available for FSR'
+       stop
+    elseif(shower_code.eq.'PYTHIA8')then
+       z=1d0-sh*xi_i_fks/(sh+w2-xm12)
+       qMC_ileg4=sqrt(z*(1-z)*w2)
+    endif
+  end function qMC_ileg4
+
+  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,shower_mc)
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
     implicit none
     include "nexternal.inc"
-    include "run.inc"
     double precision,dimension(0:3,nexternal) :: pp
-    double precision :: xi_i_fks,y_ij_fks
+    double precision :: xi_i_fks,y_ij_fks,mass
     integer :: i_fks,j_fks,fks_father
+    character(len=10) :: shower_mc
 
     jmass=mass ! this is the mass of j_fks
-    sh=2d0*dot(p(0:3,1),p(0:3,2)) ! s-hat
+    sh=2d0*dot(pp(0:3,1),pp(0:3,2)) ! s-hat
+    shower_code=shower_mc
 
     xm12=0d0
     xm22=0d0
@@ -97,12 +187,16 @@ contains
 
     if(ileg.eq.1)then
        call fill_invariants_ileg1(xi_i_fks,y_ij_fks)
+       call check_invariants_ileg12
     elseif(ileg.eq.2)then
        call fill_invariants_ileg2(xi_i_fks,y_ij_fks)
+       call check_invariants_ileg12
     elseif(ileg.eq.3)then
        call fill_invariants_ileg3(xi_i_fks,y_ij_fks)
+       call check_invariants_ileg3
     elseif(ileg.eq.4)then
        call fill_invariants_ileg4(xi_i_fks,y_ij_fks)
+       call check_invariants_ileg4
     else
        write(*,*)'Error 4 in fill_kinematics_module: assigned wrong ileg'
        stop
@@ -117,34 +211,21 @@ contains
 
   subroutine fill_invariants_ileg1(xi_i_fks,y_ij_fks)
     implicit none
-    include "run.inc"
     double precision :: xi_i_fks,y_ij_fks
     xtk=-sh*xi_i_fks*(1-y_ij_fks)/2d0
     xuk=-sh*xi_i_fks*(1+y_ij_fks)/2d0
-    if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
-    if(shower_mc.eq.'PYTHIA6Q')qMC=sqrt(-xtk)
-    if(shower_mc.eq.'PYTHIA6PT'.or. &
-         shower_mc.eq.'PYTHIA8')qMC=sqrt(-xtk*xi_i_fks)
   end subroutine fill_invariants_ileg1
 
   subroutine fill_invariants_ileg2(xi_i_fks,y_ij_fks)
     implicit none
-    include "run.inc"
     double precision :: xi_i_fks,y_ij_fks
     xtk=-sh*xi_i_fks*(1+y_ij_fks)/2d0
     xuk=-sh*xi_i_fks*(1-y_ij_fks)/2d0
-    if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
-    if(shower_mc.eq.'PYTHIA6Q') qMC=sqrt(-xuk)
-    if(shower_mc.eq.'PYTHIA6PT'.or. &
-         shower_mc.eq.'PYTHIA8') qMC=sqrt(-xuk*xi_i_fks)
   end subroutine fill_invariants_ileg2
 
   subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
     implicit none
-    include "run.inc"
-    double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
+    double precision :: xi_i_fks,y_ij_fks
     xm12=jmass**2
     xm22=dot(pp_rec,pp_rec)
     xtk=-2d0*dot(xp1,xk3)
@@ -153,32 +234,11 @@ contains
     xq2q=-2d0*dot(xp2,xk2)+xm22
     w1=-xq1q+xq2q-xtk
     w2=-xq2q+xq1q-xuk
-    if(shower_mc.eq.'HERWIG6'.or. &
-         shower_mc.eq.'HERWIGPP')then
-       zeta1=get_zeta(sh,w1,w2,xm12,xm22)
-       qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
-       if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
-       if(qMCarg.lt.-tiny) then
-          write(*,*) 'Error 1 in fill_invariants_ileg3: negtive sqrt'
-          write(*,*) qMCarg
-          stop 1
-       endif
-       qMC=sqrt(qMCarg)
-    elseif(shower_mc.eq.'PYTHIA6Q')then
-       qMC=sqrt(w1+xm12)
-    elseif(shower_mc.eq.'PYTHIA6PT')then
-       write(*,*)'PYTHIA6PT not available for FSR'
-       stop
-    elseif(shower_mc.eq.'PYTHIA8')then
-       z=1d0-sh*xi_i_fks*(xm12+w1)/w1/(sh+w1+xm12-xm22)
-       qMC=sqrt(z*(1-z)*w1)
-    endif
   end subroutine fill_invariants_ileg3
 
   subroutine fill_invariants_ileg4(xi_i_fks,y_ij_fks)
     implicit none
-    include "run.inc"
-    double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
+    double precision :: xi_i_fks,y_ij_fks,xij
     xm12=dot(pp_rec,pp_rec)
     xm22=0d0
     xtk=-2d0*dot(xp1,xk3)
@@ -188,25 +248,6 @@ contains
     xq2q=-sh*xij*(2d0-dot(xp1,xk2)*4d0/(sh*xij))/2d0
     xq1q=xuk+xq2q+w2
     w1=-xq1q+xq2q-xtk
-    if(shower_mc.eq.'HERWIG6'.or.shower_mc.eq.'HERWIGPP')then
-       zeta2=get_zeta(sh,w2,w1,xm22,xm12)
-       qMCarg=zeta2*(1d0-zeta2)*w2
-       if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
-       if(qMCarg.lt.-tiny)then
-          write(*,*)'Error 1 in fill_invariants_ileg4: negtive sqrt'
-          write(*,*)qMCarg
-          stop 1
-       endif
-       qMC=sqrt(qMCarg)
-    elseif(shower_mc.eq.'PYTHIA6Q')then
-       qMC=sqrt(w2)
-    elseif(shower_mc.eq.'PYTHIA6PT')then
-       write(*,*)'PYTHIA6PT not available for FSR'
-       stop
-    elseif(shower_mc.eq.'PYTHIA8')then
-       z=1d0-sh*xi_i_fks/(sh+w2-xm12)
-       qMC=sqrt(z*(1-z)*w2)
-    endif
   end subroutine fill_invariants_ileg4
 
 
@@ -270,91 +311,99 @@ contains
   end subroutine get_momenta_emitter_recoiler
 
   
-  subroutine check_invariants
+  subroutine check_invariants_ileg12
     implicit none
     integer,parameter :: max_imprecision=10
     integer,save,dimension(7) :: imprecision=0
-    if(ileg.eq.1 .or. ileg.eq.2)then
-       if((abs(xtk+2*dot(xp1,xk3))/sh.ge.tiny).or. &
-            (abs(xuk+2*dot(xp2,xk3))/sh.ge.tiny))then
-          write(*,*)'Warning: imprecision 1 in check_invariants'
-          write(*,*)abs(xtk+2*dot(xp1,xk3))/sh, &
-               abs(xuk+2*dot(xp2,xk3))/sh
-          imprecision(1)=imprecision(1)+1
-          if (imprecision(1).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' imprecisions. Stopping...'
-             stop
-          endif
-       endif
-    elseif(ileg.eq.3)then
-       if(sqrt(w1+xm12).ge.sqrt(sh)-sqrt(xm22))then
-          write(*,*)'Warning: imprecision 2 in check_invariants'
-          write(*,*)sqrt(w1),sqrt(sh),xm22
-          imprecision(2)=imprecision(2)+1
-          if (imprecision(2).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' imprecisions. Stopping...'
-             stop
-          endif
-       endif
-       if(((abs(w1-2*dot(xk1,xk3))/sh.ge.tiny)).or. &
-            ((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)))then
-          write(*,*)'Warning: imprecision 3 in check_invariants'
-          write(*,*)abs(w1-2*dot(xk1,xk3))/sh, &
-               abs(w2-2*dot(xk2,xk3))/sh
-          imprecision(3)=imprecision(3)+1
-          if (imprecision(3).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' imprecisions. Stopping...'
-             stop
-          endif
-       endif
-       if(xm12.eq.0d0)then
-          write(*,*)'Warning 4 in check_invariants'
-          imprecision(4)=imprecision(4)+1
-          if (imprecision(4).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' warnings. Stopping...'
-             stop
-          endif
-       endif
-    elseif(ileg.eq.4)then
-       if(sqrt(w2).ge.sqrt(sh)-sqrt(xm12))then
-          write(*,*)'Warning: imprecision 5 in check_invariants'
-          write(*,*)sqrt(w2),sqrt(sh),xm12
-          imprecision(5)=imprecision(5)+1
-          if (imprecision(5).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' imprecisions. Stopping...'
-             stop
-          endif
-       endif
-       if(((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)).or. &
-            ((abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)).or. &
-            ((abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)))then
-          write(*,*)'Warning: imprecision 6 in check_invariants'
-          write(*,*)abs(w2-2*dot(xk2,xk3))/sh, &
-               abs(xq2q+2*dot(xp2,xk2))/sh, &
-               abs(xq1q+2*dot(xp1,xk1)-xm12)/sh
-          imprecision(6)=imprecision(6)+1
-          if (imprecision(6).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' imprecisions. Stopping...'
-             stop
-          endif
-       endif
-       if(xm22.ne.0d0)then
-          write(*,*)'Warning 7 in check_invariants'
-          imprecision(7)=imprecision(7)+1
-          if (imprecision(7).ge.max_imprecision) then
-             write (*,*) 'Error: ',max_imprecision &
-                  ,' warnings. Stopping...'
-             stop
-          endif
+    if((abs(xtk+2*dot(xp1,xk3))/sh.ge.tiny).or. &
+         (abs(xuk+2*dot(xp2,xk3))/sh.ge.tiny))then
+       write(*,*)'Warning: imprecision 1 in check_invariants_ileg12'
+       write(*,*)abs(xtk+2*dot(xp1,xk3))/sh, &
+            abs(xuk+2*dot(xp2,xk3))/sh
+       imprecision(1)=imprecision(1)+1
+       if (imprecision(1).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' imprecisions. Stopping...'
+          stop
        endif
     endif
-  end subroutine check_invariants
+  end subroutine check_invariants_ileg12
 
-  
+  subroutine check_invariants_ileg3
+    implicit none
+    integer,parameter :: max_imprecision=10
+    integer,save,dimension(7) :: imprecision=0
+    if(sqrt(w1+xm12).ge.sqrt(sh)-sqrt(xm22))then
+       write(*,*)'Warning: imprecision 2 in check_invariants_ileg3'
+       write(*,*)sqrt(w1),sqrt(sh),xm22
+       imprecision(2)=imprecision(2)+1
+       if (imprecision(2).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' imprecisions. Stopping...'
+          stop
+       endif
+    endif
+    if(((abs(w1-2*dot(xk1,xk3))/sh.ge.tiny)).or. &
+         ((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)))then
+       write(*,*)'Warning: imprecision 3 in check_invariants_ileg3'
+       write(*,*)abs(w1-2*dot(xk1,xk3))/sh, &
+            abs(w2-2*dot(xk2,xk3))/sh
+       imprecision(3)=imprecision(3)+1
+       if (imprecision(3).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' imprecisions. Stopping...'
+          stop
+       endif
+    endif
+    if(xm12.eq.0d0)then
+       write(*,*)'Warning 4 in check_invariants_ileg3'
+       imprecision(4)=imprecision(4)+1
+       if (imprecision(4).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' warnings. Stopping...'
+          stop
+       endif
+    endif
+  end subroutine check_invariants_ileg3
+
+  subroutine check_invariants_ileg4
+    implicit none
+    integer,parameter :: max_imprecision=10
+    integer,save,dimension(7) :: imprecision=0
+    if(sqrt(w2).ge.sqrt(sh)-sqrt(xm12))then
+       write(*,*)'Warning: imprecision 5 in check_invariants_ileg4'
+       write(*,*)sqrt(w2),sqrt(sh),xm12
+       imprecision(5)=imprecision(5)+1
+       if (imprecision(5).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' imprecisions. Stopping...'
+          stop
+       endif
+    endif
+    if(((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)).or. &
+         ((abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)).or. &
+         ((abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)))then
+       write(*,*)'Warning: imprecision 6 in check_invariants_ileg4'
+       write(*,*)abs(w2-2*dot(xk2,xk3))/sh, &
+            abs(xq2q+2*dot(xp2,xk2))/sh, &
+            abs(xq1q+2*dot(xp1,xk1)-xm12)/sh
+       imprecision(6)=imprecision(6)+1
+       if (imprecision(6).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' imprecisions. Stopping...'
+          stop
+       endif
+    endif
+    if(xm22.ne.0d0)then
+       write(*,*)'Warning 7 in check_invariants_ileg4'
+       imprecision(7)=imprecision(7)+1
+       if (imprecision(7).ge.max_imprecision) then
+          write (*,*) 'Error: ',max_imprecision &
+               ,' warnings. Stopping...'
+          stop
+       endif
+    endif
+  end subroutine check_invariants_ileg4
+
+
 end module kinematics_module

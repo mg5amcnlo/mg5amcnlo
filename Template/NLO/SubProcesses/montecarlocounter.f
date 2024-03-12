@@ -651,6 +651,8 @@ c min(i_fks,j_fks) is the mother of the FKS pair
      $                              amp_split_bornbarstilde
       double precision amp_split_xmcxsec(amp_split_size,nexternal)
       common /to_amp_split_xmcxsec/amp_split_xmcxsec
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
 !     common block used to make the (scalar) reference scale partner
@@ -4501,7 +4503,7 @@ c Consistency check
       endif
 
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
-     $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
+     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
       call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
@@ -4568,7 +4570,7 @@ c Consistency check
       endif
 
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
-     $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
+     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
       call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a
      $     ,ileg,xm12)
       emsca_a=-1d0
