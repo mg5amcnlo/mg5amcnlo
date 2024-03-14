@@ -306,7 +306,7 @@ class Particle(PhysicsObject):
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -353,7 +353,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
