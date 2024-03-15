@@ -5269,7 +5269,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def init_fo_analysis(self, cards):
         self.has_fo_card = False
         if not self.get_path('FO_analyse', cards):
-            misc.sprint('no get path')
             return []
         self.has_fo_card = True
         self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
@@ -7585,6 +7584,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 answer = self.cards[int(answer)-self.integer_bias]
 
+        path = ''
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:
