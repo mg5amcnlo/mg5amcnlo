@@ -6,13 +6,16 @@ module kinematics_module
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: sh,jmass
   double precision,private,parameter :: tiny=1d-5
-  character(len=10),private :: shower_code
+  character(len=10),private :: shower_mc
 
   public :: get_qMC, fill_kinematics_module
   private
 
 contains
   double precision function get_qMC(xi_i_fks,y_ij_fks)
+    ! This is the (relative) pT of the splitting. For some showers this is
+    ! equal to the shower variable, but not for all. This is what is used for
+    ! the damping.
     implicit none
     double precision :: xi_i_fks,y_ij_fks
     if(ileg.eq.1)then
@@ -29,28 +32,28 @@ contains
   double precision function qMC_ileg1(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    if(shower_code.eq.'HERWIG6'  .or. &
-         shower_code.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
-    if(shower_code.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
-    if(shower_code.eq.'PYTHIA6PT'.or. &
-         shower_code.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
+    if(shower_mc.eq.'HERWIG6'  .or. &
+         shower_mc.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+    if(shower_mc.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
+    if(shower_mc.eq.'PYTHIA6PT'.or. &
+         shower_mc.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
   end function qMC_ileg1
 
   double precision function qMC_ileg2(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    if(shower_code.eq.'HERWIG6'  .or. &
-         shower_code.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
-    if(shower_code.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
-    if(shower_code.eq.'PYTHIA6PT'.or. &
-         shower_code.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
+    if(shower_mc.eq.'HERWIG6'  .or. &
+         shower_mc.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+    if(shower_mc.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
+    if(shower_mc.eq.'PYTHIA6PT'.or. &
+         shower_mc.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
   end function qMC_ileg2
 
   double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
-    if(shower_code.eq.'HERWIG6'.or. &
-         shower_code.eq.'HERWIGPP')then
+    if(shower_mc.eq.'HERWIG6'.or. &
+         shower_mc.eq.'HERWIGPP')then
        zeta1=get_zeta(sh,w1,w2,xm12,xm22)
        qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
@@ -60,12 +63,12 @@ contains
           stop 1
        endif
        qMC_ileg3=sqrt(qMCarg)
-    elseif(shower_code.eq.'PYTHIA6Q')then
+    elseif(shower_mc.eq.'PYTHIA6Q')then
        qMC_ileg3=sqrt(w1+xm12)
-    elseif(shower_code.eq.'PYTHIA6PT')then
+    elseif(shower_mc.eq.'PYTHIA6PT')then
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
-    elseif(shower_code.eq.'PYTHIA8')then
+    elseif(shower_mc.eq.'PYTHIA8')then
        z=1d0-sh*xi_i_fks*(xm12+w1)/w1/(sh+w1+xm12-xm22)
        qMC_ileg3=sqrt(z*(1-z)*w1)
     endif
@@ -74,7 +77,7 @@ contains
   double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
-    if(shower_code.eq.'HERWIG6'.or.shower_code.eq.'HERWIGPP')then
+    if(shower_mc.eq.'HERWIG6'.or.shower_mc.eq.'HERWIGPP')then
        zeta2=get_zeta(sh,w2,w1,xm22,xm12)
        qMCarg=zeta2*(1d0-zeta2)*w2
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
@@ -84,18 +87,18 @@ contains
           stop 1
        endif
        qMC_ileg4=sqrt(qMCarg)
-    elseif(shower_code.eq.'PYTHIA6Q')then
+    elseif(shower_mc.eq.'PYTHIA6Q')then
        qMC_ileg4=sqrt(w2)
-    elseif(shower_code.eq.'PYTHIA6PT')then
+    elseif(shower_mc.eq.'PYTHIA6PT')then
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
-    elseif(shower_code.eq.'PYTHIA8')then
+    elseif(shower_mc.eq.'PYTHIA8')then
        z=1d0-sh*xi_i_fks/(sh+w2-xm12)
        qMC_ileg4=sqrt(z*(1-z)*w2)
     endif
   end function qMC_ileg4
 
-  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,shower_mc)
+  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass)
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
     implicit none
@@ -107,7 +110,6 @@ contains
 
     jmass=mass ! this is the mass of j_fks
     sh=2d0*dot(pp(0:3,1),pp(0:3,2)) ! s-hat
-    shower_code=shower_mc
 
     xm12=0d0
     xm22=0d0
@@ -202,7 +204,45 @@ contains
        stop
     endif
   end subroutine fill_kinematics_module
+  
+  double precision function deltaR(p1,p2)
+    implicit none
+    double precision,dimension(0:3) :: p1,p2
+    double precision :: eta,delta_phi
+    deltaR = sqrt((delta_phi(p1,p2))**2+(delta_y(p1,p2))**2)
+  end function deltaR
 
+  double precision function delta_phi(p1, p2)
+    implicit none
+    double precision,dimension(0:3) :: p1,p2
+    double precision :: denom, temp
+    double precision,parameter :: tiny=1d-8
+    denom = sqrt(p1(1)**2 + p1(2)**2) * sqrt(p2(1)**2 + p2(2)**2)
+    temp = max(-(1d0-tiny), (p1(1)*p2(1) + p1(2)*p2(2)) / denom)
+    temp = min( (1d0-tiny), temp)
+    delta_phi = acos(temp)
+  end function delta_phi
+
+  double precision  function delta_y(p1,p2)
+    implicit none
+    double precision,dimension(0:3) :: p1,p2
+    delta_y =.5d0*dlog((p1(0)+p1(3))/(p1(0)-p1(3)))- &
+             .5d0*dlog((p2(0)+p2(3))/(p2(0)-p2(3)))
+  end function delta_y
+      
+  double precision function pt(p)
+    implicit none
+    double precision,dimension(0:3) :: p
+    pt = dsqrt(p(1)**2+p(2)**2)
+  end function pt
+
+  double precision function sumdot(p1,p2,sign)
+    implicit  none
+    double precision,dimension(0:3) :: p1,p2
+    double precision :: sign
+    sumdot=dot(p1+sign*p2,p1+sign*p2)
+  end function sumdot
+  
   double precision function dot(p1,p2)
     implicit none
     double precision,dimension(0:3) :: p1,p2

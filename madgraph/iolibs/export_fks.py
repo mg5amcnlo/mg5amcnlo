@@ -703,7 +703,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'weight_lines.f',
                      'genps_fks.f',
                      'boostwdir2.f',
-                     'madfks_mcatnlo.inc',
                      'open_output_files.f',
                      'open_output_files_dummy.f',
                      'HwU_dummy.f',
@@ -751,7 +750,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f',
-                     'kinematics_module.f90']
+                     'kinematics_module.f90',
+                     'scale_module.f90']
 
         for file in linkfiles:
             ln('../' + file , '.')

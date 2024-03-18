@@ -858,6 +858,9 @@ c respectively.
       integer get_orders_tag
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+! If .true., multiplies MC subtraction terms by S_ev
+      logical UseSfun
+      parameter (UseSfun=.false.)
       call cpu_time(tBefore)
       call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
      $     ,lzone,zhw,nofpartners,xmcxsec)

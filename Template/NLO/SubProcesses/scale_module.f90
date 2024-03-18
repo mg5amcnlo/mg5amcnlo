@@ -1,0 +1,156 @@
+
+
+
+!!!! TO DO: include pdg_type, masses & colours, valid_dipole, collider
+!!!! energy, abrv, shower_mc. Maybe define a separate module that fills this stuff?
+!!!! Shower_mc needs to be included in kinematics_module as well.
+
+
+module scale_module
+  import kinematics_module
+  implicit none
+  include "nexternal.inc"
+  double precision,public,dimension(nexternal-1,nexternal-1) :: shower_scale_nbody
+  double precision,private :: global_ref_scale
+  logical,private :: mc_del
+
+  double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
+  double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
+  double precision,private,parameter :: scaleMCcut=3d0
+
+  public :: compute_shower_scale_nbody
+  private
+
+contains
+  subroutine compute_shower_scale_nbody(p,mcatnlo_delta)
+    implicit none
+    integer :: i,j
+    double precision,dimension(0:3,nexternal-1) :: p
+    logical :: mcatnlo_delta
+    double precision :: ref_scale,scalemin,scalemax
+    mc_del=mcatnlo_delta
+    ! loop over dipoles
+    call get_global_ref_scale(p)
+    do i=1,nexternal-1
+       do j=1,nexternal-1
+          if (valid_dipole(i,j)) then
+             ref_scale=get_ref_scale_dipole(p,i,j)
+             call get_scaleminmax(ref_scale,scalemin,scalemax)
+             ! this breaks backward compatibility. In earlier versions, the
+             ! shower_scale_nbody was constrained by the ptresc (which
+             ! depended on the n+1-body). Also, now we randomize for each
+             ! dipole separately also for non-delta.
+             rrnd=ran2()
+             rrnd=damping_inv(rrnd,1d0)
+             shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
+          else
+             shower_scale_nbody(i,j)=-1d0
+          endif
+       enddo
+    enddo
+    
+  end subroutine compute_shower_scale_nbody
+
+  subroutine get_scaleminmax(ref_scale,scalemin,scalemax)
+    implicit none
+    double precision :: ref_scale,scalemin,scalemax
+    scalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
+    scalemax=max(shower_scale_factor*frac_upp*ref_scale, &
+         scalemin+scaleMCdelta)
+    scalemax=min(scalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
+    scalemin=min(scalemin,scalemax)
+    if(abrv.ne.'born'.and.shower_code(1:7).eq.'PYTHIA6' .and. &
+         ileg.eq.3)then
+       scalemin=max(scalemin,sqrt(xm12))
+       scalemax=max(scalemin,scalemax)
+    endif
+  end subroutine get_scaleminmax
+           
+  double precision function damping_fun(x,alpha)
+    implicit none
+    double precision :: x,alpha
+    if(x.lt.0d0.or.x.gt.1d0)then
+       write(*,*)'Fatal error in damping_fun'
+       stop
+    endif
+    damping_fun=x**(2*alpha)/(x**(2*alpha)+(1-x)**(2*alpha))
+  end function damping_fun
+
+  double precision function damping_inv(r,alpha)
+! Inverse of the damping function, implemented only for alpha=1 for the moment
+    implicit none
+    double precision :: r,alpha
+    if(r.lt.0d0.or.r.gt.1d0.or.alpha.ne.1d0)then
+       write(*,*)'Fatal error in damping_inv'
+       stop
+    endif
+    damping_inv=sqrt(r)/(sqrt(r)+sqrt(1d0-r))
+  end function damping_inv
+
+  
+  double precision function get_ref_scale_dipole(p,i,j)
+    implicit none
+    integer :: i,j
+    double precision,dimension(0:3,nexternal-1) :: p
+    if (.not.mc_del) then
+       get_ref_scale_dipole=global_ref_scale
+    else
+       get_ref_scale_dipole=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0))) &
+                                ,global_ref_scale)
+    endif
+  end function get_ref_scale_dipole
+  
+  
+  subroutine get_global_ref_scale(p)
+    ! this is the global reference shower scale (i.e., without damping),
+    ! i.e. HT/2 for non-delta, and shat reduced by kT of splitting, or ET of
+    ! massive in case of delta.
+    implicit none
+    double precision,dimension(0:3,nexternal-1) :: p,pQCD
+    integer :: i,j,NN
+    if (.not.mc_del) then
+       ! Sum of final-state transverse masses
+       global_ref_scale=0d0
+       do i=3,nexternal-1
+          global_ref_scale=global_ref_scale+ &
+               dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
+       enddo
+       global_ref_scale=global_ref_scale/2d0
+    else
+ ! start from s-hat      
+       global_ref_scale=sqrt(2d0*dot(p(0,1),p(0,2)))
+       NN=0
+       do j=nincoming+1,nexternal-1
+          if (is_a_j(j))then
+             NN=NN+1
+             do i=0,3
+                pQCD(i,NN)=p(i,j)
+             enddo
+          elseif (abs(get_color(pdg_type(j))).ne.1 .and. &
+               abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
+             !     reduce by ET of massive QCD particles
+             global_ref_scale=min(global_ref_scale,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
+          elseif (abs(get_color(pdg_type(j))).ne.1 .and. &
+                  abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
+             write (*,*) 'Error in assign_ref_scale(): colored'/ &
+                  /' massless particle that does not enter jets'
+             stop 1
+          endif
+       enddo
+       ! reduce by kT-cluster scale of massless QCD partons
+       if (NN.eq.1) then
+          global_ref_scale=min(global_ref_scale,pt(pQCD(0,1)))
+       elseif (NN.ge.2) then
+          do i=1,NN
+             do j=i+1,NN
+                global_ref_scale=min(global_ref_scale,min(pt(pQCD(0,i)),pt(pQCD(0,j))) &
+                                                      *deltaR(pQCD(0,i),pQCD(0,j)))
+             enddo
+             global_ref_scale=min(global_ref_scale,pt(pQCD(0,i)))
+          enddo
+       endif
+    endif
+  end subroutine get_global_ref_scale
+
+  
+end module scale_module
