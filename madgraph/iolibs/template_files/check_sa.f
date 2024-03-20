@@ -13,7 +13,7 @@ C
 C     
 C     INCLUDE FILES
 C     
-C---  the include file with the values of the parameters and masses	
+C---  the include file with the values of the parameters and masses 
       INCLUDE "coupl.inc"
 C---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
@@ -61,7 +61,7 @@ c---  Now use a simple multipurpose PS generator (RAMBO) just to get a
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
 c     the MadGraph5_aMC@NLO matrix-element.       
 c     Alternatevely, here the user can call or set the four momenta at his will, see below.
-c     	
+c       
       IF(nincoming.EQ.1) THEN
          SQRTS=PMASS(1)
       ELSE
@@ -73,9 +73,9 @@ c
 
       call printout()
 
-      CALL GET_MOMENTA(SQRTS,PMASS,P)	
+      CALL GET_MOMENTA(SQRTS,PMASS,P)   
 c
-c	  write the information on the four momenta 
+c     write the information on the four momenta 
 c
       write (*,*)
       write (*,*) " Phase space point:"
@@ -94,10 +94,10 @@ c
       CALL SMATRIX(P,MATELEM)
 c
 
-      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
+      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)    
       write (*,*) "-----------------------------------------------------------------------------"
 
-
+      call get_density_matrix(P)
 cc
 cc      Copy down here (or read in) the four momenta as a string. 
 cc      
@@ -126,15 +126,53 @@ c
 c      CALL SMATRIX(P,MATELEM)
 c
 c      write (*,*) "-------------------------------------------------"
-c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
+c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)   
 c      write (*,*) "-------------------------------------------------"
 
       end
-	
-	  
-	  
-	  
-	   double precision function dot(p1,p2)
+    
+       SUBROUTINE get_density_matrix(P)
+C---  integer nexternal ! number particles (incoming+outgoing) in the me
+       INCLUDE "nexternal.inc"
+       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+       INTEGER NHEL(NEXTERNAL)
+       INTEGER N_CHANGING  ! might need changing
+       PARAMETER (N_CHANGING=1)
+       INTEGER N_COMB
+       PARAMETER (N_COMB=2) ! total number of different helicity  combination to consider 
+       INTEGER POS(N_CHANGING)
+       INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+       DOUBLE COMPLEX INTER((N_COMB*(N_COMB+1))/2)
+       
+       INTEGER I,J, SOL
+       INTEGER K
+
+       NHEL(1) =  -1
+       NHEL(2) =   1
+       NHEL(4)=   -1 
+
+       POS(1) = 3
+c      density matrix helicity index value for particle 1 
+       ALLOW_HEL(1) = +1
+       ALLOW_HEL(2) = -1
+c      
+       call GET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+       
+       SOL=0
+       DO I=1, N_COMB
+          DO J = I, N_COMB
+             SOL= SOL + 1
+             DO K =1, N_CHANGING
+                WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((K-1)*N_COMB+I), ALLOW_HEL((K-1)*N_COMB+J)
+            ENDDO
+             write(*,*) 'value is ', INTER(SOL)
+          ENDDO
+       ENDDO
+
+       return
+       END 
+      
+       double precision function dot(p1,p2)
 C****************************************************************************
 C     4-Vector Dot product
 C****************************************************************************
@@ -144,13 +182,13 @@ C****************************************************************************
       end
 
 
-	  SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
+      SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
 C---- auxiliary function to change convention between MadGraph5_aMC@NLO and rambo
-c---- four momenta. 	  
-	  IMPLICIT NONE
-	  INCLUDE "nexternal.inc"
-C	  ARGUMENTS
-	  REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
+c---- four momenta.       
+      IMPLICIT NONE
+      INCLUDE "nexternal.inc"
+C     ARGUMENTS
+      REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C         LOCAL
          INTEGER I
          REAL*8 etot2,mom,m1,m2,e1,e2
@@ -179,10 +217,10 @@ C         LOCAL
              
             call rambo(nexternal-2,energy,pmass(nincoming+1),prambo,WGT)
             DO I=3, NEXTERNAL
-               P(0,I)=PRAMBO(4,I-2)	
+               P(0,I)=PRAMBO(4,I-2) 
                P(1,I)=PRAMBO(1,I-2)
                P(2,I)=PRAMBO(2,I-2)
-               P(3,I)=PRAMBO(3,I-2)	
+               P(3,I)=PRAMBO(3,I-2) 
             ENDDO
              
           elseif(nincoming.eq.1) then 
@@ -194,15 +232,15 @@ C         LOCAL
              
              call rambo(nexternal-1,energy,pmass(2),prambo,WGT)
              DO I=2, NEXTERNAL
-                P(0,I)=PRAMBO(4,I-1)	
+                P(0,I)=PRAMBO(4,I-1)    
                 P(1,I)=PRAMBO(1,I-1)
                 P(2,I)=PRAMBO(2,I-1)
-                P(3,I)=PRAMBO(3,I-1)	
+                P(3,I)=PRAMBO(3,I-1)    
              ENDDO
           endif
           
-	  RETURN
-	  END
+      RETURN
+      END
       
 
       SUBROUTINE RAMBO(N,ET,XM,P,WT)

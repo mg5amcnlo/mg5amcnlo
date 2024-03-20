@@ -376,6 +376,75 @@ C
       END       
 
 
+      SUBROUTINE  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+c     P momenta
+c     NHEL base of helicity that are not changing
+c     POS(N_CHNGING): position of the changing helicity
+c     n_changing: number of changing helicity
+c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
+c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
+      implicit none
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: NHEL(NEXTERNAL)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(OUT) :: INTER((NCOMB*NCOMB+1)/2)
+c
+C
+C ARGUMENTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      DOUBLE COMPLEX INTER(*)
+c
+c     Intermediate array
+c
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d)
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d)
+      INTEGER IC(NEXTERNAL)
+
+      DOUBLE COMPLEX AMP(NGRAPHS)
+      DOUBLE COMPLEX JAMP(3*NEXTERNAL, NCOLOR)
+c
+c     LOCAL
+c
+      INTEGER I,J,SOL,N
+
+C ----------
+C BEGIN CODE
+C ----------
+      IC(:)=1
+      do I = 1, N_COMB
+         do N = 1, N_CHANGING
+            NHEL(POS(N)) = ALLOW_HEL((N-1)*N_COMB+I)
+            call %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
+            call %(proc_prefix)sGET_JAMP(AMP,JAMP(I,1))
+          enddo
+      enddo
+
+    SOL = 0 
+    DO I = 1, N_COMB
+       DO J= I, N_COMB
+         SOL = SOL +1
+         call %(proc_prefix)sGET_INTER(JAMP(I,1), JAMP(J,1), INTER(SOL))
+       ENDDO
+    ENDDO
+
+
+    RETURN
+    END
+
+
+
+
+
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE   
 C
