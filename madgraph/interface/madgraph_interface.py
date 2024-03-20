@@ -3566,15 +3566,14 @@ This implies that with decay chains:
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
             #self._curr_model.get_order_hierarchy().items()
-            def order(first, second):
-                if first[1] < second[1]:
-                    return -1
-                else:
-                    return 1
-            hierarchy.sort(order)
+            #def order(first, second):
+            #    if first[1] < second[1]:
+            #        return -1
+            #    else:
+            #        return 1
+            hierarchy.sort(key=lambda x: x[1])
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
-
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')

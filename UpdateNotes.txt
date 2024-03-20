@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.19 (20/03/24):
+    OM: Fix a "cot" issue introduced in 2.9.18.
+    OM: Fixing some regular expression for the way fortran writter works.
+        The bugged expression was not spotted as problematic for the LTS version.
+    OM: Fix some compiler issue with modern compiler for rambo (standalone mode)
+    OM: Fix one rare bug for helicity recycling (case without propagator)
+
 2.9.18 (08/12/23):
     OM: Fix a bug for processes extremelly close to threshold, where the 
         the initial grid for some angle was wrongly biased towards \tetha=\pi.
