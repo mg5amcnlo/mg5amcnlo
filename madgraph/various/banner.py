@@ -319,7 +319,7 @@ class Banner(dict):
     def get_lha_strategy(self):
         """get the lha_strategy: how the weight have to be handle by the shower"""
         
-        if not self["init"]:
+        if "init" not in self or not self["init"]:
             raise Exception("No init block define")
         
         data = self["init"].split('\n')[0].split()
@@ -868,7 +868,7 @@ class ProcCard(list):
                 self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'add model', 'output'])
-                if cmds[1] == 'model':
+                if cmds[1] == 'model' and len(cmds)>2:
                     self.info['model'] = cmds[2]
                 else:
                     self.info['model'] = None # not UFO model
@@ -1212,7 +1212,7 @@ class ConfigFile(dict):
                     for pair in value[1:-1].split(','):
                         if not pair.strip():
                             break
-                        x, y = pair.split(':')
+                        x, y = pair.rsplit(':',1)
                         x, y = x.strip(), y.strip()
                         if x.startswith(('"',"'")) and x.endswith(x[0]):
                             x = x[1:-1] 
@@ -3282,7 +3282,7 @@ class RunCard(ConfigFile):
         elif formatv == 'float':
             if isinstance(value, str):
                 value = value.replace('d','e')
-            return ('%.10e' % float(value)).replace('e','d')
+            return ('%.15e' % float(value)).replace('e','d')
         
         elif formatv == 'str':
             # Check if it is a list
@@ -3904,6 +3904,7 @@ class RunCardLO(RunCard):
                       "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
                       "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "bias_wgt_custom": pjoin("SubProcesses","dummy_fct.f"),
                       "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
     
@@ -3918,6 +3919,8 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
+        self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
+                       allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
@@ -3958,7 +3961,7 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("mue_ref_fixed", 91.1880, hidden=True)
-        self.add_param("dynamical_scale_choice", 3, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
                                                 allowed=[-1,0,1,2,3,4,10])
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
@@ -4271,7 +4274,7 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff']:
+                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
@@ -4337,7 +4340,10 @@ class RunCardLO(RunCard):
                     logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
+                    if self['pdlabel'] in ['edff','chff']:
+                        logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
+                    else:
+                        logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
         if six.PY2 and self['hel_recycling']:
@@ -4705,6 +4711,9 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        if proc_characteristic['ninitial'] == 1:
+            self['SDE_strategy'] =1
 
         if 'MLM' in proc_characteristic['limitations']:
             if self['dynamical_scale_choice'] ==  -1:
@@ -5294,18 +5303,25 @@ class RunCardNLO(RunCard):
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
+        # whether to include or not photon-initiated processes in lepton collisions
         self.add_param('photons_from_lepton', True)
-        self.add_param('has_bstrahl', False)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         # stuff for lepton collisions 
-        self.add_param('alphascheme', 0)
-        self.add_param('nlep_run', -1)
-        self.add_param('nupq_run', -1)
-        self.add_param('ndnq_run', -1)
-        self.add_param('w_run', 1)
+        # these parameters are in general set automatically by eMELA in a consistent manner with the PDF set 
+        # whether the current PDF set has or not beamstrahlung 
+        self.add_param('has_bstrahl', False, system=True)
+        # renormalisation scheme of alpha
+        self.add_param('alphascheme', 0, system=True)
+        # number of leptons/up-/down-quarks relevant for the running of alpha
+        self.add_param('nlep_run', -1, system=True)
+        self.add_param('nupq_run', -1, system=True)
+        self.add_param('ndnq_run', -1, system=True)
+        # w contribution included or not in the running of alpha
+        self.add_param('w_run', 1, system=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
+        self.add_param('mcatnlo_delta', False)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
@@ -5337,7 +5353,10 @@ class RunCardNLO(RunCard):
         self.add_param('store_rwgt_info', False)
         self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
-             
+
+        #technical
+        self.add_param('folding', [1,1,1], include=False)
+        
         #merging
         self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
@@ -5540,6 +5559,15 @@ class RunCardNLO(RunCard):
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
+    # Check the folding parameters
+        if len(self['folding']) != 3:
+            raise InvalidRunCard("'folding' should contain exactly three integers")
+        for ifold in self['folding']:
+            if ifold not in [1,2,4,8]: 
+                raise InvalidRunCard("The three 'folding' parameters should be equal to 1, 2, 4, or 8.")
+    # Check MC@NLO-Delta
+        if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
+            raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
@@ -5752,7 +5780,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-13)
+        self.add_param("OSThres", 1.0e-8)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

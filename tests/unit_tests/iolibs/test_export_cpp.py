@@ -15,7 +15,6 @@
 """Unit test library for the export Pythia8 format routines"""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import six
 StringIO = six
 import copy
@@ -458,7 +457,7 @@ void Sigma_sm_qqx_qqx::initProc()
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
+  pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr); 
   pars->setIndependentCouplings(); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
@@ -474,7 +473,7 @@ void Sigma_sm_qqx_qqx::initProc()
 void Sigma_sm_qqx_qqx::sigmaKin() 
 {
   // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
+  pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS); 
   pars->setDependentCouplings(); 
   // Reset color flows
   for(int i = 0; i < 2; i++ )
@@ -791,7 +790,7 @@ void Sigma_sm_qq_six::initProc()
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
+  pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr); 
   pars->setIndependentCouplings(); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
@@ -807,7 +806,7 @@ void Sigma_sm_qq_six::initProc()
 void Sigma_sm_qq_six::sigmaKin() 
 {
   // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
+  pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS); 
   pars->setDependentCouplings(); 
   // Reset color flows
   for(int i = 0; i < 1; i++ )

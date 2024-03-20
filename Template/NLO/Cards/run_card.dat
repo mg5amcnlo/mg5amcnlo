@@ -88,7 +88,9 @@
 #***********************************************************************
   %(parton_shower)s   = parton_shower
   %(shower_scale_factor)s = shower_scale_factor ! multiply default shower starting
-                                  ! scale by this factor
+                            ! scale by this factor
+  %(mcatnlo_delta)s = MCatNLO_DELTA ! use MC@NLO-Delta matching, arXiv:2002.12716
+                        ! (only with Pythia8309 or later)
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *
@@ -204,4 +206,11 @@
 # (https://zenodo.org/record/3992765#.X2EWy5MzbVo)                     *
 #***********************************************************************
  %(pineappl)s = pineappl ! PineAPPL switch 
+#***********************************************************************
+# Folding parameters for S-events to reduce the number of negatively   *
+# weighted events. Allowed values are 1, 2, 4 or 8 for each of the     *
+# three variables. Typically, folding in xi_i or y_ij results in the   *
+# largest reduction of negatively weighted events. (arXiv:2002.12716)  *
+#***********************************************************************
+ %(folding)s = folding ! correspond to folding in xi_i, y_ij, and phi_i
 #***********************************************************************

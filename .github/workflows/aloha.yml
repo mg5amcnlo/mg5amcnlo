@@ -1,0 +1,57 @@
+# This is a basic workflow to help you get started with Actions
+
+name: running test for aloha
+# Controls when the workflow will run
+#    branches: [ main LTS ]
+on:
+  # Triggers the workflow on push or pull request events but only for the 3.4.0 branch
+  push:
+    paths-ignore:
+      - 'docs/**'
+#      - '.github/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'running aloha test'     
+        required: true
+
+env:
+  commitmsg: ${{ github.event.head_commit.message }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  test_aloha:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_helas_diagrams_gg_wpwmttx
+        run: |
+            cd $GITHUB_WORKSPACE
+            echo "import model MSSM_SLHA2" > cmd
+            ./bin/mg5_aMC cmd
+            ./tests/test_manager.py -pP -t0 test_aloha.* -e test_short_mssm_subset_creation
+
+  test_excluded:
+    # excluded due to side effect
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_short_mssm_subset_creation
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py -pP -t0 test_short_mssm_subset_creation #excluded from aloha	    

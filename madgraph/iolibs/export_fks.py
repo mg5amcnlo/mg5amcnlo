@@ -15,7 +15,6 @@
 """Methods and classes to export matrix elements to fks format."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
 import glob
 import logging
@@ -45,6 +44,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.various.banner as banner_mod
+import madgraph.various.shower_card as shower_mod
 
 import aloha.create_aloha as create_aloha
 
@@ -168,8 +168,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         calls = self.write_make_opts(writers.MakefileWriter(filename),
                                                         link_tir_libs,tir_libs)
         
-        # Duplicate run_card and FO_analyse_card
-        for card in ['FO_analyse_card', 'shower_card']:
+
+        # Duplicate FO_analyse_card
+        for card in ['FO_analyse_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -185,6 +186,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
 
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
@@ -734,6 +739,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
+                     'pythia8_fortran_dummy.cc',
+                     'pythia8_fortran.cc',
+                     'pythia8_wrapper.cc',
+                     'pythia8_control_setup.inc',
+                     'pythia8_control.inc',
+                     'dire_fortran.cc',
+                     'LHAFortran_aMCatNLO.h',
+                     'sudakov.f',
+                     'hep_event_streams.inc',
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f']
@@ -780,6 +794,22 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+
+    #===========================================================================
+    #  create the run_card 
+    #===========================================================================
+    def create_shower_card(self, processes, history):
+        """ """
+ 
+        shower_card = shower_mod.ShowerCard()
+        shower_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card_default.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
 
 
     def pass_information_from_cmd(self, cmd):
@@ -842,6 +872,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_orderstag_base_file(writers.FortranWriter(filename))
 
         self.create_run_card(matrix_elements.get_processes(), history)
+        self.create_shower_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -4144,7 +4175,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",

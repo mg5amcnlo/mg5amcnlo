@@ -16,7 +16,8 @@ LIBDIRARCH=lib/archive
 
 # Libraries to include if GZIP support is enabled
 ifeq (x$(ENABLEGZIP),xyes)
-LIBGZIP=-L$(BOOSTLIBLOCATION) -lboost_iostreams -L$(ZLIBLOCATION) -lz
+#LIBGZIP=-L$(BOOSTLIBLOCATION) -lboost_iostreams -L$(ZLIBLOCATION) -lz
+LIBGZIP=-L$(ZLIBLOCATION) -lz
 endif
 
 %.o: ./PY8Analyzer/%.f

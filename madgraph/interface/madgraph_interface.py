@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import collections
 import cmath
@@ -318,7 +317,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
-        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use the global configuration')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
         logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
@@ -1208,6 +1207,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             lastmodel = max(models, key=os.path.getmtime)
             logger.info('last model found is %s', lastmodel)
             args.insert(1, lastmodel)
+            self.history.info['model'] = lastmodel
 
         if not args:
             self.help_import()
@@ -1466,10 +1466,18 @@ This will take effect only in a NEW terminal
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
                 elif arg == 'global':
-                    if 'HOME' in os.environ:
-                        args.remove('global')
-                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-                        has_path = True
+                    legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                    if os.path.exists(legacy_config_dir):
+                        config_dir = legacy_config_dir
+                    else:
+                        config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                    config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+                    args.remove('global')
+                    args.insert(1, config_file)
+
+                    has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -1546,17 +1554,6 @@ This will take effect only in a NEW terminal
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
-
-        if args[0] in ['low_mem_multicore_nlo_generation']:
-            if args[1]:
-                if sys.version_info[0] == 2:
-                    if  sys.version_info[1] == 6:
-                        raise Exception('python2.6 does not support such functionalities please use python2.7')
-                #else:
-                #    raise Exception('python3.x does not support such functionalities please use python2.7')
-        
-
-
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman', 'axial']:
@@ -2988,7 +2985,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_size':100,
                        'output_dependencies':'external',
                        'crash_on_error':False,
-                       'auto_convert_model': False,
+                       'auto_convert_model': True,
                        'acknowledged_v3.1_syntax': False
                        }
 
@@ -3500,7 +3497,7 @@ This implies that with decay chains:
                     raise self.InvalidCmd('no particle %s in current model' % arg)
 
                 print("Particle %s has the following properties:" % particle.get_name())
-                print(str(particle))
+                print(particle.nice_string())
 
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
@@ -3610,7 +3607,6 @@ This implies that with decay chains:
             hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
-
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')
@@ -5651,7 +5647,7 @@ This implies that with decay chains:
                         if 1 not in self._curr_model.get('gauge') :
                             logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
-                                                'QCD loop cmputations with it.')
+                                                'and QCD loop computations with it.')
                         else:
                             logger.info('Change to the gauge to Feynman because '+\
                           'this loop model allows for more than just tree level'+\
@@ -6016,14 +6012,21 @@ This implies that with decay chains:
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(None))
-            
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
         if 'heptools_install_dir' in self.options:
             prefix = self.options['heptools_install_dir']
-            config_file = '~/.mg5/mg5_configuration.txt'
+            legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+            if os.path.exists(legacy_config_dir):
+                config_dir = legacy_config_dir
+            else:
+                config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+            config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
             prefix = pjoin(MG5DIR, 'HEPTools')
             config_file = ''
@@ -6131,8 +6134,8 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-
-        if return_code == 0:
+        misc.sprint(return_code)
+        if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
             
@@ -6190,6 +6193,9 @@ This implies that with decay chains:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
+        elif tool == 'eMELA':
+            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
+            self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6507,6 +6513,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if returncode:
             raise MadGraph5Error('Fail to download correctly the File. Stop')
 
+        if name == "RunningCoupling":
+            name = "Template/Running"
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -7176,8 +7184,15 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+                config_path = os.path.join(config_dir, "mg5_configuration.txt")
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',
@@ -7314,6 +7329,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 if self.options[key] in ['False', 'True']:
                     self.allow_notification_center = eval(self.options[key])
                     self.options[key] = self.allow_notification_center
+            elif key in ['lhapdf_py3', 'lhapdf_py2']:
+                if self.options[key] not in [None, 'none', 'None']:
+                    # Default: try to set parameter
+                    try:
+                        self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    except MadGraph5Error as error:
+                        print(error)
+                        logger.warning("Option %s from config file not understood" \
+                                    % key)
+                    else:
+                        if key in self.options_madgraph:
+                            self.history.append('set %s %s' % (key, self.options[key]))
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -9067,8 +9094,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             #print process
             self._generate_info = process[9:]
             #print self._generate_info
+        elif skip_2body:
+            logger.info("No three body-decay (or higher) is found for %s", pids) 
         else:
-            logger.info("No decay is found")
+            logger.info("No decay is found for %s", pids)
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""

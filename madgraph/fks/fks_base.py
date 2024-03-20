@@ -16,7 +16,6 @@
 """Definitions of the objects needed for the implementation of MadFKS"""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects

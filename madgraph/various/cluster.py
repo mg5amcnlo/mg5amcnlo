@@ -12,7 +12,6 @@
 #                                                                               
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import subprocess
 import logging
 import os
@@ -197,8 +196,9 @@ class Cluster(object):
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
                 'arguments': ' '.join([str(a) for a in argument]),
-                'program': ' ' if '.py' in prog else 'bash'}
+                'program': sys.executable if '.py' in prog else 'bash'}
         
+        temp_file_name = temp_file_name.replace("/","_")
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
         open(new_prog, 'w').write(text % dico)
@@ -646,7 +646,10 @@ class MultiCore(Cluster):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
                         if isinstance(opt['stdout'],str):
-                            opt['stdout'] = open(opt['stdout'],'w')
+                            if opt['stdout'] == '/dev/null':
+                                opt['stdout'] = os.open(os.devnull, os.O_RDWR)
+                            else:    
+                                opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         if arg:
@@ -671,11 +674,12 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(*arg, **opt)
-                        if returncode != 0:
-                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
+                        try:
+                            returncode = exe(*arg, **opt)
+                        except Exception as error:
+                            #logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                            self.remove("fct %s does raise %s\n %s" % (exe, error))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))
@@ -695,12 +699,12 @@ class MultiCore(Cluster):
                     continue
             except six.moves.queue.Empty:
                 continue
-            
-            
+        import threading
+        self.demons.remove(threading.current_thread())  
             
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
-               log=None, required_output=[], nb_submit=0):
+               log=None, required_output=[], nb_submit=0, python_opts={}):
         """submit a job on multicore machine"""
         
         # open threads if needed   
@@ -720,7 +724,7 @@ class MultiCore(Cluster):
             return tag
         else:
             # python function
-            self.queue.put((tag, prog, argument, {}))
+            self.queue.put((tag, prog, argument, python_opts))
             self.submitted.put(1)
             return tag            
         
@@ -757,8 +761,6 @@ class MultiCore(Cluster):
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
-            
-        self.demons[:] = [] 
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -847,6 +849,7 @@ class MultiCore(Cluster):
                     # can happend that stoprequest is set bu not fail if no job have been resubmitted
                     six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
                 # self.fail_msg is None can happen when no job was submitted -> ignore
+
             # reset variable for next submission
             try:
                 self.lock.clear()
@@ -875,7 +878,6 @@ class MultiCore(Cluster):
 
         if not self.keep_thread:
             self.stoprequest.set()
-            self.demons.clear()
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""

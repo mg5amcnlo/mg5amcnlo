@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import glob
 import logging
@@ -2200,6 +2199,10 @@ RESTART = %(mint_mode)s
 """ \
               % job
         else:
+            if job['mint_mode'] == 0:
+                job['fold_string']='1 1 1'
+            else:
+                job['fold_string']=' '.join(map(str, self.run_card['folding']))
             content = \
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
@@ -2209,7 +2212,7 @@ RESTART = %(mint_mode)s
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
 %(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%(fold_string)s      ! if imode is 1: Folding parameters for xi_i, y_ij and phi_i
 %(run_mode)s        ! all, born, real, virt
 """ \
                     % job
@@ -4664,6 +4667,10 @@ RESTART = %(mint_mode)s
             content += 'PDFCODE=0\n'
 
         content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        if self.banner.get_detail('run_card', 'mcatnlo_delta') :
+            content += 'DELTA=ON\n'
+        else:
+            content += 'DELTA=OFF\n'
         content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
@@ -5149,6 +5156,103 @@ RESTART = %(mint_mode)s
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
 
+    def activate_Pythia8_compilation(self, mode, options):
+        """ Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. """
+        # Also write dummies if we do fixed-order for now
+        if mode in ['NLO', 'LO'] or not self.run_card['mcatnlo_delta'] :
+            # Write dummy entries
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=.
+PYTHIA8TARGETS=pythia8_fortran_dummy.o
+PYTHIA8LINKLIBS=""")
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/-1/
+      data pythia_cmd_file/500*' '/""")
+        else:
+            if not self.options['pythia8_path']:
+                raise aMCatNLOError('Cannot find Pythia8 path in configuration file')
+            os.environ["PYTHIA8DATA"] = pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc')
+            # Write entries accoridng to the pythia8_path
+            # Probably need to do something a bit more careful to asses when '-lz' really is necessary
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=-I%(pythia8_prefix)s/include
+PYTHIA8TARGETS=pythia8_wrapper.o
+PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
+            # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
+            # For now, we don't use any pythia8.cmd card for initialization
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/0/
+      data pythia_cmd_file/500*' '/""")
+
+    def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
+        """links and copies the libraries/PDFs from ePDF/eMELA
+        pdlabel is in the form epdf:setname
+        """
+        logger.info('Using eMELA for leptonic densities')
+
+        epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        epdfdatadir = subprocess.Popen([self.options['eMELA'], '--data'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        # update the LHAPDF data path
+
+        if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
+        else:
+            os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
+
+        pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
+        pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
+
+        # link the static library in lib
+        lib = 'libeMELA.a'
+
+        if os.path.exists(pjoin(libdir, lib)):
+            files.rm(pjoin(libdir, lib))
+        files.ln(pjoin(epdflibdir, lib), libdir)
+
+        # create the PDFsets dir
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+
+        #clean previous set of pdf used
+        for name in os.listdir(pjoin(libdir, 'PDFsets')):
+            if name not in pdfsetname:
+                try:
+                    if os.path.isdir(pjoin(libdir, 'PDFsets', name)):
+                        shutil.rmtree(pjoin(libdir, 'PDFsets', name))
+                    else:
+                        os.remove(pjoin(libdir, 'PDFsets', name))
+                except Exception as error:
+                    logger.debug('%s', error)
+
+        # copy the ePDF set in the PDFsets dir
+        for setname in pdfsetname:
+            shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
+
+        # finally return the parsed info file
+        return banner_mod.eMELA_info(os.path.join(libdir, 'PDFsets', setname, setname + '.info'), self.me_dir)
+
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+
 
     def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
         """links and copies the libraries/PDFs from ePDF/eMELA
@@ -5221,7 +5325,6 @@ RESTART = %(mint_mode)s
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -5263,6 +5366,11 @@ RESTART = %(mint_mode)s
             # write an analyse_opts with a dummy analysis so that compilation goes through
             with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
                 fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
+
+        # Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. 
+        self.activate_Pythia8_compilation(mode, options)
 
         #directory where to compile exe
         p_dirs = [d for d in \
@@ -5570,7 +5678,7 @@ RESTART = %(mint_mode)s
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
-            shower = self.run_card['parton_shower']
+            shower = self.run_card['parton_shower'].upper()
             header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
             file.write(header + content)
         elif test == 'test_ME':
@@ -5676,7 +5784,7 @@ RESTART = %(mint_mode)s
         first_cmd = cmd_switch.get_cardcmd()
                 
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd, switch=switch)
 
         self.banner = banner_mod.Banner()
 
@@ -5844,16 +5952,18 @@ if '__main__' == __name__:
     # This can ONLY run a single command !!
     import sys
 
-    if sys.version_info[1] < 7:
-        sys.exit('MadGraph5_aMc@NLO works only with python 2.7 or python3.7 and later.\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph5_aMc@NLO works only with python 3.7 and later.\n'+\
                'Please upgrade your version of python or specify a compatible version.')
 
     import os
     import optparse
-    # Get the directory of the script real path (bin)                                                                                                                                                           
-    # and add it to the current PYTHONPATH                                                                                                                                                                      
-    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
-    sys.path.insert(0, root_path)
+    # Get the directory of the script real path (bin)
+    # and add it to the current PYTHONPATH
+    #root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    #root_path = os.path.split(root_path)[0]
+    sys.path.insert(0, os.path.join(root_path,'bin'))                                                     
+
 
     class MyOptParser(optparse.OptionParser):    
         class InvalidOption(Exception): pass
@@ -5903,8 +6013,8 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print(os.path.join(root_path, 'internal', 'me5_logging.conf'))
-        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        print(os.path.join(root_path, 'bin','internal', 'me5_logging.conf'))
+        logging.config.fileConfig(os.path.join(root_path,'bin', 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)
     except:
@@ -5917,10 +6027,10 @@ if '__main__' == __name__:
             # a single command is provided   
             if '--web' in args:
                 i = args.index('--web') 
-                args.pop(i)                                                                                                                                                                     
-                cmd_line =  aMCatNLOCmd(me_dir=os.path.dirname(root_path),force_run=True)
+                args.pop(i)
+                cmd_line =  aMCatNLOCmd(me_dir=root_path, force_run=True)
             else:
-                cmd_line =  aMCatNLOCmdShell(me_dir=os.path.dirname(root_path),force_run=True)
+                cmd_line =  aMCatNLOCmdShell(me_dir=root_path, force_run=True)
 
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:

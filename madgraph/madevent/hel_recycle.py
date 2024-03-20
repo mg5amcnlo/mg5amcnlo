@@ -200,6 +200,7 @@ class External(MathsObject):
     # Could get this from dag but I'm worried about preserving order
     wavs_same_leg = {}
     good_wav_combs = []
+    max_wav_num = 0 
 
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
@@ -246,6 +247,7 @@ class External(MathsObject):
         else:
             cls.wavs_same_leg[ext_num] = new_wavfuncs
         
+        cls.max_wav_num = max( cls.max_wav_num, len(graph.external_wavs) + len(graph.internal_wavs))
         return new_wavfuncs
 
     @classmethod
@@ -696,7 +698,7 @@ class HelicityRecycler():
                     self.template_dict['helas_calls'] += self.unfold_helicities(
                         line, call_type)
 
-        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num)
+        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num, External.max_wav_num)
         # filter out uselless call
         for i in range(len(self.template_dict['helas_calls'])-1,-1,-1):
             obj = self.template_dict['helas_calls'][i]
@@ -881,9 +883,13 @@ def undo_multiline(old_line, new_line):
     return f'{old_line}{new_line}'
 
 def do_multiline(line):
+    if "!" in line:
+        line,comment  = line.split("!",1)
+    else: 
+        comment = None
     char_limit = 72
     num_splits = len(line)//char_limit
-    if num_splits != 0 and len(line) != 72 and '!' not in line[0:char_limit]:
+    if num_splits != 0 and len(line) != 72:
         split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
         indent = ''
         for char in line[6:]:
@@ -893,8 +899,10 @@ def do_multiline(line):
                 break
 
         line = f'\n     ${indent}'.join(split_line)
-    return line
-
+    if not comment:
+        return line
+    else:
+        return f"{line} ! {comment}"
 def int_to_string(i):
     if i == 1:
         return '+1'

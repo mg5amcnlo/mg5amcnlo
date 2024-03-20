@@ -1,6 +1,5 @@
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import random
 import re
@@ -449,6 +448,7 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
+
         if not get_wgt:
             def weight(event):
                 return event.wgt
@@ -1137,6 +1137,7 @@ class MultiEventFile(EventFile):
                     nb_keep = max(20, int(nb_event*trunc_error*15))
                     new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
+                misc.sprint(i,f)
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
@@ -1193,7 +1194,6 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
 
         if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
@@ -3175,6 +3175,19 @@ class NLO_PARTIALWEIGHT(object):
             self.parse(input)
         
             
+    def ispureqcd(self):
+        """return True if the born does not correspond to a unique power of alphas
+           This allows to prevent to use re-weighting in mode where it is known to be 
+           failing to scale correctly.
+        """
+        for cevt in self.cevents:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
+                return False
+                nb_wgt_check += len(cevt.wgts)
+
+        return True
+
+       
         
     def parse(self, text):
         """create the object from the string information (see example below)"""
