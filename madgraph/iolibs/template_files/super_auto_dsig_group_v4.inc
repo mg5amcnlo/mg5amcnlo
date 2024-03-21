@@ -106,6 +106,19 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 
       logical init_mode
       common /to_determine_zero_hel/init_mode
+c
+c     GLOBAL LINKED TO MADNIS MODE
+c
+           double precision Rstore(4*nexternal)
+       integer r_used
+       logical use_external_random_number
+       integer mode(4*nexternal)
+       common/external_random/ Rstore, use_external_random_number, r_used, mode
+
+        integer common_subchannel
+        integer common_initsym
+        integer common_flavor
+        common/external_flavor_pick/common_subchannel, common_initsym, common_flavor
 C ----------
 C BEGIN CODE
 C ----------
@@ -218,6 +231,14 @@ C   IMODE.EQ.0, regular run mode
 
 
 C     Select among the subprocesses based on PDF weight
+  
+      if (use_external_random_number) then
+         IPROC = common_flavor 
+         ICONF= common_subchannel
+         IMIRROR = common_initsym   
+      else
+
+
       SUMPROB=0D0
 C     Turn caching on in dsigproc to avoid too many calls to switchmom
       LAST_ICONF=0
@@ -342,6 +363,7 @@ C       We are using the grouped_processes grid and it is initialized.
 		WGT=WGT*MC_grouped_proc_jacobian
 		call map_1_to_3(Lmapped,MAXSPROC,2,ICONF,IPROC,IMIRROR)
 	  ENDIF
+      ENDIF ! if related to the madnis bypass of the random selection
 
 C     Redo clustering to ensure consistent with final IPROC
       CUTSDONE=.FALSE.

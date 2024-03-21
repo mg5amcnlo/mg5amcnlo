@@ -184,13 +184,19 @@ c      call run_printout          !Prints out a summary of the run settings
       end
 
 ************************************************************************
-      subroutine madnis_api(R, ndim, channel, apply_cut, wgt)
+      subroutine madnis_api(R, ndim, channel,subchannel, initsym,
+          flavor, apply_cut, wgt)
 ************************************************************************
 *     This is a subroutine that returns the full event weight
 *
 *     INPUTS:  R           == random numbers
 *              ndims       == number of dimensions
 *              channel     == choose channel config
+*              subchannel  == choose a subchannel (need to be related to
+*                             channel via symfact
+*              initsym     == check if beam symmetry (for case like u u~)
+*              flavor      == choose a given matrix$X.f (so a choice of
+*                             flavor
 *              apply_cut   == apply ps cuts (bool)           
 *     OUTPUTS: wgt         == updated weight after choosing points
 ************************************************************************
@@ -198,6 +204,9 @@ c TODO determine dimension here + template
 Cf2py double precision, intent(in), dimension(ndim) :: R
 Cf2py integer, intent(in) :: ndim
 Cf2py integer, intent(inout) :: channel
+Cf2py integer, intent(in) :: subchannel
+Cf2py integer, intent(in) :: initsym
+Cf2py integer, intent(in) :: flavor
 Cf2py logical, intent(in) :: apply_cut
 Cf2py double precision, intent(out) :: wgt      
       implicit none
@@ -208,6 +217,9 @@ Cf2py double precision, intent(out) :: wgt
       integer, intent(in) :: ndim
       double precision, intent(in), dimension(ndim) ::  R
       integer, intent(inout) :: channel
+      integer, intent(in) :: subchannel
+      integer, intent(in) :: initsym
+      integer, intent(in) :: flavor
       logical, intent(in) :: apply_cut
       double precision, intent(out) ::  wgt
       double precision p(0:3,nexternal)
@@ -251,6 +263,7 @@ c     certainly not needed but does not hurt
 
       cutsdone=.false.
       call store_random_number(R)
+      call fix_flavor_sym(subchannel, initsym,flavor)
 
       if(first)then
          ninvar= 3*(nexternal-nincoming)-4
@@ -378,6 +391,25 @@ C      write(*,*) "stored rans = ", Rstore
       mode(:) = 0
       return
       end
+
+************************************************************************
+      subroutine fix_flavor_sym(subchannel, initsym, flavor)
+************************************************************************
+       integer subchannel, common_subchannel
+       integer initsym, common_initsym
+       integer flavor, common_flavor
+       common/external_flavor_pick/common_subchannel, common_initsym, common_flavor
+
+       common_subchannel = subchannel
+       common_initsym = initsym
+       common_flavor = flvor
+
+       return 
+       end
+       
+
+
+
 ************************************************************************
       subroutine store_momenta(pin)
 ************************************************************************
