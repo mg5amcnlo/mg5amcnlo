@@ -1125,10 +1125,10 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process or 'sqrvirt' in process:
-                valid = True
-            else:
-                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+            #if 'noborn' in process or 'sqrvirt' in process:
+            #    valid = True
+            #else:
+            #    raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
 
             # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
@@ -1137,8 +1137,15 @@ class CheckValidForCmd(cmd.CheckCmd):
             if order.strip().lower() != 'qcd':
                 raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
+            def check(p):
+                if p.get('color') != 1:
+                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                elif p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+ 
 
-            for p in particles_parts[1].split():
+
+            for p in particles_parts[0].split()+ particles_parts[-1].split():
                 if '{' in p:
                     part = p.split('{')[0]
                 else:
@@ -1149,12 +1156,13 @@ class CheckValidForCmd(cmd.CheckCmd):
                         if part in self._multiparticles:
                             for part2 in self._multiparticles[part]:
                                 p = self._curr_model.get_particle(part2)
-                                if p.get('color') != 1:
-                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                        continue
-                    if p.get('color') != 1:
-                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-        
+                                check(p)
+                        else:
+                            p = self._curr_model.get_particle(part.lower())
+                            check(p)
+                    else:
+                        check(p)
+                    
 
 
     def check_tutorial(self, args):
