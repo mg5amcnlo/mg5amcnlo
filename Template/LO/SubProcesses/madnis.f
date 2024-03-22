@@ -184,8 +184,7 @@ c      call run_printout          !Prints out a summary of the run settings
       end
 
 ************************************************************************
-      subroutine madnis_api(R, ndim, channel,subchannel, initsym,
-          flavor, apply_cut, wgt)
+      subroutine madnis_api(R, ndim, channel,subchannel, initsym, flavor, apply_cut, wgt)
 ************************************************************************
 *     This is a subroutine that returns the full event weight
 *
@@ -395,6 +394,7 @@ C      write(*,*) "stored rans = ", Rstore
 ************************************************************************
       subroutine fix_flavor_sym(subchannel, initsym, flavor)
 ************************************************************************
+          implicit none
        integer subchannel, common_subchannel
        integer initsym, common_initsym
        integer flavor, common_flavor
@@ -402,13 +402,13 @@ C      write(*,*) "stored rans = ", Rstore
 
        common_subchannel = subchannel
        common_initsym = initsym
-       common_flavor = flvor
+       common_flavor = flavor
 
        return 
        end
        
 
-
+   
 
 ************************************************************************
       subroutine store_momenta(pin)
