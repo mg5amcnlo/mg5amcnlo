@@ -1652,11 +1652,13 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
+        
+        orig_lhe.seek(0)
+        
         for i in range(nevents):
             if i % 5 ==1:
                 logger.info( "Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
             maxwgt = 0
-            orig_lhe.seek(0)
             base_event = next(orig_lhe)
             if self.options['fixed_order']:
                 base_event = base_event[0]
