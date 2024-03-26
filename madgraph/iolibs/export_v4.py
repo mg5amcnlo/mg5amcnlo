@@ -9238,6 +9238,10 @@ c         segments from -DABS(tiny*Ga) to Ga
      
         external_param = [format(param) for param in self.params_ext]
         if self.model['running_elements']:
+            default_scale = 91.188
+            def_scale_param = [p for p in self.params_ext if p.lhablock.upper() == 'LOOP' and p.lhacode == [2]]
+            if def_scale_param:
+                default_scale = def_scale_param[0].value 
             scales = set()
             
             for elements in self.model["running_elements"]:
@@ -9257,8 +9261,13 @@ c         segments from -DABS(tiny*Ga) to Ga
             for b in scales:
                 param = base_objects.ParamCardVariable(
                     'mdl__%s__scale' % b.lower(),
-                     91.188, b, [0])
+                    default_scale, b, [0])
                 external_param.append(format(param))
+                for ext in self.params_ext:
+                    if ext.scale:
+                        param.value = ext.scale
+                    else:
+                        ext.scale = default_scale 
 
         fsock.writelines('\n'.join(external_param))
 
