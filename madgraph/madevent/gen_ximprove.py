@@ -302,7 +302,9 @@ class gensym(object):
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
                     continue # avoid optimization if onlye one helicity
-                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel)
+                
+                gauge = self.cmd.proc_characteristics['gauge']
+                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel, gauge=gauge)
                 # In case of bugs you can play around with these:
                 recycler.hel_filt = self.run_card['hel_filtering']
                 recycler.amp_splt = self.run_card['hel_splitamp']

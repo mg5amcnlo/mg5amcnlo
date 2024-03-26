@@ -2054,7 +2054,7 @@ c     local variable
       enddo
       return
       end
-      
+     
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors

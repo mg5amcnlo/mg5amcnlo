@@ -4455,6 +4455,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        self.proc_characteristic['gauge'] = mg5options['gauge']
 
         # set limitation linked to the model
     

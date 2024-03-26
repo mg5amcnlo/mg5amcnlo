@@ -1736,7 +1736,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('hel_recycling', False)  
         self.add_param('single_color', True)
         self.add_param('nlo_mixed_expansion', True)    
-
+        self.add_param('gauge', 'U')
+    
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
