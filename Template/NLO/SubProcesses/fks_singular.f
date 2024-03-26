@@ -8,6 +8,7 @@ c to the list of weights using the add_wgt subroutine
       use cxi_i_hat
       use camp_split_store
       use mod_orders
+      use factor_nbody
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -31,14 +32,14 @@ c to the list of weights using the add_wgt subroutine
 !      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
 !      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
 !OMP THREADPRIVATE (/CXI_I_HAT/)
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+CC      double precision      f_b,f_nb
+Cc      common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision g22
       integer get_orders_tag, amp_index
       call cpu_time(tBefore)
-      if (f_b.eq.0d0) return
+      if (f_b(amp_index).eq.0d0) return
       if (xi_i_hat_ev(amp_index)*xiimax_cnt(0,amp_index) .gt. xiBSVcut_used) return
       !!! MZcall sborn(p_born,wgt_c)
       amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_b(1:AMP_SPLIT_SIZE,amp_index)
@@ -53,7 +54,7 @@ c to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split(iamp)*f_b/g**(qcd_power)
+        wgt1=amp_split(iamp)*f_b(amp_index)/g**(qcd_power)
         call add_wgt(2,orders,wgt1,0d0,0d0,amp_index)
       enddo
 
@@ -345,6 +346,7 @@ c value to the list of weights using the add_wgt subroutine
       use counterevnts 
       use cxiimaxcnt
       use cxi_i_hat
+      use factor_nbody
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -400,8 +402,8 @@ c value to the list of weights using the add_wgt subroutine
 !      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
 !      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
 !OMP THREADPRIVATE (/CXI_I_HAT/)
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+CC      double precision      f_b,f_nb
+CC      common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
@@ -411,7 +413,7 @@ c value to the list of weights using the add_wgt subroutine
       common /to_abrv/ abrv
       integer iamp_test
       call cpu_time(tBefore)
-      if (f_nb.eq.0d0) return
+      if (f_nb(amp_index).eq.0d0) return
       if (xi_i_hat_ev(amp_index)*xiimax_cnt(0,amp_index) .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0,amp_index),bsv_wgt,virt_wgt,born_wgt,amp_index)
       if (ickkw.eq.-1) then
@@ -430,7 +432,7 @@ C to make sure that it cannot be incorrectly understood.
          do i=1,nsplitorders
            orders(i)=-1
          enddo
-         call add_wgt(7,orders,-veto_compensating_factor*f_nb,0d0,0d0,amp_index)
+         call add_wgt(7,orders,-veto_compensating_factor*f_nb(amp_index),0d0,0d0,amp_index)
         write(*,*) 'FIX VETOXSEC in FKS_EW'
         stop
       endif
@@ -447,10 +449,10 @@ C to make sure that it cannot be incorrectly understood.
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         g22=g**(QCD_power)
-        wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
-        wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
-        wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb/g22
-        wgt4=amp_split_avv(iamp)*f_nb/g22
+        wgt1=amp_split_wgtnstmp(iamp)*f_nb(amp_index)/g22
+        wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb(amp_index)/g22
+        wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb(amp_index)/g22
+        wgt4=amp_split_avv(iamp)*f_nb(amp_index)/g22
         if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0
      &       .and. abrv.ne.'born') then
 ! This assumes a single Born order, which must always be the case for
@@ -462,7 +464,7 @@ C to make sure that it cannot be incorrectly understood.
               stop 1
            endif
            g2=g**(QCD_power-2)
-           wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
+           wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb(amp_index)/g2/(4d0*pi)
         endif
         call add_wgt(3,orders,wgt1,wgt2,wgt3,amp_index)
         call add_wgt(15,orders,wgt4,0d0,0d0,amp_index)
@@ -470,8 +472,8 @@ C to make sure that it cannot be incorrectly understood.
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-      virt_wgt_mint(0)=virt_wgt_mint(0)+virt_wgt*f_nb
-      born_wgt_mint(0)=born_wgt_mint(0)+born_wgt*f_b
+      virt_wgt_mint(0)=virt_wgt_mint(0)+virt_wgt*f_nb(amp_index)
+      born_wgt_mint(0)=born_wgt_mint(0)+born_wgt*f_b(amp_index)
       do iamp=1, amp_split_size
         if (amp_split_virt(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -480,11 +482,11 @@ c and not be part of the plots nor computation of the cross section.
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split_virt(iamp)*f_nb
+        wgt1=amp_split_virt(iamp)*f_nb(amp_index)
         virt_wgt_mint(iamp)=virt_wgt_mint(iamp)
      $       +wgt1
         born_wgt_mint(iamp)=born_wgt_mint(iamp)
-     $       +amp_split_born_for_virt(iamp)*f_nb
+     $       +amp_split_born_for_virt(iamp)*f_nb(amp_index)
         wgt1=wgt1/g**(QCD_power)
         call add_wgt(14,orders,wgt1,0d0,0d0,amp_index)
       enddo
@@ -503,9 +505,9 @@ C of parton distributions (e.g. NNPDF2.3).
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt6f1=amp_split_6to5f(iamp)*f_nb/g**(qcd_power)
-        wgt6f2=amp_split_6to5f_mur(iamp)*f_nb/g**(qcd_power)
-        wgt6f3=amp_split_6to5f_muf(iamp)*f_nb/g**(qcd_power)
+        wgt6f1=amp_split_6to5f(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgt6f2=amp_split_6to5f_mur(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgt6f3=amp_split_6to5f_muf(iamp)*f_nb(amp_index)/g**(qcd_power)
         call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3,amp_index)
       enddo
 
@@ -524,9 +526,9 @@ C wrt the hard matrix element. Relevant for lepton collisions.
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgtal1=amp_split_alpha(iamp)*f_nb/g**(qcd_power)
-        wgtal2=amp_split_alpha_mur(iamp)*f_nb/g**(qcd_power)
-        wgtal3=amp_split_alpha_muf(iamp)*f_nb/g**(qcd_power)
+        wgtal1=amp_split_alpha(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgtal2=amp_split_alpha_mur(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgtal3=amp_split_alpha_muf(iamp)*f_nb(amp_index)/g**(qcd_power)
         call add_wgt(3,orders,wgtal1,wgtal2,wgtal3,amp_index)
       enddo
 
@@ -543,6 +545,7 @@ c its value to the list of weights using the add_wgt subroutine
       use fksvariables
       use mod_orders
       use camp_split_store
+      use factor_n1body
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -566,8 +569,8 @@ c its value to the list of weights using the add_wgt subroutine
 !     $                    ,p_i_fks_cnt(0:3,-2:2)
 !      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
 !OMP THREADPRIVATE (/FKSVARIABLES/)
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
       call cpu_time(tBefore)
       amp_split(1:AMP_SPLIT_SIZE) = 0d0
@@ -587,6 +590,7 @@ c its value to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
+        write(*,*) 'SREAL', wgt1,iamp, amp_index
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0,amp_index)
         endif
@@ -610,6 +614,7 @@ c the list of weights using the add_wgt subroutine
       use mod_orders
       use camp_split_store
       use fksvariables
+      use factor_n1body
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -644,8 +649,8 @@ c the list of weights using the add_wgt subroutine
 !OMP THREADPRIVATE (/FKSVARIABLES/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -699,6 +704,7 @@ c to the list of weights using the add_wgt subroutine
       use cxiifkscnt
       use mod_orders
       use camp_split_store
+      use factor_n1body
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -744,8 +750,8 @@ c to the list of weights using the add_wgt subroutine
 !      double precision   xi_i_fks_cnt(-2:2)
 !      common /cxiifkscnt/xi_i_fks_cnt
 !OMP THREADPRIVATE (/CXIIFKSCNT/)
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -822,6 +828,7 @@ c value to the list of weights using the add_wgt subroutine
 
       use mod_orders
       use camp_split_store
+      use factor_n1body
 
       implicit none
       include 'nexternal.inc'
@@ -876,8 +883,8 @@ c value to the list of weights using the add_wgt subroutine
 !      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
 !      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
 !OMP THREADPRIVATE (/CXI_I_HAT/)
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -1163,6 +1170,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       !use vectorize
       use counterevnts
       use c_fxfx_scales
+      use factor_nbody
+      use factor_n1body
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1185,14 +1194,14 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
 !     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
 !      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 !OMP THREADPRIVATE (/COUNTEREVNTS/)
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+CC      double precision      f_b,f_nb
+CC      common /factor_nbody/ f_b,f_nb
       double precision         fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
 !      integer                              nFxFx_ren_scales
@@ -1259,8 +1268,8 @@ c Sudakov factors are included.
             enddo
          enddo
          if (iterm.eq.1) then
-            f_b =f_b *rewgt_izero
-            f_nb=f_nb*rewgt_izero
+            f_b(amp_index) =f_b(amp_index) *rewgt_izero
+            f_nb(amp_index)=f_nb(amp_index)*rewgt_izero
          elseif(iterm.eq.2) then
             f_s =f_s *rewgt_izero
             f_c =f_c *rewgt_izero
@@ -1375,6 +1384,7 @@ c bpower.
       use cxinormev
       use cxiimaxev
       use parton_cms_stuff
+      use factor_nbody
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1408,8 +1418,8 @@ c bpower.
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+CC      double precision      f_b,f_nb
+CC      common /factor_nbody/ f_b,f_nb
       logical pineappl
       common /for_pineappl/ pineappl
       logical needrndec
@@ -1445,9 +1455,9 @@ c Initialize hiostograms for fixed order runs
       endif
       call set_cms_stuff(0,amp_index)
 c f_* multiplication factors for Born and nbody
-      f_b=jac_cnt(0,amp_index)*xinorm_ev(amp_index)/(min(xiimax_ev(amp_index),xiBSVcut_used)*shat(amp_index)/(16
+      f_b(amp_index)=jac_cnt(0,amp_index)*xinorm_ev(amp_index)/(min(xiimax_ev(amp_index),xiBSVcut_used)*shat(amp_index)/(16
      $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
-      f_nb=f_b
+      f_nb(amp_index)=f_b(amp_index)
       call cpu_time(tAfter)
       tf_nb=tf_nb+(tAfter-tBefore)
       return
@@ -1465,6 +1475,7 @@ c f_* multiplication factors for Born and nbody
       use c_granny_res
       use ccalculatedborn
       use to_amps
+      use factor_nbody
 
       implicit none
       include 'nexternal.inc'
@@ -1515,11 +1526,11 @@ c f_* multiplication factors for Born and nbody
 !OMP THREADPRIVATE (/TO_AMPS/)
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+CC      double precision      f_b,f_nb
+CC      common /factor_nbody/ f_b,f_nb
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
@@ -1629,8 +1640,8 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
       endif
 
       if (imode.eq.1) then
-         f_b=      f_b      *enhance
-         f_nb=     f_nb     *enhance
+         f_b(amp_index)=      f_b(amp_index)      *enhance
+         f_nb(amp_index)=     f_nb(amp_index)     *enhance
       elseif(imode.eq.2) then
          f_r=      f_r      *enhance_real
       elseif(imode.eq.4) then
@@ -1675,6 +1686,7 @@ c terms.
       use cxiimaxcnt
       use parton_cms_stuff
       use cnocntevents
+      use factor_n1body
 
       implicit none
       include 'nexternal.inc'
@@ -1733,8 +1745,8 @@ c terms.
 !      logical nocntevents(amp_index)
 !      common/cnocntevents(amp_index)/nocntevents(amp_index)
 !OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -2206,6 +2218,7 @@ c number of contributions before they are (possibly) increased through a
 c call to separate_flavour_config().
       icontr_orig=icontr
       i=0
+      write(*,*) 'INCLUDEPDF', itype(1:icontr),wgt(1,1:icontr),wgt(2,1:icontr),wgt(3,1:icontr)
       do while (i.lt.icontr)
          i=i+1
          nFKSprocess=nFKS(i)
@@ -2940,6 +2953,7 @@ c excluding the nbody contributions.
       integer i
       sig=0d0
       if (icontr.eq.0) return
+      write(*,*) 'WGTS1', wgts(1,1:icontr)
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
      &        .and. itype(i).ne.7 .and. itype(i).ne.15) then

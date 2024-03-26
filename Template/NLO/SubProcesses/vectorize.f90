@@ -89,6 +89,44 @@ module pborn_norad
    end subroutine deallocate_pborn_norad
 end module pborn_norad
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module factor_nbody
+    implicit none
+   double precision, allocatable :: f_b(:), f_nb(:)
+ contains
+   subroutine allocate_factor_nbody(vector_size)
+       integer, intent(in) :: vector_size
+       allocate(f_b(vector_size))
+       allocate(f_nb(vector_size))
+   end subroutine allocate_factor_nbody
+   subroutine deallocate_factor_nbody
+       if (allocated(f_b)) deallocate(f_b)
+       if (allocated(f_nb)) deallocate(f_nb)
+   end subroutine deallocate_factor_nbody
+end module factor_nbody
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module factor_n1body
+    implicit none
+   double precision, allocatable :: f_r(:),f_s(:),f_c(:),f_dc(:),f_sc(:),f_dsc(:,:)
+ contains
+   subroutine allocate_factor_n1body(vector_size)
+       integer, intent(in) :: vector_size
+       allocate(f_r(vector_size))
+       allocate(f_s(vector_size))
+       allocate(f_c(vector_size))
+       allocate(f_dc(vector_size))
+       allocate(f_sc(vector_size))
+       allocate(f_dsc(4,vector_size))
+   end subroutine allocate_factor_n1body
+   subroutine deallocate_factor_n1body
+       if (allocated(f_r)) deallocate(f_r)
+       if (allocated(f_s)) deallocate(f_s)
+       if (allocated(f_c)) deallocate(f_c)
+       if (allocated(f_dc)) deallocate(f_dc)
+       if (allocated(f_sc)) deallocate(f_sc)
+       if (allocated(f_dsc)) deallocate(f_dsc)
+   end subroutine deallocate_factor_n1body
+end module factor_n1body
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module to_amps_born
   use mod_genps
   use mod_orders
@@ -962,6 +1000,8 @@ module c_born_cnt
 end module c_born_cnt
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module vectorize
+  use factor_nbody
+  use factor_n1body
   use pborn
   use pborn_ev
   use pborn_l
@@ -1021,6 +1061,8 @@ module vectorize
        implicit none
        integer, intent(in) :: vector_size
        vec_size_store = vector_size
+       call allocate_factor_nbody(vector_size)
+       call allocate_factor_n1body(vector_size)
        call allocate_pborn(vector_size)
        call allocate_pborn_ev(vector_size)
        call allocate_pborn_l(vector_size)
@@ -1133,6 +1175,8 @@ module vectorize
     end subroutine event_reset
 
     subroutine deallocate_storage
+       call deallocate_factor_nbody
+       call deallocate_factor_n1body
        call deallocate_pborn
        call deallocate_pborn_ev
        call deallocate_pborn_l

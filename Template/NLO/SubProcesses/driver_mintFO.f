@@ -307,7 +307,7 @@ c
       enddo
       close(12)
 
-!      call deallocate_storage
+      call deallocate_storage
 
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
@@ -615,6 +615,7 @@ c  The nbody contributions
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index),index)
          passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt,index)
          if (passcuts_nbody) then
+             write(*,*) 'PASSCUTSN'
             pass_cuts_check=.true.
             call set_alphaS(p1_cnt(0,1,0,index),index)
             call include_multichannel_enhance(1,index)
@@ -665,6 +666,7 @@ c The n+1-body contributions (including counter terms)
             if (ickkw.eq.3) call set_FxFx_scale(3,p,index)
             passcuts_n1body=passcuts(p,rwgt,index)
             if (passcuts_nbody .and. abrv.ne.'real') then
+                    write(*,*) 'PASSCUTSNB2'
                pass_cuts_check=.true.
                call set_cms_stuff(izero,index)
                call set_alphaS(p1_cnt(0,1,0,index),index)
@@ -674,11 +676,13 @@ c The n+1-body contributions (including counter terms)
                call compute_soft_collinear_counter_term(0d0,index)
             endif
             if (passcuts_coll .and. abrv.ne.'real') then
+                    write(*,*) 'PASSCUTSCOLL'
             call set_alphaS(p1_cnt(0,1,1,index),index)
             call set_cms_stuff(ione,index)
             call compute_collinear_counter_term(0d0,index)
             endif
             if (passcuts_n1body) then
+                    write(*,*) 'PASSCUTSn1'
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr,index)
                call set_alphaS(p,index)
@@ -710,22 +714,28 @@ c Include the bias weight specified in the bias_weight_function
             call fill_pineappl_weights(jacobian(index))
          endif
 
-c Importance sampling for FKS configurations
-         if (sum) then
-            call get_wgt_nbody(sig)
-            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
-     $        ,abs(sig))
-         else
-            call get_wgt_no_nbody(sig)
-            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
-     $        ,abs(sig)*vol)
-         endif
 
 c Finalize PS point
          call fill_plots
          call fill_mint_function(index)
 !         call fill_mint_function(f)
       enddo
+
+
+c Importance sampling for FKS configurations
+         if (sum) then
+                 write(*,*) 'SUM TRUE'
+            call get_wgt_nbody(sig)
+            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
+     $        ,abs(sig))
+         else
+            call get_wgt_no_nbody(sig)
+             write(*,*) 'FILL',max(ini_fin_fks(ichan),1),iran_picked
+     $        ,abs(sig),vol
+            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
+     $        ,abs(sig)*vol)
+         endif
+
 !      deallocate(x_local)
       deallocate(p_local)
       deallocate(wgtdum)
