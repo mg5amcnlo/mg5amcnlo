@@ -6592,6 +6592,10 @@ class UFO_model_to_mg4(object):
                 add_scale.remove('SMINPUTS')
             except Exception:
                 pass
+            try:
+                add_scale.remove('DECAY')
+            except Exception:
+                pass
             self.scales = add_scale
 
     
@@ -9252,13 +9256,20 @@ c         segments from -DABS(tiny*Ga) to Ga
                             misc.sprint(param)
                             raise Exception("internal parameter can not be running: %s"%param)
                         
-            misc.sprint(scales)
             try:
                 scales.remove('SMINPUTS')
             except Exception:
                 pass
+
+            try:
+                scales.remove('DECAY')
+            except Exception:
+                pass
+
             #entry should be a parameter ... not a string
             for b in scales:
+                if b in ['DECAY', 'MASS']:
+                    continue
                 param = base_objects.ParamCardVariable(
                     'mdl__%s__scale' % b.lower(),
                     default_scale, b, [0])
