@@ -715,7 +715,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -1281,7 +1281,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
+    p=re.compile(r'^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1405,7 +1405,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
             
     def get_fct_format(self, fct):
@@ -1665,7 +1665,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile(r'std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -1940,7 +1940,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
 

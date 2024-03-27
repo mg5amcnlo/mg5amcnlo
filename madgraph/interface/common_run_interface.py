@@ -4958,9 +4958,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
         # go trough the initialisation of each card and detect conflict
         for name in self.to_init_card:
-            misc.sprint(name)
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
-            misc.sprint(new_vars)
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
             self.all_vars.union(new_vars
@@ -5271,12 +5269,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def init_fo_analysis(self, cards):
         self.has_fo_card = False
         if not self.get_path('FO_analyse', cards):
-            misc.sprint('no get path')
             return []
         self.has_fo_card = True
         self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
         self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
-        misc.sprint(self.fo_card.string_vars)
         return list(self.fo_card.string_vars)
 
 
@@ -7618,7 +7614,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #security
         path = path.replace('_card_card','_card')
 
-        misc.sprint(answer, self.modified_card)
         if answer in self.modified_card:
             self.write_card(answer)
         elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
