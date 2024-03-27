@@ -702,6 +702,8 @@ class ParamCard(dict):
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
                 
         for block in scales:
+            if block == 'DECAY':
+                continue
             value = self[block].scale
             fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
 

@@ -2679,7 +2679,7 @@ CF2PY integer, intent(in) :: new_value
                     for one_element in line_run:
                         add_scale.add(one_element.lhablock)
             for block in add_scale:
-                if block.upper() == "SMINPUTS":
+                if block.upper() in ["SMINPUTS", 'DECAY']:
                     continue
                 name = block
                 params['%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
@@ -9350,6 +9350,8 @@ c         segments from -DABS(tiny*Ga) to Ga
                 pass
             #entry should be a parameter ... not a string
             for b in scales:
+                if b == 'DECAY':
+                    continue
                 param = base_objects.ParamCardVariable(
                     'mdl__%s__scale' % b,
                      91.188, b, 0)
