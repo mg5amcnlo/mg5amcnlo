@@ -666,7 +666,6 @@ c The n+1-body contributions (including counter terms)
             if (ickkw.eq.3) call set_FxFx_scale(3,p,index)
             passcuts_n1body=passcuts(p,rwgt,index)
             if (passcuts_nbody .and. abrv.ne.'real') then
-                    write(*,*) 'PASSCUTSNB2'
                pass_cuts_check=.true.
                call set_cms_stuff(izero,index)
                call set_alphaS(p1_cnt(0,1,0,index),index)
@@ -676,13 +675,11 @@ c The n+1-body contributions (including counter terms)
                call compute_soft_collinear_counter_term(0d0,index)
             endif
             if (passcuts_coll .and. abrv.ne.'real') then
-                    write(*,*) 'PASSCUTSCOLL'
             call set_alphaS(p1_cnt(0,1,1,index),index)
             call set_cms_stuff(ione,index)
             call compute_collinear_counter_term(0d0,index)
             endif
             if (passcuts_n1body) then
-                    write(*,*) 'PASSCUTSn1'
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr,index)
                call set_alphaS(p,index)
@@ -724,14 +721,11 @@ c Finalize PS point
 
 c Importance sampling for FKS configurations
          if (sum) then
-                 write(*,*) 'SUM TRUE'
             call get_wgt_nbody(sig)
             call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig))
          else
             call get_wgt_no_nbody(sig)
-             write(*,*) 'FILL',max(ini_fin_fks(ichan),1),iran_picked
-     $        ,abs(sig),vol
             call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig)*vol)
          endif

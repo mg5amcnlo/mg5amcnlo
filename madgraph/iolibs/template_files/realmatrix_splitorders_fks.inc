@@ -69,7 +69,7 @@ if (firsttime) then
  firsttime = .false.
 endif
 
-CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
+CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS,amp_index)
 ans_summed = 0d0
 ans_max = 0d0
 
@@ -103,7 +103,7 @@ END
 
 
 
-      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
+      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS,amp_index)
 C  
 %(info_lines)s
 C
@@ -113,6 +113,7 @@ c for the point in phase space P(0:3,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+      use ntry_real
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -122,6 +123,7 @@ C
       PARAMETER ( NCOMB=%(ncomb)d)
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+      integer amp_index
 C  
 C ARGUMENTS 
 C  
@@ -138,19 +140,19 @@ C
 %(helicity_lines)s
       LOGICAL GOODHEL(NCOMB)
       DATA GOODHEL/NCOMB*.FALSE./
-      INTEGER NTRY
-      DATA NTRY/0/
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+      NTRY(NFKSPROCESS,AMP_INDEX)=NTRY(NFKSPROCESS,AMP_INDEX)+1
       DO I=0,NSQAMPSO
-      	ANS(I) = 0D0	  
+        ANS(I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          IF (NTRY.LT.2) THEN
+        IF (GOODHEL(IHEL) .OR. NTRY(NFKSPROCESS,AMP_INDEX).LT. 2) THEN
+          IF (NTRY(NFKSPROCESS,AMP_INDEX).LT.2) THEN
 C for the first ps-point, check for helicities that give
 C identical matrix elements
             call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            

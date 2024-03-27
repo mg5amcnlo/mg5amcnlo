@@ -574,7 +574,7 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
       call cpu_time(tBefore)
       amp_split(1:AMP_SPLIT_SIZE) = 0d0
-      if (f_r.eq.0d0) return
+      if (f_r(amp_index).eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx_ev,amp_split,amp_index)
@@ -589,8 +589,7 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
-        write(*,*) 'SREAL', wgt1,iamp, amp_index
+        wgt1=amp_split(iamp)*s_ev*f_r(amp_index)/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0,amp_index)
         endif
@@ -615,6 +614,7 @@ c the list of weights using the add_wgt subroutine
       use camp_split_store
       use fksvariables
       use factor_n1body
+      use factor_n1body_nlops
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -651,14 +651,14 @@ c the list of weights using the add_wgt subroutine
       common/fks_indices/i_fks,j_fks
 C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       integer get_orders_tag
       call cpu_time(tBefore)
       amp_split(1:amp_split_size) = 0d0
-      if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
+      if (f_s(amp_index).eq.0d0 .and. f_s_MC_S(amp_index).eq.0d0 .and. f_s_MC_H(amp_index).eq.0d0) return
       if (xi_i_hat_ev(amp_index)*xiimax_cnt(0,amp_index).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
      $     return
       s_s = fks_Sij(p1_cnt(0,1,0,amp_index),i_fks,j_fks,zero,y_ij_fks_ev(amp_index),amp_index)
@@ -678,13 +678,13 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
-          call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0,amp_index)
-          wgt1=wgt1*f_s_MC_S
+          call add_wgt(8,orders,-wgt1*f_s_MC_H(amp_index),0d0,0d0,amp_index)
+          wgt1=wgt1*f_s_MC_S(amp_index)
         else
           wgt1=0d0
         endif
         if (xi_i_fks_ev(amp_index).le.xiScut_used) then
-          wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
+          wgt1=wgt1-amp_split(iamp)*s_s*f_s(amp_index)/g22
         endif
         if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0,amp_index)
       enddo
@@ -705,6 +705,7 @@ c to the list of weights using the add_wgt subroutine
       use mod_orders
       use camp_split_store
       use factor_n1body
+      use factor_n1body_nlops
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -752,16 +753,16 @@ c to the list of weights using the add_wgt subroutine
 !OMP THREADPRIVATE (/CXIIFKSCNT/)
 C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       double precision pmass(nexternal)
       integer get_orders_tag
       call cpu_time(tBefore)
       include 'pmass.inc'
-      if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
-     $     f_c_MC_H.eq.0d0)return
+      if (f_c(amp_index).eq.0d0 .and. f_dc(amp_index).eq.0d0 .and. f_c_MC_S(amp_index).eq.0d0 .and.
+     $     f_c_MC_H(amp_index).eq.0d0)return
       if ( (y_ij_fks_ev(amp_index).le.1d0-deltaS .and. replace_MC_subt.eq.0d0) .or.
      $     pmass(j_fks).ne.0.d0 ) return
       s_c = fks_Sij(p1_cnt(0,1,1,amp_index),i_fks,j_fks,xi_i_fks_cnt(1,amp_index),one,amp_index)
@@ -792,18 +793,18 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
-          call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0,amp_index)
-          wgt1=wgt1*f_c_MC_S
+          call add_wgt(9,orders,-wgt1*f_c_MC_H(amp_index),0d0,0d0,amp_index)
+          wgt1=wgt1*f_c_MC_S(amp_index)
         else
           wgt1=0d0
         endif
         if (y_ij_fks_ev(amp_index).gt.1d0-deltaS) then
-          wgt1=wgt1-amp_split(iamp)*s_c*f_c/g22
+          wgt1=wgt1-amp_split(iamp)*s_c*f_c(amp_index)/g22
           wgt1=wgt1+
      $         (amp_split_wgtdegrem_xi(iamp)+amp_split_wgtpsch_p(iamp)+
      $         (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtpsch_l(iamp))
-     $           *log(xi_i_fks_cnt(1,amp_index)))*f_dc/g22
-          wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc/g22
+     $           *log(xi_i_fks_cnt(1,amp_index)))*f_dc(amp_index)/g22
+          wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc(amp_index)/g22
         else
           wgt3=0d0
         endif
@@ -829,6 +830,7 @@ c value to the list of weights using the add_wgt subroutine
       use mod_orders
       use camp_split_store
       use factor_n1body
+      use factor_n1body_nlops
 
       implicit none
       include 'nexternal.inc'
@@ -885,10 +887,10 @@ c value to the list of weights using the add_wgt subroutine
 !OMP THREADPRIVATE (/CXI_I_HAT/)
 C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       ! PDF scheme prefactors
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
@@ -896,9 +898,9 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
       include 'pmass.inc'
       call cpu_time(tBefore)
-      if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
-     $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
-     $     .and. f_sc_MC_H.eq.0d0) return
+      if (f_sc(amp_index).eq.0d0 .and. f_dsc(1,amp_index).eq.0d0 .and. f_dsc(2,amp_index).eq.0d0 .and.
+     $     f_dsc(3,amp_index).eq.0d0 .and. f_dsc(4,amp_index).eq.0d0 .and. f_sc_MC_S(amp_index).eq.0d0
+     $     .and. f_sc_MC_H(amp_index).eq.0d0) return
       if ( ((xi_i_hat_ev(amp_index)*xiimax_cnt(1,amp_index).ge.xiScut_used .or. y_ij_fks_ev(amp_index).le.1d0
      $     -deltaS) .and. replace_MC_subt.eq.0d0).or.
      $     pmass(j_fks).ne.0.d0 ) return
@@ -928,24 +930,24 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
-          call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0,amp_index)
-          wgt1=wgt1*f_sc_MC_S
+          call add_wgt(10,orders,-wgt1*f_sc_MC_H(amp_index),0d0,0d0,amp_index)
+          wgt1=wgt1*f_sc_MC_S(amp_index)
         else
           wgt1=0d0
         endif
         if (xi_i_fks_cnt(1,amp_index).lt.xiScut_used .and. 
      $      y_ij_fks_ev(amp_index).gt.1d0-deltaS) then
-          wgt1=wgt1+amp_split(iamp)*s_sc*f_sc/g22
+          wgt1=wgt1+amp_split(iamp)*s_sc*f_sc(amp_index)/g22
           wgt1=wgt1+
      $         (-(amp_split_wgtdegrem_xi(iamp)+amp_split_wgtpsch_p(iamp)+
      $           (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtpsch_l(iamp))
-     $              *log(xi_i_fks_cnt(1,amp_index)))*f_dsc(1)-
-     $           (amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
-     $            amp_split_wgtdegrem_lxi(iamp)*f_dsc(3))+
+     $              *log(xi_i_fks_cnt(1,amp_index)))*f_dsc(1,amp_index)-
+     $           (amp_split_wgtdegrem_xi(iamp)*f_dsc(2,amp_index)+
+     $            amp_split_wgtdegrem_lxi(iamp)*f_dsc(3,amp_index))+
      $            amp_split_wgtpsch_d(iamp)*f_pdfsch_d+
      $            amp_split_wgtpsch_p(iamp)*f_pdfsch_p+
      $            amp_split_wgtpsch_l(iamp)*f_pdfsch_l)/g22
-          wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4)/g22
+          wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4,amp_index)/g22
         else
           wgt3=0d0
         endif
@@ -962,6 +964,7 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       ! use vectorize
       use fksvariables
       use mod_orders
+      use factor_n1body_nlops
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
 c their values to the list of weights using the add_wgt subroutine. It
@@ -995,10 +998,10 @@ c respectively.
       integer           fks_j_from_i(nexternal,0:nexternal)
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       integer iamp
       integer orders(nsplitorders)
       double precision amp_split_xmcxsec(amp_split_size,nexternal)
@@ -1009,7 +1012,7 @@ c respectively.
       call cpu_time(tBefore)
       call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
      $     ,lzone,zhw,nofpartners,xmcxsec)
-      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
+      if (f_MC_S(amp_index).eq.0d0 .and. f_MC_H(amp_index).eq.0d0) return
       if(UseSfun)then
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
       else
@@ -1029,10 +1032,10 @@ c respectively.
                 orders_tag=get_orders_tag(orders)
                 amp_pos=iamp
                 g22=g**(QCD_power)
-                wgt1=sevmc*f_MC_S*xlum_mc_fact*
+                wgt1=sevmc*f_MC_S(amp_index)*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
                 call add_wgt(12,orders,wgt1,0d0,0d0,amp_index)
-                wgt1=sevmc*f_MC_H*xlum_mc_fact*
+                wgt1=sevmc*f_MC_H(amp_index)*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
                 call add_wgt(13,orders,-wgt1,0d0,0d0,amp_index)
               enddo
@@ -1172,6 +1175,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       use c_fxfx_scales
       use factor_nbody
       use factor_n1body
+      use factor_n1body_nlops
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1196,10 +1200,10 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
 !OMP THREADPRIVATE (/COUNTEREVNTS/)
 C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
 CC      double precision      f_b,f_nb
 CC      common /factor_nbody/ f_b,f_nb
       double precision         fxfx_exp_rewgt
@@ -1271,17 +1275,17 @@ c Sudakov factors are included.
             f_b(amp_index) =f_b(amp_index) *rewgt_izero
             f_nb(amp_index)=f_nb(amp_index)*rewgt_izero
          elseif(iterm.eq.2) then
-            f_s =f_s *rewgt_izero
-            f_c =f_c *rewgt_izero
-            f_dc=f_dc*rewgt_izero
-            f_sc=f_sc*rewgt_izero
+            f_s(amp_index) =f_s(amp_index) *rewgt_izero
+            f_c(amp_index) =f_c(amp_index) *rewgt_izero
+            f_dc(amp_index)=f_dc(amp_index)*rewgt_izero
+            f_sc(amp_index)=f_sc(amp_index)*rewgt_izero
             do i=1,4
-               f_dsc(i)=f_dsc(i)*rewgt_izero
+               f_dsc(i,amp_index)=f_dsc(i,amp_index)*rewgt_izero
             enddo
-            f_MC_S =f_MC_S *rewgt_izero
-            f_s_MC_S =f_s_MC_S *rewgt_izero
-            f_c_MC_S =f_c_MC_S *rewgt_izero
-            f_sc_MC_S=f_sc_MC_S*rewgt_izero
+            f_MC_S(amp_index) =f_MC_S(amp_index) *rewgt_izero
+            f_s_MC_S(amp_index) =f_s_MC_S(amp_index) *rewgt_izero
+            f_c_MC_S(amp_index) =f_c_MC_S(amp_index) *rewgt_izero
+            f_sc_MC_S(amp_index)=f_sc_MC_S(amp_index)*rewgt_izero
          endif
          nFxFx_ren_scales_izero=nFxFx_ren_scales(amp_index)
          do i=1,nexternal
@@ -1330,11 +1334,11 @@ c Update shower starting scale
                p_last_mohdr(j,i)=p(j,i)
             enddo
          enddo
-         f_r=f_r*rewgt_mohdr
-         f_MC_H =f_MC_H *rewgt_mohdr
-         f_s_MC_H =f_s_MC_H *rewgt_izero
-         f_c_MC_H =f_c_MC_H *rewgt_izero
-         f_sc_MC_H=f_sc_MC_H*rewgt_izero
+         f_r(amp_index)=f_r(amp_index)*rewgt_mohdr
+         f_MC_H(amp_index) =f_MC_H(amp_index) *rewgt_mohdr
+         f_s_MC_H(amp_index) =f_s_MC_H(amp_index) *rewgt_izero
+         f_c_MC_H(amp_index) =f_c_MC_H(amp_index) *rewgt_izero
+         f_sc_MC_H(amp_index)=f_sc_MC_H(amp_index)*rewgt_izero
          nFxFx_ren_scales_mohdr=nFxFx_ren_scales(amp_index)
          do i=0,nexternal
             FxFx_ren_scales_mohdr(i)=FxFx_ren_scales(i,amp_index)
@@ -1476,6 +1480,8 @@ c f_* multiplication factors for Born and nbody
       use ccalculatedborn
       use to_amps
       use factor_nbody
+      use factor_n1body
+      use factor_n1body_nlops
 
       implicit none
       include 'nexternal.inc'
@@ -1528,12 +1534,12 @@ c f_* multiplication factors for Born and nbody
       common /dsymfactor/diagramsymmetryfactor
 CC      double precision      f_b,f_nb
 CC      common /factor_nbody/ f_b,f_nb
-      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
 !      integer igranny,iaunt
@@ -1643,25 +1649,25 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
          f_b(amp_index)=      f_b(amp_index)      *enhance
          f_nb(amp_index)=     f_nb(amp_index)     *enhance
       elseif(imode.eq.2) then
-         f_r=      f_r      *enhance_real
+         f_r(amp_index)=      f_r(amp_index)      *enhance_real
       elseif(imode.eq.4) then
-         f_MC_S=   f_MC_S   *enhance
-         f_MC_H=   f_MC_H   *enhance
+         f_MC_S(amp_index)=   f_MC_S(amp_index)   *enhance
+         f_MC_H(amp_index)=   f_MC_H(amp_index)   *enhance
       elseif(imode.eq.3) then
-         f_s=      f_s      *enhance
-         f_s_MC_S= f_s_MC_S *enhance
+         f_s(amp_index)=      f_s(amp_index)      *enhance
+         f_s_MC_S(amp_index)= f_s_MC_S(amp_index) *enhance
          f_S_MC_H= f_S_MC_H *enhance
-         f_c=      f_c      *enhance
-         f_c_MC_S= f_c_MC_S *enhance
-         f_c_MC_H= f_c_MC_H *enhance
-         f_dc=     f_dc     *enhance
-         f_sc=     f_sc     *enhance
-         f_sc_MC_S=f_sc_MC_S*enhance
-         f_sc_MC_H=f_sc_MC_H*enhance
-         f_dsc(1)= f_dsc(1) *enhance
-         f_dsc(2)= f_dsc(2) *enhance
-         f_dsc(3)= f_dsc(3) *enhance
-         f_dsc(4)= f_dsc(4) *enhance
+         f_c(amp_index)=      f_c(amp_index)      *enhance
+         f_c_MC_S(amp_index)= f_c_MC_S(amp_index) *enhance
+         f_c_MC_H(amp_index)= f_c_MC_H(amp_index) *enhance
+         f_dc(amp_index)=     f_dc(amp_index)     *enhance
+         f_sc(amp_index)=     f_sc(amp_index)     *enhance
+         f_sc_MC_S(amp_index)=f_sc_MC_S(amp_index)*enhance
+         f_sc_MC_H(amp_index)=f_sc_MC_H(amp_index)*enhance
+         f_dsc(1,amp_index)= f_dsc(1,amp_index) *enhance
+         f_dsc(2,amp_index)= f_dsc(2,amp_index) *enhance
+         f_dsc(3,amp_index)= f_dsc(3,amp_index) *enhance
+         f_dsc(4,amp_index)= f_dsc(4,amp_index) *enhance
          f_pdfsch_d=  f_pdfsch_d  *enhance
          f_pdfsch_p=  f_pdfsch_p  *enhance
          f_pdfsch_l=  f_pdfsch_l  *enhance
@@ -1687,6 +1693,7 @@ c terms.
       use parton_cms_stuff
       use cnocntevents
       use factor_n1body
+      use factor_n1body_nlops
 
       implicit none
       include 'nexternal.inc'
@@ -1747,10 +1754,10 @@ c terms.
 !OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
 C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
 C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
-     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
+C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
+C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       ! prefactors for the PDF scheme
       double precision prefact_pdfsch_d,prefact_pdfsch_p,prefact_pdfsch_l
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
@@ -1761,18 +1768,18 @@ C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=xinorm_ev(amp_index)/xi_i_fks_ev(amp_index)/(1-y_ij_fks_ev(amp_index))
-      f_r=prefact*jac_ev*fkssymmetryfactor*vegas_wgt
-      f_MC_S=f_r
-      f_MC_H=f_r
+      f_r(amp_index)=prefact*jac_ev*fkssymmetryfactor*vegas_wgt
+      f_MC_S(amp_index)=f_r(amp_index)
+      f_MC_H(amp_index)=f_r(amp_index)
       if (.not.nocntevents(amp_index)) then
          prefact_cnt_ssc=xinorm_ev(amp_index)/min(xiimax_ev(amp_index),xiScut_used)*
      $        log(xicut_used/min(xiimax_ev(amp_index),xiScut_used))/(1
      $        -y_ij_fks_ev(amp_index))
-         f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0,amp_index)
+         f_s(amp_index)=(prefact+prefact_cnt_ssc)*jac_cnt(0,amp_index)
      $        *fkssymmetryfactor*vegas_wgt
-         f_s_MC_S=prefact*jac_cnt(0,amp_index)
+         f_s_MC_S(amp_index)=prefact*jac_cnt(0,amp_index)
      $        *fkssymmetryfactor*vegas_wgt
-         f_s_MC_H=f_s_MC_S
+         f_s_MC_H(amp_index)=f_s_MC_S(amp_index)
 
          if (pmass(j_fks).eq.0d0) then
 c For the soft-collinear, these should be itwo. But they are always
@@ -1780,11 +1787,11 @@ c equal to ione, so no need to define separate factors.
             prefact_c=xinorm_cnt(1,amp_index)/xi_i_fks_cnt(1,amp_index)/(1-y_ij_fks_ev(amp_index))
             prefact_coll=xinorm_cnt(1,amp_index)/xi_i_fks_cnt(1,amp_index)*log(delta_used
      $           /deltaS)/deltaS
-            f_c=(prefact_c+prefact_coll)*jac_cnt(1,amp_index)
+            f_c(amp_index)=(prefact_c+prefact_coll)*jac_cnt(1,amp_index)
      $           *fkssymmetryfactor*vegas_wgt
-            f_c_MC_S=prefact_c*jac_cnt(1,amp_index)
+            f_c_MC_S(amp_index)=prefact_c*jac_cnt(1,amp_index)
      $           *fkssymmetryfactor*vegas_wgt
-            f_c_MC_H=f_c_MC_S
+            f_c_MC_H(amp_index)=f_c_MC_S(amp_index)
 
             call set_cms_stuff(1,amp_index)
             prefact_deg=xinorm_cnt(1,amp_index)/xi_i_fks_cnt(1,amp_index)/deltaS
@@ -1794,14 +1801,14 @@ c equal to ione, so no need to define separate factors.
             prefact_coll_c=xinorm_cnt(1,amp_index)/min(xiimax_cnt(1,amp_index),xiScut_used)
      $           *log(xicut_used/min(xiimax_cnt(1,amp_index),xiScut_used))
      $           *log(delta_used/deltaS)/deltaS
-            f_dc=jac_cnt(1,amp_index)*prefact_deg/(shat(amp_index)/(32*pi**2))
+            f_dc(amp_index)=jac_cnt(1,amp_index)*prefact_deg/(shat(amp_index)/(32*pi**2))
      $           *fkssymmetryfactorDeg*vegas_wgt
-            f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c
+            f_sc(amp_index)=(prefact_c+prefact_coll+prefact_cnt_ssc_c
      &           +prefact_coll_c)*jac_cnt(2,amp_index)
      &           *fkssymmetryfactorDeg*vegas_wgt
-            f_sc_MC_S=prefact_c*jac_cnt(2,amp_index)
+            f_sc_MC_S(amp_index)=prefact_c*jac_cnt(2,amp_index)
      $           *fkssymmetryfactor*vegas_wgt
-            f_sc_MC_H=f_sc_MC_S
+            f_sc_MC_H(amp_index)=f_sc_MC_S(amp_index)
 
             call set_cms_stuff(2,amp_index)
             prefact_deg_sxi=xinorm_cnt(1,amp_index)/min(xiimax_cnt(1,amp_index),xiScut_used)
@@ -1811,13 +1818,13 @@ c equal to ione, so no need to define separate factors.
      &           ,xiScut_used)*( log(xicut_used)**2
      &           -log(min(xiimax_cnt(1,amp_index),xiScut_used))**2 )*1/(2.d0
      &           *deltaS)
-            f_dsc(1)=prefact_deg*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
+            f_dsc(1,amp_index)=prefact_deg*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
-            f_dsc(2)=prefact_deg_sxi*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
+            f_dsc(2,amp_index)=prefact_deg_sxi*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
-            f_dsc(3)=prefact_deg_slxi*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
+            f_dsc(3,amp_index)=prefact_deg_slxi*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
-            f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2,amp_index)/(shat(amp_index)
+            f_dsc(4,amp_index)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2,amp_index)/(shat(amp_index)
      &           /(32*pi**2))*fkssymmetryfactorDeg
      &           *vegas_wgt
             ! prefactor for the PDF scheme
@@ -1831,31 +1838,31 @@ c equal to ione, so no need to define separate factors.
             f_pdfsch_l=prefact_pdfsch_l*jac_cnt(2,amp_index)/(shat(amp_index)/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
          else
-            f_c=0d0
-            f_dc=0d0
-            f_sc=0d0
+            f_c(amp_index)=0d0
+            f_dc(amp_index)=0d0
+            f_sc(amp_index)=0d0
             do i=1,4
-               f_dsc(i)=0d0
+               f_dsc(i,amp_index)=0d0
             enddo
-            f_c_MC_S=0d0
-            f_c_MC_H=0d0
-            f_sc_MC_S=0d0
-            f_sc_MC_H=0d0
+            f_c_MC_S(amp_index)=0d0
+            f_c_MC_H(amp_index)=0d0
+            f_sc_MC_S(amp_index)=0d0
+            f_sc_MC_H(amp_index)=0d0
          endif
       else
-         f_s=0d0
-         f_c=0d0
-         f_dc=0d0
-         f_sc=0d0
+         f_s(amp_index)=0d0
+         f_c(amp_index)=0d0
+         f_dc(amp_index)=0d0
+         f_sc(amp_index)=0d0
          do i=1,4
-            f_dsc(i)=0d0
+            f_dsc(i,amp_index)=0d0
          enddo
-         f_s_MC_S=0d0
-         f_s_MC_H=0d0
-         f_c_MC_S=0d0
-         f_c_MC_H=0d0
-         f_sc_MC_S=0d0
-         f_sc_MC_H=0d0
+         f_s_MC_S(amp_index)=0d0
+         f_s_MC_H(amp_index)=0d0
+         f_c_MC_S(amp_index)=0d0
+         f_c_MC_H(amp_index)=0d0
+         f_sc_MC_S(amp_index)=0d0
+         f_sc_MC_H(amp_index)=0d0
       endif
       call cpu_time(tAfter)
       tf_all=tf_all+(tAfter-tBefore)
@@ -2218,7 +2225,6 @@ c number of contributions before they are (possibly) increased through a
 c call to separate_flavour_config().
       icontr_orig=icontr
       i=0
-      write(*,*) 'INCLUDEPDF', itype(1:icontr),wgt(1,1:icontr),wgt(2,1:icontr),wgt(3,1:icontr)
       do while (i.lt.icontr)
          i=i+1
          nFKSprocess=nFKS(i)
@@ -2953,7 +2959,6 @@ c excluding the nbody contributions.
       integer i
       sig=0d0
       if (icontr.eq.0) return
-      write(*,*) 'WGTS1', wgts(1,1:icontr)
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
      &        .and. itype(i).ne.7 .and. itype(i).ne.15) then

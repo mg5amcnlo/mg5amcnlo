@@ -127,6 +127,33 @@ module factor_n1body
    end subroutine deallocate_factor_n1body
 end module factor_n1body
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module factor_n1body_nlops
+    implicit none
+   double precision, allocatable :: f_s_MC_S(:),f_s_MC_H(:),f_c_MC_S(:),f_c_MC_H(:),f_sc_MC_S(:),f_sc_MC_H(:),f_MC_S(:),f_MC_H(:)
+ contains
+   subroutine allocate_factor_n1body_nlops(vector_size)
+       integer, intent(in) :: vector_size
+       allocate(f_s_MC_S(vector_size))
+       allocate(f_s_MC_H(vector_size))
+       allocate(f_c_MC_S(vector_size))
+       allocate(f_c_MC_H(vector_size))
+       allocate(f_sc_MC_S(vector_size))
+       allocate(f_sc_MC_H(vector_size))
+       allocate(f_MC_S(vector_size))
+       allocate(f_MC_H(vector_size))
+   end subroutine allocate_factor_n1body_nlops
+   subroutine deallocate_factor_n1body_nlops
+       if (allocated(f_s_MC_S)) deallocate(f_s_MC_S)
+       if (allocated(f_s_MC_H)) deallocate(f_s_MC_H)
+       if (allocated(f_c_MC_S)) deallocate(f_c_MC_S)
+       if (allocated(f_c_MC_H)) deallocate(f_c_MC_H)
+       if (allocated(f_sc_MC_S)) deallocate(f_sc_MC_S)
+       if (allocated(f_sc_MC_H)) deallocate(f_sc_MC_H)
+       if (allocated(f_MC_S)) deallocate(f_MC_S)
+       if (allocated(f_MC_H)) deallocate(f_MC_H)
+   end subroutine deallocate_factor_n1body_nlops
+end module factor_n1body_nlops
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module to_amps_born
   use mod_genps
   use mod_orders
@@ -934,6 +961,19 @@ module to_savemom
   end subroutine deallocate_to_savemom
 end module to_savemom
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module ntry_real
+  use mod_nfksconfigs
+  integer, allocatable :: ntry(:,:)
+  contains
+  subroutine allocate_ntry_real(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(ntry(FKS_CONFIGS_mod, vector_size))
+  end subroutine allocate_ntry_real
+  subroutine deallocate_ntry_real
+   if (allocated(ntry)) deallocate(ntry)
+  end subroutine deallocate_ntry_real
+end module ntry_real
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module cBorn
   use mod_nfksconfigs
   double precision, allocatable :: hel_fac(:)
@@ -1002,6 +1042,7 @@ end module c_born_cnt
 module vectorize
   use factor_nbody
   use factor_n1body
+  use factor_n1body_nlops
   use pborn
   use pborn_ev
   use pborn_l
@@ -1051,6 +1092,7 @@ module vectorize
   use cBorn
   use c_wgt_ME_tree
   use c_born_cnt
+  use ntry_real
 !  use strong
 !  use rscale
 !  use couplings
@@ -1061,8 +1103,10 @@ module vectorize
        implicit none
        integer, intent(in) :: vector_size
        vec_size_store = vector_size
+       call allocate_ntry_real(vector_size)
        call allocate_factor_nbody(vector_size)
        call allocate_factor_n1body(vector_size)
+       call allocate_factor_n1body_nlops(vector_size)
        call allocate_pborn(vector_size)
        call allocate_pborn_ev(vector_size)
        call allocate_pborn_l(vector_size)
@@ -1175,8 +1219,10 @@ module vectorize
     end subroutine event_reset
 
     subroutine deallocate_storage
+       call deallocate_ntry_real
        call deallocate_factor_nbody
        call deallocate_factor_n1body
+       call deallocate_factor_n1body_nlops
        call deallocate_pborn
        call deallocate_pborn_ev
        call deallocate_pborn_l
