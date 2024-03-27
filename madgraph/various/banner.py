@@ -537,7 +537,8 @@ class Banner(dict):
             self.param_card = param_card_reader.ParamCard(param_card)
             return self.param_card
         elif tag == 'mgruncard':
-            self.run_card = RunCard(self[tag])
+            with misc.TMP_variable(RunCard, 'allow_scan', True):
+                self.run_card = RunCard(self[tag], consistency=False)
             return self.run_card
         elif tag == 'mg5proccard':
             proc_card = self[tag].split('\n')
@@ -976,6 +977,8 @@ class ConfigFile(dict):
     """ a class for storing/dealing with input file.
     """     
 
+    allow_scan = False
+
     def __init__(self, finput=None, **opt):
         """initialize a new instance. input can be an instance of MadLoopParam,
         a file, a path to a file, or simply Nothing"""                
@@ -993,6 +996,7 @@ class ConfigFile(dict):
         # Initialize it with all the default value
         self.user_set = set()
         self.auto_set = set()
+        self.scan_set = {} #key -> type of list (int/float/bool/str/... for scan
         self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = {} #key -> type of list (int/float/bool/str/...
@@ -1105,6 +1109,8 @@ class ConfigFile(dict):
         #1. check if the parameter is set to auto -> pass it to special
         if lower_name in self:
             targettype = type(dict.__getitem__(self, lower_name))
+            if lower_name in self.scan_set:
+                targettype = self.scan_set[lower_name] 
             if targettype != str and isinstance(value, str) and value.lower() == 'auto':
                 self.auto_set.add(lower_name)
                 if lower_name in self.user_set:
@@ -1114,12 +1120,25 @@ class ConfigFile(dict):
                 return 
             elif lower_name in self.auto_set:
                 self.auto_set.remove(lower_name)
-            
+
+ 
+            #1. check if the parameter is set to auto -> pass it to special
+            scan_targettype = None 
+            if self.allow_scan and isinstance(value, str) and value.strip().startswith('scan'):
+                if lower_name in self.user_set:
+                    self.user_set.remove(lower_name)
+                self.scan_set[lower_name] = type(self[lower_name])
+                dict.__setitem__(self, lower_name, value)
+                #keep old value.
+                self.post_set(lower_name,value, change_userdefine, raiseerror)
+                return                
+            elif lower_name in self.scan_set:
+                scan_targettype = self.scan_set[lower_name] 
+                del self.scan_set[lower_name]
+
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
             targettype = self.list_parameter[lower_name]
-            
-            
             
             if isinstance(value, str):
                 # split for each comma/space
@@ -1244,8 +1263,11 @@ class ConfigFile(dict):
             if change_userdefine:
                 self.user_set.add(lower_name)
             return self.post_set(lower_name, None, change_userdefine, raiseerror)
-        elif name in self:            
-            targettype = type(self[name])
+        elif name in self:  
+            if scan_targettype:
+               targettype = targettype
+            else:
+                 targettype = type(self[name])
         else:
             logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
               'This argument is not defined by default. Please consider adding it.')
@@ -1258,7 +1280,7 @@ class ConfigFile(dict):
             if change_userdefine:
                 self.user_set.add(lower_name)
             return self.post_set(lower_name, None, change_userdefine, raiseerror)
-    
+        
         value = self.format_variable(value, targettype, name=name)
         #check that the value is allowed:
         if lower_name in self.allowed_value and '*' not in self.allowed_value[lower_name]:
@@ -5566,9 +5588,10 @@ class RunCardNLO(RunCard):
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
-            if self['lpp%s' % i ] not in [1,2]:
+            # do not for proton mass if not proton PDF (or when scan initialization)
+            if self['lpp%s' % i ] not in [1,2] or isinstance(self['ebeam%i' % i], str):
                 continue
-
+ 
             if self['ebeam%i' % i] < 0.938:
                 if self['ebeam%i' %i] == 0:
                     logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
@@ -6018,3 +6041,179 @@ class eMELA_info(ConfigFile):
             xcard = banner.charge_card(card)
             xcard[par[0]].param_dict[(par[1],)].value = v
             xcard.write(os.path.join(self.me_dir, 'Cards', '%s.dat' % card))
+
+
+
+
+class RunCardIterator(object):
+    """A class keeping track of the scan: flag in the param_card and 
+       having an __iter__() function to scan over all the points of the scan.
+    """
+
+    logging = True
+    def __init__(self, input_path=None):
+        with misc.TMP_variable(RunCard, 'allow_scan', True):
+            self.run_card = RunCard(input_path, consistency=False)
+        self.run_card.allow_scan = True
+
+        self.itertag = [] #all the current value use
+        self.cross = []   # keep track of all the cross-section computed 
+        self.param_order = []
+        
+    def __iter__(self):
+        """generate the next param_card (in a abstract way) related to the scan.
+           Technically this generates only the generator."""
+        
+        if hasattr(self, 'iterator'):
+            return self.iterator
+        self.iterator = self.iterate()
+        return self.iterator
+    
+    def write(self, path):
+        self.__iter__.write(path)
+
+    def next(self, autostart=False):
+        """call the next iteration value"""
+        try:
+            iterator = self.iterator
+        except:
+            if autostart:
+                iterator = self.__iter__()
+            else:
+                raise
+        try:
+            out = next(iterator)
+        except StopIteration:
+            del self.iterator
+            raise
+        return out
+    
+    def iterate(self):
+        """create the actual generator"""
+        all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
+        pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+
+        # fill all_iterators with the run_card information
+        for name in self.run_card.scan_set:
+            value = self.run_card[name]
+            try:
+               key, def_list = pattern.findall(value)[0] 
+            except Exception as error:
+               misc.sprint(error)
+               raise Exception("Fail to handle scanning tag in run_card: Please check that the syntax is valid") 
+            if key == '': 
+                key = -1 * len(all_iterators)
+            if key not in all_iterators:
+                all_iterators[key] = []
+            try:
+                all_iterators[key].append( (name, eval(def_list)))
+            except SyntaxError as error:
+                raise Exception("Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error))
+        
+        #prepare to keep track of parameter changing for the report
+        keys = list(all_iterators.keys()) # need to fix an order for the scan
+        #store the type of parameter
+        for key in keys:
+            for param, values in all_iterators[key]:
+                self.param_order.append("run_card#%s" % (param))
+
+        # do the loop
+        lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
+        for positions in itertools.product(*lengths):
+            self.itertag = []
+            if self.logging:
+                logger.info("Create the next param_card in the scan definition", '$MG:BOLD')
+            for i, pos in enumerate(positions):
+                key = keys[i]
+                for param, values in all_iterators[key]:
+                    # assign the value in the card.
+                    self.run_card[param] = values[pos]
+                    self.itertag.append(values[pos])
+                    if self.logging:
+                        logger.info("change parameter %s to %s", \
+                                   param, values[pos])
+            
+            
+            # retrun the current param_card up to next iteration
+            yield self.run_card
+        
+    
+    def store_entry(self, run_name, cross, error=None, run_card_path=None):
+        """store the value of the cross-section"""
+        
+        if isinstance(cross, dict):
+            info = dict(cross)
+            info.update({'bench' : self.itertag, 'run_name': run_name})
+            self.cross.append(info)
+        else:
+            if error is None:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
+            else:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+
+    def write_summary(self, path, order=None, lastline=False, nbcol=20):
+        """ """
+
+        if path:
+            ff = open(path, 'w')
+            path_events = path.rsplit("/", 1)[0]
+            #identCard = open(pjoin(path.rsplit("/", 2)[0], "Cards", "ident_card.dat"))
+            #identLines = identCard.readlines()
+            #identCard.close()
+        else:
+            ff = StringIO.StringIO()        
+        if order:
+            keys = order
+        else:
+            keys = list(self.cross[0].keys())
+            if 'bench' in keys: keys.remove('bench')
+            if 'run_name' in keys: keys.remove('run_name')
+            keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
+
+        formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
+                                             ('%%-%is ' % (nbcol))* len(keys))
+        # header
+        if not lastline:
+            ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
+        formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
+                                             ('%%-%ie ' % (nbcol))* len(keys))
+
+        if not lastline:
+            to_print = self.cross
+        else:
+            to_print = self.cross[-1:]
+        for info in to_print:
+            name = info['run_name']
+            bench = info['bench']
+            data = []
+            for k in keys:
+                if k in info:
+                    data.append(info[k])
+                else:
+                    data.append(0.)
+            ff.write(formatting % tuple([name] + bench + data))
+            ff_single = open(pjoin(path_events, name, "params.dat"), "w")
+            for i_bench in range(0, len(bench)):
+                ff_single.write(self.param_order[i_bench] + " = " + str(bench[i_bench]) +"\n")
+            ff_single.close()
+
+        if not path:
+            return ff.getvalue()
+        
+         
+    def get_next_name(self, run_name):
+        """returns a smart name for the next run"""
+    
+        if '_' in run_name:
+            name, value = run_name.rsplit('_',1)
+            if value.isdigit():
+                return '%s_%02i' % (name, float(value)+1)
+        # no valid '_' in the name
+        return '%s_scan_02' % run_name
