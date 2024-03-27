@@ -23,17 +23,6 @@ c to the list of weights using the add_wgt subroutine
 
       double precision wgt_c
       double precision wgt1
-!      double precision p_born(0:3,nexternal-1)
-!      common /pborn/   p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision   xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-!      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-CC      double precision      f_b,f_nb
-Cc      common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision g22
@@ -79,11 +68,6 @@ C in the LO cross section
       include 'q_es.inc'
       include 'run.inc'
       include 'genps.inc'
-!      double precision p_born(0:3,nexternal-1)
-!      common /pborn/   p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      include 'orders.inc'
-!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_6to5f(amp_split_size),
@@ -191,11 +175,6 @@ C in the LO cross section
       include 'q_es.inc'
       include 'run.inc'
       include 'genps.inc'
-!      double precision p_born(0:3,nexternal-1)
-!      common /pborn/   p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      include 'orders.inc'
-!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_alpha(amp_split_size),
@@ -392,18 +371,6 @@ c value to the list of weights using the add_wgt subroutine
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
      &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision   xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-!      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-CC      double precision      f_b,f_nb
-CC      common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
@@ -565,12 +532,6 @@ c its value to the list of weights using the add_wgt subroutine
 
       double precision amp_split(amp_split_size)
 
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev(0:3)
-!     $                    ,p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
       call cpu_time(tBefore)
       amp_split(1:AMP_SPLIT_SIZE) = 0d0
@@ -631,30 +592,10 @@ c the list of weights using the add_wgt subroutine
       external fks_Sij
 
       double precision amp_split(amp_split_size)
-!      double precision     p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/ p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-!      double precision   xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-!      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev(0:3)
-!     $                    ,p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       integer get_orders_tag
       call cpu_time(tBefore)
       amp_split(1:amp_split_size) = 0d0
@@ -664,8 +605,6 @@ C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(
       s_s = fks_Sij(p1_cnt(0,1,0,amp_index),i_fks,j_fks,zero,y_ij_fks_ev(amp_index),amp_index)
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0,amp_index),0d0,y_ij_fks_ev(amp_index),fx_s,amp_split,amp_index)
-
-!      amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_r(1:AMP_SPLIT_SIZE,amp_index)
 
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -738,25 +677,8 @@ c to the list of weights using the add_wgt subroutine
 
       double precision amp_split(1:amp_split_size)
 
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev(0:3)
-!     $                    ,p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-!      double precision   xi_i_fks_cnt(-2:2)
-!      common /cxiifkscnt/xi_i_fks_cnt
-!OMP THREADPRIVATE (/CXIIFKSCNT/)
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       double precision pmass(nexternal)
       integer get_orders_tag
       call cpu_time(tBefore)
@@ -864,33 +786,10 @@ c value to the list of weights using the add_wgt subroutine
 
       double precision amp_split(amp_split_size)
 
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev(0:3)
-!     $                    ,p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-!      double precision   xi_i_fks_cnt(-2:2)
-!      common /cxiifkscnt/xi_i_fks_cnt
-!OMP THREADPRIVATE (/CXIIFKSCNT/)
-!      double precision   xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-!      double precision  xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       ! PDF scheme prefactors
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
@@ -989,19 +888,11 @@ c respectively.
 
       integer amp_index
 
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev(0:3)
-!     $                    ,p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer           fks_j_from_i(nexternal,0:nexternal)
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       integer iamp
       integer orders(nsplitorders)
       double precision amp_split_xmcxsec(amp_split_size,nexternal)
@@ -1194,26 +1085,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
 
       integer amp_index
 
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-CC      double precision      f_b,f_nb
-CC      common /factor_nbody/ f_b,f_nb
       double precision         fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
-!      integer                              nFxFx_ren_scales
-!      double precision     FxFx_ren_scales(0:nexternal),
-!     $                     FxFx_fac_scale(2)
-!      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
-!     $                     FxFx_fac_scale
-!OMP THREADPRIVATE (/C_FXFX_SCALES/)
       INTEGER              NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
@@ -1402,28 +1275,13 @@ c bpower.
 
       integer amp_index
 
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision  xinorm_ev(amp_index)
-!      common /cxinormev/xinorm_ev(amp_index)
-!OMP THREADPRIVATE (/CXINORMEV/)
-!      double precision  xiimax_ev(amp_index)
-!      common /cxiimaxev/xiimax_ev(amp_index)
-!OMP THREADPRIVATE (/CXIIMAXEV/)
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-!      double precision        ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      $                         fkssymmetryfactorDeg
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-CC      double precision      f_b,f_nb
-CC      common /factor_nbody/ f_b,f_nb
       logical pineappl
       common /for_pineappl/ pineappl
       logical needrndec
@@ -1498,25 +1356,6 @@ c f_* multiplication factors for Born and nbody
 
       integer amp_index
 
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/    p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision p_born_ev(0:3,nexternal-1)
-!      common/pborn_ev/ p_born_ev
-!OMP THREADPRIVATE (/PBORN_EV/)
-!      double precision p_born_coll(0:3,nexternal-1)
-!      common/pborn_coll/p_born_coll
-!OMP THREADPRIVATE (/PBORN_COLL/)
-!      double precision p_born_norad(0:3,nexternal-1)
-!      common/pborn_norad/p_born_norad
-!OMP THREADPRIVATE (/PBORN_NORAD/)
-!      double precision p_ev(0:3,nexternal)
-!      common/pev/      p_ev
-!OMP THREADPRIVATE (/PEV/)
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
       double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
       integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
@@ -1527,30 +1366,10 @@ c f_* multiplication factors for Born and nbody
      $     ,mapconfig
       integer            this_config
       common/to_mconfigs/this_config
-!      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-!      common/to_amps/  amp2,          jamp2
-!OMP THREADPRIVATE (/TO_AMPS/)
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
-CC      double precision      f_b,f_nb
-CC      common /factor_nbody/ f_b,f_nb
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
-!      integer igranny,iaunt
-!      logical granny_chain(-nexternal:nexternal),granny_is_res
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
-!      logical calculatedBorn(amp_index)
-!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
-!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
       logical use_evpr
       common /to_use_evpr/use_evpr
 
@@ -1710,54 +1529,19 @@ c terms.
 
       integer amp_index
 
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision    xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-!      double precision   xi_i_fks_cnt(-2:2)
-!      common /cxiifkscnt/xi_i_fks_cnt
-!OMP THREADPRIVATE (/CXIIFKSCNT/)
-!      double precision  xinorm_ev(amp_index)
-!      common /cxinormev/xinorm_ev(amp_index)
-!OMP THREADPRIVATE (/CXINORMEV/)
-!      double precision  xiimax_ev(amp_index)
-!      common /cxiimaxev/xiimax_ev(amp_index)
-!OMP THREADPRIVATE (/CXIIMAXEV/)
-!      double precision   xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-!      double precision   xinorm_cnt(-2:2)
-!      common /cxinormcnt/xinorm_cnt
-!OMP THREADPRIVATE (/CXINORMCNT/)
       double precision    delta_used
       common /cdelta_used/delta_used
       double precision    xicut_used
       common /cxicut_used/xicut_used
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-!      double precision        ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg
       integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-!      logical nocntevents(amp_index)
-!      common/cnocntevents(amp_index)/nocntevents(amp_index)
-!OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
-C      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
-C      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
-C      double precision           f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
-C      common/factor_n1body_NLOPS/f_s_MC_S(amp_index),f_s_MC_H(amp_index),f_c_MC_S(amp_index),f_c_MC_H(amp_index)
-C     $     ,f_sc_MC_S(amp_index),f_sc_MC_H(amp_index),f_MC_S(amp_index),f_MC_H(amp_index)
       ! prefactors for the PDF scheme
       double precision prefact_pdfsch_d,prefact_pdfsch_p,prefact_pdfsch_l
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
@@ -1984,26 +1768,11 @@ c        contribution
 
       integer amp_index
 
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/    p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision p_ev(0:3,nexternal)
-!      common/pev/      p_ev
-!OMP THREADPRIVATE (/PEV/)
-!      double precision        ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-!      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg
       integer                  ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                     fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-!      double precision       wgt_ME_born,wgt_ME_real
-!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
       integer     fold,ifold_counter
@@ -3754,10 +3523,6 @@ c PS point that should be written in the event file.
 
       integer amp_index
 
-!      logical write_granny(fks_configs)
-!      integer which_is_granny(fks_configs)
-!      common/write_granny_resonance/which_is_granny,write_granny
-!OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
       integer need_matching(nexternal)
       common /c_need_matching_to_write/ need_matching
 
@@ -4300,12 +4065,6 @@ c
 
       integer amp_index
 
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-!      double precision sqrtshat_ev(amp_index),shat_ev(amp_index)
-!      common/parton_cms_ev/sqrtshat_ev(amp_index),shat_ev(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_EV/)
       double precision emsca,scalemin,scalemax,emsca_bare
       logical emscasharp
       common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
@@ -4513,15 +4272,6 @@ c Safety measure
 
       integer amp_index
 
-!      double precision sqrtshat_ev(amp_index),shat_ev(amp_index)
-!      common/parton_cms_ev/sqrtshat_ev(amp_index),shat_ev(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_EV/)
-!      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-!      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-!OMP THREADPRIVATE (/PARTON_CMS_CNT/)
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
      &     ,pt_hardness
@@ -4663,12 +4413,6 @@ c Born and multiplies with the AP splitting function or eikonal factors.
 
       double precision amp_split(amp_split_size)
 
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
       logical softtest,colltest
       common/sctests/softtest,colltest
 
@@ -4763,39 +4507,13 @@ c has soft singularities
       double precision amp_split(amp_split_size)
       complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
 
-C  
-
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-
-      !ZW
       integer amp_index
-      !ZW
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
-
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
-
-!      logical calculatedBorn(amp_index)
-!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
-!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
 
       integer i,j,imother_fks,iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
@@ -4963,41 +4681,13 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
-C  
-!      double precision p_born_coll(0:3,nexternal-1)
-!      common/pborn_coll/p_born_coll
-!OMP THREADPRIVATE (/PBORN_COLL/)
-
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
 
       double precision p_born_used(0:3,nexternal-1)
       
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      !ZW
       integer amp_index
-      !ZW
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
-
-!      logical calculatedBorn(amp_index)
-!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
-!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -5794,10 +5484,6 @@ c      include "fks.inc"
       double precision amp_split(amp_split_size)
       complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
 
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
@@ -5807,11 +5493,6 @@ c      include "fks.inc"
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       integer ipos_ord
-!      include 'orders.inc'
-!      include 'vectorize.inc'
-!      double precision amp_split_soft(amp_split_size)
-!      common /to_amp_split_soft/amp_split_soft
-!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
 
       double precision iden_comp
       common /c_iden_comp/iden_comp
@@ -5886,16 +5567,6 @@ c     Returns the eikonal factor
       external dot
 
       integer amp_index
-
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       real*8 phat_i_fks(0:3)
 
@@ -5972,36 +5643,19 @@ c Calculate the eikonal factor
       include "coupl.inc"
       include 'q_es.inc'
       include "run.inc"
-!      include "orders.inc"
-!      include 'vectorize.inc'
 
       integer iord, iap
 
-      !ZW
       integer amp_index
-      !ZW
 
       double precision p(0:3,nexternal),collrem_xi,collrem_lxi
       double precision xi_i_fks,y_ij_fks
       double precision collrem_xi_tmp, collrem_lxi_tmp
 
-!      double precision p_born(0:3,nexternal-1), wgt_born
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-
-!      double precision p_born_coll(0:3,nexternal-1)
-!      common/pborn_coll/p_born_coll
-!OMP THREADPRIVATE (/PBORN_COLL/)
-
       double precision p_born_used(0:3,nexternal-1)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision delta_used
       common /cdelta_used/delta_used
@@ -6015,8 +5669,6 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision ch_i, ch_j, ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       complex*16 wgt1(2)
-!      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-!      common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       
@@ -6029,9 +5681,6 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
-!      logical calculatedBorn(amp_index)
-!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
-!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
 
 C keep track of each split orders
       integer iamp
@@ -6246,31 +5895,6 @@ c has to be inserted here
 
       integer amp_index
 
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
-!      double precision sqrtshat_ev(amp_index),shat_ev(amp_index)
-!      common/parton_cms_ev/sqrtshat_ev(amp_index),shat_ev(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_EV/)
-
-!      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-!      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-!OMP THREADPRIVATE (/PARTON_CMS_CNT/)
-
-!      double precision tau_ev(amp_index),ycm_ev(amp_index)
-!      common/cbjrk12_ev/tau_ev(amp_index),ycm_ev(amp_index)
-!OMP THREADPRIVATE (/CBJRK12_EV/)
-
-!      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-!      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-!OMP THREADPRIVATE (/CBJRK12_CNT/)
-
-!      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-!      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-!OMP THREADPRIVATE (/CBJORKENX/)
-
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c same for event and counterevents
 c This is the rapidity that enters in the arguments of the sinh() and
@@ -6313,9 +5937,6 @@ c do the same as above for the counterevents
 
       integer amp_index
 
-!      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-!      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-!OMP THREADPRIVATE (/CBJORKENX/)
       if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
         write(*,*)'Error #1 in get_mc_lum',zhw_used
         stop
@@ -6391,10 +6012,6 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
 
       integer amp_index
 
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
@@ -6916,14 +6533,7 @@ c      include "fks.inc"
       double precision xicut_used
       common /cxicut_used/xicut_used
 
-      !ZW
       integer amp_index
-      !ZW
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -6931,9 +6541,6 @@ c      include "fks.inc"
       double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
       common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
       double precision c_used, gamma_used, gammap_used
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
       double precision double,single,xmu2
       logical ComputePoles,fksprefact
       parameter (ComputePoles=.false.)
@@ -6941,10 +6548,6 @@ c      include "fks.inc"
 
       double precision beta0,ren_group_coeff
       common/cbeta0/beta0,ren_group_coeff
-
-!      logical calculatedBorn(amp_index)
-!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
-!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
 
       double precision virt_fraction_inc
       data virt_fraction_inc /1d0/
@@ -7011,9 +6614,6 @@ C to keep track of the various split orders
       integer orders(nsplitorders)
       double precision amp_split_born(amp_split_size)
       double precision amp_split_bsv(amp_split_size)
-!      double precision amp_split_soft(amp_split_size)
-!      common /to_amp_split_soft/amp_split_soft
-!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
       double precision amp_split_finite_ML(amp_split_size)
       common /to_amp_split_finite/amp_split_finite_ML
       double precision amp_split_virt_save(amp_split_size)
@@ -7534,11 +7134,6 @@ c         stop
 
       integer amp_index
 
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     #                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
       character*4 abrv
       common /to_abrv/ abrv
 
@@ -7791,13 +7386,8 @@ c      include "fks.inc"
       logical fksprefact
       double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
       common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
       integer i_fks,j_fks
-      !ZW
       integer amp_index
-      !ZW
       common/fks_indices/i_fks,j_fks
       double precision wgt1
       
@@ -7810,15 +7400,8 @@ c      include "fks.inc"
       double precision pmass(nexternal),zero,pi
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
-!      include 'orders.inc'
-!      include 'vectorize.inc'
       double precision amp_split_poles_FKS(amp_split_size,2)
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
-!      double precision amp_split_soft(amp_split_size)
-!      common /to_amp_split_soft/amp_split_soft
-!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
-!      complex*16 ans_cnt(2, nsplitorders)
-!      common /c_born_cnt/ans_cnt
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       double precision oneo8pi2
@@ -8098,10 +7681,6 @@ c
       common /to_abrv/ abrv
 
       integer amp_index
-
-!      logical nbody
-!      common/cnbody/nbody
-!OMP THREADPRIVATE (/CNBODY/)
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -8433,14 +8012,6 @@ c arguments
 c common block that is filled by this subroutine
 
       integer amp_index
-
-!      logical granny_is_res
-!      integer igranny,iaunt
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
 c other common blocks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks

@@ -363,38 +363,20 @@ c timing statistics
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
-!      include 'orders.inc'
-!      include 'vectorize.inc'
       include 'fks_info.inc'
-!      double precision xx(ndimmax,vec_size),vegas_wgt(vec_size),f(nintegrals),jac,p(0:3
-!     $     ,nexternal),rwgt,vol,sig,x(99,vec_size),MC_int_wgt
       double precision f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,MC_int_wgt
-!      double precision, allocatable, intent(inout) :: xx(:,:), vegas_wgt(:)
-!      double precision, allocatable :: x_local(:,:)
       double precision, allocatable :: p_local(:,:,:)
       double precision, allocatable :: wgtdum(:)
       double precision, allocatable :: amp2_store(:,:)
       double precision, allocatable :: jamp2_store(:,:)
-!      double precision amp_split(amp_split_size)
-!      complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
 
       ! common blocks for passing amp2/jamp2
       include 'genps.inc'
-!      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-!      common/to_amps/  amp2,          jamp2
-!OMP THREADPRIVATE (/TO_AMPS/)
 
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
-      !ZW
       integer index
-      !ZW
-      ! MZ
-!      double precision amp_split_soft(amp_split_size)
-!      common /to_amp_split_soft/amp_split_soft
-!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
-      ! MZ 
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
       data firsttime/.true./
@@ -404,29 +386,13 @@ c timing statistics
       data sum /.false./
       integer         nndim
       common/tosigint/nndim
-!      logical       nbody
-!      common/cnbody/nbody
-!OMP THREADPRIVATE (/CNBODY/)
-!      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-
-!      double precision p_born(0:3,nexternal-1)
-!      common /pborn/   p_born
-!OMP THREADPRIVATE (/PBORN/)
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-!      logical                calculatedBorn
-!      common/ccalculatedBorn/calculatedBorn
-!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       character*4      abrv
       common /to_abrv/ abrv
 c PineAPPL
       logical pineappl
       common /for_pineappl/ pineappl
-!      double precision       wgt_ME_born,wgt_ME_real
-!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ini_fin_fks_map(0:2,0:fks_configs)
@@ -434,7 +400,7 @@ c PineAPPL
 
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
-      !MZ
+
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer           fks_j_from_i(nexternal,0:nexternal)
@@ -444,7 +410,6 @@ c PineAPPL
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
 
-!      allocate(x_local(99,vec_size))
       allocate(p_local(0:3,nexternal,vec_size))
       allocate(wgtdum(vec_size))
       allocate(amp2_store(ngraphs,vec_size))
@@ -476,8 +441,6 @@ c PineAPPL
       endif
       !ZW setting zeros here as well as in accumulation loop
       virtual_over_born=0d0
-!      wgt_me_born=0d0
-!      wgt_me_real=0d0
       call reset_c_wgt_ME_tree
       if (ickkw.eq.-1) H1_factor_virt=0d0      
       do index=1,vec_size
@@ -503,14 +466,9 @@ c PineAPPL
 !$OMP DO
       do index=1,vec_size
 !         ! real emission
-!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          calculatedBorn(index)=.false.
          if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
          call smatrix_real(p_local(0,1,index), wgtdum(index),index)
-!         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
-!         write(*,*) 'index', index
-!         write(*,*) 'p_local', p_local(:,:,index)
-!         write(*,*) 'amp_split', amp_split(:)
       enddo
 !$OMP END DO
 !$OMP END PARALLEL
@@ -524,13 +482,8 @@ c PineAPPL
 !$OMP DO
       do index=1,vec_size
          ! the born
-!         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
-!         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
-!     & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
-!         amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
-!         jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
          ! color-linked borns
          do i=1,fks_j_from_i(i_fks,0)
            do j=1,i
@@ -547,35 +500,6 @@ c PineAPPL
       enddo
 !$OMP END DO
 !$OMP END PARALLEL
-      ! ZW
-      ! MZ
-
-!      write(*,*) 'amp_split_born: ', amp_split_store_b(:,:)
-
-      ! if(amp_split_soft(1,1).ne.amp_split_soft(1,2)) then
-      !    write(*,*) "amp_split_s=", amp_split_soft
-      ! endif
-      ! if(amp_split_store_r(2,1).ne.amp_split_store_r(2,2)) then
-      !    write(*,*) "amp_split_r = ", amp_split_store_r
-      ! endif
-      ! !      if(amp_split_store_b(1,1).ne.amp_split_store_b(1,2))
-      ! if(amp_split_store_b(1,1).ne.amp_split_store_b(1,2)) then
-      !       write(*,*) 'amp_split_b: ', amp_split_store_b(:,:)
-      ! endif
-
-      ! if(amp_split_store_cnt(2,1,1,1).ne.amp_split_store_cnt(2,1,1,2)) then
-      !       write(*,*) 'amp_split_cnt(1):', amp_split_store_cnt(2,1,1,1)
-      !       write(*,*) 'amp_split_cnt(2):', amp_split_store_cnt(2,1,1,2)
-      ! endif
-
-!      write(*,*) amp_split_store_bsf(2,1,1,1)
-!      do index=1,2
-!      if(amp_split_store_bsf(2,index,1,1).ne.
-!     $amp_split_store_bsf(2,index,1,2)) then
-!        write(*,*) 'amp_split_bsf(1):',amp_split_store_bsf(2,index,1,1)
-!        write(*,*) 'amp_split_bsf(2):',amp_split_store_bsf(2,index,1,2)
-!      endif
-!      enddo
 
       call reset_c_wgt_ME_tree
 
@@ -588,15 +512,8 @@ c PineAPPL
             born_wgt_mint(iamp)=0d0
          enddo
          virtual_over_born=0d0
-!         wgt_me_born=0d0
-!         wgt_me_real=0d0
          if (ickkw.eq.-1) H1_factor_virt=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p,index)
-         !ZW
-
-         ! recover amp2 and jamp2 for multichanneling
-!         amp2(:,index) = amp2_store(:,index) 
-!         jamp2(:,index) = jamp2_store(:,index) 
 
 c  The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -939,10 +856,6 @@ c
       common /to_abrv/ abrv
 
       integer index
-
-!      logical nbody
-!      common/cnbody/nbody
-!OMP THREADPRIVATE (/CNBODY/)
 
 c
 c To convert diagram number to configuration
