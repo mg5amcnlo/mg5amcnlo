@@ -703,7 +703,7 @@ c
       common /c_ptclusstring/ ptclusstring
       include './run.inc'
       include 'unlops.inc'
-      include 'madfks_mcatnlo.inc'
+c$$$      include 'madfks_mcatnlo.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       logical are_col_conn(MAXNUP,MAXNUP)
       integer n_orderstags
@@ -862,15 +862,16 @@ c Write the <scales> block only for scales related to valid colour lines
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
-     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
-               if(are_col_conn(i,j) .and. SCALUP_a(i,j)
-     $              .lt.scaleMCcut)then
-                  write(*,*)'Colour error in write_lhef_event',i,j
-                  do ii=1,NUP
-                     write (*,*) scalup_a(ii,1:NUP)
-                  enddo
-                  stop
-               endif
+     &              (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
+! TODO : reinstate the check below.
+c$$$               if(are_col_conn(i,j) .and. SCALUP_a(i,j)
+c$$$     $              .lt.scaleMCcut)then
+c$$$                  write(*,*)'Colour error in write_lhef_event',i,j
+c$$$                  do ii=1,NUP
+c$$$                     write (*,*) scalup_a(ii,1:NUP)
+c$$$                  enddo
+c$$$                  stop
+c$$$               endif
                if(are_col_conn(i,j))then
                   write(str_tmp,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"

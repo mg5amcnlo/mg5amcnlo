@@ -472,9 +472,10 @@ c
       end
 
       subroutine compute_xmcsubt_for_checks(pp,xi_i_fks,y_ij_fks,wgt)
+      use scale_module
       implicit none
       include "nexternal.inc"
-      include 'madfks_mcatnlo.inc'
+c$$$      include 'madfks_mcatnlo.inc'
       include 'run.inc'
       include 'born_nhel.inc'
       double precision pp(0:3,nexternal),wgt
@@ -547,7 +548,7 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+c$$$         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
       endif         
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
@@ -610,9 +611,10 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
      $     ,flagmc,lzone,zhw,nofpartners,xmcxsec)
+      use scale_module
       implicit none
       include 'nexternal.inc'
-      include 'madfks_mcatnlo.inc'
+c$$$      include 'madfks_mcatnlo.inc'
       include 'born_nhel.inc'
       include 'run.inc'
       include 'orders.inc'
@@ -676,7 +678,7 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+c$$$         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
       endif
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
@@ -889,12 +891,13 @@ c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &     bornbars,bornbarstilde,npartner)
+      use scale_module
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"
-      include "madfks_mcatnlo.inc"
+c$$$      include "madfks_mcatnlo.inc"
       include "run.inc"
       include "../../Source/MODEL/input.inc"
       include 'nFKSconfigs.inc'
@@ -1086,8 +1089,8 @@ c New or standard MC@NLO formulation
 
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-      call assign_emsca(pp,xi_i_fks,y_ij_fks)
-      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+c$$$      call assign_emsca(pp,xi_i_fks,y_ij_fks)
+c$$$      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 
 c Distinguish ISR and FSR
       if(ileg.le.2)then
@@ -1470,7 +1473,7 @@ c fills arrays relevant to shower scales, and computes Delta
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
       include 'nexternal.inc'
-      include 'madfks_mcatnlo.inc'
+c$$$      include 'madfks_mcatnlo.inc'
       include 'run.inc'
       include 'orders.inc'
 
@@ -2503,7 +2506,7 @@ c
       include 'nexternal.inc'
       include 'run.inc'
       include "born_nhel.inc"
-      include 'madfks_mcatnlo.inc'
+c$$$      include 'madfks_mcatnlo.inc'
       include "genps.inc"
       include 'nFKSconfigs.inc'
       double precision tiny
@@ -4474,394 +4477,394 @@ c
 
 c Shower scale
 
-      subroutine assign_emsca(pp,xi_i_fks,y_ij_fks)
-      implicit none
-      include "nexternal.inc"
-      include "madfks_mcatnlo.inc"
-      include "run.inc"
-
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
-      double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
-     &scalemax,rrnd,ran2,emscainv,dum(5),xm12,qMC,ptresc
-      integer ileg
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      logical emscasharp
-      double precision emsca
-      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-
-c Consistency check
-      shattmp=2d0*dot(pp(0,1),pp(0,2))
-      if(abs(shattmp/shat-1d0).gt.1d-5)then
-         write(*,*)'Error in assign_emsca: inconsistent shat'
-         write(*,*)shattmp,shat
-         stop
-      endif
-
-      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
-     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
-
-      emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
-     $        ,xm12)
-      emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
-      if(emscasharp)then
-         emsca_bare=scalemax
-         emsca=emsca_bare
-      else
-         rrnd=ran2()
-         rrnd=emscainv(rrnd,1d0)
-         emsca_bare=scalemin+rrnd*(scalemax-scalemin)
-         ptresc=(qMC-scalemin)/(scalemax-scalemin)
-         if(ptresc.lt.1d0)emsca=emsca_bare
-         if(ptresc.ge.1d0)emsca=scalemax
-      endif
-
-      return
-      end
-
-
-      subroutine assign_emsca_array(pp,xi_i_fks,y_ij_fks)
-      implicit none
-      include "nexternal.inc"
-      include "madfks_mcatnlo.inc"
-      include "run.inc"
-      include "born_nhel.inc"
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
-      double precision rrnd,ran2,emscainv, dum(5),xm12,qMC
-     $     ,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal
-     $     ,nexternal)
-      integer ileg,npartner,i,j
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-
-      logical emscasharp_a(nexternal,nexternal)
-      double precision emsca_a(nexternal,nexternal)
-     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-     $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
-     $     ,scalemin_a,scalemax_a,emscwgt_a
-
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-
-      double precision Eem,qMC_a2(nexternal-1,nexternal-1),emscafun
-      integer iBtoR(nexternal-1)
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-
-c Consistency check
-      shattmp=2d0*dot(pp(0,1),pp(0,2))
-      if(abs(shattmp/shat-1d0).gt.1d-5)then
-         write(*,*)'Error in assign_emsca_array: inconsistent shat'
-         write(*,*)shattmp,shat
-         stop
-      endif
-
-      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
-     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
-      call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a
-     $     ,ileg,xm12)
-      emsca_a=-1d0
-      emscwgt_a=0d0
-c
-      do i=1,nexternal
-        if(i.lt.i_fks)then
-          iBtoR(i)=i
-        elseif(i.eq.i_fks)then
-          if(i.lt.nexternal)iBtoR(i)=i+1
-        elseif(i.gt.i_fks)then
-          if(i.lt.nexternal)iBtoR(i)=i+1
-        endif
-      enddo
-c      
-      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
-      do i=1,nexternal-1
-c     skip if not QCD dipole (safety)
-         if(.not.(pdg_type(iBtoR(i)).eq.21 .or.
-     $            abs(pdg_type(iBtoR(i))).le.6))cycle
-         do j=1,nexternal-1
-            if(j.eq.i)cycle
-c     skip if not QCD dipole (safety)
-            if(.not.(pdg_type(iBtoR(j)).eq.21 .or.
-     $               abs(pdg_type(iBtoR(j))).le.6))cycle
-            emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
-     #                           (1d-3*scalemax_a(i,j))
-            if(emscasharp_a(i,j))then
-               if(qMC_a2(i,j).le.scalemax_a(i,j))emscwgt_a(i,j)=1d0
-               emsca_bare_a(i,j)=scalemax_a(i,j)
-               emsca_bare_a2(i,j)=scalemax_a(i,j)
-               emsca_a(i,j)=emsca_bare_a(i,j)
-            else
-               rrnd=ran2()
-               rrnd=emscainv(rrnd,1d0)
-               emsca_bare_a(i,j)=scalemin_a(i,j)+
-     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-               rrnd=ran2()
-               rrnd=emscainv(rrnd,1d0)
-               emsca_bare_a2(i,j)=scalemin_a(i,j)+
-     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-               ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
-     #                          (scalemax_a(i,j)-scalemin_a(i,j))
-               if(ptresc_a(i,j).le.0d0)then
-                  emscwgt_a(i,j)=1d0
-                  emsca_a(i,j)=emsca_bare_a(i,j)
-               elseif(ptresc_a(i,j).lt.1d0)then
-                  emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
-                  emsca_a(i,j)=emsca_bare_a(i,j)
-               else
-                  emscwgt_a(i,j)=0d0
-                  emsca_a(i,j)=scalemax_a(i,j)
-               endif
-            endif
-         enddo
-      enddo
-
-      return
-      end
+c$$$      subroutine assign_emsca(pp,xi_i_fks,y_ij_fks)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$c$$$      include "madfks_mcatnlo.inc"
+c$$$      include "run.inc"
+c$$$
+c$$$      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
+c$$$      double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
+c$$$     &scalemax,rrnd,ran2,emscainv,dum(5),xm12,qMC,ptresc
+c$$$      integer ileg
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$
+c$$$      logical emscasharp
+c$$$      double precision emsca
+c$$$      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+c$$$
+c$$$      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$
+c$$$c Consistency check
+c$$$      shattmp=2d0*dot(pp(0,1),pp(0,2))
+c$$$      if(abs(shattmp/shat-1d0).gt.1d-5)then
+c$$$         write(*,*)'Error in assign_emsca: inconsistent shat'
+c$$$         write(*,*)shattmp,shat
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
+c$$$     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
+c$$$
+c$$$      emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+c$$$      call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
+c$$$     $        ,xm12)
+c$$$      emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
+c$$$      if(emscasharp)then
+c$$$         emsca_bare=scalemax
+c$$$         emsca=emsca_bare
+c$$$      else
+c$$$         rrnd=ran2()
+c$$$         rrnd=emscainv(rrnd,1d0)
+c$$$         emsca_bare=scalemin+rrnd*(scalemax-scalemin)
+c$$$         ptresc=(qMC-scalemin)/(scalemax-scalemin)
+c$$$         if(ptresc.lt.1d0)emsca=emsca_bare
+c$$$         if(ptresc.ge.1d0)emsca=scalemax
+c$$$      endif
+c$$$
+c$$$      return
+c$$$      end
 
 
+c$$$      subroutine assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$c$$$      include "madfks_mcatnlo.inc"
+c$$$      include "run.inc"
+c$$$      include "born_nhel.inc"
+c$$$      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
+c$$$      double precision rrnd,ran2,emscainv, dum(5),xm12,qMC
+c$$$     $     ,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal
+c$$$     $     ,nexternal)
+c$$$      integer ileg,npartner,i,j
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+c$$$      common /MC_info/ ipartners,colorflow
+c$$$
+c$$$      logical emscasharp_a(nexternal,nexternal)
+c$$$      double precision emsca_a(nexternal,nexternal)
+c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$     $     ,nexternal)
+c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$
+c$$$      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$
+c$$$      double precision Eem,qMC_a2(nexternal-1,nexternal-1),emscafun
+c$$$      integer iBtoR(nexternal-1)
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      integer fks_j_from_i(nexternal,0:nexternal)
+c$$$     &     ,particle_type(nexternal),pdg_type(nexternal)
+c$$$      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+c$$$
+c$$$c Consistency check
+c$$$      shattmp=2d0*dot(pp(0,1),pp(0,2))
+c$$$      if(abs(shattmp/shat-1d0).gt.1d-5)then
+c$$$         write(*,*)'Error in assign_emsca_array: inconsistent shat'
+c$$$         write(*,*)shattmp,shat
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
+c$$$     $     ,dum(2),dum(3),dum(4),dum(5),qMC)
+c$$$      call assign_scaleminmax_array(shat,xi_i_fks,scalemin_a,scalemax_a
+c$$$     $     ,ileg,xm12)
+c$$$      emsca_a=-1d0
+c$$$      emscwgt_a=0d0
+c$$$c
+c$$$      do i=1,nexternal
+c$$$        if(i.lt.i_fks)then
+c$$$          iBtoR(i)=i
+c$$$        elseif(i.eq.i_fks)then
+c$$$          if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$        elseif(i.gt.i_fks)then
+c$$$          if(i.lt.nexternal)iBtoR(i)=i+1
+c$$$        endif
+c$$$      enddo
+c$$$c      
+c$$$      call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
+c$$$      do i=1,nexternal-1
+c$$$c     skip if not QCD dipole (safety)
+c$$$         if(.not.(pdg_type(iBtoR(i)).eq.21 .or.
+c$$$     $            abs(pdg_type(iBtoR(i))).le.6))cycle
+c$$$         do j=1,nexternal-1
+c$$$            if(j.eq.i)cycle
+c$$$c     skip if not QCD dipole (safety)
+c$$$            if(.not.(pdg_type(iBtoR(j)).eq.21 .or.
+c$$$     $               abs(pdg_type(iBtoR(j))).le.6))cycle
+c$$$            emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
+c$$$     #                           (1d-3*scalemax_a(i,j))
+c$$$            if(emscasharp_a(i,j))then
+c$$$               if(qMC_a2(i,j).le.scalemax_a(i,j))emscwgt_a(i,j)=1d0
+c$$$               emsca_bare_a(i,j)=scalemax_a(i,j)
+c$$$               emsca_bare_a2(i,j)=scalemax_a(i,j)
+c$$$               emsca_a(i,j)=emsca_bare_a(i,j)
+c$$$            else
+c$$$               rrnd=ran2()
+c$$$               rrnd=emscainv(rrnd,1d0)
+c$$$               emsca_bare_a(i,j)=scalemin_a(i,j)+
+c$$$     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+c$$$               rrnd=ran2()
+c$$$               rrnd=emscainv(rrnd,1d0)
+c$$$               emsca_bare_a2(i,j)=scalemin_a(i,j)+
+c$$$     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+c$$$               ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
+c$$$     #                          (scalemax_a(i,j)-scalemin_a(i,j))
+c$$$               if(ptresc_a(i,j).le.0d0)then
+c$$$                  emscwgt_a(i,j)=1d0
+c$$$                  emsca_a(i,j)=emsca_bare_a(i,j)
+c$$$               elseif(ptresc_a(i,j).lt.1d0)then
+c$$$                  emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
+c$$$                  emsca_a(i,j)=emsca_bare_a(i,j)
+c$$$               else
+c$$$                  emscwgt_a(i,j)=0d0
+c$$$                  emsca_a(i,j)=scalemax_a(i,j)
+c$$$               endif
+c$$$            endif
+c$$$         enddo
+c$$$      enddo
+c$$$
+c$$$      return
+c$$$      end
 
-      subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg
-     $     ,xm12)
-      implicit none
-      include "nexternal.inc"
-      include "run.inc"
-      include "madfks_mcatnlo.inc"
-      integer i,ileg
-      double precision shat,xi,ref_scale,xscalemax,xscalemin,xm12
-      character*4 abrv
-      common/to_abrv/abrv
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      call assign_ref_scale(p_born,xi,shat,ref_scale)
-      xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
-      xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
-     &              xscalemin+scaleMCdelta)
-      xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
-      xscalemin=min(xscalemin,xscalemax)
-c
-      if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
-     $     ileg.eq.3)then
-         xscalemin=max(xscalemin,sqrt(xm12))
-         xscalemax=max(xscalemin,xscalemax)
-      endif
-
-      return
-      end
 
 
-      subroutine assign_scaleminmax_array(shat,xi,xscalemin_a
-     $     ,xscalemax_a,ileg,xm12)
-      implicit none
-      include "nexternal.inc"
-      include "run.inc"
-      include "madfks_mcatnlo.inc"
-      integer i,j,ileg
-      double precision shat,xi,ref_scale_a(nexternal,nexternal),xm12
-      double precision xscalemax_a(nexternal,nexternal)
-     $     ,xscalemin_a(nexternal,nexternal)
-      character*4 abrv
-      common/to_abrv/abrv
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      xscalemax_a=-1d0
-      xscalemin_a=-1d0
-      call assign_ref_scale_array(p_born,ref_scale_a)
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1
-            xscalemin_a(i,j)=max(shower_scale_factor*frac_low
-     $           *ref_scale_a(i,j),scaleMClow)
-            xscalemax_a(i,j)=max(shower_scale_factor*frac_upp
-     $           *ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
-            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0
-     $           *sqrt(ebeam(1)*ebeam(2)))
-            xscalemin_a(i,j)=min(xscalemin_a(i,j),xscalemax_a(i,j))
-c
-            if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
-     $           ileg.eq.3)then
-               xscalemin_a(i,j)=max(xscalemin_a(i,j),sqrt(xm12))
-               xscalemax_a(i,j)=max(xscalemin_a(i,j),xscalemax_a(i,j))
-            endif
-c
-            xscalemin_a(j,i)=xscalemin_a(i,j)
-            xscalemax_a(j,i)=xscalemax_a(i,j)
-         enddo
-      enddo
-c
-      return
-      end
-
-      block data reference_scale
-!     common block used to make the (scalar) reference scale partner
-!     dependent in case of delta. [Set it to -1 by default: in case of
-!     the non-delta running, it never gets updated so that it remains
-!     equal to -1, and the normal code will be used].
-      integer cur_part
-      common /to_ref_scale/cur_part
-      data cur_part/-1/
-      end
-
-      
-      subroutine assign_ref_scale(p,xii,sh,ref_sc)
-      implicit none
-      include "nexternal.inc"
-      include "madfks_mcatnlo.inc"
-      double precision p(0:3,nexternal-1),xii,sh,ref_sc
-      integer i_scale,i,fks_father
-      parameter(i_scale=1)
-      double precision ref_sc_a(nexternal,nexternal)
-      double precision sumdot
-      external sumdot
-!     common block used to make the (scalar) reference scale partner
-!     dependent in case of delta
-      integer cur_part
-      common /to_ref_scale/cur_part
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      ref_sc=0d0
-      if (cur_part.eq.-1) then ! this is non-delta (or no MC subtr. needed)
-         if(i_scale.eq.0)then
-c Born-level CM energy squared
-            ref_sc=dsqrt(max(0d0,(1-xii)*sh))
-         elseif(i_scale.eq.1)then
-c Sum of final-state transverse masses
-            do i=3,nexternal-1
-               ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
-            enddo
-            ref_sc=ref_sc/2d0
-         else
-            write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
-            stop
-         endif
-c Safety threshold for the reference scale
-         ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
-      elseif (cur_part.eq.0) then
-         call get_global_ref_sc(p,ref_sc)
-      else
-! in the case of mc@nlo-delta, make the scalar reference scale equal to
-! the corresponding element of the ref scale array, i.e., the fks-father
-! and the partner. (The cur_part is set by the loop over the colour
-! partners in the compute_xmcsubt_complete subroutine).
-         call assign_ref_scale_array(p,ref_sc_a)
-         fks_father=min(i_fks,j_fks)
-         ref_sc=ref_sc_a(fks_father,cur_part)
-      endif
-      return
-      end
+c$$$      subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg
+c$$$     $     ,xm12)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$      include "run.inc"
+c$$$c$$$      include "madfks_mcatnlo.inc"
+c$$$      integer i,ileg
+c$$$      double precision shat,xi,ref_scale,xscalemax,xscalemin,xm12
+c$$$      character*4 abrv
+c$$$      common/to_abrv/abrv
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$
+c$$$      call assign_ref_scale(p_born,xi,shat,ref_scale)
+c$$$      xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
+c$$$      xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
+c$$$     &              xscalemin+scaleMCdelta)
+c$$$      xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
+c$$$      xscalemin=min(xscalemin,xscalemax)
+c$$$c
+c$$$      if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
+c$$$     $     ileg.eq.3)then
+c$$$         xscalemin=max(xscalemin,sqrt(xm12))
+c$$$         xscalemax=max(xscalemin,xscalemax)
+c$$$      endif
+c$$$
+c$$$      return
+c$$$      end
+c$$$
+c$$$
+c$$$      subroutine assign_scaleminmax_array(shat,xi,xscalemin_a
+c$$$     $     ,xscalemax_a,ileg,xm12)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$      include "run.inc"
+c$$$c$$$      include "madfks_mcatnlo.inc"
+c$$$      integer i,j,ileg
+c$$$      double precision shat,xi,ref_scale_a(nexternal,nexternal),xm12
+c$$$      double precision xscalemax_a(nexternal,nexternal)
+c$$$     $     ,xscalemin_a(nexternal,nexternal)
+c$$$      character*4 abrv
+c$$$      common/to_abrv/abrv
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$
+c$$$      xscalemax_a=-1d0
+c$$$      xscalemin_a=-1d0
+c$$$      call assign_ref_scale_array(p_born,ref_scale_a)
+c$$$      do i=1,nexternal-2
+c$$$         do j=i+1,nexternal-1
+c$$$            xscalemin_a(i,j)=max(shower_scale_factor*frac_low
+c$$$     $           *ref_scale_a(i,j),scaleMClow)
+c$$$            xscalemax_a(i,j)=max(shower_scale_factor*frac_upp
+c$$$     $           *ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
+c$$$            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0
+c$$$     $           *sqrt(ebeam(1)*ebeam(2)))
+c$$$            xscalemin_a(i,j)=min(xscalemin_a(i,j),xscalemax_a(i,j))
+c$$$c
+c$$$            if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
+c$$$     $           ileg.eq.3)then
+c$$$               xscalemin_a(i,j)=max(xscalemin_a(i,j),sqrt(xm12))
+c$$$               xscalemax_a(i,j)=max(xscalemin_a(i,j),xscalemax_a(i,j))
+c$$$            endif
+c$$$c
+c$$$            xscalemin_a(j,i)=xscalemin_a(i,j)
+c$$$            xscalemax_a(j,i)=xscalemax_a(i,j)
+c$$$         enddo
+c$$$      enddo
+c$$$c
+c$$$      return
+c$$$      end
+c$$$
+c$$$      block data reference_scale
+c$$$!     common block used to make the (scalar) reference scale partner
+c$$$!     dependent in case of delta. [Set it to -1 by default: in case of
+c$$$!     the non-delta running, it never gets updated so that it remains
+c$$$!     equal to -1, and the normal code will be used].
+c$$$      integer cur_part
+c$$$      common /to_ref_scale/cur_part
+c$$$      data cur_part/-1/
+c$$$      end
 
       
-      subroutine assign_ref_scale_array(p,ref_sc_a)
-c--------------------------------------------------------------------------
-c     The setting of the reference scales, formerly equal to the dipole
-c     masses, is achieved by taking the minimum between the relevant
-c     dipole mass and a global quantity X, defined as follows:
-c     1. processes without coloured final-state particles: X=sqrt{shat};
-c     2. processes with massless coloured final-state particles: X=first
-c     kt-clustering scale as returned by fastjet;
-c     3. processes with massive coloured final-state particles:
-c     X=minimum of the transverse energies of such particles;
-c     4. processes with both massive and massless coloured final-state
-c     particles: X=minimum of the transverse energies of the massive
-c     particles, and of first kt-clustering scale as returned by fastjet
-c     run over the massless particles.
-c
-c     Possible variants:
-c     - run fastjet over both massless and massive particles, and use
-c     the first kt-clustering scale as returned by fastjet as X in case
-c     4. To be done: check how fastjet deals with masses;
-c     - go more local: on top of defining X as above, for each particle
-c     redefine it as the minimum of itself and of the particle
-c     transverse energy. Drawbacks: unclear why this should be relevant
-c     to final-final dipoles, and possible IR sensitivity in the case
-c     of massless collinear particles.
-c--------------------------------------------------------------------------
-      implicit none
-      include "nexternal.inc"
-      double precision p(0:3,nexternal-1)
-      double precision ref_sc_a(nexternal,nexternal)
-      double precision ref_sc
-      integer i,j
-      double precision sumdot
-      external sumdot
-c
-      call get_global_ref_sc(p,ref_sc)
-c
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1
-            ref_sc_a(i,j)=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0)))
-     $           ,ref_sc)
-            ref_sc_a(j,i)=ref_sc_a(i,j)
-         enddo
-      enddo
-c
-      return
-      end
-
-      subroutine get_global_ref_sc(p,ref_sc)
-      implicit none
-      include 'nexternal.inc'
-      double precision p(0:3,nexternal-1),ref_sc,pQCD(0:3,nexternal-1)
-     $     ,palg,sycut,rfj,pjet(0:3,nexternal-1)
-      integer i,j,NN,Nmass,njet,jet(nexternal-1)
-      double precision sumdot,pt,get_mass_from_id
-     $     ,amcatnlo_fastjetdmergemax
-      integer get_color
-      external sumdot,pt,get_color,get_mass_from_id
-     $     ,amcatnlo_fastjetdmergemax
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL  IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
- ! start from s-hat      
-      ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
-      NN=0
-      Nmass=0
-      do j=nincoming+1,nexternal-1
-         if (is_a_j(j))then
-            NN=NN+1
-            do i=0,3
-               pQCD(i,NN)=p(i,j)
-            enddo
-         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
-     $           abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
-!     reduce by ET of massive QCD particles
-            
-            ref_sc=min(ref_sc,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
-         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
-     $           abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
-            write (*,*) 'Error in assign_ref_scale(): colored'/
-     $           /' massless particle that does not enter jets'
-            stop 1
-         endif
-      enddo
-! reduce by kT-cluster scale of massless QCD partons
-      if (NN.eq.1) then
-         ref_sc=min(ref_sc,pt(pQCD(0,1)))
-      elseif (NN.ge.2) then
-         palg=1d0
-         sycut=0d0
-         rfj=1d0
-         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
-     &        pjet,njet,jet)
-         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
-      endif
-      end
+c$$$      subroutine assign_ref_scale(p,xii,sh,ref_sc)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$c$$$      include "madfks_mcatnlo.inc"
+c$$$      double precision p(0:3,nexternal-1),xii,sh,ref_sc
+c$$$      integer i_scale,i,fks_father
+c$$$      parameter(i_scale=1)
+c$$$      double precision ref_sc_a(nexternal,nexternal)
+c$$$      double precision sumdot
+c$$$      external sumdot
+c$$$!     common block used to make the (scalar) reference scale partner
+c$$$!     dependent in case of delta
+c$$$      integer cur_part
+c$$$      common /to_ref_scale/cur_part
+c$$$      integer            i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      ref_sc=0d0
+c$$$      if (cur_part.eq.-1) then ! this is non-delta (or no MC subtr. needed)
+c$$$         if(i_scale.eq.0)then
+c$$$c Born-level CM energy squared
+c$$$            ref_sc=dsqrt(max(0d0,(1-xii)*sh))
+c$$$         elseif(i_scale.eq.1)then
+c$$$c Sum of final-state transverse masses
+c$$$            do i=3,nexternal-1
+c$$$               ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
+c$$$            enddo
+c$$$            ref_sc=ref_sc/2d0
+c$$$         else
+c$$$            write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
+c$$$            stop
+c$$$         endif
+c$$$c Safety threshold for the reference scale
+c$$$         ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
+c$$$      elseif (cur_part.eq.0) then
+c$$$         call get_global_ref_sc(p,ref_sc)
+c$$$      else
+c$$$! in the case of mc@nlo-delta, make the scalar reference scale equal to
+c$$$! the corresponding element of the ref scale array, i.e., the fks-father
+c$$$! and the partner. (The cur_part is set by the loop over the colour
+c$$$! partners in the compute_xmcsubt_complete subroutine).
+c$$$         call assign_ref_scale_array(p,ref_sc_a)
+c$$$         fks_father=min(i_fks,j_fks)
+c$$$         ref_sc=ref_sc_a(fks_father,cur_part)
+c$$$      endif
+c$$$      return
+c$$$      end
+c$$$
+c$$$      
+c$$$      subroutine assign_ref_scale_array(p,ref_sc_a)
+c$$$c--------------------------------------------------------------------------
+c$$$c     The setting of the reference scales, formerly equal to the dipole
+c$$$c     masses, is achieved by taking the minimum between the relevant
+c$$$c     dipole mass and a global quantity X, defined as follows:
+c$$$c     1. processes without coloured final-state particles: X=sqrt{shat};
+c$$$c     2. processes with massless coloured final-state particles: X=first
+c$$$c     kt-clustering scale as returned by fastjet;
+c$$$c     3. processes with massive coloured final-state particles:
+c$$$c     X=minimum of the transverse energies of such particles;
+c$$$c     4. processes with both massive and massless coloured final-state
+c$$$c     particles: X=minimum of the transverse energies of the massive
+c$$$c     particles, and of first kt-clustering scale as returned by fastjet
+c$$$c     run over the massless particles.
+c$$$c
+c$$$c     Possible variants:
+c$$$c     - run fastjet over both massless and massive particles, and use
+c$$$c     the first kt-clustering scale as returned by fastjet as X in case
+c$$$c     4. To be done: check how fastjet deals with masses;
+c$$$c     - go more local: on top of defining X as above, for each particle
+c$$$c     redefine it as the minimum of itself and of the particle
+c$$$c     transverse energy. Drawbacks: unclear why this should be relevant
+c$$$c     to final-final dipoles, and possible IR sensitivity in the case
+c$$$c     of massless collinear particles.
+c$$$c--------------------------------------------------------------------------
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$      double precision p(0:3,nexternal-1)
+c$$$      double precision ref_sc_a(nexternal,nexternal)
+c$$$      double precision ref_sc
+c$$$      integer i,j
+c$$$      double precision sumdot
+c$$$      external sumdot
+c$$$c
+c$$$      call get_global_ref_sc(p,ref_sc)
+c$$$c
+c$$$      do i=1,nexternal-2
+c$$$         do j=i+1,nexternal-1
+c$$$            ref_sc_a(i,j)=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0)))
+c$$$     $           ,ref_sc)
+c$$$            ref_sc_a(j,i)=ref_sc_a(i,j)
+c$$$         enddo
+c$$$      enddo
+c$$$c
+c$$$      return
+c$$$      end
+c$$$
+c$$$      subroutine get_global_ref_sc(p,ref_sc)
+c$$$      implicit none
+c$$$      include 'nexternal.inc'
+c$$$      double precision p(0:3,nexternal-1),ref_sc,pQCD(0:3,nexternal-1)
+c$$$     $     ,palg,sycut,rfj,pjet(0:3,nexternal-1)
+c$$$      integer i,j,NN,Nmass,njet,jet(nexternal-1)
+c$$$      double precision sumdot,pt,get_mass_from_id
+c$$$     $     ,amcatnlo_fastjetdmergemax
+c$$$      integer get_color
+c$$$      external sumdot,pt,get_color,get_mass_from_id
+c$$$     $     ,amcatnlo_fastjetdmergemax
+c$$$      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+c$$$      LOGICAL  IS_A_PH(NEXTERNAL)
+c$$$      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+c$$$      integer fks_j_from_i(nexternal,0:nexternal)
+c$$$     &     ,particle_type(nexternal),pdg_type(nexternal)
+c$$$      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+c$$$ ! start from s-hat      
+c$$$      ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
+c$$$      NN=0
+c$$$      Nmass=0
+c$$$      do j=nincoming+1,nexternal-1
+c$$$         if (is_a_j(j))then
+c$$$            NN=NN+1
+c$$$            do i=0,3
+c$$$               pQCD(i,NN)=p(i,j)
+c$$$            enddo
+c$$$         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+c$$$     $           abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
+c$$$!     reduce by ET of massive QCD particles
+c$$$            
+c$$$            ref_sc=min(ref_sc,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
+c$$$         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+c$$$     $           abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
+c$$$            write (*,*) 'Error in assign_ref_scale(): colored'/
+c$$$     $           /' massless particle that does not enter jets'
+c$$$            stop 1
+c$$$         endif
+c$$$      enddo
+c$$$! reduce by kT-cluster scale of massless QCD partons
+c$$$      if (NN.eq.1) then
+c$$$         ref_sc=min(ref_sc,pt(pQCD(0,1)))
+c$$$      elseif (NN.ge.2) then
+c$$$         palg=1d0
+c$$$         sycut=0d0
+c$$$         rfj=1d0
+c$$$         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+c$$$     &        pjet,njet,jet)
+c$$$         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
+c$$$      endif
+c$$$      end
 
       subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
@@ -4950,7 +4953,7 @@ c
       include "run.inc"
       include "nexternal.inc"
       include 'nFKSconfigs.inc'
-      include "madfks_mcatnlo.inc"
+c$$$      include "madfks_mcatnlo.inc"
 
       integer ileg,ip,ifat,i
       double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
@@ -5075,7 +5078,8 @@ c
       endif
  
       max_scale=min(max_scale,shower_S_scale(nFKSprocess*2-1))
-      max_scale=max(max_scale,scaleMCcut)
+! TODO : reinstate the line below
+c$$$      max_scale=max(max_scale,scaleMCcut)
       if(qMC.gt.max_scale)lzone=.false.
 
       return

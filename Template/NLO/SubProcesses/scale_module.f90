@@ -1,39 +1,38 @@
-
-
-
-!!!! TO DO: include pdg_type, masses & colours, valid_dipole, collider
-!!!! energy, abrv, shower_mc. Maybe define a separate module that fills this stuff?
-!!!! Shower_mc needs to be included in kinematics_module as well.
-
-
 module scale_module
-  import kinematics_module
+  use kinematics_module
+  use process_module
   implicit none
-  include "nexternal.inc"
-  double precision,public,dimension(nexternal-1,nexternal-1) :: shower_scale_nbody
-  double precision,private :: global_ref_scale
-  logical,private :: mc_del
+  double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody
+  double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
   double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
   double precision,private,parameter :: scaleMCcut=3d0
 
-  public :: compute_shower_scale_nbody
+  public :: compute_shower_scale_nbody,init_scale_module
   private
 
 contains
-  subroutine compute_shower_scale_nbody(p,mcatnlo_delta)
+  subroutine init_scale_module(nexternal,shower_scale_factor_in)
+    implicit none
+    integer :: nexternal
+    double precision :: shower_scale_factor_in
+    if (.not.allocated(shower_scale_nbody)) &
+         allocate(shower_scale_nbody(nexternal-1,nexternal-1))
+    shower_scale_factor=shower_scale_factor_in
+  end subroutine init_scale_module
+    
+  subroutine compute_shower_scale_nbody(p)
     implicit none
     integer :: i,j
-    double precision,dimension(0:3,nexternal-1) :: p
-    logical :: mcatnlo_delta
-    double precision :: ref_scale,scalemin,scalemax
-    mc_del=mcatnlo_delta
+    double precision,dimension(0:3,next_n) :: p
+    double precision :: ref_scale,scalemin,scalemax,rrnd
+    double precision, external :: ran2
     ! loop over dipoles
     call get_global_ref_scale(p)
-    do i=1,nexternal-1
-       do j=1,nexternal-1
-          if (valid_dipole(i,j)) then
+    do i=1,next_n
+       do j=1,next_n
+          if (valid_dipole_n(i,j)) then
              ref_scale=get_ref_scale_dipole(p,i,j)
              call get_scaleminmax(ref_scale,scalemin,scalemax)
              ! this breaks backward compatibility. In earlier versions, the
@@ -57,9 +56,9 @@ contains
     scalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
     scalemax=max(shower_scale_factor*frac_upp*ref_scale, &
          scalemin+scaleMCdelta)
-    scalemax=min(scalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
+    scalemax=min(scalemax,collider_energy)
     scalemin=min(scalemin,scalemax)
-    if(abrv.ne.'born'.and.shower_code(1:7).eq.'PYTHIA6' .and. &
+    if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and. &
          ileg.eq.3)then
        scalemin=max(scalemin,sqrt(xm12))
        scalemax=max(scalemin,scalemax)
@@ -91,8 +90,8 @@ contains
   double precision function get_ref_scale_dipole(p,i,j)
     implicit none
     integer :: i,j
-    double precision,dimension(0:3,nexternal-1) :: p
-    if (.not.mc_del) then
+    double precision,dimension(0:3,next_n) :: p
+    if (.not.mcatnlo_delta) then
        get_ref_scale_dipole=global_ref_scale
     else
        get_ref_scale_dipole=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0))) &
@@ -106,12 +105,12 @@ contains
     ! i.e. HT/2 for non-delta, and shat reduced by kT of splitting, or ET of
     ! massive in case of delta.
     implicit none
-    double precision,dimension(0:3,nexternal-1) :: p,pQCD
+    double precision,dimension(0:3,next_n) :: p,pQCD
     integer :: i,j,NN
-    if (.not.mc_del) then
+    if (.not.mcatnlo_delta) then
        ! Sum of final-state transverse masses
        global_ref_scale=0d0
-       do i=3,nexternal-1
+       do i=3,next_n
           global_ref_scale=global_ref_scale+ &
                dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
        enddo
@@ -120,20 +119,18 @@ contains
  ! start from s-hat      
        global_ref_scale=sqrt(2d0*dot(p(0,1),p(0,2)))
        NN=0
-       do j=nincoming+1,nexternal-1
-          if (is_a_j(j))then
+       do j=nincoming_mod+1,next_n
+          if (abs(colour_n(j)).ne.1 .and. mass_n(j).eq.0d0) then
              NN=NN+1
              do i=0,3
                 pQCD(i,NN)=p(i,j)
              enddo
-          elseif (abs(get_color(pdg_type(j))).ne.1 .and. &
-               abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
+          elseif (abs(colour_n(j)).ne.1 .and. abs(mass_n(j)).ne.0d0) then
              !     reduce by ET of massive QCD particles
              global_ref_scale=min(global_ref_scale,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
-          elseif (abs(get_color(pdg_type(j))).ne.1 .and. &
-                  abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
-             write (*,*) 'Error in assign_ref_scale(): colored'/ &
-                  /' massless particle that does not enter jets'
+          elseif (abs(colour_n(j)).ne.1 .and. abs(mass_n(j)).eq.0d0) then
+             write (*,*) 'Error in assign_ref_scale(): colored' &
+                  //' massless particle that does not enter jets'
              stop 1
           endif
        enddo

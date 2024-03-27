@@ -160,7 +160,7 @@ c get info on beam and PDFs
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      include "madfks_mcatnlo.inc"
+c$$$      include "madfks_mcatnlo.inc"
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
       double precision pi,zero

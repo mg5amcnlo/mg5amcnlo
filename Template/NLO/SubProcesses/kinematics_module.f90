@@ -1,14 +1,14 @@
 module kinematics_module
   ! Need to call fill_kinematics_module before anything else !
+  use process_module
   implicit none
   integer,public :: ileg
   double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
-  double precision,private :: sh,jmass
+  double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
-  character(len=10),private :: shower_mc
 
-  public :: get_qMC, fill_kinematics_module
+  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y
   private
 
 contains
@@ -33,7 +33,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks
     if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+         shower_mc.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
     if(shower_mc.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
     if(shower_mc.eq.'PYTHIA6PT'.or. &
          shower_mc.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
@@ -43,7 +43,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks
     if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(sh*(1-y_ij_fks**2))
+         shower_mc.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
     if(shower_mc.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
     if(shower_mc.eq.'PYTHIA6PT'.or. &
          shower_mc.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
@@ -54,7 +54,7 @@ contains
     double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
     if(shower_mc.eq.'HERWIG6'.or. &
          shower_mc.eq.'HERWIGPP')then
-       zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+       zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
        qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
        if(qMCarg.lt.-tiny) then
@@ -69,7 +69,7 @@ contains
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
     elseif(shower_mc.eq.'PYTHIA8')then
-       z=1d0-sh*xi_i_fks*(xm12+w1)/w1/(sh+w1+xm12-xm22)
+       z=1d0-shat_n1*xi_i_fks*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
        qMC_ileg3=sqrt(z*(1-z)*w1)
     endif
   end function qMC_ileg3
@@ -78,7 +78,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
     if(shower_mc.eq.'HERWIG6'.or.shower_mc.eq.'HERWIGPP')then
-       zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+       zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
        qMCarg=zeta2*(1d0-zeta2)*w2
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
        if(qMCarg.lt.-tiny)then
@@ -93,7 +93,7 @@ contains
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
     elseif(shower_mc.eq.'PYTHIA8')then
-       z=1d0-sh*xi_i_fks/(sh+w2-xm12)
+       z=1d0-shat_n1*xi_i_fks/(shat_n1+w2-xm12)
        qMC_ileg4=sqrt(z*(1-z)*w2)
     endif
   end function qMC_ileg4
@@ -102,14 +102,11 @@ contains
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
     implicit none
-    include "nexternal.inc"
-    double precision,dimension(0:3,nexternal) :: pp
+    double precision,dimension(0:3,next_n1) :: pp
     double precision :: xi_i_fks,y_ij_fks,mass
     integer :: i_fks,j_fks,fks_father
-    character(len=10) :: shower_mc
 
     jmass=mass ! this is the mass of j_fks
-    sh=2d0*dot(pp(0:3,1),pp(0:3,2)) ! s-hat
 
     xm12=0d0
     xm22=0d0
@@ -252,15 +249,15 @@ contains
   subroutine fill_invariants_ileg1(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    xtk=-sh*xi_i_fks*(1-y_ij_fks)/2d0
-    xuk=-sh*xi_i_fks*(1+y_ij_fks)/2d0
+    xtk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
+    xuk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
   end subroutine fill_invariants_ileg1
 
   subroutine fill_invariants_ileg2(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    xtk=-sh*xi_i_fks*(1+y_ij_fks)/2d0
-    xuk=-sh*xi_i_fks*(1-y_ij_fks)/2d0
+    xtk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
+    xuk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
   end subroutine fill_invariants_ileg2
 
   subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
@@ -283,9 +280,9 @@ contains
     xm22=0d0
     xtk=-2d0*dot(xp1,xk3)
     xuk=-2d0*dot(xp2,xk3)
-    xij=2d0*(1d0-xm12/sh-xi_i_fks)/(2d0-xi_i_fks*(1d0-y_ij_fks))
-    w2=sh*xi_i_fks*xij*(1d0-y_ij_fks)/2d0
-    xq2q=-sh*xij*(2d0-dot(xp1,xk2)*4d0/(sh*xij))/2d0
+    xij=2d0*(1d0-xm12/shat_n1-xi_i_fks)/(2d0-xi_i_fks*(1d0-y_ij_fks))
+    w2=shat_n1*xi_i_fks*xij*(1d0-y_ij_fks)/2d0
+    xq2q=-shat_n1*xij*(2d0-dot(xp1,xk2)*4d0/(shat_n1*xij))/2d0
     xq1q=xuk+xq2q+w2
     w1=-xq1q+xq2q-xtk
   end subroutine fill_invariants_ileg4
@@ -327,8 +324,7 @@ contains
   
   subroutine get_momenta_emitter_recoiler(pp,i_fks,j_fks)
     implicit none
-    include "nexternal.inc"
-    double precision,dimension(0:3,nexternal) :: pp
+    double precision,dimension(0:3,next_n1) :: pp
     integer :: i_fks,j_fks
     ! Determine and assign momenta:
     ! xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
@@ -355,11 +351,11 @@ contains
     implicit none
     integer,parameter :: max_imprecision=10
     integer,save,dimension(7) :: imprecision=0
-    if((abs(xtk+2*dot(xp1,xk3))/sh.ge.tiny).or. &
-         (abs(xuk+2*dot(xp2,xk3))/sh.ge.tiny))then
+    if((abs(xtk+2*dot(xp1,xk3))/shat_n1.ge.tiny).or. &
+         (abs(xuk+2*dot(xp2,xk3))/shat_n1.ge.tiny))then
        write(*,*)'Warning: imprecision 1 in check_invariants_ileg12'
-       write(*,*)abs(xtk+2*dot(xp1,xk3))/sh, &
-            abs(xuk+2*dot(xp2,xk3))/sh
+       write(*,*)abs(xtk+2*dot(xp1,xk3))/shat_n1, &
+            abs(xuk+2*dot(xp2,xk3))/shat_n1
        imprecision(1)=imprecision(1)+1
        if (imprecision(1).ge.max_imprecision) then
           write (*,*) 'Error: ',max_imprecision &
@@ -373,9 +369,9 @@ contains
     implicit none
     integer,parameter :: max_imprecision=10
     integer,save,dimension(7) :: imprecision=0
-    if(sqrt(w1+xm12).ge.sqrt(sh)-sqrt(xm22))then
+    if(sqrt(w1+xm12).ge.sqrt(shat_n1)-sqrt(xm22))then
        write(*,*)'Warning: imprecision 2 in check_invariants_ileg3'
-       write(*,*)sqrt(w1),sqrt(sh),xm22
+       write(*,*)sqrt(w1),sqrt(shat_n1),xm22
        imprecision(2)=imprecision(2)+1
        if (imprecision(2).ge.max_imprecision) then
           write (*,*) 'Error: ',max_imprecision &
@@ -383,11 +379,11 @@ contains
           stop
        endif
     endif
-    if(((abs(w1-2*dot(xk1,xk3))/sh.ge.tiny)).or. &
-         ((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)))then
+    if(((abs(w1-2*dot(xk1,xk3))/shat_n1.ge.tiny)).or. &
+         ((abs(w2-2*dot(xk2,xk3))/shat_n1.ge.tiny)))then
        write(*,*)'Warning: imprecision 3 in check_invariants_ileg3'
-       write(*,*)abs(w1-2*dot(xk1,xk3))/sh, &
-            abs(w2-2*dot(xk2,xk3))/sh
+       write(*,*)abs(w1-2*dot(xk1,xk3))/shat_n1, &
+            abs(w2-2*dot(xk2,xk3))/shat_n1
        imprecision(3)=imprecision(3)+1
        if (imprecision(3).ge.max_imprecision) then
           write (*,*) 'Error: ',max_imprecision &
@@ -410,9 +406,9 @@ contains
     implicit none
     integer,parameter :: max_imprecision=10
     integer,save,dimension(7) :: imprecision=0
-    if(sqrt(w2).ge.sqrt(sh)-sqrt(xm12))then
+    if(sqrt(w2).ge.sqrt(shat_n1)-sqrt(xm12))then
        write(*,*)'Warning: imprecision 5 in check_invariants_ileg4'
-       write(*,*)sqrt(w2),sqrt(sh),xm12
+       write(*,*)sqrt(w2),sqrt(shat_n1),xm12
        imprecision(5)=imprecision(5)+1
        if (imprecision(5).ge.max_imprecision) then
           write (*,*) 'Error: ',max_imprecision &
@@ -420,13 +416,13 @@ contains
           stop
        endif
     endif
-    if(((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)).or. &
-         ((abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)).or. &
-         ((abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)))then
+    if(((abs(w2-2*dot(xk2,xk3))/shat_n1.ge.tiny)).or. &
+         ((abs(xq2q+2*dot(xp2,xk2))/shat_n1.ge.tiny)).or. &
+         ((abs(xq1q+2*dot(xp1,xk1)-xm12)/shat_n1.ge.tiny)))then
        write(*,*)'Warning: imprecision 6 in check_invariants_ileg4'
-       write(*,*)abs(w2-2*dot(xk2,xk3))/sh, &
-            abs(xq2q+2*dot(xp2,xk2))/sh, &
-            abs(xq1q+2*dot(xp1,xk1)-xm12)/sh
+       write(*,*)abs(w2-2*dot(xk2,xk3))/shat_n1, &
+            abs(xq2q+2*dot(xp2,xk2))/shat_n1, &
+            abs(xq1q+2*dot(xp1,xk1)-xm12)/shat_n1
        imprecision(6)=imprecision(6)+1
        if (imprecision(6).ge.max_imprecision) then
           write (*,*) 'Error: ',max_imprecision &
