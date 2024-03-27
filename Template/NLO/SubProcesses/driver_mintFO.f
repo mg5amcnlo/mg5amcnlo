@@ -615,7 +615,6 @@ c  The nbody contributions
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index),index)
          passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt,index)
          if (passcuts_nbody) then
-             write(*,*) 'PASSCUTSN'
             pass_cuts_check=.true.
             call set_alphaS(p1_cnt(0,1,0,index),index)
             call include_multichannel_enhance(1,index)
