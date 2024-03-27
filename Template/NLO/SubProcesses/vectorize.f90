@@ -968,6 +968,7 @@ module ntry_real
   subroutine allocate_ntry_real(vector_size)
     integer, intent(in) :: vector_size
     allocate(ntry(FKS_CONFIGS_mod, vector_size))
+    ntry(:,:) = 0
   end subroutine allocate_ntry_real
   subroutine deallocate_ntry_real
    if (allocated(ntry)) deallocate(ntry)
