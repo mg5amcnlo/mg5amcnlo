@@ -4114,9 +4114,19 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.copy_python_file()
         
         if model["running_elements"]:
-            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
+            if os.path.exists(pjoin(self.model.get('modelpath'),'Cpp', 'PyRATE')):
+                replace =  '-lmodel -larmadillo -lstdc++ -lm -lrunning '
+                replace += ' `gsl-config --libs` '
+                replace += '-I../../Source/pyrate/Running/inc -I../../Source/pyrate/'
+                
+                text = open(pjoin(self.dir_path, 'SubProcesses', 'makefile')).read()
+                text = text.replace('-lmodel', replace)
+                open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'w').write(text)
+
+            elif not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
                 raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
-            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+            else:
+                misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
         
         
@@ -7198,10 +7208,11 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        if dp:        
-            fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
-        if mp:
-            fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
+        if 'aS' in self.params_ext:
+            if dp:        
+                fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
+            if mp:
+                fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
             
         for param in self.params_indep:
             if param.name == 'ZERO':

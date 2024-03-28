@@ -514,6 +514,7 @@ class UFOMG5Converter(object):
         if os.path.exists(pjoin(self.ufomodel.__path__[0], 'Cpp', 'PyRATE')):
             misc.sprint("detected running")
             all_external = [p for p in self.ufomodel.all_parameters if p.nature == 'external' and p.lhablock.upper() not in  ['LOOP']]
+            misc.sprint(len(all_external))
             running_obj = self.ufomodel.object_library.Running(name='def', 
                                                                run_objects= [all_external],
                                                                value='external') 
