@@ -723,7 +723,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                        'running': ''} 
 
         if self.opt['running']:
-            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp','PyRATE')):
+               shutil.copytree(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE'), pjoin(self.dir_path, 'Source', 'Pyrate'))
+               replace_dict['running'] = '''$(LIBDIR)librunning.a: Pyrate\n\t cd Pyrate; make; cp lib/librunning.a  ../$(LIBDIR)librunning.a\n''' 
+            else:
+                replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
             replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
@@ -4091,7 +4095,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
-
+        self.model = model
         super(ProcessExporterFortranME, self).copy_template(model)
         
         # File created from Template (Different in some child class)
