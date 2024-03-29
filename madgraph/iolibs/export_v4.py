@@ -7377,8 +7377,12 @@ class UFO_model_to_mg4(object):
                             include \'coupl.inc\'
                             LOGICAL FIRST
                             DATA FIRST /.TRUE./
-                            DOUBLE PRECISION MODEL_SCALE
+                            DOUBLE PRECISION MODEL_SCALE, ALPHAS
+                            EXTERNAL ALPHAS
                             COMMON /MODEL_SCALE/MODEL_SCALE
+                            double precision asmz
+                            integer nloop
+                            common/a_block/asmz,nloop
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
         if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
@@ -7388,9 +7392,16 @@ class UFO_model_to_mg4(object):
                     break
             fsock.writelines(""" 
                              if (FIRST)THEN  
-                             MODEL_SCALE = %s  
-                             call update_as_param()
-                             FIRST=.false.
+                              FIRST=.FALSE.
+                              if (asmz.eq.0) then ! case without PDF (use as from the run_card at given scale)
+                                MODEL_SCALE = 91.188
+                                CALL UPDATE_AS_PARAM()
+                             else
+                                MODEL_SCALE = %s
+                                ! run first alphas from PDF value to the scale of the param_card
+                                G = SQRT(4d0*PI*ALPHAS(MODEL_SCALE))  
+                                call update_as_param()
+                             endif
                              ENDIF""" %  def_scale
                              )
 
@@ -7623,7 +7634,7 @@ class UFO_model_to_mg4(object):
         include 'input.inc'
         include 'coupl.inc'
         
-        DOUBLE PRECISION MDL_G
+        DOUBLE PRECISION MDL_G ! avoid the issue that G does not have mdl_ prefix
 
         Double Precision INPUT(%(nb)i), OUTPUT(%(nb)i)
         LOGICAL FIRST
@@ -7631,7 +7642,7 @@ class UFO_model_to_mg4(object):
         SAVE INPUT, FIRST
         
         IF (FIRST) THEN
-           MDL_G = G
+           MDL_G = G 
            FIRST = .FALSE.
            %(param_initialization)s
         ENDIF
@@ -7639,6 +7650,7 @@ class UFO_model_to_mg4(object):
         ! step to zero is splitting the gap in 15
         call eParamRunning(INPUT, OUTPUT, LOG10(mdl__%(scale)s__scale), LOG10(MU), 0)
         %(param_assign)s
+        G = MDL_G
 
         return 
         end

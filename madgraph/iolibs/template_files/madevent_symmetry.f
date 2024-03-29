@@ -43,6 +43,11 @@ c
       common/to_gridpack/gridpack
       double precision stot
       common/to_stot/stot
+
+      integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+
 c
 c     DATA
 c
@@ -89,7 +94,8 @@ c      call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
 c      call get_real(npara,param,value," ebeam2 ",ebeam(2),0d0)
 c      call get_integer(npara,param,value," lpp1 ",lpp(1),0)
 c      call get_integer(npara,param,value," lpp2 ",lpp(2),0)
-
+      asmz = 0.13d0 ! can be usefull if pyrate is present into the code for the initial running
+      nloop = 2
       call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
       include 'pmass.inc'
 
