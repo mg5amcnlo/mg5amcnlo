@@ -7375,8 +7375,25 @@ class UFO_model_to_mg4(object):
                             common /to_updateloop/updateloop
                             include \'input.inc\'
                             include \'coupl.inc\'
+                            LOGICAL FIRST
+                            DATA FIRST /.TRUE./
+                            DOUBLE PRECISION MODEL_SCALE
+                            COMMON /MODEL_SCALE/MODEL_SCALE
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
+        if os.path.exists(pjoin(self.model.get('modelpath'), 'Cpp', 'PyRATE')):
+            for runs in self.params_ext:
+                if runs.lhablock != ['SMINPUTS', 'DECAY']:
+                    def_scale = 'MDL__%s__scale' % runs.lhablock
+                    break
+            fsock.writelines(""" 
+                             if (FIRST)THEN  
+                             MODEL_SCALE = %s  
+                             call update_as_param()
+                             FIRST=.false.
+                             ENDIF""" %  def_scale
+                             )
+
         if self.opt['mp']:
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
         
