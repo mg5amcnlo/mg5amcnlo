@@ -2081,7 +2081,7 @@ c spin-3/2 fermion wavefunction
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
       double complex W1(6)
-      double complex Wall(6,*)
+      double complex Wall(7,*)
       double complex Amp(*)
 c     local variable
       integer i
@@ -2121,7 +2121,7 @@ c     local variable
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
       double complex W1(3)
-      double complex Wall(6,*)
+      double complex Wall(7,*)
       double complex Amp(*)
 c     local variable
       integer i
