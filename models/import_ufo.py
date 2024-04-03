@@ -2514,6 +2514,26 @@ class RestrictModel(model_reader.ModelReader):
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)  
 
+        # looping over all vertex and remove all link to lorentz structure that are not used anymore
+        for vertex in mod_vertex:
+            lorentz_used = set()
+            for key in vertex['couplings']:
+                lorentz_used.add(key[1])
+            if not lorentz_used:
+                continue
+            lorentz_used = list(lorentz_used)
+            lorentz_used.sort()
+            map = {j:i for i,j in enumerate(lorentz_used)}            
+            new_lorentz = [l for i,l in enumerate(vertex['lorentz']) if i in lorentz_used]
+            new_coup = {}
+            for key in vertex['couplings']:
+                new_key = list(key)
+                new_key[1] = map[new_key[1]]
+                new_coup[tuple(new_key)] = vertex['couplings'][key]
+            vertex['lorentz'] = new_lorentz
+            vertex['couplings'] = new_coup                    
+
+
         return
                 
     def remove_couplings(self, couplings):               

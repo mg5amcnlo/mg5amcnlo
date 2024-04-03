@@ -7583,7 +7583,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-self.integer_bias]
-
         path = ''
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
