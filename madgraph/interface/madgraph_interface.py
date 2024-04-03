@@ -6242,6 +6242,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'rivet')):
                 self.options['rivet_path'] = pjoin(prefix, 'rivet')
                 to_save.append('rivet_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6251,12 +6254,20 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'yoda')):
                 self.options['yoda_path'] = pjoin(prefix, 'yoda')
                 to_save.append('yoda_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
-                 printcmd=False, log=False) 
+                 printcmd=False, log=False)
+        elif tool == 'fastjet':
+            self.options['fastjet'] = pjoin(prefix, tool,'bin', 'fastjet-config') 
+            self.exec_cmd('save options %s fastjet'  % (config_file),
+                 printcmd=False, log=False)  
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
-            
+        else:
+            logger.warning("path not saved for %s", tool)
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
         path_to_be_set = []

@@ -2001,6 +2001,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         text = ""
         has_mg5_path = False
         # Use local configuration => Need to update the path
+        already_written = set()
         for line in open(basefile):
             if '=' in line:
                 data, value = line.split('=',1)
@@ -2018,8 +2019,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 comment = ''    
             if key in to_keep:
                 value = str(to_keep[key])
-            else:
+            elif line not in already_written:
+                already_written.add(line)
                 text += line
+                continue
+            else:
                 continue
             if key == 'mg5_path':
                 has_mg5_path = True
@@ -2032,14 +2036,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 # check if absolute path
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
-            text += '%s = %s # %s \n' % (key, value, comment)
+            new_line = '%s = %s # %s \n' % (key, value, comment)
+            if new_line not in already_written: 
+                text += new_line
+                already_written.add(new_line)
         for key in to_write:
             if key in to_keep:
-                text += '%s = %s \n' % (key, to_keep[key])
+                new_line = '%s = %s \n' % (key, to_keep[key])
+                if new_line not in already_written: 
+                    text += new_line
         
         if not MADEVENT and not has_mg5_path:
-            text += """\n# MG5 MAIN DIRECTORY\n"""
-            text += "mg5_path = %s\n" % MG5DIR         
+            if "mg5_path = %s\n" % MG5DIR not in already_written: 
+                text += """\n# MG5 MAIN DIRECTORY\n"""
+                text += "mg5_path = %s\n" % MG5DIR         
         
         writer = open(filepath,'w')
         writer.write(text)
