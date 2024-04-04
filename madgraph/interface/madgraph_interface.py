@@ -6244,7 +6244,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 to_save.append('rivet_path')
             if os.path.exists(pjoin(prefix, 'fastjet')):
                 self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
-                to_save.append('fastjet') 
+                to_save.append('fastjet')
+            if os.path.exists(pjoin('prefix', 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6256,7 +6259,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 to_save.append('yoda_path')
             if os.path.exists(pjoin(prefix, 'fastjet')):
                 self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
-                to_save.append('fastjet') 
+                to_save.append('fastjet')
+            if os.path.exists(pjoin('prefix', 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)
         elif tool == 'fastjet':
