@@ -11,7 +11,30 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         Phase-space points for which the real-emission momentum generation was failing but the Born one
         was passing were thrown away altogether.
         Thanks to Riccardo Lubello for leading to the identification of the bug.
-      OM: Include bug fis from 2.9.19
+      OM: Change the way restriction model work to be more agressive in the data structure.
+          This was trigger by the fact that the virtual was consider different if some unused lorentz structure
+          was left in the model/interaction. This allow to get back to the behaviour of the LTS version in term 
+          of number of directories for QCD processes and therefore gain disk area and speed-up the code.
+      OM: Change in the unweighting strategy for process with a large number of channel (>80). 
+          If you have deactivated the limit of number of open file (via the ulimit command) then the unweighting will be 
+          done in a single step in one core (typically the most efficient strategy).
+          If not possible, then  the unweighting will be done by packet of 80 channel in a multi-core way.
+          Then those packet will be merged together in a second step (single core).
+          In this second case the algorithm has also been made more agressive. 
+          Speed-up of factor 20 have been observed in some extreme cases.
+          Thanks to Mark Goodsell and Stephan Hageboeck, for pushing me on this and for your help.
+      OM: Python3.12 status:
+          - many (python) warning are raised when running with python3.12. Work is in progress (and will be very long) to 
+           remove all those warnings.
+          - f2py (needed for reweighting/madspin) is quite impacted the drop of disutils and typically fails to compile
+            with the meson backend. numpy version 2.x (not yet release) will be minimum for reweighting/madspin.
+      OM: Allow (back) LHE output in fixed-order format (thanks Gauthier)
+      OM: Change the internal representation of fixed_order card, that allow to use the set command to edit the card.
+          like for the param_card/run_card/...
+      OM: relax polarization restriction at NLO for massless particles.
+      SJ+OM: fix some issue with non saving correctly where fastjet was installed when installing it via MG5aMC install command
+      SJ: Fixing rivet running due to some library not correctly linked
+      OM: Include bug fix from 2.9.19
 
 3.5.3 (22/12/23)
       OM: Include Bug fix from 2.9.18
