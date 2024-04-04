@@ -174,7 +174,7 @@ C       Fill common block for Les Houches init info
               idbmup(i)=-2212
           else
               idbmup(i) = -1*(1000000000 + (nb_proton(i)+nb_neutron(i))*10
-    $                                    + nb_proton(i)*10000)
+     $                                    + nb_proton(i)*10000)
           endif
         elseif(lpp(i).eq.3) then
           idbmup(i)=11
