@@ -22,9 +22,9 @@ contains
     shower_scale_factor=shower_scale_factor_in
   end subroutine init_scale_module
     
-  subroutine compute_shower_scale_nbody(p)
+  subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j
+    integer :: i,j,flow_picked
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -32,7 +32,7 @@ contains
     call get_global_ref_scale(p)
     do i=1,next_n
        do j=1,next_n
-          if (valid_dipole_n(i,j)) then
+          if (valid_dipole_n(i,j,flow_picked)) then
              ref_scale=get_ref_scale_dipole(p,i,j)
              call get_scaleminmax(ref_scale,scalemin,scalemax)
              ! this breaks backward compatibility. In earlier versions, the
@@ -47,7 +47,6 @@ contains
           endif
        enddo
     enddo
-    
   end subroutine compute_shower_scale_nbody
 
   subroutine get_scaleminmax(ref_scale,scalemin,scalemax)
@@ -58,7 +57,7 @@ contains
          scalemin+scaleMCdelta)
     scalemax=min(scalemax,collider_energy)
     scalemin=min(scalemin,scalemax)
-    if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and. &
+    if(abrv_mod.ne.'born'.and.shower_mc_mod(1:7).eq.'PYTHIA6' .and. &
          ileg.eq.3)then
        scalemin=max(scalemin,sqrt(xm12))
        scalemax=max(scalemin,scalemax)
@@ -91,7 +90,7 @@ contains
     implicit none
     integer :: i,j
     double precision,dimension(0:3,next_n) :: p
-    if (.not.mcatnlo_delta) then
+    if (.not.mcatnlo_delta_mod) then
        get_ref_scale_dipole=global_ref_scale
     else
        get_ref_scale_dipole=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0))) &
@@ -107,7 +106,7 @@ contains
     implicit none
     double precision,dimension(0:3,next_n) :: p,pQCD
     integer :: i,j,NN
-    if (.not.mcatnlo_delta) then
+    if (.not.mcatnlo_delta_mod) then
        ! Sum of final-state transverse masses
        global_ref_scale=0d0
        do i=3,next_n

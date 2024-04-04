@@ -5,6 +5,7 @@ c**************************************************************************
       use extra_weights
       use mint_module
       use FKSParams
+      use process_module
       implicit none
 C
 C     CONSTANTS
@@ -89,6 +90,8 @@ c general MadFKS parameters
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+      include 'leshouche_decl.inc'
+      include 'born_nhel.inc'
 C-----
 C  BEGIN CODE
 C-----  
@@ -199,6 +202,14 @@ c     Prepare the MINT folding
       ifold(ifold_phi)=iphi_i
       ifold(ifold_yij)=iy_ij
 
+      ! initialise the global, but process dependent, information in the process module.
+      call init_process_module_global(shower_mc,abrv,nexternal,nincoming
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used)
+      ! Also put all the n-body process dependent stuff here. It does
+      ! not depend on PS point or FKS config, so all global information.
+      call init_process_module_nbody_wrapper()
+         
+      
 c*************************************************************
 c     setting of the grids
 c*************************************************************
@@ -934,6 +945,52 @@ c determined which contributions are identical.
       return
       end
 
+      subroutine init_process_module_nbody_wrapper()
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      external get_color
+      double precision mass(1:nexternal-1),get_mass_from_id
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,max_bcol)
+      include 'born_leshouche.inc'
+
+      do i=1,nexternal-1
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do k=1,max_bcol
+         do j=1,nexternal-1
+            if (icolup(1,j,k).eq.0) cycle
+            if (icolup(2,j,k).eq.0) cycle
+            do i=1,nexternal-1
+               if (i.eq.j) cycle
+               if (icolup(1,i,k).eq.0) cycle
+               if (icolup(2,i,k).eq.0) cycle
+               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+                  valid_dipole(i,j,k)=.true.
+               endif
+            enddo
+         enddo
+      enddo
+      
+      call init_process_module_nbody(nexternal-1,mass,colour
+     $     ,max_bcol,valid_dipole)
+      
+      end
+      
 
       subroutine setup_proc_map(sum,proc_map,ini_fin_fks)
 c Determines the proc_map that sets which FKS configuration can be

@@ -32,28 +32,28 @@ contains
   double precision function qMC_ileg1(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
-    if(shower_mc.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
-    if(shower_mc.eq.'PYTHIA6PT'.or. &
-         shower_mc.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
+    if(shower_mc_mod.eq.'HERWIG6'  .or. &
+         shower_mc_mod.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+    if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
+    if(shower_mc_mod.eq.'PYTHIA6PT'.or. &
+         shower_mc_mod.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
   end function qMC_ileg1
 
   double precision function qMC_ileg2(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-    if(shower_mc.eq.'HERWIG6'  .or. &
-         shower_mc.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
-    if(shower_mc.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
-    if(shower_mc.eq.'PYTHIA6PT'.or. &
-         shower_mc.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
+    if(shower_mc_mod.eq.'HERWIG6'  .or. &
+         shower_mc_mod.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+    if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
+    if(shower_mc_mod.eq.'PYTHIA6PT'.or. &
+         shower_mc_mod.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
   end function qMC_ileg2
 
   double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
-    if(shower_mc.eq.'HERWIG6'.or. &
-         shower_mc.eq.'HERWIGPP')then
+    if(shower_mc_mod.eq.'HERWIG6'.or. &
+         shower_mc_mod.eq.'HERWIGPP')then
        zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
        qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
@@ -63,12 +63,12 @@ contains
           stop 1
        endif
        qMC_ileg3=sqrt(qMCarg)
-    elseif(shower_mc.eq.'PYTHIA6Q')then
+    elseif(shower_mc_mod.eq.'PYTHIA6Q')then
        qMC_ileg3=sqrt(w1+xm12)
-    elseif(shower_mc.eq.'PYTHIA6PT')then
+    elseif(shower_mc_mod.eq.'PYTHIA6PT')then
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
-    elseif(shower_mc.eq.'PYTHIA8')then
+    elseif(shower_mc_mod.eq.'PYTHIA8')then
        z=1d0-shat_n1*xi_i_fks*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
        qMC_ileg3=sqrt(z*(1-z)*w1)
     endif
@@ -77,7 +77,7 @@ contains
   double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
-    if(shower_mc.eq.'HERWIG6'.or.shower_mc.eq.'HERWIGPP')then
+    if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIGPP')then
        zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
        qMCarg=zeta2*(1d0-zeta2)*w2
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
@@ -87,12 +87,12 @@ contains
           stop 1
        endif
        qMC_ileg4=sqrt(qMCarg)
-    elseif(shower_mc.eq.'PYTHIA6Q')then
+    elseif(shower_mc_mod.eq.'PYTHIA6Q')then
        qMC_ileg4=sqrt(w2)
-    elseif(shower_mc.eq.'PYTHIA6PT')then
+    elseif(shower_mc_mod.eq.'PYTHIA6PT')then
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
-    elseif(shower_mc.eq.'PYTHIA8')then
+    elseif(shower_mc_mod.eq.'PYTHIA8')then
        z=1d0-shat_n1*xi_i_fks/(shat_n1+w2-xm12)
        qMC_ileg4=sqrt(z*(1-z)*w2)
     endif
