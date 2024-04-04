@@ -52,5 +52,5 @@ jobs:
             #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO 
-            PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/Events/run_01/rivet*.log 
+            PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log 
             cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log
