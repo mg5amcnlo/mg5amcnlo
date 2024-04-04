@@ -2957,10 +2957,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
         yoda_path = self.options['yoda_path']
+        fastjet_path = subprocess.Popen([self.options['fastjet'], '--prefix'],
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
+
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(yoda_path, 'bin'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(yoda_path, 'lib'), pjoin(yoda_path, 'lib64'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(self.options['hepmc_path'], 'lib'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(fastjet_path, 'lib'))
         major, minor = sys.version_info[0:2]
         set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
