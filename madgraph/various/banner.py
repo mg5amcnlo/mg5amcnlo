@@ -3518,11 +3518,22 @@ class RunCard(ConfigFile):
                 out = ["%s\n" %l for l in out]
                 fsock.writelines(out)
 
-    @staticmethod
-    def get_idbmup(lpp):
+    def get_idbmup(self, lpp, beam=1):
         """return the particle colliding pdg code"""
         if lpp in (1,2, -1,-2):
-            return math.copysign(2212, lpp)
+             target = 2212
+             if 'nb_proton1' in self:
+                 nbp = self['nb_proton%s' % beam]
+                 nbn = self['nb_neutron%s' % beam]
+             if nbp == 1 and nbn ==0:
+                 target = 2212
+             elif nbp==0 and nbn ==1:
+                 target = 2112
+             else:
+                 target = 1000000000
+                 target += 10 * (nbp+nbn)
+                 target += 10000 * nbp
+             return math.copysign(target, lpp)            
         elif lpp in (3,-3):
             return math.copysign(11, lpp)
         elif lpp in (4,-4):
@@ -3538,8 +3549,8 @@ class RunCard(ConfigFile):
         the first line of the <init> block of the lhe file."""
         
         output = {}
-        output["idbmup1"] = self.get_idbmup(self['lpp1'])
-        output["idbmup2"] = self.get_idbmup(self['lpp2'])
+        output["idbmup1"] = self.get_idbmup(self['lpp1'], beam=1)
+        output["idbmup2"] = self.get_idbmup(self['lpp2'], beam=2)
         output["ebmup1"] = self["ebeam1"]
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
