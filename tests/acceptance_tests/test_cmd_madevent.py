@@ -1187,6 +1187,8 @@ set draw_rivet_plots True
                          pjoin(self.path, 'mg5_cmd')],
                          #cwd=self.path,
                          stdout=stdout, stderr=stderr)
+        if os.path.exists(pjoin(self.run_dir, 'run_01_tag_1_debug.log')):
+            print(open(pjoin(self.run_dir, 'run_01_tag_1_debug.log'))i.read())
 
         self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
         self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots','index.html')))
