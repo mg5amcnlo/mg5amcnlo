@@ -1317,6 +1317,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        traceback.print_exc()
         if hasattr(error, 'filename'):
             debug_file.write("Related File: %s\n" % error.filename)
         # Create a nice error output
@@ -1385,7 +1386,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__, 
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
-        
+        traceback.print_exc()
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
@@ -1411,7 +1412,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def nice_config_error(self, error, line):
         if self.child:
             return self.child.nice_user_error(error, line)
-
+        traceback.print_exc()
         # Make sure that we are at the initial position                                 
         os.chdir(self.__initpos)
         if not self.history or line == self.history[-1]:
