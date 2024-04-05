@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.5.4
+3.5.4 (05/04/23):
       MZ+RF: Bug fixes:
         1) a bug related to event-generation, when virtual corrections include more than one
         coupling combination (so NLO QCD to SM processes were **not** affected), in particular 
