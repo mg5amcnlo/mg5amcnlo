@@ -6247,7 +6247,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 to_save.append('fastjet')
             if os.path.exists(pjoin(prefix, 'hepmc')):
                 self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
-                to_save.append('hepmc') 
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6262,7 +6262,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 to_save.append('fastjet')
             if os.path.exists(pjoin(prefix, 'hepmc')):
                 self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
-                to_save.append('hepmc') 
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)
         elif tool == 'fastjet':
