@@ -793,24 +793,32 @@ c 1/proc_map(0,0)*vol1)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+c$$$         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             pass_cuts_check=.true.
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
-            if (abrv(1:2).ne.'vi') then
+            if (abrv.eq.'born') then
                call compute_born
-            endif
-            if (abrv.ne.'born') then
+               call get_born_flow(flow_picked)
+               call Bornonly_shower_scale(p_born,flow_picked)
+            elseif (abrv(1:2).eq.'vi') then
                call compute_nbody_noborn
+               call get_born_flow(flow_picked)
+               call compute_shower_scale_nbody(p_born,flow_picked)
+            else
+               call compute_born
+               call compute_nbody_noborn
+               ! TODO: Compute shower scale here already??
             endif
          endif
+
 c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
-         call include_shape_in_shower_scale(p,nFKS_picked_nbody
-     $        ,ifold_counter)
+c$$$         call include_shape_in_shower_scale(p,nFKS_picked_nbody
+c$$$     $        ,ifold_counter)
          call set_colour_connections(nFKS_picked_nbody,ifold_counter)
             
          

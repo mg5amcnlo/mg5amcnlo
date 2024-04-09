@@ -3085,7 +3085,30 @@ c the same holds for bornbarstilde(i).
       return
       end
 
-
+      subroutine get_born_flow(flow_picked)
+      ! This assumes that the Born matrix elements are called. This is
+      ! always the case if either the compute_born or the virtual
+      ! (through bornsoftvirtual) are evaluated.
+      implicit none
+      integer flow_picked
+c sumborn is the sum of the leading colour flow contributions to the Born.
+      sumborn=0.d0
+      do i=1,max_bcol
+         if(is_leading_cflow(i)) sumborn=sumborn+jamp2(i)
+      enddo
+      target=ran2()*sumborn
+      sum=0d0
+      do i=1,max_bcol
+         if (.not.is_leading_cflow(i)) cycle
+         sum=sum+jamp2(i)
+         if(sum.gt.target) then
+            flow_picked=i
+            return
+         endif
+      enddo
+      write (*,*) 'Error #1 in get_born_flow',sum,target,i
+      stop 1
+      end
 
       function gfunction(w,alpha,beta,delta)
 c Gets smoothly to 0 as w goes to 1.

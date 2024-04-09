@@ -9,7 +9,7 @@ module scale_module
   double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
   double precision,private,parameter :: scaleMCcut=3d0
 
-  public :: compute_shower_scale_nbody,init_scale_module
+  public :: compute_shower_scale_nbody,init_scale_module,Bornonly_shower_scale
   private
 
 contains
@@ -49,6 +49,22 @@ contains
     enddo
   end subroutine compute_shower_scale_nbody
 
+  subroutine Bornonly_shower_scale(p,flow_picked)
+    implicit none
+    integer :: i,j,flow_picked
+    double precision,dimension(0:3,next_n) :: p
+    call get_global_ref_scale(p)
+    do i=1,next_n
+       do j=1,next_n
+          if (valid_dipole_n(i,j,flow_picked)) then
+             shower_scale_nbody(i,j)=global_ref_scale
+          else
+             shower_scale_nbody(i,j)=-1d0
+          endif
+       enddo
+    enddo
+  end subroutine Bornonly_shower_scale
+
   subroutine get_scaleminmax(ref_scale,scalemin,scalemax)
     implicit none
     double precision :: ref_scale,scalemin,scalemax
@@ -57,8 +73,10 @@ contains
          scalemin+scaleMCdelta)
     scalemax=min(scalemax,collider_energy)
     scalemin=min(scalemin,scalemax)
-    if(abrv_mod.ne.'born'.and.shower_mc_mod(1:7).eq.'PYTHIA6' .and. &
+    if(abrv_mod.ne.'born' .and. shower_mc_mod(1:7).eq.'PYTHIA6' .and. &
          ileg.eq.3)then
+! TODO: Shower scale depends on xm12: This is the mass^2 of j_fks. Hence, this
+! introduces FKS info into subtraction terms.
        scalemin=max(scalemin,sqrt(xm12))
        scalemax=max(scalemin,scalemax)
     endif
