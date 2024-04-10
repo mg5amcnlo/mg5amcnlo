@@ -1,0 +1,134 @@
+      INTEGER MAXPROC_USED, MAXFLOW_USED
+      PARAMETER (MAXPROC_USED = 4)
+      PARAMETER (MAXFLOW_USED = 4)
+      INTEGER IDUP_D(6,5,MAXPROC_USED)
+      INTEGER MOTHUP_D(6,2,5,MAXPROC_USED)
+      INTEGER ICOLUP_D(6,2,5,MAXFLOW_USED)
+      INTEGER ILH
+
+      DATA (IDUP_D(1,ILH,1),ILH=1,5)/-2,2,6,-6,21/
+      DATA (MOTHUP_D(1,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(1,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(1,1,ILH,  1),ILH=1, 5)/  0,501,502,  0,503/
+      DATA (ICOLUP_D(1,2,ILH,  1),ILH=1, 5)/501,  0,  0,503,502/
+      DATA (ICOLUP_D(1,1,ILH,  2),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(1,2,ILH,  2),ILH=1, 5)/501,  0,  0,501,502/
+      DATA (ICOLUP_D(1,1,ILH,  3),ILH=1, 5)/  0,502,502,  0,503/
+      DATA (ICOLUP_D(1,2,ILH,  3),ILH=1, 5)/501,  0,  0,503,501/
+      DATA (ICOLUP_D(1,1,ILH,  4),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(1,2,ILH,  4),ILH=1, 5)/501,  0,  0,502,501/
+      DATA (IDUP_D(1,ILH,2),ILH=1,5)/-4,4,6,-6,21/
+      DATA (MOTHUP_D(1,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(1,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(1,ILH,3),ILH=1,5)/-1,1,6,-6,21/
+      DATA (MOTHUP_D(1,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(1,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(1,ILH,4),ILH=1,5)/-3,3,6,-6,21/
+      DATA (MOTHUP_D(1,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(1,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(2,ILH,1),ILH=1,5)/-2,2,6,-6,21/
+      DATA (MOTHUP_D(2,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(2,1,ILH,  1),ILH=1, 5)/  0,501,502,  0,503/
+      DATA (ICOLUP_D(2,2,ILH,  1),ILH=1, 5)/501,  0,  0,503,502/
+      DATA (ICOLUP_D(2,1,ILH,  2),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(2,2,ILH,  2),ILH=1, 5)/501,  0,  0,501,502/
+      DATA (ICOLUP_D(2,1,ILH,  3),ILH=1, 5)/  0,502,502,  0,503/
+      DATA (ICOLUP_D(2,2,ILH,  3),ILH=1, 5)/501,  0,  0,503,501/
+      DATA (ICOLUP_D(2,1,ILH,  4),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(2,2,ILH,  4),ILH=1, 5)/501,  0,  0,502,501/
+      DATA (IDUP_D(2,ILH,2),ILH=1,5)/-4,4,6,-6,21/
+      DATA (MOTHUP_D(2,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(2,ILH,3),ILH=1,5)/-1,1,6,-6,21/
+      DATA (MOTHUP_D(2,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(2,ILH,4),ILH=1,5)/-3,3,6,-6,21/
+      DATA (MOTHUP_D(2,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(3,ILH,1),ILH=1,5)/-2,2,6,-6,21/
+      DATA (MOTHUP_D(3,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(3,1,ILH,  1),ILH=1, 5)/  0,501,502,  0,503/
+      DATA (ICOLUP_D(3,2,ILH,  1),ILH=1, 5)/501,  0,  0,503,502/
+      DATA (ICOLUP_D(3,1,ILH,  2),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(3,2,ILH,  2),ILH=1, 5)/501,  0,  0,501,502/
+      DATA (ICOLUP_D(3,1,ILH,  3),ILH=1, 5)/  0,502,502,  0,503/
+      DATA (ICOLUP_D(3,2,ILH,  3),ILH=1, 5)/501,  0,  0,503,501/
+      DATA (ICOLUP_D(3,1,ILH,  4),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(3,2,ILH,  4),ILH=1, 5)/501,  0,  0,502,501/
+      DATA (IDUP_D(3,ILH,2),ILH=1,5)/-4,4,6,-6,21/
+      DATA (MOTHUP_D(3,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(3,ILH,3),ILH=1,5)/-1,1,6,-6,21/
+      DATA (MOTHUP_D(3,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(3,ILH,4),ILH=1,5)/-3,3,6,-6,21/
+      DATA (MOTHUP_D(3,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(4,ILH,1),ILH=1,5)/-2,2,6,-6,21/
+      DATA (MOTHUP_D(4,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(4,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(4,1,ILH,  1),ILH=1, 5)/  0,501,502,  0,503/
+      DATA (ICOLUP_D(4,2,ILH,  1),ILH=1, 5)/501,  0,  0,503,502/
+      DATA (ICOLUP_D(4,1,ILH,  2),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(4,2,ILH,  2),ILH=1, 5)/501,  0,  0,501,502/
+      DATA (ICOLUP_D(4,1,ILH,  3),ILH=1, 5)/  0,502,502,  0,503/
+      DATA (ICOLUP_D(4,2,ILH,  3),ILH=1, 5)/501,  0,  0,503,501/
+      DATA (ICOLUP_D(4,1,ILH,  4),ILH=1, 5)/  0,503,502,  0,503/
+      DATA (ICOLUP_D(4,2,ILH,  4),ILH=1, 5)/501,  0,  0,502,501/
+      DATA (IDUP_D(4,ILH,2),ILH=1,5)/-4,4,6,-6,21/
+      DATA (MOTHUP_D(4,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(4,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(4,ILH,3),ILH=1,5)/-1,1,6,-6,21/
+      DATA (MOTHUP_D(4,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(4,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(4,ILH,4),ILH=1,5)/-3,3,6,-6,21/
+      DATA (MOTHUP_D(4,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(4,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(5,ILH,1),ILH=1,5)/21,2,6,-6,2/
+      DATA (MOTHUP_D(5,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(5,1,ILH,  1),ILH=1, 5)/501,503,501,  0,502/
+      DATA (ICOLUP_D(5,2,ILH,  1),ILH=1, 5)/503,  0,  0,502,  0/
+      DATA (ICOLUP_D(5,1,ILH,  2),ILH=1, 5)/501,502,501,  0,502/
+      DATA (ICOLUP_D(5,2,ILH,  2),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (ICOLUP_D(5,1,ILH,  3),ILH=1, 5)/502,503,501,  0,502/
+      DATA (ICOLUP_D(5,2,ILH,  3),ILH=1, 5)/503,  0,  0,501,  0/
+      DATA (ICOLUP_D(5,1,ILH,  4),ILH=1, 5)/502,501,501,  0,502/
+      DATA (ICOLUP_D(5,2,ILH,  4),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (IDUP_D(5,ILH,2),ILH=1,5)/21,4,6,-6,4/
+      DATA (MOTHUP_D(5,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(5,ILH,3),ILH=1,5)/21,1,6,-6,1/
+      DATA (MOTHUP_D(5,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(5,ILH,4),ILH=1,5)/21,3,6,-6,3/
+      DATA (MOTHUP_D(5,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(6,ILH,1),ILH=1,5)/-2,21,6,-6,-2/
+      DATA (MOTHUP_D(6,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(6,1,ILH,  1),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(6,2,ILH,  1),ILH=1, 5)/501,503,  0,501,503/
+      DATA (ICOLUP_D(6,1,ILH,  2),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(6,2,ILH,  2),ILH=1, 5)/501,503,  0,503,501/
+      DATA (ICOLUP_D(6,1,ILH,  3),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(6,2,ILH,  3),ILH=1, 5)/501,503,  0,503,502/
+      DATA (ICOLUP_D(6,1,ILH,  4),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(6,2,ILH,  4),ILH=1, 5)/501,503,  0,502,503/
+      DATA (IDUP_D(6,ILH,2),ILH=1,5)/-4,21,6,-6,-4/
+      DATA (MOTHUP_D(6,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(6,ILH,3),ILH=1,5)/-1,21,6,-6,-1/
+      DATA (MOTHUP_D(6,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(6,ILH,4),ILH=1,5)/-3,21,6,-6,-3/
+      DATA (MOTHUP_D(6,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+

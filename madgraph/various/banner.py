@@ -3157,7 +3157,7 @@ class RunCard(ConfigFile):
         if path does not exists return the current value in self for all parameter"""
 
         #WARNING DOES NOT HANDLE LIST/DICT so far
-
+        misc.sprint(output_dir, path)
         # handle case where file is missing
         if not os.path.exists(pjoin(output_dir,path)):
             misc.sprint("include file not existing", pjoin(output_dir,path))
@@ -3483,8 +3483,10 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
-        value_in_old_include = self.get_last_value_include(output_dir)
-
+        if output_dir: #output_dir is set to None in some unittest
+            value_in_old_include = self.get_last_value_include(output_dir)
+        else:
+           value_in_old_include = {} 
 
         if output_dir:
             self.write_autodef(output_dir, output_file=None)
@@ -3501,7 +3503,6 @@ class RunCard(ConfigFile):
     def write_one_include_file(self, output_dir, incname, output_file=None):
         """write one include file at the time"""
 
-        misc.sprint(incname)
         if incname is True:
             pathinc = self.default_include_file
         elif incname is False:
