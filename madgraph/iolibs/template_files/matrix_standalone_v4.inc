@@ -137,6 +137,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
 				    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                         CYCLE
                     ENDIF
+c		    write (*,*) 'HEL = ',NHEL(:,IHEL)
                     T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))
                     IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                         ANS=ANS+T
@@ -148,6 +149,9 @@ C     For this reason, we simply remove the filterin when there is only three ex
 		     ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)
+c	  write (*,*) "Spyros: IDEN         = ", IDEN
+c	  write (*,*) "Spyros: USERHEL      = ", USERHEL
+c	  write (*,*) "Spyros: HELAVGFACTOR = ", HELAVGFACTOR
 	  IF(USERHEL.NE.-1) THEN
           ANS=ANS*HELAVGFACTOR	  
 	  ELSE
@@ -155,6 +159,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
 		  IF (POLARIZATIONS(J,0).ne.-1) THEN
             ANS=ANS*BEAMS_HELAVGFACTOR(J)
             ANS=ANS/POLARIZATIONS(J,0)
+c	    write (*,*) "Spyros: InPart ", J, " BEAMS_HELAVGFACTOR = ", BEAMS_HELAVGFACTOR(J), ", POLARIZATION = ", POLARIZATIONS(J,0)  
 		  ENDIF
 		ENDDO
 	  ENDIF
@@ -213,8 +218,11 @@ C ----------
 C BEGIN CODE
 C ----------
       call %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
+c      WRITE (*,*) '  -> AMP = ', AMP
       call %(proc_prefix)sGET_JAMP(AMP,JAMP)
+c      WRITE (*,*) '  -> JAMP = ', JAMP
       call %(proc_prefix)sGET_MATRIX(JAMP,%(proc_prefix)sMATRIX)
+c      write (*,*) "  -> col.ave. |M|^2 for HEL=[", NHEL ,"] = ", %(proc_prefix)sMATRIX
 
 %(amp2_lines)s
 
