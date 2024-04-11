@@ -3771,6 +3771,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
                 logger.warning("  - reduce the number of requested events (if set too high)")
                 logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+                logger.warning("  - regenerate your process directory by selecting another gauge (in particular try FD gauge).")
 
         if partials:
             for i in range(partials):
