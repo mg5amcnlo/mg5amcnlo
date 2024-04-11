@@ -24,6 +24,16 @@ c************************************************************************
       common /to_updateloop/updateloop
       data updateloop /%(updateloop_default)s/
 
+      logical first
+      data first /.true./
+      save first
+
+      if (.not.first)then
+              call coup()
+              return
+      endif
+      first=.false.
+
       %(load_card)s
       ! also loop parameters should be initialised here
       if (updateloop) then
