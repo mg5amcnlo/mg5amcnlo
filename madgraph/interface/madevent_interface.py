@@ -496,7 +496,6 @@ class HelpToCmd(object):
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
-
 class AskRun(cmd.ControlSwitch):
     """a class for the question on what to do on a madevent run"""
 
@@ -2393,13 +2392,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         mode = self.check_generate_events(args)
         switch_mode = self.ask_run_configuration(mode, args)
-        if not args:
-            # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
-        else:
-            self.set_run_name(args[0], None, 'parton', True)
-            args.pop(0)
-            
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'), consistency=False)
+        if not run_card.scan_set:
+            if not args:
+                # No run name assigned -> assigned one automaticaly 
+                self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
+            else:
+                self.set_run_name(args[0], None, 'parton', True)
+                args.pop(0) 
+
+        
         self.run_generate_events(switch_mode, args)
 
         self.postprocessing()
@@ -2560,7 +2563,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.update_status("postprocessing contur done", level="rivet")
 
     # this decorator handle the loop related to scan.
-    @common_run.scanparamcardhandling()
+    @common_run.scanparamcardhandling(run_card_scan=True)
     def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
@@ -2593,7 +2596,6 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             # Regular run mode
             logger.info('Generating %s events with run name %s' %
                         (self.run_card['nevents'], self.run_name))
-        
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
             nb_event = self.run_card['nevents']
@@ -3726,59 +3728,111 @@ Beware that this can be dangerous for local multicore runs.""")
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
         Gdirs = self.get_Gdir()
         Gdirs.sort()
-        for Gdir in Gdirs:
-            if os.path.exists(pjoin(Gdir, 'events.lhe')):
-                result = sum_html.OneResult('')
-                result.read_results(pjoin(Gdir, 'results.dat'))
-                sum_xsec += result.get('xsec')
-                sum_xerru.append(result.get('xerru'))
-                sum_axsec += result.get('axsec')
+        partials_info = []
+        try:
+            p = subprocess.Popen(["ulimit", "-n"], stdout=subprocess.PIPE)
+            out, err = p.communicate()
+            max_G = out.decode()
+            if max_G == "unlimited":
+                max_G =2500
+            else:
+                max_G = int(max_G) - 40
+        except Exception as  error:
+            logger.debug(error)
+            max_G = 80 # max(20, len(Gdirs)/self.options['nb_core'])
 
-                if self.run_card['gridpack'] or self.run_card['nevents']==0:
-                    os.remove(pjoin(Gdir, 'events.lhe'))
-                    continue
-
-                AllEvent.add(pjoin(Gdir, 'events.lhe'), 
-                             result.get('xsec'),
-                             result.get('xerru'),
-                             result.get('axsec')
-                             )
- 
-                if len(AllEvent) >= 80: #perform a partial unweighting
-                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
-                    AllEvent = lhe_parser.MultiEventFile()
-                    AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                                 sum_xsec,
-                                 math.sqrt(sum(x**2 for x in sum_xerru)),
-                                 sum_axsec) 
-                    partials +=1
-        
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
-        if len(AllEvent) == 0:
-            nb_event = 0 
-        else:
+        mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+
+        def split(a, n):
+            """split a list "a" into n chunk of same size (or nearly same size)"""
+            k, m = divmod(len(a), n)
+            return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
+
+        partials_info = [] 
+        if len(Gdirs) >= max_G:
+            max_G = 80
+            start_unweight= time.perf_counter()
+
+            # first check in how many chunk we have to split (always use a multiple of nb_core)
+            nb_split = 1
+            nb_G = len(Gdirs) // self.options['nb_core']
+            while nb_G > max_G:
+               nb_split += 1 
+               nb_G = len(Gdirs)//(nb_split*self.options['nb_core']) 
+            
+            # do the unweighting of each chunk on their own thread
+            nb_chunk = 2 * (nb_split*self.options['nb_core'])
+            for i, local_G in enumerate(split(Gdirs, nb_chunk)):
+                line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
+                line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
+                line.append(str(self.results.current['cross']))
+                line += local_G
+                partials_info.append(self.do_combine_events_partial(' '.join(line), preprocess_only=True))
+                mycluster.submit(sys.executable, 
+                    [pjoin(self.me_dir, 'bin', 'internal', 'madevent_interface.py'), 'combine_events_partial'] + line,
+                    stdout='/dev/null'
+                )
+                
+            starttime = time.time()
+            update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, 'unweight'), level=None,
+                                       force=False, starttime=starttime)
+            mycluster.wait(self.me_dir, update_status)
+            # do the final combination
+            for data in partials_info:
+                AllEvent.add(*data)
+            
+            start_unweight= time.perf_counter()
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
-
-            if nb_event < self.run_card['nevents']:
-                logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
-                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", 1 + self.run_card['sde_strategy'] % 2)
-                logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
-                logger.warning("  - reduce the number of requested events (if set too high)")
-                logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
-                logger.warning("  - regenerate your process directory by selecting another gauge (in particular try FD gauge).")
-
-        if partials:
-            for i in range(partials):
+            
+            #cleaning
+            for data in partials_info:
+                path = data[0]
                 try:
-                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
+                    os.remove(path)
                 except Exception:
-                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
+                    os.remove(path[:-3]) # try without the .gz
+        else:
+            for Gdir in Gdirs:
+                if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                    result = sum_html.OneResult('')
+                    result.read_results(pjoin(Gdir, 'results.dat'))
+                    sum_xsec += result.get('xsec')
+                    sum_xerru.append(result.get('xerru'))
+                    sum_axsec += result.get('axsec')
+
+                    if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                        os.remove(pjoin(Gdir, 'events.lhe'))
+                        continue
+
+                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                                result.get('xsec'),
+                                result.get('xerru'),
+                                result.get('axsec')
+                                )
+                    
+            if len(AllEvent) == 0:
+                nb_event = 0 
+            else:
+                nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                                get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                                log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                                proc_charac=self.proc_characteristic)
+
+        if nb_event < self.run_card['nevents']:
+            logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
+            logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", 1 + self.run_card['sde_strategy'] % 2)
+            logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
+            logger.warning("  - reduce the number of requested events (if set too high)")
+            logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+            logger.warning("  - regenerate your process directory by selecting another gauge (in particular try FD gauge).")
+
+
                    
         self.results.add_detail('nb_event', nb_event)
     
@@ -3790,7 +3844,50 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info("combination of events done in %s s ", time.time()-start)
         
         self.to_store.append('event')
+
+    ############################################################################ 
+    def do_combine_events_partial(self, line, preprocess_only=False):
+        """ """
+
     
+        AllEvent = lhe_parser.MultiEventFile()
+
+        sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        output, banner_path,cross = line.split()[:3]
+        Gdirs = line.split()[3:]
+
+        cross = float(cross)
+        if not self.banner:
+            self.banner = banner_mod.Banner(banner_path)
+        if not hasattr(self, 'run_card'):
+            self.run_card = banner_mod.RunCard(self.banner['mgruncard'])
+        AllEvent.banner = self.banner
+
+        for Gdir in Gdirs:
+            if os.path.exists(pjoin(Gdir, 'events.lhe')):
+                result = sum_html.OneResult('')
+                result.read_results(pjoin(Gdir, 'results.dat'))
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+
+                if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                    os.remove(pjoin(Gdir, 'events.lhe'))
+                    continue
+                if not preprocess_only:
+                    AllEvent.add(pjoin(Gdir, 'events.lhe'), 
+                             result.get('xsec'),
+                             result.get('xerru'),
+                             result.get('axsec')
+                             ) 
+        if preprocess_only:
+            return output, sum_xsec, math.sqrt(sum(x**2 for x in sum_xerru)), sum_axsec
+        nb_event = max(min(abs(1.01*self.run_card['nevents']*sum_axsec/cross),self.run_card['nevents']), 10)
+        get_wgt = lambda event: event.wgt   
+        AllEvent.unweight(output,
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)  
+        return output, sum_xsec, math.sqrt(sum(x**2 for x in sum_xerru)), sum_axsec
+
     ############################################################################ 
     def correct_bias(self):
         """check the first event and correct the weight by the bias 
@@ -4474,7 +4571,7 @@ Please install this tool with the following MG5_aMC command:
             else:
                 preamble = misc.get_HEPTools_location_setter(
                                                  pjoin(MG5DIR,'HEPTools'),'lib')
-        preamble += "\n unset PYTHIA8DATA\n"
+        #preamble += "\n unset PYTHIA8DATA\n"
         
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
@@ -6033,7 +6130,7 @@ tar -czf split_$1.tar.gz split_$1
                        'syscalc':[],
                        'rivet':['rivet']}
 
-        if name == self.run_name:        
+        if name and name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = banner_mod.RunCard(run_card)
@@ -6897,6 +6994,7 @@ class GridPackCmd(MadEventCmd):
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
+        partials_info = []
         Gdirs = self.get_Gdir()
         Gdirs.sort()
         for Gdir in Gdirs:
@@ -6915,16 +7013,21 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
+                    nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.nb_event)
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
+                    partials_info.append((pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                                  sum_xsec,
                                  math.sqrt(sum(x**2 for x in sum_xerru)),
-                                 sum_axsec) 
+                                 sum_axsec) )  
+                    sum_xsec, sum_xerru, sum_axsec = 0,[],0
                     partials +=1
         
+        for data in partials_info:
+            AllEvent.add(*data)
+
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         

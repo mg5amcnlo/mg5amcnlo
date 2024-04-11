@@ -639,6 +639,109 @@ class TestRestrictModel(unittest.TestCase):
         self.assertNotIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
         self.assertNotIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
 
+    def test_remove_interactions2(self):
+        """ check that the detection of irrelevant interactions works """
+        
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                input_bbh = candidate
+                coupling_bbh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                input_4g = candidate
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]            
+                coupling_eez_2 = candidate['couplings'][(0,1)]
+        
+        #security                                      
+        found_4g = 0  
+        found_bbh = 0 
+        for dep,data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_4g: found_4g +=1
+                elif param.name == coupling_bbh: found_bbh +=1
+        self.assertGreater(found_bbh, 0)
+        self.assertGreater(found_4g, 0)
+        
+        # make the real test
+        self.model.locate_coupling()
+        #result = self.model.remove_interactions([coupling_bbh, coupling_4g])
+        #self.assertNotIn(input_bbh, self.model['interactions'])
+        #self.assertNotIn(input_4g, self.model['interactions'])
+        
+    
+        # Now test case where some of them are deleted and some not
+        if coupling_ddz_1 != coupling_eez_1:
+            coupling_eez_1, coupling_eez_2 = coupling_eez_2, coupling_eez_1
+        assert coupling_ddz_1 == coupling_eez_1
+        
+        result = self.model.remove_interactions([coupling_ddz_1])
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        self.assertNotIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertNotIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
+
+        self.assertEqual(len(input_ddz['couplings']), 1)
+        self.assertEqual(len(input_ddz['lorentz']), 1)
+        self.assertEqual(list(input_ddz['couplings'].keys())[0], (0,0))
+
+    def test_remove_interactions3(self):
+        """ check that the detection of irrelevant interactions works """
+        
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                input_bbh = candidate
+                coupling_bbh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                input_4g = candidate
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]            
+                coupling_eez_2 = candidate['couplings'][(0,1)]
+        
+        #security                                      
+        found_4g = 0  
+        found_bbh = 0 
+        for dep,data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_4g: found_4g +=1
+                elif param.name == coupling_bbh: found_bbh +=1
+        self.assertGreater(found_bbh, 0)
+        self.assertGreater(found_4g, 0)
+        
+        # make the real test
+        self.model.locate_coupling()
+        #result = self.model.remove_interactions([coupling_bbh, coupling_4g])
+        #self.assertNotIn(input_bbh, self.model['interactions'])
+        #self.assertNotIn(input_4g, self.model['interactions'])
+        
+    
+        # Now test case where some of them are deleted and some not
+        if coupling_ddz_1 != coupling_eez_1:
+            coupling_eez_1, coupling_eez_2 = coupling_eez_2, coupling_eez_1
+        assert coupling_ddz_1 == coupling_eez_1
+        
+        result = self.model.remove_interactions([coupling_ddz_2])
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        self.assertIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertNotIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
+
+        self.assertEqual(len(input_ddz['couplings']), 1)
+        self.assertEqual(len(input_ddz['lorentz']), 1)
+        self.assertEqual(list(input_ddz['couplings'].keys())[0], (0,0))
+
+
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""
         

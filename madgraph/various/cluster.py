@@ -646,7 +646,10 @@ class MultiCore(Cluster):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
                         if isinstance(opt['stdout'],str):
-                            opt['stdout'] = open(opt['stdout'],'w')
+                            if opt['stdout'] == '/dev/null':
+                                opt['stdout'] = os.open(os.devnull, os.O_RDWR)
+                            else:    
+                                opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         if arg:
@@ -671,11 +674,12 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(*arg, **opt)
-                        if returncode != 0:
-                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
+                        try:
+                            returncode = exe(*arg, **opt)
+                        except Exception as error:
+                            #logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                            self.remove("fct %s does raise %s\n %s" % (exe, error))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))
@@ -700,7 +704,7 @@ class MultiCore(Cluster):
             
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
-               log=None, required_output=[], nb_submit=0):
+               log=None, required_output=[], nb_submit=0, python_opts={}):
         """submit a job on multicore machine"""
         
         # open threads if needed   
@@ -720,7 +724,7 @@ class MultiCore(Cluster):
             return tag
         else:
             # python function
-            self.queue.put((tag, prog, argument, {}))
+            self.queue.put((tag, prog, argument, python_opts))
             self.submitted.put(1)
             return tag            
         

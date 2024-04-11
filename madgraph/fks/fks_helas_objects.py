@@ -834,7 +834,14 @@ class FKSHelasProcess(object):
             return False
 
         # now the virtuals
-        if self.virt_matrix_element != other.virt_matrix_element:
+        if self.virt_matrix_element and other.virt_matrix_element: 
+            virttag = helas_objects.IdentifyMETag.\
+                        create_tag(self.virt_matrix_element.get('base_amplitude'))
+            othertag = helas_objects.IdentifyMETag.\
+                        create_tag(other.virt_matrix_element.get('base_amplitude'))
+            if virttag != othertag: 
+                return False
+        elif self.virt_matrix_element !=  other.virt_matrix_element: 
             return False
 
         # now the reals

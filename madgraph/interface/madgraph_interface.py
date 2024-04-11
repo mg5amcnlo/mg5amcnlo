@@ -1126,10 +1126,10 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process or 'sqrvirt' in process:
-                valid = True
-            else:
-                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+            #if 'noborn' in process or 'sqrvirt' in process:
+            #    valid = True
+            #else:
+            #    raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
 
             # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
@@ -1138,8 +1138,15 @@ class CheckValidForCmd(cmd.CheckCmd):
             if order.strip().lower() != 'qcd':
                 raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
+            def check(p):
+                if p.get('color') != 1:
+                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                elif p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+ 
 
-            for p in particles_parts[1].split():
+
+            for p in particles_parts[0].split()+ particles_parts[-1].split():
                 if '{' in p:
                     part = p.split('{')[0]
                 else:
@@ -1150,12 +1157,13 @@ class CheckValidForCmd(cmd.CheckCmd):
                         if part in self._multiparticles:
                             for part2 in self._multiparticles[part]:
                                 p = self._curr_model.get_particle(part2)
-                                if p.get('color') != 1:
-                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                        continue
-                    if p.get('color') != 1:
-                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-        
+                                check(p)
+                        else:
+                            p = self._curr_model.get_particle(part.lower())
+                            check(p)
+                    else:
+                        check(p)
+                    
 
 
     def check_tutorial(self, args):
@@ -3499,7 +3507,7 @@ This implies that with decay chains:
                     raise self.InvalidCmd('no particle %s in current model' % arg)
 
                 print("Particle %s has the following properties:" % particle.get_name())
-                print(str(particle))
+                print(particle.nice_string())
 
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
@@ -3609,7 +3617,6 @@ This implies that with decay chains:
             hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
-
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')
@@ -6239,6 +6246,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'rivet')):
                 self.options['rivet_path'] = pjoin(prefix, 'rivet')
                 to_save.append('rivet_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet')
+            if os.path.exists(pjoin(prefix, 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6248,12 +6261,23 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'yoda')):
                 self.options['yoda_path'] = pjoin(prefix, 'yoda')
                 to_save.append('yoda_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet')
+            if os.path.exists(pjoin(prefix, 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
-                 printcmd=False, log=False) 
+                 printcmd=False, log=False)
+        elif tool == 'fastjet':
+            self.options['fastjet'] = pjoin(prefix, tool,'bin', 'fastjet-config') 
+            self.exec_cmd('save options %s fastjet'  % (config_file),
+                 printcmd=False, log=False)  
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
-            
+        else:
+            logger.warning("path not saved for %s", tool)
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
         path_to_be_set = []
@@ -7334,6 +7358,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 if self.options[key] in ['False', 'True']:
                     self.allow_notification_center = eval(self.options[key])
                     self.options[key] = self.allow_notification_center
+            elif key in ['lhapdf_py3', 'lhapdf_py2']:
+                if self.options[key] not in [None, 'none', 'None']:
+                    # Default: try to set parameter
+                    try:
+                        self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    except MadGraph5Error as error:
+                        print(error)
+                        logger.warning("Option %s from config file not understood" \
+                                    % key)
+                    else:
+                        if key in self.options_madgraph:
+                            self.history.append('set %s %s' % (key, self.options[key]))
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -9096,8 +9132,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             #print process
             self._generate_info = process[9:]
             #print self._generate_info
+        elif skip_2body:
+            logger.info("No three body-decay (or higher) is found for %s", pids) 
         else:
-            logger.info("No decay is found")
+            logger.info("No decay is found for %s", pids)
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""

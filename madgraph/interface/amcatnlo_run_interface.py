@@ -508,8 +508,7 @@ class CheckValidForCmd(object):
         if tag: 
             arg.remove(tag[0])
             tag = tag[0][6:]
-        
-        
+         
         if len(arg) == 0 and not self.run_name:
             if self.results.lastrun:
                 arg.insert(0, self.results.lastrun)
@@ -935,7 +934,8 @@ class AskRunNLO(cmd.ControlSwitch):
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
         self.proc_characteristics = opt['mother_interface'].proc_characteristics
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards', 'run_card.dat'),
                                            consistency='warning')
 
         hide_line = []
@@ -1742,19 +1742,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options = options.__dict__
             self.check_launch(argss, options)
 
-        
-        if 'run_name' in list(options.keys()) and options['run_name']:
-            self.run_name = options['run_name']
-            # if a dir with the given run_name already exists
-            # remove it and warn the user
-            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
-                logger.warning('Removing old run information in \n'+
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
-                self.results.delete_run(self.run_name)
-        else:
-            self.run_name = '' # will be set later
-
         if options['multicore']:
             self.cluster_mode = 2
         elif options['cluster']:
@@ -1769,13 +1756,80 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else:
             mode = self.ask_run_configuration('auto', options, switch)
 
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
+        if 'run_name' in list(options.keys()) and options['run_name']:
+            self.run_name = options['run_name']
+            # if a dir with the given run_name already exists
+            # remove it and warn the user
+            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
+                logger.warning('removing old run information in \n'+
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
+                self.results.delete_run(self.run_name)
+        else:
+            self.run_name = ''
+            check = 0
+            suffix = ''
+            if mode == 'LO':
+                suffix = '_%s' % mode
+            while True:
+                check += 1
+                name = 'run_%02i%s' % (check, suffix)
+                if not misc.glob('run_%02i*' % check, path= pjoin(self.me_dir, 'Events')): 
+                    self.run_name = name
+                    break
 
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
+
+        self.run_generate_events(mode, options, argss, switch)
+ 
+        #check if the param_card defines a scan.
+        if False:# self.param_card_iterator:
+            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
+            param_card_iterator = self.param_card_iterator
+            self.param_card_iterator = [] #avoid to next generate go trough here
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'],
+                                            param_card_path=cpath)
+            orig_name = self.run_name
+            #go trough the scan
+            with misc.TMP_variable(self, 'allow_notification_center', False):
+                for i,card in enumerate(param_card_iterator):
+                    card.write(cpath)
+                    self.check_param_card(cpath, dependent=True)
+                    if not options['force']:
+                        options['force'] = True
+                    if options['run_name']:
+                        options['run_name'] = '%s_%s' % (orig_name, i+1)
+                    if not argss:
+                        argss = [mode, "-f"]
+                    elif argss[0] == "auto":
+                        argss[0] = mode
+                    self.do_launch("", options=options, argss=argss, switch=switch)
+                    #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'],
+                                                    param_card_path=cpath)
+            #restore original param_card
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
+            param_card_iterator.write_summary(path)
+            
+        if self.allow_notification_center:    
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                                                 self.results.current['cross'],
+                                                 self.results.current['error']))
+    
+    # this decorator handle the loop related to scan.
+    @common_run.scanparamcardhandling(run_card_scan=True)
+    def run_generate_events(self, mode, options, args, switch): 
+
+        self.results.add_detail('run_mode', mode)
+        self.update_status('Starting run', level=None, update_results=True)
 
         if '+' in mode:
             mode = mode.split('+')[0]
@@ -1815,47 +1869,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You are running with FxFx merging enabled. To be able to merge samples of various multiplicities without double counting, you have to remove some events after showering 'by hand'. Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.store_result()
-        #check if the param_card defines a scan.
-        if self.param_card_iterator:
-            cpath = pjoin(self.me_dir,'Cards','param_card.dat')
-            param_card_iterator = self.param_card_iterator
-            self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                            error=self.results.current['error'],
-                                            param_card_path=cpath)
-            orig_name = self.run_name
-            #go trough the scal
-            with misc.TMP_variable(self, 'allow_notification_center', False):
-                for i,card in enumerate(param_card_iterator):
-                    card.write(cpath)
-                    self.check_param_card(cpath, dependent=True)
-                    if not options['force']:
-                        options['force'] = True
-                    if options['run_name']:
-                        options['run_name'] = '%s_%s' % (orig_name, i+1)
-                    if not argss:
-                        argss = [mode, "-f"]
-                    elif argss[0] == "auto":
-                        argss[0] = mode
-                    self.do_launch("", options=options, argss=argss, switch=switch)
-                    #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
-                                                    error=self.results.current['error'],
-                                                    param_card_path=cpath)
-            #restore original param_card
-            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-            name = misc.get_scan_name(orig_name, self.run_name)
-            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
-            logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
-            param_card_iterator.write_summary(path)
-            
-        if self.allow_notification_center:    
-            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
-                                                 self.results.current['cross'],
-                                                 self.results.current['error']))
-    
-            
+
+
     ############################################################################      
     def do_compile(self, line):
         """Advanced commands: just compile the executables """
@@ -4352,7 +4367,8 @@ RESTART = %(mint_mode)s
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = banner_mod.RunCardNLO(run_card)
+                with misc.TMP_variable(banner_mod.RunCardNLO, 'allow_scan', True): 
+                    self.run_card = banner_mod.RunCardNLO(run_card)
 
             #check if we need to change the tag
             if tag:
@@ -4384,6 +4400,8 @@ RESTART = %(mint_mode)s
         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
         if 'mgruncard' in self.banner:
             self.run_card = self.banner.charge_card('run_card')
+        else:
+            self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True

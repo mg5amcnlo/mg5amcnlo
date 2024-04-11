@@ -23,6 +23,7 @@ from __future__ import absolute_import
 import ast
 import logging
 import math
+import copy
 import os
 import re
 import shutil
@@ -181,6 +182,23 @@ class HelpToCmd(object):
         logger.info('   threshold option allows to change the minimal value required to')
         logger.info('   a non zero value for the particle (default:1e-12s)')
 
+    def help_print_results(self):
+        logger.info("syntax: print_results [RUN_NAME] [OPTIONS]")
+        logger.info("-- print the results of the previous run on the screen")
+        logger.info("   If not RUN_NAME is provided, the information of all run")
+        logger.info("   are printed one after another.")
+        logger.info("")
+        logger.info("   supported options:")
+        logger.info("   ------------------")
+        logger.info("   --format=full|short # default is full")
+        logger.info("     full format contains banner/... ")
+        logger.info("     while short is a simple multi-column format (nice for plotting)")
+        logger.info("   --path=")
+        logger.info("     allow to write the information to a file.")
+        logger.info("   --mode=w|a  #default is w ")
+        logger.info("     when the information is printed to a file, you can choose ")
+        logger.info("     to either overwrite the file if already exists (w mode)")
+        logger.info("     to append the information at the end of the file (a mode)")
 
 
 class CheckValidForCmd(object):
@@ -2459,7 +2477,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     ############################################################################ 
     def do_print_results(self, line):
-        """Not in help:Print the cross-section/ number of events for a given run"""
+        """Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
         options={'path':None, 'mode':'w', 'format':'full'}
@@ -2940,10 +2958,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
         yoda_path = self.options['yoda_path']
+        fastjet_path = subprocess.Popen([self.options['fastjet'], '--prefix'],
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
+
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(yoda_path, 'bin'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(yoda_path, 'lib'), pjoin(yoda_path, 'lib64'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(self.options['hepmc_path'], 'lib'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(fastjet_path, 'lib'))
         major, minor = sys.version_info[0:2]
         set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
@@ -4821,9 +4844,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     (return False to repeat the question)
     """
 
-    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
                      'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
-    to_init_card = ['param', 'run', 'madweight', 'madloop', 
+    to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
                     'shower', 'pythia8','delphes','madspin', 'rivet']
     special_shortcut = {}
     special_shortcut_help = {}
@@ -4853,6 +4876,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         self.has_delphes = False
         self.has_rivet = False
+        self.has_fo_card = False
         self.paths = {}
         self.update_block = []
 
@@ -5058,7 +5082,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         
         try:
-            self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
+            with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+                self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
         except IOError:
             self.run_card = {}
         try:
@@ -5247,6 +5272,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return []
         self.has_delphes = True
         return []
+
+    def init_fo_analysis(self, cards):
+        self.has_fo_card = False
+        if not self.get_path('FO_analyse', cards):
+            return []
+        self.has_fo_card = True
+        self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
+        self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
+        return list(self.fo_card.string_vars)
 
 
     def set_CM_velocity(self, line):
@@ -5508,6 +5542,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['delphes_card'] = ''
             if self.has_rivet:
                 allowed['rivet_card'] = ''
+            if self.has_fo_card:
+                allowed['fo_card'] = ''
         
         elif len(args) == 2:
             if args[1] == 'run_card':
@@ -5532,6 +5568,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'delphes_card':'default'}
             elif args[1] == 'rivet_card':
                 allowed = {'rivet_card':'default'}
+            elif args[1] == 'fo_card':
+                allowed = {'fo_card':'default'} 
             else:
                 allowed = {'value':''}
 
@@ -5539,6 +5577,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
+                            'fo_card',
                             'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
                 start = 2
 
@@ -5576,6 +5615,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('delphes_card')
             if self.has_rivet:
                 categories.append('rivet_card')
+            if self.has_fo_card:
+                categories.append('fo_card')
 
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -5630,7 +5671,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'delphes_card' in allowed:
             if allowed['delphes_card'] == 'default':
                 opts = ['default', 'atlas', 'cms']
-            possibilities['Delphes Card'] = self.list_completion(text, opts)              
+            possibilities['Delphes Card'] = self.list_completion(text, opts)
+
+        if 'fo_card' in allowed:
+            opts = self.fo_card.string_vars
+            if allowed['fo_card'] == 'default':
+                opts.append('default') 
+            possibilities['FO Card'] = self.list_completion(text, opts)               
 
         if 'value' in list(allowed.keys()):
             opts = ['default', 'scale']
@@ -5733,21 +5780,28 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[0] in self.special_shortcut:
             targettypes , cmd = self.special_shortcut[args[0]]
             if len(args) != len(targettypes) +1:
-                logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
-                if len(args) < len(targettypes) +1:
-                    return
+                if len(targettypes) == 1 and args[len(targettypes)].startswith('scan'):
+                    args = args[:len(targettypes)] + [' '.join(args[len(targettypes):])]
+                    targettypes = [str]
                 else:
-                    logger.warning('additional argument will be ignored')
+                    logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
+                    if len(args) < len(targettypes) +1:
+                        return
+                    else:
+                        logger.warning('additional argument will be ignored')
             values ={}
             for i, argtype in enumerate(targettypes):           
                 try:  
-                    values = {str(i): banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])}
+                    values[str(i)] = banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])
                 except ValueError as e:
                     logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
                     return
                 except InvalidCmd as e:
-                    logger.warning(str(e))
-                    return
+                    if isinstance(args[i+1], str) and args[i+1].startswith('scan'):
+                        values[str(i)] = args[i+1]
+                    else:
+                        logger.warning(str(e))
+                        return
             #else:
             #    logger.warning("too many argument for this command")
             #    return
@@ -5856,7 +5910,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
 
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
 
             if args[1] == 'default':
@@ -6176,6 +6230,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.setRivet(args[start], value, default=default)
             self.rivet_card.write(self.paths['rivet'], self.paths['rivet_default'])
 
+        elif self.has_fo_card and (card in ['', 'fo_card'])\
+             and args[start].lower() in [k.lower() for k in self.fo_card.string_vars]:
+            
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.fo_card_default[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False 
+            self.fo_card[args[start]] = value
+            self.modified_card.add('fo_card') 
+
         #INVALID --------------------------------------------------------------
         else:      
             logger.warning('invalid set command %s ' % line)
@@ -6222,12 +6292,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
 
-        if self.mother_interface.inputfile:
-            self.run_card.set(name, value, user=True, raiseerror=True)
-        else:
-            self.run_card.set(name, value, user=True)
-        new_value = self.run_card.get(name)
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:BOLD')        
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            if self.mother_interface.inputfile:
+                self.run_card.set(name, value, user=True, raiseerror=True)
+            else:
+                self.run_card.set(name, value, user=True)
+            new_value = self.run_card.get(name)
+            logger.info('modify parameter %s of the run_card.dat to %s' % (name, new_value),'$MG:BOLD')        
 
 
     def setML(self, name, value, default=False):
@@ -6728,7 +6799,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ write the param_card """    
     
         self.param_card.write(self.paths['param'])
-        
+    
+    def write_card_fo_card(self):
+        """ write the fo_card"""
+        self.fo_card.write_card_from_template(self.paths['FO_analyse'], self.paths['FO_analyse_default'])
+
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0, run_card=None,
                     lhapdfconfig=None):
@@ -7523,16 +7598,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-self.integer_bias]
-
+        path = ''
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:
             answer = self.paths['ML']
         elif 'pythia8_card' in answer:
             answer = self.paths['pythia8']
+        elif 'FO_analyse' in answer:
+            path = self.paths['FO_analyse']
+            answer = 'fo_card'
         if os.path.exists(answer):
             path = answer
-        else:
+        elif not os.path.exists(path):
             if not '.dat' in answer and not '.lhco' in answer:
                 if answer != 'trigger':
                     path = self.paths[answer]
@@ -7610,6 +7688,8 @@ You can also copy/paste, your event file here.''')
             except:
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
+        elif path == self.paths['FO_analyse']:
+            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
         else:
             logger.debug('not keep in sync: %s', path)
         return path
@@ -7625,6 +7705,9 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                       iteratorclass=param_card_mod.ParamCardIterator,
                       summaryorder=lambda obj: lambda:None,
                       check_card=lambda obj: CommonRunCmd.static_check_param_card,
+                      run_card_scan=False,
+                      run_card_input= lambda obj: pjoin(obj.me_dir, 'Cards', 'run_card.dat'),
+                      run_card_iteratorclass=banner_mod.RunCardIterator,
                       ):
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
@@ -7672,9 +7755,63 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             return self.iterator
         
         def __exit__(self, ctype, value, traceback ):
-            self.iterator.write(self.path)
+             self.iterator.write(self.path)
     
-    def decorator(original_fct):
+    def scan_over_run_card(original_fct, obj, *args, **opts):
+
+        if isinstance(input_path, str):
+            card_path = run_card_input
+        else:
+            card_path = run_card_input(obj)
+
+        run_card_iterator = run_card_iteratorclass(card_path)
+        orig_card = copy.deepcopy(run_card_iterator.run_card)
+        if not run_card_iterator.run_card.scan_set:
+            return original_fct(obj, *args, **opts)
+        
+        
+        #with restore_iterator(orig_card, card_path):
+        if 1:
+            # this with statement ensure that the original card is restore
+            # whatever happens inside those block
+
+            if not hasattr(obj, 'allow_notification_center'):
+                obj.allow_notification_center = False
+            with misc.TMP_variable(obj, 'allow_notification_center', False):
+                orig_name = get_run_name(obj)
+                if not orig_name and args[1]:
+                    orig_name = args[1][0]
+                    args = (args[0], args[1][1:])
+                    #orig_name = "scan_%s" % len(obj.results)
+
+                try:
+                    os.mkdir(pjoin(obj.me_dir, 'Events', orig_name))
+                except Exception:
+                    pass
+                next_name = orig_name + "_00"
+
+                for i,card in enumerate(run_card_iterator):
+                    card.write(card_path)
+                    # still have to check for the auto-wdith
+                    #if i !=0:
+                    next_name = run_card_iterator.get_next_name(next_name)
+                    set_run_name(obj)(next_name)
+                    try:
+                        original_fct(obj, *args, **opts)
+                    except ignoreerror as error:
+                        run_card_iterator.store_entry(next_name, {'exception': error})
+                    else:
+                        run_card_iterator.store_entry(next_name, store_for_scan(obj)(), run_card_path=card_path)
+                        
+            #param_card_iterator.write(card_path) #-> this is done by the with statement
+            name = misc.get_scan_name(orig_name, next_name)
+            path = result_path(obj) % name 
+            logger.info("write scan results in %s" % path ,'$MG:BOLD')
+            order = summaryorder(obj)()
+            run_card_iterator.write_summary(path, order=order) 
+
+
+    def decorator(original_fct):        
         def new_fct(obj, *args, **opts):
             
             if isinstance(input_path, str):
@@ -7698,8 +7835,13 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             
             if not param_card_iterator:
                 #first run of the function
-                original_fct(obj, *args, **opts)
-                return
+                if run_card_scan:
+                    scan_over_run_card(original_fct, obj, *args, **opts)
+                    return
+                else:
+                    #first run of the function
+                    original_fct(obj, *args, **opts)
+                    return
             
             with restore_iterator(param_card_iterator, card_path):
                 # this with statement ensure that the original card is restore
