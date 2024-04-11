@@ -448,6 +448,7 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
+
         if not get_wgt:
             def weight(event):
                 return event.wgt
@@ -1136,6 +1137,7 @@ class MultiEventFile(EventFile):
                     nb_keep = max(20, int(nb_event*trunc_error*15))
                     new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
+                misc.sprint(i,f)
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
@@ -1189,7 +1191,6 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
 
         if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
