@@ -889,11 +889,34 @@ class UFOMG5Converter(object):
         for i,lor in enumerate(all_lor):
             new_lorentz = self.get_symmetric_lorentz(lor, restricted_mapping, change_number=True)
             all_lor[i] = str(new_lorentz)
-        if str(new_vertex.get('color')) != "[1 ]":
-            raise Exception('not corect color')
+        all_color = new_vertex.get('color')
+        for i, col in enumerate(all_color):
+            new_color = self.get_symmetric_color(str(col), restricted_mapping)
+            if new_color not in  ['1 ','1 1']:
+                all_color[i] = ColorString(new_color)
 
         return new_vertex
 
+
+    @staticmethod
+    def get_symmetric_color(old_color, substitution):
+        """ """
+        all_color_flag = ['f','d', 'Epsilon', 'EpsilonBar', 'K6', 'K6Bar', 'T', 'T6', 'Tr' ]
+        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(all_color_flag), old_color)
+        new_expr = ''
+        for i in range(len(split)):
+            if i % 3 == 0:
+                new_expr += split[i]
+            if i % 3 == 1:
+                new_expr += split[i]+'('
+            if i %3 == 2:
+                indices = split[i].split(',')
+                for i, oneindex in enumerate(indices):
+                    if int(oneindex) in substitution: # +1/-1 since not python ordering
+                        indices[i] = str(substitution[int(oneindex)])
+
+                new_expr += ','.join(indices)+')'
+        return old_color.__class__(new_expr)
 
 
 
@@ -935,21 +958,21 @@ class UFOMG5Converter(object):
         for old,new in substitution.items():
                 new_spins[new] = lor_orig.spins[old]
 
-        for old, new in substitution.items():
-            split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(self.all_aloha_obj), lor_orig.structure)
-            new_expr = ''
-            for i in range(len(split)):
-                if i % 3 == 0:
-                    new_expr += split[i]
-                if i % 3 == 1:
-                    new_expr += split[i]+'('
-                if i %3 == 2:
-                    indices = split[i].split(',')
-                    for i, oneindex in enumerate(indices):
-                        if int(oneindex)-1 in substitution: # +1/-1 since not python ordering
-                            indices[i] = str(substitution[int(oneindex)-1]+1)
+        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(self.all_aloha_obj), lor_orig.structure )
+        new_expr = ''
+        for i in range(len(split)):
+            if i % 3 == 0:
+                new_expr += split[i]
+            if i % 3 == 1:
+                new_expr += split[i]+'('
+            if i %3 == 2:
+                indices = split[i].split(',')
+                for i, oneindex in enumerate(indices):
+                    if int(oneindex)-1 in substitution: # +1/-1 since not python ordering
+                        indices[i] = str(substitution[int(oneindex)-1]+1)
 
-                    new_expr += ','.join(indices)+')'
+                new_expr += ','.join(indices)+')'
+        
         new_formfact = lor_orig.formfactors if hasattr(lor_orig, 'formfactors') else None
 
         if change_number:
@@ -1019,7 +1042,7 @@ class UFOMG5Converter(object):
             if color in vertex.get('color'):
                 translate_color[i] = vertex.get('color').index(color)
             else:
-                misc.sprint("why a new color appear?")
+                misc.sprint("why a new color appear?", color, vertex.get('color'))
                 raise Exception
                 translate_color[i] = len(vertex.get('color'))
                 vertex.get('color').append(color)
@@ -1045,8 +1068,23 @@ class UFOMG5Converter(object):
 
         if nb_vector != nb_gold:
             mappings = self.get_identical_goldstone_mapping(gold_vertex,vertex,goldstone, vector)
-            for lorentz in list(gold_vertex.get('lorentz')):
-                for mapping in mappings:
+            for mapping in mappings:
+                color_map = {}
+                for i, col in enumerate(gold_vertex.get('color')):
+                    new_col = self.get_symmetric_color(str(col), mapping)
+                    if new_col not in  ['1 ', '1 1']:
+                        new_col = ColorString(new_col)
+                    else:
+                        color_map[i]=i
+                        continue 
+                    if new_col in vertex.get('color'):
+                        new_col_index = vertex.get('color').index(new_col)
+                    else:
+                        new_col_index = len( vertex.get('color'))
+                        vertex.get('color').append(new_col)
+                    color_map[i] = new_col_index
+
+                for lorentz in list(gold_vertex.get('lorentz')):
                     new_lorentz = self.get_symmetric_lorentz(lorentz, mapping)
                     new_lorentz_index = len(vertex.get('lorentz'))
                     if new_lorentz in vertex.get('lorentz'):
@@ -1058,7 +1096,7 @@ class UFOMG5Converter(object):
                     for (color, lorentz2), value in list(vertex.get('couplings').items()):
                         if vertex.get('lorentz')[lorentz2] != lorentz:
                             continue
-                        vertex.get('couplings')[color,new_lorentz_index] = value        
+                        vertex.get('couplings')[color_map[color],new_lorentz_index] = value        
 
     def get_identical_goldstone_mapping(self, gold_vertex, v_vertex, goldstone, vector):
         """generate a mapping of the various possible assignment.
@@ -1862,7 +1900,6 @@ class UFOMG5Converter(object):
         
         #original = copy.copy(data_string)
         #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-        
         
         output = []
         factor = 1

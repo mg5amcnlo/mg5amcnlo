@@ -55,6 +55,66 @@ class TestImportUFO(unittest.TestCase):
         """Test that the expansion_order is set"""
         self.assertEqual(self.base_model.get('expansion_order'),
                          {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
+        
+
+    def test_get_symmetric_lorentz(self):
+
+        import models as ufomodels
+        ufo_model = ufomodels.load_model(import_ufo.find_ufo_path('sm'), decay=False)
+        ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model)    
+        model = ufo2mg5_converter.load_model()
+
+        #sm = import_ufo.load_model(import_ufo.find_ufo_path('sm'), False)
+        #obj = import_ufo.UFOMG5Converter(sm)
+        #obj.load_model()
+        old_lor = ufo2mg5_converter.get_symmetric_lorentz('VSS1', {}, change_number=False)
+        self.assertEqual(old_lor.name, 'VSS1')
+        self.assertEqual(old_lor.structure, 'P(1,2) - P(1,3)')        
+        new_lor = ufo2mg5_converter.get_symmetric_lorentz('VSS1', {0: 1, 1: 2, 2: 0}, change_number=True)
+        self.assertEqual(new_lor.name, 'SVS2')
+        self.assertEqual(new_lor.structure, 'P(2,3) - P(2,1)')
+        new_lor = ufo2mg5_converter.get_symmetric_lorentz('VSS1', {1: 2, 2: 1}, change_number=True)
+        self.assertEqual(new_lor.name, 'VSS2')
+        self.assertEqual(new_lor.structure, 'P(1,3) - P(1,2)')
+
+
+        old_lor = ufo2mg5_converter.get_symmetric_lorentz('VVSS1', {}, change_number=False)
+        self.assertEqual(old_lor.name, 'VVSS1')
+        self.assertEqual(old_lor.structure, 'Metric(1,2)')     
+
+        new_lor = ufo2mg5_converter.get_symmetric_lorentz('VVSS1', {0: 1, 1: 0, 2: 3, 3:2}, change_number=True)
+        self.assertEqual(new_lor.name, 'VVSS2')
+        self.assertEqual(new_lor.structure, 'Metric(2,1)')
+
+        # here they are no need of a new lorentz
+        new_lor = ufo2mg5_converter.get_symmetric_lorentz('VVSS1', {2: 3, 3:2}, change_number=True)
+        self.assertEqual(new_lor.name, 'VVSS1')
+        self.assertEqual(new_lor.structure, 'Metric(1,2)')
+
+        # here flip Scalar and Vector
+        new_lor = ufo2mg5_converter.get_symmetric_lorentz('VVSS1', {0: 3, 1:2,2: 1, 3:0}, change_number=True)
+        self.assertEqual(new_lor.name, 'SSVV2')
+        self.assertEqual(new_lor.structure, 'Metric(4,3)')
+
+    def test_get_symmetric_color(self):
+        """ """
+
+        fct = import_ufo.UFOMG5Converter.get_symmetric_color
+
+        output = fct(' 1 T(2,1,0)', {})
+        self.assertEqual(output, ' 1 T(2,1,0)')
+
+        output = fct(' 1 T(2,1,0)', {0:1, 1:0})
+        self.assertEqual(output, ' 1 T(2,0,1)')
+
+        output = fct(' 1 T(2,1,0)', {0:1, 1:2, 2:0})
+        self.assertEqual(output, ' 1 T(0,2,1)')
+
+        output = fct(' 1', {0:1, 1:2, 2:0})
+        self.assertEqual(output, ' 1') 
+
+
+
 
 class TestImportUFO_fromcmd(unittest.TestCase):
 
