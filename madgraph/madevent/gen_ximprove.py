@@ -300,7 +300,7 @@ class gensym(object):
                     bad_amps_perhel = []
                 if __debug__:
                     mtext = open(matrix_file).read()
-                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    nb_amp = int(re.findall(r'PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
                     logger.debug('(%s) nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', split_file[-1], len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))

@@ -1786,7 +1786,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         # 2. compute the decay matrix-element
         decay_text = []
         processes_decay = []

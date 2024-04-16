@@ -1825,7 +1825,7 @@ class Test_Channel(unittest.TestCase):
         Nice string of channel_a,b,c (new leg ordering):
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) \ mu(8) vm(12)
+                         \\ mu(7) vm(11) \\ mu(8) vm(12)
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
           \t~(6) 
@@ -1842,7 +1842,7 @@ class Test_Channel(unittest.TestCase):
           \t (4) 
           \t~(5) 
           \t~(6) > b~(6) w-(9)          w-(10)
-                         \ mu(9) vm(11) \ mu(10) vm(12)
+                         \\ mu(9) vm(11) \\ mu(10) vm(12)
         Channel_b:
         ((10(13),12(-14)>10(-24),id:44),(9(13),11(-14)>9(-24),id:44),
         (6(-5),9(-24),10(-24)>6(-6),id:901),(3(-5),8(-24)>3(-6),id:54),
@@ -1852,10 +1852,10 @@ class Test_Channel(unittest.TestCase):
         --------------
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) 
+                         \\ mu(7) vm(11) 
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
-                          \ mu(10) vm(12)
+                          \\ mu(10) vm(12)
           \t~(6) 
         Channel_c:
         ((10(13),12(-14)>10(-24),id:44),(7(13),11(-14)>7(-24),id:44),

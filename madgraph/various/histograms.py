@@ -2864,7 +2864,7 @@ plot \\"""
             if not mu[0] in ['none',None]:
                 major_title += r', dynamical\_scale\_choice=%s'%mu[0]
             if not pdf[0] in ['none',None]:
-                major_title += ', PDF=%s'%pdf[0].replace('_','\_')
+                major_title += ', PDF=%s'%pdf[0].replace('_',r'\_')
 
             # Do not show uncertainties for individual jet samples (unless first
             # or specified explicitely and uniquely)
@@ -2937,7 +2937,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var+3,color_index,\
-'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
+r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
@@ -2947,7 +2947,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
-'%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
+'%s PDF=%s' % (title,pdf[j].replace('_',r'\_'))))
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines

@@ -67,7 +67,7 @@ def parse_info_str(fsock):
     """
 
     info_dict = {}
-    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+    pattern = re.compile(r"(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
     for entry in fsock:
         entry = entry.strip()
@@ -614,10 +614,10 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
     #search file
     file_to_change=find_makefile_in_dir(directory)
     if compiler_type == 'gfortran':
-        comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
         var = 'FC'
     elif compiler_type == 'cpp':
-        comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)CXX\s*=\s*(.+)\s*$')
         var = 'CXX'
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
@@ -861,9 +861,9 @@ def detect_current_compiler(path, compiler_type='fortran'):
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
     if compiler_type == 'fortran':
-        comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*FC\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     elif compiler_type == 'cpp':
-        comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*CXX\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
@@ -1895,12 +1895,12 @@ class EasterEgg(object):
     May4_banner = "*                           _____                          *\n" + \
         "*                       ,-~\"     \"~-.                      *\n" + \
         "*        *            ,^ ___         ^.             *      *\n" + \
-        "*          *         / .^   ^.         \         *         *\n" + \
+        "*          *         / .^   ^.         \\         *         *\n" + \
         "*            *      Y  l  o  !          Y      *           *\n" + \
         "*              *   l_  `.___.'         _,[   *             *\n" + \
         "*                * |^~\"--------------~\"\"^| *               *\n" + \
         "*              *   !     May the 4th     !   *             *\n" + \
-        "*            *       \                 /       *           *\n" + \
+        "*            *       \\                 /       *           *\n" + \
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
@@ -1909,13 +1909,13 @@ class EasterEgg(object):
         "* M::::::::::M       M::::::::::M                          *\n" + \
         "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
         "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
-        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \\__ \\                *\n" + \
         "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
         "* M::::::M   M:::::::M   M::::::M                          *\n" + \
         "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
-        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \\| '__|       *\n" + \
         "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
-        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M   |_/\\/\\___/|_|          *\n" + \
         "* M::::::M               M::::::M                          *\n" + \
         "* MMMMMMMM               MMMMMMMM                          *\n" + \
         "*                                                          *\n" + \

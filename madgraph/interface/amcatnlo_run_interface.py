@@ -3487,7 +3487,7 @@ RESTART = %(mint_mode)s
             r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_abs_contr_err>[\d\+-Eed\.]*)\s*\%\)")
     
         virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
-                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
+                     r"-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
         
         channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
         
@@ -3652,7 +3652,7 @@ RESTART = %(mint_mode)s
         # =======================================
     
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
-                     "(?P<time>[\d\+-Eed\.]*)\s*")
+                     r"(?P<time>[\d\+-Eed\.]*)\s*")
 
         for logf in log_GV_files:
             logfile=open(logf,'r')
@@ -4294,7 +4294,7 @@ RESTART = %(mint_mode)s
             else:
                 pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
                 
-                pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
+                pythiare = re.compile(r"\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
                 # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
                                                          
                 for line in pythia_log:
@@ -4931,7 +4931,7 @@ RESTART = %(mint_mode)s
         # find the number of the integration channel
         splittings = []
         ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
-        pattern = re.compile('for i in (\d+) ; do')
+        pattern = re.compile(r'for i in (\d+) ; do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
         # then open the nevents_unweighted_splitted file and look for the 
