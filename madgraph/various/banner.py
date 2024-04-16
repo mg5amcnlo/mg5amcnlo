@@ -1509,7 +1509,10 @@ class ConfigFile(dict):
                                     v /=  float(split[2*i+2])
                         except:
                             v=0
-                            raise InvalidCmd("%s can not be mapped to a float" % value)
+                            if "scan" in value:
+                               raise InvalidCmd("%s is not supported here. Note that scan command can not be present simultaneously in  the run_card and param_card." % value) 
+                            else:
+                                raise InvalidCmd("%s can not be mapped to a float" % value)
                         finally:
                             value = v
             else:
