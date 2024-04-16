@@ -288,7 +288,7 @@ class ShowerCard(banner.RunCard):
             self.text = open(template,'r').read()
 
 
-        key_re = re.compile('^(\s*)([\S^#]+)(\s*)=(\s*)([^#]*?)(\s*)(\#.*|$)')
+        key_re = re.compile(r'^(\s*)([\S^#]+)(\s*)=(\s*)([^#]*?)(\s*)(\#.*|$)')
         newlines = []
         for line in self.text.split('\n'):
             key_match = key_re.findall(line)
