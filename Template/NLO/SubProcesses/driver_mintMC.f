@@ -794,6 +794,7 @@ c 1/proc_map(0,0)*vol1)
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
 c$$$         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+! TODO: fix FxFx scale setting.         
 c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
@@ -801,17 +802,22 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv.eq.'born') then
+               ! Doing only the Born contribution.
                call compute_born
                call get_born_flow(flow_picked)
                call Bornonly_shower_scale(p_born,flow_picked)
             elseif (abrv(1:2).eq.'vi') then
+               ! Doing only the Virtual contribution (could be because
+               ! we are generating a virtual event).
                call compute_nbody_noborn
                call get_born_flow(flow_picked)
                call compute_shower_scale_nbody(p_born,flow_picked)
             else
+               ! Normal: all contributions included
                call compute_born
                call compute_nbody_noborn
-               ! TODO: Compute shower scale here already??
+               call get_born_flow(flow_picked)
+               call compute_shower_scale_nbody(p_born,flow_picked)
             endif
          endif
 
@@ -819,6 +825,7 @@ c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
 c$$$         call include_shape_in_shower_scale(p,nFKS_picked_nbody
 c$$$     $        ,ifold_counter)
+! TODO: fix set_colour_con.
          call set_colour_connections(nFKS_picked_nbody,ifold_counter)
             
          
@@ -846,29 +853,41 @@ c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
 c Set the shower scales            
-            if (ickkw.eq.3) then
-               call set_FxFx_scale(0,p) ! reset the FxFx scales
-            endif
-            call set_cms_stuff(izero)
-            call set_shower_scale_noshape(p,iFKS*2-1)
-            if (ickkw.eq.3) then
-               call set_FxFx_scale(2,p1_cnt(0,1,0))
-            endif
-            call set_cms_stuff(mohdr)
-            call set_shower_scale_noshape(p,iFKS*2)
-            if (ickkw.eq.3) then
-               if (p(0,1).gt.0d0) then
-                  call set_FxFx_scale(3,p)
-               endif
-            endif              
+! TODO : fix FxFx
+c$$$            if (ickkw.eq.3) then
+c$$$               call set_FxFx_scale(0,p) ! reset the FxFx scales
+c$$$            endif
+
+! This can go:            
+c$$$            call set_cms_stuff(izero)
+c$$$            call set_shower_scale_noshape(p,iFKS*2-1)
+
+! TODO: fix FxFx
+c$$$            if (ickkw.eq.3) then
+c$$$               call set_FxFx_scale(2,p1_cnt(0,1,0))
+c$$$            endif
+
+! This can go:            
+c$$$            call set_cms_stuff(mohdr)
+c$$$            call set_shower_scale_noshape(p,iFKS*2)
+
+! TODO : fix FxFx
+c$$$            if (ickkw.eq.3) then
+c$$$               if (p(0,1).gt.0d0) then
+c$$$                  call set_FxFx_scale(3,p)
+c$$$               endif
+c$$$            endif
+            
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+c$$$ TODO : fix FxFx
+c$$$            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(mohdr)
-            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+c$$$ TODO : fix FxFx
+c$$$            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             if (passcuts_nbody .and. abrv.ne.'real') then
@@ -876,7 +895,8 @@ c check if event or counter-event passes cuts
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
-                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+c$$$ TODO : fix FxFx
+c$$$                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
                   call compute_MC_subt_term(p,passcuts_nbody,gfactsf
@@ -894,7 +914,8 @@ c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_cms_stuff(izero)
-               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+c$$$ TODO : fix FxFx
+c$$$               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
                call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
@@ -910,7 +931,8 @@ c Include the real-emission contribution.
             if (passcuts_n1body) then
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
-               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+c$$$ TODO : fix FxFx
+c$$$               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
                call include_multichannel_enhance(2)
                sudakov_damp=probne

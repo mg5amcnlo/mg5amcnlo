@@ -669,17 +669,17 @@ c -- call to MC counterterm functions
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
-      if (mcatnlo_delta) then
-c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
-c define 'factor'.  This damping 'factor' is used only here, and not in
-c the following.  A subsequent call to assign_emsca_array, in
-c complete_xmcsubt, will set emsca_a and related quantities.  This means
-c that, event by event, MC damping factors D(mu_ij) corresponding to the
-c emscwgt_a determined now, are not computed with the actual mu_ij
-c scales used as starting scales (which are determined in the subsequent
-c call to assign_emsca_array), which however is fine statistically
-c$$$         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
-      endif
+c$$$      if (mcatnlo_delta) then
+c$$$c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
+c$$$c define 'factor'.  This damping 'factor' is used only here, and not in
+c$$$c the following.  A subsequent call to assign_emsca_array, in
+c$$$c complete_xmcsubt, will set emsca_a and related quantities.  This means
+c$$$c that, event by event, MC damping factors D(mu_ij) corresponding to the
+c$$$c emscwgt_a determined now, are not computed with the actual mu_ij
+c$$$c scales used as starting scales (which are determined in the subsequent
+c$$$c call to assign_emsca_array), which however is fine statistically
+c$$$c$$$         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+c$$$      endif
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
@@ -1112,16 +1112,18 @@ c G-function parameters
       becl=-(1d0-ymin)
       gfactcl=gfunction(y_ij_fks,alsf,becl,1d0)
       if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
-c For processes that have jets at the Born level, we need to include a
-c theta-function: The radiation from the shower should always be softer
-c than the jets at the Born, hence no need to include the MC counter
-c terms when the radiation is hard.
-      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
-         emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-         emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
-         is_pt_hard=.true.
-         return
-      endif
+! TODO : this can go (in fact, all is_pt_hard stuff can go). It should
+! be "automatic" when using the correct scales in get_dead_zone
+c$$$c For processes that have jets at the Born level, we need to include a
+c$$$c theta-function: The radiation from the shower should always be softer
+c$$$c than the jets at the Born, hence no need to include the MC counter
+c$$$c terms when the radiation is hard.
+c$$$      if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
+c$$$         emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+c$$$         emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
+c$$$         is_pt_hard=.true.
+c$$$         return
+c$$$      endif
 
       if (btest(MCcntcalled,2)) then
          write (*,*) 'Third bit of MCcntcalled should not be set yet'
@@ -5099,7 +5101,9 @@ c
          endif
 
       endif
- 
+! TODO: replace shower_S_scale by shower_scale_nbody_nodamp. This means
+! that all needs to be done dipole-by-dipole (and for a given flow that
+! was picked in scale_module).
       max_scale=min(max_scale,shower_S_scale(nFKSprocess*2-1))
 ! TODO : reinstate the line below
 c$$$      max_scale=max(max_scale,scaleMCcut)

@@ -2,7 +2,8 @@ module scale_module
   use kinematics_module
   use process_module
   implicit none
-  double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody
+  double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
+       shower_scalee_nbody_nodamp
   double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
@@ -37,13 +38,16 @@ contains
              call get_scaleminmax(ref_scale,scalemin,scalemax)
              ! this breaks backward compatibility. In earlier versions, the
              ! shower_scale_nbody was constrained by the ptresc (which
-             ! depended on the n+1-body). Also, now we randomize for each
-             ! dipole separately also for non-delta.
+             ! depended on the n+1-body and was used to decide if in life or
+             ! dead zone). Also, now we randomize for each dipole separately
+             ! also for non-delta.
              rrnd=ran2()
              rrnd=damping_inv(rrnd,1d0)
              shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
+             shower_scale_nbody_nodamp(i,j)=scalemax
           else
              shower_scale_nbody(i,j)=-1d0
+             shower_scale_nbody_nodamp(i,j)=-1d0
           endif
        enddo
     enddo
@@ -57,9 +61,11 @@ contains
     do i=1,next_n
        do j=1,next_n
           if (valid_dipole_n(i,j,flow_picked)) then
-             shower_scale_nbody(i,j)=global_ref_scale
+             shower_scale_nbody(i,j)=get_ref_scale_dipole(p,i,j)
+             shower_scale_nbody_nodamp(i,j)=shower_scale_nbody(i,j)
           else
              shower_scale_nbody(i,j)=-1d0
+             shower_scale_nbody_nodamp(i,j)=-1d0
           endif
        enddo
     enddo
@@ -108,31 +114,32 @@ contains
     implicit none
     integer :: i,j
     double precision,dimension(0:3,next_n) :: p
-    if (.not.mcatnlo_delta_mod) then
-       get_ref_scale_dipole=global_ref_scale
-    else
+!!$    if (.not.mcatnlo_delta_mod) then
+!!$       get_ref_scale_dipole=global_ref_scale
+!!$    else
        get_ref_scale_dipole=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0))) &
                                 ,global_ref_scale)
-    endif
+!!$    endif
   end function get_ref_scale_dipole
   
   
   subroutine get_global_ref_scale(p)
     ! this is the global reference shower scale (i.e., without damping),
-    ! i.e. HT/2 for non-delta, and shat reduced by kT of splitting, or ET of
-    ! massive in case of delta.
+    ! i.e. HT/2 for non-delta (no longer used), and shat reduced by kT of
+    ! splitting, or ET of massive in case of delta (now for both delta and
+    ! non-delta).
     implicit none
     double precision,dimension(0:3,next_n) :: p,pQCD
     integer :: i,j,NN
-    if (.not.mcatnlo_delta_mod) then
-       ! Sum of final-state transverse masses
-       global_ref_scale=0d0
-       do i=3,next_n
-          global_ref_scale=global_ref_scale+ &
-               dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
-       enddo
-       global_ref_scale=global_ref_scale/2d0
-    else
+!!$    if (.not.mcatnlo_delta_mod) then
+!!$       ! Sum of final-state transverse masses
+!!$       global_ref_scale=0d0
+!!$       do i=3,next_n
+!!$          global_ref_scale=global_ref_scale+ &
+!!$               dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
+!!$       enddo
+!!$       global_ref_scale=global_ref_scale/2d0
+!!$    else
  ! start from s-hat      
        global_ref_scale=sqrt(2d0*dot(p(0,1),p(0,2)))
        NN=0
@@ -163,7 +170,7 @@ contains
              global_ref_scale=min(global_ref_scale,pt(pQCD(0,i)))
           enddo
        endif
-    endif
+!!$    endif
   end subroutine get_global_ref_scale
 
   

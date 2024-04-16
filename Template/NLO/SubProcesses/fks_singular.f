@@ -862,15 +862,15 @@ c$$$      include 'madfks_mcatnlo.inc'
       logical UseSfun
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
-      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-     $     ,lzone,zhw,nofpartners,xmcxsec)
-      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       else
          sevmc = fks_Hij(p,i_fks,j_fks)
       endif
       if (sevmc.eq.0d0) return
+      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
+     $     ,lzone,zhw,nofpartners,xmcxsec)
+      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if (passcuts .and. flagmc) then
          do i=1,nofpartners
             if(lzone(i))then
