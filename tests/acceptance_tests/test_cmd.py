@@ -55,7 +55,7 @@ class TestCmdShell1(unittest.TestCase):
         """join path and treat spaces"""   
 
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -521,7 +521,7 @@ class TestCmdShell2(unittest.TestCase,
 
         #log_output = open(logfile, 'r').read()
         #misc.sprint(log_output)
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -585,7 +585,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_epem_epem'), shell=True)
         (log_output, err) = p.communicate()
         log_output = log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -616,7 +616,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -652,7 +652,7 @@ class TestCmdShell2(unittest.TestCase,
                                                  oneproc), shell=True)
             
                 log_output = open(logfile, 'r').read()
-                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                                    re.IGNORECASE)
                 me_groups = me_re.search(log_output)
                 self.assertTrue(me_groups)
@@ -707,7 +707,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_gg_hgg'), shell=True)
         (log_output, err) = p.communicate()                                         
         log_output =log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -1563,7 +1563,7 @@ P1_qq_wp_wp_lvl
                                          'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)

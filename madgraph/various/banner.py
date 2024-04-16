@@ -116,8 +116,8 @@ class Banner(dict):
     ############################################################################
     #  READ BANNER
     ############################################################################
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     tag_to_file={'slha':'param_card.dat',
       'mgruncard':'run_card.dat',
@@ -1462,7 +1462,7 @@ class ConfigFile(dict):
                     value =int(value[:-1]) * convert[value[-1]] 
                 elif '/' in value or '*' in value:               
                     try:
-                        split = re.split('(\*|/)',value)
+                        split = re.split(r'(\*|/)',value)
                         v = float(split[0])
                         for i in range((len(split)//2)):
                             if split[2*i+1] == '*':
@@ -1500,7 +1500,7 @@ class ConfigFile(dict):
                         value = float(value)
                     except ValueError:
                         try:
-                            split = re.split('(\*|/)',value)
+                            split = re.split(r'(\*|/)',value)
                             v = float(split[0])
                             for i in range((len(split)//2)):
                                 if split[2*i+1] == '*':
@@ -3056,7 +3056,7 @@ class RunCard(ConfigFile):
                 # do not write hidden parameter not hidden for this template 
                 #
                 if python_template:
-                    written = written.union(set(re.findall('\%\((\w*)\)s', open(template,'r').read(), re.M)))
+                    written = written.union(set(re.findall(r'\%\((\w*)\)s', open(template,'r').read(), re.M)))
                 to_write = to_write.union(set(self.hidden_param))
                 to_write = to_write.difference(written)
 
@@ -3144,7 +3144,7 @@ class RunCard(ConfigFile):
                 text = open(path,'r').read()
                 #misc.sprint(text)
                 f77_type = ['real*8', 'integer', 'double precision', 'logical']
-                pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                pattern = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                                 % {'type':'|'.join(f77_type)}, re.I+re.M)
                 for fct in pattern.findall(text):
                     fsock = file_writers.FortranWriter(tmp,'w')
@@ -3231,7 +3231,7 @@ class RunCard(ConfigFile):
         #handle metadata
         opts = {}
         forced_opts = []
-        for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+        for key,val in re.findall(r"\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
             forced_opts.append(key)
             if val in ['True', 'False']:
                 opts[key] = eval(val)

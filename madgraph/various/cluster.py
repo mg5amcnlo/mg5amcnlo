@@ -939,7 +939,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         output = output.decode(errors='ignore')
         try:
             id = pat.search(output).groups()[0]
@@ -1028,7 +1028,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         output = output.decode(errors='ignore')
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1591,7 +1591,7 @@ class GECluster(Cluster):
 
         output = a.communicate()[0].decode(errors='ignore')
         #Your job 874511 ("test.sh") has been submitted
-        pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+        pat = re.compile(r"Your job (\d*) \(",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1609,7 +1609,7 @@ class GECluster(Cluster):
         if not status:
             return 'F'
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-        pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+        pat = re.compile(r"^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
         stat = ''
         for line in status.stdout.read().decode(errors='ignore').split('\n'):
             if not line:
@@ -1639,7 +1639,7 @@ class GECluster(Cluster):
             cmd = 'qstat -s %s' % statusflag
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-            pat = re.compile("^(\d+)")
+            pat = re.compile(r"^(\d+)")
             for line in status.stdout.read().decode(errors='ignore').split('\n'):
                 line = line.strip()
                 try:
@@ -1739,7 +1739,7 @@ class SLURMCluster(Cluster):
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
-            id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
+            id = re.findall(r'Submitted batch job ([\d\.]+)', ' '.join(output_arr))
             
             if not id or len(id)>1:
                 raise ClusterManagmentError( 'fail to submit to the cluster: \n%s' \

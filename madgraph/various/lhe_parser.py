@@ -1542,11 +1542,11 @@ class Event(list):
             return self.loweight
         
         if not hasattr(Event, 'loweight_pattern'):
-            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
+                                    <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb1>1|2)["']?\\>\\s*(?P<beam1>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb2>1|2)["']?\\>\\s*(?P<beam2>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <totfact>\\s*(?P<totfact>[\\d.e+-]*)\\s*</totfact>
             ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
@@ -1599,7 +1599,7 @@ class Event(list):
         self.matched_scale_data = []
         
 
-        pattern  = re.compile("<scales\s|</scales>")
+        pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1607,7 +1607,7 @@ class Event(list):
             tmp = {}
             start,content, end = data
             self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
             for i in range(1, len(self)+1):
@@ -1631,7 +1631,7 @@ class Event(list):
             return self.syscalc_data
         
         pattern  = re.compile("<mgrwt>|</mgrwt>")
-        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        pattern2 = re.compile("<(?P<tag>[\\w]*)(?:\\s*(\\w*)=[\"'](.*)[\"']\\s*|\\s*)>(.*)</(?P=tag)>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
