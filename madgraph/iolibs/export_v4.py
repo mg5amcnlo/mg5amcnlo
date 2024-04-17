@@ -7438,7 +7438,9 @@ class UFO_model_to_mg4(object):
                             common /to_updateloop/updateloop
                             include \'model_functions.inc\'
                             double precision Gother
-                            
+                            double precision last_scale
+                            data last_scale /0d0/
+                            save last_scale
                             double precision model_scale
                             common /model_scale/model_scale
                             """)
@@ -7614,6 +7616,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines(' first = .false.') 
         fsock.writelines(" call PYRATE_RUNNING(mue_ref_fixed) ! all \n" ) 
         fsock.writelines(' elseif(.not.fixed_extra_scale) then')
+        fsock.writelines('    if(last_scale.eq.mue_over_ref*model_scale) return')
+        fsock.writelines('    last_scale = mue_over_ref*model_scale')
         fsock.writelines(" call PYRATE_RUNNING(mue_over_ref*model_scale) ! all \n" ) 
         if self.MUE:
             fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
