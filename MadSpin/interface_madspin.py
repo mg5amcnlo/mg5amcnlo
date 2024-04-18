@@ -27,7 +27,7 @@ import time
 import glob
 import six
 from six.moves import range
-
+from itertools import filterfalse
 
 pjoin = os.path.join
 if '__main__' == __name__:
@@ -1333,7 +1333,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     logger.critical('The number of event generated is only %s/%s. This typically indicates that you need specify cut on the decay process.',me5_cmd.results.current['nb_event'], run_card["nevents"])
                     logger.critical('We strongly suggest that you cancel/discard this run.')
                 me5_cmd.exec_cmd("exit")
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
+                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))    
+                print(f"Spyros: writing decay file to {pjoin(decay_dir, 'events.lhe.gz')}")               
             else:
                 if not self.seed:
                     if hasattr(self, 'mother'):
@@ -1346,7 +1347,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.seed -= 30081*30081        
                 logger.info('Will use seed %s' % (self.seed))
                 misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
+                out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))     
             if cumul:
                 break
         
@@ -1398,6 +1399,9 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         #count the number of particle need to be decayed.
         to_decay = collections.defaultdict(int)
+        # Spyros: dictionary with particle properties
+        decay_dict = {}
+	
         nb_event = 0
         for event in orig_lhe:
             if self.options['fixed_order']:
@@ -1407,7 +1411,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
-
+                    # Properties of decaying particle
+                    width = self.banner.get('param_card', 'decay', abs(particle.pdg)).value
+                    mass  = self.banner.get('param_card', 'mass', abs(particle.pdg)).value
+                    color = self.model.get_particle(particle.pdg).get('color')
+                    decay_dict[particle.pdg] = [width, mass, color]
+        
+        print(f"Spyros to_decay = {to_decay}")
+        	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             if not self.model:
@@ -1452,8 +1463,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     efficiency = 1.1
                 else:
                     efficiency = 2.0
-                    
+              
+                print(f"Spyros nb_beeded = {nb_needed} , nb_event = {nb_event}")
+		    
                 totwidth = self.banner.get('param_card', 'decay', abs(pdg)).value
+				
                 #check if a splitting is needed
                 if nb_needed == nb_event:
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
@@ -1508,7 +1522,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file,self.options)
 
-
+        misc.sprint("Compile")
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
         self.all_f2py = {}
@@ -1516,12 +1530,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_nhel = {}
         self.all_jamp = {}
         self.all_inter = {}
+        self.all_inter_ij = {}
         self.all_matrix = {}
-        print(self.all_me)
-        #4. determine the maxwgt
-        maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
         
-        #5. generate the decay 
+        misc.sprint("Determine maxwgt")
+        print(f"Spyros evt_decayfile = {evt_decayfile}")
+        
+	# Instantiate dictionary to hold inter for production
+	# This is to be filled for each production event
+        inter_prod_dict = {}
+	
+	#4. determine the maxwgt
+        maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile, decay_dict, inter_prod_dict)
+        print(f"Spyros: maxwgt = {maxwgt}")
+        
+        #5. generate the decay (for each production event)
         orig_lhe.seek(0)
         output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe'), 'w')
         if self.options['fixed_order']:
@@ -1535,17 +1558,25 @@ class MadSpinInterface(extended_cmd.Cmd):
         nb_try, nb_event = 0, len(orig_lhe)
         
         start = time.time()
+        misc.sprint("Start generating decays")
         for curr_event,production in enumerate(orig_lhe):
+            #print(f"--- Event {curr_event} ---")
+	    
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
             if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
             #else:
             #    logger.info("next event [%s]", time.time()-start)
+            	    	    
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
-                full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays)
+                # Spyros cached
+                full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
+                # Spyros uncached (how it was before)
+                #full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays)
+                print(f"Spyros wgt = {wgt}")
                 if random.random()*maxwgt < wgt:
                     if self.options['fixed_order']:
                         full_evt = [full_evt] + [evt.add_decays(decays) for evt in counterevt]
@@ -1570,8 +1601,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.efficiency = 1 # to let me5 to write the correct number of events
         misc.sprint('Done so far. output written in %s' % output_lhe.name)
         
-    
-
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
@@ -1579,6 +1608,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         out = collections.defaultdict(list)
         particles = [p for p in production if int(p.status) == 1.0]
         ids = [particle.pid for particle in particles]
+        #print(f"Spyros production = {production}")
         for i,particle in enumerate(particles):
             # check if we need to decay the particle 
             if particle.pdg not in evt_decayfile:
@@ -1626,18 +1656,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     evt_decayfile[particle.pdg].update(new_file)
                     decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                     continue
-            
+            #print(f"Spyros: chosen decay = {decay}")
             out[particle.pdg].append(decay)
                         
         return out
         
     
-    def get_maxwgt_for_onshell(self, orig_lhe, evt_decayfile):
+    def get_maxwgt_for_onshell(self, orig_lhe, evt_decayfile, decay_dict, inter_prod_dict=None):
         """determine the maximum weight for the onshell (or similar) strategy"""
 
         # event_decay is a dict pdg -> list of event file (contain the decay)
-        
-        
+                
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
             return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
         
@@ -1652,7 +1681,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
-        
+
         orig_lhe.seek(0)
         
         for i in range(nevents):
@@ -1665,7 +1694,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function 
-                _, wgt = self.get_onshell_evt_and_wgt(base_event, decays)
+                _, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
+                #print(f"Spyros wgt for max : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
             
@@ -1688,12 +1718,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['ms_dir']:
             open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
-            
-            
-            
 
             
-    def get_onshell_evt_and_wgt(self, production, decays):
+    def get_onshell_evt_and_wgt(self, production, decays, decay_dict, inter_prod_dict=None):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
@@ -1708,137 +1735,171 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
+	# Calculate production ME	
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
             production_me = self.calculate_matrix_element(production)
             production.me_wgt = production_me
+        
+	# Calculate decay ME
         decay_me = 1.0
         for pdg in decays:
             for dec in decays[pdg]:
                 decay_me *= self.calculate_matrix_element(dec)
             random.shuffle(decays[pdg])
 
-
+        # Calculate production*decay ME
         if self.generate_all.mode == 'onshell':
             full_event = lhe_parser.Event(str(production))
             full_event = full_event.add_decays(decays)
             full_me = self.calculate_matrix_element(full_event)
-#            print(full_event)
         else:
-            full_event, full_me = self.calculate_matrix_element_from_density(production, decays)
-#            print(full_event)
-            #full_event need o be set after since modifies production
+            full_event, full_me = self.calculate_matrix_element_from_density(production, decays, decay_dict, inter_prod_dict)
+	    # full_event need to be set after since modifies production
         return full_event, full_me/(production_me*decay_me)
-        
-    def calculate_matrix_element_from_density(self, production, decays):
-
-        #        print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
- #        print("WARNING decays might not be boosted to the correct frame yet")
-        
-        """routine to return all the possible inter for an event"""
-
+ 
+           
+    def calculate_matrix_element_from_density(self, production, decays, decay_dict, inter_prod_dict=None):
+        """routine to return all the possible inter for an event"""        
+	
         full_event = lhe_parser.Event(str(production))
         param_card = self.banner.param_card
-        
+        inter_prod_dict_exists = bool(inter_prod_dict)
+        #print(f"Spyros production_event = {full_event}")
+        #print(f"Spyros decays = {decays}")
+		
         for pdg in decays:
+            # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
+            
+	    # Spyros: this should later be removed for allowing more than one decays
             assert len(init_part) == 1 
-
+            
+	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
-            width = check_param_card.ParamCard(param_card).get_value('decay',abs(pdg))
-            mass = check_param_card.ParamCard(param_card).get_value('mass',pdg)
-#            print('mass=',mass)
-#            print('width=',width)
-#            width = self.model.get_particle(pdg).get('width')
-#            mass = self.model.get_particle(pdg).get('mass')
-            color = self.model.get_particle(pdg).get('color')
+            #print(f"Spyros position = {position}")
+	    
+	    # ------- inter_prod_dict filling -------- #
+            if inter_prod_dict_exists and len(inter_prod_dict) == 0:
+	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
+                nhel_p_tot, iden_p = self.get_nhel(production,position[0])
+                                 
+	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
+	        # to make the dictionary
+                inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
+                #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
+	        		
+	        # Let's store the inter_prod in the dictionary
+                for hpair in inter_prod_dict: 
+                    inter_prod_dict[hpair] = self.get_inter_value(production, hpair)
+                #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
+	    # ------------------------- #
+	    
+	    # Get the color, mass and width of decaying particle
+            width = decay_dict[pdg][0]
+            mass = decay_dict[pdg][1]
+            color = decay_dict[pdg][2]
+            
+	    # propagator of the decaying particle on-shell
             D = complex(0,mass * width)
-
+            D_D_conj = D*D.conjugate()
+	    
+	    # Update the status of the particle that decays from 1 to 2
             full_event[position[0]].status = 2 
+	    
+	    # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
             for i,decay_event in enumerate(decays[pdg]):
                 part = init_part[i]
+		# We need to boost all particles in the decay event using the momentum
+		# of the decaying particle in the production event
                 boost = lhe_parser.FourMomentum(part)
                 decay_event.boost(boost)                      
-  #              print("decay event=",decay_event)         
-
-
+                #print("decay event=",decay_event)         
+                
+		# Get all helicity configurations and iden number for production and decay events
                 nhel_p_tot,iden_p = self.get_nhel(production,position[0])
-  #              print('nhel prod=',nhel_p)
+                #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
+		
                 nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
-   #             print('nhel dec=',nhel_d)
-
+                #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
+                
+		# Spyros: try to use get_all_inter
+                #all_inter_prod = self.get_all_inter(production, position)
+                #all_inter_dec = self.get_all_inter(decay_event, position)
+		
                 me = 0
+                inter_prod_dict_exists = bool(inter_prod_dict)
+                #print(f"Spyros: nhel = {len(nhel_p_tot)}")
                 for i,hel_p in enumerate(nhel_p_tot): 
-                    inter_prod = self.get_inter_value(production,hel_p)
-#    print("INTER_PROD=",inter_prod)
+                    # Verify that we only loop over the decaying particle
+		    #target_hel = full_event.get_helicity(([0,1], [i for i in range(10)])
+		    
+		    # Spyros convert hel_p from list of lists to tuple of tuples 
+		    # so that we can use the dictionary of inter_prod
+                    hp = tuple(map(tuple, (h for h in hel_p)))
+		    
+		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
+                    inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
+		    
+		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
                         inter_dec = self.get_inter_value(decay_event,hel_d)
-                        matrix_element = complex(0,0)
-                        for k in range(len(inter_prod)):
-                            matrix_element +=  (inter_prod[k] * inter_dec[k])/(D*D.conjugate())
-                        me += matrix_element
+                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
+                        me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
 
-
+                # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 
                     full_event.append(decay_event[k+1])
+                # print('full_event=',full_event)
                 
- #               print('full_event=',full_event)
-                '''
-                nhel_full = self.get_nhel_full(full_event) 
-                for i,hel_full in enumerate(nhel_full) : 
-                    m,p_full = self.get_MG_matrix_element(full_event,hel_full)
-                pdir_full,orig_order_full = self.get_pdir(full_event)
-                print("self.all_f2py=",self.all_f2py)
-#                print('pdir full',pdir_full)
-                matrix = self.all_f2py[pdir_full](p_full,0.13,0)
-                '''
-#                matrix = self.calculate_matrix_element(full_event)
-#                print('Ratio=', matrix/me)
-            
- #               print('--------------------------------------------')
- #               print('Matrix Element QH=',me)
-#                print('Matrix Element MG=',matrix)
-#                print('--------------------------------------------')
-#                print('Ratio=', matrix/me)
-#            print('--------------------------------------------')
-             
-#            print('Ratio=',full_me / me)
+		# Spyros for debugging 		
+                #print(f"Spyros full_event = {full_event}")
+                #print('--------------------------------------------')
+                #print(f"Matrix Element = {me}")
+                #print('--------------------------------------------')
+ 
         return full_event,me
 
-        '''
-        raise Exception("Not IMplemented")
-        # below is pseudo code
-        assert len(decays) == 1
-        for pdg in decays:
-            init_momenta = [part for part in production if part.get('pdg_code') == pdg and part.get('satus')==1]
-            assert len(init_momenta) == 1 
-            for i,dec_event in enumerate(decays[pdg]):
-                part = init_momenta[i]
-                position_of_part_in_event = part.event_id # to check if this works
-                #production.find_decay(i) # function to define ?
-                boost = lhe_parser.FourMomentum(part)
-                dec_event.boost(boost) # decay now is boosted (need to check that this is done correctly)
-                assert lhe_parser.FourMomentum(dec_event[0]) == boost # this is the check
 
-        # compute full-matrix-element
-        full_me = 0
-        return full_me
-        '''
+    def get_all_inter(self,event,position):
+        pdir,orig_order = self.get_pdir(event)
+        	
+        if pdir in self.all_inter_ij:
+            all_p = event.get_all_momenta(orig_order)
+            for p in all_p:
+                P = rwgt_interface.ReweightInterface.invert_momenta(p)
+                hel_fixed = event.get_helicity(orig_order) # this should be changed to allow multiple decays
+                allow_hel = [-1,1]
+                n_changing = len(position)
+                n_comb = len(allow_hel)
+                print(f"hel_fixed = {hel_fixed} , allow_hel = {allow_hel}")
+                
+                inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, allow_hel, n_changing, n_comb)
+                inter[0][0] = inter_temp[0]
+                inter[0][1] = inter_temp[1]
+                inter[1][0] = inter_temp[1].conjugate()
+                inter[1][1] = inter_temp[2]
+                return inter
+        else : 
+            self.all_inter_ij[pdir] = self.get_mymod(pdir,'ALL_INTER')
 
+        return self.get_all_inter(event, position) 	
+
+   
     def get_inter_value(self,event,nhel):
         """routine to return all the possible inter for an event"""
         
         pdir,orig_order = self.get_pdir(event)
-
+        	
         if pdir in self.all_amp:
             all_p = event.get_all_momenta(orig_order)
             for p in all_p:
 #                print(pdir,'Momenta=',p)
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
 #               print("Momenta =",P,"\n")
-                IC = [1]*len(p) 
+                IC = [1]*len(p)
                 amp = []
                 jamp = []
                 inter = []
@@ -1879,7 +1940,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self.get_nhel(event,position)
 
 
-    def get_mymod(self,pdir,INTER_or_NHEL): 
+    def get_mymod(self,pdir,MODE): 
 
         if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
@@ -1898,8 +1959,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
                 else:
                     mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat')) 
-                    if INTER_or_NHEL == 'INTER':
+                    if MODE == 'INTER':
                         return mymod.get_amp,mymod.get_jamp,mymod.get_inter,mymod.get_matrix
+                    elif MODE == 'ALL_INTER':
+                        return mymod.get_all_inter
                     else : 
                         return mymod.get_nhel
 
@@ -1924,7 +1987,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""        
         
         tag, order = event.get_tag_and_order()
-#        print(order)
+        #print(f"Spyros event = {event}")
         try:
             orig_order = self.all_me[tag]['order']
         except Exception:
@@ -1944,11 +2007,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise Exception("Ambiguous particle in production and decay. crash as requested by 'identical_particle_in_prod_and_decay'")
             out = 0
             for p in all_p:
+                #print(f"Spyros p = {p}")    
                 p = rwgt_interface.ReweightInterface.invert_momenta(p)
+                #print(f"Spyros p after reweighting= {p}")    
                 if event[0].color1 == 599 and event.aqcd==0:
                     new_value = self.all_f2py[pdir](p, 0.113, 0)
-                else:
+                else:       
                     new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                    #print(f"Spyros calculate ME for p = {p}, aqcd = {event.aqcd}, ME = {new_value}")
                 if self.options['identical_particle_in_prod_and_decay'] == "average":
                     out += new_value
                 else:

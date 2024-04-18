@@ -260,7 +260,7 @@ C     ----------
       CALL GET_AMP(P,NHEL,IC,AMP)
       CALL GET_JAMP(AMP,JAMP)
       CALL GET_MATRIX(JAMP,MATRIX)
-
+      write (*,*) "Spyros |M|^2 for NHEL=(" , NHEL, ") = :", MATRIX
 
 
       END
