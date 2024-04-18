@@ -1126,7 +1126,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     def generate_external_wavefunction(self,argument):
         """ Generate an external wavefunction """
-        
+
+        misc.sprint(argument['particle']['name'],argument.get('offshell')) 
         call="CALL "
         call_function = None
         if argument.get('is_loop'):

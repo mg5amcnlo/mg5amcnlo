@@ -433,7 +433,7 @@ C ----------
          do N = 1, N_CHANGING
             NHEL(POS(N)) = ALLOW_HEL((N-1)*N_COMB+I)
             call %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
-            call %(proc_prefix)sGET_JAMP(AMP,JAMP(I,1))
+            call %(proc_prefix)sGET_JAMP(AMP,JAMP(1,I))
           enddo
       enddo
 
@@ -441,7 +441,7 @@ C ----------
     DO I = 1, N_COMB
        DO J= I, N_COMB
          SOL = SOL +1
-         call %(proc_prefix)sGET_INTER(JAMP(I,1), JAMP(J,1), INTER(SOL))
+         call %(proc_prefix)sGET_INTER(JAMP(1,I), JAMP(1,J), INTER(SOL))
        ENDDO
     ENDDO
 

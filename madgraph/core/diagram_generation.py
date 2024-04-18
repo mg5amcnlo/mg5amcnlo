@@ -1734,7 +1734,8 @@ class MultiProcess(base_objects.PhysicsObject):
         for prod in itertools.product(*isids):
             islegs = [\
                     base_objects.Leg({'id':id, 'state': False, 
-                                      'polarization': islegs_orig[i]['polarization']})
+                                      'polarization': islegs_orig[i]['polarization'],
+                                      'offshell': islegs_orig[i]['offshell']})
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
