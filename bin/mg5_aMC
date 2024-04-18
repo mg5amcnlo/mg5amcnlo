@@ -161,12 +161,13 @@ if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
         try:
             __import__('MG5aMC_PLUGIN.%s' % options.plugin)
+            plugin = sys.modules['MG5aMC_PLUGIN.%s' % options.plugin]
         except:
             print( "ERROR: %s is not present in the PLUGIN directory. Please install it first" % options.plugin)
-
+            sys.exit()
     else:
         __import__('PLUGIN.%s' % options.plugin)
-    plugin = sys.modules['PLUGIN.%s' % options.plugin]
+        plugin = sys.modules['PLUGIN.%s' % options.plugin]
     if not plugin.new_interface:
         logging.warning("Plugin: %s do not define dedicated interface and should be used without the --mode options" % options.plugin)
         sys.exit()
