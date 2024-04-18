@@ -27,7 +27,7 @@ import time
 import glob
 import six
 from six.moves import range
-
+from itertools import filterfalse
 
 pjoin = os.path.join
 if '__main__' == __name__:
@@ -1759,13 +1759,13 @@ class MadSpinInterface(extended_cmd.Cmd):
 	    # full_event need to be set after since modifies production
         return full_event, full_me/(production_me*decay_me)
  
-        
+           
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, inter_prod_dict=None):
         """routine to return all the possible inter for an event"""        
 	
         full_event = lhe_parser.Event(str(production))
         param_card = self.banner.param_card
-        
+        inter_prod_dict_exists = bool(inter_prod_dict)
         #print(f"Spyros production_event = {full_event}")
         #print(f"Spyros decays = {decays}")
 		
@@ -1781,7 +1781,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             #print(f"Spyros position = {position}")
 	    
 	    # ------- inter_prod_dict filling -------- #
-            if inter_prod_dict is not None and len(inter_prod_dict) == 0:
+            if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
                 nhel_p_tot, iden_p = self.get_nhel(production,position[0])
                                  
@@ -1789,23 +1789,21 @@ class MadSpinInterface(extended_cmd.Cmd):
 	        # to make the dictionary
                 inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
                 #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
-	        
+	        		
 	        # Let's store the inter_prod in the dictionary
                 for hpair in inter_prod_dict: 
                     inter_prod_dict[hpair] = self.get_inter_value(production, hpair)
                 #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
 	    # ------------------------- #
 	    
-	    # Reading from cards takes O(1ms) while the rest of the operations take O(1e-5, 1e-6)
-	    #width = check_param_card.ParamCard(param_card).get_value('decay',abs(pdg))
-            #mass = check_param_card.ParamCard(param_card).get_value('mass',pdg)
-            #color = self.model.get_particle(pdg).get('color')
+	    # Get the color, mass and width of decaying particle
             width = decay_dict[pdg][0]
             mass = decay_dict[pdg][1]
             color = decay_dict[pdg][2]
             
 	    # propagator of the decaying particle on-shell
             D = complex(0,mass * width)
+            D_D_conj = D*D.conjugate()
 	    
 	    # Update the status of the particle that decays from 1 to 2
             full_event[position[0]].status = 2 
@@ -1831,6 +1829,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #all_inter_dec = self.get_all_inter(decay_event, position)
 		
                 me = 0
+                inter_prod_dict_exists = bool(inter_prod_dict)
                 #print(f"Spyros: nhel = {len(nhel_p_tot)}")
                 for i,hel_p in enumerate(nhel_p_tot): 
                     # Verify that we only loop over the decaying particle
@@ -1841,16 +1840,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     hp = tuple(map(tuple, (h for h in hel_p)))
 		    
 		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
-                    if inter_prod_dict:
-                        inter_prod = inter_prod_dict[tuple(hp)]
-                    else:
-                        inter_prod = self.get_inter_value(production,hel_p)                  
+                    inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
 		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
                         inter_dec = self.get_inter_value(decay_event,hel_d)
-                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]
-                        D_D_conj = D*D.conjugate()
+                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
 
