@@ -1530,6 +1530,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_nhel = {}
         self.all_jamp = {}
         self.all_inter = {}
+        self.all_inter_ij = {}
         self.all_matrix = {}
         
         misc.sprint("Determine maxwgt")
@@ -1824,11 +1825,18 @@ class MadSpinInterface(extended_cmd.Cmd):
 		
                 nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
-             
+                
+		# Spyros: try to use get_all_inter
+                #all_inter_prod = self.get_all_inter(production, position)
+                #all_inter_dec = self.get_all_inter(decay_event, position)
+		
                 me = 0
-                #print(f"Spyros: nhel_p_tot = {nhel_p_tot}")
+                #print(f"Spyros: nhel = {len(nhel_p_tot)}")
                 for i,hel_p in enumerate(nhel_p_tot): 
-                    # Spyros convert hel_p from list of lists to tuple of tuples 
+                    # Verify that we only loop over the decaying particle
+		    #target_hel = full_event.get_helicity(([0,1], [i for i in range(10)])
+		    
+		    # Spyros convert hel_p from list of lists to tuple of tuples 
 		    # so that we can use the dictionary of inter_prod
                     hp = tuple(map(tuple, (h for h in hel_p)))
 		    
@@ -1841,10 +1849,9 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
                         inter_dec = self.get_inter_value(decay_event,hel_d)
-                        matrix_element = complex(0,0)
-                        for k in range(len(inter_prod)):
-                            matrix_element +=  (inter_prod[k] * inter_dec[k])/(D*D.conjugate())
-                        me += matrix_element
+                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]
+                        D_D_conj = D*D.conjugate()
+                        me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
 
                 # Add decayed event to LHE record
@@ -1860,26 +1867,32 @@ class MadSpinInterface(extended_cmd.Cmd):
  
         return full_event,me
 
-        '''
-        raise Exception("Not IMplemented")
-        # below is pseudo code
-        assert len(decays) == 1
-        for pdg in decays:
-            init_momenta = [part for part in production if part.get('pdg_code') == pdg and part.get('satus')==1]
-            assert len(init_momenta) == 1 
-            for i,dec_event in enumerate(decays[pdg]):
-                part = init_momenta[i]
-                position_of_part_in_event = part.event_id # to check if this works
-                #production.find_decay(i) # function to define ?
-                boost = lhe_parser.FourMomentum(part)
-                dec_event.boost(boost) # decay now is boosted (need to check that this is done correctly)
-                assert lhe_parser.FourMomentum(dec_event[0]) == boost # this is the check
 
-        # compute full-matrix-element
-        full_me = 0
-        return full_me
-        '''
+    def get_all_inter(self,event,position):
+        pdir,orig_order = self.get_pdir(event)
+        	
+        if pdir in self.all_inter_ij:
+            all_p = event.get_all_momenta(orig_order)
+            for p in all_p:
+                P = rwgt_interface.ReweightInterface.invert_momenta(p)
+                hel_fixed = event.get_helicity(orig_order) # this should be changed to allow multiple decays
+                allow_hel = [-1,1]
+                n_changing = len(position)
+                n_comb = len(allow_hel)
+                print(f"hel_fixed = {hel_fixed} , allow_hel = {allow_hel}")
+                
+                inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, allow_hel, n_changing, n_comb)
+                inter[0][0] = inter_temp[0]
+                inter[0][1] = inter_temp[1]
+                inter[1][0] = inter_temp[1].conjugate()
+                inter[1][1] = inter_temp[2]
+                return inter
+        else : 
+            self.all_inter_ij[pdir] = self.get_mymod(pdir,'ALL_INTER')
 
+        return self.get_all_inter(event, position) 	
+
+   
     def get_inter_value(self,event,nhel):
         """routine to return all the possible inter for an event"""
         
@@ -1932,7 +1945,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self.get_nhel(event,position)
 
 
-    def get_mymod(self,pdir,INTER_or_NHEL): 
+    def get_mymod(self,pdir,MODE): 
 
         if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
@@ -1951,8 +1964,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
                 else:
                     mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat')) 
-                    if INTER_or_NHEL == 'INTER':
+                    if MODE == 'INTER':
                         return mymod.get_amp,mymod.get_jamp,mymod.get_inter,mymod.get_matrix
+                    elif MODE == 'ALL_INTER':
+                        return mymod.get_all_inter
                     else : 
                         return mymod.get_nhel
 
