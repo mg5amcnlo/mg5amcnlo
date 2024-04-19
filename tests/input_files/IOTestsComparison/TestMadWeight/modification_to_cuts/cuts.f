@@ -69,7 +69,9 @@ C     GLOBAL
 C
       include 'run.inc'
       include 'cuts.inc'
-
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE
+      
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
       double precision ptlepton(nexternal)
@@ -259,6 +261,7 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
+            MODEL_SCALE = scale
             call update_as_param()
          endif
 

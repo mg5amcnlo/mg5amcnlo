@@ -28,6 +28,16 @@ c************************************************************************
       common /to_updateloop/updateloop
       data updateloop /.true./
 
+      logical first
+      data first /.true./
+      save first
+
+      if (.not.first)then
+              call coup()
+              return
+      endif
+      first=.false.
+
       call LHA_loadcard(param_name,npara,param,value)
       ! also loop parameters should be initialised here
       if (updateloop) then

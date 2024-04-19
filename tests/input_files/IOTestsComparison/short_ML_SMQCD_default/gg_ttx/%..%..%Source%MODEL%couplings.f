@@ -20,6 +20,14 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
+      LOGICAL FIRST
+      DATA FIRST /.TRUE./
+      DOUBLE PRECISION MODEL_SCALE, ALPHAS
+      EXTERNAL ALPHAS
+      COMMON /MODEL_SCALE/MODEL_SCALE
+      DOUBLE PRECISION ASMZ
+      INTEGER NLOOP
+      COMMON/A_BLOCK/ASMZ,NLOOP
       READLHA = .TRUE.
       INCLUDE 'intparam_definition.inc'
       INCLUDE 'mp_intparam_definition.inc'
@@ -47,7 +55,9 @@ C
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'model_functions.inc'
       DOUBLE PRECISION GOTHER
-
+      DOUBLE PRECISION LAST_SCALE
+      DATA LAST_SCALE /0D0/
+      SAVE LAST_SCALE
       DOUBLE PRECISION MODEL_SCALE
       COMMON /MODEL_SCALE/MODEL_SCALE
 
