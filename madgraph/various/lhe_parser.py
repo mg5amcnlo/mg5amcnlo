@@ -2090,9 +2090,14 @@ class Event(list):
         return jac        
         
     
-    def get_helicity(self, get_order, allow_reversed=True):
+    def get_helicity(self, get_order=None, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
         
+        if get_order is None:
+            init = [part.pid for part in self if part.status == -1]
+            final = [part.pid for part in self if part.status == 1] 
+            get_order = [init, final]
+
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
         out = [9] *(len(order[0])+len(order[1]))
