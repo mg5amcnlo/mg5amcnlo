@@ -1543,7 +1543,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 	#4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile, decay_dict, inter_prod_dict)
         print(f"Spyros: maxwgt = {maxwgt}")
-        
+        #sys.exit(1)
+	
         #5. generate the decay (for each production event)
         orig_lhe.seek(0)
         output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe'), 'w')
@@ -1765,9 +1766,13 @@ class MadSpinInterface(extended_cmd.Cmd):
 	
         full_event = lhe_parser.Event(str(production))
         param_card = self.banner.param_card
-        inter_prod_dict_exists = bool(inter_prod_dict)
+        inter_prod_dict_exists = inter_prod_dict is not None
         #print(f"Spyros production_event = {full_event}")
         #print(f"Spyros decays = {decays}")
+	
+	# Spyros: get helicity of full event
+        production_hel = full_event.get_helicity()
+        #print(f"Spyros: production_hel = {production_hel}")
 		
         for pdg in decays:
             # Get the particle that should decay from the production event
@@ -1778,7 +1783,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             
 	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
-            #print(f"Spyros position = {position}")
+            #print(f"Spyros position = {position}")	    
+	    
+            #print(f"Spyros: inter_prod_dict_exists = {inter_prod_dict_exists} , length = {len(inter_prod_dict)}")
 	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
@@ -1793,7 +1800,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 	        # Let's store the inter_prod in the dictionary
                 for hpair in inter_prod_dict: 
                     inter_prod_dict[hpair] = self.get_inter_value(production, hpair)
-                #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
+                #print(f"Spyros filling inter_prod_dict = {inter_prod_dict}")
 	    # ------------------------- #
 	    
 	    # Get the color, mass and width of decaying particle
@@ -1831,10 +1838,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
                 #print(f"Spyros: nhel = {len(nhel_p_tot)}")
-                for i,hel_p in enumerate(nhel_p_tot): 
-                    # Verify that we only loop over the decaying particle
-		    #target_hel = full_event.get_helicity(([0,1], [i for i in range(10)])
-		    
+						
+                for i,hel_p in enumerate(nhel_p_tot): 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
 		    # so that we can use the dictionary of inter_prod
                     hp = tuple(map(tuple, (h for h in hel_p)))
@@ -1844,6 +1849,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
+                        #print(f"decay hel = {hel_d}")	    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
                         inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
