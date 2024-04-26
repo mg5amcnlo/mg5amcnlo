@@ -862,6 +862,7 @@ c$$$      include 'madfks_mcatnlo.inc'
       logical UseSfun
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
+      if (p(0,1).le.0d0) return
       if(UseSfun)then
          sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       else

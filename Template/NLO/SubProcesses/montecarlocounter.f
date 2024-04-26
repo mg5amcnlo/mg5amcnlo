@@ -935,7 +935,7 @@ c$$$      include "madfks_mcatnlo.inc"
 
       integer i,j,npartner,ileg,N_p
       double precision tk,uk,q1q,q2q,E0sq(nexternal),x,yi,yj,xij,ap(2)
-     $     ,Q(2),s,w1,w2,beta,xfact,prefact,kn,knbar,kn0,betae0,betad
+     $     ,Q(2),w1,w2,beta,xfact,prefact,kn,knbar,kn0,betae0,betad
      $     ,betas,gfactazi,gfunction,bogus_probne_fun,z(nexternal)
      $     ,xi(nexternal),xjac(nexternal),ztmp,xitmp,xjactmp,zHW6,xiHW6
      $     ,xjacHW6_xiztoxy,zHWPP,xiHWPP,xjacHWPP_xiztoxy,zPY6Q,xiPY6Q
@@ -1000,6 +1000,7 @@ c Should be zero if there are no jets at the Born
       common/c_MCcntcalled/MCcntcalled
 
       double precision becl,delta
+      parameter (becl=-0.1d0)
 c alsf and besf are the parameters that control gfunsoft
       double precision alsf,besf
       common/cgfunsfp/alsf,besf
@@ -1012,11 +1013,10 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
-      double precision zero,one,tiny,vtiny,ymin
+      double precision zero,one,tiny,vtiny
       parameter (zero=0d0)
       parameter (one=1d0)
       parameter (vtiny=1d-10)
-      parameter (ymin=0.9d0)
 
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
@@ -1061,55 +1061,26 @@ c one can remove any reference to xi_i_fks
       limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny
       non_limit = xi_i_fks.ge.tiny
 
-c Discard if unphysical kinematics
-      if(pp(0,1).le.0d0)return
-
-c Determine invariants, ileg, and MC hardness qMC
-      call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                       xm12,xm22,tk,uk,q1q,q2q,qMC)
-      w1=-q1q+q2q-tk
-      w2=-q2q+q1q-uk
-      if(qMC.lt.0d0)then
-         write(*,*)'Error in xmcsubt: qMC=',qMC
-         stop
-      endif
-
-c Check ileg, and special case for PYTHIA6PT
-      if(ileg.lt.0.or.ileg.gt.4)then
-         write(*,*)'Error in xmcsubt: ileg=',ileg
-         stop
-      endif
-      if(ileg.gt.2.and.shower_mc.eq.'PYTHIA6PT')then
-         write(*,*)'FSR not allowed when matching PY6PT'
-         stop
-      endif
+      qMC=get_qMC(xi_i_fks,y_ij_fks)
 
 c New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
 
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-c$$$      call assign_emsca(pp,xi_i_fks,y_ij_fks)
-c$$$      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 
 c Distinguish ISR and FSR
       if(ileg.le.2)then
          delta=min(1d0,deltaI)
-         yj=0d0
-         yi=y_ij_fks
       elseif(ileg.ge.3)then
          delta=min(1d0,deltaO)
-         yj=y_ij_fks
-         yi=0d0
       endif
-      x=1-xi_i_fks
-      s=shat
-      xij=2*(1-xm12/s-(1-x))/(2-(1-x)*(1-yj)) 
+
+c$$$      s=shat
 
 c G-function parameters 
       gfactsf=gfunction(x,alsf,besf,2d0)
-      if(abs(i_type).eq.3)gfactsf=1d0
-      becl=-(1d0-ymin)
+      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
       gfactcl=gfunction(y_ij_fks,alsf,becl,1d0)
       if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
 ! TODO : this can go (in fact, all is_pt_hard stuff can go). It should
@@ -1136,21 +1107,21 @@ c$$$      endif
       
 c Shower variables
       if(shower_mc.eq.'HERWIGPP')then
-         ztmp=zHWPP(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiHWPP(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacHWPP_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+         ztmp=zHWPP(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiHWPP(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacHWPP_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
       elseif(shower_mc.eq.'PYTHIA6Q')then
-         ztmp=zPY6Q(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY6Q(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY6Q_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+         ztmp=zPY6Q(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY6Q(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY6Q_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
       elseif(shower_mc.eq.'PYTHIA6PT')then
-         ztmp=zPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY6PT(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY6PT_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+         ztmp=zPY6PT(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY6PT(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY6PT_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
       elseif(shower_mc.eq.'PYTHIA8')then
-         ztmp=zPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q)
+         ztmp=zPY8(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY8(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
       endif
       
       first_MCcnt_call=.false.
@@ -1167,15 +1138,15 @@ c Main loop over colour partners used to begin here
       xi(npartner)=xitmp
       xjac(npartner)=xjactmp
       if(shower_mc.eq.'HERWIG6')then
-         z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat,
+         z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
      &                    x,yi,yj,tk,uk,q1q,q2q)
-         xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat,
+         xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
      &                      x,yi,yj,tk,uk,q1q,q2q)
          xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,
-     &                                  shat,x,yi,yj,tk,uk,q1q,q2q)
+     &                                  shat_n1,x,yi,yj,tk,uk,q1q,q2q)
       endif
 c Compute dead zones
-      call get_dead_zone(ileg,z(npartner),xi(npartner),s,x,yi,
+      call get_dead_zone(ileg,z(npartner),xi(npartner),shat_n1,x,yi,
      &  xm12,xm22,w1,w2,qMC,scalemax,ipartners(npartner),fksfather,
      &  lzone(npartner),wcc)
 
@@ -1434,7 +1405,7 @@ c Emsca stuff
 c
 c Emsca stuff for multiple scales
       if(mcatnlo_delta)then
-         call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
+         call assign_qMC_array(xi_i_fks,y_ij_fks,shat_n1,pp,qMC,qMC_a2)
          do i=1,nexternal-1
             do j=1,nexternal-1
                if(j.eq.i)cycle

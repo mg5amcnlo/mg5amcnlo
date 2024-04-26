@@ -3,7 +3,7 @@ module scale_module
   use process_module
   implicit none
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
-       shower_scalee_nbody_nodamp
+       shower_scale_nbody_nodamp
   double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0

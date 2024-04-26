@@ -3,7 +3,7 @@ module kinematics_module
   use process_module
   implicit none
   integer,public :: ileg
-  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2
+  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x,xij
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
@@ -12,6 +12,7 @@ module kinematics_module
   private
 
 contains
+  !TODO: modify qMC to be the shower variable???
   double precision function get_qMC(xi_i_fks,y_ij_fks)
     ! This is the (relative) pT of the splitting. For some showers this is
     ! equal to the shower variable, but not for all. This is what is used for
@@ -26,6 +27,10 @@ contains
        get_qMC=qMC_ileg3(xi_i_fks,y_ij_fks)
     elseif(ileg.eq.4)then
        get_qMC=qMC_ileg4(xi_i_fks,y_ij_fks)
+    endif
+    if(get_qMC.lt.0d0)then
+       write(*,*) 'Error in get_qMC: qMC=',get_qMC
+       stop 1
     endif
   end function get_qMC
   
@@ -200,6 +205,8 @@ contains
        write(*,*)'Error 4 in fill_kinematics_module: assigned wrong ileg'
        stop
     endif
+    x=1-xi_i_fks
+    xij=2*(1-xm12/shat_n1-(1-x))/(2-(1-x)*(1-yj)) 
   end subroutine fill_kinematics_module
   
   double precision function deltaR(p1,p2)
@@ -251,6 +258,8 @@ contains
     double precision :: xi_i_fks,y_ij_fks
     xtk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
     xuk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
+    yj=0d0
+    yi=y_ij_fks
   end subroutine fill_invariants_ileg1
 
   subroutine fill_invariants_ileg2(xi_i_fks,y_ij_fks)
@@ -258,6 +267,8 @@ contains
     double precision :: xi_i_fks,y_ij_fks
     xtk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
     xuk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
+    yj=0d0
+    yi=y_ij_fks
   end subroutine fill_invariants_ileg2
 
   subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
@@ -271,6 +282,8 @@ contains
     xq2q=-2d0*dot(xp2,xk2)+xm22
     w1=-xq1q+xq2q-xtk
     w2=-xq2q+xq1q-xuk
+    yj=y_ij_fks
+    yi=0d0
   end subroutine fill_invariants_ileg3
 
   subroutine fill_invariants_ileg4(xi_i_fks,y_ij_fks)
@@ -285,6 +298,8 @@ contains
     xq2q=-shat_n1*xij*(2d0-dot(xp1,xk2)*4d0/(shat_n1*xij))/2d0
     xq1q=xuk+xq2q+w2
     w1=-xq1q+xq2q-xtk
+    yj=y_ij_fks
+    yi=0d0
   end subroutine fill_invariants_ileg4
 
 
@@ -308,7 +323,7 @@ contains
     ! Instead of jmass, one should use pmass(fksfather), but the
     ! kernels where pmass(fksfather) != jmass are non-singular
     fksfather=min(i_fks,j_fks)
-    if(fksfather.le.2)then
+    if(fksfather.le.2 .and. fks_father.gt.0)then
        ileg=fksfather
     elseif(jmass.ne.0d0)then
        ileg=3
@@ -318,6 +333,10 @@ contains
        write(*,*)'Error 1 in get_ileg: unknown ileg'
        write(*,*)ileg,fksfather,jmass
        stop
+    endif
+    if(ileg.gt.2 .and. shower_mc_mod.eq.'PYTHIA6PT')then
+       write (*,*) 'FSR not allowed when matching PY6PT'
+       stop 1
     endif
   end subroutine fill_ileg
   

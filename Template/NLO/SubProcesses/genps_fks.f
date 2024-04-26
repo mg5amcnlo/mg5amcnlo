@@ -1284,7 +1284,7 @@ c
  112  continue
 
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
@@ -1320,6 +1320,10 @@ c must stay so for the computation of enhancement factors.
      &            (jac_cnt(2).le.0.d0)
       call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
 c
+
+
+      
+      
       return
       end
 
@@ -1577,7 +1581,7 @@ c
  112  continue
 
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
@@ -1761,14 +1765,14 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
 
 
       subroutine fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
-
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
+      use kinematics_module
       implicit none
       integer icountevts
       include 'nexternal.inc'
       double precision tau,ycm,ycm_born,shat,sqrtshat,xbjrk(2),xiimax,xinorm,
      $ xi_i_fks,xi_i_hat,p_i_fks(0:3),y_ij_fks,xp(0:3,nexternal),p(0:3,nexternal),
-     $ xjac,jac
+     $ xjac,jac,m_j_fks
 
       integer i,j
 
@@ -1813,6 +1817,8 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
 
       double precision p_ev(0:3,nexternal)
       common/pev/p_ev
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 
 c Catch the points for which there is no viable phase-space generation
 c (still fill the common blocks with some information that is needed
@@ -1844,6 +1850,8 @@ c Fill common blocks
             enddo
          enddo
          jac=xjac
+         if (nlo_ps) call fill_kinematics_module(p,i_fks,j_fks,xi_i_fks
+     $        ,y_ij_fks,m_j_fks)
       else
          tau_cnt(icountevts)=tau
 c Special fix in the case the soft counter-events are not generated but
