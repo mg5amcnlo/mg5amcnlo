@@ -1001,7 +1001,11 @@ def call_stdout(arg, *args, **opt):
 def copytree(src, dst, symlinks = False, ignore = None):
   if not os.path.exists(dst):
     os.makedirs(dst)
-    shutil.copystat(src, dst)
+    try:
+      shutil.copystat(src, dst)
+    except PermissionError:
+      print('Warning: could not copy permissions from %s to %s' % (src, dst))
+      print('If you have the right permissions ignore this warning.')
   lst = os.listdir(src)
   if ignore:
     excl = ignore(src, lst)
