@@ -3752,18 +3752,31 @@ Beware that this can be dangerous for local multicore runs.""")
 
         partials_info = [] 
         if len(Gdirs) >= max_G:
-            max_G = 80
             start_unweight= time.perf_counter()
-
             # first check in how many chunk we have to split (always use a multiple of nb_core)
             nb_split = 1
-            nb_G = len(Gdirs) // self.options['nb_core']
-            while nb_G > max_G:
+            nb_G = len(Gdirs) // (2* self.options['nb_core'])
+            while nb_G > min(80, max_G):
                nb_split += 1 
-               nb_G = len(Gdirs)//(nb_split*self.options['nb_core']) 
+               nb_G = len(Gdirs)//(nb_split*2*self.options['nb_core'])
+               if nb_G < 10:
+                   nb_split -=1
+                   nb_G = len(Gdirs)//(nb_split*2*self.options['nb_core']) 
             
-            # do the unweighting of each chunk on their own thread
-            nb_chunk = 2 * (nb_split*self.options['nb_core'])
+            #enforce at least 10 directory per thread
+            if nb_G > 10 or nb_split>1: 
+                # do the unweighting of each chunk on their own thread
+                nb_chunk = (nb_split*2*self.options['nb_core'])
+            else:
+                nb_chunk = len(Gdirs) // 10 
+                nb_G =10
+            
+            # security that the number of combine events is too large
+            if nb_chunk >= max_G:
+                nb_chunk = max_G -1
+                nb_G = len(Gdirs) // nb_chunk 
+
+            misc.sprint(nb_chunk, nb_G)
             for i, local_G in enumerate(split(Gdirs, nb_chunk)):
                 line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
                 line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
@@ -3795,8 +3808,11 @@ Beware that this can be dangerous for local multicore runs.""")
                 path = data[0]
                 try:
                     os.remove(path)
-                except Exception:
-                    os.remove(path[:-3]) # try without the .gz
+                except Exception as error:
+                    try: 
+                        os.remove(path[:-3]) # try without the .gz
+                    except:
+                        misc.sprint('no file ', path, 'to clean')
         else:
             for Gdir in Gdirs:
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
