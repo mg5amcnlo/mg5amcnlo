@@ -1,5 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.20 ():
+    OM: Fix a wrong syntax handling for decay chain like
+        generate ... > A A B  , B > ,  A >  , A >
+        where due to the different order in production (AAB) and in decay (BAA)
+        all A particle where decay with both decay mode, instead of their specific ones.
+        (present since v1.0.0)
+        Note this bug can still be present if A or B are multi-particles, in that case we advise to use
+        the same order for the production and decay syntax.
+
+
 2.9.19 (20/03/24):
     OM: Fix a "cot" issue introduced in 2.9.18.
     OM: Fixing some regular expression for the way fortran writter works.
