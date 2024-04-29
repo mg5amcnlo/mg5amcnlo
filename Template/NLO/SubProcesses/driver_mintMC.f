@@ -29,6 +29,9 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
+c     to know if we're using omp or not
+      logical oMP
+      common /c_omp/oMP
 c
 c     Properly initialize PY8 controls
 c
@@ -94,7 +97,14 @@ C  BEGIN CODE
 C-----  
 c Write the process PID in the log.txt files (i.e., to the screen)
       write (*,*) getpid()
+      oMP = .false. ! ensure that we can check if we're using openMP or not
 
+c     check if openMP and set number of threads
+!$ oMP = .true.
+!$ call omp_set_num_thread(vec_size)
+c
+c     Setup the timing variable
+c
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
@@ -145,6 +155,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
+      call allocate_storage(vec_size)
       call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
@@ -204,7 +215,7 @@ c     setting of the grids
 c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
          write (*,*) 'imode is ',imode
-         call mint(sigintF)
+         call mint(sigintF, vec_size)
          call deallocate_weight_lines
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
@@ -214,7 +225,7 @@ c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
          write (*,*) 'imode is ',imode
-         call mint(sigintF)
+         call mint(sigintF, vec_size)
          call deallocate_weight_lines
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
@@ -440,6 +451,7 @@ c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
       use mint_module
+      use cnbody
       implicit none
 c
 c     Constants
@@ -480,9 +492,11 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-!      logical nbody(index)
-!      common/cnbody(index)/nbody(index)
-!OMP THREADPRIVATE (/Cnbody(index)/)
+      integer index
+
+C!      logical nbody(index)
+C!      common/cnbody(index)/nbody(index)
+C!OMP THREADPRIVATE (/Cnbody(index)/)
 c
 c To convert diagram number to configuration
 c
@@ -665,11 +679,14 @@ c
       use mint_module
       use vectorize
       use c_wgt_ME_tree
+      use cnbody
+      use pborn
+      use ccalculatedborn 
+      use counterevnts
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
-      include 'orders.inc'
       include 'fks_info.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
@@ -687,37 +704,46 @@ c
 
       integer index
 
-!      double precision p_born(0:3,nexternal-1)
-!      common /pborn/   p_born
-!OMP THREADPRIVATE (/PBORN/)
+C!      double precision p_born(0:3,nexternal-1)
+C!      common /pborn/   p_born
+C!OMP THREADPRIVATE (/PBORN/)
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
-!      logical calculatedBorn(index)
-!      common/ccalculatedBorn(index)/calculatedBorn(index)
-!OMP THREADPRIVATE (/CcalculatedBorn(index)/)
+C!      logical calculatedBorn(index)
+C!      common/ccalculatedBorn(index)/calculatedBorn(index)
+C!      common/cnbody(index)/nbody(index)
+C!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+C!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C!OMP THREADPRIVATE (/CcalculatedBorn(index)/)
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
-!      logical       nbody(index)
-!      common/cnbody(index)/nbody(index)
-!OMP THREADPRIVATE (/Cnbody(index)/)
+C!      logical       nbody(index)
+C!      common/cnbody(index)/nbody(index)
+C!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+C!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C!OMP THREADPRIVATE (/Cnbody(index)/)
       integer         nndim
       common/tosigint/nndim
       character*4      abrv
       common /to_abrv/ abrv
-!      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-!     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision       wgt_ME_born,wgt_ME_real
-!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C!      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+C!     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+C!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+C!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+C!OMP THREADPRIVATE (/COUNTEREVNTS/)
+C!      double precision       wgt_ME_born,wgt_ME_real
+C!      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
 c
+
+      call event_reset(vec_size)
+
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -759,7 +785,7 @@ c "npNLO".
 !         wgt_me_born=0d0
          call reset_c_wgt_ME_tree
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
-         call update_vegas_x(xx,x)
+         call update_vegas_x(amp_index)
          do i=1,nndim
             x_save(i,ifold_counter)=x(i)
          enddo
@@ -1192,10 +1218,13 @@ c     include all quarks (except top quark) and the gluon.
       return
       end
 
-      subroutine update_vegas_x(xx,x)
+!      subroutine update_vegas_x(xx,x)
+      subroutine update_vegas_x(amp_index)
       use mint_module
+      use vectorize
       implicit none
       integer i
+      integer amp_index
       double precision xx(ndimmax),x(99),ran2
       external ran2
       integer         nndim
@@ -1205,17 +1234,17 @@ c     include all quarks (except top quark) and the gluon.
       do i=1,99
          if (abrv.eq.'born') then
             if(i.le.nndim-3)then
-               x(i)=xx(i)
+               x_local(i,amp_index)=x_bjork(i,amp_index)
             elseif(i.le.nndim) then
-               x(i)=ran2()      ! Choose them flat when not including real-emision
+               x_local(i,amp_index)=ran2()      ! Choose them flat when not including real-emision
             else
-               x(i)=0.d0
+               x_local(i,amp_index)=0.d0
             endif
          else
             if(i.le.nndim)then
-               x(i)=xx(i)
+               x_local(i,amp_index)=x_bjork(i,amp_index)
             else
-               x(i)=0.d0
+               x_local(i,amp_index)=0.d0
             endif
          endif
       enddo
