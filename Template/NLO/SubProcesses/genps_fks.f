@@ -26,20 +26,11 @@
 
       integer amp_index
 
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer iconfig0
       common/ciconfig0/iconfig0
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
-!      double precision xvar(99)
-!      common /c_vegas_x/xvar
-!OMP THREADPRIVATE (/C_VEGAS_X/)
       integer            this_config
       common/to_mconfigs/this_config
 c     
@@ -94,20 +85,6 @@ c
 
       integer amp_index
 
-!      double precision rat_xi_orig(amp_index)
-!      common /c_rat_xi/ rat_xi_orig(amp_index)
-!OMP THREADPRIVATE (/C_RAT_XI/)
-!      double precision granny_m2_red(-1:1)
-!      common /to_virtgranny/granny_m2_red
-!OMP THREADPRIVATE (/TO_VIRTGRANNY/)
-c common block that is filled by this subroutine
-!      logical granny_is_res(amp_index)
-!      integer igranny(amp_index),iaunt(amp_index)
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny(amp_index),iaunt(amp_index),granny_is_res(amp_index),granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
 c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
@@ -117,9 +94,6 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
-!      double precision xvar(99)
-!      common /c_vegas_x/xvar
-!OMP THREADPRIVATE (/C_VEGAS_X/)
 c      
       granny_m2_red(0,amp_index)=virtgrannybar
       if (virtgrannybar.le.granny_m2_red(-1,amp_index) .or.
@@ -164,21 +138,6 @@ c
      &     ,pcm(0:3),df1(0:3),jac
       external dot,rho
 
-
-!      double precision granny_m2_red(-1:1)
-!      common /to_virtgranny/granny_m2_red
-!OMP THREADPRIVATE (/TO_VIRTGRANNY/)
-!      double precision rat_xi_orig(amp_index)
-!      common /c_rat_xi/ rat_xi_orig(amp_index)
-!OMP THREADPRIVATE (/C_RAT_XI/)
-c common block that is filled by this subroutine
-!      logical granny_is_res(amp_index)
-!      integer igranny(amp_index),iaunt(amp_index)
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny(amp_index),iaunt(amp_index),granny_is_res(amp_index),granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
 c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
@@ -189,21 +148,8 @@ c arguments for the generate_momenta_conf subroutine from common blocks
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
 c
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     &                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-!      double precision p_born_l(0:3,nexternal-1)
-!      common/pborn_l/p_born_l
-!OMP THREADPRIVATE (/PBORN_L/)
-!      double precision shybst(amp_index),chybst,chybstmo(amp_index)
-!      common /virtgranny_boost/shybst(amp_index),chybst,chybstmo(amp_index)
-!OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
-!      double precision xvar(99)
-!      common /c_vegas_x/xvar
-!OMP THREADPRIVATE (/C_VEGAS_X/)
 c      
       granny_m2_red(0,amp_index)=virtgrannybar
       if (virtgrannybar.le.granny_m2_red(-1,amp_index) .or.
@@ -253,12 +199,6 @@ c Any call to this function must be preceded by a call to fillcblk
 
       integer amp_index
 
-!      real*8 xmbemin2(amp_index),xmbemax2(amp_index)
-!      common/cgrannyrange/xmbemin2(amp_index),xmbemax2(amp_index)
-!OMP THREADPRIVATE (/CGRANNYRANGE/)
-!      real*8 offset(amp_index)
-!      common/coffset(amp_index)/offset(amp_index)
-!OMP THREADPRIVATE (/Coffset(amp_index)/)
       real*8 dzerox,off_virtgranny
       external off_virtgranny
 c
@@ -286,12 +226,6 @@ c Any call to this function must be preceded by a call to fillcblk
 
       integer amp_index
 
-!      real*8 xmbemin2(amp_index),xmbemax2(amp_index)
-!      common/cgrannyrange/xmbemin2(amp_index),xmbemax2(amp_index)
-!OMP THREADPRIVATE (/CGRANNYRANGE/)
-!      real*8 offset(amp_index)
-!      common/coffset(amp_index)/offset(amp_index)
-!OMP THREADPRIVATE (/Coffset(amp_index)/)
       real*8 dzerox,off_redvirtgranny
       external off_redvirtgranny
 c
@@ -314,10 +248,6 @@ c Any call to this function must be preceded by a call to fillcblk
       external virtgranny
 
       integer amp_index
-
-!      real*8 offset(amp_index)
-!      common/coffset(amp_index)/offset(amp_index)
-!OMP THREADPRIVATE (/Coffset(amp_index)/)
 c
       tmp=virtgranny(virtgrannybar,amp_index)-offset(amp_index)
       off_virtgranny=tmp
@@ -335,10 +265,6 @@ c Any call to this function must be preceded by a call to fillcblk
       external virtgranny_red
 
       integer amp_index
-
-!      real*8 offset(amp_index)
-!      common/coffset(amp_index)/offset(amp_index)
-!OMP THREADPRIVATE (/Coffset(amp_index)/)
 c
       tmp=virtgranny_red(virtgrannybar,amp_index)+virtgrannybar-offset(amp_index)
       off_redvirtgranny=tmp
@@ -381,37 +307,12 @@ c     granny stuff
 
       integer amp_index
 
-!      double precision granny_m2_red(-1:1)
-!      common /to_virtgranny/granny_m2_red
-!OMP THREADPRIVATE (/TO_VIRTGRANNY/)
       real*8 xmbemin2_0,xmbemax2_0
-!      common/cgrannyrange/xmbemin2(amp_index),xmbemax2(amp_index)
-!OMP THREADPRIVATE (/CGRANNYRANGE/)
       logical input_granny_m2,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
       integer irange,idir
       data irange/0/
       parameter (idir=0,step=1d-2)
-c common block that is filled by this subroutine
-!      logical granny_is_res(amp_index)
-!      integer igranny(amp_index),iaunt(amp_index)
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny(amp_index),iaunt(amp_index),granny_is_res(amp_index),granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
-!      logical only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!      common /c_skip_only_event_phsp(amp_index)/only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!OMP THREADPRIVATE (/C_SKIP_only_event_phsp(amp_index)/)
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision rat_xi,rat_xi_orig(amp_index)
-!      common /c_rat_xi/ rat_xi_orig(amp_index)
-!OMP THREADPRIVATE (/C_RAT_XI/)
       double precision rat_xi
 c     debug stuff
       double precision temp
@@ -422,30 +323,11 @@ c     debug stuff
       integer ntot_granny,derntot,ncase(0:6)
       common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
-!      logical nocntevents(amp_index)
-!      common/cnocntevents(amp_index)/nocntevents(amp_index)
-!OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-!      double precision xi_i_fks_cnt(-2:2)
-!      common /cxiifkscnt/xi_i_fks_cnt
-!OMP THREADPRIVATE (/CXIIFKSCNT/)
       logical do_mapping_granny
       logical softtest,colltest
       common/sctests/softtest,colltest
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-c Common block with information to determine if we should not write a
-c possible resonance.
-!      logical write_granny(fks_configs)
-!      integer which_is_granny(fks_configs)
-!      common/write_granny_resonance/which_is_granny,write_granny
-!OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
-!      integer isolsign(amp_index)
-!      common /c_isolsign(amp_index)/isolsign(amp_index)
-!OMP THREADPRIVATE (/C_isolsign(amp_index)/)
       double precision border,border_massive,border_massless,fborder
       parameter (border_massive=2d0,border_massless=0.1d0,fborder=0.02d0)
       logical firsttime
@@ -728,14 +610,6 @@ C
 
       integer amp_index
 
-c Conflicting BW stuff
-!      integer cBW_level_max(amp_index),cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-!      double precision cBW_mass(-1:1,-nexternal:-1),
-!     &     cBW_width(-1:1,-nexternal:-1)
-!      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max(amp_index),cBW
-!     $     ,cBW_level
-!OMP THREADPRIVATE (/C_CONFLICTINGBW/)
-
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
@@ -843,35 +717,6 @@ c No PDFs (also use fixed energy when performing tests)
 C
 
       integer amp_index
-
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision p_born_l(0:3,nexternal-1)
-!      common/pborn_l/p_born_l
-!OMP THREADPRIVATE (/PBORN_L/)
-!      double precision p_born_ev(0:3,nexternal-1)
-!      common/pborn_ev/p_born_ev
-!OMP THREADPRIVATE (/PBORN_EV/)
-c Conflicting BW stuff
-!      integer cBW_level_max(amp_index),cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-!      double precision cBW_mass(-1:1,-nexternal:-1),
-!     &     cBW_width(-1:1,-nexternal:-1)
-!      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max(amp_index),cBW
-!     $     ,cBW_level
-!OMP THREADPRIVATE (/C_CONFLICTINGBW/)
-c Common block with granny information
-!      logical granny_is_res(amp_index)
-!      integer igranny(amp_index),iaunt(amp_index)
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny(amp_index),iaunt(amp_index),granny_is_res(amp_index),granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
-
-!      logical only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!      common /c_skip_only_event_phsp(amp_index)/only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!OMP THREADPRIVATE (/C_SKIP_only_event_phsp(amp_index)/)
 
       integer i,j
 
@@ -1016,20 +861,8 @@ c     2 soft-collinear
 
       integer amp_index
 
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-!      logical nocntevents(amp_index)
-!      common/cnocntevents(amp_index)/nocntevents(amp_index)
-!OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
       integer iconfig0,iconfigsave
       common/ciconfig0/iconfig0
       save iconfigsave
@@ -1060,11 +893,6 @@ c parameters
 c saves
       save m,stot,totmassin,totmass
      &     ,ionebody,fksmass,nbranch
-!      common /c_isolsign(amp_index)/isolsign(amp_index)
-!OMP THREADPRIVATE (/C_isolsign(amp_index)/)
-!      logical only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!      common /c_skip_only_event_phsp(amp_index)/only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!OMP THREADPRIVATE (/C_SKIP_only_event_phsp(amp_index)/)
 
       pass=.true.
       do i=1,nexternal-1
@@ -1223,65 +1051,8 @@ c Set all to negative values and exit
 
       integer amp_index
 
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision p_born_l(0:3,nexternal-1)
-!      common/pborn_l/p_born_l
-!OMP THREADPRIVATE (/PBORN_L/)
-!      double precision p_born_ev(0:3,nexternal-1)
-!      common/pborn_ev/p_born_ev
-!OMP THREADPRIVATE (/PBORN_EV/)
-
-!      logical nocntevents(amp_index)
-!      common/cnocntevents(amp_index)/nocntevents(amp_index)
-!OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
-
-!      logical nbody(amp_index)
-!      common/cnbody(amp_index)/nbody(amp_index)
-!OMP THREADPRIVATE (/Cnbody(amp_index)/)
-
-!      double precision xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
-
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     &                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      logical only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!      common /c_skip_only_event_phsp(amp_index)/only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!OMP THREADPRIVATE (/C_SKIP_only_event_phsp(amp_index)/)
-
-!      integer isolsign(amp_index)
-!      common /c_isolsign(amp_index)/isolsign(amp_index)
-!OMP THREADPRIVATE (/C_isolsign(amp_index)/)
-
-!      double precision xiimax_ev(amp_index)
-!      common /cxiimaxev/xiimax_ev(amp_index)
-!OMP THREADPRIVATE (/CXIIMAXEV/)
-!      double precision xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
@@ -1542,71 +1313,8 @@ c
 
       integer amp_index
 
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-!      double precision p_born(0:3,nexternal-1)
-!      common/pborn/p_born
-!OMP THREADPRIVATE (/PBORN/)
-!      double precision p_born_l(0:3,nexternal-1)
-!      common/pborn_l/p_born_l
-!OMP THREADPRIVATE (/PBORN_L/)
-!      double precision p_born_ev(0:3,nexternal-1)
-!      common/pborn_ev/p_born_ev
-!OMP THREADPRIVATE (/PBORN_EV/)
-!      double precision p_born_coll(0:3,nexternal-1)
-!      common/pborn_coll/p_born_coll
-!OMP THREADPRIVATE (/PBORN_COLL/)
-!      double precision p_born_norad(0:3,nexternal-1)
-!      common/pborn_norad/p_born_norad
-!OMP THREADPRIVATE (/PBORN_NORAD/)
-
-!      logical nocntevents(amp_index)
-!      common/cnocntevents(amp_index)/nocntevents(amp_index)
-!OMP THREADPRIVATE (/Cnocntevents(amp_index)/)
-
-!      logical nbody(amp_index)
-!      common/cnbody(amp_index)/nbody(amp_index)
-!OMP THREADPRIVATE (/Cnbody(amp_index)/)
-
-!      double precision xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
-
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-
-!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
-!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
-!     &                        sqrtshat(amp_index),shat(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      logical only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!      common /c_skip_only_event_phsp(amp_index)/only_event_phsp(amp_index),skip_event_phsp(amp_index)
-!OMP THREADPRIVATE (/C_SKIP_only_event_phsp(amp_index)/)
-
-!      integer isolsign(amp_index)
-!      common /c_isolsign(amp_index)/isolsign(amp_index)
-!OMP THREADPRIVATE (/C_isolsign(amp_index)/)
-
-!      double precision xiimax_ev(amp_index)
-!      common /cxiimaxev/xiimax_ev(amp_index)
-!OMP THREADPRIVATE (/CXIIMAXEV/)
-!      double precision xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
 
       integer skip
       double precision srec
@@ -1985,61 +1693,6 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
 
       integer amp_index
 
-!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
-!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-!     common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
-!OMP THREADPRIVATE (/FKSVARIABLES/)
-
-!      double precision xi_i_fks_cnt(-2:2)
-!      common /cxiifkscnt/xi_i_fks_cnt
-!OMP THREADPRIVATE (/CXIIFKSCNT/)
-
-!      double precision xi_i_hat_ev(amp_index),xi_i_hat_cnt(-2:2)
-!      common /cxi_i_hat/xi_i_hat_ev(amp_index),xi_i_hat_cnt
-!OMP THREADPRIVATE (/CXI_I_HAT/)
-
-!      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-!      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-!OMP THREADPRIVATE (/CBJORKENX/)
-!      double precision sqrtshat_ev(amp_index),shat_ev(amp_index)
-!      common/parton_cms_ev/sqrtshat_ev(amp_index),shat_ev(amp_index)
-!OMP THREADPRIVATE (/PARTON_CMS_EV/)
-!      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-!      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-!OMP THREADPRIVATE (/PARTON_CMS_CNT/)
-
-!      double precision tau_ev(amp_index),ycm_ev(amp_index)
-!      common/cbjrk12_ev/tau_ev(amp_index),ycm_ev(amp_index)
-!OMP THREADPRIVATE (/CBJRK12_EV/)
-!      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-!      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-!OMP THREADPRIVATE (/CBJRK12_CNT/)
-
-!      double precision xiimax_ev(amp_index)
-!      common /cxiimaxev/xiimax_ev(amp_index)
-!OMP THREADPRIVATE (/CXIIMAXEV/)
-!      double precision xiimax_cnt(-2:2)
-!      common /cxiimaxcnt/xiimax_cnt
-!OMP THREADPRIVATE (/CXIIMAXCNT/)
-
-!      double precision xinorm_ev(amp_index)
-!      common /cxinormev/xinorm_ev(amp_index)
-!OMP THREADPRIVATE (/CXINORMEV/)
-!      double precision xinorm_cnt(-2:2)
-!      common /cxinormcnt/xinorm_cnt
-!OMP THREADPRIVATE (/CXINORMCNT/)
-
-!      double precision p1_cnt(0:3,nexternal,-2:2)
-!      double precision wgt_cnt(-2:2)
-!      double precision pswgt_cnt(-2:2)
-!      double precision jac_cnt(-2:2)
-!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!OMP THREADPRIVATE (/COUNTEREVNTS/)
-
-!      double precision p_ev(0:3,nexternal)
-!      common/pev/p_ev
-!OMP THREADPRIVATE (/PEV/)
-
 c Catch the points for which there is no viable phase-space generation
 c (still fill the common blocks with some information that is needed
 c (e.g. ycm_cnt)).
@@ -2130,12 +1783,6 @@ c common blocks
 
       integer amp_index
 
-!     double precision  veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!      common/cgenps_fks/veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!OMP THREADPRIVATE (/CGENPS_FKS/)
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2350,12 +1997,6 @@ c common blocks
 
       integer amp_index
 
-!      double precision  veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!      common/cgenps_fks/veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!OMP THREADPRIVATE (/CGENPS_FKS/)
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2371,8 +2012,6 @@ c local
      &     ,sinphi_i_fks,xiimax_save
       save xiimax_save
       double complex resAoR0
-!      common /virtgranny_boost/shybst(amp_index),chybst(amp_index),chybstmo(amp_index)
-!OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
 c external
       double precision rho
       external rho
@@ -2625,9 +2264,6 @@ c common blocks
 
       integer amp_index
 
-!      double precision  veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!      common/cgenps_fks/veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!OMP THREADPRIVATE (/CGENPS_FKS/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2639,14 +2275,11 @@ c local
      $     ,E_i_fks,x3len_i_fks,b2m4ac,x3len_j_fks_num,x3len_j_fks_den
      $     ,x3len_j_fks,x3len_fks_mother,costh_i_fks,sinth_i_fks
      $     ,xpifksred(0:3),recoil(0:3),xp_mother(0:3),sumrec,expybst
-!     $     ,shybst(amp_index),chybst(amp_index),chybstmo(amp_index)
      $     ,xdir(3),veckn,veckbarn ,cosphi_i_fks
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
      $     ,sinth_mother_fks
       save xjactmp
-!      common /virtgranny_boost/shybst(amp_index),chybst(amp_index),chybstmo(amp_index)
-!OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
 c external
       double precision rho
       external rho
@@ -2963,12 +2596,6 @@ c common blocks
 
       integer amp_index
 
-!      double precision  veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!      common/cgenps_fks/veckn_ev(amp_index),veckbarn_ev(amp_index),xp0jfks(amp_index)
-!OMP THREADPRIVATE (/CGENPS_FKS/)
-!      double complex xij_aor(amp_index)
-!      common/cxij_aor(amp_index)/xij_aor(amp_index)
-!OMP THREADPRIVATE (/Cxij_aor(amp_index)/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -3682,9 +3309,6 @@ c For e+e- collisions, set tau to one and y to zero
 
       integer amp_index
 
-!      double precision s_mass(-nexternal:nexternal)
-!      common/to_phase_space_s_channel/s_mass
-!OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
       pass=.true.
       totalmass=totmass
       do ii = -1,-ns_channel,-1
@@ -3762,18 +3386,6 @@ c next-to-last, with granny itself as the final one.
      &     cBW_width(-1:1,-nexternal:-1)
 
       integer amp_index
-
-!      double precision s_mass(-nexternal:nexternal)
-!      common/to_phase_space_s_channel/s_mass
-!OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
-c Common block with granny information
-!      logical granny_is_res(amp_index)
-!      integer igranny(amp_index),iaunt(amp_index)
-!      logical granny_chain(-nexternal:nexternal)
-!     &     ,granny_chain_real_final(-nexternal:nexternal)
-!      common /c_granny_res/igranny(amp_index),iaunt(amp_index),granny_is_res(amp_index),granny_chain
-!     &     ,granny_chain_real_final
-!OMP THREADPRIVATE (/C_GRANNY_RES/)
 c
       totalmass=0d0
       do i=nexternal-1,-ns_channel,-1
@@ -4001,10 +3613,6 @@ c
       external lambda,dot
 
       integer amp_index
-
-!      double precision s_mass(-nexternal:nexternal)
-!      common/to_phase_space_s_channel/s_mass
-!OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
 c 
       pass=.true.
       totalmass=0d0
