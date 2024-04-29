@@ -1004,8 +1004,16 @@ def copytree(src, dst, symlinks = False, ignore = None):
     try:
       shutil.copystat(src, dst)
     except PermissionError:
-      print('Warning: could not copy permissions from %s to %s' % (src, dst))
-      print('If you have the right permissions ignore this warning.')
+        if os.path.realpath(src).startswith('/cvmfs') and os.path.realpath(dst).startswith('/afs'):
+           # allowing missmatch from cvmfs to afs since sounds to not create issue --at least in general-- 
+           logger.critical('Ignoring that we could not copy permissions from %s to %s', src, dst)
+        else:
+           logger.critical('Permission error detected from %s to %s.\n'+\
+                          'If you are using WSL with windows partition, please try using python3.12\n'+\
+                          'or avoid moving your data from the WSL partition to the UNIX one')
+           # we do not have enough experience in WSL to allow it to get trough.
+           raise
+      
   lst = os.listdir(src)
   if ignore:
     excl = ignore(src, lst)
