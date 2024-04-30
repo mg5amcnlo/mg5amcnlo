@@ -1777,21 +1777,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         for pdg in decays:
             # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
-            
+	    
 	    # Spyros: this should later be removed for allowing more than one decays
-            assert len(init_part) == 1 
+            nchanging = len(init_part)
+            assert nchanging == 1 
             
 	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
             #print(f"Spyros position = {position}")	    
 	    
-            #print(f"Spyros: inter_prod_dict_exists = {inter_prod_dict_exists} , length = {len(inter_prod_dict)}")
+            # Allowed helicities of decaying particle - make this more generic
+            allowed_hel = [-1, 1]
 	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
                 nhel_p_tot, iden_p = self.get_nhel(production,position[0])
-                                 
+		                 
 	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
 	        # to make the dictionary
                 inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
@@ -1831,13 +1833,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                 nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
+		# Get helicities of decay event
+                decay_hel = decay_event.get_helicity()
+                pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
+		
 		# Spyros: try to use get_all_inter
-                #all_inter_prod = self.get_all_inter(production, position)
-                #all_inter_dec = self.get_all_inter(decay_event, position)
+                all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, nchanging*len(allowed_hel))
+                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
 		
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
-                #print(f"Spyros: nhel = {len(nhel_p_tot)}")
+                #print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} / nhel_d_tot = {len(nhel_d_tot)}")
 						
                 for i,hel_p in enumerate(nhel_p_tot): 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
@@ -1846,7 +1852,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    
 		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
                     inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
-		    
+		    		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
                         #print(f"decay hel = {hel_d}")	    
@@ -1868,30 +1874,24 @@ class MadSpinInterface(extended_cmd.Cmd):
  
         return full_event,me
 
-
-    def get_all_inter(self,event,position):
+    def get_all_inter(self, event, hel_fixed, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
         	
         if pdir in self.all_inter_ij:
             all_p = event.get_all_momenta(orig_order)
+            inter_tmp = []
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
-                hel_fixed = event.get_helicity(orig_order) # this should be changed to allow multiple decays
-                allow_hel = [-1,1]
-                n_changing = len(position)
-                n_comb = len(allow_hel)
-                print(f"hel_fixed = {hel_fixed} , allow_hel = {allow_hel}")
-                
-                inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, allow_hel, n_changing, n_comb)
-                inter[0][0] = inter_temp[0]
-                inter[0][1] = inter_temp[1]
-                inter[1][0] = inter_temp[1].conjugate()
-                inter[1][1] = inter_temp[2]
-                return inter
+                inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)
+            inter[0][0] = inter_temp[0]
+            inter[0][1] = inter_temp[1]
+            inter[1][0] = inter_temp[1].conjugate()
+            inter[1][1] = inter_temp[2]
+            return inter
         else : 
             self.all_inter_ij[pdir] = self.get_mymod(pdir,'ALL_INTER')
 
-        return self.get_all_inter(event, position) 	
+        return self.get_all_inter(event, hel_fixed, position, nchanging, allow_hel, ncomb) 	
 
    
     def get_inter_value(self,event,nhel):
