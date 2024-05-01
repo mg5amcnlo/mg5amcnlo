@@ -4000,6 +4000,9 @@ class RunCardLO(RunCard):
         self.add_param('frame_id', 6,  system=True)
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum', hidden=True)
+        self.add_param("keep_log", "normal", include=False, hidden=True,
+                       comment="none: all log send to /dev/null.\n minimal: keep only log for survey of the last run.\n normal: keep only log for survey of all run. \n debug: keep all log (survey and refine)",
+                       allowed=['none', 'minimal', 'normal', 'debug'])
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)

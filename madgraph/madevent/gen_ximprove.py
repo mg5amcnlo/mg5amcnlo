@@ -1387,7 +1387,7 @@ class gen_ximprove_v4(gen_ximprove):
                     break
                 info = jobs[j]
                 info['script_name'] = 'ajob%i' % script_number
-                info['keeplog'] = 'false'
+                info['keeplog'] = 'false' if self.run_card['keep_log'] != 'debug' else 'true'
                 if "base_directory" not in info:
                     info["base_directory"] = "./"
                 fsock.write(template_text % info)
