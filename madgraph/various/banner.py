@@ -3830,7 +3830,8 @@ class PDLabelBlock(RunBlock):
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
-        if abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
+        if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
+            abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
             raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
 
     def status(self, card):

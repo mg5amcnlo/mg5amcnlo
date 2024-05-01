@@ -6385,6 +6385,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             proc_charac = self.mother_interface.proc_characteristics
             if proc_charac['grouped_matrix'] and \
+                  isinstance(self.run_card['lpp1'],int) and isinstance(self.run_card['lpp2'],int) and \
                   abs(self.run_card['lpp1']) == 1 == abs(self.run_card['lpp2']) and \
                   (self.run_card['nb_proton1'] != self.run_card['nb_proton2'] or
                  self.run_card['nb_neutron1'] != self.run_card['nb_neutron2'] or
@@ -6470,41 +6471,42 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             # check that only quark/gluon/photon are in initial beam if lpp=+-1
             pdg_in_p = list(range(-6,7))+[21,22]
-            if (abs(self.run_card['lpp1'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
+            if isinstance(self.run_card['lpp1'],int) and isinstance(self.run_card['lpp2'],int):
+                if(abs(self.run_card['lpp1'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
                or (abs(self.run_card['lpp2'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):
-                if 'pythia_card.dat' in self.cards or 'pythia8_card.dat' in self.cards:
-                    path_to_remove = None
-                    if 'pythia_card.dat' in self.cards:
-                        path_to_remove = self.paths['pythia']
-                        card_to_remove = 'pythia_card.dat'
-                    elif 'pythia8_card.dat' in self.cards:
-                        path_to_remove = self.paths['pythia8']
-                        card_to_remove = 'pythia8_card.dat'
-                    if path_to_remove:
-                        if 'partonshower' in self.run_card['bypass_check']:
-                            logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
-                        else:    
-                            logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
-                            os.remove(path_to_remove)
-                            self.cards.remove(card_to_remove)
-                else:
-                    logger.info('Remember that Parton-Shower are not yet ready for such proton component definition (HW implementation in progress).', '$MG:BOLD' )
-            elif (abs(self.run_card['lpp1'])==3 and abs(self.run_card['lpp2'])==3):
-                if 'pythia8_card.dat' in self.cards:
-                    if self.run_card['pdlabel'] == 'isronlyll':
-                       if 'partonshower' not in self.run_card['bypass_check']:
-                            # force that QED shower is on?
-                            for param in ['TimeShower:QEDshowerByQ', 'TimeShower:QEDshowerByL', 'TimeShower:QEDshowerByGamma', 'SpaceShower:QEDshowerByQ', 'SpaceShower:QEDshowerByL']:
-                                if param not in self.PY8Card or \
-                                   (not self.PY8Card[param] and param.lower() not in self.PY8Card.user_set):
-                                    logger.warning('Activating QED shower: setting %s to True', param)
-                                    self.PY8Card[param] = True
-                    elif 'partonshower' in self.run_card['bypass_check']:
-                        logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
+                    if 'pythia_card.dat' in self.cards or 'pythia8_card.dat' in self.cards:
+                        path_to_remove = None
+                        if 'pythia_card.dat' in self.cards:
+                            path_to_remove = self.paths['pythia']
+                            card_to_remove = 'pythia_card.dat'
+                        elif 'pythia8_card.dat' in self.cards:
+                            path_to_remove = self.paths['pythia8']
+                            card_to_remove = 'pythia8_card.dat'
+                        if path_to_remove:
+                            if 'partonshower' in self.run_card['bypass_check']:
+                                logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
+                            else:    
+                                logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
+                                os.remove(path_to_remove)
+                                self.cards.remove(card_to_remove)
                     else:
-                        logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
-                        os.remove(self.paths['pythia8'])
-                        self.cards.remove('pythia8_card.dat')
+                        logger.info('Remember that Parton-Shower are not yet ready for such proton component definition (HW implementation in progress).', '$MG:BOLD' )
+                elif (abs(self.run_card['lpp1'])==3 and abs(self.run_card['lpp2'])==3):
+                    if 'pythia8_card.dat' in self.cards:
+                        if self.run_card['pdlabel'] == 'isronlyll':
+                           if 'partonshower' not in self.run_card['bypass_check']:
+                                # force that QED shower is on?
+                                for param in ['TimeShower:QEDshowerByQ', 'TimeShower:QEDshowerByL', 'TimeShower:QEDshowerByGamma', 'SpaceShower:QEDshowerByQ', 'SpaceShower:QEDshowerByL']:
+                                    if param not in self.PY8Card or \
+                                       (not self.PY8Card[param] and param.lower() not in self.PY8Card.user_set):
+                                        logger.warning('Activating QED shower: setting %s to True', param)
+                                        self.PY8Card[param] = True
+                        elif 'partonshower' in self.run_card['bypass_check']:
+                            logger.warning("forcing to keep parton-shower run while possibly not fully consistent... please be carefull")
+                        else:
+                            logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off.')
+                            os.remove(self.paths['pythia8'])
+                            self.cards.remove('pythia8_card.dat')
 
                  
         ########################################################################
@@ -6581,7 +6583,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
 
             #check relation between lepton PDF // dressed lepton collisions // ...
-            if abs(self.run_card['lpp1']) != 1  or  abs(self.run_card['lpp2']) != 1:
+            if isinstance(self.run_card['lpp1'],int) and isinstance(self.run_card['lpp2'],int) and \
+                abs(self.run_card['lpp1']) != 1  or  abs(self.run_card['lpp2']) != 1:
                 if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 3:
                     # this can be dressed lepton or photon-flux
                     if proc_charac['pdg_initial1'] in [[11],[-11]] and  proc_charac['pdg_initial2'] in [[11],[-11]]:
