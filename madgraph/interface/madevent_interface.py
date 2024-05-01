@@ -4015,13 +4015,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 #except Exception:
                 #    continue                    
                 # Store log
-                try:
-                    if os.path.exists(pjoin(G_path, 'log.txt')):
-                        input = pjoin(G_path, 'log.txt')
+                input = pjoin(G_path, 'log.txt')
+                if os.path.exists(input): 
+                    if self.run_card['keep_log'] not in ["none", "minimal"]:
                         output = pjoin(G_path, '%s_log.txt' % run)
-                        files.mv(input, output) 
-                except Exception:
-                    continue
+                        try:
+                            files.mv(input, output) 
+                        except Exception:
+                            continue
+                    elif self.run_card['keep_log'] == "none":
+                        try:
+                            os.remove(input)
+                        except Exception:
+                            continue 
                 #try:   
                 #    # Grid
                 #    for name in ['ftn26']:
