@@ -578,10 +578,7 @@ cc      to use this code you must set                                           
 cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         write(*,*) "User-defined scale not set"
-         stop 1
-         temp_scale_id='User-defined dynamical scale' ! use a meaningful string
-         tmp = 0d0
+         tmp = user_dynamical_scale(P)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
