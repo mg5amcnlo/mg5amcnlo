@@ -4773,7 +4773,10 @@ This implies that with decay chains:
 
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
-                        
+
+        if LoopOption != 'tree' and self.options['gauge'] in ['FD','axial']:
+            raise Exception('Gauge %s is only supported/validated for tree level amplitude'% self.options['gauge'])
+
         ## Now check for orders/squared orders/constrained orders
         order_pattern = re.compile(\
            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
