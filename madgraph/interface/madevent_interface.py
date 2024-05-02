@@ -3776,7 +3776,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_chunk = max_G -1
                 nb_G = len(Gdirs) // nb_chunk 
 
-            misc.sprint(nb_chunk, nb_G)
             for i, local_G in enumerate(split(Gdirs, nb_chunk)):
                 line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
                 line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
