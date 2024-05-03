@@ -878,8 +878,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if fks_i <= 1: # initial-state recoil
 
                 # First boost to partonic CM frame
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
+                q = lhe_parser.FourMomentum(new_event[0])+lhe_parser.FourMomentum(new_event[1])
                 for ip,part in enumerate(new_event):
                     vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
                     new_event[ip].set_momentum(vec.zboost(pboost=q))
