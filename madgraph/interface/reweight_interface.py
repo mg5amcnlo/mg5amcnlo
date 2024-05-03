@@ -767,7 +767,7 @@ class ReweightInterface(extended_cmd.Cmd):
         event[1].mass = 0.
         tot_E=0.
         for ip,part in enumerate(event):
-            if ip >=2 :
+            if part.status == 1 :
                 tot_E += part.E
         if (event[0].pz > 0.and event[1].pz < 0):
             event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
