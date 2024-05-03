@@ -880,7 +880,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 # First boost to partonic CM frame
                 q = lhe_parser.FourMomentum(new_event[0])+lhe_parser.FourMomentum(new_event[1])
                 for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+                    vec = lhe_parser.FourMomentum(part)
                     new_event[ip].set_momentum(vec.zboost(pboost=q))
 
                 k_tot = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E-new_event[fks_j].E,new_event[0].px+new_event[1].px-new_event[fks_j].px,\
