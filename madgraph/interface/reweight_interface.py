@@ -17,6 +17,7 @@ from __future__ import division
 from __future__ import absolute_import
 import difflib
 import logging
+import copy
 import math
 import os
 import re
@@ -790,7 +791,6 @@ class ReweightInterface(extended_cmd.Cmd):
         """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
         """ note!! kinematics (and id) mapping only! """
 
-        import copy
         recoil = True
         fks_type = False
 
@@ -1356,7 +1356,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
             return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
         else:
-            import copy
             buff_event=copy.deepcopy(event)
             orig_wgt = event.wgt
             w_orig= event.wgt
@@ -1792,7 +1791,6 @@ class ReweightInterface(extended_cmd.Cmd):
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
         if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
-            import copy
             new_event = copy.deepcopy(event)
             pboost = FourMomenta()
             to_inc = bin(self.banner.run_card['frame_id'])[2:]
@@ -1812,7 +1810,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
         elif (hypp_id == 1 and self.boost_event):
             if self.boost_event is not True:
-                import copy
                 new_event = copy.deepcopy(event)
                 new_event.boost(self.boost_event)
                 if self.keep_ordering:
@@ -2351,7 +2348,6 @@ class ReweightInterface(extended_cmd.Cmd):
             except ImportError: 
                 nb_core = 1
 
-            import copy
             compile_options = copy.copy(self.options)
             compile_options['nb_core'] = nb_core
             compile_cluster = cluster.MultiCore(**compile_options)
