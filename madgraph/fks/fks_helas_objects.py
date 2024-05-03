@@ -861,8 +861,8 @@ class FKSHelasProcess(object):
         othertag = helas_objects.IdentifyMETag.\
                         create_tag(other.born_me.get('base_amplitude'))
 
-        # MZ temporary fix for sudakov; since they are not taken into account
-        # in the combination, return False for the moment
+        # MZ: if EW sudakov are included, do not combine. 
+        # This is not 100% ideal, as it is quite inefficient, but it is the safest option
         if self.ewsudakov:
             logger.warning('With --ewsudakov, matrix elements will not be combined')
             return False
