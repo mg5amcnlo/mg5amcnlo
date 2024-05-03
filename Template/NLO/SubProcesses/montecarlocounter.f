@@ -610,7 +610,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
 
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
-     $     ,flagmc,lzone,zhw,nofpartners,xmcxsec)
+     $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -622,7 +622,7 @@ c$$$      include 'madfks_mcatnlo.inc'
       logical lzone(nexternal),flagmc
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
-      double precision p(0:3,nexternal),probne,zhw(nexternal)
+      double precision p(0:3,nexternal),probne,z_shower(nexternal)
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
      $     ,emscwgt,MCsec(nexternal,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
@@ -683,7 +683,7 @@ c$$$      endif
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
+     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi,emscwgt
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if (.not.mcatnlo_delta) then
@@ -1106,23 +1106,8 @@ c$$$      endif
       
       
 c Shower variables
-      if(shower_mc.eq.'HERWIGPP')then
-         ztmp=zHWPP(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiHWPP(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacHWPP_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-      elseif(shower_mc.eq.'PYTHIA6Q')then
-         ztmp=zPY6Q(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY6Q(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY6Q_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-      elseif(shower_mc.eq.'PYTHIA6PT')then
-         ztmp=zPY6PT(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY6PT(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY6PT_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-      elseif(shower_mc.eq.'PYTHIA8')then
-         ztmp=zPY8(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xitmp=xiPY8(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
-      endif
+      call get_shower_variables(ztmp,xitmp,xjactmp)
+
       
       first_MCcnt_call=.false.
  222  continue
@@ -1139,11 +1124,11 @@ c Main loop over colour partners used to begin here
       xjac(npartner)=xjactmp
       if(shower_mc.eq.'HERWIG6')then
          z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
-     &                    x,yi,yj,tk,uk,q1q,q2q)
+     &                    x,yi,yj,tk,uk,xq1q,xq2q)
          xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
-     &                      x,yi,yj,tk,uk,q1q,q2q)
+     &                      x,yi,yj,tk,uk,xq1q,xq2q)
          xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,
-     &                                  shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+     &                                  shat_n1,x,yi,yj,tk,uk,xq1q,xq2q)
       endif
 c Compute dead zones
       call get_dead_zone(ileg,z(npartner),xi(npartner),shat_n1,x,yi,
@@ -1437,6 +1422,28 @@ c Main loop over colour partners used to end here
       return
       end
 
+      subroutine get_shower_variables(ztmp,xitmp,xjactmp)
+      use kinematics_module
+      implicit none
+      double precision ztmp,xitmp,xjactmp
+      if(shower_mc.eq.'HERWIGPP')then
+         ztmp=zHWPP()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiHWPP()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacHWPP_xiztoxy()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+      elseif(shower_mc.eq.'PYTHIA6Q')then
+         ztmp=zPY6Q()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY6Q()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY6Q_xiztoxy()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+      elseif(shower_mc.eq.'PYTHIA6PT')then
+         ztmp=zPY6PT()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY6PT()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY6PT_xiztoxy()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+      elseif(shower_mc.eq.'PYTHIA8')then
+         ztmp=zPY8()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xitmp=xiPY8()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY8_xiztoxy()!(ileg,xm12,xm22,shat_n1,x,yi,yj,tk,uk,q1q,q2q)
+      endif
+      end
 
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
@@ -3752,16 +3759,18 @@ c
 
 c Hewrig++
 
-      function zHWPP(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-c Shower energy variable
+      double precision function zHWPP()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+c     Shower energy variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision zHWPP,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
-     &w1,w2,zeta1,zeta2,get_zeta,betad,betas
+!      integer ileg
+!      double precision zHWPP,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
+!     &w1,w2,zeta1,zeta2,get_zeta,betad,betas
+      double precision betad,betas,tiny,get_zeta,zeta1,zeta2
       parameter (tiny=1d-5)
 
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          zHWPP=1-(1-x)*(1+yi)/2d0
@@ -3771,22 +3780,23 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
+            betad=sqrt((1-(xm12-xm22)/shat_n1)**2-(4*xm22/shat_n1))
+            betas=1+(xm12-xm22)/shat_n1
             zHWPP=1-(1-x)*(1+yj)/(betad+betas)
          else
-            zeta1=get_zeta(s,w1,w2,xm12,xm22)
+            zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
             zHWPP=1-zeta1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yj)*s/(2*(s-xm12))
+            zHWPP=1-(1-x)*(1+yj)*shat_n1/(2*(shat_n1-xm12))
          elseif(1-yj.lt.tiny)then
-            zHWPP=(s*x-xm12)/(s-xm12)+(1-yj)*(1-x)*s*(s*x+xm12*(x-2))*
-     &                                (s*x-xm12)/(2*(s-xm12)**3)
+            zHWPP=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)*shat_n1
+     $           *(shat_n1*x+xm12*(x-2))*(shat_n1*x-xm12)/(2*(shat_n1
+     $           -xm12)**3)
          else
-            zeta2=get_zeta(s,w2,w1,xm22,xm12)
+            zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
             zHWPP=1-zeta2 
          endif
 c

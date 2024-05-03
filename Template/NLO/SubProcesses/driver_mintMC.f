@@ -718,6 +718,9 @@ c
       common /c_vegas_x_fold/x_save,ifold_picked
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
+      integer fks_father
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -816,8 +819,6 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
                ! Normal: all contributions included
                call compute_born
                call compute_nbody_noborn
-               call get_born_flow(flow_picked)
-               call compute_shower_scale_nbody(p_born,flow_picked)
             endif
          endif
 
@@ -842,6 +843,13 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
+
+! Consider all flows for the shower scale assignment (with assignements
+! only needed for the dipoles where the fks-mother is one end of the
+! dipole line)
+            fks_father=min(i_fks,j_fks)
+            call compute_shower_scale_nbody(p_born,-fks_father) 
+
             jac=1d0/vol1
             probne=1d0
             gfactsf=1.d0

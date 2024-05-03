@@ -31,26 +31,43 @@ contains
     double precision, external :: ran2
     ! loop over dipoles
     call get_global_ref_scale(p)
-    do i=1,next_n
-       do j=1,next_n
-          if (valid_dipole_n(i,j,flow_picked)) then
-             ref_scale=get_ref_scale_dipole(p,i,j)
-             call get_scaleminmax(ref_scale,scalemin,scalemax)
-             ! this breaks backward compatibility. In earlier versions, the
-             ! shower_scale_nbody was constrained by the ptresc (which
-             ! depended on the n+1-body and was used to decide if in life or
-             ! dead zone). Also, now we randomize for each dipole separately
-             ! also for non-delta.
-             rrnd=ran2()
-             rrnd=damping_inv(rrnd,1d0)
-             shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
-             shower_scale_nbody_nodamp(i,j)=scalemax
-          else
-             shower_scale_nbody(i,j)=-1d0
-             shower_scale_nbody_nodamp(i,j)=-1d0
-          endif
+    if (flow_picked .lt. 0) then
+       fks_father=-flow_picked
+       do i=1,next_n
+          if (i.eq.fks_father) cycle
+          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
+          ref_scale=get_ref_scale_dipole(p,i,fks_father)
+          call get_scaleminmax(ref_scale,scalemin,scalemax)
+          rrnd=ran2()
+          rrnd=damping_inv(rrnd,1d0)
+          shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
+          shower_scale_nbody_nodamp(i,fks_father)=scalemax
        enddo
-    enddo
+    elseif (flow_picked.gt.0) then
+       do i=1,next_n
+          do j=1,next_n
+             if (valid_dipole_n(i,j,flow_picked)) then
+                ref_scale=get_ref_scale_dipole(p,i,j)
+                call get_scaleminmax(ref_scale,scalemin,scalemax)
+                ! this breaks backward compatibility. In earlier versions, the
+                ! shower_scale_nbody was constrained by the ptresc (which
+                ! depended on the n+1-body and was used to decide if in life or
+                ! dead zone). Also, now we randomize for each dipole separately
+                ! also for non-delta.
+                rrnd=ran2()
+                rrnd=damping_inv(rrnd,1d0)
+                shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
+                shower_scale_nbody_nodamp(i,j)=scalemax
+             else
+                shower_scale_nbody(i,j)=-1d0
+                shower_scale_nbody_nodamp(i,j)=-1d0
+             endif
+          enddo
+       enddo
+    else
+       write (*,*) 'flow_picked is zero in compute_shower_scale_nbody',flow_picked
+       stop 1
+    endif
   end subroutine compute_shower_scale_nbody
 
   subroutine Bornonly_shower_scale(p,flow_picked)

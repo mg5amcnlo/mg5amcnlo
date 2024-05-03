@@ -835,7 +835,7 @@ c$$$      include 'madfks_mcatnlo.inc'
       include 'born_nhel.inc'
       integer nofpartners,i
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
-     $     ,sevmc,zhw(nexternal),xmcxsec(nexternal),g22,wgt1
+     $     ,sevmc,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
@@ -870,12 +870,12 @@ c$$$      include 'madfks_mcatnlo.inc'
       endif
       if (sevmc.eq.0d0) return
       call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-     $     ,lzone,zhw,nofpartners,xmcxsec)
+     $     ,lzone,z_shower,nofpartners,xmcxsec)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if (passcuts .and. flagmc) then
          do i=1,nofpartners
             if(lzone(i))then
-              call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)
+              call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
               do iamp=1, amp_split_size
                 if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
                 call amp_split_pos_to_orders(iamp, orders)
@@ -5859,16 +5859,16 @@ c do the same as above for the counterevents
       return
       end
 
-      subroutine get_mc_lum(j_fks,zhw_used,xi_i_fks,xlum_mc_fact)
+      subroutine get_mc_lum(j_fks,z_shower,xi_i_fks,xlum_mc_fact)
       implicit none
       include "run.inc"
       include "nexternal.inc"
       integer j_fks
-      double precision zhw_used,xi_i_fks,xlum_mc_fact
+      double precision z_shower,xi_i_fks,xlum_mc_fact
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      if(zhw_used.lt.0.d0.or.zhw_used.gt.1.d0)then
-        write(*,*)'Error #1 in get_mc_lum',zhw_used
+      if(z_shower.lt.0.d0.or.z_shower.gt.1.d0)then
+        write(*,*)'Error #1 in get_mc_lum',z_shower
         stop
       endif
       if(j_fks.gt.nincoming)then
@@ -5876,24 +5876,24 @@ c do the same as above for the counterevents
         xbk(2)=xbjrk_cnt(2,0)
         xlum_mc_fact=1.d0
       elseif(j_fks.eq.1)then
-        xbk(1)=xbjrk_cnt(1,0)/zhw_used
+        xbk(1)=xbjrk_cnt(1,0)/z_shower
         xbk(2)=xbjrk_cnt(2,0)
 c Note that this is true for Pythia since, due to event projection and to
-c the definition of the shower variable x = zhw_used, the Bjorken x's for
+c the definition of the shower variable x = z_shower, the Bjorken x's for
 c the event (to be used in H events) are the ones for the counterevent
 c multiplied by 1/x (by 1) for the emitting (non emitting) leg 
         if(xbk(1).gt.1.d0)then
           xlum_mc_fact = 0.d0
         else
-          xlum_mc_fact = (1-xi_i_fks)/zhw_used
+          xlum_mc_fact = (1-xi_i_fks)/z_shower
         endif
       elseif(j_fks.eq.2)then
         xbk(1)=xbjrk_cnt(1,0)
-        xbk(2)=xbjrk_cnt(2,0)/zhw_used
+        xbk(2)=xbjrk_cnt(2,0)/z_shower
         if(xbk(2).gt.1.d0)then
           xlum_mc_fact = 0.d0
         else
-          xlum_mc_fact = (1-xi_i_fks)/zhw_used
+          xlum_mc_fact = (1-xi_i_fks)/z_shower
         endif
       else
         write(*,*)'Error in get_mc_lum: unknown j_fks',j_fks
