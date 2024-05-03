@@ -850,7 +850,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_p.E = 0.0
                 for ip,part in enumerate(new_event):
                     if (ip != fks_j and ip >= 2):
-                        new_E = new_E + part.E
+                        new_p.E +=  part.E
                 
                 # Use one of the initial states to absorb the energy change in the final state
                 new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
