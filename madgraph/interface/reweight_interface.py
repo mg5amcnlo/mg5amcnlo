@@ -783,9 +783,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
         for ip,part in enumerate(event):
             if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
-                event[ip].mass = 0.
-                E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + event[ip].pz**2)
-                event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, event[ip].pz]))
+                part.mass = 0.
+                E_1_new = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                part.set_momentum(lhe_parser.FourMomentum([E_1_new, part.px, part.py, part.pz]))
 
     def merge_particles_kinematics(self, event, i,j, moth):
         """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
