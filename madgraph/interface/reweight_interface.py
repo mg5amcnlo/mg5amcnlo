@@ -781,7 +781,7 @@ class ReweightInterface(extended_cmd.Cmd):
     def set_final_jet_mass_to_zero(self, event):
 
         for ip,part in enumerate(event):
-            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (ip > 1):
+            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
                 event[ip].mass = 0.
                 E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + event[ip].pz**2)
                 event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, event[ip].pz]))
