@@ -820,10 +820,7 @@ class ReweightInterface(extended_cmd.Cmd):
             new_event[fks_i].set_momentum(mother_4mom)
 
             if fks_i <= 1: # initial-state recoil
-                new_E = 0.0
-                new_x = 0.0
-                new_y = 0.0
-                new_z = 0.0
+                new_p = lhe_parser.FourMomentum()
                 for ip,part in enumerate(new_event):
                     if (ip != fks_i and ip != fks_j and ip >= 2):
                         new_E = new_E + part.E
