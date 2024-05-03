@@ -660,7 +660,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
-        logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
+        if self.inc_sudakov:
+            logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
         
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
