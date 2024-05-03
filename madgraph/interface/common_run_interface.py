@@ -994,7 +994,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     # unless the complex mass scheme is used
                     if not self.proc_characteristics['complex_mass_scheme']:
                         no_width = [p for p in ufomodel.all_particles if p.width != zero]
-                        logger.info('''Setting all particle widhts to zero (needed for EW Sudakov approximation).''','$MG:BOLD')
+                        logger.info('''Setting all particle widths to zero (needed for EW Sudakov approximation).''','$MG:BOLD')
                     # also, check that the model features the 'ntadpole' parameter, and set it to 1
                     try:
                         param_card['tadpole'].get(1).value = 1.
