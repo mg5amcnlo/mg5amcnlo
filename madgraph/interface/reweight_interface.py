@@ -997,7 +997,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-            logger.info(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
                 fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
