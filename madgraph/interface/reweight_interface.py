@@ -1371,7 +1371,7 @@ class ReweightInterface(extended_cmd.Cmd):
             nexternal = n_init + n_final
 
             # Remove all propagator particles from the event to be passed to Sud module
-            for ip,part in enumerate(buff_event):
+            for ip,part in enumerate(list(buff_event)):
                 if (abs(part.status) != 1):
                     buff_event.pop(ip)
 
