@@ -1666,7 +1666,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if '_lo' in type_nlo:
             w_orig = self.calculate_matrix_element(event, 0)
             w_new =  self.calculate_matrix_element(event, 1)      
-            misc.sprint('editing weight in LO')      
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
             
