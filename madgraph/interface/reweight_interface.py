@@ -823,10 +823,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_p = lhe_parser.FourMomentum()
                 for ip,part in enumerate(new_event):
                     if (ip != fks_i and ip != fks_j and ip >= 2):
-                        new_E = new_E + part.E
-                        new_x = new_x + part.px
-                        new_y = new_y + part.py
-                        new_z = new_z + part.pz
+                        new_p += part
                 
                 if fks_i == 0:
                     new_event[1].set_momentum(lhe_parser.FourMomentum([new_E - new_event[0].E, new_x - new_event[0].px,\
