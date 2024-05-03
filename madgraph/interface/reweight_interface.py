@@ -826,11 +826,9 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_p += part
                 
                 if fks_i == 0:
-                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E - new_event[0].E, new_x - new_event[0].px,\
-                                                                    new_y - new_event[0].py, new_z - new_event[0].pz]))
+                    new_event[1].set_momentum(new_p - lhe_parser.FourMomentum(new_event[0]))
                 elif fks_i == 1:
-                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E - new_event[1].E, new_x - new_event[1].px, \
-                                                                    new_y - new_event[1].py, new_z - new_event[1].pz]))
+                    new_event[0].set_momentum(new_p - lhe_parser.FourMomentum(new_event[1]))
                 
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
                 pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
