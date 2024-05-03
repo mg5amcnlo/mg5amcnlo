@@ -853,7 +853,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_p.E +=  part.E
                 
                 # Use one of the initial states to absorb the energy change in the final state
-                new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
+                new_event[1].set_momentum(lhe_parser.FourMomentum([new_p.E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
                 
                 # Change the initial state pz and E
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
