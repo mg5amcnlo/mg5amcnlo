@@ -844,7 +844,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 for ip,part in enumerate(new_event):
                     if (ip == fks_i):
                         part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
-                        new_E = part.E
+                        new_p.E = part.E
 
                 # Find the overall energy in the final state
                 new_p.E = 0.0
