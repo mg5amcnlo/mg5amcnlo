@@ -2980,8 +2980,8 @@ c Fills the function that is returned to the MINT integrator
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6
@@ -3580,8 +3580,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6

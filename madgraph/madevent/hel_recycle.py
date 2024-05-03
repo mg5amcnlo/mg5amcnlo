@@ -839,7 +839,7 @@ def split_amps(line, new_amps):
                 spin = fct.split(None,1)[1][to_remove]
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
 
-            hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel, iamp = re.findall(r'AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 

@@ -7977,7 +7977,8 @@ class UFO_model_to_mg4(object):
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
-        
+        # put in lower case and remove duplicate
+        additional_fct = list({f.lower():'' for f in additional_fct if f.lower() not in ['condif', 'reglog', 'reglogp', 'reglogm', 'recms', 'arg', 'grreglog', 'regsqrt']}) 
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
           double complex condif
@@ -8021,7 +8022,7 @@ class UFO_model_to_mg4(object):
         """
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
+        fsock.writelines(r"""double complex function cond(condition,truecase,falsecase)
           implicit none
           double complex condition,truecase,falsecase
           if(condition.eq.(0.0d0,0.0d0)) then

@@ -865,7 +865,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
-        order = re.findall("\[(.*)\]", firstprocess)
+        order = re.findall(r"\[(.*)\]", firstprocess)
         if 'QED' in order[0]:
             perturbation_order.append('QED')
         if 'QCD' in order[0]:

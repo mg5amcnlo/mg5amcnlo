@@ -624,12 +624,12 @@ class BasicCmd(OriginalCmd):
                 compfunc = self.completenames
 
             # correct wrong splittion with '\ '
-            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+            if line and begidx > 2 and line[begidx-2:begidx] == r'\ ':
                 Ntext = line.split(os.path.sep)[-1]
-                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                self.completion_prefix = Ntext.rsplit(r'\ ', 1)[0] + r'\ '
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
-                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                data = compfunc(Ntext.replace(r'\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="
@@ -742,7 +742,7 @@ class BasicCmd(OriginalCmd):
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
         
-        completion = [a.replace(' ','\ ') for a in completion]
+        completion = [a.replace(' ',r'\ ') for a in completion]
         return completion
 
 
@@ -1253,7 +1253,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return possibility[0]
         if '=' in line and ' ' in line.strip():
             leninit = len(line)
-            line,n = re.subn('\s*=\s*','=', line)
+            line,n = re.subn(r'\s*=\s*','=', line)
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
@@ -1311,7 +1311,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
+            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', r'\ '))
         except Exception as error:
             logger.error(error)
 
@@ -2001,6 +2001,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         text = ""
         has_mg5_path = False
         # Use local configuration => Need to update the path
+        already_written = set()
         for line in open(basefile):
             if '=' in line:
                 data, value = line.split('=',1)
@@ -2018,8 +2019,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 comment = ''    
             if key in to_keep:
                 value = str(to_keep[key])
-            else:
+            elif line not in already_written:
+                already_written.add(line)
                 text += line
+                continue
+            else:
                 continue
             if key == 'mg5_path':
                 has_mg5_path = True
@@ -2032,14 +2036,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 # check if absolute path
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
-            text += '%s = %s # %s \n' % (key, value, comment)
+            new_line = '%s = %s # %s \n' % (key, value, comment)
+            if new_line not in already_written: 
+                text += new_line
+                already_written.add(new_line)
         for key in to_write:
             if key in to_keep:
-                text += '%s = %s \n' % (key, to_keep[key])
+                new_line = '%s = %s \n' % (key, to_keep[key])
+                if new_line not in already_written: 
+                    text += new_line
         
         if not MADEVENT and not has_mg5_path:
-            text += """\n# MG5 MAIN DIRECTORY\n"""
-            text += "mg5_path = %s\n" % MG5DIR         
+            if "mg5_path = %s\n" % MG5DIR not in already_written: 
+                text += """\n# MG5 MAIN DIRECTORY\n"""
+                text += "mg5_path = %s\n" % MG5DIR         
         
         writer = open(filepath,'w')
         writer.write(text)
@@ -2190,7 +2200,7 @@ class SmartQuestion(BasicCmd):
                 raise
             
     def reask(self, reprint_opt=True):
-        pat = re.compile('\[(\d*)s to answer\]')
+        pat = re.compile(r'\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
         
         if prev_timer:     
@@ -2991,7 +3001,7 @@ class ControlSwitch(SmartQuestion):
                                   lpotential_switch=0,
                                   lnb_key=0,
                                   key=None):
-        """should return four lines:
+        r"""should return four lines:
         1. The upper band (typically /========\ 
         2. The lower band (typically \========/
         3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
@@ -3239,13 +3249,13 @@ class ControlSwitch(SmartQuestion):
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
                 
                 if hidden_line: 
-                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f2 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f2)
                 text.append(f2 % data_to_format)
             elif hidden_line:
                 if not f3:
-                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f3 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f1)
                 text.append(f3 % data_to_format)

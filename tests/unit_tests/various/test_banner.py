@@ -162,8 +162,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = " 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
