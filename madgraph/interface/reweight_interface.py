@@ -1459,7 +1459,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 sys.exit(2)
                 
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
-            E, px, py, pz = 0.,0.,0.,0.
+            p = lhe_parser.FourMomentum()
             for i,particle in enumerate(event_to_sud):
                     if particle.status == -1:
                         E += particle.E
