@@ -2330,7 +2330,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # set the environmental variable ewsudsa in make_opts
             common_run_interface.CommonRunCmd.update_make_opts_full(pjoin(sourcedir, 'make_opts'), {'ewsudsa': 'True'})
             misc.compile(cwd=sourcedir)
-            logger.info('Compiling reweight P*dirs')
+            logger.info('Compiling reweight P* dirs')
             p_dirs = [d for d in \
                 open(pjoin(sarw_path, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
             # determine the number of core to use for compilation
