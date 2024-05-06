@@ -122,7 +122,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
         # this is for the Sudakov approximation of EW corrections
         logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
-                       'Please cite arxiv:2110.03714')
+                       'Please cite arxiv:2110.03714, arxiv:2309.00452')
         if "--ewsudakov" in args:
             self.ewsudakov = True
             args.remove('--ewsudakov')
