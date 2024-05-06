@@ -550,6 +550,8 @@ class ReweightInterface(extended_cmd.Cmd):
             for onedir in rwgt_dir_possibility:
                 if not os.path.exists(pjoin(path_me,onedir)):
                     continue 
+
+                sys.path.insert(0, path_me)
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
 
@@ -1462,12 +1464,9 @@ class ReweightInterface(extended_cmd.Cmd):
             p = lhe_parser.FourMomentum()
             for i,particle in enumerate(event_to_sud):
                     if particle.status == -1:
-                        E += particle.E
-                        px += particle.px
-                        py += particle.py
-                        pz += particle.pz
-            in_part_mom = lhe_parser.FourMomentum([E, px, py, pz])
-            if not ((abs(px) < 1e-6 * E) and (abs(py) < 1e-6 * E) and (abs(pz) < 1e-6 * E)):
+                        p += particle
+            in_part_mom = p
+            if not ((abs(p.px) < 1e-6 * p.E) and (abs(p.py) < 1e-6 * p.E) and (abs(p.pz) < 1e-6 * p.E)):
                 event_to_sud.boost(in_part_mom)
 
             # Rotate system to a partonic CM along z-axis
