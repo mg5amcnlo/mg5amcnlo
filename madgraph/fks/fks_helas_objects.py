@@ -242,7 +242,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'], ['ewsudakov'], 
+        keys += ['real_matrix_elements', 'has_isr', 'has_fsr', 'ewsudakov', 
                  'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
 
