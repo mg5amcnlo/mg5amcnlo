@@ -2241,10 +2241,10 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
-                    try:
-                        mgcmd.exec_cmd("define %s = %s" % (name, content))
-                    except madgraph.InvalidCmd:
-                        pass
+                try:
+                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                except madgraph.InvalidCmd:
+                    pass
                         
             if  second and 'tree_path' in self.dedicated_path:
                 files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
