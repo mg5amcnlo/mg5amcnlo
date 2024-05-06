@@ -1865,6 +1865,30 @@ class Event(list):
         
         return new_event
 
+
+    def set_initial_mass_to_zero(self):
+        """set the masses of the initial particles to zero, by reshuffling the respective momenta
+        Works only in the **partonic** com frame, so the event must be boosted to such frame
+        before calling the function
+        """
+
+        self[0].mass = 0.
+        self[1].mass = 0.
+        tot_E=0.
+        for ip,part in enumerate(self):
+            if part.status == 1 :
+                tot_E += part.E
+        if (self[0].pz > 0.and self[1].pz < 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, -tot_E/2.]))
+        elif (self[0].pz < 0.and self[1].pz > 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, -tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, tot_E/2.]))
+        else:
+            logger.critical('ERROR: two incoming partons not back.-to-back')
+
+
+
     def boost(self, filter=None):
         """modify the current event to boost it according to the current filter"""
         if filter is None:

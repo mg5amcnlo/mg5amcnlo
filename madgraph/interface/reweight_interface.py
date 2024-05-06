@@ -764,22 +764,22 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
-    def set_initial_mass_to_zero(self, event):
-
-        event[0].mass = 0.
-        event[1].mass = 0.
-        tot_E=0.
-        for ip,part in enumerate(event):
-            if part.status == 1 :
-                tot_E += part.E
-        if (event[0].pz > 0.and event[1].pz < 0):
-            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-        elif (event[0].pz < 0.and event[1].pz > 0):
-            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-        else:
-            logger.critical('ERROR: two incoming partons not back.-to-back')
+#    def set_initial_mass_to_zero(self, event):
+#
+#        event[0].mass = 0.
+#        event[1].mass = 0.
+#        tot_E=0.
+#        for ip,part in enumerate(event):
+#            if part.status == 1 :
+#                tot_E += part.E
+#        if (event[0].pz > 0.and event[1].pz < 0):
+#            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
+#            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
+#        elif (event[0].pz < 0.and event[1].pz > 0):
+##            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
+#            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
+#        else:
+#            logger.critical('ERROR: two incoming partons not back.-to-back')
 
     def set_final_jet_mass_to_zero(self, event):
 
@@ -1478,7 +1478,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # Set all light quarks and lepton masses to zero in event file
             self.set_final_jet_mass_to_zero(event_to_sud)
             # Set finally all initial masses to zero rather than the masses in the event files
-            self.set_initial_mass_to_zero(event_to_sud)
+            event_to_sud.set_initial_mass_to_zero()
             event_to_sud.check_kinematics_only()
 
             gstr=event.aqcd*2.*pi
