@@ -764,226 +764,6 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
-#    def set_initial_mass_to_zero(self, event):
-#
-#        event[0].mass = 0.
-#        event[1].mass = 0.
-#        tot_E=0.
-#        for ip,part in enumerate(event):
-#            if part.status == 1 :
-#                tot_E += part.E
-#        if (event[0].pz > 0.and event[1].pz < 0):
-#            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-#            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-#        elif (event[0].pz < 0.and event[1].pz > 0):
-##            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-#            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-#        else:
-#            logger.critical('ERROR: two incoming partons not back.-to-back')
-
-    def set_final_jet_mass_to_zero(self, event):
-
-        for ip,part in enumerate(event):
-            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
-                part.mass = 0.
-                E_1_new = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
-                part.set_momentum(lhe_parser.FourMomentum([E_1_new, part.px, part.py, part.pz]))
-
-    def merge_particles_kinematics(self, event, i,j, moth):
-        """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
-        """ note!! kinematics (and id) mapping only! """
-
-        recoil = True
-        fks_type = False
-
-        if recoil and not fks_type:
-            if (i == moth[0].get('number')-1):
-                fks_i = i
-                fks_j = j
-            elif (j == moth[0].get('number')-1):
-                fks_i = j
-                fks_j = i
-            to_remove = fks_j
-            
-            merge_i = event[fks_i]
-            merge_j = event[fks_j]
-        
-            i_4mom = lhe_parser.FourMomentum(merge_i)
-            j_4mom = lhe_parser.FourMomentum(merge_j)
-            if (fks_i <= 1):
-                sign1 = -1.0
-            else:
-                sign1 = 1.0
-            mother_4mom = i_4mom + sign1*j_4mom
-        
-            new_event = copy.deepcopy(event)
-
-            new_event[fks_i].pid = moth[0]['id']
-            new_event[fks_i].set_momentum(mother_4mom)
-
-            if fks_i <= 1: # initial-state recoil
-                new_p = lhe_parser.FourMomentum()
-                for ip,part in enumerate(new_event):
-                    if (ip != fks_i and ip != fks_j and ip >= 2):
-                        new_p += part
-                
-                if fks_i == 0:
-                    new_event[1].set_momentum(new_p - lhe_parser.FourMomentum(new_event[0]))
-                elif fks_i == 1:
-                    new_event[0].set_momentum(new_p - lhe_parser.FourMomentum(new_event[1]))
-                
-                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
-                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
-                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
-                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
-                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
-                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
-                new_event.pop(to_remove)
-                
-            if fks_i > 1: # final-state recoil
-
-                # Re-scale the energy of fks_i to make it on-shell
-                for ip,part in enumerate(new_event):
-                    if (ip == fks_i):
-                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
-                        new_p.E = part.E
-
-                # Find the overall energy in the final state
-                new_p.E = 0.0
-                for ip,part in enumerate(new_event):
-                    if (ip != fks_j and ip >= 2):
-                        new_p.E +=  part.E
-                
-                # Use one of the initial states to absorb the energy change in the final state
-                new_event[1].set_momentum(lhe_parser.FourMomentum([new_p.E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
-                
-                # Change the initial state pz and E
-                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
-                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
-                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
-                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
-                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
-                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
-                new_event.pop(to_remove)
-            
-        elif fks_type and not recoil:        
-            ## Do it in a more FKS-style
-            if (i == moth[0].get('number')-1):
-                fks_i = i
-                fks_j = j
-            elif (j == moth[0].get('number')-1):
-                fks_i = j
-                fks_j = i
-            to_remove = fks_j
-            new_event = copy.copy(event)
-
-            if fks_i <= 1: # initial-state recoil
-
-                # First boost to partonic CM frame
-                q = lhe_parser.FourMomentum(new_event[0])+lhe_parser.FourMomentum(new_event[1])
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum(part)
-                    new_event[ip].set_momentum(vec.zboost(pboost=q))
-
-                k_tot = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E-new_event[fks_j].E,new_event[0].px+new_event[1].px-new_event[fks_j].px,\
-                            new_event[0].py+new_event[1].py-new_event[fks_j].py,new_event[0].pz+new_event[1].pz-new_event[fks_j].pz])
-
-                final = lhe_parser.FourMomentum([0,0,0,0])
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                    if (ip != fks_i and ip != fks_j and ip >= 2):
-                        final = final + vec
-                        
-                s = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])**2
-                ksi = new_event[fks_j].E/(math.sqrt(s)/2.0)
-                y = new_event[fks_j].pz/new_event[fks_j].E
-
-                new_event[0].pz = new_event[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
-                new_event[0].E = math.sqrt(new_event[0].mass**2 + new_event[0].pz**2)
-                new_event[1].pz = new_event[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
-                new_event[1].E = math.sqrt(new_event[1].mass**2 + new_event[1].pz**2)
-
-                final = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                k_tot_1 = k_tot.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                k_tot_2 = k_tot_1.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
-                k_tot_3 = k_tot_2.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-
-                for ip,part in enumerate(new_event):
-                    if (ip >= 2):
-                        vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                        vec2 = vec.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                        vec3 = vec2.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
-                        vec_new = vec3.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                        new_event[ip].set_momentum(lhe_parser.FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
-                
-                new_event.pop(to_remove)
-
-            else: # final-state recoil
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                    new_event[ip].set_momentum(vec.zboost(pboost=q))
-            
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                k = lhe_parser.FourMomentum([new_event[fks_i].E+new_event[fks_j].E,new_event[fks_i].px+new_event[fks_j].px,\
-                            new_event[fks_i].py+new_event[fks_j].py,new_event[fks_i].pz+new_event[fks_j].pz])
-
-                k_rec = lhe_parser.FourMomentum([0,0,0,0])
-                for ip,part in enumerate(new_event):
-                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
-                        k_rec = k_rec + lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-
-                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
-                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
-                for ip,part in enumerate(new_event):
-                    if ip >= 2 and ip != fks_i and ip != fks_j:
-                        vec = lhe_parser.FourMomentum([new_event[ip].E,new_event[ip].px,new_event[ip].py,new_event[ip].pz])
-                        new_event[ip].set_momentum(vec.boost_beta(beta,k_rec))
-                    if ip == fks_i:
-                        new_event[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
-                new_event.pop(to_remove)
-        else:
-            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
-
-
-        return new_event
-
-    def recoil_eq(self,part1, part2):
-        """ In general, solves the equation
-        E1 + E2 = K 
-        p1 + p2 = c
-        E1^2 - p1^2 = a
-        E2^2 - p2^2 = b
-        and returns p1
-        """
-        thresh = 1e-6
-        import random
-        a = part1.mass**2 + part1.px**2 + part1.py**2
-        b = part2.mass**2 + part2.px**2 + part2.py**2
-        c = part1.pz + part2.pz
-        K = part1.E + part2.E
-        K2 = K**2
-        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
-        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
-        
-        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
-            logger.critical('Error in recoil_eq solver 1')
-            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
-            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
-        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
-            logger.critical('Error in recoil_eq solver 2')
-            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
-            logger.critical(K)
-        return sol1
-
-
     def handle_param_card(self, model_line, args, type_rwgt):
         
 
@@ -1438,8 +1218,8 @@ class ReweightInterface(extended_cmd.Cmd):
                         #### H1 type
                         type = 1
                     else:
-                        event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
-                        event_to_sud = event_for_sud
+                        buff_event.merge_particles_kinematics(min_i,min_j,ij_comb)
+                        event_to_sud = buff_event
                         n_part = nexternal 
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
                         # map to n+1 body if recoil does not exist at Born level among processes
@@ -1476,7 +1256,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
             
             # Set all light quarks and lepton masses to zero in event file
-            self.set_final_jet_mass_to_zero(event_to_sud)
+            #self.set_final_jet_mass_to_zero(event_to_sud)
+            event_to_sud.set_final_jet_mass_to_zero()
             # Set finally all initial masses to zero rather than the masses in the event files
             event_to_sud.set_initial_mass_to_zero()
             event_to_sud.check_kinematics_only()

@@ -7,6 +7,7 @@ import operator
 import numbers
 import math
 import time
+import copy
 import os
 import shutil
 import sys
@@ -1887,6 +1888,209 @@ class Event(list):
         else:
             logger.critical('ERROR: two incoming partons not back.-to-back')
 
+    def set_final_jet_mass_to_zero(self):
+        """set the final light particle masses to zero
+        """
+
+        for ip,part in enumerate(self):
+            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
+                part.mass = 0.
+                E_1_new = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                part.set_momentum(FourMomentum([E_1_new, part.px, part.py, part.pz]))
+
+
+
+    def merge_particles_kinematics(self, i,j, moth):
+        """Map to an underlying n-body kinematics for two given 
+           particles i,j to be merged and a resulting moth"""
+        """ note! kinematics (and id) mapping only! """
+
+        recoil = True
+        fks_type = False
+
+        if recoil and not fks_type:
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            
+            merge_i = self[fks_i]
+            merge_j = self[fks_j]
+        
+            i_4mom = FourMomentum(merge_i)
+            j_4mom = FourMomentum(merge_j)
+            if (fks_i <= 1):
+                sign1 = -1.0
+            else:
+                sign1 = 1.0
+            mother_4mom = i_4mom + sign1*j_4mom
+        
+            new_event = copy.deepcopy(self)
+
+            self[fks_i].pid = moth[0]['id']
+            self[fks_i].set_momentum(mother_4mom)
+
+            if fks_i <= 1: # initial-state recoil
+                new_p = FourMomentum()
+                for ip,part in enumerate(self):
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        new_p += part
+                
+                if fks_i == 0:
+                    self[1].set_momentum(new_p - FourMomentum(self[0]))
+                elif fks_i == 1:
+                    self[0].set_momentum(new_p - FourMomentum(self[1]))
+                
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+                
+            if fks_i > 1: # final-state recoil
+
+                # Re-scale the energy of fks_i to make it on-shell
+                for ip,part in enumerate(self):
+                    if (ip == fks_i):
+                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                        new_p.E = part.E
+
+                # Find the overall energy in the final state
+                new_p.E = 0.0
+                for ip,part in enumerate(self):
+                    if (ip != fks_j and ip >= 2):
+                        new_p.E +=  part.E
+                
+                # Use one of the initial states to absorb the energy change in the final state
+                self[1].set_momentum(FourMomentum([new_p.E-self[0].E,self[1].px,self[1].py,self[1].pz]))
+                
+                # Change the initial state pz and E
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+            
+        elif fks_type and not recoil:        
+            ## Do it in a more FKS-style
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            new_event = copy.copy(event)
+
+            if fks_i <= 1: # initial-state recoil
+
+                # First boost to partonic CM frame
+                q = FourMomentum(self[0])+FourMomentum(self[1])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum(part)
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+
+                k_tot = FourMomentum([self[0].E+self[1].E-self[fks_j].E,self[0].px+self[1].px-self[fks_j].px,\
+                            self[0].py+self[1].py-self[fks_j].py,self[0].pz+self[1].pz-self[fks_j].pz])
+
+                final = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        final = final + vec
+                        
+                s = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])**2
+                ksi = self[fks_j].E/(math.sqrt(s)/2.0)
+                y = self[fks_j].pz/self[fks_j].E
+
+                self[0].pz = self[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
+                self[0].E = math.sqrt(self[0].mass**2 + self[0].pz**2)
+                self[1].pz = self[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
+                self[1].E = math.sqrt(self[1].mass**2 + self[1].pz**2)
+
+                final = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k_tot_1 = k_tot.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                k_tot_2 = k_tot_1.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                k_tot_3 = k_tot_2.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+
+                for ip,part in enumerate(self):
+                    if (ip >= 2):
+                        vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                        vec2 = vec.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        vec3 = vec2.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                        vec_new = vec3.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        self[ip].set_momentum(FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
+                
+                self.pop(to_remove)
+
+            else: # final-state recoil
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+            
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k = FourMomentum([self[fks_i].E+self[fks_j].E,self[fks_i].px+self[fks_j].px,\
+                            self[fks_i].py+self[fks_j].py,self[fks_i].pz+self[fks_j].pz])
+
+                k_rec = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
+                        k_rec = k_rec + FourMomentum([part.E,part.px,part.py,part.pz])
+
+                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
+                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j:
+                        vec = FourMomentum([self[ip].E,self[ip].px,self[ip].py,self[ip].pz])
+                        self[ip].set_momentum(vec.boost_beta(beta,k_rec))
+                    if ip == fks_i:
+                        self[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
+                self.pop(to_remove)
+        else:
+            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
+
+    def recoil_eq(self,part1, part2):
+        """ In general, solves the equation
+        E1 + E2 = K 
+        p1 + p2 = c
+        E1^2 - p1^2 = a
+        E2^2 - p2^2 = b
+        and returns p1
+        """
+        thresh = 1e-6
+        import random
+        a = part1.mass**2 + part1.px**2 + part1.py**2
+        b = part2.mass**2 + part2.px**2 + part2.py**2
+        c = part1.pz + part2.pz
+        K = part1.E + part2.E
+        K2 = K**2
+        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
+            logger.critical('Error in recoil_eq solver 1')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
+            logger.critical('Error in recoil_eq solver 2')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(K)
+        return sol1
 
 
     def boost(self, filter=None):
