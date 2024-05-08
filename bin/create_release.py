@@ -121,7 +121,7 @@ auto_update = True
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
 MG_branch = p.stdout.read().decode().strip()
 if MG_branch not in  ['3.x']:
-    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
+    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -172,14 +172,7 @@ elif auto_update:
     auto_update = False
 
 # checking that the rev_nb is in a reasonable range compare to the old one.
-<<<<<<< HEAD
-rev_nb = None
 if auto_update:
-||||||| merged common ancestors
-if rev_nb:
-=======
-if auto_update:
->>>>>>> 3.x
     rev_nb_i = int(rev_nb)
     try:
         if MG_branch == 'LTS':
