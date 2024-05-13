@@ -3,7 +3,7 @@ module kinematics_module
   use process_module
   implicit none
   integer,public :: ileg
-  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x,xij
+  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x,xij,betad,betas
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
@@ -205,8 +205,10 @@ contains
        write(*,*)'Error 4 in fill_kinematics_module: assigned wrong ileg'
        stop
     endif
-    x=1-xi_i_fks
-    xij=2*(1-xm12/shat_n1-(1-x))/(2-(1-x)*(1-yj)) 
+    x=1d0-xi_i_fks
+    xij=2d0*(1d0-xm12/shat_n1-(1d0-x))/(2d0-(1d0-x)*(1d0-yj))
+    betad=sqrt((1d0-(xm12-xm22)/shat_n1)**2-(4d0*xm22/shat_n1))
+    betas=1d0+(xm12-xm22)/shat_n1
   end subroutine fill_kinematics_module
   
   double precision function deltaR(p1,p2)

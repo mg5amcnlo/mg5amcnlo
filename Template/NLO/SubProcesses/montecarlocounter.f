@@ -3517,36 +3517,38 @@ c (i.e., are defined as -2p.k, NOT (p+k)^2)
 
 c Herwig6
 
-      function zHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function zHW6(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower energy variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision zHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
-     $     ,tiny,ss,w1,w2,tbeta1,zeta1,tbeta2,zeta2,get_zeta,beta,betae0
-     $     ,betad,betas
+      double precision tiny,e0sq,ss,betae0,beta,zeta,tbeta,get_zeta
+c$$$      integer ileg
+c$$$      double precision zHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
+c$$$     $     ,tiny,ss,w1,w2,tbeta1,zeta1,tbeta2,zeta2,get_zeta,beta,betae0
+c$$$     $     ,betad,betas
       parameter (tiny=1d-5)
 
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*(s*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
+            zHW6=1-(1-x)*(shat_n1*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
          elseif(1-yi.lt.tiny)then
-            zHW6=x-(1-yi)*(1-x)*(s*x**2-4*e0sq)/(8*e0sq)
+            zHW6=x-(1-yi)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
          else
-            ss=1-(1+xuk/s)/(e0sq/xtk)
+            ss=1-(1+xuk/shat_n1)/(e0sq/xtk)
             if(ss.lt.0d0)goto 999
             zHW6=2*(e0sq/xtk)*(1-sqrt(ss))
          endif
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*(s*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
+            zHW6=1-(1-x)*(shat_n1*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
          elseif(1-yi.lt.tiny)then
-            zHW6=x-(1-yi)*(1-x)*(s*x**2-4*e0sq)/(8*e0sq)
+            zHW6=x-(1-yi)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
          else
-            ss=1-(1+xtk/s)/(e0sq/xuk)
+            ss=1-(1+xtk/shat_n1)/(e0sq/xuk)
             if(ss.lt.0d0)goto 999
             zHW6=2*(e0sq/xuk)*(1-sqrt(ss))
          endif
@@ -3554,33 +3556,33 @@ c
       elseif(ileg.eq.3)then
          if(e0sq.le.(w1+xm12))goto 999
          if(1-x.lt.tiny)then
-            beta=1-xm12/s
+            beta=1-xm12/shat_n1
             betae0=sqrt(1-xm12/e0sq)
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            zHW6=1+(1-x)*( s*(yj*betad-betas)/(4*e0sq*(1+betae0))-
-     &                     betae0*(xm12-xm22+s*(1+(1+yj)*betad-betas))/
-     &                     (betad*(xm12-xm22+s*(1+betad))) )
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            zHW6=1+(1-x)*( shat_n1*(yj*betad-betas)/(4*e0sq*(1+betae0))-
+     $           betae0*(xm12-xm22+shat_n1*(1+(1+yj)*betad-betas))/
+     $           (betad*(xm12-xm22+shat_n1*(1+betad))) )
          else
-            tbeta1=sqrt(1-(w1+xm12)/e0sq)
-            zeta1=get_zeta(s,w1,w2,xm12,xm22)
-            zHW6=1-tbeta1*zeta1-w1/(2*(1+tbeta1)*e0sq)
+            tbeta=sqrt(1-(w1+xm12)/e0sq)
+            zeta=get_zeta(shat_n1,w1,w2,xm12,xm22)
+            zHW6=1-tbeta*zeta-w1/(2*(1+tbeta)*e0sq)
          endif
 c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*( (s-xm12)*(1-yj)/(8*e0sq)+
-     &                     s*(1+yj)/(2*(s-xm12)) )
+            zHW6=1-(1-x)*( (shat_n1-xm12)*(1-yj)/(8*e0sq)+
+     &                     shat_n1*(1+yj)/(2*(shat_n1-xm12)) )
          elseif(1-yj.lt.tiny)then
-            zHW6=(s*x-xm12)/(s-xm12)+(1-yj)*(1-x)*(s*x-xm12)*
-     &           ( (s-xm12)**2*(s*(1-2*x)+xm12)+
-     &             4*e0sq*s*(s*x-xm12*(2-x)) )/
-     &           ( 8*e0sq*(s-xm12)**3 )
+            zHW6=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)*(shat_n1*x
+     $           -xm12)*( (shat_n1-xm12)**2*(shat_n1*(1-2*x)+xm12)+4
+     $           *e0sq*shat_n1*(shat_n1*x-xm12*(2-x)) )/( 8*e0sq
+     $           *(shat_n1-xm12)**3 )
          else
-            tbeta2=sqrt(1-w2/e0sq)
-            zeta2=get_zeta(s,w2,w1,xm22,xm12)
-            zHW6=1-tbeta2*zeta2-w2/(2*(1+tbeta2)*e0sq)
+            tbeta=sqrt(1-w2/e0sq)
+            zeta=get_zeta(shat_n1,w2,w1,xm22,xm12)
+            zHW6=1-tbeta*zeta-w2/(2*(1+tbeta)*e0sq)
          endif
 c
       else
@@ -3598,47 +3600,51 @@ c
 
 
 
-      function xiHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function xiHW6(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower evolution variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xiHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
-     $     ,tiny,z,zHW6,w1,w2,beta,betae0,betad,betas
+      double precision tiny,e0sq,betae0,beta
+c$$$      integer ileg
+c$$$      double precision xiHW6,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q
+c$$$     $     ,tiny,z,zHW6,w1,w2,beta,betae0,betad,betas
       parameter (tiny=1d-5)
 
-      z=zHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zHW6(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            xiHW6=2*s*(1-yi)/(s*(1-yi)+4*e0sq*(1+yi))
+            xiHW6=2*shat_n1*(1-yi)/(shat_n1*(1-yi)+4*e0sq*(1+yi))
          elseif(1-yi.lt.tiny)then
-            xiHW6=(1-yi)*s*x**2/(4*e0sq)
+            xiHW6=(1-yi)*shat_n1*x**2/(4*e0sq)
          else
-            xiHW6=2*(1+xuk/(s*(1-z)))
+            xiHW6=2*(1+xuk/(shat_n1*(1-z)))
          endif
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            xiHW6=2*s*(1-yi)/(s*(1-yi)+4*e0sq*(1+yi))
+            xiHW6=2*shat_n1*(1-yi)/(shat_n1*(1-yi)+4*e0sq*(1+yi))
          elseif(1-yi.lt.tiny)then
-            xiHW6=(1-yi)*s*x**2/(4*e0sq)
+            xiHW6=(1-yi)*shat_n1*x**2/(4*e0sq)
          else
-            xiHW6=2*(1+xtk/(s*(1-z)))
+            xiHW6=2*(1+xtk/(shat_n1*(1-z)))
          endif
 c
       elseif(ileg.eq.3)then
          if(e0sq.le.(w1+xm12))goto 999
          if(1-x.lt.tiny)then
-            beta=1-xm12/s
+            beta=1-xm12/shat_n1
             betae0=sqrt(1-xm12/e0sq)
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            xiHW6=( s*(1+betae0)*betad*(xm12-xm22+s*(1+betad))*(yj*betad-betas) )/
-     &            ( -4*e0sq*betae0*(1+betae0)*(xm12-xm22+s*(1+(1+yj)*betad-betas))+
-     &              (s*betad*(xm12-xm22+s*(1+betad))*(yj*betad-betas)) )
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            xiHW6=( shat_n1*(1+betae0)*betad*(xm12-xm22+shat_n1*(1
+     $           +betad))*(yj*betad-betas) )/( -4*e0sq*betae0*(1+betae0)
+     $           *(xm12-xm22+shat_n1*(1+(1+yj)*betad-betas))+(shat_n1
+     $           *betad*(xm12-xm22+shat_n1*(1+betad))*(yj*betad-betas))
+     $           )
          else
             xiHW6=w1/(2*z*(1-z)*e0sq)
          endif
@@ -3646,9 +3652,10 @@ c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            xiHW6=2*(s-xm12)**2*(1-yj)/( (s-xm12)**2*(1-yj)+4*e0sq*s*(1+yj) )
+            xiHW6=2*(shat_n1-xm12)**2*(1-yj)/( (shat_n1-xm12)**2*(1-yj)
+     $           +4*e0sq*shat_n1*(1+yj) )
          elseif(1-yj.lt.tiny)then
-            xiHW6=(s-xm12)**2*(1-yj)/(4*e0sq*s)
+            xiHW6=(shat_n1-xm12)**2*(1-yj)/(4*e0sq*shat_n1)
          else
             xiHW6=w2/(2*z*(1-z)*e0sq)
          endif
@@ -3668,79 +3675,81 @@ c
 
 
 
-      function xjacHW6_xiztoxy(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
-     $     ,xq1q,xq2q)
+      double precision function xjacHW6_xiztoxy(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
+!     $     ,xq1q,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xjacHW6_xiztoxy,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
-     $     ,xq1q,xq2q,tiny,tmp,z,zHW6,xi,xiHW6,w1,w2,tbeta1,zeta1,dw1dx
-     $     ,dw2dx,dw1dy,dw2dy,tbeta2,get_zeta,beta,betae0,betad,betas
-     $     ,eps1,eps2,beta1,beta2,zmo
+      double precision tiny,z,xi,zHW6,xiHW6,tmp,e0sq,beta,betae0,zmo
+     $     ,tbeta,eps
+c$$$      integer ileg
+c$$$      double precision xjacHW6_xiztoxy,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
+c$$$     $     ,xq1q,xq2q,tiny,tmp,z,zHW6,xi,xiHW6,w1,w2,tbeta1,zeta1,dw1dx
+c$$$     $     ,dw2dx,dw1dy,dw2dy,tbeta2,get_zeta,beta,betae0,betad,betas
+c$$$     $     ,eps1,eps2,beta1,beta2,zmo
       parameter (tiny=1d-5)
 
-      tmp=0d0
-      z=zHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-      xi=xiHW6(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zHW6(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      xi=xiHW6(e0sq)!(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0.or.xi.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            tmp=-2*s/(s*(1-yi)+4*(1+yi)*e0sq)
+            tmp=-2*shat_n1/(shat_n1*(1-yi)+4*(1+yi)*e0sq)
          elseif(1-yi.lt.tiny)then
-            tmp=-s*x**2/(4*e0sq)
+            tmp=-shat_n1*x**2/(4*e0sq)
          else
-            tmp=-s*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
+            tmp=-shat_n1*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
          endif
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            tmp=-2*s/(s*(1-yi)+4*(1+yi)*e0sq)
+            tmp=-2*shat_n1/(shat_n1*(1-yi)+4*(1+yi)*e0sq)
          elseif(1-yi.lt.tiny)then
-            tmp=-s*x**2/(4*e0sq)
+            tmp=-shat_n1*x**2/(4*e0sq)
          else
-            tmp=-s*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
+            tmp=-shat_n1*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
          endif
 c
       elseif(ileg.eq.3)then
          if(e0sq.le.(w1+xm12))goto 999
          if(1-x.lt.tiny)then
-            beta=1-xm12/s
+            beta=1-xm12/shat_n1
             betae0=sqrt(1-xm12/e0sq)
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            tmp=( s*betae0*(1+betae0)*betad*(xm12-xm22+s*(1+betad)) )/
-     &          ( (-4*e0sq*(1+betae0)*(xm12-xm22+s*(1+betad*(1+yj)-betas)))+
-     &            (xm12-xm22+s*(1+betad))*(xm12*(4+yj*betad-betas)-
-     &            (xm22-s)*(yj*betad-betas)) )
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            tmp=( shat_n1*betae0*(1+betae0)*betad*(xm12-xm22+shat_n1*(1
+     $           +betad)) )/( (-4*e0sq*(1+betae0)*(xm12-xm22+shat_n1*(1
+     $           +betad*(1+yj)-betas)))+(xm12-xm22+shat_n1*(1+betad))
+     $           *(xm12*(4+yj*betad-betas)-(xm22-shat_n1)*(yj*betad
+     $           -betas)) )
          else
-            eps2=1-(xm12-xm22)/(s-w1)
-            beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
-            tbeta1=sqrt(1-(w1+xm12)/e0sq)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta1/(2*e0sq*z*(1-z)*(s-w1)
-     $           *beta2)
+            eps=1-(xm12-xm22)/(shat_n1-w1)
+            beta=sqrt(eps**2-4*shat_n1*xm22/(shat_n1-w1)**2)
+            tbeta=sqrt(1-(w1+xm12)/e0sq)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta/(2*e0sq*z*(1-z)
+     $           *(shat_n1-w1)*beta)
          endif
 c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            zmo=(s-xm12)*(1-yj)/(8*e0sq)+s*(1+yj)/(2*(s-xm12))
-            tmp=-s/(4*e0sq*zmo)
+            zmo=(shat_n1-xm12)*(1-yj)/(8*e0sq)+shat_n1*(1+yj)/(2
+     $           *(shat_n1-xm12))
+            tmp=-shat_n1/(4*e0sq*zmo)
          elseif(1-yj.lt.tiny)then
-            tmp=-(s-xm12)/(4*e0sq)
+            tmp=-(shat_n1-xm12)/(4*e0sq)
          else
-            eps1=1+xm12/(s-w2)
-            beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
-            tbeta2=sqrt(1-w2/e0sq)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta2/(2*e0sq*z*(1-z)*(s-w2)
-     $           *beta1)
+            eps=1+xm12/(shat_n1-w2)
+            beta=sqrt(eps**2-4*shat_n1*xm12/(shat_n1-w2)**2)
+            tbeta=sqrt(1-w2/e0sq)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta/(2*e0sq*z*(1-z)
+     $           *(shat_n1-w2)*beta)
          endif
 c
       else
@@ -3780,8 +3789,8 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/shat_n1)**2-(4*xm22/shat_n1))
-            betas=1+(xm12-xm22)/shat_n1
+c$$$            betad=sqrt((1-(xm12-xm22)/shat_n1)**2-(4*xm22/shat_n1))
+c$$$            betas=1+(xm12-xm22)/shat_n1
             zHWPP=1-(1-x)*(1+yj)/(betad+betas)
          else
             zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
@@ -3815,39 +3824,41 @@ c
 
 
 
-      function xiHWPP(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-c Shower evolution variable
+      double precision function xiHWPP()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+c     Shower evolution variable
+      use kinematics_module
       implicit none
-      integer ileg
-      real*8 xiHWPP,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,w1,w2,
-     &betad,betas,z,zHWPP
+c$$$      integer ileg
+c$$$      real*8 xiHWPP,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,w1,w2,
+c$$$  &betad,betas,z,zHWPP
+      double precision z,zHWPP,tiny
       parameter (tiny=1d-5)
 
-      z=zHWPP(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zHWPP()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c 
       if(ileg.eq.1)then
-         xiHWPP=s*(1-yi)/(1+yi)
+         xiHWPP=shat_n1*(1-yi)/(1+yi)
 c
       elseif(ileg.eq.2)then
-         xiHWPP=s*(1-yi)/(1+yi)
+         xiHWPP=shat_n1*(1-yi)/(1+yi)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            xiHWPP=-s*(betad+betas)*(yj*betad-betas)/(2*(1+yj))
+c$$$            betad=sqrt((1-(xm12-xm22)/shat_n1)**2-(4*xm22/shat_n1))
+c$$$            betas=1+(xm12-xm22)/shat_n1
+            xiHWPP=-shat_n1*(betad+betas)*(yj*betad-betas)/(2*(1+yj))
          else
             xiHWPP=w1/(z*(1-z))
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiHWPP=(1-yj)*(s-xm12)**2/(s*(1+yj))
+            xiHWPP=(1-yj)*(shat_n1-xm12)**2/(shat_n1*(1+yj))
          elseif(1-yj.lt.tiny)then
-            xiHWPP=(1-yj)*(s-xm12)**2/(2*s)
+            xiHWPP=(1-yj)*(shat_n1-xm12)**2/(2*shat_n1)
          else
             xiHWPP=w2/(z*(1-z))
          endif
@@ -3867,53 +3878,53 @@ c
 
 
 
-      function xjacHWPP_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
-     $     ,xq2q)
+      double precision function xjacHWPP_xiztoxy()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
+                                                  !$ ,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
-      integer ileg
-      double precision xjacHWPP_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
-     &xq2q,tiny,tmp,z,zHWPP,w1,w2,zeta1,dw1dx,dw2dx,dw1dy,dw2dy,get_zeta,
-     &betad,betas,eps1,eps2,beta1,beta2
+      use kinematics_module
+      double precision z,zHWPP,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy
+c$$$      integer ileg
+c$$$      double precision xjacHWPP_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
+c$$$     &xq2q,tiny,tmp,z,zHWPP,w1,w2,zeta1,dw1dx,dw2dx,dw1dy,dw2dy,get_zeta,
+c$$$     &betad,betas,eps1,eps2,beta1,beta2
       parameter (tiny=1d-5)
 
       tmp=0d0
-      z=zHWPP(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zHWPP()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk 
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk 
 c
       if(ileg.eq.1)then
-         tmp=-s/(1+yi)
+         tmp=-shat_n1/(1+yi)
 c
       elseif(ileg.eq.2)then
-         tmp=-s/(1+yi)
+         tmp=-shat_n1/(1+yi)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            tmp=-s*(betad+betas)/(2*(1+yj))
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            tmp=-shat_n1*(betad+betas)/(2*(1+yj))
          else
-            eps2=1-(xm12-xm22)/(s-w1)
-            beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w1)*beta2)
+            eps=1-(xm12-xm22)/(shat_n1-w1)
+            beta=sqrt(eps**2-4*shat_n1*xm22/(shat_n1-w1)**2)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((shat_n1-w1)*beta)
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            tmp=-(s-xm12)/(1+yj)
+            tmp=-(shat_n1-xm12)/(1+yj)
          elseif(1-yj.lt.tiny)then
-            tmp=-(s-xm12)/2
+            tmp=-(shat_n1-xm12)/2
          else
-            eps1=1+xm12/(s-w2)
-            beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
-            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w2)*beta1)
+            eps=1+xm12/(shat_n1-w2)
+            beta=sqrt(eps**2-4*shat_n1*xm12/(shat_n1-w2)**2)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((shat_n1-w2)*beta)
          endif
 c
       else
@@ -3932,16 +3943,18 @@ c
 
 c Pythia6Q
 
-      function zPY6Q(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function zPY6Q()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower energy variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision zPY6Q,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
-     &w1,w2,betad,betas
+      double precision tiny
+c$$$      integer ileg
+c$$$      double precision zPY6Q,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
+c$$$     &w1,w2,betad,betas
       parameter(tiny=1d-5)
 
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          zPY6Q=x
@@ -3951,11 +3964,11 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            zPY6Q=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            zPY6Q=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
          else
-            zPY6Q=1-s*(1-x)*(xm12+w1)/w1/(s+w1+xm12-xm22)
+            zPY6Q=1-shat_n1*(1-x)*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
 c This is equation (3.10) of hep-ph/1102.3795. In the partonic
 c CM frame it is equal to (xk1(0)+xk3(0)*f)/(xk1(0)+xk3(0)),
 c where f = xm12/( s+xm12-xm22-2*sqrt(s)*(xk1(0)+xk3(0)) )
@@ -3963,12 +3976,12 @@ c where f = xm12/( s+xm12-xm22-2*sqrt(s)*(xk1(0)+xk3(0)) )
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zPY6Q=1-s*(1-x)/(s-xm12)
+            zPY6Q=1-shat_n1*(1-x)/(shat_n1-xm12)
          elseif(1-yj.lt.tiny)then
-            zPY6Q=(s*x-xm12)/(s-xm12)+(1-yj)*(1-x)**2*s*(s*x-xm12)/
-     &                                ( 2*(s-xm12)**2 )
+            zPY6Q=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)**2
+     $           *shat_n1*(shat_n1*x-xm12)/( 2*(shat_n1-xm12)**2 )
          else
-            zPY6Q=1-s*(1-x)/(s+w2-xm12)
+            zPY6Q=1-shat_n1*(1-x)/(shat_n1+w2-xm12)
          endif
 c
       else
@@ -3986,37 +3999,39 @@ c
 
 
 
-      function xiPY6Q(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-c Shower evolution variable
+      double precision function xiPY6Q()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+c     Shower evolution variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xiPY6Q,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z,
-     &zPY6Q,w1,w2,betad,betas
+      double precision tiny
+c$$$  integer ileg
+c$$$      double precision xiPY6Q,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z,
+c$$$     &zPY6Q,w1,w2,betad,betas
       parameter(tiny=1d-5)
 
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
-         xiPY6Q=s*(1-x)*(1-yi)/2
+         xiPY6Q=shat_n1*(1-x)*(1-yi)/2
 c
       elseif(ileg.eq.2)then
-         xiPY6Q=s*(1-x)*(1-yi)/2
+         xiPY6Q=shat_n1*(1-x)*(1-yi)/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            xiPY6Q=s*(1-x)*(betas-betad*yj)/2
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            xiPY6Q=shat_n1*(1-x)*(betas-betad*yj)/2
          else
             xiPY6Q=w1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiPY6Q=(1-yj)*(1-x)*(s-xm12)/2
+            xiPY6Q=(1-yj)*(1-x)*(shat_n1-xm12)/2
          elseif(1-yj.lt.tiny)then
-            xiPY6Q=(1-yj)*(1-x)*(s*x-xm12)/2
+            xiPY6Q=(1-yj)*(1-x)*(shat_n1*x-xm12)/2
          else
             xiPY6Q=w2
          endif
@@ -4036,48 +4051,47 @@ c
 
 
 
-      function xjacPY6Q_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
-     $     ,xq2q)
+      double precision function xjacPY6Q_xiztoxy()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
+c$$$     $     ,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
-c variables, and x and y are FKS variables
+c     variables, and x and y are FKS variables
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xjacPY6Q_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
-     &xq2q,tiny,tmp,z,zPY6Q,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas
+      double precision tiny,zPY6Q,z,tmp,dw1dx,dw1dy,dw2dx,dw2dy
+c$$$  integer ileg
+c$$$      double precision xjacPY6Q_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
+c$$$     &xq2q,tiny,tmp,z,zPY6Q,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas
       parameter (tiny=1d-5)
 
-      tmp=0d0
-      z=zPY6Q(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zPY6Q()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
-         tmp=-s*(1-x)/2
+         tmp=-shat_n1*(1-x)/2
 c
       elseif(ileg.eq.2)then
-         tmp=-s*(1-x)/2
+         tmp=-shat_n1*(1-x)/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
             tmp=xm12*betad/betas/(betas-betad*yj)
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
-            tmp=s*(xm12+w1)/w1/(s+w1+xm12-xm22)*dw1dy
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=shat_n1*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)*dw1dy
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            tmp=s*(1-x)/2
+            tmp=shat_n1*(1-x)/2
          elseif(1-yj.lt.tiny)then
-            tmp=-s*(1-x)*(s*x-xm12)/( 2*(s-xm12) )
+            tmp=-shat_n1*(1-x)*(shat_n1*x-xm12)/( 2*(shat_n1-xm12) )
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy) 
-            tmp=s/(s+w2-xm12)*dw2dy
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy) 
+            tmp=shat_n1/(shat_n1+w2-xm12)*dw2dy
          endif
 c
       else
@@ -4096,12 +4110,14 @@ c
 
 c Pythia6PT
 
-      function zPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function zPY6PT()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower energy variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision zPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny
-      parameter(tiny=1d-5)
+c$$$      double precision tiny
+c$$$      integer ileg
+c$$$      double precision zPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny
+c$$$      parameter(tiny=1d-5)
 
       if(ileg.eq.1)then
          zPY6PT=x
@@ -4132,18 +4148,19 @@ c
 
 
 
-      function xiPY6PT(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function xiPY6PT()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower evolution variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xiPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z
-      parameter(tiny=1d-5)
+c$$$      integer ileg
+c$$$      double precision xiPY6PT,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z
+c$$$      parameter(tiny=1d-5)
 
       if(ileg.eq.1)then
-         xiPY6PT=s*(1-x)**2*(1-yi)/2
+         xiPY6PT=shat_n1*(1-x)**2*(1-yi)/2
 c
       elseif(ileg.eq.2)then
-         xiPY6PT=s*(1-x)**2*(1-yi)/2
+         xiPY6PT=shat_n1*(1-x)**2*(1-yi)/2
 c
       elseif(ileg.eq.3)then
          write(*,*)'PYTHIA6PT not available for FSR'
@@ -4168,20 +4185,21 @@ c
 
 
 
-      function xjacPY6PT_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function xjacPY6PT_xiztoxy()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
-c variables, and x and y are FKS variables
+c     variables, and x and y are FKS variables
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xjacPY6PT_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
-     &xq2q,tiny,tmp
-      parameter(tiny=1d-5)
+c$$$      integer ileg
+c$$$      double precision xjacPY6PT_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
+c$$$     &xq2q,tiny,tmp
+c$$$      parameter(tiny=1d-5)
 
       if(ileg.eq.1)then
-         tmp=-s*(1-x)**2/2
+         tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.2)then
-         tmp=-s*(1-x)**2/2
+         tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.3)then
          write(*,*)'PYTHIA6PT not available for FSR'
@@ -4207,16 +4225,18 @@ c
 
 c Pythia8
 
-      function zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function zPY8()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower energy variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
-     &w1,w2,betad,betas
+      double precision tiny
+c$$$  integer ileg
+c$$$      double precision zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,
+c$$$     &w1,w2,betad,betas
       parameter(tiny=1d-5)
 
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
          zPY8=x
@@ -4226,11 +4246,11 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            zPY8=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            zPY8=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
          else
-            zPY8=1-s*(1-x)*(xm12+w1)/w1/(s+w1+xm12-xm22)
+            zPY8=1-shat_n1*(1-x)*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
 c This is equation (3.10) of hep-ph/1102.3795. In the partonic
 c CM frame it is equal to (xk1(0)+xk3(0)*f)/(xk1(0)+xk3(0)),
 c where f = xm12/( s+xm12-xm22-2*sqrt(s)*(xk1(0)+xk3(0)) )
@@ -4238,12 +4258,12 @@ c where f = xm12/( s+xm12-xm22-2*sqrt(s)*(xk1(0)+xk3(0)) )
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zPY8=1-s*(1-x)/(s-xm12)
+            zPY8=1-shat_n1*(1-x)/(shat_n1-xm12)
          elseif(1-yj.lt.tiny)then
-            zPY8=(s*x-xm12)/(s-xm12)+(1-yj)*(1-x)**2*s*(s*x-xm12)/
-     &                               ( 2*(s-xm12)**2 )
+            zPY8=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)**2*shat_n1
+     $           *(shat_n1*x-xm12)/( 2*(shat_n1-xm12)**2 )
          else
-            zPY8=1-s*(1-x)/(s+w2-xm12)
+            zPY8=1-shat_n1*(1-x)/(shat_n1+w2-xm12)
          endif
 c
       else
@@ -4261,40 +4281,43 @@ c
 
 
 
-      function xiPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function xiPY8()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Shower evolution variable
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z,
-     &zPY8,w1,w2,betas,betad,z0
+      double precision tiny,z,zPY8,z0
+c$$$      integer ileg
+c$$$      double precision xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,z,
+c$$$     &zPY8,w1,w2,betas,betad,z0
       parameter(tiny=1d-5)
 
-      z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zPY8()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
-         xiPY8=s*(1-x)**2*(1-yi)/2
+         xiPY8=shat_n1*(1-x)**2*(1-yi)/2
 c
       elseif(ileg.eq.2)then
-         xiPY8=s*(1-x)**2*(1-yi)/2
+         xiPY8=shat_n1*(1-x)**2*(1-yi)/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
-            xiPY8=s*(1-x)*(betas-betad*yj)*z0*(1-z0)/2
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
+            xiPY8=shat_n1*(1-x)*(betas-betad*yj)*z0*(1-z0)/2
          else
             xiPY8=z*(1-z)*w1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiPY8=s*(1-x)**2*(1-yj)/2
+            xiPY8=shat_n1*(1-x)**2*(1-yj)/2
          elseif(1-yj.lt.tiny)then
-            xiPY8=s*(1-x)**2*(1-yj)*(s*x-xm12)**2/(2*(s-xm12)**2)
+            xiPY8=shat_n1*(1-x)**2*(1-yj)*(shat_n1*x-xm12)**2/(2
+     $           *(shat_n1-xm12)**2)
          else
             xiPY8=z*(1-z)*w2
          endif
@@ -4314,46 +4337,48 @@ c
 
 
 
-      function xjacPY8_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      double precision function xjacPY8_xiztoxy()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
+      use kinematics_module
       implicit none
-      integer ileg
-      double precision xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
-     &xq2q,tiny,tmp,z,zPY8,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas,z0
-      parameter (tiny=1d-5)
+      double precision tiny,z,z0,zPY8,dw1dx,dw1dy,dw2dx,dw2dy,tmp
+c$$$      integer ileg
+c$$$      double precision xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
+c$$$     &xq2q,tiny,tmp,z,zPY8,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas,z0
+c$$$      parameter (tiny=1d-5)
 
-      tmp=0d0
-      z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      z=zPY8()!(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
       if(z.lt.0d0)goto 999
-      w1=-xq1q+xq2q-xtk
-      w2=-xq2q+xq1q-xuk
+c$$$      w1=-xq1q+xq2q-xtk
+c$$$      w2=-xq2q+xq1q-xuk
 c
       if(ileg.eq.1)then
-         tmp=-s*(1-x)**2/2
+         tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.2)then
-         tmp=-s*(1-x)**2/2
+         tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c$$$            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$            betas=1+(xm12-xm22)/s
+            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
             tmp=xm12*betad/betas/(betas-betad*yj)*z0*(1-z0)
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
-            tmp=s*(xm12+w1)/w1/(s+w1+xm12-xm22)*dw1dy*z*(1-z)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=shat_n1*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)*dw1dy*z*(1-z)
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            tmp=s**2*(1-x)**2/( 2*(s-xm12) )
+            tmp=shat_n1**2*(1-x)**2/( 2*(shat_n1-xm12) )
          elseif(1-yj.le.tiny)then
-            tmp=4*s**2*(1-x)**2*(s*x-xm12)**2/( 2*(s-xm12) )**3
+            tmp=4*shat_n1**2*(1-x)**2*(shat_n1*x-xm12)**2/( 2*(shat_n1
+     $           -xm12) )**3
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
-            tmp=s/(s+w2-xm12)*dw2dy*z*(1-z)
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+            tmp=shat_n1/(shat_n1+w2-xm12)*dw2dy*z*(1-z)
          endif
 c
       else
@@ -4872,11 +4897,13 @@ c$$$         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
 c$$$      endif
 c$$$      end
 
-      subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+c$$$      subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+      subroutine dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
+      use kinematics_module
       implicit none
       integer ileg
-      double precision s,x,yi,yj,xm12,xm22,dw1dx,dw2dx,dw1dy,dw2dy
+      double precision s,dw1dx,dw2dx,dw1dy,dw2dy
       double precision afun,bfun,cfun,mom_fks_sister_p,mom_fks_sister_m,
      &diff_p,diff_m,signfac,dadx,dady,dbdx,dbdy,dcdx,dcdy,mom_fks_sister,
      &dmomfkssisdx,dmomfkssisdy,en_fks,en_fks_sister,dq1cdx,dq2qdx,dq1cdy,
@@ -4886,6 +4913,7 @@ c Returns derivatives of Mandelstam invariants with respect to FKS variables
       double precision tiny
       parameter(tiny=1d-5)
 
+      s=shat_n1
       if(ileg.eq.1)then
          write(*,*)'dinvariants_dFKS should not be called for ileg = 1'
          stop
