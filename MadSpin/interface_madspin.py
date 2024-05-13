@@ -1979,29 +1979,37 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         return self.get_inter_value(event,nhel) 
 
-
-    def get_nhel(self,event,position):
+    def get_nhel(self,event):
 
         pdir,orig_order = self.get_pdir(event)
-
         if pdir in self.all_nhel:
+            return self.all_nhel[pdir]
+        else:
+            fct = self.get_mymod(pdir,'NHEL') 
+            iden,NHEL = fct()
+            self.all_nhel[pdir] = iden, NHEL 
 
-            iden,NHEL = self.all_nhel[pdir]()
-            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
-            groups = {} 
-            nhel = sorted(nhel) 
-            for item in nhel:
-                a = item.copy()
-                del a[position]
-                t = tuple(a)
-                groups.setdefault(t, []).append(item)
-                grouped = list(groups.values())
-            return grouped,iden
-        else : 
-            self.all_nhel[pdir] = self.get_mymod(pdir,'NHEL')
-
-            return self.get_nhel(event,position)
-
+# .      OLD CODE BY QUENTIN TO RETURN ONLY HELICITY WHERE HE
+#        pdir,orig_order = self.get_pdir(event)
+#
+#        if pdir in self.all_nhel:
+#
+#            iden,NHEL = self.all_nhel[pdir]()
+#            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
+#            groups = {} 
+#            nhel = sorted(nhel) 
+#            for item in nhel:
+#                a = item.copy()
+#                del a[position]
+#                t = tuple(a)
+#                groups.setdefault(t, []).append(item)
+#                grouped = list(groups.values())
+#            return grouped,iden
+#        else : 
+#            self.all_nhel[pdir] = self.get_mymod(pdir,'NHEL')
+#
+#            return self.get_nhel(event,position)
+#
 
     def get_mymod(self,pdir,MODE): 
 
