@@ -117,6 +117,7 @@ class CombineRuns(object):
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
+        to_clean = []
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
         wgt = results.axsec / results.nunwgt
         tot_nevents, nb_file = 0, 0
@@ -129,7 +130,13 @@ class CombineRuns(object):
             nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
             tot_nevents += nw
             nb_file += 1
+            to_clean.append(path)
         logger.debug("Combined %s file generating %s events for %s " , nb_file, tot_nevents, channel)
+        for path in to_clean:
+            try:
+                shutil.rmtree(path)
+            except:
+                pass
 
     @staticmethod
     def get_fortran_str(nb):
