@@ -1052,7 +1052,7 @@ class AllMatrixElement(dict):
         for leg in me.get('legs'):
             pid =  leg.get('id')
             nb = leg.get('number')
-            if pid in to_decay:
+            if pid in to_decay and leg.get('state'):
                 i, proc = to_decay[pid].pop()
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
