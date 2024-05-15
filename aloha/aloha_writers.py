@@ -543,7 +543,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if KERNEL.has_pi:
             out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         
-        if aloha.unitary_gauge == 3: # Feynman 
+        if aloha.unitary_gauge == 3: # FG gauge 
             self.declaration.add(('int','i'))
             out.write(" COMPLEX*16 CZERO\n")
             out.write("PARAMETER (CZERO=(0D0,0D0)) \n")
