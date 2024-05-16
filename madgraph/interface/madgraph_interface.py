@@ -5176,8 +5176,13 @@ This implies that with decay chains:
                isinstance(forbidden_schannel_ids[0], list):
                 raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels")
-            required_schannel_ids = \
-                               self.extract_particle_ids(required_schannels)
+            
+            try:
+                required_schannel_ids = \
+                               self.extract_particle_ids(required_schannels, crash_on_duplication=True)
+            except self.InvalidCmd:
+                raise self.InvalidCmd("Invalid \"> A A >\" syntax. In old version of MG5aMC, this was allowed but incorectly intrepreted as \"> A >\".")
+
             if required_schannel_ids and not \
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
@@ -5444,7 +5449,7 @@ This implies that with decay chains:
 
         return final
 
-    def extract_particle_ids(self, args):
+    def extract_particle_ids(self, args, crash_on_duplication=False):
         """Extract particle ids from a list of particle names. If
         there are | in the list, this corresponds to an or-list, which
         is represented as a list of id lists. An or-list is used to
@@ -5478,10 +5483,18 @@ This implies that with decay chains:
         for i, id_list in enumerate(all_ids):
             res_lists.extend(diagram_generation.expand_list_list(id_list))
         # Trick to avoid duplication while keeping ordering
-        for ilist, idlist in enumerate(res_lists):
-            set_dict = {}
-            res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
-                         if i not in set_dict]
+        if not crash_on_duplication:
+            for ilist, idlist in enumerate(res_lists):
+                set_dict = {}
+                res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
+                            if i not in set_dict]
+        else:
+            for ilist, idlist in enumerate(res_lists):
+                set_dict = {}
+                test = [set_dict.setdefault(i,i) for i in idlist \
+                            if i not in set_dict]
+                if len(test) != len(idlist):
+                    raise self.InvalidCmd('Particle can not be duplicate')  
 
         if len(res_lists) == 1:
             res_lists = res_lists[0]
