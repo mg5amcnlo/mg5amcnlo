@@ -223,6 +223,7 @@ class TestCmdShell1(unittest.TestCase):
                      'rivet_path': './HEPTools/rivet',
                      'yoda_path':'./HEPTools/yoda',
                       'eMELA': 'eMELA-config',
+                      'cluster_walltime': None,
                     }
 
         self.assertEqual(config, expected)
