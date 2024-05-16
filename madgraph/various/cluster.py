@@ -911,6 +911,10 @@ class CondorCluster(Cluster):
         else:
             requirement = ''
 
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+            requirement+='\n MaxRuntime =  %s' % self.options['cluster_walltime'] 
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -1718,6 +1722,7 @@ class SLURMCluster(Cluster):
             stderr = stdout
         if log is None:
             log = '/dev/null'
+
         
         command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
@@ -1728,6 +1733,12 @@ class SLURMCluster(Cluster):
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
+
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+                command.insert(1, '-t')
+                command.insert(2, self.options['cluster_walltime'])            
+            
 
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
