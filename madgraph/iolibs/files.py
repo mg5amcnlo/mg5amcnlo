@@ -117,25 +117,17 @@ def is_uptodate(picklefile, path_list=None, min_time=1343682423):
     
     assert type(path_list) == list, 'is_update expect a list of files'
     
-    ###pickle_date = os.path.getctime(picklefile) # BUG! mg5amcnlo/mg5amcnlo#89
-    pickle_date = os.path.getmtime(picklefile) # FIX BUG mg5amcnlo/mg5amcnlo#89
-    ###import madgraph.various.misc as misc # debug mg5amcnlo/mg5amcnlo#89
-    ###misc.sprint(pickle_date, min_time) # debug mg5amcnlo/mg5amcnlo#89
+    pickle_date = os.path.getmtime(picklefile) # FIX BUG mg5amcnlo/mg5amcnlo#89 (use getmtime instead of getctime)
     if pickle_date < min_time:
-        ###misc.sprint('False') # debug mg5amcnlo/mg5amcnlo#89
         return False
     
     for path in path_list:
-        ###misc.sprint(path) # debug mg5amcnlo/mg5amcnlo#89
         try:
-            ###misc.sprint(pickle_date, os.path.getmtime(path)) # debug mg5amcnlo/mg5amcnlo#89
             if os.path.getmtime(path) > pickle_date:
-                ###misc.sprint('False') # debug mg5amcnlo/mg5amcnlo#89
                 return False
         except Exception:
             continue
     #all pass
-    ###misc.sprint('True') # debug mg5amcnlo/mg5amcnlo#89
     return True
 
 

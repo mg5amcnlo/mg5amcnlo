@@ -361,7 +361,6 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
-    ###misc.sprint('Check', pickle_name, 'against:\n', '\n'.join(files_list)) # debug mg5amcnlo/mg5amcnlo#89
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         allow_reload = True
         try:
