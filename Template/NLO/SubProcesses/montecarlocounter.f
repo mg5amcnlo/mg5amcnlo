@@ -1048,8 +1048,6 @@ c Initialise if first time
       xitmp    = 0d0
       xjactmp  = 0d0
       gfactazi = 0d0
-      xkern(1:2)    = 0d0
-      xkernazi(1:2) = 0d0
       kn       = veckn_ev
       knbar    = veckbarn_ev
       kn0      = xp0jfks
@@ -1105,39 +1103,85 @@ c$$$      endif
       MCcntcalled=MCcntcalled+4
       
       
-c Shower variables
+c Shower variables (all except HW6, since that one depends on the
+c partner)
       call get_shower_variables(ztmp,xitmp,xjactmp)
-
       
       first_MCcnt_call=.false.
  222  continue
 c Main loop over colour partners used to begin here
       fksfather=min(i_fks,j_fks)
-      E0sq(npartner)=dot(p_born(0,fksfather),p_born(0,ipartners(npartner)))
+      E0sq(npartner)=dot(p_born(0,fksfather),
+     $                   p_born(0,ipartners(npartner)))
       if(E0sq(npartner).lt.0d0)then
          write(*,*)'Error in xmcsubt: negative E0sq'
          write(*,*)E0sq(npartner),ileg,npartner
          stop
       endif
-      z(npartner)=ztmp
-      xi(npartner)=xitmp
-      xjac(npartner)=xjactmp
       if(shower_mc.eq.'HERWIG6')then
-         z(npartner)=zHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
-     &                    x,yi,yj,tk,uk,xq1q,xq2q)
-         xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat_n1,
-     &                      x,yi,yj,tk,uk,xq1q,xq2q)
-         xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,
-     &                                  shat_n1,x,yi,yj,tk,uk,xq1q,xq2q)
+         z(npartner)=zHW6(E0sq(npartner))
+         xi(npartner)=xiHW6(E0sq(npartner))
+         xjac(npartner)=xjacHW6_xiztoxy(E0sq(npartner))
+      else
+         z(npartner)=ztmp
+         xi(npartner)=xitmp
+         xjac(npartner)=xjactmp
       endif
 c Compute dead zones
-      call get_dead_zone(ileg,z(npartner),xi(npartner),shat_n1,x,yi,
-     &  xm12,xm22,w1,w2,qMC,scalemax,ipartners(npartner),fksfather,
-     &  lzone(npartner),wcc)
+      call get_dead_zone(z(npartner),xi(npartner),qMC
+     $     ,ipartners(npartner),fksfather,lzone(npartner),PY6PTweight)
 
 c Compute MC subtraction terms
       if(lzone(npartner))then
          if(.not.flagmc)flagmc=.true.
+         call compute_spitting_kernels(xkern,xkernazi)
+      endif
+
+      subroutine compute_spitting_kernels(xkern,xkernazi)
+      implicit none
+      double precision xkern(1:2),xkernazi(1:2)
+      xkern(1:2)    = 0d0
+      xkernazi(1:2) = 0d0
+
+      if( (ileg.ge.3 .and.
+     $     (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
+     $    (ileg.le.2 .and.
+     $     (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
+         if(i_type.eq.8)then
+c g->gg, go->gog (icode=1)
+            call compute_splitting_kernel_icode1(xkern,xkernazi)
+         elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
+c g->qq, a->qq, a->ee (icode=2)
+            call compute_splitting_kernel_icode2(xkern,xkernazi)
+         else
+            write(*,*)'Error 1 in xmcsubt: unknown particle type'
+            write(*,*)i_type
+            stop
+         endif
+      elseif( (ileg.ge.3 .and.
+     $        (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
+     $        (ileg.le.2 .and.
+     $        (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )
+     $        then
+         if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
+c q->gq, q->aq, e->ae (icode=3)
+            call compute_splitting_kernel_icode3(xkern,xkernazi)
+         elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
+c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
+            call compute_splitting_kernel_icode4(xkern,xkernazi)
+         else
+            write(*,*)'Error 2 in xmcsubt: unknown particle type'
+            write(*,*)i_type
+            stop
+         endif
+      else
+         write(*,*)'Error 3 in xmcsubt: unknown particle type'
+         write(*,*)j_type,i_type
+         stop
+      endif
+      return
+      end
+      
          if( (ileg.ge.3 .and. (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
      &       (ileg.le.2 .and. (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
             if(i_type.eq.8)then
@@ -1361,8 +1405,12 @@ c Dead zone
         xkernazi(1:2)=0d0
       endif
 c
-      xkern(1:2)=xkern(1:2)*gfactsf*wcc
-      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf*wcc
+      xkern(1:2)=xkern(1:2)*gfactsf
+      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+      if (shower_mc='PYTHIA6PT') then
+         xkern(1:2)=xkern(1:2)*PY6PTweight
+         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
+      endif
 
 c Emsca stuff
       if(emscasharp)then
@@ -4981,91 +5029,78 @@ c
 
 
 
-      subroutine get_dead_zone(ileg,z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,
-     &                         scalemax,ip,ifat,lzone,wcc)
+      subroutine get_dead_zone(z,xi,qMC,ipartner,ifather,lzone
+     $     ,PY6PTweight)
+      use scale_module
       implicit none
-      include "run.inc"
-      include "nexternal.inc"
-      include 'nFKSconfigs.inc'
-c$$$      include "madfks_mcatnlo.inc"
-
-      integer ileg,ip,ifat,i
-      double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
+      include 'nexternal.inc'
+      integer ipartner,ifather,i
+      double precision z,xi,qMC,PY6PTweight
       logical lzone
 
-      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,Q2,
-     &lambda,dot,e0sq,beta,dum,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3
-      external dot
+      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda,sumdot,dot
+     $     ,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,get_angle
+     $     ,theta2p
+      external sumdot,dot,get_angle
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision pip(0:3),pifat(0:3),psum(0:3)
+      double precision pip(0:3),pifat(0:3)
 
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      double precision shower_S_scale(fks_configs*2)
-     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
-     &     ,pt_hardness
-      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
-     &     ,pt_hardness
-
+      ! PYTHIA6 variables
       integer mstj50,mstp67
       double precision parp67
       parameter (mstj50=2,mstp67=2,parp67=1d0)
-      double precision get_angle,theta2p
-
-c Stop if wrong ileg
-      if(ileg.lt.1.or.ileg.gt.4)then
-         write(*,*)'Subroutine get_dead_zone: unknown ileg ',ileg
-         stop
-      endif
-
-c Check compatibility among masses and ileg
-      if( (ileg.eq.3.and.xm12.eq.0d0) .or.
-     &    (ileg.eq.4.and.xm22.ne.0d0) .or.
-     &    (ileg.le.2.and.(xm12.ne.0d0.or.xm22.ne.0d0)) )then
-         write(*,*)'Subroutine get_dead_zone: wrong masses '
-         write(*,*)ileg,sqrt(xm12),sqrt(xm22)
-         stop
-      endif
 
 c Skip if unphysical shower variables
-      if(z.lt.0d0.or.xi.lt.0d0)goto 999
+      if(z.lt.0d0.or.xi.lt.0d0) then
+         lzone=.false.
+         return
+      endif
 
 c Definition and initialisation of variables
       lzone=.true.
+      PY6PTweight=-1d0
       do i=0,3
-         pifat(i)=p_born(i,ifat) ! father momentum (Born level)
-         pip(i)  =p_born(i,ip) ! partner momentum (Born level)
-         psum(i) =pifat(i)+pip(i) 
+         pifat(i)=p_born(i,ifather) ! father momentum (Born level)
+         pip(i)  =p_born(i,ipartner) ! partner momentum (Born level)
       enddo
-      max_scale=scalemax
-      xmp2=dot(pip,pip) ! mass squared of the partner
-      e0sq=dot(pip,pifat) ! father-partner dot product (Born level)
-      theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
-      theta2p=theta2p**2
-      xmm2=xm12*(4-ileg) ! emitter mass squared
-      xmr2=xm22*(4-ileg)-xm12*(3-ileg) ! global-recoiler mass squared
-      ww=w1*(4-ileg)-w2*(3-ileg) ! FKS parent/sister dot product
-      Q2=dot(psum,psum) ! parent dipole mass squared (Born level)
-      lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
-      beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
-        ! quantity used in the z boundaries for Pythia6 and Pythia8
-      wcc=1d0
-      ycc=1-parp67*x/(1-x)**2/2
-      mdip  =sqrt((sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2)
-        ! mdip corresponds to sqrt(dip.m2DipCorr)
-        ! (around line 2305 in Pythia TimeShower.cc)
-      mdip_g=sqrt((sqrt(s) -sqrt(xmr2))**2-xmm2)
-        ! Global-recoil adaption of the above
-      zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
-      zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
-      zp2=(1+beta)/2 ! These are the solutions of equation q2 s == z(1-z)(s+q2-xmr2)^2
-      zm2=(1-beta)/2 ! where q2 = (p_i_FKS + p_j_FKS)^2
-                     ! Note that this is the global-recoil analogue of eq. (24) in 0408302
-      zp3=(1+sqrt(1-4*xi/mdip_g**2))/2 ! These are the analogous of eq. (23) in 0408302
-      zm3=(1-sqrt(1-4*xi/mdip_g**2))/2 ! for the global recoil
-
+      if (shower_mc(1:6).eq.'HERWIG') e0sq=dot(pip,pifather)
+      theta2p=get_angle(pip,pifat)**2
+      if(ileg.eq.3 .or. ileg.eq.4) then
+         if (ileg.eq.3) then
+            xmm2=xm12           ! emitter mass squared
+            ww=w1               ! FKS parent/sister dot product
+            xmr2=xm22           ! global-recoiler mass squared
+         elseif (ileg.eq.4) then
+            xmm2=0d0
+            ww=w2               ! FKS parent/sister dot product
+            xmr2=xm12           ! global-recoiler mass squared
+         endif
+         Q2=sumdot(pifat,pip,1d0) ! parent dipole mass squared (Born level)
+         xmp2=dot(pip,pip)      ! mass squared of the partner
+         if (shower_mc.eq.'HERWIGPP')
+     &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
+         if (shower_mc.eq.'PYTHIA6Q') then
+            beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
+            zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
+            zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
+         endif
+         if (shower_mc.eq.'PYTHIA8') then
+            beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
+            mdip  =sqrt((sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2)
+            ! mdip corresponds to sqrt(dip.m2DipCorr)
+            ! (around line 2305 in Pythia TimeShower.cc)
+            mdip_g=sqrt((sqrt(s) -sqrt(xmr2))**2-xmm2)
+            ! Global-recoil adaption of the above
+            zp2=(1+beta)/2      ! These are the solutions of equation q2 s == z(1-z)(s+q2-xmr2)^2
+            zm2=(1-beta)/2      ! where q2 = (p_i_FKS + p_j_FKS)^2
+            ! Note that this is the global-recoil analogue of eq. (24) in 0408302
+            zp3=(1+sqrt(1-4*xi/mdip_g**2))/2 ! These are the analogous of eq. (23) in 0408302
+            zm3=(1-sqrt(1-4*xi/mdip_g**2))/2 ! for the global recoil
+         endif
+      endif
+      
 c Dead zones
 c IMPLEMENT QED DZ's!
       if(shower_mc.eq.'HERWIG6')then
@@ -5080,24 +5115,26 @@ c
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then
             upscale2=2*e0sq+xmm2
-            if(ip.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
+            if(ipartner.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
          endif
          if(xi.lt.upscale2)lzone=.true.
 c
       elseif(shower_mc.eq.'PYTHIA6Q')then
          if(ileg.le.2)then
-            if(mstp67.eq.2.and.ip.gt.2.and.
+            if(mstp67.eq.2.and.ipartner.gt.2.and.
      &         4*xi/s/(1-z).ge.theta2p)lzone=.false.
          elseif(ileg.gt.2)then
-            if(mstj50.eq.2.and.ip.le.2.and.
+            if(mstj50.eq.2.and.ipartner.le.2.and.
 c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
-     &         max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/s.ge.theta2p)lzone=.false.
+     &           max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/s.ge.theta2p)
+     &           lzone=.false.
             if(z.gt.zp1.or.z.lt.zm1)lzone=.false.
          endif
 c
       elseif(shower_mc.eq.'PYTHIA6PT')then
+         ycc=1-parp67*x/(1-x)**2/2
          if(mstp67.eq.1.and.yi.lt.ycc)lzone=.false.
-         if(mstp67.eq.2)wcc=min(1d0,(1-ycc)/(1-yi))
+         if(mstp67.eq.2) PY6PTweight=min(1d0,(1-ycc)/(1-yi))
 c
       elseif(shower_mc.eq.'PYTHIA8')then
          if(ileg.le.2.and.z.gt.1-sqrt(xi/z/s)*
@@ -5110,17 +5147,12 @@ c
          endif
 
       endif
-! TODO: replace shower_S_scale by shower_scale_nbody_nodamp. This means
-! that all needs to be done dipole-by-dipole (and for a given flow that
-! was picked in scale_module).
-      max_scale=min(max_scale,shower_S_scale(nFKSprocess*2-1))
-! TODO : reinstate the line below
-c$$$      max_scale=max(max_scale,scaleMCcut)
-      if(qMC.gt.max_scale)lzone=.false.
 
-      return
- 999  continue
-      lzone=.false.
+! If the relative pT of the splitting is larger then the maximum shower
+! scale, we are in the deadzone
+      if (qMC.gt.shower_scale_nbody_nodamp(iparter,ifather))
+     &     lzone=.false.
+
       return
       end
 

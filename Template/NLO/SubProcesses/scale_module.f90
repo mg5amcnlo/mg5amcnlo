@@ -40,8 +40,8 @@ contains
           call get_scaleminmax(ref_scale,scalemin,scalemax)
           rrnd=ran2()
           rrnd=damping_inv(rrnd,1d0)
-          shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
-          shower_scale_nbody_nodamp(i,fks_father)=scalemax
+          shower_scale_nbody(i,fks_father)=max(scalemin+rrnd*(scalemax-scalemin),scaleMCcut)
+          shower_scale_nbody_nodamp(i,fks_father)=max(scalemax,scaleMCcut)
        enddo
     elseif (flow_picked.gt.0) then
        do i=1,next_n
@@ -56,8 +56,8 @@ contains
                 ! also for non-delta.
                 rrnd=ran2()
                 rrnd=damping_inv(rrnd,1d0)
-                shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
-                shower_scale_nbody_nodamp(i,j)=scalemax
+                shower_scale_nbody(i,j)=max(scalemin+rrnd*(scalemax-scalemin),scaleMCcut)
+                shower_scale_nbody_nodamp(i,j)=max(scalemax,scaleMCcut)
              else
                 shower_scale_nbody(i,j)=-1d0
                 shower_scale_nbody_nodamp(i,j)=-1d0
