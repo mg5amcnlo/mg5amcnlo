@@ -774,8 +774,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial|FD",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
+        logger.info(" > FD is for Feynman Diagram gauge:     2203.10440 ")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Set complex mass scheme.")
@@ -1564,8 +1565,9 @@ This will take effect only in a NEW terminal
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
         if args[0] in ['gauge']:
-            if args[1] not in ['unitary','Feynman', 'axial']:
-                raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')
+            allow = ['unitary','Feynman', 'axial', 'FD']
+            if args[1] not in allow:
+                raise self.InvalidCmd('gauge needs argument %s.' % ','.join(allow))
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -2605,7 +2607,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1].lower() == 'ewscheme':
                 return self.list_completion(text, ["external", "MZ_MW_alpha"])
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
+                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial', 'FD'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'output_dependencies':
@@ -4772,7 +4774,10 @@ This implies that with decay chains:
 
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
-                        
+
+        if LoopOption != 'tree' and self.options['gauge'] in ['FD','axial']:
+            raise Exception('Gauge %s is only supported/validated for tree level amplitude'% self.options['gauge'])
+
         ## Now check for orders/squared orders/constrained orders
         order_pattern = re.compile(\
            r"^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
@@ -5172,8 +5177,13 @@ This implies that with decay chains:
                isinstance(forbidden_schannel_ids[0], list):
                 raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels")
-            required_schannel_ids = \
-                               self.extract_particle_ids(required_schannels)
+            
+            try:
+                required_schannel_ids = \
+                               self.extract_particle_ids(required_schannels, crash_on_duplication=True)
+            except self.InvalidCmd:
+                raise self.InvalidCmd("Invalid \"> A A >\" syntax. In old version of MG5aMC, this was allowed but incorectly intrepreted as \"> A >\".")
+
             if required_schannel_ids and not \
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
@@ -5440,7 +5450,7 @@ This implies that with decay chains:
 
         return final
 
-    def extract_particle_ids(self, args):
+    def extract_particle_ids(self, args, crash_on_duplication=False):
         """Extract particle ids from a list of particle names. If
         there are | in the list, this corresponds to an or-list, which
         is represented as a list of id lists. An or-list is used to
@@ -5474,10 +5484,18 @@ This implies that with decay chains:
         for i, id_list in enumerate(all_ids):
             res_lists.extend(diagram_generation.expand_list_list(id_list))
         # Trick to avoid duplication while keeping ordering
-        for ilist, idlist in enumerate(res_lists):
-            set_dict = {}
-            res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
-                         if i not in set_dict]
+        if not crash_on_duplication:
+            for ilist, idlist in enumerate(res_lists):
+                set_dict = {}
+                res_lists[ilist] = [set_dict.setdefault(i,i) for i in idlist \
+                            if i not in set_dict]
+        else:
+            for ilist, idlist in enumerate(res_lists):
+                set_dict = {}
+                test = [set_dict.setdefault(i,i) for i in idlist \
+                            if i not in set_dict]
+                if len(test) != len(idlist):
+                    raise self.InvalidCmd('Particle can not be duplicate')  
 
         if len(res_lists) == 1:
             res_lists = res_lists[0]
@@ -5676,6 +5694,8 @@ This implies that with decay chains:
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return
+            if self._curr_model:
+                self._curr_model._curr_gauge = self.options['gauge']
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -7823,6 +7843,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     aloha.unitary_gauge = True
                 elif args[1] == 'axial':
                     aloha.unitary_gauge = 2 
+                elif args[1] == 'FD':
+                    aloha.unitary_gauge = 3 
                 else:
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
@@ -7846,6 +7868,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     able_to_mod = False
                     if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
+            elif args[1] == 'FD':
+                logger.warning("WARNING: NOT ALL MODEL ARE SUPPORTING THIS GAUGE. PLEASE CHECK/CITE 2203.10440 and 2405.01256")
+                if 0 in self._curr_model.get('gauge'):
+                    aloha.unitary_gauge = 3
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that FD gauge is not allowed for your current model %s' \
+                                           % self._curr_model.get('name'))   
             else:
                 if 1 in self._curr_model.get('gauge'):
                     aloha.unitary_gauge = False
@@ -7854,6 +7884,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
 
+            self._curr_model._curr_gauge = args[1]
             if self.options['gauge'] == args[1]:
                 return
             
@@ -7879,8 +7910,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
-            logger.info('Passing to gauge %s.' % args[1])
-
             if able_to_mod:
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when

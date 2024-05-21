@@ -984,7 +984,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
-            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+            if aloha.unitary_gauge !=3:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                                                 write_dir+'/aloha_functions.f')
+            else:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions_fd.f', 
                                                  write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
@@ -4451,6 +4455,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        self.proc_characteristic['gauge'] = mg5options['gauge']
 
         # set limitation linked to the model
     
@@ -4708,6 +4713,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
+            if hasattr(self.model, '_curr_gauge') and self.model._curr_gauge == 'FD':
+                replace_dict['wavefunctionsize'] = 7
 
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)

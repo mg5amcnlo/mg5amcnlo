@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 import collections
 import fractions
+import inspect
 import logging
 import math
 import os
@@ -39,7 +40,8 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import aloha
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
-
+import aloha.aloha_object as aloha_object
+import aloha.aloha_lib as aloha_lib
 import models as ufomodels
 import models.model_reader as model_reader
 import six
@@ -350,8 +352,10 @@ def import_full_model(model_path, decay=False, prefix=''):
                                                          (model_path, filename))
         files_list.append(filepath)
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge: 
+    if aloha.unitary_gauge == 1: 
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 3:
+        pickle_name = 'model_FDG.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
     if decay:
@@ -596,6 +600,10 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if aloha.unitary_gauge == 3:
+            self.merge_all_goldstone_with_vector()
+
+    
         if self.non_qcd_gluon_emission:
             logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
             "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
@@ -693,9 +701,6 @@ class UFOMG5Converter(object):
                 del interaction['couplings'][key]
                 
         
-                
-
-        
         # we want to check if the same coupling is used for two lorentz strucutre 
         # for the same color structure. 
         to_lor = {}
@@ -705,7 +710,7 @@ class UFOMG5Converter(object):
                 to_lor[key].append(lor)
             else:
                 to_lor[key] = [lor]
-                
+
         nb_reduce = []
         optimize = False
         for key in to_lor:
@@ -727,6 +732,13 @@ class UFOMG5Converter(object):
         for key in to_lor:
             if len(to_lor[key]) == 1:
                 continue
+            def get_spin(l):
+                return self.lorentz_info[interaction['lorentz'][l]].get('spins')
+                
+            if any(get_spin(l1) != get_spin(to_lor[key][0]) for l1 in to_lor[key]):
+                logger.warning('not all same spins for a given interactions')
+                continue 
+
             names = [interaction['lorentz'][i] for i in to_lor[key]]
             names.sort()
             if self.lorentz_info[names[0]].get('structure') == 'external':
@@ -754,6 +766,376 @@ class UFOMG5Converter(object):
             interaction['couplings'][(color, new_l)] = coup  
                 
     
+    def merge_all_goldstone_with_vector(self):
+        """For Feynman Diagram gauge need to merge interaction of scalar/boson"""
+
+        # Here identify the pair and then delegates to another function
+        # This routine also removes the goldstone from the list of particles of the model
+        for particle in self.particles[:]:
+            if particle.get('type') == 'goldstone':
+                self.particles.remove(particle)
+                vector = [p for p in self.particles if p.get('mass') == particle.get('mass')]
+                if len(vector) != 1:
+                    raise Exception("Failed to idendity goldstone/boson relation")
+                
+                self.merge_goldstone_with_vector(particle, vector[0])
+                if not particle.get('self_antipart') and particle.get('is_part'):
+                    particle = copy.copy(particle)
+                    particle.set('is_part', False)
+                    vector = copy.copy(vector[0])
+                    vector.set('is_part', False)
+                    self.merge_goldstone_with_vector(particle, vector)
+
+    def merge_goldstone_with_vector(self, goldstone, vector):
+        """For Feynman Diagram gauge need to merge interaction of scalar/boson
+           In this routine we identify the interactions that needs to be merge into a single one.
+           And delegate the actual merging to another routine
+        """
+
+                    
+                    
+        
+        g_name = goldstone.get_name()
+        v_name = vector.get_name()
+
+        goldstone_interactions = [vertex for vertex in self.interactions if goldstone in  vertex.get('particles')]
+        vector_interactions = [vertex for vertex in self.interactions 
+                               if vector in vertex.get('particles') and
+                               goldstone not in vertex.get('particles')]
+
+        # create an easy way (dict) to find the equivalent vertex with boson
+        search_int = {}
+        for vertex in vector_interactions:
+            names = tuple(sorted([p.get_name() for p in vertex.get('particles')]))
+            if names in search_int:
+                search_int[names].append(vertex)
+            else:
+                search_int[names] = [vertex]
+
+
+        # now loop over goldstone interaction, identify if the a vector interactions
+        # does exists and act accordingly (call dedicated routine)
+        for vertex in goldstone_interactions:
+            self.interactions.remove(vertex)
+
+            #old_names = tuple(sorted([p.get_name() for p in vertex.get('particles')]))
+            names = tuple(sorted([p.get_name() if p.get_name() != g_name else v_name
+                      for p in vertex.get('particles')]))
+            if names in search_int:
+                self.update_vertex_for_goldstone(search_int[names], vertex, goldstone, vector)
+            else:
+                new_vertex = self.convert_goldstone_to_V(vertex, goldstone, vector)
+                self.interactions.append(new_vertex)
+                search_int[names] = [new_vertex]
+
+        #raise Exception
+
+
+    def convert_goldstone_to_V(self, vertex, goldstone, vector):
+        """create a new vertex where goldstone are replace by the associated vector"""
+
+        gold_vertex = copy.deepcopy(vertex)
+        nb_vector = 0
+        nb_gold = 0
+        for p in vertex.get('particles'):
+            if p.get_pdg_code() == goldstone.get_pdg_code():
+                nb_gold += 1
+
+        to_print=False
+        if nb_gold != nb_vector:
+            to_print=True
+
+        particles_list = base_objects.ParticleList(vertex.get('particles'))
+        for i, part in enumerate(vertex.get('particles')):
+            if part == goldstone:
+                particles_list[i] = vector
+        vertex.set('particles', particles_list)
+
+        for p in vertex.get('particles'):
+            if p.get_pdg_code() == vector.get_pdg_code():
+                nb_vector += 1
+
+        if nb_vector != nb_gold:
+            mappings = self.get_identical_goldstone_mapping(gold_vertex,vertex,goldstone, vector)
+            for lorentz in list(vertex.get('lorentz')):
+                for mapping in  mappings:
+                    new_lorentz = self.get_symmetric_lorentz(str(lorentz), mapping)
+                    new_lorentz_index = len(vertex.get('lorentz'))
+                    vertex.get('lorentz').append(str(new_lorentz))
+                    for (color, lorentz2), value in list(vertex.get('couplings').items()):
+                        if vertex.get('lorentz')[lorentz2] != lorentz:
+                            continue
+                        vertex.get('couplings')[color, new_lorentz_index] = value            
+            return vertex
+        else:
+            return vertex
+
+    def reorder_vertex(self, vertex, mapping):
+        """change the order of the particle within a given interaction"""
+
+        new_vertex = copy.deepcopy(vertex)
+
+        # reorder the particle within the new vertex
+        old_particles = vertex.get('particles')
+        new_particles = old_particles.__class__()
+        for i in range(len(old_particles)):
+            new_particles.append(old_particles[mapping[i]])
+        new_vertex.set('particles', new_particles)
+
+        restricted_mapping = {i:j for i,j in mapping.items() if i!=j}
+
+        # change the lorentz structure within the new vertex
+        all_lor = new_vertex.get('lorentz')
+        for i,lor in enumerate(all_lor):
+            new_lorentz = self.get_symmetric_lorentz(lor, restricted_mapping, change_number=True)
+            all_lor[i] = str(new_lorentz)
+        all_color = new_vertex.get('color')
+        for i, col in enumerate(all_color):
+            new_color = self.get_symmetric_color(str(col), restricted_mapping)
+            if new_color not in  ['1 ','1 1']:
+                all_color[i] = ColorString(new_color)
+
+        return new_vertex
+
+
+    @staticmethod
+    def get_symmetric_color(old_color, substitution):
+        """ """
+        all_color_flag = ['f','d', 'Epsilon', 'EpsilonBar', 'K6', 'K6Bar', 'T', 'T6', 'Tr' ]
+        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(all_color_flag), old_color)
+        new_expr = ''
+        for i in range(len(split)):
+            if i % 3 == 0:
+                new_expr += split[i]
+            if i % 3 == 1:
+                new_expr += split[i]+'('
+            if i %3 == 2:
+                indices = split[i].split(',')
+                for i, oneindex in enumerate(indices):
+                    if int(oneindex) in substitution: # +1/-1 since not python ordering
+                        indices[i] = str(substitution[int(oneindex)])
+
+                new_expr += ','.join(indices)+')'
+        return old_color.__class__(new_expr)
+
+
+
+    def get_symmetric_lorentz(self, old_lorentz, substitution, change_number=False):
+        """ """
+        
+        lor_orig = [l for l in self.model['lorentz'] if l.name==old_lorentz][0]
+        FR_name = True 
+        for key in substitution:
+            if old_lorentz[key] not in ['S','V']:
+                FR_name = False
+
+        if not FR_name:
+            raise Exception("need to think how to setup a name in this case. Please report")
+        else:
+            new_name = list(old_lorentz)
+            for old,new in substitution.items():
+                new_name[new] = old_lorentz[old]
+            new_name = ''.join(new_name)
+
+        if change_number:
+            base = new_name[:len(lor_orig.spins)]
+            try:
+                index = int(new_name[len(lor_orig.spins):]) + 1
+            except:
+                base = new_name
+                index = 1
+            if not hasattr(self.model, 'lorentz_name2obj'):
+                self.model.create_lorentz_dict()
+            while str(base)+str(index) in self.model.lorentz_name2obj:
+                index += 1
+            new_name = str(base)+str(index)
+
+        if not hasattr(self, 'all_aloha_obj'):
+            self.all_aloha_obj = [n for n, obj in aloha_object.__dict__.items() 
+                                  if inspect.isclass(obj) and issubclass(obj, aloha_lib.FactoryLorentz)]
+
+        new_spins = list(lor_orig.spins)
+        for old,new in substitution.items():
+                new_spins[new] = lor_orig.spins[old]
+
+        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(self.all_aloha_obj), lor_orig.structure )
+        new_expr = ''
+        for i in range(len(split)):
+            if i % 3 == 0:
+                new_expr += split[i]
+            if i % 3 == 1:
+                new_expr += split[i]+'('
+            if i %3 == 2:
+                indices = split[i].split(',')
+                for i, oneindex in enumerate(indices):
+                    if int(oneindex)-1 in substitution: # +1/-1 since not python ordering
+                        indices[i] = str(substitution[int(oneindex)-1]+1)
+
+                new_expr += ','.join(indices)+')'
+        
+        new_formfact = lor_orig.formfactors if hasattr(lor_orig, 'formfactors') else None
+
+        if change_number:
+            #need to check that the new structure does not exists yet
+            all_prev_expr = [(l.structure,l.spins) for l in self.model.get('lorentz')]
+            if (new_expr,new_spins) in all_prev_expr:
+                return self.model.get('lorentz')[all_prev_expr.index((new_expr,new_spins))]
+            else:
+                new_lor = self.add_lorentz(new_name, new_spins, new_expr, formfact=new_formfact)
+        else:
+            try:
+                new_lor = self.add_lorentz(new_name, new_spins, new_expr, formfact=new_formfact)
+            except AssertionError:
+                prev_def = [l for l in self.model['lorentz'] if l.name==new_name][0]
+                if prev_def.structure != new_expr:
+                    misc.sprint("WARNING, two different definition for one lorentz name", prev_def.structure, new_expr)
+                new_lor = prev_def
+        return new_lor
+
+
+    
+    def update_vertex_for_goldstone(self, vertex, gold_vertex, goldstone, vector):
+        """put the content of the gold_vertex within the vertex.
+           So far we do assume that ordering is preserved between interaction
+        """
+
+        if len(vertex) !=1 :
+            raise Exception
+        vertex = vertex[0]
+
+        nb_vector = 0
+        nb_gold = 0
+        for p in gold_vertex.get('particles'):
+            if p.get_pdg_code() == goldstone.get_pdg_code():
+                nb_gold += 1
+        for p in vertex.get('particles'):
+            if p.get_pdg_code() == vector.get_pdg_code():
+                nb_vector += 1
+
+        # need to check here if the ordering is the same.
+        gold_pdg = [p.get_pdg_code() if p.get_pdg_code() != goldstone.get_pdg_code() else vector.get_pdg_code()
+                    for p in gold_vertex.get('particles')]
+        vert_pdg = [p.get_pdg_code() for p in vertex.get('particles')]
+
+        # check if the order of the particle is the same
+        if gold_pdg != vert_pdg:
+            mapping = {}
+            for orig in range(len(gold_pdg)):
+                if vert_pdg[orig] == gold_pdg[orig]:
+                    mapping[orig] = orig
+                    vert_pdg[orig] = 0
+            for orig in range(len(gold_pdg)):
+                if orig in mapping:
+                    continue
+                new_pos = vert_pdg.index(gold_pdg[orig])
+                mapping[orig] = new_pos
+                vert_pdg[new_pos] = 0
+
+            gold_vertex = self.reorder_vertex(gold_vertex, mapping)
+
+        # check how to translate the color:
+        # the translate_color track the index of the color in gold_vertex (key)
+        # and the value is associate to the identical color in vertex. 
+        # If that color does not exists it is added to the mix (should never happen. I guess)
+        translate_color = {}
+        for i, color in enumerate(gold_vertex.get('color')):
+            if color in vertex.get('color'):
+                translate_color[i] = vertex.get('color').index(color)
+            else:
+                misc.sprint("why a new color appear?", color, vertex.get('color'))
+                raise Exception
+                translate_color[i] = len(vertex.get('color'))
+                vertex.get('color').append(color)
+        
+        # check now the lorentz structure. Some strategy as for the color
+        # But lorentz structure should not repeat in principle...
+        translate_lorentz = {}
+        for i, lor in enumerate(gold_vertex.get('lorentz')):
+            if lor in vertex.get('lorentz'):
+                #raise Exception("lorentz should not repeat. Please report for investigation.")
+                translate_lorentz[i] = vertex.get('lorentz').index(lor)
+            else:
+                translate_lorentz[i] = len(vertex.get('lorentz'))
+                vertex.get('lorentz').append(lor)
+
+        # now we can add the coupling to the original vertex
+        for (color, lorentz), value in gold_vertex.get('couplings').items():
+            key = (translate_color[color], translate_lorentz[lorentz])
+            assert key not in vertex.get('couplings')
+            vertex.get('couplings')[key] = value
+
+
+
+        if nb_vector != nb_gold:
+            mappings = self.get_identical_goldstone_mapping(gold_vertex,vertex,goldstone, vector)
+            for mapping in mappings:
+                color_map = {}
+                for i, col in enumerate(gold_vertex.get('color')):
+                    new_col = self.get_symmetric_color(str(col), mapping)
+                    if new_col not in  ['1 ', '1 1']:
+                        new_col = ColorString(new_col)
+                    else:
+                        color_map[i]=i
+                        continue 
+                    if new_col in vertex.get('color'):
+                        new_col_index = vertex.get('color').index(new_col)
+                    else:
+                        new_col_index = len( vertex.get('color'))
+                        vertex.get('color').append(new_col)
+                    color_map[i] = new_col_index
+
+                for lorentz in list(gold_vertex.get('lorentz')):
+                    new_lorentz = self.get_symmetric_lorentz(lorentz, mapping)
+                    new_lorentz_index = len(vertex.get('lorentz'))
+                    if new_lorentz in vertex.get('lorentz'):
+                        misc.sprint(lorentz)
+                        misc.sprint(new_lorentz)
+                        misc.sprint(vertex)
+                        raise Exception("lorentz structure already in the vertex")
+                    vertex.get('lorentz').append(str(new_lorentz))
+                    for (color, lorentz2), value in list(vertex.get('couplings').items()):
+                        if vertex.get('lorentz')[lorentz2] != lorentz:
+                            continue
+                        vertex.get('couplings')[color_map[color],new_lorentz_index] = value        
+
+    def get_identical_goldstone_mapping(self, gold_vertex, v_vertex, goldstone, vector):
+        """generate a mapping of the various possible assignment.
+           This is called only if the number of particle does not match (so no need to check)
+        """
+
+        #input_pos=[i for i,p in enumerate(gold_vertex.get('particles')) if p.get_pdg_code() == goldstone.get_pdg_code()]
+        final_pos=[i for i,p in enumerate(v_vertex.get('particles')) if p.get_pdg_code() == vector.get_pdg_code()]  
+        pdgs = [p.get_pdg_code() for p in gold_vertex.get('particles')]
+        valid = []
+        for candidate in set(itertools.permutations(pdgs)):
+            for i, pdg in enumerate(candidate):
+                if i not in final_pos:
+                    if pdg != pdgs[i]:
+                        break
+            else:
+                valid.append(candidate) 
+        # now that we have all the valid permutation, convert that to a dictionary of mappings
+        # drop the identity permutation
+        mappings = []
+        for v in valid:
+            if tuple(v) == tuple(pdgs):
+                continue
+            input_pos=[i for i,p in enumerate(gold_vertex.get('particles')) if p.get_pdg_code() == goldstone.get_pdg_code()]
+            new_pos = [i for i in range(len(v)) if v[i] == goldstone.get_pdg_code()]
+            mydict = {}#{i:i for i in range(len(v))}
+            #check if they are overlap between input_pos and new_pos
+            for i in input_pos:
+                if i in new_pos:
+                    input_pos.remove(i)
+                    new_pos.remove(i)
+            # now that identity is correctly handle, takes permutation of particle to the mapping
+            for i in range(len(v)):
+                if i in input_pos:
+                    mydict[i] = new_pos.pop()
+                    mydict[mydict[i]] = i
+            mappings.append(mydict)
+        return mappings
+
     def add_merge_lorentz(self, names):
         """add a lorentz structure which is the sume of the list given above"""
         
@@ -812,7 +1194,7 @@ class UFOMG5Converter(object):
         if not self.perturbation_couplings and particle_info.spin < 0:
             return
         
-        if (aloha.unitary_gauge and 0 in self.model['gauge']) \
+        if (aloha.unitary_gauge in [1,2] and 0 in self.model['gauge']) \
                             or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
@@ -1518,7 +1900,6 @@ class UFOMG5Converter(object):
         
         #original = copy.copy(data_string)
         #data_string = p.sub('color.T(\g<first>,\g<second>)', data_string)
-        
         
         output = []
         factor = 1
@@ -2697,9 +3078,19 @@ class RestrictModel(model_reader.ModelReader):
                 self.defined_lorentz_expr[lor.get('structure')] = lor.get('name')
                 self.lorentz_info[lor.get('name')] = lor #(lor.get('structure'), lor.get('spins'))
             
+
+
         for key in to_lor:
             if len(to_lor[key]) == 1:
                 continue
+
+            def get_spin(l):
+                return self.lorentz_info[interaction['lorentz'][l]].get('spins')
+
+            if any(get_spin(l1[0]) != get_spin(to_lor[key][0][0]) for l1 in to_lor[key]):
+                logger.warning('not all same spins for a given interactions')
+                continue 
+
             names = ['u%s' % interaction['lorentz'][i[0]] if i[1] ==1 else \
                      'd%s' % interaction['lorentz'][i[0]] for i in to_lor[key]]
 
@@ -2743,6 +3134,7 @@ class RestrictModel(model_reader.ModelReader):
                 break
         else:
             base_name = 'LMER'
+
         i = 1
         while '%s%s' %(base_name, i) in self.lorentz_info:
             i +=1
