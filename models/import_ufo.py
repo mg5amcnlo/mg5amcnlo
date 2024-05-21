@@ -349,7 +349,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
-    files_list.append(os.path.join(MG5DIR, 'models', 'import_ufo.py')) # see mg5amcnlo/mg5amcnlo#89
+    files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
