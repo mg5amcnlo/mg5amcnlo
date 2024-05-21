@@ -117,7 +117,7 @@ def is_uptodate(picklefile, path_list=None, min_time=1343682423):
     
     assert type(path_list) == list, 'is_update expect a list of files'
     
-    pickle_date = os.path.getmtime(picklefile) # FIX BUG mg5amcnlo/mg5amcnlo#89 (use getmtime instead of getctime)
+    pickle_date = os.path.getctime(picklefile)
     if pickle_date < min_time:
         return False
     
