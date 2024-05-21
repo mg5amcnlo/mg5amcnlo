@@ -1144,12 +1144,13 @@ class ReweightInterface(extended_cmd.Cmd):
             import importlib
             import numpy as np
 
-            for proc in [line[9:].strip() for line in self.banner.proc_card
-                                if line.startswith('generate')]:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                n_init = len(re.split('\s+',re.split('>', process)[0])) -1
-                n_final = len(re.split('\s+',re.split('>', process)[1])) -2
-            nexternal = n_init + n_final
+            # identify the process
+            try:
+                process = self.banner.get_detail('proc_card', 'generate')
+            except KeyError:
+                process = self.banner.get_detail('proc_card', 'add process')
+            process, opts = mg_interface.MadGraphCmd.split_process_line(process)
+            nexternal = len([p for p in process.split() if p != '>'])
 
             # Remove all propagator particles from the event to be passed to Sud module
             for ip,part in enumerate(list(buff_event)):
