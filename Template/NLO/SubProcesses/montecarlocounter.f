@@ -944,8 +944,6 @@ c$$$      include "madfks_mcatnlo.inc"
       common/cqMC/qMC
 
       common/cscaleminmax/xm12,ileg
-      double precision veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer i_fks,j_fks
@@ -1048,16 +1046,7 @@ c Initialise if first time
       xitmp    = 0d0
       xjactmp  = 0d0
       gfactazi = 0d0
-      kn       = veckn_ev
-      knbar    = veckbarn_ev
-      kn0      = xp0jfks
       nofpartners = ipartners(0)
-      tiny = 1d-6
-      if (softtest.or.colltest)tiny = 1d-12
-c Logical variables to control the IR limits:
-c one can remove any reference to xi_i_fks
-      limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny
-      non_limit = xi_i_fks.ge.tiny
 
       qMC=get_qMC(xi_i_fks,y_ij_fks)
 
@@ -1134,273 +1123,10 @@ c Compute dead zones
 c Compute MC subtraction terms
       if(lzone(npartner))then
          if(.not.flagmc)flagmc=.true.
-         call compute_spitting_kernels(xkern,xkernazi)
-      endif
-
-      subroutine compute_spitting_kernels(xkern,xkernazi)
-      implicit none
-      double precision xkern(1:2),xkernazi(1:2)
-      xkern(1:2)    = 0d0
-      xkernazi(1:2) = 0d0
-
-      if( (ileg.ge.3 .and.
-     $     (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
-     $    (ileg.le.2 .and.
-     $     (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
-         if(i_type.eq.8)then
-c g->gg, go->gog (icode=1)
-            call compute_splitting_kernel_icode1(xkern,xkernazi)
-         elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
-c g->qq, a->qq, a->ee (icode=2)
-            call compute_splitting_kernel_icode2(xkern,xkernazi)
-         else
-            write(*,*)'Error 1 in xmcsubt: unknown particle type'
-            write(*,*)i_type
-            stop
-         endif
-      elseif( (ileg.ge.3 .and.
-     $        (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
-     $        (ileg.le.2 .and.
-     $        (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )
-     $        then
-         if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
-c q->gq, q->aq, e->ae (icode=3)
-            call compute_splitting_kernel_icode3(xkern,xkernazi)
-         elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
-c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
-            call compute_splitting_kernel_icode4(xkern,xkernazi)
-         else
-            write(*,*)'Error 2 in xmcsubt: unknown particle type'
-            write(*,*)i_type
-            stop
-         endif
+         call limits(xi_i_fks,y_ij_fks)
+         call compute_spitting_kernels(xkern,xkernazi,z(npartner)
+     $        ,xi(npartner),xjac(npartner))
       else
-         write(*,*)'Error 3 in xmcsubt: unknown particle type'
-         write(*,*)j_type,i_type
-         stop
-      endif
-      return
-      end
-      
-         if( (ileg.ge.3 .and. (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
-     &       (ileg.le.2 .and. (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
-            if(i_type.eq.8)then
-c g->gg, go->gog (icode=1)
-               if(ileg.le.2)then
-                  N_p=2
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                     xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
-                     xkern(2)=0d0
-                     xkernazi(2)=0d0
-                  elseif(non_limit)then
-                     xfact=(1-yi)*(1-x)/x
-                     prefact=4/(s*N_p)
-                     call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                     call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z(npartner),Q)
-                     Q(1:2)=Q(1:2)/(1-z(npartner))
-                     xkernazi(1:2)=prefact*xfact*xjac(npartner)*Q(1:2)/xi(npartner)
-                     if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
-                        write(*,*) 'ERROR#1, g->gg splitting QED' /
-     $                       /'contributions should be 0', xkern,
-     $                       xkernazi
-                        stop
-                     endif
-                  endif
-c
-               elseif(ileg.eq.3)then
-                  N_p=2
-                  if(non_limit)then
-                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.4)then
-                  N_p=2
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*( 8*vca*
-     &                    (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
-     &                    ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                     xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
-                     xkern(2)=0d0
-                     xkernazi(2)=0d0
-                  elseif(non_limit)then
-                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                     call Qterms_reduced_timelike(j_type,i_type,ch_m,ch_i,one,z(npartner),Q)
-                     Q(1:2)=Q(1:2)/(1-z(npartner))
-                     xkernazi(1:2)=prefact*xfact*xjac(npartner)*Q(1:2)/xi(npartner)
-                     if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
-                        write(*,*) 'ERROR#1, g->gg splitting QED' /
-     $                       /'contributions should be 0', xkern,
-     $                       xkernazi
-                        stop
-                     endif
-                  endif
-               endif
-            elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
-c g->qq, a->qq, a->ee (icode=2)
-               if(ileg.le.2)then
-                  N_p=1
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                     xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
-     &                                    ch_i**2 * abs(i_type) / vtf
-                  elseif(non_limit)then
-                     xfact=(1-yi)*(1-x)/x
-                     prefact=4/(s*N_p)
-                     call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.4)then
-                  N_p=2
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
-     &                     (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
-     &                     ( (s-xm12)**2*(s*x-xm12) )
-                     xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
-     &                     ch_i**2 * abs(i_type) / vtf
-                     xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
-                     xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
-     &                     ch_i**2 * abs(i_type) / vtf
-                  elseif(non_limit)then
-                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                     call Qterms_reduced_timelike(j_type,i_type,ch_m,ch_i,one,z(npartner),Q)
-                     Q(1:2)=Q(1:2)/(1-z(npartner))
-                     xkernazi(1:2)=prefact*xfact*xjac(npartner)*Q(1:2)/xi(npartner)
-                  endif
-               endif
-            else
-               write(*,*)'Error 1 in xmcsubt: unknown particle type'
-               write(*,*)i_type
-               stop
-            endif
-            elseif( (ileg.ge.3 .and. (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
-     &              (ileg.le.2 .and. (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )then
-               if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
-c q->gq, q->aq, e->ae (icode=3)
-               if(ileg.le.2)then
-                  N_p=2
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
-     &                                   (ch_i**2 / vcf)
-                     xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
-                     xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
-     &                                   (ch_i**2 / vcf)
-                  elseif(non_limit)then
-                     xfact=(1-yi)*(1-x)/x
-                     prefact=4/(s*N_p)
-                     call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                     call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z(npartner),Q)
-                     Q(1:2)=Q(1:2)/(1-z(npartner))
-                     xkernazi(1:2)=prefact*xfact*xjac(npartner)*Q(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.3)then
-                  N_p=1
-                  if(non_limit)then
-                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.4)then
-                  N_p=1
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*
-     &                    ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
-     &                    ( (s-xm12)*(s*x-xm12)**2 )
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
-     &                                   (ch_i**2 / vcf)
-                  elseif(non_limit)then
-                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-               endif
-            elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
-c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
-               if(ileg.le.2)then
-                  N_p=1
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
-     &                                  (ch_m**2 / vcf)
-                  elseif(non_limit)then
-                     xfact=(1-yi)*(1-x)/x
-                     prefact=4/(s*N_p)
-                     call AP_reduced(m_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.3)then
-                  N_p=1
-                  if(non_limit)then
-                     xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     if(abs(PDG_type(j_fks)).le.6)then
-                        if(shower_mc.ne.'HERWIGPP')
-     &                  call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                        if(shower_mc.eq.'HERWIGPP')
-     &                  call AP_reduced_massive(j_type,i_type,ch_m,ch_i,one,z(npartner),
-     &                                              xi(npartner),xm12,ap)
-                     else
-                        call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     endif
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-c
-               elseif(ileg.eq.4)then
-                  N_p=1
-                  if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*
-     &                     ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-     &                     ( s*(s-xm12)*(s*x-xm12) )
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
-     &                                   (ch_j**2 / vcf)
-                  elseif(non_limit)then
-                     xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
-                     prefact=2/(s*N_p)
-                     call AP_reduced(j_type,i_type,ch_m,ch_i,one,z(npartner),ap)
-                     ap(1:2)=ap(1:2)/(1-z(npartner))
-                     xkern(1:2)=prefact*xfact*xjac(npartner)*ap(1:2)/xi(npartner)
-                  endif
-               endif
-            else
-               write(*,*)'Error 2 in xmcsubt: unknown particle type'
-               write(*,*)i_type
-               stop
-            endif
-         else
-            write(*,*)'Error 3 in xmcsubt: unknown particle type'
-            write(*,*)j_type,i_type
-            stop
-         endif
-      else
-c Dead zone
         xkern(1:2)=0d0
         xkernazi(1:2)=0d0
       endif
@@ -1470,6 +1196,367 @@ c Main loop over colour partners used to end here
       return
       end
 
+
+
+
+      subroutine compute_spitting_kernels(xkern,xkernazi,z,xi,xjac)
+      implicit none
+      double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
+      double precision tiny
+      parameter (tiny=1d-6)
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+      xkern(1:2)    = 0d0
+      xkernazi(1:2) = 0d0
+      if( (ileg.ge.3 .and.
+     $     (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
+     $    (ileg.le.2 .and.
+     $     (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
+         if(i_type.eq.8)then
+c g->gg, go->gog (icode=1)
+            call compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
+         elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
+c g->qq, a->qq, a->ee (icode=2)
+            call compute_splitting_kernel_icode2(xkern,xkernazi,z,xi)
+         else
+            write(*,*)'Error 1 in xmcsubt: unknown particle type'
+            write(*,*)i_type
+            stop
+         endif
+      elseif( (ileg.ge.3 .and.
+     $        (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
+     $        (ileg.le.2 .and.
+     $        (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )
+     $        then
+         if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
+c q->gq, q->aq, e->ae (icode=3)
+            call compute_splitting_kernel_icode3(xkern,xkernazi,z,xi)
+         elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
+c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
+            call compute_splitting_kernel_icode4(xkern,xkernazi,z,xi)
+         else
+            write(*,*)'Error 2 in xmcsubt: unknown particle type'
+            write(*,*)i_type
+            stop
+         endif
+      else
+         write(*,*)'Error 3 in xmcsubt: unknown particle type'
+         write(*,*)j_type,i_type
+         stop
+      endif
+      if (non_limit) then
+         ! If limit, the jacobian is already included in the kernel
+         ! (through the subroutines 'compute_splitting_kernel_icode)
+         xkern(1:2)    = xkern(1:2)*xjac
+         xkernazi(1:2) = xkernaxi(1:2)*xjac
+      endif
+      return
+      end
+
+      subroutine limits(xi_i_fks,y_ij_fks)
+      implicit none
+      double precision tiny
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+c Logical variables to control the IR limits:
+c one can remove any reference to xi_i_fks
+      tiny = 1d-6
+      if (softtest.or.colltest)tiny = 1d-12
+      limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny ! collinear (and not soft)
+      non_limit = xi_i_fks.ge.tiny  ! not collinear (and not soft)
+      ! (Note, if soft, we should use the G-functions and not the MC subtraction terms)
+      end
+      
+      double precision function xfact_ileg12(N_p)
+      use kinematics_module
+      implicit none
+      integer N_p
+      xfact_ileg12=(1d0-yi)*(1d0-x)/x * 4d0/(s*N_p)
+      end
+
+      double precision function xfact_ileg3(N_p)
+      use kinematics_module
+      implicit none
+      integer N_p
+      xfact_ileg3=(2d0-(1d0-x)*(1d0-(kn0/kn)*yj))/
+     &     kn*knbar*(1d0-x)*(1d0-yj) * 2d0/(s*N_p)
+      end
+
+      double precision function xfact_ileg4(N_p)
+      use kinematics_module
+      implicit none
+      integer N_p
+      xfact_ileg4=(2d0-(1d0-x)*(1d0-yj))/
+     &     xij*(1d0-xm12/s)*(1d0-x)*(1d0-yj) * 2d0/(s*N_p)
+      end
+
+      subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
+      use kinematics_module
+      implicit none
+      include "coupl.inc"
+      double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact,
+     $     ,ap(1:2),Q(1:2)
+      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
+      external xfact_ileg12,xfact_ileg3,xfact_ileg4
+      integer N_P
+      double precision vca,one
+      parameter (vca=3d0)
+      parameter (one=1d0)
+c Particle types (=color) of i_fks, j_fks and fks_mother
+      integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+      s=shat_n1
+c g->gg, go->gog (icode=1)
+      if(ileg.le.2)then
+         N_p=2
+         if(limit)then
+            xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+            xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+            xkern(2)=0d0
+            xkernazi(2)=0d0
+         elseif(non_limit)then
+            xfact=xfact_ileg12(N_p)
+            call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+            call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z
+     $           ,Q)
+            xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
+            if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
+               write(*,*) 'ERROR#1, g->gg splitting QED' /
+     $              /'contributions should be 0', xkern,
+     $              xkernazi
+               stop
+            endif
+         else
+! We are soft. The G-function will take care of this.
+            continue
+         endif
+c     
+      elseif(ileg.eq.3)then
+         N_p=2
+         if(non_limit)then
+            xfact=xfact_ileg3(N_p)
+            call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.4)then
+         N_p=2
+         if(limit)then
+            xkern(1)=(g**2/N_p)*( 8*vca*
+     &           (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
+     &           ( s*(s-xm12)**2*(s*x-xm12)**2 )
+            xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+            xkern(2)=0d0
+            xkernazi(2)=0d0
+         elseif(non_limit)then
+            xfact=xfact_ileg4(N_p)
+            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+            call Qterms_reduced_timelike(j_type,i_type,ch_m,ch_i,one,z
+     $           ,Q)
+            xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
+            if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
+               write(*,*) 'ERROR#1, g->gg splitting QED' /
+     $              /'contributions should be 0', xkern,
+     $              xkernazi
+               stop
+            endif
+         else
+! We are soft. The G-function will take care of this.
+            continue
+         endif
+      endif
+      end
+      
+      subroutine compute_splitting_kernel_icode2(xkern,xkernazi,z,xi)
+      use kinematics_module
+      implicit none
+      include "coupl.inc"
+      double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact,
+     $     ,ap(1:2),Q(1:2)
+      double precision xfact_ileg12,xfact_ileg4
+      external xfact_ileg12,xfact_ileg4
+      integer N_p
+      double precision vtf,one
+      parameter (vtf=1d0/2d0)
+      parameter (one=1d0)
+c Particle types (=color) of i_fks, j_fks and fks_mother
+      integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+      s=shat_n1
+c g->qq, a->qq, a->ee (icode=2)
+      if(ileg.le.2)then
+         N_p=1
+         if(limit)then
+            xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
+     &           ch_i**2 * abs(i_type) / vtf
+         elseif(non_limit)then
+            xfact=xfact_ileg12(N_p)
+            call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.4)then
+         N_p=2
+         if(limit)then
+            xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
+     &           (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
+     &           ( (s-xm12)**2*(s*x-xm12) )
+            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
+     &           ch_i**2 * abs(i_type) / vtf
+            xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+            xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
+     &           ch_i**2 * abs(i_type) / vtf
+         elseif(non_limit)then
+            xfact=xfact_ileg4(N_p)
+            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+            call Qterms_reduced_timelike(j_type,i_type,ch_m,ch_i,one,z
+     $           ,Q)
+            xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
+         endif
+      endif
+      end
+      
+      subroutine compute_splitting_kernel_icode3(xkern,xkernazi,z,xi)
+      use kinematics_module
+      implicit none
+      include "coupl.inc"
+      double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact,
+     $     ,ap(1:2),Q(1:2)
+      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
+      external xfact_ileg12,xfact_ileg3,xfact_ileg4
+      integer N_P
+      double precision vcf,one
+      parameter (vcf=4d0/3d0)
+      parameter (one=1d0)
+c Particle types (=color) of i_fks, j_fks and fks_mother
+      integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+      s=shat_n1
+c q->gq, q->aq, e->ae (icode=3)
+      if(ileg.le.2)then
+         N_p=2
+         if(limit)then
+            xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &           (ch_i**2 / vcf)
+            xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+            xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
+     &           (ch_i**2 / vcf)
+         elseif(non_limit)then
+            xfact=xfact_ileg12(N_p)
+            call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+            call Qterms_reduced_spacelike(m_type,i_type,ch_m,ch_i,one,z
+     $           ,Q)
+            xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.3)then
+         N_p=1
+         if(non_limit)then
+            xfact=xfact_ileg3(N_p)
+            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.4)then
+         N_p=1
+         if(limit)then
+            xkern(1)=(g**2/N_p)*
+     &           ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
+     &           ( (s-xm12)*(s*x-xm12)**2 )
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &           (ch_i**2 / vcf)
+         elseif(non_limit)then
+            xfact=xfact_ileg4(N_p)
+            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+      endif
+      end
+
+      subroutine compute_splitting_kernel_icode4(xkern,xkernazi,z,xi)
+      use kinematics_module
+      implicit none
+      include "coupl.inc"
+      double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact,
+     $     ,ap(1:2),Q(1:2)
+      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
+      external xfact_ileg12,xfact_ileg3,xfact_ileg4
+      integer N_P
+      double precision vcf,one
+      parameter (vcf=4d0/3d0)
+      parameter (one=1d0)
+c Particle types (=color) of i_fks, j_fks and fks_mother
+      integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
+      s=shat_n1
+c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
+      if(ileg.le.2)then
+         N_p=1
+         if(limit)then
+            xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &           (ch_m**2 / vcf)
+         elseif(non_limit)then
+            xfact=xfact_ileg12(N_p)
+            call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.3)then
+         N_p=1
+         if(non_limit)then
+            xfact=xfact_ileg3(N_p)
+            if(abs(PDG_type(j_fks)).le.6)then
+               if(shower_mc_mod.ne.'HERWIGPP')
+     &              call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+               if(shower_mc_mod.eq.'HERWIGPP')
+     &              call AP_reduced_massive(j_type,i_type,ch_m,ch_i,one,
+     &              z,xi,xm12,ap)
+            else
+               call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z,ap)
+            endif
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+c     
+      elseif(ileg.eq.4)then
+         N_p=1
+         if(limit)then
+            xkern(1)=(g**2/N_p)*4*vcf*
+     &           ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &           ( s*(s-xm12)*(s*x-xm12) )
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+     &           (ch_j**2 / vcf)
+         elseif(non_limit)then
+            xfact=xfact_ileg4(N_p)
+            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
+         endif
+      endif
+      end
+
+
+
+      
       subroutine get_shower_variables(ztmp,xitmp,xjactmp)
       use kinematics_module
       implicit none

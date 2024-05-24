@@ -3,7 +3,8 @@ module kinematics_module
   use process_module
   implicit none
   integer,public :: ileg
-  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x,xij,betad,betas
+  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x, &
+       xij,betad,betas,kn,knbar,kn0
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
@@ -110,6 +111,8 @@ contains
     double precision,dimension(0:3,next_n1) :: pp
     double precision :: xi_i_fks,y_ij_fks,mass
     integer :: i_fks,j_fks,fks_father
+    double precision :: veckn_ev,veckbarn_ev,xp0jfks
+    common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
 
     jmass=mass ! this is the mass of j_fks
 
@@ -118,6 +121,9 @@ contains
     xq1q=0d0
     xq2q=0d0
     qMC=-1d0
+    kn=veckn_ev
+    knbar=veckbarn_ev
+    kn0=xp0jfks
 
     ! Determine ileg
     call fill_ileg(i_fks,j_fks)
