@@ -1574,8 +1574,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
                 # Spyros cached
-                full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
-                #full_evt, wgt = self.get_onshell_evt_and_wgt_fixed_hel(production, decays, decay_dict, inter_prod_dict)
+                #full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
+                full_evt, wgt = self.get_onshell_evt_and_wgt_fixed_hel(production, decays, decay_dict, inter_prod_dict)
 		# Spyros uncached (how it was before)
                 #full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays)
                 print(f"Spyros wgt = {wgt}")
@@ -1696,8 +1696,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function 
-                _, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
-                #_, wgt = self.get_onshell_evt_and_wgt_fixed_hel(base_event, decays, decay_dict, inter_prod_dict)
+                #_, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
+                _, wgt = self.get_onshell_evt_and_wgt_fixed_hel(base_event, decays, decay_dict, inter_prod_dict)
 		#print(f"Spyros wgt for max : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
@@ -1772,6 +1772,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 	# Spyros: get helicity of production event
         production_event = lhe_parser.Event(str(production))
         production_hel = production_event.get_helicity()
+        #print("production_hel = {production_hel}")
 	
         tag, order = production.get_tag_and_order()
         try:
@@ -1833,7 +1834,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             
 	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
-            #print(f"Spyros position = {position}")	    
+            print(f"Spyros position = {position}")	    
 	    
             # Allowed helicities of decaying particle - make this more generic
             #allowed_hel = [-1, 1]
@@ -1841,7 +1842,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
-                nhel_p_tot, iden_p = self.get_nhel(production,position[0])
+                print(f"Spyros: get_nhel = {self.get_nhel(production)}")
+                iden_p, nhel_p_tot = self.get_nhel(production) 
+                print(f"Spyros: iden_p = {iden_p}")
+                print(f"Spyros: nhel_p_tot = {nhel_p_tot}")
+                for hp in nhel_p_tot: print(hp)
 		                 
 	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
 	        # to make the dictionary
@@ -1876,10 +1881,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #print("decay event=",decay_event)         
                 
 		# Get all helicity configurations and iden number for production and decay events
-                nhel_p_tot,iden_p = self.get_nhel(production,position[0])
+                nhel_p_tot,iden_p = self.get_nhel(production)
                 #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
 		
-                nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
+                nhel_d_tot,iden_d = self.get_nhel(decay_event)
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
 		# Get helicities of decay event
@@ -1891,12 +1896,13 @@ class MadSpinInterface(extended_cmd.Cmd):
 		
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
-                #print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} / nhel_d_tot = {len(nhel_d_tot)}")
+                print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} , nhel_d_tot = {len(nhel_d_tot)}, {nhel_p_tot}")
 								
                 for i,hel_p in enumerate(nhel_p_tot): 		    
 		    # Spyros: skip if helicity doesn't match the helicity of the production event
                     #print(f"hel_p = {hel_p} - production_hel = {production_hel}")
                     # NB: Choosing the first element might be wrong - check with Olivier
+                    #print(f"production_hel = {production_hel} - hel_p = {hel_p}")
                     if production_hel is not None and hel_p[0] != production_hel: continue
 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
@@ -1908,11 +1914,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
-		        # Spyros: skip if helicity doesn't match helicity of decay event
+                        #print(f"decay hel = {decay_hel} , hel_d = {hel_d}")
+			# Spyros: skip if helicity doesn't match helicity of decay event
 			# NB: Choosing the first element might be wrong - check with Olivier
                         if decay_hel is not None and hel_d[0] != decay_hel: continue
-			
-                        #print(f"decay hel = {hel_d}")	    
+				    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
                         inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
@@ -1983,11 +1989,17 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         pdir,orig_order = self.get_pdir(event)
         if pdir in self.all_nhel:
+            print("1")
+            print(f"pdir = {pdir}")
+            print(f"all_nhel = {self.all_nhel}")
+            print(f"return = {self.all_nhel[pdir]}")
             return self.all_nhel[pdir]
         else:
+            print("2")
             fct = self.get_mymod(pdir,'NHEL') 
             iden,NHEL = fct()
-            self.all_nhel[pdir] = iden, NHEL 
+	    # NHEL returns next arrays each filled with helicities
+            self.all_nhel[pdir] = iden, NHEL.transpose().tolist()
 
 # .      OLD CODE BY QUENTIN TO RETURN ONLY HELICITY WHERE HE
 #        pdir,orig_order = self.get_pdir(event)
@@ -2085,7 +2097,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     new_value = self.all_f2py[pdir](p, 0.113, helicity) if helicity else self.all_f2py[pdir](p, 0.113, 0) 
                 else:       
                     new_value = self.all_f2py[pdir](p, event.aqcd, helicity) if helicity else self.all_f2py[pdir](p, event.aqcd, 0)
-                    #print(f"Spyros calculate ME for p = {p}, aqcd = {event.aqcd}, ME = {new_value}")
+                    #print(f"Spyros calculate ME fixed_hel = {self.all_f2py[pdir](p, event.aqcd, helicity)} , all_hel = {self.all_f2py[pdir](p, event.aqcd, 0)}")
                 if self.options['identical_particle_in_prod_and_decay'] == "average":
                     out += new_value
                 else:
