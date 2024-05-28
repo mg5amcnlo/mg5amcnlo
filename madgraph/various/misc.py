@@ -2243,15 +2243,18 @@ def import_python_lhapdf(lhapdfconfig):
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
         misc.sprint(lhapdf_libdir)
+        misc.sprint(pjoin(lhapdf_libdir, os.pardir, 'local'))
         misc.sprint(os.listdir('/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/')) 
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        misc.sprint(candidates)
         if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local')):
             candidates += [pjoin(os.pardir,'local', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local'))
                            if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', dirname))]
+            misc.sprint(candidates)
         for candidate in candidates:
             for subdir in ['site-packages', 'dist-packages']:
                 if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
