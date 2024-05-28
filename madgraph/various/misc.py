@@ -2252,9 +2252,9 @@ def import_python_lhapdf(lhapdfconfig):
         except OSError:
             candidates=[]
         sprint(candidates)
-        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local')):
-            candidates += [pjoin(os.pardir,'local', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local'))
-                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', dirname))]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
             sprint(candidates)
         for candidate in candidates:
             for subdir in ['site-packages', 'dist-packages']:
