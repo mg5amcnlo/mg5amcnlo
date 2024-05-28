@@ -1783,7 +1783,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # check for longitudinal photon
                 invalid = False
                 for l in legs[len(islegs):]:
-                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO" and not l['offshell']:
                         l['polarization'] =list(l['polarization'])
                         l['polarization'].remove(0)
                         if len(l['polarization']) == 0:
