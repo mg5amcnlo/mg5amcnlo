@@ -202,14 +202,9 @@ class TestMECmdRWGT(unittest.TestCase):
     def test_nlo_reweighting(self):
         """ check identical re-weighting in ttbar 
         """
-
         
-
-
         me_cmd = self.get_aMCcmd(pjoin(_pickle_path, 'ttbar_nlo.lhe.gz'))
-
-        lhapdf = misc.import_python_lhapdf(me_cmd.options['lhapdf'])
-        misc.sprint(lhapdf)       
+        
         cmd_lines = """
         change mode LO+NLO
         launch --rwgt_name=MYNLO
