@@ -2242,7 +2242,8 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
+        misc.sprint(lhapdf_libdir)
+        misc.sprint(os.listdir('/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/')) 
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
