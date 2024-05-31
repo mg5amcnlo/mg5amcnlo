@@ -6431,6 +6431,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
 
+
+        if second_exporter:
+            tmp = locals()
+            del tmp['self']
+            misc.sprint(os.getcwd())
+            process_exporter_cpp.generate_subprocess_directory_end(**tmp) 
+
+
         # Return to SubProcesses dir)
         os.chdir(pathdir)
 
@@ -6439,7 +6447,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
-                
+
         # Return to original dir
         os.chdir(cwd)
 
