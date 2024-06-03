@@ -804,6 +804,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             return True
         else:
             return replace_dict
+
     #===========================================================================
     # write_pmass_file
     #===========================================================================
@@ -813,12 +814,137 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model = matrix_element.get('processes')[0].get('model')
         
         lines = []
+        onium = -1
+        onium_mass = 0
+        counter = 0
+        for wf in matrix_element.get_external_wavefunctions():
+            mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+            if wf.get('onium'):
+                if onium == -1:
+                    onium = wf.get('onium').get('index')
+                    if mass.lower() != "zero":
+                        onium_mass = "abs(%s)" % mass
+                    else:
+                        onium_mass = mass
+                    counter += 1
+                    continue
+                elif onium == wf.get('onium').get('index'):
+                    onium = -1
+                    if mass.lower() != "zero":
+                        mass = "abs(%s)" % mass
+                    if onium_mass.lower() != "zero":
+                        if mass.lower() != "zero":
+                            mass = onium_mass+"+"+mass
+                        else:
+                            mass = onium_mass
+                else:
+                    raise MadGraph5Error("The file 'pmass.inc' cannot be produced.")
+            elif mass.lower() != "zero":
+                mass = "abs(%s)" % mass
+
+            lines.append("pmass(%d)=%s" % \
+                         (wf.get('number_external')-counter, mass))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_onia_file
+    #===========================================================================
+    def write_onia_file(self, writer, matrix_element):
+        """Write the onia.inc file for MG4"""
+
+        model = matrix_element.get('processes')[0].get('model')
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
+
+        lines = []
+        lines.append("INTEGER    NONIA")
+        lines.append("PARAMETER (NONIA=%d)"%nonia)
+
+        # Get mapping between production of bound states and open production mode
+        mapping = []
+        pairs = []
+        s = []
+        l = []
+        j = []
+        c = []
+        onia = [0]*nonia
+        onium = -1
+        onium_mass = 0
+        counter = 0
+        for wf in matrix_element.get_external_wavefunctions():
+            mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+            if wf.get('onium'):
+                if onium == -1:
+                    onium = wf.get('onium').get('index')
+                    mapping.append(wf.get('number_external')-counter)
+                    if wf.get('is_part'):
+                        pairs.append(wf.get('onium').get('index')+1)
+                    else:
+                        pairs.append(-(wf.get('onium').get('index')+1))
+                    s.append(int((wf.get('onium').get('spectroscopy')[0]-1)/2.))
+                    l.append(wf.get('onium').get('spectroscopy')[1])
+                    j.append(wf.get('onium').get('spectroscopy')[2])
+                    c.append(wf.get('onium').get('spectroscopy')[3])
+                    onia[onium] = wf.get('number')-counter
+                    counter += 1
+                    continue
+                elif onium == wf.get('onium').get('index'):
+                    onium = -1
+                    if wf.get('is_part'):
+                        pairs.append(wf.get('onium').get('index')+1)
+                    else:
+                        pairs.append(-(wf.get('onium').get('index')+1))
+                else:
+                    raise MadGraph5Error("The file 'onia.inc' cannot be produced.")
+            else:
+                pairs.append(0)
+            mapping.append(wf.get('number_external')-counter)
+
+        lines.append("\nINTEGER MAPPING(%i)"%(nexternal+nonia))
+        lines.append("INTEGER PAIRS(%i)"%(nexternal+nonia))
+        lines.append("DATA (MAPPING(i),i=1,%d)/%s/" % \
+                         (nexternal+nonia,",".join(str(x) for x in mapping)))
+        lines.append("DATA (PAIRS(i),i=1,%d)/%s/" % \
+                         (nexternal+nonia,",".join(str(x) for x in pairs)))
+
+        lines.append("\nINTEGER ONIA(NONIA), S_ONIA(NONIA), L_ONIA(NONIA), J_ONIA(NONIA), C_ONIA(NONIA)")
+        lines.append("DATA (ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in onia)))
+        lines.append("DATA (S_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in s)))
+        lines.append("DATA (L_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in l)))
+        lines.append("DATA (J_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in j)))
+        lines.append("DATA (C_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in c)))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_pmassonia_file
+    #===========================================================================
+    def write_pmassonia_file(self, writer, matrix_element):
+        """Write the onia.inc file for MG4"""
+
+        model = matrix_element.get('processes')[0].get('model')
+
+        lines = []
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
             if mass.lower() != "zero":
                 mass = "abs(%s)" % mass
 
-            lines.append("pmass(%d)=%s" % \
+            lines.append("pmass_onia(%d)=%s" % \
                          (wf.get('number_external'), mass))
 
         # Write the file
@@ -864,9 +990,24 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
+
+            idup = []
+            onium = False
+            for l in legs:
+                if l.get('onium'):
+                    if not onium:
+                        onium = True
+                        idup.append(str(l.get('onium').get('id')))
+                    else:
+                        onium = False
+                        continue
+                else:
+                    idup.append(str(l.get('id')))
+
             lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
                          (iproc + 1, numproc+1, nexternal,
-                          ",".join([str(l.get('id')) for l in legs])))
+                          ",".join(idup)))
+
             if iproc == 0 and numproc == 0:
                 for i in [1, 2]:
                     lines.append("DATA (MOTHUP(%d,i),i=1,%2r)/%s/" % \
@@ -887,10 +1028,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 else:
                     # First build a color representation dictionnary
                     repr_dict = {}
+                    onium = False
                     for l in legs:
-                        repr_dict[l.get('number')] = \
-                            proc.get('model').get_particle(l.get('id')).get_color()\
-                            * (-1)**(1+l.get('state'))
+                        if l.get('onium'):
+                            if not onium:
+                                onium = True
+                                repr_dict[l.get('number')] = \
+                                    l.get('onium').get('spectroscopy')[-1]\
+                                    * (-1)**(1+l.get('state'))
+                            else:
+                                onium = False
+                                continue
+                        else:
+                            repr_dict[l.get('number')] = \
+                                proc.get('model').get_particle(l.get('id')).get_color()\
+                                * (-1)**(1+l.get('state'))
+
                     # Get the list of color flows
                     color_flow_list = \
                         matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
@@ -898,10 +1051,21 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
+                            color_flow = []
+                            onium = False
+                            for l in legs:
+                                if l.get('onium'):
+                                    if not onium:
+                                        onium = True
+                                        color_flow.append("%3r" % color_flow_dict[l.get('number')][i])
+                                    else:
+                                        onium = False
+                                        continue
+                                else:
+                                    color_flow.append("%3r" % color_flow_dict[l.get('number')][i])
                             lines.append("DATA (ICOLUP(%d,i,%d,%d),i=1,%2r)/%s/" % \
                                  (i + 1, cf_i + 1, numproc+1, nexternal,
-                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
-                                            for l in legs])))
+                                  ",".join(color_flow)))
 
         return lines
 
@@ -1214,8 +1378,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if num_diag == 0:
                 continue
 
-            # List of True or False 
-            bool_list = [(i + 1 in diag_jamp[num_diag]) for i in range(colamps)]
+            # List of True or False
+            try:
+                bool_list = [(i + 1 in diag_jamp[num_diag]) for i in range(colamps)]
+            except:
+                bool_list = [False] * colamps
             # Add line
             ret_list.append("DATA(icolamp(i,%d,%d),i=1,%d)/%s/" % \
                                 (iconfig+1, num_matrix_element, colamps,
@@ -2782,7 +2949,10 @@ CF2PY integer, intent(in) :: new_value
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()] 
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()]
+
+        if matrix_element.get_nonia()>0:
+                self.matrix_file = 'matrix_standalone_v4_onia.inc'
                 
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -2814,6 +2984,15 @@ CF2PY integer, intent(in) :: new_value
         filename = pjoin(dirpath, 'nexternal.inc')
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
+
+        if matrix_element.get_nonia()>0:
+            filename = pjoin(dirpath, 'onia.inc')
+            self.write_onia_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+            filename = pjoin(dirpath, 'pmassonia.inc')
+            self.write_pmassonia_file(writers.FortranWriter(filename),
+                         matrix_element)
 
         filename = pjoin(dirpath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -2893,7 +3072,6 @@ CF2PY integer, intent(in) :: new_value
                                 write=True, proc_prefix=''):
         """Export a matrix element to a matrix.f file in MG4 standalone format
         if write is on False, just return the replace_dict and not write anything."""
-
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -3021,9 +3199,16 @@ CF2PY integer, intent(in) :: new_value
                 """INTEGER NSQSO_BORN
                    PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
 
-        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-
         matrix_template = self.matrix_template
+
+        if matrix_element.get_nonia()>0:
+            matrix_template = matrix_template.replace('.inc','_onia.inc')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)   
+
         if self.opt['export_format']=='standalone_msP' :
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
@@ -4615,6 +4800,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+        if matrix_element.get_nonia()>0:
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+
 
         #adding the support for the fake width (forbidding too small width)
         mass_width = matrix_element.get_all_mass_widths()
@@ -4772,9 +4962,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                ELSE IF(POL(%(bid)i).NE.1d0)THEN
                  T=T*(2d0-ABS(POL(%(bid)i)))
                ENDIF """ % {'bid': i+1}
-
-
-
 
         replace_dict['template_file'] = pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
@@ -5976,6 +6163,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         matrix_elements = subproc_group.get('matrix_elements')
 
+        if matrix_elements[0].get_nonia()>0:
+                self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+
         # Add the driver.f, all grouped ME's must share the same number of 
         # helicity configuration
         ncomb = matrix_elements[0].get_helicity_combinations()
@@ -6016,7 +6206,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 #
                 # write the dedicated template for helicity recycling
                 #
-                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read() 
+                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read()
                 file = tfile % replace_dict
                 # Add the split orders helper functions.
                 file = file + '\n' + open(replace_dict['template_file2'])\
@@ -6147,6 +6337,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+        if matrix_element.get_nonia()>0:
+            filename = 'onia.inc'
+            self.write_onia_file(writers.FortranWriter(filename),
+                             matrix_element)
+
+            filename = 'pmassonia.inc'
+            self.write_pmassonia_file(writers.FortranWriter(filename),
                          matrix_element)
 
         filename = 'props.inc'
