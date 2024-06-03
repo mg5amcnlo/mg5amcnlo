@@ -134,7 +134,8 @@
 #   0: No merging                                                      *
 #   3: FxFx Merging - WARNING! Applies merging only at the hard-event  *
 #      level. After showering an MLM-type merging should be applied as *
-#      well. See http://amcatnlo.cern.ch/FxFx_merging.htm for details. *
+#      well. See http://amcatnlo.web.cern.ch/amcatnlo/FxFx_merging.htm *
+#      and arXiv:1209.6215 [hep-ph] for details.                       *
 #   4: UNLOPS merging (with pythia8 only). No interface from within    *
 #      MG5_aMC available, but available in Pythia8.                    *
 #  -1: NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph].    *
