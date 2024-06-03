@@ -307,6 +307,39 @@ class ColorBasis(dict):
                 except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
+    def OniumColorString(self, pid_charges, pid_numbers, charge, offset=10000):
+        """Do the color projection for a given onium"""
+        if len(pid_numbers) != 2 or len(pid_charges) != 2:
+            raise ColorBasis.ColorBasisError("Only the projection of two particles is supported")
+        if pid_charges==(1,1):
+            if charge != 1:
+                raise ColorBasis.ColorBasisError("Only color singlet is possible when charges=%d,%d"%pid_charges)
+            projector_str = color_algebra.ColorString([color_algebra.ColorOne()])
+        elif pid_charges==(3,-3) or pid_charges==(-3,3):
+            if pid_charges==(-3,3):
+                pidnums=(pid_numbers[1],pid_numbers[0])
+            else:
+                pidnums=(pid_numbers[0],pid_numbers[1])
+            if charge == 1:
+                # color singlet
+                projector_str = color_algebra.ColorString([color_algebra.T(pidnums[1], pidnums[0])])
+            elif charge == 8:
+                # color octet
+                projector_str = color_algebra.ColorString([color_algebra.T(pidnums[0],pidnums[1],pidnums[0])])
+            else:
+                raise ColorBasis.ColorBasisError("Only color singlet/octet is possible when charges=%d,%d"%pid_charges)
+        else:
+            raise ColorBasis.ColorBasisError("Unknown charges=%d,%d for color projection of onium"%pid_charges)
+
+        return projector_str
+
+    def OniaColorProjection(self, colorize_dict, pid_color_numbers):
+        """Color projection for onia"""
+        for (pid_charges,pid_numbers,charge) in pid_color_numbers:
+            OniumCS=self.OniumColorString(pid_charges, pid_numbers, charge)
+            for col_str in colorize_dict.values():
+                col_str.product(OniumCS)
+
     def create_color_dict_list(self, amplitude):
         """Returns a list of colorize dict for all diagrams in amplitude. Also
         update the _list_color_dict object accordingly """
@@ -316,6 +349,27 @@ class ColorBasis(dict):
         for diagram in amplitude.get('diagrams'):
             colorize_dict = self.colorize(diagram,
                                           amplitude.get('process').get('model'))
+
+            onium = False
+            pid_color_numbers = []
+            for l in amplitude.get('process').get('legs'):
+                if l.get('onium'):
+                    if not onium:
+                        onium = True
+                        for part in amplitude.get('process').get('model').get('particles'):
+                            if part.get('pdg_code') == l.get('id'): color = part.get('color')
+                            if part.get('pdg_code') == -l.get('id'): color = -part.get('color')
+                        onium_color = color
+                        onium_number = l.get('number')
+                    else:
+                        onium = False
+                        for part in amplitude.get('process').get('model').get('particles'):
+                            if part.get('pdg_code') == l.get('id'): color = part.get('color')
+                            if part.get('pdg_code') == -l.get('id'): color = -part.get('color')
+                        pid_color_numbers.append([(onium_color,color),(onium_number,l.get('number')),l.get('onium').get('spectroscopy')[-1]])
+
+            if pid_color_numbers: self.OniaColorProjection(colorize_dict, pid_color_numbers)
+
             list_color_dict.append(colorize_dict)
 
         self._list_color_dict = list_color_dict
@@ -467,7 +521,6 @@ class ColorBasis(dict):
             for (leg_num, leg_repr) in repr_dict.items():
                 # By default, assign a (0,0) color flow
                 res_dict[leg_num] = [0, 0]
-
                 # Raise an error if external legs contain non supported repr
                 if abs(leg_repr) not in [1, 3, 6, 8]:
                     raise ColorBasis.ColorBasisError("Particle ID=%i has an unsupported color representation" % leg_repr)

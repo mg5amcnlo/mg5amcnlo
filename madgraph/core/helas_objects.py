@@ -5728,6 +5728,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         col_basis = color_amp.ColorBasis()
         new_amp = matrix_element.get_base_amplitude()
         matrix_element.set('base_amplitude', new_amp)
+
+        print('LS--------------')
+        print('helas_objects.py:5783::')
+        print("legs:",matrix_element.get('base_amplitude').get('process').get('legs'))
+        print('LS--------------')
         
         colorize_obj = col_basis.create_color_dict_list(\
                          matrix_element.get('base_amplitude'))
@@ -5760,6 +5765,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                list_color_basis[col_index])
         matrix_element.set('color_matrix',
                                list_color_matrices[col_index])
+
+        print('LS--------------')
+        print('helas_objects.py:5742::')
+        print('color basis:',matrix_element.get('color_basis'))
+        # print('color matrix:',matrix_element.get('color_matrix'))
+        print('LS--------------')
 
 
     # Below is the type of HelasMatrixElement which should be created by this
@@ -5929,7 +5940,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # than for regular tree ones. So the function below is overloaded
                 # in LoopHelasProcess
                 cls.process_color(matrix_element,color_information,\
-                                                compute_loop_nc=compute_loop_nc)                    
+                                                compute_loop_nc=compute_loop_nc)                 
 
         if not matrix_elements:
             raise InvalidCmd("No matrix elements generated, check overall coupling orders")
