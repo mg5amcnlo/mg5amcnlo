@@ -351,7 +351,7 @@ c#endif
             fo(6) = ip     * sqm(abs(im))
          else
 
-c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
             omega(1) = dsqrt(p(0)+pp)
@@ -938,6 +938,86 @@ c#endif
 c
       return
       end
+
+
+
+      subroutine onia_proj(p1, p2, m1, m2, nhel1, nhel2, spin, nhelext,
+     $       fonia)
+      implicit none
+      double complex fonia, vc(6),fo(6),fi(6)
+      double precision p1(0:3), p2(0:3), p(0:3), m1, m2, mtot, fact
+      integer nhel1, nhel2, spin, nhelext
+
+      double complex im, comp1, comp2, comp3, comp4
+      double complex term1, term2, term3, term4
+      parameter( im = dcmplx(0.D0,1.0D0))
+
+      call oxxxxx(p1,m1,nhel1,-1,fo)
+      call ixxxxx(p2,m2,nhel2,+1,fi)
+      p(0:3) = p1(0:3) + p2(0:3)
+      mtot = m1 + m2
+
+C     eff basis
+      !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)+im*p(2))*fi(6)
+      !comp2 = mtot*fi(4) + (p(1)-im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
+      !comp3 = (p(0)-p(3))*fi(3) + (-im*p(2)-p(1))*fi(4) + mtot*fi(5)
+      !comp4 = (+im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
+      
+C     chiral basis = eff basis up to i -> -i
+      !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
+      !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
+      !comp3 = (p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
+      !comp4 = (-im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
+
+C     Dirac basis
+      !comp1 = (p(0)+mtot)*fi(3) + p(3)*fi(5) + (p(1)-im*p(2))*fi(6)
+      !comp2 = (p(0)+mtot)*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(3))*fi(6)
+      !comp3 = (-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + (-p(0)+mtot)*fi(5)
+      !comp4 = (-im*p(2)-p(1))*fi(3) + (p(3))*fi(4) + (-p(0)+mtot)*fi(6)
+      
+C     chiral alternate basis
+      !comp1 = mtot*fi(3) + (p(3)-p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
+      !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(0)-p(3))*fi(6)
+      !comp3 = (-p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
+      !comp4 = (-im*p(2)-p(1))*fi(3) + (-p(0)+p(3))*fi(4) + mtot*fi(6)
+
+C     hss convention
+      comp1 = fi(3)
+      comp2 = fi(4)
+      comp3 = fi(5)
+      comp4 = fi(6)
+
+      !fact= SQRT(32d0*m2*m1)*mtot/mtot/2d0 ! source of this factor? I divide eff fact factor by mtot/2d0 since this is already taken into account in below
+      fact = 0.5D0/SQRT(2D0*m1*m2)
+      
+      if(spin.eq.0)then
+c     spin singlet    
+
+         fonia = (-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
+     $   +fo(6)*comp4)
+      !fonia = 0.5d0/mtot*(-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
+    ! $   +fo(6)*comp4)
+      fonia = fonia*fact
+      elseif(spin.eq.1)then !fixed? 
+c     spin triplet
+         call vxxxxx(p,mtot,nhelext,1,vc)
+
+         term1 = fo(5)*(vc(3)-vc(6)) + fo(6)*(-vc(4)-im*vc(5))
+         term2 = (-vc(4)+im*vc(5))*fo(5) + (vc(3) + vc(6))*fo(6)
+         term3 = fo(3)*(vc(3)+vc(6)) + fo(4)*(vc(4)+im*vc(5))
+         term4 = fo(3)*(vc(4) - im*vc(5)) + fo(4)*(vc(3)-vc(6))
+
+         fonia = (term1*comp1 + term2*comp2 + term3*comp3
+     $        + term4*comp4)
+         fonia = fonia*fact
+      else
+         print *,"spin not yet implemented"
+         stop
+      endif
+      return
+      end
+
+
 
       subroutine boostx(p,q , pboost)
 c

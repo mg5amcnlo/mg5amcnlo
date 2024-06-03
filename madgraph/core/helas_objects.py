@@ -4789,6 +4789,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code')].get_helicity_states())
             for wf in self.get_external_wavefunctions()]
 
+        if self.get_nonia()>0:
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            external_wavefunctions = self.get_external_wavefunctions()
+            for pair in onia_pairs:
+                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
+                s = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[0]
+                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
+                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
+                hel_per_part[pair[0]-1] = s
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
+
         return reduce(lambda x, y: x * y,
                       hel_per_part)
 
@@ -4804,6 +4818,26 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         else model.get('particle_dict')[\
                                   wf.get('pdg_code')].get_helicity_states(allow_reverse)
             for wf in self.get_external_wavefunctions()]
+
+        if self.get_nonia()>0:
+            print("LS--------------")
+            print("helas_objects.py:get_helicity_matrix()")
+            print("LS::WARNING: make sure that use of indices in the next lines are always correct, if 'allow_reverse' is chosen differently, the indices in hel_per_part are different!")
+            print("LS--------------")
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            external_wavefunctions = self.get_external_wavefunctions()
+            for pair in onia_pairs:
+                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
+                s = int((external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[0]-1)/2)
+                hel = [i for i in range(-s,s+1,1)]
+                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
+                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
+                hel_per_part[pair[0]-1] = hel
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
+
         return itertools.product(*hel_per_part)
 
 
@@ -4849,6 +4883,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         if len(hel_per_part) == 1:
             hel_per_part.append(0)
+
+        if self.get_nonia()>0:
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            legs = [leg for leg in self.get('processes')[0].get('legs')]
+            for pair in onia_pairs:
+                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
+                s = legs[pair[0]-1].get('onium').get('spectroscopy')[0]
+                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
+                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
+                hel_per_part[pair[0]-1] = s
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
             
         return hel_per_part
 
