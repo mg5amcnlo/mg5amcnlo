@@ -1734,7 +1734,8 @@ class MultiProcess(base_objects.PhysicsObject):
         for prod in itertools.product(*isids):
             islegs = [\
                     base_objects.Leg({'id':id, 'state': False, 
-                                      'polarization': islegs_orig[i]['polarization']})
+                                      'polarization': islegs_orig[i]['polarization'],
+                                      'onium': islegs_orig[i]['onium']})
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1766,11 +1767,11 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'onium': fsleg['onium']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
-                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'is_tagged': tag}) \
+                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'onium': fsleg['onium'], 'is_tagged': tag}) \
                             for id, fsleg, tag in zip(prod, fslegs, fstags)])
 
 

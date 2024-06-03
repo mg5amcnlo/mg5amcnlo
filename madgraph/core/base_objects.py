@@ -273,7 +273,7 @@ class Particle(PhysicsObject):
                 else:
                     return True
         return super(Particle, self).set(name, value,force=force)
-        
+
     def nice_string(self):
         """String representation of the object. Outputs valid Python 
         with improved format."""
@@ -299,8 +299,8 @@ class Particle(PhysicsObject):
         mystr = mystr.rstrip(',\n')
         mystr = mystr + '\n}'
 
-        return mystr
-    
+        return mystr        
+
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
@@ -2081,6 +2081,8 @@ class Leg(PhysicsObject):
         self['onshell'] = None
         # filter on the helicty
         self['polarization'] = []
+        # propteries of bound state
+        self['onium'] = {}
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -2117,13 +2119,31 @@ class Leg(PhysicsObject):
                 if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
+
+        elif name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid dictionary" % str(value))
+            # if value[0] not in [0, 3, 99]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid spin" % str(value))
+            # if value[1] not in [0, 1, 99]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid orbital angular momentum" % str(value))
+            # if value[2] not in range((value[0]-1)/2-value[1],(value[0]-1)/2+value[1]):
+            #     print("madgraph/core/base_objects.py:2101:: The if condition has to be checked and generalised for the case when we sum over all angular momentum configurations 'j'!")
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid total angular momentum" % str(value))
+            # if value[3] not in [1, 8]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid color configuartion" % str(value))
                                                                     
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization']
+        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization', 'onium']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
@@ -2285,6 +2305,7 @@ class MultiLeg(PhysicsObject):
         self['ids'] = []
         self['state'] = True
         self['polarization'] = []
+        self['onium'] = {}
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -2305,6 +2326,24 @@ class MultiLeg(PhysicsObject):
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 
+        if name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            # if value[0] not in [0, 3, 99]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid spin" % str(value))
+            # if value[1] not in [0, 1, 99]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid orbital angular momentum" % str(value))
+            # if value[2] not in range((value[0]-1)/2-value[1],(value[0]-1)/2+value[1]):
+            #     print("madgraph/core/base_objects.py:2101:: The if condition has to be checked and generalised for the case when we sum over all angular momentum configurations 'j'!")
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid total angular momentum" % str(value))
+            # if value[3] not in [1, 8]:
+            #     raise self.PhysicsObjectError( \
+            #           "%s is not a valid color configuartion" % str(value))
+
         if name == 'state':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid leg state (initial|final)" % \
@@ -2315,7 +2354,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state','polarization']
+        return ['ids', 'state','polarization','onium']
 
 #===============================================================================
 # LegList

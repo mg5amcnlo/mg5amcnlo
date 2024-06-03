@@ -1125,10 +1125,10 @@ class CheckValidForCmd(cmd.CheckCmd):
             
         if '[' in process and '{' in process:
             valid = False
-            #if 'noborn' in process or 'sqrvirt' in process:
-            #    valid = True
-            #else:
-            #    raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+            # if 'noborn' in process or 'sqrvirt' in process:
+            #     valid = True
+            # else:
+            #     raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
 
             # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
@@ -1137,13 +1137,13 @@ class CheckValidForCmd(cmd.CheckCmd):
             if order.strip().lower() != 'qcd':
                 raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
+
             def check(p):
                 if p.get('color') != 1:
                     raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
                 elif p.get('mass') != 'ZERO':
                     raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
  
-
 
             for p in particles_parts[0].split()+ particles_parts[-1].split():
                 if '{' in p:
@@ -1162,7 +1162,6 @@ class CheckValidForCmd(cmd.CheckCmd):
                             check(p)
                     else:
                         check(p)
-                    
 
 
     def check_tutorial(self, args):
@@ -3615,6 +3614,7 @@ This implies that with decay chains:
             hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
+
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')
@@ -4939,12 +4939,19 @@ This implies that with decay chains:
         state = False
 
         # Extract process
+        onium_index = 0
         for part_name in args:
             if part_name == '>':
                 if not myleglist:
                     raise self.InvalidCmd("No final state particles")
                 state = True
                 continue
+
+            # check if particle is ONIA
+            is_onium = False
+            if part_name.find(".") > 0 and part_name.find("(") > 0 and part_name.endswith(")") > 0:
+                onium = re.split(r"[.(]+", part_name[:-1])
+                is_onium = True
 
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
@@ -5047,7 +5054,7 @@ This implies that with decay chains:
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
 
-            duplicate =1
+            duplicate = 1
             if part_name in self._multiparticles:
                 # multiparticles cannot be tagged
                 if is_tagged:
@@ -5056,6 +5063,17 @@ This implies that with decay chains:
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
                 mylegids.extend(self._multiparticles[part_name])
+            elif is_onium:
+                for i in range(2):
+                    mypart = self._curr_model['particles'].get_copy(onium[i])
+                    spectroscopy = onium[2].replace('s','0').replace('p','1')
+                    spectroscopy = [int(i) for i in spectroscopy]
+                    myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
+                                                            'state':state,
+                                                            'polarization': polarization,
+                                                            'onium': {'id':441, 'index':onium_index, 'spectroscopy':spectroscopy}
+                                                            }))
+                onium_index += 1
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
                 if int(part_name) in self._curr_model.get('particle_dict'):
                     mylegids.append(int(part_name))
@@ -5090,12 +5108,16 @@ This implies that with decay chains:
 
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
-                                                            'polarization': polarization}))
+                                                            'polarization': polarization,
+                                                            'onium': {}}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
                                                           'polarization': polarization,
+                                                          'onium': {},
                                                           'is_tagged':is_tagged}))
+            elif is_onium:
+                pass
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
 
@@ -6247,7 +6269,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 to_save.append('fastjet')
             if os.path.exists(pjoin(prefix, 'hepmc')):
                 self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
-                to_save.append('hepmc_path') 
+                to_save.append('hepmc_path')
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6268,12 +6290,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         elif tool == 'fastjet':
             self.options['fastjet'] = pjoin(prefix, tool,'bin', 'fastjet-config') 
             self.exec_cmd('save options %s fastjet'  % (config_file),
-                 printcmd=False, log=False)  
+                 printcmd=False, log=False)
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
         else:
-            logger.warning("path not saved for %s", tool)
+            logger.warning("path not saved for %s", tool)            
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
         path_to_be_set = []
@@ -9120,7 +9142,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._generate_info = process[9:]
             #print self._generate_info
         elif skip_2body:
-            logger.info("No three body-decay (or higher) is found for %s", pids) 
+            logger.info("No three body-decay (or higher) is found for %s", pids)
         else:
             logger.info("No decay is found for %s", pids)
 

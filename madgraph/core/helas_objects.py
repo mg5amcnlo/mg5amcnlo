@@ -649,6 +649,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #
         #
         self['polarization'] = []
+        self['onium'] = []
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -705,6 +706,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 else:
                     self.set('polarization', leg.get('polarization'))
                 self.set('interaction_id', interaction_id, model)
+                self.set('onium', leg.get('onium'))
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
         else:
@@ -4709,14 +4711,52 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([ len(d.get('amplitudes')) for d in \
                        self.get('diagrams')])
 
+    def get_nonia(self):
+        """Gives the total number of external onia states"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+
+        nonia = 0
+        for wf in external_wfs:
+            if wf.get('onium'):
+                nonia +=1
+
+        if nonia%2:
+            raise MadGraph5Error("Odd number of quarkonia constituents detected.")
+        else:
+            nonia /= 2
+
+        return int(nonia)
+
+    def get_onia_pairs(self):
+        """Gives the total number of external onia states"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+
+        pairs = []
+        onia = [-1,-1]
+        for wf in external_wfs:
+            if wf.get('onium'):
+                if onia[0] < 0:
+                    onia = [wf.get('onium').get('index'),wf.get('number')]
+                elif onia[0] == wf.get('onium').get('index'):
+                    pairs.append((onia[1],wf.get('number')))
+                    onia[0] = -1
+                else:
+                    raise MadGraph5Error("Quarkonia constituents cannot be matched.")
+
+        return pairs
+
     def get_nexternal_ninitial(self):
         """Gives (number or external particles, number of
         incoming particles)"""
 
         external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
 
+        nonia = self.get_nonia()
+        
         return (len(set([wf.get('number_external') for wf in \
-                         external_wfs])),
+                         external_wfs]))-nonia,
                 len(set([wf.get('number_external') for wf in \
                          [wf for wf in external_wfs if wf.get('leg_state') == False]])))
 
