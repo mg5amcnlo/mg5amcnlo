@@ -117,6 +117,7 @@ c      open (unit=lun+1,file='results.dat',status='unknown',err=13)
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
       call setcuts               !Sets up cuts 
+      %(load_onia_card)s
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       nconfigs = 1

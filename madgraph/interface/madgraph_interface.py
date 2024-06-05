@@ -8639,13 +8639,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self._curr_exporter.convert_model(self._curr_model, 
                                                wanted_lorentz,
                                                wanted_couplings)
+
+
+        self._curr_exporter.export_onia_files(self._curr_matrix_elements)
         
         # move the old options to the flaglist system.
         if nojpeg:
             flaglist.append('nojpeg')
         if online:
             flaglist.append('online')
-
             
 
         if self._export_format in ['NLO']:

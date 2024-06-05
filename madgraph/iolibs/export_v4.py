@@ -269,9 +269,9 @@ class ProcessExporterFortran(VirtualExporter):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         shutil.copyfile(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'),
                         pjoin(self.dir_path, 'Cards', 'run_card.dat'))
-        
-        
-        
+    
+
+
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -493,7 +493,7 @@ class ProcessExporterFortran(VirtualExporter):
                 # Copying these cards turn on the use of MadAnalysis5 by default.
                 if os.path.isfile(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level)):
                     shutil.copy(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level),
-                                pjoin(self.dir_path,'Cards','madanalysis5_%s_card.dat'%level))
+                                pjoin(self.dir_path,'Cards','madanalysis5_%s_card.dat'%level))  
 
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
@@ -950,7 +950,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Write the file
         writer.writelines(lines)
 
-        return True
+        return True      
 
     #===========================================================================
     # write_ngraphs_file
@@ -2190,6 +2190,142 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return s_and_t_channels
 
     #===========================================================================
+    # export the onia files
+    #===========================================================================
+    def export_onia_files(self, matrix_elements):
+        """Configure the files/link of the process according to the model"""
+
+        contains_onia = False
+        for matrix_element in matrix_elements:
+            for me in matrix_element.get('matrix_elements'):
+                if me.get_nonia() > 0:
+                    contains_onia = True
+                    break
+            if contains_onia:
+                break
+
+        if contains_onia:
+
+            onia_ids = self.get_onia_ids(matrix_elements)
+
+            self.create_onia_card(onia_ids)
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
+            self.write_ldme_file(writers.FortranWriter(filename),
+                         onia_ids)
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
+            self.write_onia_read(writers.FortranWriter(filename),
+                         onia_ids)
+
+            filename = pjoin(self.dir_path, 'Cards', 'ident_card.dat')
+            self.extend_ident_card(filename, onia_ids)
+
+            try:
+                if self.format == 'standalone':
+                    shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa_onia.f'), 
+                            pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+            except:
+                pass
+
+            model_path = self.dir_path + '/Source/MODEL/'
+            ln(model_path + '/ldme.inc', self.dir_path + '/Source')
+            ln(model_path + '/ldme.inc', self.dir_path + '/SubProcesses')
+
+        else:
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
+            self.write_ldme_file(writers.FortranWriter(filename),
+                         [])
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
+            self.write_onia_read(writers.FortranWriter(filename),
+                         [])
+
+
+
+    def create_onia_card(self, onia_ids):
+        """ """
+        
+        shutil.copy(pjoin(self.mgme_dir, 'Template/Common/Cards/onia_card.dat'), 
+                               pjoin(self.dir_path,'Cards'))
+
+        # create onia_card
+        for card in ['onia_card']:
+            if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                try:
+                    with open(pjoin(self.dir_path, 'Cards',card + '_default.dat'), 'w') as f:
+                        with open(pjoin(self.dir_path, 'Cards',card + '.dat'),'r') as source:
+                            shutil.copyfileobj(source, f)
+                        f.write('Block ldme\n')
+                        for onium_id in onia_ids:
+                            f.write('   {id}  {value:.16f}   # LDME for quarkonium with ID {id}\n'.format(id=onium_id,value=1.))
+                    shutil.copy(pjoin(self.dir_path, 'Cards',card + '_default.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '.dat'))
+                except IOError:
+                    logger.warning("Failed to copy " + card + ".dat to default")
+
+
+
+    def get_onia_ids(self, matrix_elements):
+
+        ids = []
+        for matrix_element in matrix_elements:
+            for me in matrix_element.get('matrix_elements'):
+                for proc in me.get('processes'):
+                    for leg in proc.get('legs'):
+                        if leg.get('onium'):
+                            ids += [leg.get('onium').get('id')]
+        ids = list(dict.fromkeys(ids))
+        ids.sort()
+
+        return ids
+
+
+
+    def write_ldme_file(self, writer, onia_ids):
+        """ write ldme.inc """
+
+        ldmes = ["LDME_%i"%(onium_id) for onium_id in onia_ids]
+        
+        lines = []
+        if onia_ids:
+            lines.append("DOUBLE PRECISION %s"% \
+                            (",".join(str(x) for x in ldmes)))
+            lines.append("COMMON/LDME/ %s"% \
+                            (",".join(str(x) for x in ldmes)))
+
+        # Write the file
+        writer.writelines(lines)
+
+
+
+    def write_onia_read(self, writer, onia_ids):    
+        """write onia_read.inc"""
+
+        lines = []        
+        for onium_id in onia_ids:
+            lines.append("CALL LHA_GET_REAL(NONIA,ONIA,VALUE,'LDME_{id}',LDME_{id},1D0)".format(id=onium_id))
+
+        # Write the file
+        writer.writelines(lines)
+
+
+
+    def extend_ident_card(self, card, onia_ids):    
+        """append ldmes to ident_card.dat"""
+
+        if os.path.isfile(card):
+            print("LS::ident_card")
+            with open(card, 'a') as f:
+                for onium_id in onia_ids:
+                    f.write("\nldme {id} LDME_{id}\n".format(id=onium_id))
+                    
+        else:
+            raise MadGraph5Error("LDMEs cannot be added to 'ident_card.dat'")
+
+
+
+    #===========================================================================
     # Global helper methods
     #===========================================================================
 
@@ -3016,6 +3152,8 @@ CF2PY integer, intent(in) :: new_value
             plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
@@ -3202,7 +3340,8 @@ CF2PY integer, intent(in) :: new_value
         matrix_template = self.matrix_template
 
         if matrix_element.get_nonia()>0:
-            matrix_template = matrix_template.replace('.inc','_onia.inc')
+            if not 'onia' in matrix_template:
+                matrix_template = matrix_template.replace('.inc','_onia.inc')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
@@ -3817,6 +3956,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
         linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -4595,7 +4736,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'sudakov.inc',
                      'symmetry.f',
                      'unwgt.f',
-                     'dummy_fct.f'
+                     'dummy_fct.f',
+                     'ldme.inc'
                      ]
 
     def link_files_in_SubProcess(self, Ppath):
@@ -5826,21 +5968,26 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_driver
     #===========================================================================
-    def write_driver(self, writer, ncomb, n_grouped_proc, v5=True):
+    def write_driver(self, writer, ncomb, n_grouped_proc, v5=True, onia=False):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_driver.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            card = 'Source/MODEL/MG5_param.dat'
+            param_card = 'Source/MODEL/MG5_param.dat'
         else:
-            card = 'param_card.dat'
+            param_card = 'param_card.dat'
+        if onia:
+            load_onia_card = 'call setonia("onia_card.dat")'
+        else:
+            load_onia_card = ''
         # Requiring each helicity configuration to be probed by 10 points for 
         # matrix element before using the resulting grid for MC over helicity
         # sampling.
         # We multiply this by 2 because each grouped subprocess is called at most
         # twice for each IMIRROR.
-        replace_dict = {'param_card_name':card, 
+        replace_dict = {'param_card_name':param_card,
+                        'load_onia_card':load_onia_card, 
                         'ncomb':ncomb,
                         'hel_init_points':n_grouped_proc*10*2}
         if not v5:
@@ -6163,8 +6310,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         matrix_elements = subproc_group.get('matrix_elements')
 
+        contains_onia = False
         if matrix_elements[0].get_nonia()>0:
+            if not contains_onia:
                 self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+                contains_onia = True
 
         # Add the driver.f, all grouped ME's must share the same number of 
         # helicity configuration
@@ -6176,7 +6326,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'driver.f'
         self.write_driver(writers.FortranWriter(filename),ncomb,
-                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
+                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'], onia=contains_onia)
 
         try:
             self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
@@ -6700,7 +6850,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         super(ProcessExporterFortranMEGroup, self).finalize(*args, **opts)
         #ensure that the grouping information is on the correct value
-        self.proc_characteristic['grouped_matrix'] = True        
+        self.proc_characteristic['grouped_matrix'] = True
+
 
         
 #===============================================================================
@@ -6967,7 +7118,7 @@ class UFO_model_to_mg4(object):
         
         #copy the library files
         file_to_link = ['formats.inc','printout.f', \
-                        'rw_para.f', 'testprog.f']
+                        'rw_onia.f', 'rw_para.f', 'testprog.f']
     
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, \
@@ -7001,6 +7152,9 @@ class UFO_model_to_mg4(object):
             load_card = ''
             lha_read_filename='lha_read.f'
             updateloop_default = '.false.'
+
+        cp( MG5DIR + '/models/template_files/fortran/rw_onia.f', \
+                                       os.path.join(self.dir_path,'rw_onia.f'))
             
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
                                        os.path.join(self.dir_path,'lha_read.f'))
@@ -7190,7 +7344,7 @@ class UFO_model_to_mg4(object):
         
         # Write the Couplings
         lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
-        fsock.writelines('\n'.join(lines))
+        fsock.writelines('\n'.join(lines))            
         
         
     def create_input(self):
@@ -9262,7 +9416,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_onia.o rw_para.o'
         text += ' model_functions.o '
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '
@@ -9809,6 +9963,8 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)

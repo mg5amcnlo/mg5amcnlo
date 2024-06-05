@@ -297,6 +297,15 @@ class SubProcessGroup(base_objects.PhysicsObject):
         return self.get('matrix_elements')[0].\
                get_nexternal_ninitial()
 
+    def get_nonia(self):
+        """Get number of quarkonia for this group"""
+
+        assert self.get('matrix_elements'), \
+               "Need matrix element to call get_nonia"
+
+        return self.get('matrix_elements')[0].\
+               get_nonia()
+
     def get_num_configs(self):
         """Get number of configs for this group"""
 
