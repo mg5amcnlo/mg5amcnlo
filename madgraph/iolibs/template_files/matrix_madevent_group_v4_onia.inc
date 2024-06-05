@@ -299,7 +299,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,M,N,QQ,Q1,Q2
-      REAL*8 FRAC, NORM
+      REAL*8 FRAC
       COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
       REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
@@ -320,6 +320,8 @@ C
 C MADONIA VAIABLES
 C
       INCLUDE 'onia.inc'
+      INCLUDE 'ldme.inc'
+      REAL*8 NORM, LDME
       REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA)
       COMPLEX*16 PROJ(4**NONIA)
       INTEGER NHEL_ONIA(NEXTERNAL+NONIA), IC_ONIA(NEXTERNAL+NONIA)
@@ -412,6 +414,7 @@ C       Computing normalisation factor from color projector
           NORM = NORM*2D0
         ENDIF 
       ENDDO
+      LDME = %(ldme_product)s
 
 C     Computing the amplitudes
       K = 1
@@ -423,7 +426,7 @@ C     Computing the amplitudes
         ENDIF
       ENDDO
       DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM)
+        PROJ(J) = SQRT(NORM*LDME)
         DO I =1, NONIA
           QQ = ONIA(I)  
           Q1 = FINDLOC(PAIRS, I, DIM=1)

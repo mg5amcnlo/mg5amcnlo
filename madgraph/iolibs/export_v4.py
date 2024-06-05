@@ -2326,6 +2326,28 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
     #===========================================================================
+    # Onia helper methods
+    #===========================================================================
+
+    def get_ldme_product(self, matrix_element):
+
+        print("LS::LDME product",matrix_element.keys())
+        onia = []
+        ldmes = []
+        for proc in matrix_element.get('processes'):
+            for leg in proc.get('legs'):
+                if leg.get('onium'):
+                    if leg.get('onium').get('index') not in onia:
+                        onia += [leg.get('onium').get('index')]
+                        ldmes += ['LDME_{id}'.format(id=leg.get('onium').get('id'))]
+
+        ldme_product = '*'.join(ldmes)
+
+        return ldme_product
+
+
+
+    #===========================================================================
     # Global helper methods
     #===========================================================================
 
@@ -3345,6 +3367,8 @@ CF2PY integer, intent(in) :: new_value
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+            ldme_product = self.get_ldme_product(matrix_element)
+            replace_dict['ldme_product'] = ldme_product
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)   
 
@@ -4946,6 +4970,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+            ldme_product = self.get_ldme_product(matrix_element)
+            replace_dict['ldme_product'] = ldme_product
 
 
         #adding the support for the fake width (forbidding too small width)
