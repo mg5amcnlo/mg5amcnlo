@@ -508,14 +508,12 @@ c$$$      include 'madfks_mcatnlo.inc'
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
-      double precision emscwgt
-      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal) ,scalemin_a(nexternal,nexternal)
      $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
      $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
      $     ,scalemin_a,scalemax_a,emscwgt_a
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -534,6 +532,7 @@ c$$$      include 'madfks_mcatnlo.inc'
 !     dependent in case of delta
       integer cur_part
       common /to_ref_scale/cur_part
+      double precision smin,smax,ptresc,emscafun,qMC
       first_MCcnt_call=.true.
       is_pt_hard=.false.
       MCsec(1:nexternal,1:max_bcol)=0d0
@@ -551,16 +550,20 @@ c call to assign_emsca_array), which however is fine statistically
 c$$$         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
       endif         
       do npartner=1,ipartners(0)
-         if (mcatnlo_delta) cur_part=ipartners(npartner)
+         cur_part=ipartners(npartner)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
+     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if (.not.mcatnlo_delta) then
-            factor=emscwgt
+            smin=shower_scale_nbody_min(cur_part,fks_father)
+            smax=shower_scale_nbody_max(cur_part,fks_father)
+            qMC=get_qMC(xi_i_fks,y_ij_fks)
+            ptresc=(qMC-smin)/(smax-smin)
+            factor=1d0-emscafun(ptresc,1d0)
          else
 c min(i_fks,j_fks) is the mother of the FKS pair
-            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
+            factor=emscwgt_a(min(i_fks,j_fks),cur_part)
          endif
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
@@ -624,15 +627,14 @@ c$$$      include 'madfks_mcatnlo.inc'
      $     bornbarstilde(max_bcol,nsplitorders)
       double precision p(0:3,nexternal),probne,z_shower(nexternal)
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
-     $     ,emscwgt,MCsec(nexternal,max_bcol),sumMCsec
+     $     ,MCsec(nexternal,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
-      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal) ,scalemin_a(nexternal,nexternal)
      $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
      $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
      $     ,scalemin_a,scalemax_a,emscwgt_a
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -661,6 +663,7 @@ c$$$      include 'madfks_mcatnlo.inc'
 !     dependent in case of delta
       integer cur_part
       common /to_ref_scale/cur_part
+      double precision smin,smax,ptresc,emscafun,qMC
 c -- call to MC counterterm functions
       first_MCcnt_call=.true.
       is_pt_hard=.false.
@@ -681,13 +684,17 @@ c$$$c call to assign_emsca_array), which however is fine statistically
 c$$$c$$$         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
 c$$$      endif
       do npartner=1,ipartners(0)
-         if (mcatnlo_delta) cur_part=ipartners(npartner)
+         cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi,emscwgt
+     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if (.not.mcatnlo_delta) then
-            factor=emscwgt
+            smin=shower_scale_nbody_min(cur_part,fks_father)
+            smax=shower_scale_nbody_max(cur_part,fks_father)
+            qMC=get_qMC(xi_i_fks,y_ij_fks)
+            ptresc=(qMC-smin)/(smax-smin)
+            factor=1d0-emscafun(ptresc,1d0)
          else
 c min(i_fks,j_fks) is the mother of the FKS pair
             factor=emscwgt_a(min(i_fks,j_fks),cur_part)
@@ -889,7 +896,7 @@ c
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
+     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,
      &     bornbars,bornbarstilde,npartner)
       use scale_module
       implicit none
@@ -918,15 +925,11 @@ c$$$      include "madfks_mcatnlo.inc"
 
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,qMC,emscainv,emscafun
-      double precision emscwgt,emscav(nexternal)
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner
-      logical emscasharp
-      double precision emscav_tmp(nexternal)
       double precision emscav_tmp_a(nexternal,nexternal)
       double precision emscav_tmp_a2(nexternal,nexternal)
-      common/cemscav_tmp/emscav_tmp
       common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision shattmp,dot,xkern(2),xkernazi(2)
@@ -961,16 +964,15 @@ c$$$      include "madfks_mcatnlo.inc"
       common/sctests/softtest,colltest
 
       double precision emsca
-      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
+      common/cemsca/emsca,emsca_bare,scalemin,scalemax
 
       double precision ptresc_a(nexternal,nexternal)
-      logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal),scalemin_a(nexternal,nexternal)
      $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
      $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
      $     ,scalemin_a,scalemax_a,emscwgt_a
 
       double precision ran2,iseed
@@ -1138,29 +1140,7 @@ c
          xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
       endif
 
-c Emsca stuff
-      if(emscasharp)then
-         if(qMC.le.scalemax)then
-            emscwgt=1d0
-            emscav(npartner)=emsca_bare
-         else
-            emscwgt=0d0
-            emscav(npartner)=scalemax
-         endif
-      else
-         ptresc=(qMC-scalemin)/(scalemax-scalemin)
-         if(ptresc.le.0d0)then
-            emscwgt=1d0
-            emscav(npartner)=emsca_bare
-         elseif(ptresc.lt.1d0)then 
-            emscwgt=1-emscafun(ptresc,one)
-            emscav(npartner)=emsca_bare
-         else
-            emscwgt=0d0
-            emscav(npartner)=scalemax
-         endif
-      endif
-      emscav_tmp(npartner)=emscav(npartner)
+c     Emsca stuff
 c
 c Emsca stuff for multiple scales
       if(mcatnlo_delta)then
@@ -1168,24 +1148,14 @@ c Emsca stuff for multiple scales
          do i=1,nexternal-1
             do j=1,nexternal-1
                if(j.eq.i)cycle
-               if(emscasharp_a(i,j))then
-                  if(qMC_a2(i,j).le.scalemax_a(i,j))then
-                     emscav_a(i,j)=emsca_bare_a(i,j)
-                     emscav_a2(i,j)=emsca_bare_a2(i,j)
-                  else
-                     emscav_a(i,j)=scalemax_a(i,j)
-                     emscav_a2(i,j)=scalemax_a(i,j)
-                  endif
+               ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
+     &              (scalemax_a(i,j)-scalemin_a(i,j))
+               if(ptresc_a(i,j).lt.1d0)then 
+                  emscav_a(i,j)=emsca_bare_a(i,j)
+                  emscav_a2(i,j)=emsca_bare_a2(i,j)
                else
-                  ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
-     &                          (scalemax_a(i,j)-scalemin_a(i,j))
-                  if(ptresc_a(i,j).lt.1d0)then 
-                     emscav_a(i,j)=emsca_bare_a(i,j)
-                     emscav_a2(i,j)=emsca_bare_a2(i,j)
-                  else
-                     emscav_a(i,j)=scalemax_a(i,j)
-                     emscav_a2(i,j)=scalemax_a(i,j)
-                  endif
+                  emscav_a(i,j)=scalemax_a(i,j)
+                  emscav_a2(i,j)=scalemax_a(i,j)
                endif
                emscav_tmp_a(i,j)=emscav_a(i,j)
                emscav_tmp_a2(i,j)=emscav_a2(i,j)
@@ -1597,22 +1567,19 @@ c$$$      include 'madfks_mcatnlo.inc'
 
       double precision emsca_bare,ptresc,ref_scale,
      & scalemin,scalemax,emscainv
-      double precision emscav(nexternal)
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer cflows,jflow
       common/c_colour_flow/jflow
-      logical emscasharp
 
       double precision emsca
-      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-      logical emscasharp_a(nexternal,nexternal)
+      common/cemsca/emsca,emsca_bare,scalemin,scalemax
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal) ,scalemin_a(nexternal,nexternal)
      $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
      $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2, emscasharp_a
+      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,
      $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
@@ -1638,10 +1605,8 @@ c  1<=iBtoR(k)<=nexternal,  1<=k<=nexternal-1
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-      double precision emscav_tmp(nexternal)
       double precision emscav_tmp_a(nexternal,nexternal)
       double precision emscav_tmp_a2(nexternal,nexternal)
-      common/cemscav_tmp/emscav_tmp
       common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt
@@ -1826,14 +1791,18 @@ c for the random numbers that enter their definitions. The former will
 c help determine the S-event shower scales written onto the LHE file, 
 c the latter is employed in the computation of Delta
       SCALUP_tmp_S=-1d0
-      SCALUP_tmp_S2=-1d0
+c$$$      SCALUP_tmp_S2=-1d0
       do i=1,nexternal-2
          do j=i+1,nexternal-1
             if(are_col_conn_S(i,j))then
-               SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
-               SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
-               SCALUP_tmp_S2(i,j)=emscav_tmp_a2(i,j)
-               SCALUP_tmp_S2(j,i)=emscav_tmp_a2(j,i)
+c$$$               SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
+c$$$               SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
+c$$$               SCALUP_tmp_S2(i,j)=emscav_tmp_a2(i,j)
+c$$$               SCALUP_tmp_S2(j,i)=emscav_tmp_a2(j,i)
+               SCALUP_tmp_S(i,j)=shower_scale_nbody(i,j)
+               SCALUP_tmp_S(j,i)=shower_scale_nbody(j,i)
+c$$$               SCALUP_tmp_S2(i,j)=shower_scale_nbody(i,j)
+c$$$               SCALUP_tmp_S2(j,i)=shower_scale_nbody(j,i)
             endif
          enddo
       enddo
@@ -1846,7 +1815,7 @@ c if a sensible II scale exists
                if(are_col_conn_S(i,j))then
                   if(are_col_conn_S(i,3-i))then
                      SCALUP_tmp_S(i,j) =SCALUP_tmp_S(i,3-i)
-                     SCALUP_tmp_S2(i,j)=SCALUP_tmp_S2(i,3-i)
+c$$$                     SCALUP_tmp_S2(i,j)=SCALUP_tmp_S2(i,3-i)
                   else
                      continue
 c if no other available colour connection, we keep the IF scale
@@ -2158,7 +2127,8 @@ c double colour connection, count twice
             endif
 c The following definition of startingScale is unprotected:
 c cstupp must be sufficiently large
-            startingScale0 = min(SCALUP_tmp_S2(i,j),cstupp)
+c$$$            startingScale0 = min(SCALUP_tmp_S2(i,j),cstupp)
+            startingScale0 = min(SCALUP_tmp_S(i,j),cstupp)
 c Same comment on cstupp as above. Inserted here as a safety
 c measure, since Pythia might give very large scales. In those
 c case, the computed Sudakovs are actually discarded later
@@ -2649,10 +2619,7 @@ c Stuff to be written onto the LHE file
      &                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
       double precision emsca,emsca_bare,           scalemin,scalemax
-      logical                           emscasharp
-      common /cemsca/  emsca,emsca_bare,emscasharp,scalemin,scalemax
-      double precision   emscav_tmp(nexternal)
-      common/cemscav_tmp/emscav_tmp
+      common /cemsca/  emsca,emsca_bare,scalemin,scalemax
       double precision qMC
       common /cqMC/    qMC
       INTEGER              NFKSPROCESS
@@ -2761,7 +2728,7 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
             else
-               emsca=emscav_tmp(mpartner)
+               emsca=shower_scale_nbody(mpartner,fks_father)
             endif
          else
             emsca=scalemax
@@ -2791,7 +2758,7 @@ c Assign emsca on statistical basis
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
             else
-               emsca=emscav_tmp(mpartner)
+               emsca=shower_scale_nbody(mpartner,fks_father)
             endif
          else
             emsca=scalemax
@@ -2825,18 +2792,10 @@ c min() avoids troubles if ran2()=1
 
       function get_to_zero(sc,xlow,xupp)
       implicit none
-      double precision get_to_zero,sc,xlow,xupp
-      double precision x,tmp,emscafun
-c
-      if(sc.le.xlow)then
-        tmp=0d0
-      elseif(sc.le.xupp)then
-        x=(xupp-sc)/(xupp-xlow)
-        tmp=1-emscafun(x,2d0)
-      else
-        tmp=1d0
-      endif
-      get_to_zero=tmp
+      double precision get_to_zero,xlow,xupp,sc
+      double precision x,emscafun
+      x=(xupp-sc)/(xupp-xlow)
+      get_to_zero=1-emscafun(x,2d0)
       return
       end
 
@@ -4550,12 +4509,13 @@ c
       function emscafun(x,alpha)
       implicit none
       double precision emscafun,x,alpha
-c
-      if(x.lt.0d0.or.x.gt.1d0)then
-         write(*,*)'Fatal error in emscafun'
-         stop
+      if(x.le.0d0) then
+         emscafun=0d0
+      elseif(x.ge.1d0) then
+         emscafun=1d0
+      else
+         emscafun=x**(2*alpha)/(x**(2*alpha)+(1-x)**(2*alpha))
       endif
-      emscafun=x**(2*alpha)/(x**(2*alpha)+(1-x)**(2*alpha))
       return
       end
 
@@ -4589,14 +4549,8 @@ c Theta function
          if(qMC.le.2d0)tmp=0d0
       elseif(itype.eq.2)then
 c Smooth function
-        if(qMC.le.0.5d0)then
-          tmp=0d0
-        elseif(qMC.le.1d1)then
-          x=(1d1-qMC)/(1d1-0.5d0)
-          tmp=1-emscafun(x,2d0)
-        else
-          tmp=1d0
-       endif
+         x=(1d1-qMC)/(1d1-0.5d0)
+         tmp=1-emscafun(x,2d0)
       elseif(itype.eq.3) then
 c No (bogus) sudakov factor
          tmp=1d0
@@ -5237,7 +5191,7 @@ c
 
 ! If the relative pT of the splitting is larger then the maximum shower
 ! scale, we are in the deadzone
-      if (qMC.gt.shower_scale_nbody_nodamp(iparter,ifather))
+      if (qMC.gt.shower_scale_nbody_max(iparter,ifather))
      &     lzone=.false.
 
       return
