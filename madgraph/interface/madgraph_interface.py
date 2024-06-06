@@ -7870,7 +7870,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                            % self._curr_model.get('name'))
             elif args[1] == 'FD':
                 logger.warning("WARNING: NOT ALL MODEL ARE SUPPORTING THIS GAUGE. PLEASE CHECK/CITE 2203.10440 and 2405.01256")
-                if 0 in self._curr_model.get('gauge'):
+                if 1 in self._curr_model.get('gauge'):
                     aloha.unitary_gauge = 3
                 else:
                     able_to_mod = False
