@@ -2074,7 +2074,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
                         channels=chan_file.readline().split()
                 except IOError:
-                    logger.warning('No integration channels found for contribution %s' % p_dir)
+                    logger.warning('No integration channels found for contribution %s (too large masses?)' % p_dir)
                     continue
                 if fixed_order:
                     lch=len(channels)
