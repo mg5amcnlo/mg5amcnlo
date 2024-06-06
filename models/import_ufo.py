@@ -349,6 +349,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
+    files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
@@ -1809,7 +1810,11 @@ class OrganizeModelExpression:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
                 self.couplings[depend_on] = [parameter]
-            self.all_expr[coupling.value] = parameter 
+            if coupling.value not in self.all_expr:
+                # the if statement is only to prevent overwritting definition in all_expr
+                # when a coupling is equal to a single parameter
+                # note that coupling are always mapped to complex, while parameter can be real.
+                self.all_expr[coupling.value] = parameter 
         
 
     def find_dependencies(self, expr):
