@@ -6432,7 +6432,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 #           Force here to choose one particular server
             if any(a.startswith('--source=') for a in args):
                 source = [a[9:] for a in args if a.startswith('--source=')][-1]
-                if source == 'uiuc':
+                if source == 'milan':
                     r = [1]
                 elif source == 'ucl':
                     r = [0]
