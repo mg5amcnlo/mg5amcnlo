@@ -166,7 +166,7 @@ if options.plugin:
 
     else:
         __import__('PLUGIN.%s' % options.plugin)
-    plugin = sys.modules['PLUGIN.%s' % options.plugin]
+        plugin = sys.modules['PLUGIN.%s' % options.plugin]
     if not plugin.new_interface:
         logging.warning("Plugin: %s do not define dedicated interface and should be used without the --mode options" % options.plugin)
         sys.exit()
