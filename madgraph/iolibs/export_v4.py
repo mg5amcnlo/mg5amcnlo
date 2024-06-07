@@ -2206,9 +2206,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         if contains_onia:
 
-            onia_ids = self.get_onia_ids(matrix_elements)
+            (onia_info, onia_ids) = self.get_onia_info(matrix_elements)
 
-            self.create_onia_card(onia_ids)
+            self.create_onia_card(onia_info)
 
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
             self.write_ldme_file(writers.FortranWriter(filename),
@@ -2243,7 +2243,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
 
-    def create_onia_card(self, onia_ids):
+    def create_onia_card(self, onia_info):
         """ """
         
         shutil.copy(pjoin(self.mgme_dir, 'Template/Common/Cards/onia_card.dat'), 
@@ -2257,8 +2257,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         with open(pjoin(self.dir_path, 'Cards',card + '.dat'),'r') as source:
                             shutil.copyfileobj(source, f)
                         f.write('Block ldme\n')
-                        for onium_id in onia_ids:
-                            f.write('   {id}  {value:.16f}   # LDME for quarkonium with ID {id}\n'.format(id=onium_id,value=1.))
+                        for onium_info in onia_info:
+                            f.write('   {id}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=1.))
                     shutil.copy(pjoin(self.dir_path, 'Cards',card + '_default.dat'),
                                    pjoin(self.dir_path, 'Cards', card + '.dat'))
                 except IOError:
@@ -2266,19 +2266,24 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
 
-    def get_onia_ids(self, matrix_elements):
+    def get_onia_info(self, matrix_elements):
 
-        ids = []
+        info = []
         for matrix_element in matrix_elements:
             for me in matrix_element.get('matrix_elements'):
                 for proc in me.get('processes'):
                     for leg in proc.get('legs'):
                         if leg.get('onium'):
-                            ids += [leg.get('onium').get('id')]
-        ids = list(dict.fromkeys(ids))
-        ids.sort()
+                            info += [[leg.get('onium').get('id'),leg.get('onium').get('name')]]
 
-        return ids
+        info = sorted(info, key=lambda x: (x[0]))
+        for i in reversed(range(1,len(info))):
+            if info[i]==info[i-1]:
+                del info[i]
+
+        ids = [x[0] for x in info]
+
+        return info, ids
 
 
 
