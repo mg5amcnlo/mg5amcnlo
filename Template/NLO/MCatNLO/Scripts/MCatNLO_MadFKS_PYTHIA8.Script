@@ -543,8 +543,8 @@ TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photo
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
-TimeShower:pTminChgQ = 0.01
-TimeShower:pTminChgL = 0.00001
+#TimeShower:pTminChgQ = 0.01
+#TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -556,8 +556,8 @@ SpaceShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photon
 SpaceShower:QEDshowerByL = $QEDSHOWER     ! Prevent leptons from radiating photons
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
-SpaceShower:pTminChgQ = 0.01
-SpaceShower:pTminChgL = 0.00001
+#SpaceShower:pTminChgQ = 0.01
+#SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = $PKT    ! off = no primordial kT
@@ -613,7 +613,7 @@ cat <<EOF >> $ifile
 ! 10) Matrix-element corrections.
 EOF
 
-if [ $space_shower_me_corrections = ".TRUE." ]
+if [ "$space_shower_me_corrections" = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 SpaceShower:MEcorrections = on     ! MECs for ISR
@@ -624,7 +624,7 @@ SpaceShower:MEcorrections = off     ! no MECs for ISR
 EOF
 fi
 
-if [ $time_shower_me_corrections = ".TRUE." ]
+if [ "$time_shower_me_corrections" = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEcorrections = on     ! MECs for FSR
@@ -635,7 +635,7 @@ TimeShower:MEcorrections = off     ! no MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_extended = ".TRUE." ]
+if [ "$time_shower_me_extended" = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEextended = on     ! Extended MECs for FSR
@@ -646,7 +646,7 @@ TimeShower:MEextended = off     ! no extended MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_after_first = ".TRUE." ]
+if [ "$time_shower_me_after_first" = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEafterFirst = on     ! MECs after frst FSR
