@@ -265,6 +265,7 @@ C ----------
       ENDDO
 
       NORM = 1D0
+      LDME = 1D0
       DO I = 1, NONIA
         QQ = ONIA(I)
         Q1 = FINDLOC(PAIRS, I, DIM=1)
@@ -287,8 +288,12 @@ C       Computing normalisation factor from color projector
         ELSE IF (C_ONIA(I).EQ.8) THEN
           NORM = NORM*2D0
         ENDIF 
+C       Computing normalisation factor for LDME convention
+        LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
       ENDDO
-      LDME = %(ldme_product)s
+
+C     Computing product of LDMEs
+      LDME = LDME*%(ldme_product)s
 
 C     Computing the amplitudes
       K = 1
