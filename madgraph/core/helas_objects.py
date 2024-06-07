@@ -4794,11 +4794,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             constituent = []
             external_wavefunctions = self.get_external_wavefunctions()
             for pair in onia_pairs:
-                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
-                s = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[0]
-                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
-                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
-                hel_per_part[pair[0]-1] = s
+                hel_per_part[pair[0]-1] = int(2*external_wavefunctions[pair[0]-1].get('onium').get('S')+1)
                 constituent.append(pair[1])
             for i in sorted(constituent, reverse=True):
                 del hel_per_part[i-1]
@@ -4828,11 +4824,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             constituent = []
             external_wavefunctions = self.get_external_wavefunctions()
             for pair in onia_pairs:
-                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
-                s = int((external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[0]-1)/2)
+                s = external_wavefunctions[pair[0]-1].get('onium').get('S')
                 hel = [i for i in range(-s,s+1,1)]
-                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
-                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
                 hel_per_part[pair[0]-1] = hel
                 constituent.append(pair[1])
             for i in sorted(constituent, reverse=True):
@@ -4889,11 +4882,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             constituent = []
             legs = [leg for leg in self.get('processes')[0].get('legs')]
             for pair in onia_pairs:
-                # hel_per_part[pair[0]-1] = list(set([int(sum(x)/2) for x in zip(hel_per_part[pair[0]-1],hel_per_part[pair[1]-1])]))
-                s = legs[pair[0]-1].get('onium').get('spectroscopy')[0]
-                # l = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[1]
-                # j = external_wavefunctions[pair[0]-1].get('onium').get('spectroscopy')[2]
-                hel_per_part[pair[0]-1] = s
+                hel_per_part[pair[0]-1] = int(2*legs[pair[0]-1].get('onium').get('S')+1)
                 constituent.append(pair[1])
             for i in sorted(constituent, reverse=True):
                 del hel_per_part[i-1]

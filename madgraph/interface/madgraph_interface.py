@@ -5068,10 +5068,21 @@ This implies that with decay chains:
                     mypart = self._curr_model['particles'].get_copy(onium[i])
                     spectroscopy = onium[2].replace('s','0').replace('p','1')
                     spectroscopy = [int(i) for i in spectroscopy]
+                    if spectroscopy[0]%2==0:
+                        raise self.InvalidCmd("Quaknonium in spectroscopic state (2*S+1)=%i cannot exist"%spectroscopy[0])
+                    spectroscopy[0] = int((spectroscopy[0]-1)/2)
                     myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
                                                             'state':state,
                                                             'polarization': polarization,
-                                                            'onium': {'id':441, 'index':onium_index, 'spectroscopy':spectroscopy}
+                                                            'onium': {
+                                                                'id':441,
+                                                                'name':'etac',
+                                                                'index':onium_index,
+                                                                'S':spectroscopy[0],
+                                                                'L':spectroscopy[1],
+                                                                'J':spectroscopy[2],
+                                                                'C':spectroscopy[3]
+                                                                }
                                                             }))
                 onium_index += 1
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():

@@ -366,7 +366,7 @@ class ColorBasis(dict):
                         for part in amplitude.get('process').get('model').get('particles'):
                             if part.get('pdg_code') == l.get('id'): color = part.get('color')
                             if part.get('pdg_code') == -l.get('id'): color = -part.get('color')
-                        pid_color_numbers.append([(onium_color,color),(onium_number,l.get('number')),l.get('onium').get('spectroscopy')[-1]])
+                        pid_color_numbers.append([(onium_color,color),(onium_number,l.get('number')),l.get('onium').get('C')])
 
             if pid_color_numbers: self.OniaColorProjection(colorize_dict, pid_color_numbers)
 

@@ -887,10 +887,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         pairs.append(wf.get('onium').get('index')+1)
                     else:
                         pairs.append(-(wf.get('onium').get('index')+1))
-                    s.append(int((wf.get('onium').get('spectroscopy')[0]-1)/2.))
-                    l.append(wf.get('onium').get('spectroscopy')[1])
-                    j.append(wf.get('onium').get('spectroscopy')[2])
-                    c.append(wf.get('onium').get('spectroscopy')[3])
+                    s.append(wf.get('onium').get('S'))
+                    l.append(wf.get('onium').get('L'))
+                    j.append(wf.get('onium').get('J'))
+                    c.append(wf.get('onium').get('C'))
                     onia[onium] = wf.get('number')-counter
                     counter += 1
                     continue
@@ -1034,7 +1034,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             if not onium:
                                 onium = True
                                 repr_dict[l.get('number')] = \
-                                    l.get('onium').get('spectroscopy')[-1]\
+                                    l.get('onium').get('C')\
                                     * (-1)**(1+l.get('state'))
                             else:
                                 onium = False
