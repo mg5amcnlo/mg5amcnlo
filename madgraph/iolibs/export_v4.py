@@ -359,9 +359,7 @@ class ProcessExporterFortran(VirtualExporter):
                                                               MG_version['version'])
 
         # add the makefile in Source directory 
-        filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))
-
+        # now moved to finalize
 
         self.write_vector_size(writers.FortranWriter('vector.inc'))
         
@@ -476,7 +474,14 @@ class ProcessExporterFortran(VirtualExporter):
     #===========================================================================
     def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[], second_exporter=None):
         """Function to finalize v4 directory, for inheritance.""" 
-        
+
+        filename = pjoin(self.dir_path,'Source','makefile')
+        if not second_exporter:
+            self.write_source_makefile(writers.FileWriter(filename))
+        else:
+           replace_dict = self.write_source_makefile(None)
+           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+
         if second_exporter:
             self.has_second_exporter = second_exporter
 
@@ -725,11 +730,11 @@ class ProcessExporterFortran(VirtualExporter):
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = ' '.join(['$(LIBRARIES)']+self.get_source_libraries_list())
         if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
-            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make
 MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
 param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
         else:
-            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         replace_dict= {'libraries': set_of_lib, 
@@ -6774,7 +6779,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             self.has_second_exporter = second_exporter
         super(ProcessExporterFortranMEGroup, self).finalize(*args, second_exporter=None, **opts)
         #ensure that the grouping information is on the correct value
-        self.proc_characteristic['grouped_matrix'] = True        
+        self.proc_characteristic['grouped_matrix'] = True
+
+        filename = pjoin(self.dir_path,'Source','makefile')
+        if not second_exporter:
+            self.write_source_makefile(writers.FileWriter(filename))
+        else:
+           replace_dict = self.write_source_makefile(None)
+           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+
         if second_exporter:
             second_exporter.finalize(*args, **opts)
 
