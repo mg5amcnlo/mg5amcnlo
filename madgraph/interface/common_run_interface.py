@@ -6327,7 +6327,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
 
                 if self.run_card['nhel'] == 0:
-                    logger.warning("EVA modes requires MC sampling by polarization: updating run_card with nhel=1")
+                    logger.warning("EVA mode requires MC sampling by polarization: updating run_card with nhel=1")
                     self.do_set('run_card nhel 1')
 
             # check the status of small width status from LO

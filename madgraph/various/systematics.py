@@ -996,12 +996,12 @@ class Systematics(object):
                 vPol = event[0].helicity
                 vPID = event[0].pid
                 ievo = self.banner.run_card['ievo_eva']
-                evoOrder = self.banner.run_card['evoOrder']
+                evaOrder = self.banner.run_card['evaOrder']
                 if ievo != 0 and len(loinfo['pdf_x1']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo,evoOrder)
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo,evaOrder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
@@ -1010,12 +1010,12 @@ class Systematics(object):
                 vPol = event[1].helicity
                 vPID = event[1].pid
                 ievo = self.banner.run_card['ievo_eva']
-                evoOrder = self.banner.run_card['evoOrder']
+                evaOrder = self.banner.run_card['evaOrder']
                 if ievo != 0 and len(loinfo['pdf_x2']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo,evoOrder)
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo,evaOrder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
@@ -1109,18 +1109,18 @@ class Systematics(object):
         return wgt
 
 
-    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0, evoOrder=0):
+    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0, evaOrder=0):
         if abs(vPol) == 1:
-            if(evoOrder==2):
+            if(evaOrder==2):
                 return self.call_ievaNLP_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-            elif(evoOrder==1):
+            elif(evaOrder==1):
                 return self.call_ieva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
             else:
                 return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
         elif vPol == 0:
-            if(evoOrder==2):
+            if(evaOrder==2):
                 return self.call_ievaNLP_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
-            elif(evoOrder==1):
+            elif(evaOrder==1):
                 return self.call_ieva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
             else:
                 return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)

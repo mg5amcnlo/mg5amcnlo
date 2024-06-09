@@ -3681,9 +3681,9 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 # EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
 template_on = \
-""" %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
+"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
                          ! 0 for evo by q^2; 1 for evo by pT^2
-    %(evaOrder)s  = evaOrder         ! 0=EVA, 1=iEVA, 2=iEVA@nlp [24xx.yyyyy]
+     %(evaOrder)s  = evaOrder         ! 0=EVA, 1=iEVA, 2=iEVA@nlp [24xx.yyyyy]
 """
 template_off = ""
 eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
