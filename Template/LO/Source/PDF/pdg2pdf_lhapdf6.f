@@ -34,7 +34,7 @@ C
       data imemlast/20*-99/
       data i_replace/20/
 
-c     effective w/z/a approximation (leading log fixed order; not resummed)
+c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
       integer ppid

@@ -3,7 +3,10 @@ c                 Effective Vector Boson Approximation
 c     /* ********************************************************* *      
 c     File: ElectroweakFlux.f
 c     R. Ruiz (2021 February)
-c     For details, see companion paper by Ruiz, et al [arXiv:2111.02442]
+c     R. Ruiz (2024 June -- update)
+c     For details, see companion papers by:
+c     -- EVA in MG5aMC: Ruiz, Costantini, et al [arXiv:2111.02442]
+c     -- iEVA(EVA@NLP): Bigaran & Ruiz [arXiv:24xx.yyyyy]
 c     /* ********************************************************* *
 c     /* ********************************************************* *      
 c     function eva_fX_to_vHEL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaOrder):

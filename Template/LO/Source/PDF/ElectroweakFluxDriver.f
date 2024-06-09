@@ -5,7 +5,7 @@ c     File: ElectroweakFluxDriver.f
 c     R. Ruiz (2021 February)
 c     R. Ruiz (2024 June -- update)
 c     For details, see companion papers by:
-c     -- EVA: Ruiz, Costantini, et al [arXiv:2111.02442]
+c     -- EVA in MG5aMC: Ruiz, Costantini, et al [arXiv:2111.02442]
 c     -- iEVA(EVA@NLP): Bigaran & Ruiz [arXiv:24xx.yyyyy]
 c     /* ********************************************************* *
 c     function eva_get_pdf_by_PID:

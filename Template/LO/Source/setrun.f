@@ -108,9 +108,9 @@ c     if no matching ensure that no pdfreweight are done
 
 
       if(pdlabel.eq.'eva') then
-            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva/ieva)
-            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva/ieva)
-            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva/ieva)
+            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva)
+            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva)
+            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva)
             pol(1) = (-1d0/200d0)*pb1 + 0.5d0
             pol(2) = (-1d0/200d0)*pb2 + 0.5d0
       else
@@ -199,7 +199,7 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=22)
+      parameter (npdfs=21)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',

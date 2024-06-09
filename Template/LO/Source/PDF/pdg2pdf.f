@@ -52,7 +52,7 @@ C
       data pdlabellast/2*'abcdefg'/
       data ihlast/2*-99/
 
-c     effective w/z/a approximation (leading log fixed order; not resummed)
+c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
       integer ppid
@@ -132,7 +132,7 @@ c        write(*,*), x, beamid ,omx_ee(iabs(beamid)),xmu,1,ipart,ih_local,pdg2pd
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
-      if(pdlabel.eq.'eva'    .or.pdsublabel(iabs(beamid)).eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'eva') then
          ipart=ipdg
       else
          ipart=sign(1,ih)*ipdg
@@ -223,7 +223,7 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
 
-      if(pdlabel.eq.'eva'    .or.pdsublabel(iabs(beamid)).eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'eva') then
          if(iabs(ipart).ne.7.and.
 c     &      iabs(ipart).ne.12.and.
 c     &      iabs(ipart).ne.14.and.     
