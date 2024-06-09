@@ -3557,9 +3557,7 @@ class RunCard(ConfigFile):
                 return lhaid
         else: 
             try:
-                return {'none': 0, 'iww': 0, 
-                    'eva':0, 'ieva':0, 
-                    'edff':0, 'chff':0,
+                return {'none': 0, 'iww': 0, 'eva':0, 'edff':0, 'chff':0,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
                     }[pdf] 
@@ -3683,8 +3681,9 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 # EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
 template_on = \
-"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
+""" %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
                          ! 0 for evo by q^2; 1 for evo by pT^2
+    %(evaOrder)s  = evaOrder         ! 0=EVA, 1=iEVA, 2=iEVA@nlp [24xx.yyyyy]
 """
 template_off = ""
 eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
@@ -3948,7 +3947,7 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','ieva','edff','chff','none','mixed']+\
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
         self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
@@ -3968,6 +3967,8 @@ class RunCardLO(RunCard):
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
+        self.add_param("evaOrder",0,hidden=True, allowed=[0,1,2],fortran_name="evaOrder",
+                        comment='EVA order: 0=EVA, 1=iEVA, 2=iEVA@nlp')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
@@ -4263,15 +4264,15 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
-                if self[pdlabelX] in ['eva','ieva','iww','edff','chff','none']:
+                if self[pdlabelX] in ['eva','iww','edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
-                if self[pdlabelX] not in ['none','eva','ieva','iww'] + sum(self.allowed_lep_densities.values(),[]):
+                if self[pdlabelX] not in ['none','eva','iww'] + sum(self.allowed_lep_densities.values(),[]):
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
+                if self[pdlabelX] not in ['none','chff','edff','iww']:
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True

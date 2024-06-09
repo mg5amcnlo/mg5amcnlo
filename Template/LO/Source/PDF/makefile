@@ -20,7 +20,7 @@ ifneq (,$(filter eva, $(pdlabel1) $(pdlabel2)))
 #  go through here if pdlabel1 or pdlabel2 is on "eva"
   TOREMOVE += ElectroweakFlux_dummy.o
 # remove it to force recompilation of the library if back on it
-  PDF += ElectroweakFluxDriver.o ElectroweakFlux.o 
+  PDF += ElectroweakFluxDriver.o ElectroweakFlux.o
 else
 #  go through here if NEITHER pdlabel1 or pdlabel2 is on "eva"
   PDF += ElectroweakFlux_dummy.o
