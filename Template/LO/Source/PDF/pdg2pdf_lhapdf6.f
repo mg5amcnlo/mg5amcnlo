@@ -37,14 +37,10 @@ C
 c     effective w/z/a approximation (leading log fixed order; not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
-c     improved effective w/z/a (leading log + next-to-leading power fixed orderresummed)
-      double precision evaNLP_get_pdf_by_PID
-      external evaNLP_get_pdf_by_PID      
       integer ppid
-      integer ievo,ievo_eva
-      common/to_eva/ievo_eva
+      integer ievo,ievo_eva,evaOrder
+      common/to_eva/ievo_eva,evaOrder
       double precision q2max
-      logical doevaNLP
       integer hel,helMulti,hel_picked
       double precision hel_jacobian
       common/hel_picked/hel_picked,hel_jacobian
@@ -80,7 +76,7 @@ c     instead of stopping the code, as this might accidentally happen.
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
-      if(pdsublabel(iabs(beamid)).eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'ieva') then
+      if(pdsublabel(iabs(beamid)).eq.'eva') then
          ipart=ipdg
       else 
          ipart=ipdg*ih/iabs(ih)
@@ -116,7 +112,7 @@ c         write(26,*) 'Error: PDF not supported for pdg ',ipdg
 c         stop 1
       endif
       
-      if(pdsublabel(iabs(beamid)).eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'ieva') then
+      if(pdsublabel(iabs(beamid)).eq.'eva') then
          if(iabs(ipart).ne.7.and.
 c     &      iabs(ipart).ne.12.and.
 c     &      iabs(ipart).ne.14.and.     
@@ -141,15 +137,11 @@ c         write(*,*) 'running eva'
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
             fLPol = pol(iabs(beamid))        ! see setrun.f for treatment of polbeam*
             q2max = xmu*xmu
-            ievo = ievo_eva
+            ievo  = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            if(pdsublabel(iabs(beamid)).eq.'eva') then
-               doevaNLP = .false.
-            else
-               doevaNLP = .true.
-            endif
-               pdg2pdf = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,doevaNLP)
+            pdg2pdf  = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,evaOrder)
+            pdg2pdf  = helMulti*pdg2pdf
             return
          endif
       else

@@ -1,6 +1,6 @@
-       double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo,doevaNLP)
+       double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo,evaOrder)
        implicit none
-       logical doevaNLP ! =.false. for normal EWA (=.true. for iEVA/NLP)
+       integer evaOrder ! 0=EVA, 1=iEVA, 2=iEVA@nlp
        integer ievo ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
        integer vPID,fPID,vpol
        double precision fLpol,x,mu2
