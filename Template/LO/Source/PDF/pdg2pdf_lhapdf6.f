@@ -38,8 +38,8 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
       integer ppid
-      integer ievo,ievo_eva,evaOrder
-      common/to_eva/ievo_eva,evaOrder
+      integer ievo,ievo_eva,evaorder
+      common/to_eva/ievo_eva,evaorder
       double precision q2max
       integer hel,helMulti,hel_picked
       double precision hel_jacobian
@@ -140,7 +140,7 @@ c         write(*,*) 'running eva'
             ievo  = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            pdg2pdf  = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,evaOrder)
+            pdg2pdf  = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid),ievo,evaorder)
             pdg2pdf  = helMulti*pdg2pdf
             return
          endif

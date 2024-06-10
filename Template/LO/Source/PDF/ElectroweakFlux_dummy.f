@@ -1,6 +1,6 @@
-       double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo,evaOrder)
+       double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo,evaorder)
        implicit none
-       integer evaOrder ! 0=EVA, 1=iEVA, 2=iEVA@nlp
+       integer evaorder ! 0=EVA, 1=iEVA, 2=iEVA@nlp
        integer ievo ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
        integer vPID,fPID,vpol
        double precision fLpol,x,mu2

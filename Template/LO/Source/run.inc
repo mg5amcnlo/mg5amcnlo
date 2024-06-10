@@ -10,13 +10,13 @@ c
       integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
 
 c     EVA      
-      integer ievo_eva,evaOrder
+      integer ievo_eva,evaorder
       
       common/to_scale/scale,scalefact,alpsfact, mue_ref_fixed, mue_over_ref,
      $                fixed_ren_scale,fixed_fac_scale1, fixed_fac_scale2,
      $                fixed_couplings, fixed_extra_scale,ickkw,nhmult,hmult,asrwgtflavor,
      $                dynamical_scale_choice
-      common/to_eva/ievo_eva,evaOrder
+      common/to_eva/ievo_eva,evaorder
 c
 c     Collider
 c
