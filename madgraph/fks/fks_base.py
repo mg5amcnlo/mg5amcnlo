@@ -840,11 +840,11 @@ class FKSProcess(object):
         """
 
         # check that all splitting types are of ['QCD'] type, otherwise return
-        for real in self.real_amps:
-            for info in real.fks_infos:
-                if info['splitting_type'] != ['QCD']:
-                    logger.info('link_born_real: skipping because not all splittings are QCD')
-                    return
+#        for real in self.real_amps:
+#            for info in real.fks_infos:
+#                if info['splitting_type'] != ['QCD']:
+#                    logger.info('link_born_real: skipping because not all splittings are QCD')
+#                    return
 
 
         for real in self.real_amps:

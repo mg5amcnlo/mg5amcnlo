@@ -589,7 +589,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # the file with the mapping of born vs real diagrams
         # Otherwise, write a dummy file
         filename = 'real_from_born_configs.inc'
-        if self.proc_characteristic['splitting_types'] == ['QCD']:
+        #if self.proc_characteristic['splitting_types'] == ['QCD']:
+        if True: 
             self.write_real_from_born_configs(
                               writers.FortranWriter(filename), 
                               matrix_element,

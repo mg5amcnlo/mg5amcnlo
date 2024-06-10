@@ -1307,7 +1307,8 @@ c     if there are no soft singularities at all, just do something trivial
          else
             found_S=.true.
          endif
-         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21.or.
+     $       abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.22 ) then
             i_soft=i
             exit
          endif
