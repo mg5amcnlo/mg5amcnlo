@@ -1636,7 +1636,6 @@ This will take effect only in a NEW terminal
                 args.pop(0)
                 if hasattr(output_cls, 'change_output_args'):
                     args[:] = output_cls.change_output_args(args, self) 
-                self.export
             else:
                 self._export_format = default
         else:
@@ -2499,7 +2498,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_wrap=1']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -6147,7 +6146,6 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-        misc.sprint(return_code)
         if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
@@ -8127,6 +8125,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         args = self.split_arg(line)
         # Check Argument validity
+        self._export_plugin = None
         self.check_output(args)
 
         noclean = '-noclean' in args

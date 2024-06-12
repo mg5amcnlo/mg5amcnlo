@@ -3157,7 +3157,6 @@ class RunCard(ConfigFile):
         if path does not exists return the current value in self for all parameter"""
 
         #WARNING DOES NOT HANDLE LIST/DICT so far
-
         # handle case where file is missing
         if not os.path.exists(pjoin(output_dir,path)):
             misc.sprint("include file not existing", pjoin(output_dir,path))
@@ -3166,13 +3165,9 @@ class RunCard(ConfigFile):
         with open(pjoin(output_dir,path), 'r') as fsock:
             text = fsock.read()
         
-        for name in list_of_params:
-            misc.sprint(name, name in self.fortran_name)
-            misc.sprint(self.fortran_name[name] if name in self.fortran_name[name] else name)
         to_track = [self.fortran_name[name] if name in self.fortran_name else name for name in list_of_params]
         pattern = re.compile(r"\(?(%(names)s)\s?=\s?([^)]*)\)?" % {'names':'|'.join(to_track)}, re.I)
         out =  dict(pattern.findall(text))
-        misc.sprint(out)
         for name in list_of_params:
             if name in self.fortran_name:
                 value = out[self.fortran_name[name]]
@@ -3483,8 +3478,10 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
-        value_in_old_include = self.get_last_value_include(output_dir)
-
+        if output_dir: #output_dir is set to None in some unittest
+            value_in_old_include = self.get_last_value_include(output_dir)
+        else:
+           value_in_old_include = {} 
 
         if output_dir:
             self.write_autodef(output_dir, output_file=None)
@@ -3501,7 +3498,6 @@ class RunCard(ConfigFile):
     def write_one_include_file(self, output_dir, incname, output_file=None):
         """write one include file at the time"""
 
-        misc.sprint(incname)
         if incname is True:
             pathinc = self.default_include_file
         elif incname is False:
@@ -3916,6 +3912,7 @@ template_on = \
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
    %(vector_size)s = vector_size ! size of fortran arrays allocated in the multi-event API for SIMD/GPU (VECSIZE_MEMMAX)
+   %(nb_warp)s = nb_warp ! total number of warp/frontwave
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
@@ -4319,7 +4316,10 @@ class RunCardLO(RunCard):
         self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3',
                        fct_mod=(self.make_Ptouch, ('matrix'),{}))        
         self.add_param('vector_size', 1, include='vector.inc', hidden=True, comment='lockstep size for parralelism run', 
-                       fortran_name='VECSIZE_MEMMAX', fct_mod=(self.reset_simd,(),{}))
+                       fortran_name='WARP_SIZE', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('nb_warp', 1, include='vector.inc', hidden=True, comment='number of warp for parralelism run', 
+                       fortran_name='NB_WARP', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('vecsize_memmax', 0, include='vector.inc', system=True)
 
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -4610,7 +4610,7 @@ class RunCardLO(RunCard):
             self['mxxmin4pdg'] =[0.] 
             self['mxxpart_antipart'] = [False]
             
-                    
+        self['vecsize_memmax'] = self['nb_warp'] * self['vector_size']       
            
     def create_default_for_process(self, proc_characteristic, history, proc_def):
         """Rules

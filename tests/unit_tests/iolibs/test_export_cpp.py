@@ -341,7 +341,7 @@ int id4Mass() const {return 4;}""")
 #ifndef Pythia8_Sigma_sm_qqx_qqx_H
 #define Pythia8_Sigma_sm_qqx_qqx_H
 
-#include <complex> 
+#include <complex>
 
 #include "Pythia8/SigmaProcess.h"
 #include "Parameters_sm.h"
@@ -417,7 +417,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
 }  // end namespace Pythia8
 
-#endif  // Pythia8_Sigma_sm_qqx_qqx_H
+#endif // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
 
         self.pythia8_exporter.write_process_h_file(\
