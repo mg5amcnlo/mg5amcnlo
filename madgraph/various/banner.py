@@ -3157,7 +3157,6 @@ class RunCard(ConfigFile):
         if path does not exists return the current value in self for all parameter"""
 
         #WARNING DOES NOT HANDLE LIST/DICT so far
-
         # handle case where file is missing
         if not os.path.exists(pjoin(output_dir,path)):
             misc.sprint("include file not existing", pjoin(output_dir,path))
@@ -3166,13 +3165,9 @@ class RunCard(ConfigFile):
         with open(pjoin(output_dir,path), 'r') as fsock:
             text = fsock.read()
         
-        for name in list_of_params:
-            misc.sprint(name, name in self.fortran_name)
-            misc.sprint(self.fortran_name[name] if name in self.fortran_name[name] else name)
         to_track = [self.fortran_name[name] if name in self.fortran_name else name for name in list_of_params]
         pattern = re.compile(r"\(?(%(names)s)\s?=\s?([^)]*)\)?" % {'names':'|'.join(to_track)}, re.I)
         out =  dict(pattern.findall(text))
-        misc.sprint(out)
         for name in list_of_params:
             if name in self.fortran_name:
                 value = out[self.fortran_name[name]]
