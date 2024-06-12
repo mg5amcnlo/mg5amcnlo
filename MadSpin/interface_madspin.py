@@ -1698,7 +1698,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #carefull base_event is modified by the following function 
                 #_, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
                 _, wgt = self.get_onshell_evt_and_wgt_fixed_hel(base_event, decays, decay_dict, inter_prod_dict)
-		#print(f"Spyros wgt for max : {wgt}")
+                #print(f"Spyros wgt for max {i},{j} : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
             
@@ -1818,6 +1818,9 @@ class MadSpinInterface(extended_cmd.Cmd):
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, inter_prod_dict=None, production_hel=None, decay_hel=None):
         """routine to return all the possible inter for an event"""        
 	
+	# Spyros: switch for debugging
+        skipHel = False
+	
         full_event = lhe_parser.Event(str(production))
         param_card = self.banner.param_card
         inter_prod_dict_exists = inter_prod_dict is not None
@@ -1834,20 +1837,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             
 	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
-            print(f"Spyros position = {position}")	    
-	    
-            # Allowed helicities of decaying particle - make this more generic
-            #allowed_hel = [-1, 1]
 	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
-                print(f"Spyros: get_nhel = {self.get_nhel(production)}")
-                iden_p, nhel_p_tot = self.get_nhel(production) 
-                print(f"Spyros: iden_p = {iden_p}")
-                print(f"Spyros: nhel_p_tot = {nhel_p_tot}")
-                for hp in nhel_p_tot: print(hp)
-		                 
+                nhel_p_tot, iden_p = self.get_nhel(production, position[0]) 
+                				                 
 	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
 	        # to make the dictionary
                 inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
@@ -1871,7 +1866,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 	    # Update the status of the particle that decays from 1 to 2
             full_event[position[0]].status = 2 
 	    
-	    # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
             for i,decay_event in enumerate(decays[pdg]):
                 part = init_part[i]
 		# We need to boost all particles in the decay event using the momentum
@@ -1881,29 +1875,29 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #print("decay event=",decay_event)         
                 
 		# Get all helicity configurations and iden number for production and decay events
-                nhel_p_tot,iden_p = self.get_nhel(production)
-                #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
+                if not nhel_p_tot: 
+                    nhel_p_tot,iden_p = self.get_nhel(production, position[0])
+                    #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
 		
-                nhel_d_tot,iden_d = self.get_nhel(decay_event)
+                nhel_d_tot,iden_d = self.get_nhel(decay_event, 0)
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
-		# Get helicities of decay event
-                pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
-		
-		# Spyros: try to use get_all_inter
-                #all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, nchanging*len(allowed_hel))
-                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
-		
                 me = 0
-                inter_prod_dict_exists = bool(inter_prod_dict)
-                print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} , nhel_d_tot = {len(nhel_d_tot)}, {nhel_p_tot}")
+		
+		# Find the helicities that we have to loop over
+                if skipHel:
+                    hel_p_loop = [nhel_p_tot[[i for i,j in enumerate(nhel_p_tot) if production_hel in j][0]]]
+                    hel_d_loop = [nhel_d_tot[[i for i,j in enumerate(nhel_d_tot) if decay_hel in j][0]]]
+                    #print(f"hel_p_loop = {hel_p_loop}")
+                else:
+                    hel_p_loop = nhel_p_tot
+                    hel_d_loop = nhel_d_tot
 								
-                for i,hel_p in enumerate(nhel_p_tot): 		    
-		    # Spyros: skip if helicity doesn't match the helicity of the production event
-                    #print(f"hel_p = {hel_p} - production_hel = {production_hel}")
-                    # NB: Choosing the first element might be wrong - check with Olivier
+                for i,hel_p in enumerate(hel_p_loop): 		    
+		    # Spyros: skip if helicity doesn't match the helicity of the production event                   
                     #print(f"production_hel = {production_hel} - hel_p = {hel_p}")
-                    if production_hel is not None and hel_p[0] != production_hel: continue
+                    if skipHel:
+                        if production_hel is not None and production_hel not in hel_p: continue
 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
 		    # so that we can use the dictionary of inter_prod
@@ -1911,13 +1905,14 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    
 		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
                     inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
+                    print(f"inter_prod_dict = {inter_prod_dict}")
 		    		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
-                    for j,hel_d in enumerate(nhel_d_tot):
+                    for j,hel_d in enumerate(hel_d_loop):
                         #print(f"decay hel = {decay_hel} , hel_d = {hel_d}")
 			# Spyros: skip if helicity doesn't match helicity of decay event
-			# NB: Choosing the first element might be wrong - check with Olivier
-                        if decay_hel is not None and hel_d[0] != decay_hel: continue
+                        if skipHel:
+                            if decay_hel is not None and decay_hel not in hel_d: continue
 				    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
                         inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
@@ -1985,21 +1980,29 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         return self.get_inter_value(event,nhel) 
 
-    def get_nhel(self,event):
+    def get_nhel(self,event, position):
 
         pdir,orig_order = self.get_pdir(event)
+	
         if pdir in self.all_nhel:
-            print("1")
-            print(f"pdir = {pdir}")
-            print(f"all_nhel = {self.all_nhel}")
-            print(f"return = {self.all_nhel[pdir]}")
             return self.all_nhel[pdir]
         else:
-            print("2")
             fct = self.get_mymod(pdir,'NHEL') 
             iden,NHEL = fct()
 	    # NHEL returns next arrays each filled with helicities
-            self.all_nhel[pdir] = iden, NHEL.transpose().tolist()
+            ungrouped_helicities = NHEL.transpose().tolist()
+
+	    # This is needed in order to make a list of lists 
+	    # that contains elements like [[-1,-1,1,-1], [-1,-1,-1,-1]]
+	    # where the helicity that changes is the one of the decaying particle
+            grouped_helicities = {}
+            for item in ungrouped_helicities:
+                h = item.copy()
+                del h[position]
+                t = tuple(h)
+                grouped_helicities.setdefault(t, []).append(item)
+            self.all_nhel[pdir] = list(grouped_helicities.values()), iden
+            return self.get_nhel(event,position)
 
 # .      OLD CODE BY QUENTIN TO RETURN ONLY HELICITY WHERE HE
 #        pdir,orig_order = self.get_pdir(event)
