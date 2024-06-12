@@ -140,7 +140,14 @@ class VirtualExporter(object):
     def generate_subprocess_directory(self, subproc_group, helicity_model, me=None, **opt):
     #    generate_subprocess_directory(self, matrix_element, helicity_model, me_number) [for ungrouped]
         return 0 # return an integer stating the number of call to helicity routine
-    
+
+    def generate_subprocess_directory_end(self, **opt):
+        """ This is called only if the class is used as a second exporter. (like simd plugin)
+            in that case opt contains all the local variable defined in the upstream class.
+            so if multiple option exists this can lead to variable existing in some setup and not other
+        """
+        return 
+
     def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[]):
         return
     
@@ -6499,7 +6506,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         if second_exporter:
             tmp = locals()
             del tmp['self']
-            misc.sprint(os.getcwd())
             process_exporter_cpp.generate_subprocess_directory_end(**tmp) 
 
 
