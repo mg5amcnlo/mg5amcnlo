@@ -124,6 +124,8 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         lines.append("bah=2")
         lines.append(" endif")
         lines.append("test")
+        lines.append("# this is a comment")
+        lines.append('#ifdef not a comment')
 
         goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHHHH
      $ +ASDASD, WSPEDFTEISPD)
@@ -139,7 +141,9 @@ C       Test
  20   ELSE
         BAH=2
       ENDIF
-      TEST\n"""
+      TEST\n
+C     this is a comment
+#ifdef not a comment"""
 
         writer = writers.FortranWriter(self.give_pos('fortran_test')).\
                  writelines(lines)

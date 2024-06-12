@@ -12,6 +12,7 @@ c************************************************************************
       character*(*) param_name
       logical readlha
 
+      include '../vector.inc'
       include 'coupl.inc'
       include 'input.inc'
       include 'model_functions.inc'
