@@ -903,10 +903,7 @@ class MEComparatorGauge(MEComparator):
         res_str = "\n" + self._fixed_string_length("Process", proc_col_size) + \
                 ''.join([self._fixed_string_length(runner.name, col_size) for \
                            runner in self.me_runners]) + \
-                  self._fixed_string_length("Diff both unit", col_size) + \
-                  self._fixed_string_length("Diff both cms", col_size) + \
-                  self._fixed_string_length("Diff both fixw", col_size) + \
-                  self._fixed_string_length("Diff both feyn", col_size) + \
+                  self._fixed_string_length("Max Diff", col_size) + \
                   "Result"
 
         for i, proc in enumerate(self.proc_list):
@@ -920,18 +917,21 @@ class MEComparatorGauge(MEComparator):
                        (list_res[0] + list_res[1] + 1e-99)
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
+            diff_FD = abs(list_res[2] - list_res[4]) / \
+                       (list_res[2] + list_res[4] + 1e-99) 
+            max_diff = max(diff_feyn, diff_unit, diff_cms, diff_fixw, diff_FD)
 
             res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length("%1.10e" % res,
                                                col_size) for res in list_res])
 
-            res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
-            res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
-            res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
-            res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
+            res_str += self._fixed_string_length("%1.10e" % max_diff, col_size)
+            #res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
+            #res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
+            #res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
                         
             if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
-               diff_unit < 1e-2:
+               diff_unit < 1e-2 and diff_FD < 1e-4:
                 pass_proc += 1
                 res_str += "Pass"
             else:
@@ -974,9 +974,11 @@ class MEComparatorGauge(MEComparator):
                        (list_res[0] + list_res[1] + 1e-99)
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
-                       
+            diff_FD = abs(list_res[2] - list_res[4]) / \
+                       (list_res[2] + list_res[4] + 1e-99) 
+
             if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-3 or \
-               diff_unit > 1e-2:          
+               diff_unit > 1e-2 or diff_FD > 1e-4:          
                 fail_str += proc+" "
 
         test_object.assertEqual(fail_str, "")    

@@ -1762,7 +1762,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('hel_recycling', False)  
         self.add_param('single_color', True)
         self.add_param('nlo_mixed_expansion', True)    
-
+        self.add_param('gauge', 'U')
+    
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
@@ -4708,7 +4709,7 @@ class RunCardLO(RunCard):
         # here pick strategy 2 if only one QCD color flow
         # and for pure multi-jet case
         jet_id = [21] + list(range(1, self['maxjetflavor']+1))
-        if proc_characteristic['single_color']:
+        if proc_characteristic['gauge'] != 'FD' and proc_characteristic['single_color']:
             self['sde_strategy'] = 2
             #for pure lepton final state go back to sde_strategy=1
             pure_lepton=True

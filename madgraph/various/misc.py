@@ -2242,39 +2242,51 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir,candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as  error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
     if not use_lhapdf:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib64')):
+            candidates += [pjoin(os.pardir,'local', 'lib64', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib64', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
         if not use_lhapdf:
             try:
                 import lhapdf

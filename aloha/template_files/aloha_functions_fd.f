@@ -351,7 +351,7 @@ c#endif
             fo(6) = ip     * sqm(abs(im))
          else
 
-c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
             omega(1) = dsqrt(p(0)+pp)
@@ -579,7 +579,7 @@ c output:
 c       complex sc(3)          : scalar wavefunction                   s
 c
       implicit none
-      double complex sc(3)
+      double complex sc(20)
       double precision p(0:3)
       integer nss
 
@@ -618,10 +618,14 @@ c         write(stdo,*) '             : nss = ',nss
 c      endif
 c#endif
 
-      sc(3) = dcmplx( rOne )
       sc(1) = dcmplx(p(0),p(3))*nss
       sc(2) = dcmplx(p(1),p(2))*nss
-c
+      sc(3) = dcmplx(0.d0)
+      sc(4) = dcmplx(0.d0)
+      sc(5) = dcmplx(0.d0)
+      sc(6) = dcmplx(0.d0)
+      sc(7) = dcmplx( rOne )
+
       return
       end
 
@@ -810,13 +814,19 @@ c output:
 c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
 c
       implicit none
-      double complex vc(6)
+      double complex vc(7) !!!
       double precision p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
       integer nhel,nsv,nsvahl
 
       double precision rZero, rHalf, rOne, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0 )
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
+
+      double complex ci
+      parameter (ci = (0.d0, 1.d0))
+
+      double precision n(0:4)
+      double precision nk
 
 c#ifdef HELAS_CHECK
 c      double precision p2
@@ -899,7 +909,7 @@ c#endif
             vc(3) = dcmplx( rZero )
             vc(4) = dcmplx(-hel*sqh )
             vc(5) = dcmplx( rZero , nsvahl*sqh )
-            vc(6) = dcmplx( hel0 )
+            vc(6) = dcmplx( hel0 ) 
 
          else
 
@@ -919,6 +929,33 @@ c#endif
 
          endif
 
+
+         if (pp>0.d0) then
+               
+            n(0) = sign(1.d0,dble(p(0)))
+            n(1) = -p(1)/pp
+            n(2) = -p(2)/pp
+            n(3) = -p(3)/pp
+            n(4) = 0.d0
+            
+         else
+
+            n(0) = sign(1.d0,dble(p(0)))
+            n(1) = 0.d0
+            n(2) = 0.d0
+            n(3) = -sign(1.d0,dble(p(0)))
+            
+         endif
+
+         nk = n(0)*p(0)-n(1)*p(1)-n(2)*p(2)-n(3)*p(3)
+
+         if (abs(nhel)==1) then
+            vc(7) = dcmplx(0.d0)
+         else
+            vc(3:6) = -vmass/nk*n(0:3)
+            vc(7) = -nsv*ci
+         endif
+
       else
 
          pp = p(0)
@@ -934,7 +971,10 @@ c#endif
             vc(5) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
          endif
 
+         vc(7) = dcmplx( 0.d0 )
+
       endif
+
 c
       return
       end
@@ -2041,7 +2081,7 @@ c spin-3/2 fermion wavefunction
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
       double complex W1(6)
-      double complex Wall(6,*)
+      double complex Wall(7,*)
       double complex Amp(*)
 c     local variable
       integer i
@@ -2054,13 +2094,34 @@ c     local variable
       enddo
       return
       end
-     
+      
+      subroutine CombineAmpFD(nb, ihels, iwfcts, W1, Wall, Amp)
+
+      integer nb ! size of the vectors
+      integer ihels(*), iwfcts(*)
+      double complex W1(7)
+      double complex Wall(7,*)
+      double complex Amp(*)
+c     local variable
+      integer i
+
+      do i = 1, nb
+         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i)) +
+     &                    W1(4) * Wall(4,iwfcts(i))+
+     &                    W1(5) * Wall(5,iwfcts(i))+
+     &                    W1(6) * Wall(6,iwfcts(i))+
+     &                    W1(7) * Wall(7,iwfcts(i))
+      enddo
+      return
+      end
+      
+
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
       double complex W1(3)
-      double complex Wall(6,*)
+      double complex Wall(7,*)
       double complex Amp(*)
 c     local variable
       integer i
@@ -2070,3 +2131,102 @@ c     local variable
       enddo
       return
       end
+
+      subroutine multiply_propagator_factor(win, m, wout)
+
+      implicit none
+
+      double complex win(7)
+      double precision m
+      double complex wout(7)
+
+
+      double complex q(0:4)
+      double precision n(0:4)
+      double precision nq
+      double complex w0(0:4), w1(0:4)
+
+      double precision d
+      double complex js1, js2
+
+      double complex ci
+      parameter (ci=(0.d0,1.d0))
+
+      wout(1:2) = win(1:2)
+      
+      q(0) = -dble(win(1))
+      q(1) = -dble(win(2))
+      q(2) = -dimag(win(2))
+      q(3) = -dimag(win(1))
+      q(4) = -ci*m
+      
+      call define_gauge_dir(q,n)
+
+      w0(0:4) = win(3:7)
+      
+      nq = n(0)*dble(q(0))-n(1)*dble(q(1))-n(2)*dble(q(2))-n(3)*dble(q(3))
+
+      call calculate_propagator_factor(q, m, d)
+      
+      js1 = (n(0)*w0(0)-n(1)*w0(1)-n(2)*w0(2)-n(3)*w0(3)) / nq
+      js2 = (q(0)*w0(0)-q(1)*w0(1)-q(2)*w0(2)-q(3)*w0(3) 
+     &     - dconjg(q(4))*w0(4)) / nq
+
+      w1(0:4) = w0(0:4)-q(0:4)*js1-n(0:4)*js2
+
+      wout(3:7) = w1(0:4)
+      
+      end
+
+      subroutine define_gauge_dir(q, n)
+
+      implicit none
+
+      double complex q(0:4)
+      double precision n(0:4)
+
+      double precision qabs2, qabs
+
+      qabs2 = dble(q(1))**2+dble(q(2))**2+dble(q(3))**2
+
+      if (qabs2>0.d0) then
+
+         qabs = sqrt(qabs2)
+         n(0) = sign(1.d0,dble(q(0)))
+         n(1) = -dble(q(1))/qabs
+         n(2) = -dble(q(2))/qabs
+         n(3) = -dble(q(3))/qabs
+         n(4) = 0.d0
+              
+      else
+           
+         n(0) = sign(1.d0,dble(q(0)))
+         n(1) = 0.d0
+         n(2) = 0.d0
+         n(3) = sign(-1.d0,dble(q(0)))
+         n(4) = 0.d0
+         
+      endif
+
+      return
+
+      end
+
+      subroutine calculate_propagator_factor(q,mass,d)
+
+      implicit none
+
+      double complex q(0:4)
+      double precision mass
+
+      double precision d
+
+      double precision q2
+
+      q2 = dble(q(0))**2 -(dble(q(1))**2 + dble(q(2))**2+dble(q(3))**2 )
+
+      d = 1.d0/(q2-mass**2)
+
+      return
+      end
+      
