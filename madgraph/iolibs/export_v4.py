@@ -6301,7 +6301,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
             if second_exporter:
                 process_exporter_cpp = second_exporter.oneprocessclass(matrix_element,second_helas, prefix=ime)
-                misc.sprint(process_exporter_cpp)
                 dirpath = '.'
                 with misc.chdir(dirpath):
                     logger.info('Creating files in directory %s' % dirpath)
