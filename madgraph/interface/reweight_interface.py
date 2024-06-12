@@ -1976,8 +1976,6 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir
-            ## TV: skip all output and generation of folder is rw_me exists already
-            return
         data['path'] = path_me
 
         for i in range(2):

@@ -1873,6 +1873,10 @@ class Event(list):
         before calling the function
         """
 
+        if self[0].px != 0 or self[0].py != 0 or self[1].px != 0 or self[1].py != 0 \
+           or not misc.equal(self[0].pz, - self[1].pz, zero_limit=False):
+            raise Exception('momenta should be in the partonic center of mass frame') 
+
         self[0].mass = 0.
         self[1].mass = 0.
         tot_E=0.
@@ -1881,10 +1885,10 @@ class Event(list):
                 tot_E += part.E
         if (self[0].pz > 0.and self[1].pz < 0):
             self[0].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, tot_E/2.]))
-            self[1].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, -tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., self[1].px, self[1].py, -tot_E/2.]))
         elif (self[0].pz < 0.and self[1].pz > 0):
             self[0].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, -tot_E/2.]))
-            self[1].set_momentum(FourMomentum([tot_E/2., self[0].px, self[0].py, tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., self[1].px, self[1].py, tot_E/2.]))
         else:
             logger.critical('ERROR: two incoming partons not back.-to-back')
 
