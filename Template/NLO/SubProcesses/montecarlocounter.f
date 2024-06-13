@@ -626,7 +626,7 @@ c$$$      include 'madfks_mcatnlo.inc'
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
       double precision p(0:3,nexternal),probne,z_shower(nexternal)
-     $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
+     $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),damping,N_p
      $     ,MCsec(nexternal,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
       double precision emsca_a(nexternal,nexternal)
@@ -663,7 +663,7 @@ c$$$      include 'madfks_mcatnlo.inc'
 !     dependent in case of delta
       integer cur_part
       common /to_ref_scale/cur_part
-      double precision smin,smax,ptresc,emscafun,qMC
+      double precision smin,smax,ptresc,compute_damping_weight,qMC
 c -- call to MC counterterm functions
       first_MCcnt_call=.true.
       is_pt_hard=.false.
@@ -672,33 +672,14 @@ c -- call to MC counterterm functions
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
-c$$$      if (mcatnlo_delta) then
-c$$$c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
-c$$$c define 'factor'.  This damping 'factor' is used only here, and not in
-c$$$c the following.  A subsequent call to assign_emsca_array, in
-c$$$c complete_xmcsubt, will set emsca_a and related quantities.  This means
-c$$$c that, event by event, MC damping factors D(mu_ij) corresponding to the
-c$$$c emscwgt_a determined now, are not computed with the actual mu_ij
-c$$$c scales used as starting scales (which are determined in the subsequent
-c$$$c call to assign_emsca_array), which however is fine statistically
-c$$$c$$$         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
-c$$$      endif
       do npartner=1,ipartners(0)
          cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
-         if (.not.mcatnlo_delta) then
-            smin=shower_scale_nbody_min(cur_part,fks_father)
-            smax=shower_scale_nbody_max(cur_part,fks_father)
-            qMC=get_qMC(xi_i_fks,y_ij_fks)
-            ptresc=(qMC-smin)/(smax-smin)
-            factor=1d0-emscafun(ptresc,1d0)
-         else
-c min(i_fks,j_fks) is the mother of the FKS pair
-            factor=emscwgt_a(min(i_fks,j_fks),cur_part)
-         endif
+         damping=compute_damping_weight(cur_part,fks_father,xi_i_fks
+     $        ,y_ij_fks)
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
             if(isspecial(cflows)) then
@@ -716,12 +697,12 @@ c min(i_fks,j_fks) is the mother of the FKS pair
                   iord_val=2
                endif
                ione=ione+1
-               MCsec(npartner,colorflow(npartner,cflows))=factor
+               MCsec(npartner,colorflow(npartner,cflows))=damping
      $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
      $              ,cflows),iord)+xkernazi(iord_val)*N_p
      $              *bornbarstilde(colorflow(npartner,cflows),iord))
                amp_split_mc(1:amp_split_size) =
-     $              amp_split_mc(1:amp_split_size)+factor
+     $              amp_split_mc(1:amp_split_size)+damping
      $              *(xkern(iord_val)*N_p
      $              *amp_split_bornbars(1:amp_split_size
      $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
@@ -764,6 +745,20 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       endif
       if (is_pt_hard) MCcntcalled=MCcntcalled+16
       return
+      end
+
+      double precision function compute_damping_weight(cur_part
+     $     ,fks_father,xi_i_fks,y_ij_fks)
+      use scale_module
+      implicit none
+      integer :: cur_part,fks_father
+      double precision :: xi_i_fks,y_ij_fks,emscafun,smin,smax,qMC
+     $     ,ptresc
+      smin=shower_scale_nbody_min(cur_part,fks_father)
+      smax=shower_scale_nbody_max(cur_part,fks_father)
+      qMC=get_qMC(xi_i_fks,y_ij_fks)
+      ptresc=(qMC-smin)/(smax-smin)
+      compute_damping_weight=1d0-emscafun(ptresc,1d0)
       end
 
       subroutine check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
@@ -1140,28 +1135,6 @@ c
          xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
       endif
 
-c     Emsca stuff
-c
-c Emsca stuff for multiple scales
-      if(mcatnlo_delta)then
-         call assign_qMC_array(xi_i_fks,y_ij_fks,shat_n1,pp,qMC,qMC_a2)
-         do i=1,nexternal-1
-            do j=1,nexternal-1
-               if(j.eq.i)cycle
-               ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
-     &              (scalemax_a(i,j)-scalemin_a(i,j))
-               if(ptresc_a(i,j).lt.1d0)then 
-                  emscav_a(i,j)=emsca_bare_a(i,j)
-                  emscav_a2(i,j)=emsca_bare_a2(i,j)
-               else
-                  emscav_a(i,j)=scalemax_a(i,j)
-                  emscav_a2(i,j)=scalemax_a(i,j)
-               endif
-               emscav_tmp_a(i,j)=emscav_a(i,j)
-               emscav_tmp_a2(i,j)=emscav_a2(i,j)
-            enddo
-         enddo
-      endif
 c Main loop over colour partners used to end here
       return
       end
@@ -5233,296 +5206,296 @@ c
       end
 
 
-      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a2)
-      implicit none
-      include "nexternal.inc"
-      include "coupl.inc"
-      include "run.inc"
-      double precision pp(0:3,nexternal),pp_rec(0:3)
-      double precision xi_i_fks,y_ij_fks,xij
-
-      integer ileg,j,i,nfinal,ipart
-      double precision xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),xk3(0:3)
-c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
-      double precision qMC,qMC_a(nexternal),qMC_a2(nexternal-1,nexternal-1)
-      double precision zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      double precision tiny
-      parameter(tiny=1d-5)
-      double precision zero
-      parameter(zero=0d0)
-      integer iRtoB(nexternal)
-
-      integer isqrtneg
-      save isqrtneg
-
-      double precision pmass(nexternal)
-      include "pmass.inc"
-
-c Stop if not PYTHIA8
-      if(shower_mc.ne.'PYTHIA8')then
-         write(*,*)'assign_qMC_array should be called only for PY8'
-         stop
-      endif
-
-c Initialise
-      do i=0,3
-         pp_rec(i)=0d0
-         xp1(i)=0d0
-         xp2(i)=0d0
-         xk1(i)=0d0
-         xk2(i)=0d0
-         xk3(i)=0d0
-      enddo
-      nfinal=nexternal-2
-      xm12=0d0
-      xm22=0d0
-      xq1q=0d0
-      xq2q=0d0
-      qMC_a=-1d0
-      qMC_a2=-1d0
-
-c Discard if unphysical FKS variables
-      if(xi_i_fks.lt.0d0.or.xi_i_fks.gt.1d0.or.
-     &   abs(y_ij_fks).gt.1d0)then
-         write(*,*)'Error 0 in assign_qMC_array: fks variables'
-         write(*,*)xi_i_fks,y_ij_fks
-         stop
-      endif
-
-      do ipart=1,nexternal
-      if(ipart.eq.i_fks.or..not.
-     &   (pdg_type(ipart).eq.21.or.abs(pdg_type(ipart)).le.6))cycle
-      if(ipart.eq.j_fks)then
-         qMC_a(ipart)=qMC
-         cycle
-      endif
-c Determine ileg
-c ileg = 1 ==> emission from left     incoming parton
-c ileg = 2 ==> emission from right    incoming parton
-c ileg = 3 ==> emission from massive  outgoing parton
-c ileg = 4 ==> emission from massless outgoing parton
-      if(ipart.le.2)then
-         ileg=ipart
-      elseif(pmass(ipart).ne.0d0)then
-         ileg=3
-      elseif(pmass(ipart).eq.0d0)then
-         ileg=4
-      else
-         write(*,*)'Error 1 in assign_qMC_array: unknown ileg'
-         write(*,*)ileg,ipart,pmass(ipart)
-         stop
-      endif
-
-c Determine and assign momenta:
-c xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
-c xp2 = incoming right parton (emitter (recoiler) if ileg = 2 (1))
-c xk1 = outgoing parton       (emitter (recoiler) if ileg = 3 (4))
-c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
-c xk3 = extra parton          (FKS parton)
-      do j=0,3
-c xk1 and xk2 are never used for ISR
-         xp1(j)=pp(j,1)
-         xp2(j)=pp(j,2)
-         xk3(j)=pp(j,i_fks)
-         if(ileg.gt.2)pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,ipart)
-         if(ileg.eq.3)then
-            xk1(j)=pp(j,ipart)
-            xk2(j)=pp_rec(j)
-         elseif(ileg.eq.4)then
-            xk1(j)=pp_rec(j)
-            xk2(j)=pp(j,ipart)
-         endif
-      enddo
-
-c Determine the Mandelstam invariants needed in the MC functions in terms
-c of FKS variables: the argument of MC functions are (p+k)^2, NOT 2 p.k
-c
-c Definitions of invariants in terms of momenta
-c
-c xm12 =     xk1 . xk1
-c xm22 =     xk2 . xk2
-c xtk  = - 2 xp1 . xk3
-c xuk  = - 2 xp2 . xk3
-c xq1q = - 2 xp1 . xk1 + xm12
-c xq2q = - 2 xp2 . xk2 + xm22
-c w1   = + 2 xk1 . xk3        = - xq1q + xq2q - xtk
-c w2   = + 2 xk2 . xk3        = - xq2q + xq1q - xuk
-c xq1c = - 2 xp1 . xk2        = - s - xtk - xq1q + xm12
-c xq2c = - 2 xp2 . xk1        = - s - xuk - xq2q + xm22
-c
-c Parametrisation of invariants in terms of FKS variables
-c
-c ileg = 1
-c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
-c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
-c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , yi )
-c xk1  =  irrelevant
-c xk2  =  irrelevant
-c yi = y_ij_fks
-c x = 1 - xi_i_fks
-c B = sqrt(s)/2*(1-x)
-c
-c ileg = 2
-c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
-c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
-c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , -yi )
-c xk1  =  irrelevant
-c xk2  =  irrelevant
-c yi = y_ij_fks
-c x = 1 - xi_i_fks
-c B = sqrt(s)/2*(1-x)
-c
-c ileg = 3
-c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
-c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
-c xk1  =  ( sqrt(veckn_ev**2+xm12) , 0 , 0 , veckn_ev )
-c xk2  =  xp1 + xp2 - xk1 - xk3
-c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
-c yj = y_ij_fks
-c yi = irrelevant
-c x = 1 - xi_i_fks
-c veckn_ev is such that xk2**2 = xm22
-c B = sqrt(s)/2*(1-x)
-c azimuth = irrelevant (hence set = 0)
-c
-c ileg = 4
-c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
-c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
-c xk1  =  xp1 + xp2 - xk2 - xk3
-c xk2  =  A * ( 1 , 0 , 0 , 1 )
-c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
-c yj = y_ij_fks
-c yi = irrelevant
-c x = 1 - xi_i_fks
-c A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yj)))
-c B = sqrt(s)/2*(1-x)
-c azimuth = irrelevant (hence set = 0)
-
-      if(ileg.eq.1)then
-         xtk=-2*dot(xp1,xk3)
-         xuk=-2*dot(xp2,xk3)
-         if(shower_mc.eq.'HERWIG6'  .or.
-     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xtk)
-         if(shower_mc.eq.'PYTHIA6PT'.or.
-     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xtk*xi_i_fks)
-      elseif(ileg.eq.2)then
-         xtk=-2*dot(xp1,xk3)
-         xuk=-2*dot(xp2,xk3)
-         if(shower_mc.eq.'HERWIG6'  .or.
-     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xuk)
-         if(shower_mc.eq.'PYTHIA6PT'.or.
-     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xuk*xi_i_fks)
-      elseif(ileg.eq.3)then
-         xm12=pmass(ipart)**2
-         xm22=dot(pp_rec,pp_rec)
-         xtk=-2*dot(xp1,xk3)
-         xuk=-2*dot(xp2,xk3)
-         xq1q=-2*dot(xp1,xk1)+xm12
-         xq2q=-2*dot(xp2,xk2)+xm22
-         w1=-xq1q+xq2q-xtk
-         w2=-xq2q+xq1q-xuk
-         if(shower_mc.eq.'HERWIG6'.or.
-     &        shower_mc.eq.'HERWIGPP')then
-            zeta1=get_zeta(sh,w1,w2,xm12,xm22)
-            qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
-            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-            if(qMCarg.lt.-tiny) then
-               isqrtneg=isqrtneg+1
-               write(*,*)'Error 2 in assign_qMC_array: negtive sqrt'
-               write(*,*)qMCarg,isqrtneg
-               if(isqrtneg.ge.100)stop
-            endif
-            qMC_a(ipart)=sqrt(qMCarg)
-         elseif(shower_mc.eq.'PYTHIA6Q')then
-            qMC_a(ipart)=sqrt(w1+xm12)
-         elseif(shower_mc.eq.'PYTHIA6PT')then
-            write(*,*)'PYTHIA6PT not available for FSR'
-            stop
-         elseif(shower_mc.eq.'PYTHIA8')then
-            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $           ,xuk,xq1q,xq2q)
-            qMC_a(ipart)=sqrt(z*(1-z)*w1)
-         endif
-      elseif(ileg.eq.4)then
-         xm12=dot(pp_rec,pp_rec)
-         xm22=0d0
-         xtk=-2*dot(xp1,xk3)
-         xuk=-2*dot(xp2,xk3)
-         xij=2*(1-xm12/sh-xi_i_fks)/(2-xi_i_fks*(1-y_ij_fks))
-         w2=2*dot(xk2,xk3)
-         xq2q=-2*dot(xp2,xk2)+xm22
-         xq1q=xuk+xq2q+w2
-         w1=-xq1q+xq2q-xtk
-         if(shower_mc.eq.'HERWIG6'.or.
-     &        shower_mc.eq.'HERWIGPP')then
-            zeta2=get_zeta(sh,w2,w1,xm22,xm12)
-            qMCarg=zeta2*(1-zeta2)*w2
-            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-            if(qMCarg.lt.-tiny)then
-               isqrtneg=isqrtneg+1
-               write(*,*)'Error 3 in assign_qMC_array: negtive sqrt'
-               write(*,*)qMCarg,isqrtneg
-               if(isqrtneg.ge.100)stop
-            endif
-            qMC_a(ipart)=sqrt(qMCarg)
-         elseif(shower_mc.eq.'PYTHIA6Q')then
-            qMC_a(ipart)=sqrt(w2)
-         elseif(shower_mc.eq.'PYTHIA6PT')then
-            write(*,*)'PYTHIA6PT not available for FSR'
-            stop
-         elseif(shower_mc.eq.'PYTHIA8')then
-            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $           ,xuk,xq1q,xq2q)
-            qMC_a(ipart)=sqrt(z*(1-z)*w2)
-         endif
-      else
-         write(*,*)'Error 4 in assign_qMC_array: assigned wrong ileg'
-         stop
-      endif
-      enddo
-c
-c qMC_a2 is generated from qMC_a through two operations (here, n is the
-c number of particles at the Born level):
-c - a relabelling from n+1 entries, where i_fks is skipped, to n entries, 
-c   all filled (thus, the conventions are the same as those relevant e.g. 
-c   to xscales and xscales2);
-c - a conversion from an array to a matrix, where the first index represents 
-c   the emitter of i_fks, and the second one is the recoiler (connected with
-c   a colour line to the emitter). Since in PY8 the dependence on the shower 
-c   variable is immaterial (or negligible), all columns are filled with
-c   the same value. In more realistic cases, only one (two) column(s) per
-c   row must be non-zero in the case of quarks (gluons)
-      do i=1,nexternal
-        if(i.lt.i_fks)then
-          iRtoB(i)=i
-        elseif(i.eq.i_fks)then
-          iRtoB(i)=-1
-        elseif(i.gt.i_fks)then
-          iRtoB(i)=i-1
-        endif
-      enddo
-      do i=1,nexternal
-         if(i.eq.i_fks)cycle
-         do j=1,nexternal
-            if(j.eq.i_fks)cycle
-            if(j.eq.i)cycle
-            if(.not.(pdg_type(j).eq.21.or.abs(pdg_type(j)).le.6))cycle
-            qMC_a2(iRtoB(i),iRtoB(j))=qMC_a(i)
-         enddo
-      enddo
-
-c Checks on invariants
-c      call check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22)
-
-      return
-      end
+c$$$      subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a2)
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$      include "coupl.inc"
+c$$$      include "run.inc"
+c$$$      double precision pp(0:3,nexternal),pp_rec(0:3)
+c$$$      double precision xi_i_fks,y_ij_fks,xij
+c$$$
+c$$$      integer ileg,j,i,nfinal,ipart
+c$$$      double precision xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),xk3(0:3)
+c$$$c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
+c$$$      integer fks_j_from_i(nexternal,0:nexternal)
+c$$$     &     ,particle_type(nexternal),pdg_type(nexternal)
+c$$$      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+c$$$      double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
+c$$$      double precision qMC,qMC_a(nexternal),qMC_a2(nexternal-1,nexternal-1)
+c$$$      double precision zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      double precision tiny
+c$$$      parameter(tiny=1d-5)
+c$$$      double precision zero
+c$$$      parameter(zero=0d0)
+c$$$      integer iRtoB(nexternal)
+c$$$
+c$$$      integer isqrtneg
+c$$$      save isqrtneg
+c$$$
+c$$$      double precision pmass(nexternal)
+c$$$      include "pmass.inc"
+c$$$
+c$$$c Stop if not PYTHIA8
+c$$$      if(shower_mc.ne.'PYTHIA8')then
+c$$$         write(*,*)'assign_qMC_array should be called only for PY8'
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$c Initialise
+c$$$      do i=0,3
+c$$$         pp_rec(i)=0d0
+c$$$         xp1(i)=0d0
+c$$$         xp2(i)=0d0
+c$$$         xk1(i)=0d0
+c$$$         xk2(i)=0d0
+c$$$         xk3(i)=0d0
+c$$$      enddo
+c$$$      nfinal=nexternal-2
+c$$$      xm12=0d0
+c$$$      xm22=0d0
+c$$$      xq1q=0d0
+c$$$      xq2q=0d0
+c$$$      qMC_a=-1d0
+c$$$      qMC_a2=-1d0
+c$$$
+c$$$c Discard if unphysical FKS variables
+c$$$      if(xi_i_fks.lt.0d0.or.xi_i_fks.gt.1d0.or.
+c$$$     &   abs(y_ij_fks).gt.1d0)then
+c$$$         write(*,*)'Error 0 in assign_qMC_array: fks variables'
+c$$$         write(*,*)xi_i_fks,y_ij_fks
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$      do ipart=1,nexternal
+c$$$      if(ipart.eq.i_fks.or..not.
+c$$$     &   (pdg_type(ipart).eq.21.or.abs(pdg_type(ipart)).le.6))cycle
+c$$$      if(ipart.eq.j_fks)then
+c$$$         qMC_a(ipart)=qMC
+c$$$         cycle
+c$$$      endif
+c$$$c Determine ileg
+c$$$c ileg = 1 ==> emission from left     incoming parton
+c$$$c ileg = 2 ==> emission from right    incoming parton
+c$$$c ileg = 3 ==> emission from massive  outgoing parton
+c$$$c ileg = 4 ==> emission from massless outgoing parton
+c$$$      if(ipart.le.2)then
+c$$$         ileg=ipart
+c$$$      elseif(pmass(ipart).ne.0d0)then
+c$$$         ileg=3
+c$$$      elseif(pmass(ipart).eq.0d0)then
+c$$$         ileg=4
+c$$$      else
+c$$$         write(*,*)'Error 1 in assign_qMC_array: unknown ileg'
+c$$$         write(*,*)ileg,ipart,pmass(ipart)
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$c Determine and assign momenta:
+c$$$c xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
+c$$$c xp2 = incoming right parton (emitter (recoiler) if ileg = 2 (1))
+c$$$c xk1 = outgoing parton       (emitter (recoiler) if ileg = 3 (4))
+c$$$c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
+c$$$c xk3 = extra parton          (FKS parton)
+c$$$      do j=0,3
+c$$$c xk1 and xk2 are never used for ISR
+c$$$         xp1(j)=pp(j,1)
+c$$$         xp2(j)=pp(j,2)
+c$$$         xk3(j)=pp(j,i_fks)
+c$$$         if(ileg.gt.2)pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,ipart)
+c$$$         if(ileg.eq.3)then
+c$$$            xk1(j)=pp(j,ipart)
+c$$$            xk2(j)=pp_rec(j)
+c$$$         elseif(ileg.eq.4)then
+c$$$            xk1(j)=pp_rec(j)
+c$$$            xk2(j)=pp(j,ipart)
+c$$$         endif
+c$$$      enddo
+c$$$
+c$$$c Determine the Mandelstam invariants needed in the MC functions in terms
+c$$$c of FKS variables: the argument of MC functions are (p+k)^2, NOT 2 p.k
+c$$$c
+c$$$c Definitions of invariants in terms of momenta
+c$$$c
+c$$$c xm12 =     xk1 . xk1
+c$$$c xm22 =     xk2 . xk2
+c$$$c xtk  = - 2 xp1 . xk3
+c$$$c xuk  = - 2 xp2 . xk3
+c$$$c xq1q = - 2 xp1 . xk1 + xm12
+c$$$c xq2q = - 2 xp2 . xk2 + xm22
+c$$$c w1   = + 2 xk1 . xk3        = - xq1q + xq2q - xtk
+c$$$c w2   = + 2 xk2 . xk3        = - xq2q + xq1q - xuk
+c$$$c xq1c = - 2 xp1 . xk2        = - s - xtk - xq1q + xm12
+c$$$c xq2c = - 2 xp2 . xk1        = - s - xuk - xq2q + xm22
+c$$$c
+c$$$c Parametrisation of invariants in terms of FKS variables
+c$$$c
+c$$$c ileg = 1
+c$$$c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c$$$c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c$$$c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c$$$c xk1  =  irrelevant
+c$$$c xk2  =  irrelevant
+c$$$c yi = y_ij_fks
+c$$$c x = 1 - xi_i_fks
+c$$$c B = sqrt(s)/2*(1-x)
+c$$$c
+c$$$c ileg = 2
+c$$$c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c$$$c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c$$$c xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , -yi )
+c$$$c xk1  =  irrelevant
+c$$$c xk2  =  irrelevant
+c$$$c yi = y_ij_fks
+c$$$c x = 1 - xi_i_fks
+c$$$c B = sqrt(s)/2*(1-x)
+c$$$c
+c$$$c ileg = 3
+c$$$c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c$$$c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c$$$c xk1  =  ( sqrt(veckn_ev**2+xm12) , 0 , 0 , veckn_ev )
+c$$$c xk2  =  xp1 + xp2 - xk1 - xk3
+c$$$c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
+c$$$c yj = y_ij_fks
+c$$$c yi = irrelevant
+c$$$c x = 1 - xi_i_fks
+c$$$c veckn_ev is such that xk2**2 = xm22
+c$$$c B = sqrt(s)/2*(1-x)
+c$$$c azimuth = irrelevant (hence set = 0)
+c$$$c
+c$$$c ileg = 4
+c$$$c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c$$$c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c$$$c xk1  =  xp1 + xp2 - xk2 - xk3
+c$$$c xk2  =  A * ( 1 , 0 , 0 , 1 )
+c$$$c xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
+c$$$c yj = y_ij_fks
+c$$$c yi = irrelevant
+c$$$c x = 1 - xi_i_fks
+c$$$c A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yj)))
+c$$$c B = sqrt(s)/2*(1-x)
+c$$$c azimuth = irrelevant (hence set = 0)
+c$$$
+c$$$      if(ileg.eq.1)then
+c$$$         xtk=-2*dot(xp1,xk3)
+c$$$         xuk=-2*dot(xp2,xk3)
+c$$$         if(shower_mc.eq.'HERWIG6'  .or.
+c$$$     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+c$$$         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xtk)
+c$$$         if(shower_mc.eq.'PYTHIA6PT'.or.
+c$$$     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xtk*xi_i_fks)
+c$$$      elseif(ileg.eq.2)then
+c$$$         xtk=-2*dot(xp1,xk3)
+c$$$         xuk=-2*dot(xp2,xk3)
+c$$$         if(shower_mc.eq.'HERWIG6'  .or.
+c$$$     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+c$$$         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xuk)
+c$$$         if(shower_mc.eq.'PYTHIA6PT'.or.
+c$$$     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xuk*xi_i_fks)
+c$$$      elseif(ileg.eq.3)then
+c$$$         xm12=pmass(ipart)**2
+c$$$         xm22=dot(pp_rec,pp_rec)
+c$$$         xtk=-2*dot(xp1,xk3)
+c$$$         xuk=-2*dot(xp2,xk3)
+c$$$         xq1q=-2*dot(xp1,xk1)+xm12
+c$$$         xq2q=-2*dot(xp2,xk2)+xm22
+c$$$         w1=-xq1q+xq2q-xtk
+c$$$         w2=-xq2q+xq1q-xuk
+c$$$         if(shower_mc.eq.'HERWIG6'.or.
+c$$$     &        shower_mc.eq.'HERWIGPP')then
+c$$$            zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+c$$$            qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+c$$$            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+c$$$            if(qMCarg.lt.-tiny) then
+c$$$               isqrtneg=isqrtneg+1
+c$$$               write(*,*)'Error 2 in assign_qMC_array: negtive sqrt'
+c$$$               write(*,*)qMCarg,isqrtneg
+c$$$               if(isqrtneg.ge.100)stop
+c$$$            endif
+c$$$            qMC_a(ipart)=sqrt(qMCarg)
+c$$$         elseif(shower_mc.eq.'PYTHIA6Q')then
+c$$$            qMC_a(ipart)=sqrt(w1+xm12)
+c$$$         elseif(shower_mc.eq.'PYTHIA6PT')then
+c$$$            write(*,*)'PYTHIA6PT not available for FSR'
+c$$$            stop
+c$$$         elseif(shower_mc.eq.'PYTHIA8')then
+c$$$            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+c$$$     $           ,xuk,xq1q,xq2q)
+c$$$            qMC_a(ipart)=sqrt(z*(1-z)*w1)
+c$$$         endif
+c$$$      elseif(ileg.eq.4)then
+c$$$         xm12=dot(pp_rec,pp_rec)
+c$$$         xm22=0d0
+c$$$         xtk=-2*dot(xp1,xk3)
+c$$$         xuk=-2*dot(xp2,xk3)
+c$$$         xij=2*(1-xm12/sh-xi_i_fks)/(2-xi_i_fks*(1-y_ij_fks))
+c$$$         w2=2*dot(xk2,xk3)
+c$$$         xq2q=-2*dot(xp2,xk2)+xm22
+c$$$         xq1q=xuk+xq2q+w2
+c$$$         w1=-xq1q+xq2q-xtk
+c$$$         if(shower_mc.eq.'HERWIG6'.or.
+c$$$     &        shower_mc.eq.'HERWIGPP')then
+c$$$            zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+c$$$            qMCarg=zeta2*(1-zeta2)*w2
+c$$$            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+c$$$            if(qMCarg.lt.-tiny)then
+c$$$               isqrtneg=isqrtneg+1
+c$$$               write(*,*)'Error 3 in assign_qMC_array: negtive sqrt'
+c$$$               write(*,*)qMCarg,isqrtneg
+c$$$               if(isqrtneg.ge.100)stop
+c$$$            endif
+c$$$            qMC_a(ipart)=sqrt(qMCarg)
+c$$$         elseif(shower_mc.eq.'PYTHIA6Q')then
+c$$$            qMC_a(ipart)=sqrt(w2)
+c$$$         elseif(shower_mc.eq.'PYTHIA6PT')then
+c$$$            write(*,*)'PYTHIA6PT not available for FSR'
+c$$$            stop
+c$$$         elseif(shower_mc.eq.'PYTHIA8')then
+c$$$            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+c$$$     $           ,xuk,xq1q,xq2q)
+c$$$            qMC_a(ipart)=sqrt(z*(1-z)*w2)
+c$$$         endif
+c$$$      else
+c$$$         write(*,*)'Error 4 in assign_qMC_array: assigned wrong ileg'
+c$$$         stop
+c$$$      endif
+c$$$      enddo
+c$$$c
+c$$$c qMC_a2 is generated from qMC_a through two operations (here, n is the
+c$$$c number of particles at the Born level):
+c$$$c - a relabelling from n+1 entries, where i_fks is skipped, to n entries, 
+c$$$c   all filled (thus, the conventions are the same as those relevant e.g. 
+c$$$c   to xscales and xscales2);
+c$$$c - a conversion from an array to a matrix, where the first index represents 
+c$$$c   the emitter of i_fks, and the second one is the recoiler (connected with
+c$$$c   a colour line to the emitter). Since in PY8 the dependence on the shower 
+c$$$c   variable is immaterial (or negligible), all columns are filled with
+c$$$c   the same value. In more realistic cases, only one (two) column(s) per
+c$$$c   row must be non-zero in the case of quarks (gluons)
+c$$$      do i=1,nexternal
+c$$$        if(i.lt.i_fks)then
+c$$$          iRtoB(i)=i
+c$$$        elseif(i.eq.i_fks)then
+c$$$          iRtoB(i)=-1
+c$$$        elseif(i.gt.i_fks)then
+c$$$          iRtoB(i)=i-1
+c$$$        endif
+c$$$      enddo
+c$$$      do i=1,nexternal
+c$$$         if(i.eq.i_fks)cycle
+c$$$         do j=1,nexternal
+c$$$            if(j.eq.i_fks)cycle
+c$$$            if(j.eq.i)cycle
+c$$$            if(.not.(pdg_type(j).eq.21.or.abs(pdg_type(j)).le.6))cycle
+c$$$            qMC_a2(iRtoB(i),iRtoB(j))=qMC_a(i)
+c$$$         enddo
+c$$$      enddo
+c$$$
+c$$$c Checks on invariants
+c$$$c      call check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22)
+c$$$
+c$$$      return
+c$$$      end

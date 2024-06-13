@@ -2,7 +2,7 @@ module process_module
   implicit none
   integer :: next_n,next_n1,nexternal_mod,nincoming_mod,max_flows_n,max_flows_n1
   double precision,allocatable,dimension(:) :: mass_n,mass_n1
-  integer,allocatable,dimension(:) :: colour_n,colour_n1
+  integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
   logical,allocatable,dimension(:,:,:) :: valid_dipole_n,valid_dipole_n1
   double precision :: shat_n1,collider_energy
   character(len=10) :: shower_mc_mod
@@ -39,6 +39,7 @@ contains
     if (.not.allocated(mass_n1)) allocate(mass_n1(1:nexternal_mod))
     if (.not.allocated(colour_n1)) allocate(colour_n1(1:nexternal_mod))
     if (.not.allocated(valid_dipole_n1)) allocate(valid_dipole_n1(1:nexternal_mod,1:nexternal_mod,1:max_flows_n1))
+    if (.not.allocated(iRtoB)) allocate(iRtoB(1:nexternal_mod))
   end subroutine init_process_module_global
   
   subroutine init_process_module_nbody(nexternal_in, mass_in, colour_in, &
@@ -85,4 +86,18 @@ contains
     shat_n1=shat_in
   end subroutine init_process_module_n1body
 
+  subroutine RealToBornMapping(i_fks)
+    implicit none
+    integer :: i,i_fks
+    do i=1,next_n1
+       if(i.lt.i_fks)then
+          iRtoB(i)=i
+       elseif(i.eq.i_fks)then
+          iRtoB(i)=-1
+       elseif(i.gt.i_fks)then
+          iRtoB(i)=i-1
+       endif
+    enddo
+  end subroutine RealToBornMapping
+  
 end module process_module

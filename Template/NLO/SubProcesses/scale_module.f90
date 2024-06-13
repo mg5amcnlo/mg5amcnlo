@@ -3,7 +3,7 @@ module scale_module
   use process_module
   implicit none
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
-       shower_scale_nbody_nodamp
+       shower_scale_nbody_max,shower_scale_nbody_min
   double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
@@ -40,8 +40,11 @@ contains
           call get_scaleminmax(ref_scale,scalemin,scalemax)
           rrnd=ran2()
           rrnd=damping_inv(rrnd,1d0)
-          shower_scale_nbody(i,fks_father)=max(scalemin+rrnd*(scalemax-scalemin),scaleMCcut)
-          shower_scale_nbody_nodamp(i,fks_father)=max(scalemax,scaleMCcut)
+          scalemin=max(scalemin,scaleMCcut)
+          scalemax=max(scalemax,scalemin+scaleMCdelta)
+          shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
+          shower_scale_nbody_min(i,fks_father)=scalemin
+          shower_scale_nbody_max(i,fks_father)=scalemax
        enddo
     elseif (flow_picked.gt.0) then
        do i=1,next_n
@@ -56,11 +59,15 @@ contains
                 ! also for non-delta.
                 rrnd=ran2()
                 rrnd=damping_inv(rrnd,1d0)
-                shower_scale_nbody(i,j)=max(scalemin+rrnd*(scalemax-scalemin),scaleMCcut)
-                shower_scale_nbody_nodamp(i,j)=max(scalemax,scaleMCcut)
+                scalemin=max(scalemin,scaleMCcut)
+                scalemax=max(scalemax,scalemin+scaleMCdelta)
+                shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
+                shower_scale_nbody_min(i,j)=scalemin
+                shower_scale_nbody_max(i,j)=scalemax
              else
                 shower_scale_nbody(i,j)=-1d0
-                shower_scale_nbody_nodamp(i,j)=-1d0
+                shower_scale_nbody_min(i,j)=-1d0
+                shower_scale_nbody_max(i,j)=-1d0
              endif
           enddo
        enddo
@@ -79,13 +86,13 @@ contains
        do j=1,next_n
           if (valid_dipole_n(i,j,flow_picked)) then
              shower_scale_nbody(i,j)=get_ref_scale_dipole(p,i,j)
-             shower_scale_nbody_nodamp(i,j)=shower_scale_nbody(i,j)
           else
              shower_scale_nbody(i,j)=-1d0
-             shower_scale_nbody_nodamp(i,j)=-1d0
           endif
        enddo
     enddo
+    shower_scale_nbody_min=-1d0
+    shower_scale_nbody_max=-1d0
   end subroutine Bornonly_shower_scale
 
   subroutine get_scaleminmax(ref_scale,scalemin,scalemax)
