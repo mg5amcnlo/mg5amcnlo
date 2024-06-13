@@ -107,7 +107,7 @@ def get_model_db():
     """return the file with the online model database"""
 
     data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
-                     'https://madgraph.mi.infn.it//models_db.dat']
+                     'http://madgraph.mi.infn.it//models_db.dat']
     import random
     import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
     r = random.randint(0,1)
@@ -122,7 +122,8 @@ def get_model_db():
         cluster_path = data_path[index]
         try:
             data = six.moves.urllib.request.urlopen(cluster_path)
-        except Exception:
+        except Exception as err:
+            misc.sprint(err)
             continue
         if data.getcode() != 200:
             continue

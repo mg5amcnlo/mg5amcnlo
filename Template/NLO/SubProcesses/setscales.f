@@ -580,6 +580,7 @@ cc      to use this code you must set                                           
 cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
          tmp = user_dynamical_scale(PP)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc

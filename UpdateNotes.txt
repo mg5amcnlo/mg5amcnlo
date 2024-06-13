@@ -1,11 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
 3.6.0 ():
       OM: Allow the scan command within the run_card.
           Note that such command can NOT be used if the scan command is used in the param_card.
           so the following command is now working:
           set ebeam scan1:[6500,7000]
           Thanks to Kentarou Mawatari for pushing me to implement this.
+      DP+TV+MZ: Implementation of EW Sudakov corrections. See 2110.03714 and 2309.00452
+
 
 
 3.5.4 (05/04/23):
