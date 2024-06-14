@@ -204,6 +204,9 @@ c               all_wgt(i) = all_wgt(i)*fx
 
                if (VECSIZE_USED.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
+                  ivec=0
+                  ilock=0
+                  iwarp=1 
                else
 c                 Here "i" is the position in the full grid of the event                  
                   do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
