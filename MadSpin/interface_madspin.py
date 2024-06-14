@@ -1574,9 +1574,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
                 # Spyros cached
-                #full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
-                full_evt, wgt = self.get_onshell_evt_and_wgt_fixed_hel(production, decays, decay_dict, inter_prod_dict)
-		# Spyros uncached (how it was before)
+                full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
+                # Spyros uncached (how it was before)
                 #full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays)
                 print(f"Spyros wgt = {wgt}")
                 if random.random()*maxwgt < wgt:
@@ -1696,9 +1695,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function 
-                #_, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
-                _, wgt = self.get_onshell_evt_and_wgt_fixed_hel(base_event, decays, decay_dict, inter_prod_dict)
-                #print(f"Spyros wgt for max {i},{j} : {wgt}")
+                _, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
+                #print(f"Spyros wgt for max : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
             
@@ -1727,7 +1725,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
-        	
+        
         tag, order = production.get_tag_and_order()
         try:
             info = self.generate_all.all_me[tag]
@@ -1761,60 +1759,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event, full_me = self.calculate_matrix_element_from_density(production, decays, decay_dict, inter_prod_dict)
 	    # full_event need to be set after since modifies production
         return full_event, full_me/(production_me*decay_me)
-
-
-    def get_onshell_evt_and_wgt_fixed_hel(self, production, decays, decay_dict, inter_prod_dict=None):
-        """ return the onshell wgt for the production event associated to the decays
-            return also the full event with decay. Do this only for the helicity set 
-	    by the LHE production and decay files.
-            Carefull this modifies production event (pass to the full one)"""
-        
-	# Spyros: get helicity of production event
-        production_event = lhe_parser.Event(str(production))
-        production_hel = production_event.get_helicity()
-        #print("production_hel = {production_hel}")
-	
-        tag, order = production.get_tag_and_order()
-        try:
-            info = self.generate_all.all_me[tag]
-        except:
-            misc.sprint(self.generate_all.all_me)
-            misc.sprint(production)
-            misc.sprint(decays)
-            raise
-        import copy
-        
-	# Calculate production ME	
-        if hasattr(production, 'me_wgt'):
-            production_me = production.me_wgt
-        else:
-            production_me = self.calculate_matrix_element(production)
-            production.me_wgt = production_me
-        
-	# Calculate decay ME
-        decay_me = 1.0
-        for pdg in decays:
-            for dec in decays[pdg]:
-	        # Spyros: get helicity for decay event
-                decay_event = lhe_parser.Event(str(dec))
-                decay_hel = decay_event.get_helicity()
-		
-                decay_me *= self.calculate_matrix_element(dec)
-            random.shuffle(decays[pdg])
-
-        # Calculate production*decay ME
-        if self.generate_all.mode == 'onshell':
-            full_event = lhe_parser.Event(str(production))
-            full_event = full_event.add_decays(decays)
-            full_me = self.calculate_matrix_element(full_event)
-        else:
-            full_event, full_me = self.calculate_matrix_element_from_density(production, decays, decay_dict, inter_prod_dict, production_hel, decay_hel)
-	    # full_event need to be set after since modifies production
-        return full_event, full_me/(production_me*decay_me)
-
  
            
-    def calculate_matrix_element_from_density(self, production, decays, decay_dict, inter_prod_dict=None, production_hel=None, decay_hel=None):
+    def calculate_matrix_element_from_density(self, production, decays, decay_dict, inter_prod_dict=None):
         """routine to return all the possible inter for an event"""        
 	
         full_event = lhe_parser.Event(str(production))
@@ -1823,6 +1770,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         #print(f"Spyros production_event = {full_event}")
         #print(f"Spyros decays = {decays}")
 	
+	# Spyros: get helicity of full event
+        production_hel = full_event.get_helicity()
+        #print(f"Spyros: production_hel = {production_hel}")
+		
         for pdg in decays:
             # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
@@ -1833,12 +1784,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             
 	    # This is the position of the particle that decays in the production event
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
+            #print(f"Spyros position = {position}")	    
+	    
+            # Allowed helicities of decaying particle - make this more generic
+            allowed_hel = [-1, 1]
 	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
-                nhel_p_tot, iden_p = self.get_nhel(production, position[0]) 
-                				                 
+                nhel_p_tot, iden_p = self.get_nhel(production,position[0])
+		                 
 	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
 	        # to make the dictionary
                 inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
@@ -1862,6 +1817,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 	    # Update the status of the particle that decays from 1 to 2
             full_event[position[0]].status = 2 
 	    
+	    # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
             for i,decay_event in enumerate(decays[pdg]):
                 part = init_part[i]
 		# We need to boost all particles in the decay event using the momentum
@@ -1871,15 +1827,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #print("decay event=",decay_event)         
                 
 		# Get all helicity configurations and iden number for production and decay events
-                if not nhel_p_tot: 
-                    nhel_p_tot,iden_p = self.get_nhel(production, position[0])
-                    #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
+                nhel_p_tot,iden_p = self.get_nhel(production,position[0])
+                #print(f"Spyros - nhel prod = {nhel_p_tot} , iden_p = {iden_p}")
 		
-                nhel_d_tot,iden_d = self.get_nhel(decay_event, 0)
+                nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
+		# Get helicities of decay event
+                decay_hel = decay_event.get_helicity()
+                pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
+		
+		# Spyros: try to use get_all_inter
+                all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, nchanging*len(allowed_hel))
+                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
+		
                 me = 0
-
+                inter_prod_dict_exists = bool(inter_prod_dict)
+                #print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} / nhel_d_tot = {len(nhel_d_tot)}")
+						
                 for i,hel_p in enumerate(nhel_p_tot): 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
 		    # so that we can use the dictionary of inter_prod
@@ -1887,11 +1852,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    
 		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
                     inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
-                    #print(f"inter_prod_dict = {inter_prod_dict}")
 		    		    
 		    #print(f"Spyros: INTER_PROD = {inter_prod}")
                     for j,hel_d in enumerate(nhel_d_tot):
-                        #print(f"decay hel = {decay_hel} , hel_d = {hel_d}")				    
+                        #print(f"decay hel = {hel_d}")	    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
                         inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
@@ -1958,51 +1922,29 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         return self.get_inter_value(event,nhel) 
 
-    def get_nhel(self,event, position):
+
+    def get_nhel(self,event,position):
 
         pdir,orig_order = self.get_pdir(event)
-	
-        if pdir in self.all_nhel:
-            return self.all_nhel[pdir]
-        else:
-            fct = self.get_mymod(pdir,'NHEL') 
-            iden,NHEL = fct()
-	    # NHEL returns next arrays each filled with helicities
-            ungrouped_helicities = NHEL.transpose().tolist()
 
-	    # This is needed in order to make a list of lists 
-	    # that contains elements like [[-1,-1,1,-1], [-1,-1,-1,-1]]
-	    # where the helicity that changes is the one of the decaying particle
-            grouped_helicities = {}
-            for item in ungrouped_helicities:
-                h = item.copy()
-                del h[position]
-                t = tuple(h)
-                grouped_helicities.setdefault(t, []).append(item)
-            self.all_nhel[pdir] = list(grouped_helicities.values()), iden
+        if pdir in self.all_nhel:
+
+            iden,NHEL = self.all_nhel[pdir]()
+            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
+            groups = {} 
+            nhel = sorted(nhel) 
+            for item in nhel:
+                a = item.copy()
+                del a[position]
+                t = tuple(a)
+                groups.setdefault(t, []).append(item)
+                grouped = list(groups.values())
+            return grouped,iden
+        else : 
+            self.all_nhel[pdir] = self.get_mymod(pdir,'NHEL')
+
             return self.get_nhel(event,position)
 
-# .      OLD CODE BY QUENTIN TO RETURN ONLY HELICITY WHERE HE
-#        pdir,orig_order = self.get_pdir(event)
-#
-#        if pdir in self.all_nhel:
-#
-#            iden,NHEL = self.all_nhel[pdir]()
-#            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
-#            groups = {} 
-#            nhel = sorted(nhel) 
-#            for item in nhel:
-#                a = item.copy()
-#                del a[position]
-#                t = tuple(a)
-#                groups.setdefault(t, []).append(item)
-#                grouped = list(groups.values())
-#            return grouped,iden
-#        else : 
-#            self.all_nhel[pdir] = self.get_mymod(pdir,'NHEL')
-#
-#            return self.get_nhel(event,position)
-#
 
     def get_mymod(self,pdir,MODE): 
 
@@ -2047,7 +1989,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         pdir = self.all_me[tag]['pdir']
         return pdir,orig_order
 
-    def calculate_matrix_element(self, event, helicity=None):
+    def calculate_matrix_element(self, event):
         """routine to return the matrix element"""        
         
         tag, order = event.get_tag_and_order()
@@ -2075,9 +2017,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 p = rwgt_interface.ReweightInterface.invert_momenta(p)
                 #print(f"Spyros p after reweighting= {p}")    
                 if event[0].color1 == 599 and event.aqcd==0:
-                    new_value = self.all_f2py[pdir](p, 0.113, 0) 
+                    new_value = self.all_f2py[pdir](p, 0.113, 0)
                 else:       
                     new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                    #print(f"Spyros calculate ME for p = {p}, aqcd = {event.aqcd}, ME = {new_value}")
                 if self.options['identical_particle_in_prod_and_decay'] == "average":
                     out += new_value
                 else:
@@ -2108,7 +2051,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     else:
                         mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
             self.all_f2py[pdir] = mymod.get_value 
-            return self.calculate_matrix_element(event,helicity)
+            return self.calculate_matrix_element(event)
         
         
     def generate_all_matrix_element(self):
