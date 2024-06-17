@@ -1069,11 +1069,11 @@ class AskRunNLO(cmd.ControlSwitch):
     def get_allowed_fixed_order(self):
         """ """
         
-        if self.proc_characteristics['ninitial'] == 1 or \
-           'QED' in self.proc_characteristics['splitting_types']:
-            return ['ON']
-        else:
-            return ['ON', 'OFF']
+        #if self.proc_characteristics['ninitial'] == 1 or \
+        #   'QED' in self.proc_characteristics['splitting_types']:
+        #    return ['ON']
+        #else:
+        return ['ON', 'OFF']
         
     def set_default_fixed_order(self):
           
@@ -1081,8 +1081,8 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['fixed_order'] = 'ON'
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['fixed_order'] = 'ON'
-        elif 'QED' in self.proc_characteristics['splitting_types']:
-             self.switch['fixed_order'] = 'ON'
+        #elif 'QED' in self.proc_characteristics['splitting_types']:
+        #     self.switch['fixed_order'] = 'ON'
         else:
             self.switch['fixed_order'] = 'OFF'
 
@@ -1095,9 +1095,9 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def print_options_fixed_order(self):
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
-            return "No NLO+PS available for EW correction"
-        else:
+        #if 'QED' in self.proc_characteristics['splitting_types']:
+        #    return "No NLO+PS available for EW correction"
+        #else:
             return self.print_options('fixed_order', keep_default=True)
     
     def color_for_shower(self, switch_value):
@@ -1114,23 +1114,23 @@ class AskRunNLO(cmd.ControlSwitch):
         """ temporary way to forbid event generation due to lack of validation"""
         
 #        if True:
-        if 'QED' in self.proc_characteristics['splitting_types']:
-            out = {}
-            to_check ={'fixed_order': ['ON'],
-                       'shower': ['OFF'],
-                       'madanalysis': ['OFF'],
-                       'madspin': ['OFF','onshell','none'],
-                       'reweight': ['OFF']}
-            for key, allowed  in to_check.items():        
-                if switch[key] not in allowed:
-                    out[key] = allowed[0]
-                    if not self.nb_fo_warning:
-                        if 'QED' in self.proc_characteristics['splitting_types']:
-                            logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
-                        self.nb_fo_warning = 1
-        else: 
-            return self.check_consistency_with_all(key, value)
-        return out 
+#        if 'QED' in self.proc_characteristics['splitting_types']:
+#            out = {}
+#            to_check ={'fixed_order': ['ON'],
+#                       'shower': ['OFF'],
+#                       'madanalysis': ['OFF'],
+#                       'madspin': ['OFF','onshell','none'],
+#                       'reweight': ['OFF']}
+#            for key, allowed  in to_check.items():        
+#                if switch[key] not in allowed:
+#                    out[key] = allowed[0]
+#                    if not self.nb_fo_warning:
+#                        if 'QED' in self.proc_characteristics['splitting_types']:
+#                            logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
+#                        self.nb_fo_warning = 1
+        #else: 
+        return self.check_consistency_with_all(key, value)
+        #return out 
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
     consistency_shower = lambda self, *args, **opts: self.consistency_QED('shower', *args, **opts)
@@ -1185,9 +1185,9 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
-            self.allowed_shower = ['OFF']
-            return self.allowed_shower
+        #if 'QED' in self.proc_characteristics['splitting_types']:
+        #    self.allowed_shower = ['OFF']
+        #    return self.allowed_shower
 
         if not misc.which('bc'):
             return ['OFF']
@@ -1234,9 +1234,10 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def set_default_shower(self): 
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
-            self.switch['shower'] = 'Not Avail'
-        elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
+#        if 'QED' in self.proc_characteristics['splitting_types']:
+#            self.switch['shower'] = 'Not Avail'
+
+        if self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['shower'] = 'OFF'
