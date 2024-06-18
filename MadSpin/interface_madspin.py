@@ -1777,7 +1777,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         for pdg in decays:
             # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
-	    
+	     
 	    # Spyros: this should later be removed for allowing more than one decays
             nchanging = len(init_part)
             assert nchanging == 1 
@@ -1787,8 +1787,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             #print(f"Spyros position = {position}")	    
 	    
             # Allowed helicities of decaying particle - make this more generic
-            allowed_hel = [-1, 1]
-	    
+            allowed_hel = [[1, -1]]
+	    	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
 	        # Spyros: add here the code to cache the inter_prod in order to avoid recalculating it for each decay
@@ -1837,8 +1837,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decay_hel = decay_event.get_helicity()
                 pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
 		
+		# Number of helicity combinations to consider
+                ncomb = nchanging*len(allowed_hel[0])
+		
 		# Spyros: try to use get_all_inter
-                all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, nchanging*len(allowed_hel))
+                print(f"production = {production}")
+                print(f"production_hel = {production_hel}")
+                print(f"position = {position}")
+                print(f"nchanging = {nchanging}")
+                print(f"allowed_hel = {allowed_hel}")	
+                print(f"ncomb = {ncomb}")		
+                all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, ncomb)
                 #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
 		
                 me = 0
@@ -1882,6 +1891,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             inter_tmp = []
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
+                print(f"{self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)}")
                 inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)
             inter[0][0] = inter_temp[0]
             inter[0][1] = inter_temp[1]
