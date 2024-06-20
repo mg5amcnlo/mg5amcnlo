@@ -1787,7 +1787,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             #print(f"Spyros position = {position}")	    
 	    
             # Allowed helicities of decaying particle - make this more generic
-            allowed_hel = [[1, -1]]
+            allowed_hel = [1, -1]
 	    	    
 	    # ------- inter_prod_dict filling -------- #
             if inter_prod_dict_exists and len(inter_prod_dict) == 0:
@@ -1838,18 +1838,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
 		
 		# Number of helicity combinations to consider
-                ncomb = nchanging*len(allowed_hel[0])
-		
-		# Spyros: try to use get_all_inter
-                print(f"production = {production}")
-                print(f"production_hel = {production_hel}")
-                print(f"position = {position}")
-                print(f"nchanging = {nchanging}")
-                print(f"allowed_hel = {allowed_hel}")	
-                print(f"ncomb = {ncomb}")		
-                all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, ncomb)
-                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
-		
+                ncomb = nchanging*len(allowed_hel)
+				
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
                 #print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} / nhel_d_tot = {len(nhel_d_tot)}")
@@ -1866,10 +1856,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for j,hel_d in enumerate(nhel_d_tot):
                         #print(f"decay hel = {hel_d}")	    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
-                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
+                        inter_prod_dec = [inter_prod[i] * inter_dec[j] for i in range(len(inter_prod)) for j in range(len(inter_dec))]                      
                         me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
-
+                
+		# Spyros: try to use get_all_inter
+                #print(f"production = {production}")
+                #print(f"production_hel = {production_hel}")
+                #print(f"position = {position}")
+                #print(f"nchanging = {nchanging}")
+                #print(f"allowed_hel = {allowed_hel}")	
+                #print(f"ncomb = {ncomb}")
+                #print(f"decay_event = {decay_event}")
+                #print(f"pos_in_dec = {pos_in_dec}")
+                #print(f"decay_hel = {decay_hel}")		
+                #all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, ncomb)
+                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
+		
                 # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 
                     full_event.append(decay_event[k+1])
@@ -1885,18 +1888,19 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def get_all_inter(self, event, hel_fixed, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
-        	
+        
+        inter = [[0,0]]*2
+		
         if pdir in self.all_inter_ij:
             all_p = event.get_all_momenta(orig_order)
             inter_tmp = []
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
-                print(f"{self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)}")
                 inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)
-            inter[0][0] = inter_temp[0]
-            inter[0][1] = inter_temp[1]
-            inter[1][0] = inter_temp[1].conjugate()
-            inter[1][1] = inter_temp[2]
+            inter[0][0] = inter_tmp[0]
+            inter[0][1] = inter_tmp[1]
+            inter[1][0] = inter_tmp[1].conjugate()
+            inter[1][1] = inter_tmp[2]
             return inter
         else : 
             self.all_inter_ij[pdir] = self.get_mymod(pdir,'ALL_INTER')
