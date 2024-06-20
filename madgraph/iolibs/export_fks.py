@@ -4409,9 +4409,7 @@ Parameters              %(params)s\n\
                                     ("c settings other partons flavours outside quark, gluon, photon to 0d0\n" + \
                                      "%s%d=0d0\n") % \
                                          (pdf_codes[initial_state],i + 1)                                
-
                 pdf_lines = pdf_lines + "ENDIF\n"
-
             # Add up PDFs for the different initial state particles
             pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
             for proc in processes:
@@ -4431,15 +4429,42 @@ Parameters              %(params)s\n\
 
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
-
+                
                 # this is for the lepton collisions with electron luminosity 
                 # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
                 pdf_lines += "if (ABS(LPP(1)).EQ.ABS(LPP(2)).and. (ABS(LPP(1)).EQ.3.or.ABS(LPP(1)).EQ.4).and.pdlabel.ne.'none')" + \
                              "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
                              tuple(comp_list)
 
+            pdf_lines = pdf_lines + "\nPD2(0) = 0d0\nIPROS = 0\n"
+            for proc in processes:
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "\nIPROS=IPROS+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nPD2(IPROS) = "
+                for ibeam in [2]:
+                    initial_state = proc.get_initial_pdg(ibeam)
+                    if initial_state in pdf_codes.keys():
+                        pdf_lines = pdf_lines + "%s%d" % \
+                                    (pdf_codes[initial_state], ibeam) + "\n"
+                    else:
+                        pdf_lines = pdf_lines + "1d0*"
+            pdf_lines = pdf_lines + "\nPD1(0) = 0d0\nIPROSS = 0\n"
+            for proc in processes:
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "\nIPROSS=IPROSS+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nPD1(IPROSS) = "
+                for ibeam in [1]:
+                    initial_state = proc.get_initial_pdg(ibeam)
+                    if initial_state in pdf_codes.keys():
+                        pdf_lines = pdf_lines + "%s%d" % \
+                                    (pdf_codes[initial_state], ibeam) + "\n"
+			#pdf_lines = pdf_lines[:-1] + "\n"
+                    else:
+                        pdf_lines = pdf_lines + "1d0*"
+
         # Remove last line break from pdf_lines
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
+
 
 
     #test written
