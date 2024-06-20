@@ -1,6 +1,6 @@
 module scale_module
-  use kinematics_module
   use process_module
+  use kinematics_module
   implicit none
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
        shower_scale_nbody_max,shower_scale_nbody_min
@@ -25,7 +25,7 @@ contains
     
   subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked
+    integer :: i,j,flow_picked,fks_father
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -33,9 +33,12 @@ contains
     call get_global_ref_scale(p)
     if (flow_picked .lt. 0) then
        fks_father=-flow_picked
-       do i=1,next_n
+       do_i : do i=1,next_n
           if (i.eq.fks_father) cycle
-          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
+          do j=1,max_flows_n
+             if (.not. valid_dipole_n(i,fks_father,j)) cycle do_i
+          enddo
+!!$          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
           ref_scale=get_ref_scale_dipole(p,i,fks_father)
           call get_scaleminmax(ref_scale,scalemin,scalemax)
           rrnd=ran2()
@@ -45,7 +48,7 @@ contains
           shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
           shower_scale_nbody_min(i,fks_father)=scalemin
           shower_scale_nbody_max(i,fks_father)=scalemax
-       enddo
+       enddo do_i
     elseif (flow_picked.gt.0) then
        do i=1,next_n
           do j=1,next_n

@@ -5,8 +5,8 @@ module process_module
   integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
   logical,allocatable,dimension(:,:,:) :: valid_dipole_n,valid_dipole_n1
   double precision :: shat_n1,collider_energy
-  character(len=10) :: shower_mc_mod
-  character(len=4) :: abrv_mod
+  character*10 :: shower_mc_mod
+  character*4 :: abrv_mod
   logical :: mcatnlo_delta_mod
 
   public :: init_process_module_global,init_process_module_nbody, &
@@ -18,8 +18,8 @@ contains
        mcatnlo_delta_in,collider_energy_in,max_flows_n_in,max_flows_n1_in)
     implicit none
     integer :: nexternal_in,nincoming_in,max_flows_n_in,max_flows_n1_in
-    character(len=10) :: shower_mc_in
-    character(len=4) :: abrv_in
+    character*10 :: shower_mc_in
+    character*4 :: abrv_in
     logical :: mcatnlo_delta_in
     double precision :: collider_energy_in
     ! global:

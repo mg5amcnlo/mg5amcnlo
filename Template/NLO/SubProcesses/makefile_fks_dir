@@ -35,6 +35,7 @@ endif
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
+	 process_module.o kinematics_module.o scale_module.o		\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 genps_fks.o setcuts.o setscales.o veto_xsec.o			\
@@ -42,7 +43,6 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o				\
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
 	 rescale_alpha_tagged.o						\
-	 process_module.o kinematics_module.o scale_module.o		\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o 		    				\
 	 boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o	\

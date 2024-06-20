@@ -2,8 +2,8 @@ module kinematics_module
   ! Need to call fill_kinematics_module before anything else !
   use process_module
   implicit none
-  integer,public :: ileg
-  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,w1,w2,yi,yj,x, &
+  integer,public :: ileg,fksfather
+  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yi,yj,x, &
        xij,betad,betas,kn,knbar,kn0
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
@@ -110,23 +110,24 @@ contains
     implicit none
     double precision,dimension(0:3,next_n1) :: pp
     double precision :: xi_i_fks,y_ij_fks,mass
-    integer :: i_fks,j_fks,fks_father
+    integer :: i_fks,j_fks
     double precision :: veckn_ev,veckbarn_ev,xp0jfks
     common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
 
+    fksfather=min(i_fks,j_fks)
+    
     jmass=mass ! this is the mass of j_fks
 
     xm12=0d0
     xm22=0d0
     xq1q=0d0
     xq2q=0d0
-    qMC=-1d0
     kn=veckn_ev
     knbar=veckbarn_ev
     kn0=xp0jfks
 
     ! Determine ileg
-    call fill_ileg(i_fks,j_fks)
+    call fill_ileg()
 
     ! fill the momenta for the recoilers and emitters and emitted.
     call get_momenta_emitter_recoiler(pp,i_fks,j_fks)
@@ -321,17 +322,15 @@ contains
          ( (xs-xw1)*beta*(2*xs-(xs-xw1)*eps+(xs-xw1)*beta) )
   end function get_zeta
 
-  subroutine fill_ileg(i_fks,j_fks)
+  subroutine fill_ileg()
     implicit none
-    integer :: i_fks,j_fks,fksfather
     ! ileg = 1 ==> emission from left     incoming parton
     ! ileg = 2 ==> emission from right    incoming parton
     ! ileg = 3 ==> emission from massive  outgoing parton
     ! ileg = 4 ==> emission from massless outgoing parton
     ! Instead of jmass, one should use pmass(fksfather), but the
     ! kernels where pmass(fksfather) != jmass are non-singular
-    fksfather=min(i_fks,j_fks)
-    if(fksfather.le.2 .and. fks_father.gt.0)then
+    if(fksfather.le.2 .and. fksfather.gt.0)then
        ileg=fksfather
     elseif(jmass.ne.0d0)then
        ileg=3

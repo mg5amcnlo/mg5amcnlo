@@ -1581,7 +1581,7 @@ c
  112  continue
 
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks,i_fks,j_fks)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
@@ -1765,7 +1765,7 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
 
 
       subroutine fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks,i_fks,j_fks)
       use kinematics_module
       implicit none
       integer icountevts
@@ -1774,7 +1774,7 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
      $ xi_i_fks,xi_i_hat,p_i_fks(0:3),y_ij_fks,xp(0:3,nexternal),p(0:3,nexternal),
      $ xjac,jac,m_j_fks
 
-      integer i,j
+      integer i,j,i_fks,j_fks
 
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
