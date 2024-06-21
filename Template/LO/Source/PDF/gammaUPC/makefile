@@ -8,7 +8,7 @@ include ../../make_opts
 
 EXE=test
 
-photonflux=tbessk.o tbessj.o nielsen_generalized_polylog.o ElasticPhotonPhotonFlux.o OpticalGlauber_Geometry.o nintlib.o interpolation.o photonpdfsquare.o
+photonflux=tbessk.o tbessj.o elliptic_integral.o nielsen_generalized_polylog.o photoabsorption.o ElasticPhotonPhotonFlux.o OpticalGlauber_Geometry.o nintlib.o interpolation.o fmin_module.o photonpdfsquare.o
 
 all: $(LIBDIR)$(LIBRARY)
 
@@ -21,7 +21,10 @@ $(EXE): test.o $(photonflux)
 test.o: test.f90 ElasticPhotonPhotonFlux.mod OpticalGlauber_Geometry.mod
 	$(FC) $(FFLAGS) -c $<
 
-ElasticPhotonPhotonFlux.o ElasticPhotonPhotonFlux.mod: ElasticPhotonPhotonFlux.f90 OpticalGlauber_Geometry.mod nintlib.mod interpolation.mod
+ElasticPhotonPhotonFlux.o ElasticPhotonPhotonFlux.mod: ElasticPhotonPhotonFlux.f90 OpticalGlauber_Geometry.mod nintlib.mod interpolation.mod fmin_module.mod photoabsorption.mod
+	$(FC) $(FFLAGS) -c $<
+
+photoabsorption.o photoabsorption.mod: photoabsorption.f90
 	$(FC) $(FFLAGS) -c $<
 
 photonpdfsquare.o : photonpdfsquare.f ElasticPhotonPhotonFlux.mod
@@ -33,10 +36,16 @@ tbessk.o: tbessk.f90
 tbessj.o: tbessj.f90
 	$(FC) $(FFLAGS) -c $<
 
+elliptic_integral.o: elliptic_integral.f90
+	$(FC) $(FFLAGS) -c $<
+
 nielsen_generalized_polylog.o nielsen_generalized_polylog.mod: nielsen_generalized_polylog.f90
 	$(FC) $(FFLAGS) -c $<
 
 interpolation.o interpolation.mod: interpolation.f90
+	$(FC) $(FFLAGS) -c $<
+
+fmin_module.o fmin_module.mod: fmin_module.f90
 	$(FC) $(FFLAGS) -c $<
 
 OpticalGlauber_Geometry.o OpticalGlauber_Geometry.mod: OpticalGlauber_Geometry.f90 nintlib.mod interpolation.mod nielsen_generalized_polylog.mod

@@ -162,9 +162,14 @@ class Systematics(object):
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
             #self.b1 = beam1//2212
             isEVAxDIS=True
-        # none, chff, edff
-        if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
+        # none, chff, edff and their neutron tagging options
+        nosystlabels=['none','chff','edff']
+        for y in ['i','x','0','1','2','3','4']:
+            for z in ['i','x','0','1','2','3','4']:
+                upclabels.append('edf'+y+'n'+z+'n')
+                upclabels.append('chf'+y+'n'+z+'n')
+        if(self.banner.run_card['pdlabel'] in nosystlabels):
+            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff,chf<y>n<z>n, edf<y>n<z>n')
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
