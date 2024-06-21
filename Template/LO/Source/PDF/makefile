@@ -28,7 +28,7 @@ else
 endif
 
 # check if we need to link to gammaUPC
-ifneq (,$(filter edff chff, $(pdlabel1) $(pdlabel2)))
+ifneq (,$(filter edff chff edfinin chfinin edfinxn chfinxn edfin0n chfin0n edfin1n chfin1n edfin2n chfin2n edfin3n chfin3n edfin4n chfin4n edfxnin chfxnin edfxnxn chfxnxn edfxn0n chfxn0n edfxn1n chfxn1n edfxn2n chfxn2n edfxn3n chfxn3n edfxn4n chfxn4n edf0nin chf0nin edf0nxn chf0nxn edf0n0n chf0n0n edf0n1n chf0n1n edf0n2n chf0n2n edf0n3n chf0n3n edf0n4n chf0n4n edf1nin chf1nin edf1nxn chf1nxn edf1n0n chf1n0n edf1n1n chf1n1n edf1n2n chf1n2n edf1n3n chf1n3n edf1n4n chf1n4n edf2nin chf2nin edf2nxn chf2nxn edf2n0n chf2n0n edf2n1n chf2n1n edf2n2n chf2n2n edf2n3n chf2n3n edf2n4n chf2n4n edf3nin chf3nin edf3nxn chf3nxn edf3n0n chf3n0n edf3n1n chf3n1n edf3n2n chf3n2n edf3n3n chf3n3n edf3n4n chf3n4n edf4nin chf4nin edf4nxn chf4nxn edf4n0n chf4n0n edf4n1n chf4n1n edf4n2n chf4n2n edf4n3n chf4n3n edf4n4n chf4n4n, $(pdlabel1) $(pdlabel2)))
 # go through here if pdflabel1 or pdlabel2 is on "edff" or "chff"
    TOREMOVE += $(LIBDIR)libgammaUPC.$(libext)
 # remove it to force recompilation of the library if back on it
