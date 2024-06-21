@@ -131,6 +131,7 @@ c     saved. 'pdflast' is filled below.
       xlast(2,ireuse)=xx2
       pdlabellast(ireuse)=pdlabel
 
+      neutron_tagging(1:2)=-2
       if(pdlabel(1:3).eq.'edf') then
          USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
          if(pdlabel(4:4).ne.'f')then
@@ -188,6 +189,11 @@ c 4n
             else
                WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
                STOP 5
+            endif
+         else
+            if(pdlabel(5:7).ne.'   ')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 9
             endif
          endif
       elseif(pdlabel(1:3).eq.'chf') then
@@ -247,6 +253,11 @@ c 4n
             else
                WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
                STOP 8
+            endif
+         else
+            if(pdlabel(5:7).ne.'   ')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 10
             endif
          endif
       else
