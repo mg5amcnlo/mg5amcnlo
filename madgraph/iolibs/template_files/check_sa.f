@@ -132,6 +132,7 @@ c      write (*,*) "-------------------------------------------------"
       end
     
        SUBROUTINE get_density_matrix(P)
+       implicit none
 C---  integer nexternal ! number particles (incoming+outgoing) in the me
        INCLUDE "nexternal.inc"
        REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
@@ -156,7 +157,7 @@ c      density matrix helicity index value for particle 1
        ALLOW_HEL(1) = +1
        ALLOW_HEL(2) = -1
 c      
-       call GET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
        
        SOL=0
        DO I=1, N_COMB
@@ -165,7 +166,7 @@ c
              DO K =1, N_CHANGING
                 WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((K-1)*N_COMB+I), ALLOW_HEL((K-1)*N_COMB+J)
             ENDDO
-             write(*,*) 'value is ', INTER(SOL)
+             write(*,*) 'value is ',SOL , INTER(SOL)
           ENDDO
        ENDDO
 

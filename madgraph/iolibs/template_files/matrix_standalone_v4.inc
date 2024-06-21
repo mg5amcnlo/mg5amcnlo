@@ -15,20 +15,20 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
-	  INTEGER HEL
+      INTEGER HEL
 C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+      COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL %(proc_prefix)sSMATRIX(P,ANS)
-	  USERHEL=-1
+      CALL %(proc_prefix)sSMATRIX(P,ANS)
+      USERHEL=-1
 
-	  END
+      END
 
       SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS)
 C  
@@ -48,14 +48,14 @@ C CONSTANTS
 C  
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-	  INTEGER    NINITIAL 
+      INTEGER    NINITIAL 
       PARAMETER (NINITIAL=%(nincoming)d)
       INTEGER NPOLENTRIES
       PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
-	  INTEGER HELAVGFACTOR
-	  PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
+      INTEGER HELAVGFACTOR
+      PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
 C  
 C ARGUMENTS 
 C  
@@ -73,7 +73,7 @@ C  put in common block to expose this variable to python interface
       INTEGER IHEL,IDEN, I, J
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
-	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
@@ -83,8 +83,8 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
-	  DATA USERHEL/-1/	  
+      COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+      DATA USERHEL/-1/    
       LOGICAL HELRESET
       common/%(proc_prefix)shelreset/HELRESET
       data HELRESET/.true./
@@ -92,7 +92,7 @@ C
 %(helicity_lines)s
 %(den_factor_line)s
 
-	  INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
       DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
 
@@ -127,43 +127,43 @@ C     lorentz invariant with expternal spin-2 particles (only the helicity sum i
 C     For this reason, we simply remove the filterin when there is only three external particles.
       IF (NEXTERNAL.LE.3) THEN
         DO IHEL=1,NCOMB
-		  GOODHEL(IHEL)=.TRUE.
-		ENDDO
-	  ENDIF
+          GOODHEL(IHEL)=.TRUE.
+        ENDDO
+      ENDIF
       ANS = 0D0
           DO IHEL=1,NCOMB
-	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
+             IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN       
                 IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
-				    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+                    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                         CYCLE
                     ENDIF
-c		    write (*,*) 'HEL = ',NHEL(:,IHEL)
+c           write (*,*) 'HEL = ',NHEL(:,IHEL)
                     T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))
                     IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                         ANS=ANS+T
                     ENDIF
-				    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
                         GOODHEL(IHEL)=.TRUE.
                     ENDIF
                 ENDIF
-		     ENDIF
+             ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)
-c	  write (*,*) "Spyros: IDEN         = ", IDEN
-c	  write (*,*) "Spyros: USERHEL      = ", USERHEL
-c	  write (*,*) "Spyros: HELAVGFACTOR = ", HELAVGFACTOR
-	  IF(USERHEL.NE.-1) THEN
-          ANS=ANS*HELAVGFACTOR	  
-	  ELSE
-		DO J=1,NINITIAL
-		  IF (POLARIZATIONS(J,0).ne.-1) THEN
+c     write (*,*) "Spyros: IDEN         = ", IDEN
+c     write (*,*) "Spyros: USERHEL      = ", USERHEL
+c     write (*,*) "Spyros: HELAVGFACTOR = ", HELAVGFACTOR
+      IF(USERHEL.NE.-1) THEN
+          ANS=ANS*HELAVGFACTOR    
+      ELSE
+        DO J=1,NINITIAL
+          IF (POLARIZATIONS(J,0).ne.-1) THEN
             ANS=ANS*BEAMS_HELAVGFACTOR(J)
             ANS=ANS/POLARIZATIONS(J,0)
-c	    write (*,*) "Spyros: InPart ", J, " BEAMS_HELAVGFACTOR = ", BEAMS_HELAVGFACTOR(J), ", POLARIZATION = ", POLARIZATIONS(J,0)  
-		  ENDIF
-		ENDDO
-	  ENDIF
-	  END
+c       write (*,*) "Spyros: InPart ", J, " BEAMS_HELAVGFACTOR = ", BEAMS_HELAVGFACTOR(J), ", POLARIZATION = ", POLARIZATIONS(J,0)  
+          ENDIF
+        ENDDO
+      ENDIF
+      END
        
        
       REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
@@ -376,12 +376,69 @@ C
       INTER = (0.D0,0.D0)  
       DO I = 1, NCOLOR 
         ZTEMP = DCONJG(JAMP_2(I))
-	DO J=1, NCOLOR
+    DO J=1, NCOLOR
           INTER = INTER + %(proc_prefix)sCF(J,I) * JAMP_1(J) * ZTEMP 
         ENDDO 
       ENDDO
 
       END       
+
+
+
+      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+c     P momenta
+c     NHEL base of helicity that are not changing
+c     POS(N_CHNGING): position of the changing helicity
+c     n_changing: number of changing helicity
+c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
+c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
+      implicit none
+CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: N_CHANGING
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
+c
+C
+C ARGUMENTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER THISNHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      DOUBLE COMPLEX INTER(99)
+      DOUBLE COMPLEX TMP_INTER(99)
+      INTEGER NB_NHEL
+      PARAMETER (NB_NHEL=%(ncomb)d)
+c LOCAL
+      INTEGER I,IHEL,IPART
+C
+      INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
+C     put in common block to expose this variable to python interface
+      COMMON/PROCESS_NHEL/NHEL
+
+
+      DO I=1, N_COMB*(N_COMB+1)/2
+        INTER(I) = 0
+      enddo
+
+      DO IHEL =1, NB_NHEL
+        THISNHEL(:) = NHEL(:, IHEL)
+        DO IPART=1,N_CHANGING
+            if(THISNHEL(POS(IPART)).NE.ALLOW_HEL(1+N_COMB*(IPART-1))) GOTO 10 !BYPASS COMPUTATION FOR HELICITY
+        ENDDO
+        TMP_INTER(:) = 0
+        call  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, TMP_INTER)
+        do I = 1, N_COMB*(N_COMB+1)/2
+           INTER(I) = INTER(I) + TMP_INTER(I)
+        enddo 
+ 10   enddo   
+      return 
+      end
 
 
       SUBROUTINE  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
@@ -392,13 +449,13 @@ c     n_changing: number of changing helicity
 c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
 c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
       implicit none
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
-CF2PY INTENT(IN) :: NHEL(NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
+CF2PY INTENT(IN) :: NHEL(%(nexternal)d)
 CF2PY INTENT(IN) :: POS(N_CHANGING)
 CF2PY INTENT(IN) :: N_CHANGING
 CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY INTENT(IN) :: N_COMB
-CF2PY INTENT(OUT) :: INTER((NCOMB*NCOMB+1)/2)
+CF2PY INTENT(OUT) :: INTER(NCOMB*(NCOMB+1)/2)
 c
 C
 C ARGUMENTS
@@ -410,7 +467,7 @@ C
       INTEGER N_CHANGING, N_COMB
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
-      DOUBLE COMPLEX INTER(*)
+      DOUBLE COMPLEX INTER(99)
 c
 c     Intermediate array
 c
