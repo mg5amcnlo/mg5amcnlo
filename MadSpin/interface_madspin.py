@@ -1849,7 +1849,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for j,hel_d in enumerate(nhel_d_tot):
                         #print(f"decay hel = {hel_d}")	    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
-                        inter_prod_dec = [inter_prod[i] * inter_dec[j] for i in range(len(inter_prod)) for j in range(len(inter_dec))]                      
+                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
                 
