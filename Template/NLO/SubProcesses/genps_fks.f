@@ -1282,9 +1282,9 @@ c All done, so check four-momentum conservation
       call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
 c      
  112  continue
-
+      
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,m_j_fks,i_fks,j_fks)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then

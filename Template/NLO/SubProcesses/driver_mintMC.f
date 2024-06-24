@@ -673,6 +673,7 @@ c
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
       use mint_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -682,7 +683,7 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum
+     $     ,iFKS,sum,flow_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -857,6 +858,8 @@ c for different nFKSprocess.
             MCcntcalled=0
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
+
+            call init_process_module_n1body_wrapper(p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
@@ -1010,12 +1013,10 @@ c determined which contributions are identical.
       valid_dipole=.false.
       do k=1,max_bcol
          do j=1,nexternal-1
-            if (icolup(1,j,k).eq.0) cycle
-            if (icolup(2,j,k).eq.0) cycle
+            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
             do i=1,nexternal-1
                if (i.eq.j) cycle
-               if (icolup(1,i,k).eq.0) cycle
-               if (icolup(2,i,k).eq.0) cycle
+               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
                if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
      &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
      &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
@@ -1028,6 +1029,48 @@ c determined which contributions are identical.
       
       call init_process_module_nbody(nexternal-1,mass,colour
      $     ,max_bcol,valid_dipole)
+      
+      end
+      
+      subroutine init_process_module_n1body_wrapper(p)
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      integer iFKS,colour(1:nexternal),i,j,k,get_color
+      double precision mass(1:nexternal),get_mass_from_id,p(0:3
+     $     ,nexternal),shat,dot
+      external get_color,dot
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal,1:nexternal,1:maxflow)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+
+      do i=1,nexternal
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do k=1,maxflow
+         do j=1,nexternal
+            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
+            do i=1,nexternal
+               if (i.eq.j) cycle
+               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
+               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+                  valid_dipole(i,j,k)=.true.
+               endif
+            enddo
+         enddo
+      enddo
+      
+      shat=2d0*dot(p(0,1),p(0,2))
+      call init_process_module_n1body(nexternal,mass,colour
+     $     ,maxflow,valid_dipole,shat)
       
       end
       

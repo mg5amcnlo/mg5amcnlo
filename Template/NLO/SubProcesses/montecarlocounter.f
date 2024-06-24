@@ -678,8 +678,8 @@ c -- call to MC counterterm functions
      $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
-         damping=compute_damping_weight(cur_part,fks_father,xi_i_fks
-     $        ,y_ij_fks)
+         damping=compute_damping_weight(cur_part,xi_i_fks_ev
+     $        ,y_ij_fks_ev)
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
             if(isspecial(cflows)) then
@@ -748,14 +748,15 @@ c -- call to MC counterterm functions
       end
 
       double precision function compute_damping_weight(cur_part
-     $     ,fks_father,xi_i_fks,y_ij_fks)
+     $     ,xi_i_fks,y_ij_fks)
+      use kinematics_module
       use scale_module
       implicit none
-      integer :: cur_part,fks_father
+      integer :: cur_part
       double precision :: xi_i_fks,y_ij_fks,emscafun,smin,smax,qMC
      $     ,ptresc
-      smin=shower_scale_nbody_min(cur_part,fks_father)
-      smax=shower_scale_nbody_max(cur_part,fks_father)
+      smin=shower_scale_nbody_min(cur_part,fksfather)
+      smax=shower_scale_nbody_max(cur_part,fksfather)
       qMC=get_qMC(xi_i_fks,y_ij_fks)
       ptresc=(qMC-smin)/(smax-smin)
       compute_damping_weight=1d0-emscafun(ptresc,1d0)
@@ -1037,12 +1038,16 @@ c Main loop over colour partners used to end here
 
 
       subroutine compute_spitting_kernels(xkern,xkernazi,z,xi,xjac)
+      use kinematics_module
       implicit none
       double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
       double precision tiny
       parameter (tiny=1d-6)
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
+      integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
       xkern(1:2)    = 0d0
       xkernazi(1:2) = 0d0
       if( (ileg.ge.3 .and.
@@ -1092,7 +1097,7 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
 
       subroutine limits(xi_i_fks,y_ij_fks)
       implicit none
-      double precision tiny
+      double precision tiny,xi_i_fks,y_ij_fks
       logical softtest,colltest
       common/sctests/softtest,colltest
       logical limit,non_limit
@@ -1107,29 +1112,33 @@ c one can remove any reference to xi_i_fks
       end
       
       double precision function xfact_ileg12(N_p)
+      use process_module
       use kinematics_module
       implicit none
       integer N_p
-      xfact_ileg12=(1d0-yi)*(1d0-x)/x * 4d0/(s*N_p)
+      xfact_ileg12=(1d0-yi)*(1d0-x)/x * 4d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg3(N_p)
+      use process_module
       use kinematics_module
       implicit none
       integer N_p
       xfact_ileg3=(2d0-(1d0-x)*(1d0-(kn0/kn)*yj))/
-     &     kn*knbar*(1d0-x)*(1d0-yj) * 2d0/(s*N_p)
+     &     kn*knbar*(1d0-x)*(1d0-yj) * 2d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg4(N_p)
+      use process_module
       use kinematics_module
       implicit none
       integer N_p
       xfact_ileg4=(2d0-(1d0-x)*(1d0-yj))/
-     &     xij*(1d0-xm12/s)*(1d0-x)*(1d0-yj) * 2d0/(s*N_p)
+     &     xij*(1d0-xm12/shat_n1)*(1d0-x)*(1d0-yj) * 2d0/(shat_n1*N_p)
       end
 
       subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
+      use process_module
       use kinematics_module
       implicit none
       include "coupl.inc"
@@ -1212,6 +1221,7 @@ c
       end
       
       subroutine compute_splitting_kernel_icode2(xkern,xkernazi,z,xi)
+      use process_module
       use kinematics_module
       implicit none
       include "coupl.inc"
@@ -1266,6 +1276,7 @@ c
       end
       
       subroutine compute_splitting_kernel_icode3(xkern,xkernazi,z,xi)
+      use process_module
       use kinematics_module
       implicit none
       include "coupl.inc"
@@ -1331,6 +1342,7 @@ c
       use process_module
       use kinematics_module
       implicit none
+      include "nexternal.inc"
       include "coupl.inc"
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
      $     ,ap(1:2),Q(1:2)
@@ -1340,10 +1352,15 @@ c
       double precision vcf,one
       parameter (vcf=4d0/3d0)
       parameter (one=1d0)
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1427,6 +1444,7 @@ c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
       subroutine complete_xmcsubt(p,lzone,xmcxsec,xmcxsec2,MCsec
      $     ,probne)
+      use scale_module
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -2460,6 +2478,8 @@ c
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt)
+      use kinematics_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -2601,7 +2621,7 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
             else
-               emsca=shower_scale_nbody(mpartner,fks_father)
+               emsca=shower_scale_nbody(mpartner,fksfather)
             endif
          else
             emsca=scalemax
@@ -2631,7 +2651,7 @@ c Assign emsca on statistical basis
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
             else
-               emsca=shower_scale_nbody(mpartner,fks_father)
+               emsca=shower_scale_nbody(mpartner,fksfather)
             endif
          else
             emsca=scalemax
@@ -3037,7 +3057,17 @@ c the same holds for bornbarstilde(i).
       ! always the case if either the compute_born or the virtual
       ! (through bornsoftvirtual) are evaluated.
       implicit none
-      integer flow_picked
+      include 'genps.inc'
+      include "born_nhel.inc"
+      integer flow_picked,i
+      double precision sumborn,target,sum
+      double precision ran2
+      external ran2
+      double Precision amp2(ngraphs),jamp2(0:ncolor)
+      common/to_amps/  amp2         ,jamp2
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c sumborn is the sum of the leading colour flow contributions to the Born.
       sumborn=0.d0
       do i=1,max_bcol
@@ -4962,10 +4992,10 @@ c
       double precision z,xi,qMC,PY6PTweight
       logical lzone
 
-      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda,sumdot,dot
+      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda
      $     ,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,get_angle
-     $     ,theta2p
-      external sumdot,dot,get_angle
+     $     ,theta2p,max_scale
+      external get_angle
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -4985,6 +5015,7 @@ c Skip if unphysical shower variables
 c Definition and initialisation of variables
       lzone=.true.
       PY6PTweight=-1d0
+      max_scale=shower_scale_nbody_max(ipartner,ifather)
       do i=0,3
          pifather(i)=p_born(i,ifather) ! father momentum (Born level)
          pip(i)  =p_born(i,ipartner) ! partner momentum (Born level)
@@ -5006,16 +5037,16 @@ c Definition and initialisation of variables
          if (shower_mc_mod(1:8).eq.'HERWIGPP')
      &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
          if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then
-            beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
+            beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
             zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
             zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
          endif
          if (shower_mc_mod(1:7).eq.'PYTHIA8') then
-            beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
+            beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
             mdip  =sqrt((sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2)
             ! mdip corresponds to sqrt(dip.m2DipCorr)
             ! (around line 2305 in Pythia TimeShower.cc)
-            mdip_g=sqrt((sqrt(s) -sqrt(xmr2))**2-xmm2)
+            mdip_g=sqrt((sqrt(shat_n1) -sqrt(xmr2))**2-xmm2)
             ! Global-recoil adaption of the above
             zp2=(1+beta)/2      ! These are the solutions of equation q2 s == z(1-z)(s+q2-xmr2)^2
             zm2=(1-beta)/2      ! where q2 = (p_i_FKS + p_j_FKS)^2
@@ -5046,11 +5077,11 @@ c
       elseif(shower_mc_mod(1:8).eq.'PYTHIA6Q')then
          if(ileg.le.2)then
             if(mstp67.eq.2.and.ipartner.gt.2.and.
-     &         4*xi/s/(1-z).ge.theta2p)lzone=.false.
+     &         4*xi/shat_n1/(1-z).ge.theta2p)lzone=.false.
          elseif(ileg.gt.2)then
             if(mstj50.eq.2.and.ipartner.le.2.and.
 c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
-     &           max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/s.ge.theta2p)
+     &           max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/shat_n1.ge.theta2p)
      &           lzone=.false.
             if(z.gt.zp1.or.z.lt.zm1)lzone=.false.
          endif
@@ -5061,12 +5092,12 @@ c
          if(mstp67.eq.2) PY6PTweight=min(1d0,(1-ycc)/(1-yi))
 c
       elseif(shower_mc_mod(1:7).eq.'PYTHIA8')then
-         if(ileg.le.2.and.z.gt.1-sqrt(xi/z/s)*
-     &      (sqrt(1+xi/4/z/s)-sqrt(xi/4/z/s)))lzone=.false.
+         if(ileg.le.2.and.z.gt.1-sqrt(xi/z/shat_n1)*
+     &      (sqrt(1+xi/4/z/shat_n1)-sqrt(xi/4/z/shat_n1)))lzone=.false.
          if(ileg.gt.2)then
-            max_scale=min(min(scalemax,mdip/2),mdip_g/2) ! Pythia as well
-   ! in the global recoil scheme, constrains radiation to be softer than local
-   ! dipole mass divided by two 
+   ! Pythia as well in the global recoil scheme, constrains radiation to be
+   ! softer than local dipole mass divided by two
+            max_scale=min(max_scale,mdip/2,mdip_g/2)
             if(z.gt.min(zp2,zp3).or.z.lt.max(zm2,zm3))lzone=.false.
          endif
 
@@ -5074,8 +5105,7 @@ c
 
 ! If the relative pT of the splitting is larger then the maximum shower
 ! scale, we are in the deadzone
-      if (qMC.gt.shower_scale_nbody_max(ipartner,ifather))
-     &     lzone=.false.
+      if (qMC.gt.max_scale) lzone=.false.
 
       return
       end

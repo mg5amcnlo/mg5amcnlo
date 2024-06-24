@@ -113,7 +113,7 @@ contains
     integer :: i_fks,j_fks
     double precision :: veckn_ev,veckbarn_ev,xp0jfks
     common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-
+    
     fksfather=min(i_fks,j_fks)
     
     jmass=mass ! this is the mass of j_fks

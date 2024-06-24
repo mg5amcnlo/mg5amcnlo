@@ -199,8 +199,9 @@ c
      &        maxproc,maxproc_used
          stop
       endif
-      if (maxflow_used.gt.maxflow) then
-         write (*,*) 'ERROR in leshouche_inc_chooser: increase maxflow',
+      if (maxflow_used.ne.maxflow) then
+         write (*,*) 'ERROR in leshouche_inc_chooser: maxflow and '/
+     &        /'maxflow_used should be equal',
      &        maxflow,maxflow_used
          stop
       endif
@@ -348,6 +349,7 @@ c born_leshouche.inc file.
       endif
 
       open(unit=78, file='leshouche_info.dat', status='old')
+      icolup_d=0 ! initialize colour to zero, (makes sure that valid_dipole() are set correctly).
       do while (.true.)
         read(78,'(a)',end=999) buff
         if (buff(:1).eq.'#') cycle

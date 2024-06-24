@@ -24,6 +24,7 @@ contains
     double precision :: collider_energy_in
     ! global:
     nexternal_mod=nexternal_in
+    next_n1=nexternal_in
     nincoming_mod=nincoming_in
     shower_mc_mod=shower_mc_in
     abrv_mod=abrv_in
@@ -71,7 +72,6 @@ contains
     integer,dimension(nexternal_in) :: colour_in
     logical,dimension(nexternal_in,nexternal_in,max_flows_in) :: valid_dipole_in
     double precision :: shat_in
-    next_n1=nexternal_in
     if (next_n1.ne.nexternal_mod) then
        write (*,*) 'ERROR #2 in setting up process module',next_n1,nexternal_mod
        stop 1
@@ -84,6 +84,7 @@ contains
     colour_n1=colour_in
     valid_dipole_n1=valid_dipole_in
     shat_n1=shat_in
+    
   end subroutine init_process_module_n1body
 
   subroutine RealToBornMapping(i_fks)
