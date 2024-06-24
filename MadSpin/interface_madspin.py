@@ -1530,7 +1530,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_nhel = {}
         self.all_jamp = {}
         self.all_inter = {}
-        self.all_inter_ij = {}
+        self.all_density = {}
         self.all_matrix = {}
         
         misc.sprint("Determine maxwgt")
@@ -1767,13 +1767,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         full_event = lhe_parser.Event(str(production))
         param_card = self.banner.param_card
         inter_prod_dict_exists = inter_prod_dict is not None
-        #print(f"Spyros production_event = {full_event}")
-        #print(f"Spyros decays = {decays}")
-	
-	# Spyros: get helicity of full event
-        production_hel = full_event.get_helicity()
-        #print(f"Spyros: production_hel = {production_hel}")
-		
+			
         for pdg in decays:
             # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
@@ -1834,7 +1828,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
 		# Get helicities of decay event
-                decay_hel = decay_event.get_helicity()
                 pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
 		
 		# Number of helicity combinations to consider
@@ -1860,23 +1853,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
                 
-		# Spyros: try to use get_all_inter
-                #print(f"production = {production}")
-                #print(f"production_hel = {production_hel}")
-                #print(f"position = {position}")
-                #print(f"nchanging = {nchanging}")
-                #print(f"allowed_hel = {allowed_hel}")	
-                #print(f"ncomb = {ncomb}")
-                #print(f"decay_event = {decay_event}")
-                #print(f"pos_in_dec = {pos_in_dec}")
-                #print(f"decay_hel = {decay_hel}")		
-                #all_inter_prod = self.get_all_inter(production, production_hel, position, nchanging, allowed_hel, ncomb)
-                #all_inter_dec = self.get_all_inter(decay_event, decay_hel, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
+		# Get density matrix for production and decay
+                #density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
+                #density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
 		
                 # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 
                     full_event.append(decay_event[k+1])
-                # print('full_event=',full_event)
                 
 		# Spyros for debugging 		
                 #print(f"Spyros full_event = {full_event}")
@@ -1886,26 +1869,28 @@ class MadSpinInterface(extended_cmd.Cmd):
  
         return full_event,me
 
-    def get_all_inter(self, event, hel_fixed, position, nchanging, allow_hel, ncomb):
+    def get_density(self, event, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
         
-        inter = [[0,0]]*2
+        if len(allow_hel) != 2:
+            raise RuntimeError("Density matrix formalism not yet implemented for particles with spin != 1/2")
+        density = [[0,0]]*2 
 		
-        if pdir in self.all_inter_ij:
+        if pdir in self.all_density:
             all_p = event.get_all_momenta(orig_order)
-            inter_tmp = []
+            density_tmp = []
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
-                inter_tmp = self.all_inter_ij[pdir](P, hel_fixed, position, nchanging, allow_hel, ncomb)
-            inter[0][0] = inter_tmp[0]
-            inter[0][1] = inter_tmp[1]
-            inter[1][0] = inter_tmp[1].conjugate()
-            inter[1][1] = inter_tmp[2]
-            return inter
+                density_tmp = self.all_density[pdir](P, position, nchanging, allow_hel, ncomb)
+            density[0][0] = density_tmp[0]
+            density[0][1] = density_tmp[1]
+            density[1][0] = density_tmp[1].conjugate()
+            density[1][1] = density_tmp[2]
+            return density
         else : 
-            self.all_inter_ij[pdir] = self.get_mymod(pdir,'ALL_INTER')
+            self.all_density[pdir] = self.get_mymod(pdir,'DENSITY')
 
-        return self.get_all_inter(event, hel_fixed, position, nchanging, allow_hel, ncomb) 	
+        return self.get_density(event, position, nchanging, allow_hel, ncomb) 	
 
    
     def get_inter_value(self,event,nhel):
@@ -1981,8 +1966,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat')) 
                     if MODE == 'INTER':
                         return mymod.get_amp,mymod.get_jamp,mymod.get_inter,mymod.get_matrix
-                    elif MODE == 'ALL_INTER':
-                        return mymod.get_all_inter
+                    elif MODE == 'DENSITY':
+                        return mymod.get_density
                     else : 
                         return mymod.get_nhel
 
