@@ -420,15 +420,14 @@ C
       INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
 C     put in common block to expose this variable to python interface
       COMMON/PROCESS_NHEL/NHEL
-
-
+      
       DO I=1, N_COMB*(N_COMB+1)/2
         INTER(I) = 0
       enddo
 
       DO IHEL =1, NB_NHEL
         THISNHEL(:) = NHEL(:, IHEL)
-        DO IPART=1,N_CHANGING
+	DO IPART=1,N_CHANGING
             if(THISNHEL(POS(IPART)).NE.ALLOW_HEL(1+N_COMB*(IPART-1))) GOTO 10 !BYPASS COMPUTATION FOR HELICITY
         ENDDO
         TMP_INTER(:) = 0
@@ -488,6 +487,7 @@ C ----------
 C BEGIN CODE
 C ----------
       IC(:)=1
+      write(*,*) ''
       do I = 1, N_COMB
          do N = 1, N_CHANGING
             NHEL(POS(N)) = ALLOW_HEL((N-1)*N_COMB+I)

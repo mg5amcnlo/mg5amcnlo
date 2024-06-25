@@ -56,6 +56,7 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+UseDensity = False
 
 class MadSpinOptions(banner.ConfigFile):
     
@@ -1777,7 +1778,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             assert nchanging == 1 
             
 	    # This is the position of the particle that decays in the production event
-            position = [k for k in range(len(production)) if production[k].pid == pdg]  
+            position = [k+1 for k in range(len(production)) if production[k].pid == pdg]  # +1 to convert to fortran conversion
             #print(f"Spyros position = {position}")	    
 	    
             # Allowed helicities of decaying particle - make this more generic
@@ -1790,11 +1791,22 @@ class MadSpinInterface(extended_cmd.Cmd):
 		                 
 	        # We first need to convert nhel_p_tot which is a list of lists of lists into a tuple
 	        # to make the dictionary
+		# Here each element of the dictionary corresponds to fixed helicities for the particles that don't decay
+		# e.g. with the decaying particle at position [2] we have 
+		# 1st element: (-1,-1,-1,-1), (-1,-1,1,-1)
+		# 2nd element: (1,-1,-1,-1), (1,-1,1,-1) etc
+		# get_density and get_inter_value give a list of inters
+		# inter(1) = jamp_1 * jamp_1.conjugate
+		# inter(2) = jamp_1 * jamp_2.conjugate
+		# inter(3) = jamp_2 * jamp_2.conjugate
+		# that are then summed over
+                #print(f"Spyros: nhel_p_tot = {nhel_p_tot} - len = {len(nhel_p_tot)}")
                 inter_prod_dict = dict.fromkeys(tuple(map(tuple, (h for h in hp))) for hp in nhel_p_tot)
                 #print(f"Spyros: inter_prod_dict = {inter_prod_dict}")
 	        		
 	        # Let's store the inter_prod in the dictionary
                 for hpair in inter_prod_dict: 
+                    #print(f"hpair = {hpair}")
                     inter_prod_dict[hpair] = self.get_inter_value(production, hpair)
                 #print(f"Spyros filling inter_prod_dict = {inter_prod_dict}")
 	    # ------------------------- #
@@ -1828,14 +1840,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #print(f"Spyros - nhel dec = {nhel_d_tot} , iden_d = {iden_d}")
                 
 		# Get helicities of decay event
-                pos_in_dec = [k for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
+                pos_in_dec = [k+1 for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
 		
 		# Number of helicity combinations to consider
                 ncomb = nchanging*len(allowed_hel)
 				
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
-                #print(f"Spyros: nhel_p_tot = {len(nhel_p_tot)} / nhel_d_tot = {len(nhel_d_tot)}")
+                #print(f"Spyros: nhel_p_tot = {nhel_p_tot} / nhel_d_tot = {nhel_d_tot}")
 						
                 for i,hel_p in enumerate(nhel_p_tot): 		    
 		    # Spyros convert hel_p from list of lists to tuple of tuples 
@@ -1849,14 +1861,33 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for j,hel_d in enumerate(nhel_d_tot):
                         #print(f"decay hel = {hel_d}")	    
                         inter_dec = self.get_inter_value(decay_event,hel_d)
+			# Here the indices for inter_prod and inter_dec need to be the same since
+			# inter_2_prod = jamp_1_prod * jamp_2_prod.conjugate
+			# inter_2_dec = jamp_1_dec * jamp_2_dec.conjugate
                         inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
                         me += sum(inter_prod_dec)/D_D_conj
                 me = me.real/(iden_p*color)
                 
 		# Get density matrix for production and decay
-                #density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
-                #density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, nchanging*len(allowed_hel))
+		# get_density gives the inters that already contain the sum over helicities
+		# density_1 = inter_1 = J_1^(3)*J_1^(3).conjugate + J_1^(4)*J_1^(4).conjugate
+		# density_2 = inter_2 = J_1^(3)*J_2^(3).conjugate + J_1^(4)*J_2^(4).conjugate
+		# density_3 = inter_3 = J_2^(3)*J_2^(3).conjugate + J_2^(4)*J_2^(4).conjugate
+		# where subscripts indicate the helicity of the decaying particle 
+		# and superscripts the helicities of the rest of the particles
+                density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
+                density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
 		
+		# To get the ME we need to multiply the production and decay inters with the same index
+                #print(f"density_prod = {density_prod}")
+                #print(f"density_dec = {density_dec}")
+                me2 = density_prod[0]*density_dec[0] \
+                      + density_prod[1]*density_dec[1] \
+                      + density_prod[1].conjugate()*density_dec[1].conjugate() \
+                      + density_prod[2]*density_dec[2]
+                me2 = me2.real/(iden_p*color)
+                print(f"me = {me} , me2 = {me2}")
+				
                 # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 
                     full_event.append(decay_event[k+1])
@@ -1878,15 +1909,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 		
         if pdir in self.all_density:
             all_p = event.get_all_momenta(orig_order)
-            density_tmp = []
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
-                density_tmp = self.all_density[pdir](P, position, nchanging, allow_hel, ncomb)
-            density[0][0] = density_tmp[0]
-            density[0][1] = density_tmp[1]
-            density[1][0] = density_tmp[1].conjugate()
-            density[1][1] = density_tmp[2]
-            return density
+                density = self.all_density[pdir](P, position, nchanging, allow_hel, ncomb)
+                return density
         else : 
             self.all_density[pdir] = self.get_mymod(pdir,'DENSITY')
 
@@ -1910,8 +1936,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 inter = []
            
                 for i,hel in enumerate(nhel):
+                    #print(f"hel = {hel}")		
                     amp.append(self.all_amp[pdir](P,hel,IC))
                     jamp.append(self.all_jamp[pdir](amp[i]))
+                #print(f"len(jamp) = {len(jamp)}")
                 for i in range(len(jamp)): 
                     for j in range(len(jamp)): 
                         inter.append(self.all_inter[pdir](jamp[i],jamp[j]))
