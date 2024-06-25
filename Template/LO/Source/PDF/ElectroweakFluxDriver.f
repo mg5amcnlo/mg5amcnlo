@@ -212,11 +212,11 @@ c     /* ********************************************************* *
 c      
       select case (vpol)
       case (-1)
-         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaorder)
+         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
       case (0)
-         tmpPDF = eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaorder)
+         tmpPDF = eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
       case (+1)
-         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaorder)
+         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
       case default
          write(*,*) 'vPol out of range; should not be here',vPol
          stop
@@ -247,9 +247,9 @@ c     /* ********************************************************* *
 c      
       select case (vpol)
       case (-1)
-         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo,evaorder)
+         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,evaorder)
       case (+1)
-         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo,evaorder)
+         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,evaorder)
       case default
          write(*,*) 'vPol out of range; should not be here',vPol
          stop
@@ -287,11 +287,11 @@ c
          if(isAntiNu) then ! no LH antineutrinos
             tmpPDF = 0
          else  
-            tmpPDF = eva_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaorder)
+            tmpPDF = eva_fX_to_fL(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
          endif
       case (+1)
          if(isAntiNu) then ! no RH neutrinos
-            tmpPDF = eva_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo,evaorder)
+            tmpPDF = eva_fX_to_fR(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
          else
             tmpPDF = 0
          endif
