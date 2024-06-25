@@ -633,6 +633,17 @@ c     Variables for keeping track of jets
       external is_octet
       setclscales=.true.
 
+       setclscales=.true.
+
+c Workaround for valgrind 'Conditional jump or move depends on uninitialised value(s)'
+c See https://github.com/mg5amcnlo/mg5amcnlo/issues/111
+c FIXME: this is just a workaround to avoid uninitialised values and undefined behaviour...
+c FIXME: a real bug is probably hidden in the code (goodjet must be correctly defined!)...
+c FIXME: adding this workaround may change the behaviour of existing code...
+      do i=1,n_max_cl
+        goodjet(i)=.false. !!FIXME!! there is no reason to choose false instead of true here...
+      end do
+
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
             s_scale(ivec)=scale
@@ -1227,7 +1238,7 @@ c
          do i=1,2
             do j=1,2
 c              First adjust goodjet based on iqjets
-               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then
+               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then ! FIXME: goodjet is uninitialised #111
                   if(iqjets(ipart(j,ida(i))).eq.0) goodjet(ida(i))=.false.
                endif
 c              Now reset ptclus if jet vertex
