@@ -148,11 +148,11 @@ C---  integer nexternal ! number particles (incoming+outgoing) in the me
        INTEGER I,J, SOL
        INTEGER K
 
-       NHEL(1) =  -1
-       NHEL(2) =   1
-       NHEL(4)=   -1 
-
-       POS(1) = 3
+       if(nincoming.eq.2) then
+            POS(1) = 3
+       else
+           POS(1) = 1
+       endif
 c      density matrix helicity index value for particle 1 
        ALLOW_HEL(1) = +1
        ALLOW_HEL(2) = -1
@@ -195,17 +195,16 @@ C         LOCAL
          REAL*8 etot2,mom,m1,m2,e1,e2
 
          ETOT2=energy**2
-         m1=pmass(1)
-         m2=pmass(2)
-         mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
-     -        2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
-         mom=dsqrt(mom)
-         e1=DSQRT(mom**2+m1**2)
-         e2=DSQRT(mom**2+m2**2)
-         write (*,*) e1+e2,mom
 
          if(nincoming.eq.2) then
 
+             m1=pmass(1)
+             m2=pmass(2)
+             mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
+     &            2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
+             mom=dsqrt(mom)
+             e1=DSQRT(mom**2+m1**2)
+             e2=DSQRT(mom**2+m2**2)
             P(0,1)=e1
             P(1,1)=0d0
             P(2,1)=0d0
