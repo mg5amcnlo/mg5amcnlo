@@ -487,7 +487,6 @@ C ----------
 C BEGIN CODE
 C ----------
       IC(:)=1
-      write(*,*) ''
       do I = 1, N_COMB
          do N = 1, N_CHANGING
             NHEL(POS(N)) = ALLOW_HEL((N-1)*N_COMB+I)

@@ -1697,7 +1697,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function 
                 _, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
-                #print(f"Spyros wgt for max : {wgt}")
+                print(f"Spyros wgt for max : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
             
@@ -1727,6 +1727,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
         
+        from copy import deepcopy
+        p1 = deepcopy(production)
+        d1 = deepcopy(decays)
+	
         tag, order = production.get_tag_and_order()
         try:
             info = self.generate_all.all_me[tag]
@@ -1758,7 +1762,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_me = self.calculate_matrix_element(full_event)
         else:
             full_event, full_me = self.calculate_matrix_element_from_density(production, decays, decay_dict, inter_prod_dict)
-	    # full_event need to be set after since modifies production
+            full_event = lhe_parser.Event(str(p1))
+            full_event = full_event.add_decays(d1)
+            me1 = self.calculate_matrix_element(full_event)
+            # full_event need to be set after since modifies production
+        
+        _, me2 = self.calculate_matrix_element_from_density(prod1, dec1, decay_dict, inter_prod_dict)
+        print(f"me1 = {me1} , me2 = {me2} , ratio = {me1/me2}")	
         return full_event, full_me/(production_me*decay_me)
  
            
@@ -1848,45 +1858,45 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me = 0
                 inter_prod_dict_exists = bool(inter_prod_dict)
                 #print(f"Spyros: nhel_p_tot = {nhel_p_tot} / nhel_d_tot = {nhel_d_tot}")
-						
-                for i,hel_p in enumerate(nhel_p_tot): 		    
-		    # Spyros convert hel_p from list of lists to tuple of tuples 
-		    # so that we can use the dictionary of inter_prod
-                    hp = tuple(map(tuple, (h for h in hel_p)))
-		    
-		    # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
-                    inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
-		    		    
-		    #print(f"Spyros: INTER_PROD = {inter_prod}")
-                    for j,hel_d in enumerate(nhel_d_tot):
-                        #print(f"decay hel = {hel_d}")	    
-                        inter_dec = self.get_inter_value(decay_event,hel_d)
-			# Here the indices for inter_prod and inter_dec need to be the same since
-			# inter_2_prod = jamp_1_prod * jamp_2_prod.conjugate
-			# inter_2_dec = jamp_1_dec * jamp_2_dec.conjugate
-                        inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
-                        me += sum(inter_prod_dec)/D_D_conj
-                me = me.real/(iden_p*color)
-                
-		# Get density matrix for production and decay
-		# get_density gives the inters that already contain the sum over helicities
-		# density_1 = inter_1 = J_1^(3)*J_1^(3).conjugate + J_1^(4)*J_1^(4).conjugate
-		# density_2 = inter_2 = J_1^(3)*J_2^(3).conjugate + J_1^(4)*J_2^(4).conjugate
-		# density_3 = inter_3 = J_2^(3)*J_2^(3).conjugate + J_2^(4)*J_2^(4).conjugate
-		# where subscripts indicate the helicity of the decaying particle 
-		# and superscripts the helicities of the rest of the particles
-                density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
-                density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
 		
-		# To get the ME we need to multiply the production and decay inters with the same index
-                #print(f"density_prod = {density_prod}")
-                #print(f"density_dec = {density_dec}")
-                me2 = density_prod[0]*density_dec[0] \
-                      + density_prod[1]*density_dec[1] \
-                      + density_prod[1].conjugate()*density_dec[1].conjugate() \
-                      + density_prod[2]*density_dec[2]
-                me2 = me2.real/(iden_p*color)
-                print(f"me = {me} , me2 = {me2}")
+                if not UseDensity:				
+                    for i,hel_p in enumerate(nhel_p_tot): 		    
+		        # Spyros convert hel_p from list of lists to tuple of tuples 
+		        # so that we can use the dictionary of inter_prod
+                        hp = tuple(map(tuple, (h for h in hel_p)))
+		    
+		        # Spyros: now instead of recalculating the inter_prod just take it from the dictionary
+                        inter_prod = inter_prod_dict[tuple(hp)] if inter_prod_dict_exists else self.get_inter_value(production,hel_p)
+		    		    
+		        #print(f"Spyros: INTER_PROD = {inter_prod}")
+                        for j,hel_d in enumerate(nhel_d_tot):
+                            #print(f"decay hel = {hel_d}")	    
+                            inter_dec = self.get_inter_value(decay_event,hel_d)
+			    # Here the indices for inter_prod and inter_dec need to be the same since
+			    # inter_2_prod = jamp_1_prod * jamp_2_prod.conjugate
+			    # inter_2_dec = jamp_1_dec * jamp_2_dec.conjugate
+                            inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
+                            me += sum(inter_prod_dec)/D_D_conj
+                    me = me.real/(iden_p*color)
+                else:
+		    # Get density matrix for production and decay
+		    # get_density gives the inters that already contain the sum over helicities
+		    # density_1 = inter_1 = J_1^(3)*J_1^(3).conjugate + J_1^(4)*J_1^(4).conjugate
+		    # density_2 = inter_2 = J_1^(3)*J_2^(3).conjugate + J_1^(4)*J_2^(4).conjugate
+		    # density_3 = inter_3 = J_2^(3)*J_2^(3).conjugate + J_2^(4)*J_2^(4).conjugate
+		    # where subscripts indicate the helicity of the decaying particle 
+		    # and superscripts the helicities of the rest of the particles
+                    density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
+                    density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
+		
+		    # To get the ME we need to multiply the production and decay inters with the same index
+                    #print(f"density_prod = {density_prod}")
+                    #print(f"density_dec = {density_dec}")
+                    me = density_prod[0]*density_dec[0] \
+                         + density_prod[1]*density_dec[1] \
+                         + density_prod[1].conjugate()*density_dec[1].conjugate() \
+                         + density_prod[2]*density_dec[2]
+                    me = me.real/(iden_p*color)
 				
                 # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 
