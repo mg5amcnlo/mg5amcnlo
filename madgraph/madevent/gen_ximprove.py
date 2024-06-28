@@ -157,7 +157,8 @@ class gensym(object):
             (stdout, _) = p.communicate(''.encode())
             stdout = stdout.decode('ascii',errors='ignore')
             if stdout:
-                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
+                lines = stdout.strip().split('\n')
+                nb_channel = max([math.floor(float(d)) for d in lines[-1].split()])
             else:
                 for matrix_file in misc.glob('matrix*orig.f', Pdir):
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
