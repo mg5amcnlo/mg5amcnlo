@@ -1186,6 +1186,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         booldict = {False: ".false.", True: ".true."}
 
+        misc.sprint('get_icolamp_lines F77',mapconfigs)
         if not matrix_element.get('color_basis'):
             # No color, so only one color factor. Simply write a ".true." 
             # for each config (i.e., each diagram with only 3 particle
@@ -1224,9 +1225,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                           [ijamp+1]
                 else:
                     self.proc_characteristic['single_color'] = False
+        ###misc.sprint('get_icolamp_lines F77',diag_jamp)
 
         colamps = ijamp + 1
         for iconfig, num_diag in enumerate(mapconfigs):        
+            ###misc.sprint('get_icolamp_lines F77',iconfig,num_diag)
             if num_diag == 0:
                 continue
 

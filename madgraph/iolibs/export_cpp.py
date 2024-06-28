@@ -1770,6 +1770,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         booldict = {False: "false", True: "true"}
 
         # Only want to include leading color flows, so find max_Nc
+        misc.sprint('get_icolamp_lines CPP',mapconfigs)
         color_basis = matrix_element.get('color_basis')
         if not color_basis:
             # No color, so only one color factor. Simply write a ".true." 
@@ -1802,11 +1803,16 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                                           [ijamp+1]
                 #else:
                 #    self.proc_characteristic['single_color'] = False
+        ###misc.sprint('get_icolamp_lines F77',diag_jamp)
 
         colamps = ijamp + 1
-        for iconfig, num_diag in enumerate(mapconfigs):  
-            # mapconfigs can be a list or a dictionary.
-            # In case of dictionary the num_diag will be the key of the dictionary.    
+        for iconfig, num_diag_key in enumerate(mapconfigs):  
+            # [AV fix bug #114: icolamp array is different in Fortran and CPP]
+            # Variable mapconfigs can be a list or a dictionary
+            # In the old (buggy) implementation num_diag was the key of the dictionary
+            # In the new (fixed) implementation num_diag is the value of the dictionary, extracting the first list element, and adding +1 (F77/CPP indexing?)
+            num_diag = mapconfigs[num_diag_key][0]+1
+            ###misc.sprint('get_icolamp_lines CPP',iconfig,num_diag)
             if num_diag == 0:
                 continue
 
