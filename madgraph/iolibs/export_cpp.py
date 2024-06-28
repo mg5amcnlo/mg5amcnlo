@@ -1803,7 +1803,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                                           [ijamp+1]
                 #else:
                 #    self.proc_characteristic['single_color'] = False
-        ###misc.sprint('get_icolamp_lines F77',diag_jamp)
+        ###misc.sprint('get_icolamp_lines CPP',diag_jamp)
 
         colamps = ijamp + 1
         for iconfig, num_diag_key in enumerate(mapconfigs):  
