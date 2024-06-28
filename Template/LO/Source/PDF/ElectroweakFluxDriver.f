@@ -63,7 +63,7 @@ c     1. check momentum fraction
 c     2. check fermion polarization fraction
       if(fLpol.lt.0d0.or.fLpol.gt.1d0) then
          write(*,*) 'eva: fLpol out of range',fLpol
-         stop
+         stop -1113
          eva_get_pdf_by_PID = 0d0
          return
       endif
@@ -212,7 +212,6 @@ c
       case (-1)
          tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
       case (0)
-         write(*,*)'gg2,gL2,gR2 = ',gg2,gL2,gR2
          tmpPDF = eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)
       case (+1)
          tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ebeam,ievo,evaorder)

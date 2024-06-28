@@ -96,7 +96,6 @@ c     EVA (1/6) for f_L > v_+
       double precision tmpXLP1,tmpXLP2,tmpNLP1,tmpNLP2,tmp
 c      
       coup2 = gg2*gL2/fourPiSq
-      write(*,*)'gg2,gL2,fourPiSq : ',gg2,gL2,fourPiSq
       split = (1.d0-x)**1 / 2.d0 / x ! note that exponent of (1-x) is 1
 c     needed for full LP / NLP
       ev2     = (x*ebeam)**2
@@ -116,7 +115,6 @@ c     set PDF according to order
             tmp = xxlog*(tmpXLP1+tmpNLP1) - muOmumv*(tmpXLP2+tmpNLP2)
       case (1) ! full LP 
             tmp = tmpXLP1*(xxlog - muOmumv)
-            write(*,*)'tmpXLP1*(xxlog - muOmumv) = ',tmp
       case default ! log LP
             if(ievo.eq.0) then
                   xxlog = dlog(mu2/mv2) ! update
@@ -125,9 +123,8 @@ c     set PDF according to order
             endif
             tmp = tmpXLP1*xxlog
       end select
-      write(*,*)'coup2,split : ', coup2,split
+
       eva_fL_to_vp = coup2*split*tmp
-      write(*,*)'eva_fL_to_vp = ',eva_fL_to_vp
       return
       end
 c     /* ********************************************************* *
@@ -143,7 +140,6 @@ c     EVA (2/6) for f_L > v_-
       double precision tmpXLP1,tmpXLP2,tmpNLP1,tmpNLP2,tmp
 c
       coup2 = gg2*gL2/fourPiSq
-      write(*,*)'gg2,gL2,fourPiSq : ',gg2,gL2,fourPiSq
       split = 1.d0 / 2.d0 / x
 c     needed for full LP / NLP
       ev2     = (x*ebeam)**2
@@ -163,7 +159,6 @@ c     set PDF according to order
             tmp = xxlog*(tmpXLP1+tmpNLP1) - muOmumv*(tmpXLP2+tmpNLP2)
       case (1) ! full LP 
             tmp = tmpXLP1*(xxlog - muOmumv)
-            write(*,*)'tmpXLP1*(xxlog - muOmumv) = ',tmp
       case default ! log LP
             if(ievo.eq.0) then
                   xxlog = dlog(mu2/mv2) ! update
@@ -172,9 +167,8 @@ c     set PDF according to order
             endif
             tmp = tmpXLP1*xxlog
       end select
-      write(*,*)'coup2,split : ', coup2,split
+
       eva_fL_to_vm = coup2*split*tmp
-      write(*,*)'eva_fL_to_vm = ',eva_fL_to_vm
       return
       end
 c     /* ********************************************************* *
@@ -203,9 +197,6 @@ c     set PDF according to order
             hflip(2) = eva_fL_to_vp(gg2,gL2,mv2,x,mu2,ebeam,ievo,1)
             tmp(2) = 0.5d0 * mvOev * (hflip(1)+hflip(2))
             tmp(1) = muOmumv
-            write(*,*)'0.5d0, mvOev,hflip(1),hflip(2) : ',0.5d0, mvOev,hflip(1),hflip(2)
-            write(*,*)'0.5d0 * mvOev * (hflip(1)+hflip(2)) =', tmp(2)
-            write(*,*)'muOmumv = ',tmp(1)
       case (1) ! full LP
             tmp(2) = 0.0d0
             tmp(1) = muOmumv
@@ -215,8 +206,6 @@ c     set PDF according to order
       end select
 
       eva_fL_to_v0 = coup2*split*tmp(1) - tmp(2)
-      write(*,*)'eva_fL_to_v0 = ',eva_fL_to_v0
-      stop
       return
       end
 c     /* ********************************************************* *
