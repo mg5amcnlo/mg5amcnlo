@@ -1,5 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.5.5 ():
+     NEWS: 3.5.x is becoming the new LTS branch. Support for 2.9.x (previous LTS) will be stopped end of december 2025.
+     OM: Fix a bug in the new strategy of combining events.
+     OM: Allow slurm/condor cluster to specify the wall time of the jobs (cluster_walltime)
+     OM: add new (hidden) entry in the run_card to force to keep all the log file (keep_log)
+     OM: Fixing a matchbox issue (introduced in 2.9.0)
+     OM: Dynamical scale choice for NLO can now be set via custom_fcts (was bugged before)
+
+
 3.5.4 (05/04/23):
       MZ+RF: Bug fixes:
         1) a bug related to event-generation, when virtual corrections include more than one
