@@ -212,7 +212,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|!\$)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|!)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):
@@ -232,7 +232,7 @@ class FortranWriter(FileWriter):
         # Check if this line is a comment
         if self.__comment_pattern.search(line):
             # This is a comment
-            res_lines = self.write_comment_line(line.lstrip()[1:])
+            res_lines = self.write_comment_line(line.lstrip()[1:], prefix=line.lstrip()[0])
             return res_lines
         elif self.__continuation_line.search(line):
             return line+'\n'
@@ -316,7 +316,7 @@ class FortranWriter(FileWriter):
 
         return res_lines
 
-    def write_comment_line(self, line):
+    def write_comment_line(self, line, prefix=''):
         """Write a comment line, with correct indent and line splits"""
         
         # write_comment_line must have a single line as argument
@@ -328,6 +328,8 @@ class FortranWriter(FileWriter):
             return ['%s\n' % line] 
         elif line.startswith("$OMP"):
             return ['!%s\n' % line] 
+        elif prefix == "#" and line.startswith(("ifdef","else","endif")):
+            return ['#%s\n' % line] 
 
         res_lines = []
 

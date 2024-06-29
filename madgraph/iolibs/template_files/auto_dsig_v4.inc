@@ -182,7 +182,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, VECSIZE_USED)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -223,15 +223,19 @@ C
       DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
       INTEGER IMODE
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER IMIRROR_VEC(*)
+      INTEGER ICONF_VEC(*)
       INTEGER VECSIZE_USED
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)      
 C ----------
 C BEGIN CODE
 C ----------
 C  
 C LOCAL VARIABLES 
 C
-      double precision QSCALE
       INTEGER I,ITYPE,LP,IPROC
+      DOUBLE PRECISION QSCALE
 %(pdf_vars_vec)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX) 
@@ -287,8 +291,8 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec
-
+	   integer ivec, curr_warp, iwarp
+	   integer channels(VECSIZE_MEMMAX)
 C  
 C DATA
 C  
@@ -314,11 +318,21 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,VECSIZE_USED
-c        Do not need those three here do I?	 
-	 XBK(:) = ALL_XBK(:,IVEC)
-c	 CM_RAP = ALL_CM_RAP(IVEC)
-	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+	 DO CURR_WARP=1, NB_WARP
+	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
+	     IB(1) = 1
+	     IB(2) = 2
+	   else
+	     IB(1) = 2
+	     IB(2) = 1	   
+	   endif
+	   DO IWARP=1, WARP_SIZE
+	      IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+c        Do not need those three here. do I?	 
+	      XBK(:) = ALL_XBK(:,IVEC)
+c	      CM_RAP = ALL_CM_RAP(IVEC)
+	      Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+
 
 C     Select a flavor combination (need to do here for right sign)
        CALL RANMAR(R)
@@ -327,7 +341,7 @@ C     Select a flavor combination (need to do here for right sign)
           IPSEL=IPSEL+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
-       channel = %(get_channel)s
+       %(get_channel_vec)s
 
 
        ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
@@ -339,8 +353,9 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-	 ENDDO
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+	 ENDDO ! end loop on IWARP/IVEC	 
+	 ENDDO ! end loop on the CURR_WARP
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO IVEC=1,VECSIZE_USED
@@ -405,8 +420,8 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col, VECSIZE_USED)
-     USE OMP_LIB
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, out, selected_hel, selected_col, VECSIZE_USED)
+%(OMP_LIB)s
      implicit none
 
      include 'nexternal.inc'
@@ -417,7 +432,7 @@ C
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
-     integer channel
+     integer channels(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
@@ -425,22 +440,23 @@ C
 
      integer ivec
 
+%(additional_header)s
 
-!$OMP PARALLEL
-!$OMP DO
+
+%(OMP_PREFIX)s
       DO IVEC=1, VECSIZE_USED
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
      &                           col_rand(IVEC),
-     &				 channel,
+     &				 channels(IVEC),
      &                           IVEC,
      &				 out(IVEC),
      &				 selected_hel(IVEC),
      &				 selected_col(IVEC)
      &				 )
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
+%(OMP_POSTFIX)s
+
      return
      end
 

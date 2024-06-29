@@ -11,6 +11,7 @@ ptest*
 *.pkl
 p_ME_*
 *.log
+.DS_Store
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
 input/mg5_configuration.txt

@@ -1534,7 +1534,7 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['group_subprocesses']:
             if args[1].lower() not in ['false', 'true', 'auto', 'gpu']:
-                raise self.InvalidCmd('%s needs argument False, True or Auto, got %s' % \
+                raise self.InvalidCmd('%s needs argument False, True, gpu or Auto, got %s' % \
                                       (args[0], args[1]))
         if args[0] in ['ignore_six_quark_processes']:
             if args[1] not in list(self._multiparticles.keys()) and args[1].lower() != 'false':
@@ -1636,7 +1636,6 @@ This will take effect only in a NEW terminal
                 args.pop(0)
                 if hasattr(output_cls, 'change_output_args'):
                     args[:] = output_cls.change_output_args(args, self) 
-                self.export
             else:
                 self._export_format = default
         else:
@@ -2499,7 +2498,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_wrap=1']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -2597,11 +2596,13 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, opts)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
+            if args[1] in ['complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
                            'include_lepton_initiated_processes',\
                            'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
                 return self.list_completion(text, ['False', 'True', 'default'])
+            elif args[1] in ['group_subprocesses']:
+                return self.list_completion(text, ['False', 'True', 'Auto', 'gpu', 'nlo'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
             elif args[1].lower() == 'ewscheme':
@@ -6147,7 +6148,6 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-        misc.sprint(return_code)
         if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
@@ -8127,6 +8127,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         args = self.split_arg(line)
         # Check Argument validity
+        self._export_plugin = None
         self.check_output(args)
 
         noclean = '-noclean' in args

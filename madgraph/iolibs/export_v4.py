@@ -140,7 +140,14 @@ class VirtualExporter(object):
     def generate_subprocess_directory(self, subproc_group, helicity_model, me=None, **opt):
     #    generate_subprocess_directory(self, matrix_element, helicity_model, me_number) [for ungrouped]
         return 0 # return an integer stating the number of call to helicity routine
-    
+
+    def generate_subprocess_directory_end(self, **opt):
+        """ This is called only if the class is used as a second exporter. (like simd plugin)
+            in that case opt contains all the local variable defined in the upstream class.
+            so if multiple option exists this can lead to variable existing in some setup and not other
+        """
+        return 
+
     def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[]):
         return
     
@@ -359,9 +366,7 @@ class ProcessExporterFortran(VirtualExporter):
                                                               MG_version['version'])
 
         # add the makefile in Source directory 
-        filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))
-
+        # now moved to finalize
 
         self.write_vector_size(writers.FortranWriter('vector.inc'))
         
@@ -476,7 +481,14 @@ class ProcessExporterFortran(VirtualExporter):
     #===========================================================================
     def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[], second_exporter=None):
         """Function to finalize v4 directory, for inheritance.""" 
-        
+
+        filename = pjoin(self.dir_path,'Source','makefile')
+        if not second_exporter:
+            self.write_source_makefile(writers.FileWriter(filename))
+        else:
+           replace_dict = self.write_source_makefile(None)
+           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+
         if second_exporter:
             self.has_second_exporter = second_exporter
 
@@ -725,11 +737,11 @@ class ProcessExporterFortran(VirtualExporter):
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = ' '.join(['$(LIBRARIES)']+self.get_source_libraries_list())
         if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
-            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make
 MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
 param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
         else:
-            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
+            model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         replace_dict= {'libraries': set_of_lib, 
@@ -1735,7 +1747,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,VECSIZE_USED\n"
+            pdf_lines = """ DO CURR_WARP=1, NB_WARP
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
+        ENDIF
+        DO IWARP=1, warp_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+          """
+
 
 
         if ninitial == 1:
@@ -1870,8 +1893,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
                     
-
-                misc.sprint(vector, subproc_group,self.opt['vector_size'])
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
 
@@ -1941,7 +1962,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         ee_pdf_definition_lines = ""
             else:
                 # Add up PDFs for the different initial state particles
-                pdf_lines += "ENDDO\n"
+                pdf_lines += "ENDDO ! IWARP LOOP\n"
+                pdf_lines += "ENDDO ! CURRWARP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
                 for proc in processes:
                     process_line = proc.base_string()
@@ -4196,6 +4218,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             self.opt['vector_size'] = 0
 
+        if opt and isinstance(opt['output_options'], dict) and \
+                                       'nb_warp' in opt['output_options']:
+            self.opt['nb_warp'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['nb_warp'], int, 'nb_warp')
+        else:
+            self.opt['nb_warp'] = 1
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -4993,6 +5022,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
 
         replace_dict = {}
+        replace_dict['additional_header'] = ''
+        replace_dict['OMP_LIB'] = " USE OMP_LIB"
+        replace_dict['OMP_PREFIX'] = "!$OMP PARALLEL\n!$OMP DO"
+        replace_dict['OMP_POSTFIX'] = "!$OMP END DO\n!$OMP END PARALLEL"
+
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -5028,7 +5062,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
-                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=max(self.opt['vector_size'],1))
+                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", 
+                                   vector=max(1,int(self.opt['vector_size'])))
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines
@@ -5046,12 +5081,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             replace_dict['cutsdone'] = ""
             replace_dict['get_channel'] = "SUBDIAG(%s)" % proc_id
+            replace_dict['get_channel_vec'] = """
+            CHANNELS(IVEC) = CONFSUB(%s,SYMCONF(ICONF_VEC(CURR_WARP)))
+            SUBDIAG(%s) = CHANNELS(IVEC) ! only valid if a single process
+            channel = SUBDIAG(%s)""" % (proc_id,proc_id, proc_id)
+            #SUBDIAG(%s)" % proc_id
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
+            replace_dict['get_channel_vec'] = " channel  = MAPCONFIG(ICONFIG)"
 
         # extract and replace ncombinations, helicity lines
         ncomb=matrix_element.get_helicity_combinations()
@@ -5105,6 +5146,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             vector_size = 1
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
+
+        try:
+            nb_warp = self.opt['output_options']['nb_warp']
+        except KeyError:
+            nb_warp = 1
+        nb_warp = banner_mod.ConfigFile.format_variable(nb_warp, int, name='nb_warp')
+        nb_warp = max(1, nb_warp)
+
         text=["""C
 C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
 C this is designed for offloading MEs to GPUs or vectorized C++,
@@ -5134,8 +5183,14 @@ C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
 C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
 C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
 C
+      INTEGER WARP_SIZE
+      PARAMETER (WARP_SIZE=%i)
+      INTEGER NB_WARP
+      PARAMETER (NB_WARP=%i)
       INTEGER VECSIZE_MEMMAX
-      PARAMETER (VECSIZE_MEMMAX=%i)""" % vector_size]
+      PARAMETER (VECSIZE_MEMMAX=%i)
+              
+              """ % (vector_size,nb_warp, vector_size*nb_warp)]
         fsock.writelines(text)
         return vector_size
 
@@ -6261,7 +6316,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
             if second_exporter:
                 process_exporter_cpp = second_exporter.oneprocessclass(matrix_element,second_helas, prefix=ime)
-                misc.sprint(process_exporter_cpp)
                 dirpath = '.'
                 with misc.chdir(dirpath):
                     logger.info('Creating files in directory %s' % dirpath)
@@ -6438,7 +6492,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         if second_exporter:
             tmp = locals()
             del tmp['self']
-            misc.sprint(os.getcwd())
             process_exporter_cpp.generate_subprocess_directory_end(**tmp) 
 
 
@@ -6499,7 +6552,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,VECSIZE_USED) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC,IMIRROR_VEC,VECSIZE_USED) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
@@ -6777,7 +6830,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             self.has_second_exporter = second_exporter
         super(ProcessExporterFortranMEGroup, self).finalize(*args, second_exporter=None, **opts)
         #ensure that the grouping information is on the correct value
-        self.proc_characteristic['grouped_matrix'] = True        
+        self.proc_characteristic['grouped_matrix'] = True
+
+        filename = pjoin(self.dir_path,'Source','makefile')
+        if not second_exporter:
+            self.write_source_makefile(writers.FileWriter(filename))
+        else:
+           replace_dict = self.write_source_makefile(None)
+           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+
         if second_exporter:
             second_exporter.finalize(*args, **opts)
 
@@ -6827,8 +6888,14 @@ class UFO_model_to_mg4(object):
         except KeyError:
             vector_size = 1
         self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
+        try:
+            nb_warp = self.opt['output_options']['nb_warp']
+        except KeyError:
+            nb_warp = 1
+        self.nb_warp = max(1, banner_mod.ConfigFile.format_variable(nb_warp, int, 'nb_warp'))
         if self.opt['mp']:
             self.vector_size = 0
+            self.nb_warp = 1
         self.scales = []
         self.MUE = None # extra parameter loop #2 which is running
         
@@ -7607,10 +7674,10 @@ C
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                        dp=True, mp=False, vec=self.vector_size)
+                                        dp=True, mp=False, vec=self.vector_size*self.nb_warp)
             if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                           dp=False, mp=True, vec=self.vector_size)
+                                           dp=False, mp=True, vec=self.vector_size*self.nb_warp)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
@@ -9785,6 +9852,8 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                 import madgraph.loop.loop_exporters as loop_exporters
                 return  loop_exporters.LoopInducedExporterMEGroup( 
                                                cmd._export_dir,loop_induced_opt)
+            elif cmd._export_plugin:
+                return cmd._export_plugin(cmd._export_dir,opt) 
             else:
                 return  ProcessExporterFortranMEGroup(cmd._export_dir,opt)                
         elif format in ['madevent']:
