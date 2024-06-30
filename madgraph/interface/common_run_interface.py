@@ -7699,7 +7699,8 @@ You can also copy/paste, your event file here.''')
                 logger.error('Please re-open the file and fix the problem.')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == self.paths['run']:
-            self.run_card = banner_mod.RunCard(path)
+            with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+                self.run_card = banner_mod.RunCard(path)
         elif path == self.paths['shower']:
             self.shower_card = shower_card_mod.ShowerCard(path)
         elif path == self.paths['ML']:
@@ -7785,7 +7786,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             return self.iterator
         
         def __exit__(self, ctype, value, traceback ):
-             self.iterator.write(self.path)
+            self.iterator.write(self.path)
     
     def scan_over_run_card(original_fct, obj, *args, **opts):
 
@@ -7800,8 +7801,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             return original_fct(obj, *args, **opts)
         
         
-        #with restore_iterator(orig_card, card_path):
-        if 1:
+        with restore_iterator(orig_card, card_path):
             # this with statement ensure that the original card is restore
             # whatever happens inside those block
 
