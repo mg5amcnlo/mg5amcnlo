@@ -502,8 +502,8 @@ c$$$      include 'madfks_mcatnlo.inc'
       integer npartner,cflows
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
+      logical first_MCcnt_call
+      common/cMCcall/first_MCcnt_call
 
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol,nsplitorders),
@@ -534,7 +534,6 @@ c$$$      include 'madfks_mcatnlo.inc'
       common /to_ref_scale/cur_part
       double precision smin,smax,ptresc,emscafun,qMC
       first_MCcnt_call=.true.
-      is_pt_hard=.false.
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_mc(1:amp_split_size)=0d0
@@ -554,7 +553,7 @@ c$$$         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
-         if(is_pt_hard)exit
+         if(.not.lzone(npartner)) cycle
          if (.not.mcatnlo_delta) then
             smin=shower_scale_nbody_min(cur_part,fksfather)
             smax=shower_scale_nbody_max(cur_part,fksfather)
@@ -644,8 +643,8 @@ c$$$      include 'madfks_mcatnlo.inc'
       common /MC_info/ ipartners,colorflow
       logical isspecial(max_bcol)
       common/cisspecial/isspecial
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
+      logical first_MCcnt_call
+      common/cMCcall/first_MCcnt_call
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -666,7 +665,6 @@ c$$$      include 'madfks_mcatnlo.inc'
       double precision smin,smax,ptresc,compute_damping_weight,qMC
 c -- call to MC counterterm functions
       first_MCcnt_call=.true.
-      is_pt_hard=.false.
       xmcxsec(1:nexternal)=0d0
       xmcxsec2(1:max_bcol)=0d0
       MCsec(1:nexternal,1:max_bcol)=0d0
@@ -677,12 +675,12 @@ c -- call to MC counterterm functions
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
-         if(is_pt_hard)exit
+         if(.not. lzone(npartner)) cycle
          damping=compute_damping_weight(cur_part,xi_i_fks_ev
      $        ,y_ij_fks_ev)
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
-            if(isspecial(cflows)) then
+            if (isspecial(cflows)) then
                N_p=2d0
             else
                N_p=1d0
@@ -727,12 +725,13 @@ c -- call to MC counterterm functions
       call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
-         if(.not.is_pt_hard) call complete_xmcsubt(p,lzone,xmcxsec
-     $        ,xmcxsec2,MCsec,probne)
+         if(any(lzone(1:ipartners(0)))) call complete_xmcsubt(p,lzone
+     $        ,xmcxsec,xmcxsec2,MCsec,probne)
       else
 ! assign emsca on statistical basis (don't need flow here): 
-         if(.not.is_pt_hard) call assign_emsca_and_flow_statistical(
-     $        xmcxsec,xmcxsec2,MCsec,lzone,idum,ddum)
+         if(any(lzone(1:ipartners(0)))) 
+     $        call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
+     $        ,MCsec,lzone,idum,ddum)
 ! include the bogus no-emission probability:
          xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
          amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
@@ -743,7 +742,7 @@ c -- call to MC counterterm functions
      $        /'have been set yet',MCcntcalled
          stop 1
       endif
-      if (is_pt_hard) MCcntcalled=MCcntcalled+16
+      if(any(lzone(1:ipartners(0)))) MCcntcalled=MCcntcalled+16
       return
       end
 
@@ -922,8 +921,8 @@ c over colour partners
       parameter (ymin=0.9d0)
       parameter(zero=0d0)
 ! common
-      logical first_MCcnt_call,is_pt_hard
-      common/cMCcall/first_MCcnt_call,is_pt_hard
+      logical first_MCcnt_call
+      common/cMCcall/first_MCcnt_call
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
       double precision alsf,besf
@@ -2631,30 +2630,36 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
 c Compute MC cross section
          wgt=0d0
          do npartner=1,ipartners(0)
-            wgt=wgt+xmcxsec(npartner)
+            if(lzone(npartner))then
+               wgt=wgt+xmcxsec(npartner)
+            endif
          enddo
 c Assign emsca on statistical basis
          if(wgt.gt.1d-30)then
             rrnd=ran2()
             wgt1=0d0
-            jpartner=0
             do npartner=1,ipartners(0)
-               if(lzone(npartner).and.jpartner.eq.0)then
+               if(lzone(npartner))then
                   wgt1=wgt1+xmcxsec(npartner)
                   if(wgt1.ge.rrnd*wgt)then
-                     jpartner=ipartners(npartner)
-                     mpartner=npartner
+                     mpartner=ipartners(npartner)
+                     exit
                   endif
                endif
             enddo
-            if(jpartner.eq.0)then
+            if(npartner.eq.ipartners(0)+1)then
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
             else
                emsca=shower_scale_nbody(mpartner,fksfather)
             endif
          else
-            emsca=scalemax
+            emsca=0d0
+            do npartner=1,ipartners(0)
+               emsca=max(emsca
+     $              ,shower_scale_nbody_max(ipartners(npartner)
+     $              ,fks_father))
+            enddo
          endif
       endif
 

@@ -20,6 +20,10 @@ contains
     double precision :: shower_scale_factor_in
     if (.not.allocated(shower_scale_nbody)) &
          allocate(shower_scale_nbody(nexternal-1,nexternal-1))
+    if (.not.allocated(shower_scale_nbody_max)) &
+         allocate(shower_scale_nbody_max(nexternal-1,nexternal-1))
+    if (.not.allocated(shower_scale_nbody_min)) &
+         allocate(shower_scale_nbody_min(nexternal-1,nexternal-1))
     shower_scale_factor=shower_scale_factor_in
   end subroutine init_scale_module
     

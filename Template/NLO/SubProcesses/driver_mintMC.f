@@ -6,6 +6,7 @@ c**************************************************************************
       use mint_module
       use FKSParams
       use process_module
+      use scale_module
       implicit none
 C
 C     CONSTANTS
@@ -208,6 +209,7 @@ c     Prepare the MINT folding
       ! Also put all the n-body process dependent stuff here. It does
       ! not depend on PS point or FKS config, so all global information.
       call init_process_module_nbody_wrapper()
+      call init_scale_module(nexternal,shower_scale_factor)
          
       
 c*************************************************************
@@ -859,7 +861,7 @@ c for different nFKSprocess.
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
 
-            call init_process_module_n1body_wrapper(p)
+            call init_process_module_n1body_wrapper()
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
@@ -890,7 +892,6 @@ c$$$               endif
 c$$$            endif
 
 !
-            
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 c check if event or counter-event passes cuts
@@ -985,6 +986,7 @@ c determined which contributions are identical.
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       endif
+            
       return
       end
 
@@ -1032,15 +1034,14 @@ c determined which contributions are identical.
       
       end
       
-      subroutine init_process_module_n1body_wrapper(p)
+      subroutine init_process_module_n1body_wrapper()
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       integer iFKS,colour(1:nexternal),i,j,k,get_color
-      double precision mass(1:nexternal),get_mass_from_id,p(0:3
-     $     ,nexternal),shat,dot
-      external get_color,dot
+      double precision mass(1:nexternal),get_mass_from_id
+      external get_color
       external get_mass_from_id
       logical valid_dipole(1:nexternal,1:nexternal,1:maxflow)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
@@ -1068,9 +1069,8 @@ c determined which contributions are identical.
          enddo
       enddo
       
-      shat=2d0*dot(p(0,1),p(0,2))
       call init_process_module_n1body(nexternal,mass,colour
-     $     ,maxflow,valid_dipole,shat)
+     $     ,maxflow,valid_dipole)
       
       end
       

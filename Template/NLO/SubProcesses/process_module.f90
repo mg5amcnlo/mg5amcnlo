@@ -4,7 +4,7 @@ module process_module
   double precision,allocatable,dimension(:) :: mass_n,mass_n1
   integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
   logical,allocatable,dimension(:,:,:) :: valid_dipole_n,valid_dipole_n1
-  double precision :: shat_n1,collider_energy
+  double precision :: collider_energy
   character*10 :: shower_mc_mod
   character*4 :: abrv_mod
   logical :: mcatnlo_delta_mod
@@ -65,13 +65,12 @@ contains
   end subroutine init_process_module_nbody
 
   subroutine init_process_module_n1body(nexternal_in, mass_in, colour_in, &
-       max_flows_in,valid_dipole_in, shat_in)
+       max_flows_in,valid_dipole_in)
     implicit none
     integer :: nexternal_in,max_flows_in
     double precision,dimension(nexternal_in) :: mass_in
     integer,dimension(nexternal_in) :: colour_in
     logical,dimension(nexternal_in,nexternal_in,max_flows_in) :: valid_dipole_in
-    double precision :: shat_in
     if (next_n1.ne.nexternal_mod) then
        write (*,*) 'ERROR #2 in setting up process module',next_n1,nexternal_mod
        stop 1
@@ -83,8 +82,6 @@ contains
     mass_n1=mass_in
     colour_n1=colour_in
     valid_dipole_n1=valid_dipole_in
-    shat_n1=shat_in
-    
   end subroutine init_process_module_n1body
 
   subroutine RealToBornMapping(i_fks)

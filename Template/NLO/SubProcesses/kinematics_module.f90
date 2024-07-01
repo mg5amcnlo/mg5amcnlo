@@ -4,7 +4,7 @@ module kinematics_module
   implicit none
   integer,public :: ileg,fksfather
   double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yi,yj,x, &
-       xij,betad,betas,kn,knbar,kn0
+       xij,betad,betas,kn,knbar,kn0,shat_n1
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
@@ -110,10 +110,12 @@ contains
     implicit none
     double precision,dimension(0:3,next_n1) :: pp
     double precision :: xi_i_fks,y_ij_fks,mass
+    double precision,external :: dot
     integer :: i_fks,j_fks
     double precision :: veckn_ev,veckbarn_ev,xp0jfks
     common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-    
+
+    shat_n1=2d0*dot(pp(0,1),pp(0,2))
     fksfather=min(i_fks,j_fks)
     
     jmass=mass ! this is the mass of j_fks
