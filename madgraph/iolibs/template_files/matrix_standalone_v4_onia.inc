@@ -275,8 +275,8 @@ C       Computing the projectors
           DO J = 1, SIZE(HELQ1)
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
-              NHEL_ONIA(Q2) = HELQ2(K) 
-              CALL ONIA_PROJ(P_ONIA(:,Q2), P_ONIA(:,Q1),PMASS_ONIA(Q2),PMASS_ONIA(Q1),NHEL_ONIA(Q2),NHEL_ONIA(Q1),S_ONIA(I),NHEL(QQ),PROJ(1))   
+              NHEL_ONIA(Q2) = HELQ2(K)   
+              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
               PROJ_SAVED(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
           ENDDO

@@ -941,79 +941,136 @@ c
 
 
 
-      subroutine onia_proj(p1, p2, m1, m2, nhel1, nhel2, spin, nhelext,
-     $       fonia)
+C       subroutine onia_proj(p1, p2, m1, m2, nhel1, nhel2, spin, nhelext,
+C      $       fonia)
+C       implicit none
+C       double complex fonia, vc(6),fo(6),fi(6)
+C       double precision p1(0:3), p2(0:3), p(0:3), m1, m2, mtot, fact
+C       integer nhel1, nhel2, spin, nhelext
+
+C       double complex im, comp1, comp2, comp3, comp4
+C       double complex term1, term2, term3, term4
+C       parameter( im = dcmplx(0.D0,1.0D0))
+
+C       call oxxxxx(p1,m1,nhel1,-1,fo)
+C       call ixxxxx(p2,m2,nhel2,+1,fi)
+C       p(0:3) = p1(0:3) + p2(0:3)
+C       mtot = m1 + m2
+
+C C     eff basis
+C       !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)+im*p(2))*fi(6)
+C       !comp2 = mtot*fi(4) + (p(1)-im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
+C       !comp3 = (p(0)-p(3))*fi(3) + (-im*p(2)-p(1))*fi(4) + mtot*fi(5)
+C       !comp4 = (+im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
+      
+C C     chiral basis = eff basis up to i -> -i
+C       !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
+C       !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
+C       !comp3 = (p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
+C       !comp4 = (-im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
+
+C C     Dirac basis
+C       !comp1 = (p(0)+mtot)*fi(3) + p(3)*fi(5) + (p(1)-im*p(2))*fi(6)
+C       !comp2 = (p(0)+mtot)*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(3))*fi(6)
+C       !comp3 = (-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + (-p(0)+mtot)*fi(5)
+C       !comp4 = (-im*p(2)-p(1))*fi(3) + (p(3))*fi(4) + (-p(0)+mtot)*fi(6)
+      
+C C     chiral alternate basis
+C       !comp1 = mtot*fi(3) + (p(3)-p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
+C       !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(0)-p(3))*fi(6)
+C       !comp3 = (-p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
+C       !comp4 = (-im*p(2)-p(1))*fi(3) + (-p(0)+p(3))*fi(4) + mtot*fi(6)
+
+C C     hss convention
+C       comp1 = fi(3)
+C       comp2 = fi(4)
+C       comp3 = fi(5)
+C       comp4 = fi(6)
+
+C       !fact= SQRT(32d0*m2*m1)*mtot/mtot/2d0 ! source of this factor? I divide eff fact factor by mtot/2d0 since this is already taken into account in below
+C       fact = 0.5D0/SQRT(2D0*m1*m2)
+      
+C       if(spin.eq.0)then
+C c     spin singlet    
+
+C          fonia = (-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
+C      $   +fo(6)*comp4)
+C       !fonia = 0.5d0/mtot*(-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
+C     ! $   +fo(6)*comp4)
+C       fonia = fonia*fact
+C       elseif(spin.eq.1)then !fixed? 
+C c     spin triplet
+C          call vxxxxx(p,mtot,nhelext,1,vc)
+
+C          term1 = fo(5)*(vc(3)-vc(6)) + fo(6)*(-vc(4)-im*vc(5))
+C          term2 = (-vc(4)+im*vc(5))*fo(5) + (vc(3) + vc(6))*fo(6)
+C          term3 = fo(3)*(vc(3)+vc(6)) + fo(4)*(vc(4)+im*vc(5))
+C          term4 = fo(3)*(vc(4) - im*vc(5)) + fo(4)*(vc(3)-vc(6))
+
+C          fonia = (term1*comp1 + term2*comp2 + term3*comp3
+C      $        + term4*comp4)
+C          fonia = fonia*fact
+C       else
+C          print *,"spin not yet implemented"
+C          stop
+C       endif
+C       return
+C       end
+
+      subroutine onia_proj(p1, m1, nhel1, p2, m2, nhel2, p3, m3, nhel3,
+     $       spin, proj)
+c
+c This subroutine computes the spin projector for an onium states.
+c
+c input:
+c       real    p1(0:3)        : four-momentum of constituent particle
+c       real    p2(0:3)        : four-momentum of constituent anti-particle
+c       real    p3(0:3)        : four-momentum of onium state
+c       real    m1(0:3)        : mass          of constituent particle
+c       real    m2(0:3)        : mass          of constituent anti-particle
+c       real    m3(0:3)        : mass          of onium state
+c       integer nhel1          : helicity      of constituent particle
+c       integer nhel2          : helicity      of constituent anti-particle
+c       integer nhel3          : helicity      of onium state
+c       integer spin           : spin          of onium state
+c
+c output:
+c       complex proj           : value of the projector
+c
       implicit none
-      double complex fonia, vc(6),fo(6),fi(6)
-      double precision p1(0:3), p2(0:3), p(0:3), m1, m2, mtot, fact
-      integer nhel1, nhel2, spin, nhelext
+      double precision p1(0:3), p2(0:3), p3(0:3)
+      double precision m1, m2, m3
+      integer nhel1, nhel2, nhel3
+      integer spin
+      double complex proj
 
-      double complex im, comp1, comp2, comp3, comp4
-      double complex term1, term2, term3, term4
-      parameter( im = dcmplx(0.D0,1.0D0))
+      double complex fi(6),fo(6),vc(6)
+      double complex ci, tmp
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
 
-      call oxxxxx(p1,m1,nhel1,-1,fo)
-      call ixxxxx(p2,m2,nhel2,+1,fi)
-      p(0:3) = p1(0:3) + p2(0:3)
-      mtot = m1 + m2
-
-C     eff basis
-      !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)+im*p(2))*fi(6)
-      !comp2 = mtot*fi(4) + (p(1)-im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
-      !comp3 = (p(0)-p(3))*fi(3) + (-im*p(2)-p(1))*fi(4) + mtot*fi(5)
-      !comp4 = (+im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
+      call ixxxxx(p1,m1,nhel1,+1,fi)
+      call oxxxxx(p2,m2,nhel2,-1,fo)
       
-C     chiral basis = eff basis up to i -> -i
-      !comp1 = mtot*fi(3) + (p(3)+p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
-      !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (p(0)-p(3))*fi(6)
-      !comp3 = (p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
-      !comp4 = (-im*p(2)-p(1))*fi(3) + (p(0)+p(3))*fi(4) + mtot*fi(6)
-
-C     Dirac basis
-      !comp1 = (p(0)+mtot)*fi(3) + p(3)*fi(5) + (p(1)-im*p(2))*fi(6)
-      !comp2 = (p(0)+mtot)*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(3))*fi(6)
-      !comp3 = (-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + (-p(0)+mtot)*fi(5)
-      !comp4 = (-im*p(2)-p(1))*fi(3) + (p(3))*fi(4) + (-p(0)+mtot)*fi(6)
-      
-C     chiral alternate basis
-      !comp1 = mtot*fi(3) + (p(3)-p(0))*fi(5) + (p(1)-im*p(2))*fi(6)
-      !comp2 = mtot*fi(4) + (p(1)+im*p(2))*fi(5) + (-p(0)-p(3))*fi(6)
-      !comp3 = (-p(0)-p(3))*fi(3) + (im*p(2)-p(1))*fi(4) + mtot*fi(5)
-      !comp4 = (-im*p(2)-p(1))*fi(3) + (-p(0)+p(3))*fi(4) + mtot*fi(6)
-
-C     hss convention
-      comp1 = fi(3)
-      comp2 = fi(4)
-      comp3 = fi(5)
-      comp4 = fi(6)
-
-      !fact= SQRT(32d0*m2*m1)*mtot/mtot/2d0 ! source of this factor? I divide eff fact factor by mtot/2d0 since this is already taken into account in below
-      fact = 0.5D0/SQRT(2D0*m1*m2)
-      
-      if(spin.eq.0)then
+      if (spin.eq.0) then
 c     spin singlet    
 
-         fonia = (-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
-     $   +fo(6)*comp4)
-      !fonia = 0.5d0/mtot*(-fo(3)*comp1 -fo(4)*comp2 + fo(5)*comp3
-    ! $   +fo(6)*comp4)
-      fonia = fonia*fact
-      elseif(spin.eq.1)then !fixed? 
+         tmp = -fi(3)*fo(3)-fi(4)*fo(4)+fi(5)*fo(5)+fi(6)*fo(6)
+
+      elseif (spin.eq.1) then
 c     spin triplet
-         call vxxxxx(p,mtot,nhelext,1,vc)
+         call vxxxxx(p3,m3,nhel3,+1,vc)
 
-         term1 = fo(5)*(vc(3)-vc(6)) + fo(6)*(-vc(4)-im*vc(5))
-         term2 = (-vc(4)+im*vc(5))*fo(5) + (vc(3) + vc(6))*fo(6)
-         term3 = fo(3)*(vc(3)+vc(6)) + fo(4)*(vc(4)+im*vc(5))
-         term4 = fo(3)*(vc(4) - im*vc(5)) + fo(4)*(vc(3)-vc(6))
-
-         fonia = (term1*comp1 + term2*comp2 + term3*comp3
-     $        + term4*comp4)
-         fonia = fonia*fact
+         tmp = (fi(3)*fo(6)-fi(5)*fo(4))*(vc(4)+ci*vc(5))+
+     &         (fi(4)*fo(5)-fi(6)*fo(3))*(vc(4)-ci*vc(5))+
+     &         (fi(3)*fo(5)+fi(6)*fo(4))*(vc(3)+vc(6))+
+     &         (fi(4)*fo(6)+fi(5)*fo(3))*(vc(3)-vc(6))
       else
-         print *,"spin not yet implemented"
+         print *,"spin projector not yet implemented"
          stop
       endif
+
+      proj = 0.5d0/SQRT(2d0*m1*m2)*tmp
+
       return
       end
 
