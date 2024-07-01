@@ -836,7 +836,9 @@ class Systematics(object):
                 index = self.args.index(pdfplusone)
                 self.args.insert(index, default)
 
-        self.log( "# Will Compute %s weights per event." % (len(self.args)-1))
+            self.log( "# Will compute %s weights per event." % (len(self.args)-1))
+        else:
+            self.log( "# Running EVA: will not compute PDF weights per event.")
         return
     
     def new_event(self):
@@ -1001,7 +1003,8 @@ class Systematics(object):
                     raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo,evaorder)
+                    ebeam1 = self.banner.run_card['ebeam1']
+                    wgt *= self.get_eva_scale_wgt_by_vx(Dmuf*muf1,vPID,self.b1,vPol,xx,ebeam1,ievo,evaorder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
@@ -1015,7 +1018,8 @@ class Systematics(object):
                     raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
                 xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo,evaorder)
+                    ebeam2 = self.banner.run_card['ebeam2']
+                    wgt *= self.get_eva_scale_wgt_by_vx(Dmuf*muf2,vPID,self.b2,vPol,xx,ebeam2,ievo,evaorder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
@@ -1109,35 +1113,20 @@ class Systematics(object):
         return wgt
 
 
-    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0, evaorder=0):
-        if abs(vPol) == 1:
-            if(evaorder==2):
-                return self.call_ievaNLP_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-            elif(evaorder==1):
-                return self.call_ieva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-            else:
-                return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-        elif vPol == 0:
-            if(evaorder==2):
-                return self.call_ievaNLP_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
-            elif(evaorder==1):
-                return self.call_ieva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
-            else:
-                return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+    def get_eva_scale_wgt_by_vx(self, muf, vPID, fPID, vPol, xx, beam, ievo=0, evaorder=0):
+        if(vPol==0):
+            return self.get_eva_stripped_pdf_v0(muf,vPID,fPID,xx,beam,ievo,evaorder)
+        elif(vPol==+1):
+            return self.get_eva_stripped_pdf_vp(muf,vPID,fPID,xx,beam,ievo,evaorder)
+        elif(vPol==-1):
+            return self.get_eva_stripped_pdf_vm(muf,vPID,fPID,xx,beam,ievo,evaorder)
         else:
-            raise SystematicsError("unknow EVA vPol %s " % vPol)
+            raise SystematicsError("unknow EVA vPol: %s " % vPol)
 
-    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        return 1e0
-    
-    def call_ieva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        return 1e0
-        
-    def call_ievaNLP_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        return 1e0
-
+    # KEEP THIS FOR NOW FOR ievo=1 ROUTINE
+    # TO DELETE
     def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        mufMin = self.get_eva_mufMin_byPID(vPID,fPID)
         if ievo != 0:
             mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
         if(mufMin<0):
@@ -1147,37 +1136,175 @@ class Systematics(object):
         else:
             return math.log(muf/mufMin) 
         
-    def call_ieva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
-        if ievo != 0:
-            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
-        if(mufMin<0):
-            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-        elif(muf < mufMin*1.001):
-            return 0e0
-        else:
-            return math.log(muf/mufMin)
+    # scale dependence of f_V+ according to EVA accuracy
+    def get_eva_stripped_pdf_vp(self, muf, vPID, fPID, xx, ebeam, ievo=0, evaorder=0):
+        mufMin = self.get_eva_mufMin_byPID(vPID,fPID)
+        if(evaorder < 0): 
+            raise SystematicsError("Invalid evaorder! evaorder = %s" % evaorder)
+        elif(evaorder==2):  # next-to-leading power
+            return self.calc_eva_stripped_pdf_vm_nlp(muf, vPID, xx, ebeam, ievo)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_vp_xlp(muf, vPID, xx, ebeam, ievo)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_vt_LLA(muf, vPID, xx, ebeam, ievo)
+    
+    # scale dependence of f_V- according to EVA accuracy
+    def get_eva_stripped_pdf_vm(self, muf, vPID, fPID, xx, ebeam, ievo=0, evaorder=0):
+        mufMin = self.get_eva_mufMin_byPID(vPID,fPID)
+        if(evaorder < 0): 
+            raise SystematicsError("Invalid evaorder! evaorder = %s" % evaorder)
+        elif(evaorder==2):  # next-to-leading power
+            return self.calc_eva_stripped_pdf_vp_nlp(muf, vPID, xx, ebeam, ievo)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_vp_xlp(muf, vPID, xx, ebeam, ievo)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_vt_LLA(muf, vPID, xx, ebeam, ievo)
+    
+    # scale dependence of f_V0 according to EVA accuracy
+    def get_eva_stripped_pdf_v0(self, muf, vPID, fPID, xx, ebeam, ievo=0, evaorder=0):
+        mufMin = self.get_eva_mufMin_byPID(vPID,fPID)
+        if(evaorder < 0): 
+            raise SystematicsError("Invalid evaorder! evaorder = %s" % evaorder)
+        elif(evaorder==2):  # next-to-leading power
+            return self.calc_eva_stripped_pdf_v0_nlp(muf, vPID, xx, ebeam, ievo)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_v0_xlp(muf, vPID, xx, ebeam, ievo)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_v0_LLA(muf, vPID, xx, ebeam, ievo)
         
-    def call_ievaNLP_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
-        if ievo != 0:
-            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
-        if(mufMin<0):
-            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-        elif(muf < mufMin*1.001):
-            return 0e0
-        else:
-            return math.log(muf/mufMin) 
+    # scale dependence of f_V0 at LLA
+    def calc_eva_stripped_pdf_v0_LLA(self, muf, vPID, xx, ebeam, ievo=0):
+            # = 1
+            return 1.0
+    
+    # scale dependence of f_V+ and f_V- at LLA
+    def calc_eva_stripped_pdf_vt_LLA(self, muf, vPID, xx, ebeam, ievo=0):
+            # = log(muf2 / mv2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor
+            # O(1) term
+            # log term
+            muOmv = mu2/mv2
+            # return
+            return math.log(muOmv)
 
-    def call_eva_get_mufMin_byPID(self, vPID, fPID):
+    # scale dependence of f_V0 at full LP
+    def calc_eva_stripped_pdf_v0_xlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV0^LP * (4pi^2 z / g^2 gL^2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor
+            prefact = (1.0-xx)
+            # O(1) term
+            muOmumv = 1.0 + mv2/mu2
+            muOmumv = 1.0/muOmumv
+            # log term
+            # return
+            return prefact*muOmumv
+
+    # scale dependence of f_V+ at full LP
+    def calc_eva_stripped_pdf_vp_xlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV+^LP * (4pi^2 z / g^2 gL^2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor
+            prefact = 0.5*(1.0-xx)**2
+            # O(1) term
+            muOmumv = 1.0 + mv2/mu2
+            muOmumv = 1.0/muOmumv
+            # log term
+            mumvOmv = mu2/mv2 + 1.0
+            logmuf2 = math.log(mumvOmv)
+            # return
+            return prefact*(logmuf2 - muOmumv)
+    
+    # scale dependence of f_V- at full LP
+    def calc_eva_stripped_pdf_vm_xlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV-^LP * (4pi^2 z / g^2 gL^2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor
+            prefact = 0.5
+            # O(1) term
+            muOmumv = 1.0 + mv2/mu2
+            muOmumv = 1.0/muOmumv
+            # log term
+            mumvOmv = mu2/mv2 + 1.0
+            logmuf2 = math.log(mumvOmv)
+            # return
+            return prefact*(logmuf2 - muOmumv)
+    
+    # scale dependence of f_V0 at NLP
+    def calc_eva_stripped_pdf_v0_nlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV0^NLP * (4pi^2 z / g^2 gL^2)
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            mvOev = mv2 / ev2 / 2.0 
+            # XLP terms
+            f0XLP = self.calc_eva_stripped_pdf_v0_xlp(muf, vPID, xx, ebeam, ievo)
+            fpXLP = self.calc_eva_stripped_pdf_vp_xlp(muf, vPID, xx, ebeam, ievo)
+            fmXLP = self.calc_eva_stripped_pdf_vm_xlp(muf, vPID, xx, ebeam, ievo)
+            # combine
+            tmpNLP = f0XLP - mvOev*(fpXLP+fmXLP)
+            return tmpNLP
+    
+    # scale dependence of f_V+ at NLP
+    def calc_eva_stripped_pdf_vp_nlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV+^NLP * (4pi^2 z / g^2 gL^2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            # ratios
+            mvOev   = (2.0-xx)*mv2/ev2
+            muOev   = mu2 / ev2 / 4.0
+            muOmumv = 1.0 + mv2/mu2 # for fVp@LP
+            muOmumv = 1.0/muOmumv   # for fVp@LP
+            mumvOmv = mu2/mv2 + 1.0 # for fVp@LP
+            # XLP terms
+            f0XLP  = self.calc_eva_stripped_pdf_v0_xlp(muf, vPID, xx, ebeam, ievo)
+            f0Term = muOev * (2.0-xx) * f0XLP
+            # note: not calling stripped_pdf_vp to avoid 1/(1-xx) factor
+            prefact = 0.5*(1.0-xx) # *(1-x)
+            logmuf2 = math.log(mumvOmv)
+            fpXLP   = prefact*(1.0-xx)*(logmuf2 - muOmumv)
+            fpMoE   = prefact*mvOev   *(logmuf2 - muOmumv) 
+            fpTerm  = fpXLP + fpMoE
+            # combine
+            tmpNLP = fpTerm - f0Term
+            return tmpNLP
+    
+    # scale dependence of f_V- at NLP
+    def calc_eva_stripped_pdf_vm_nlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV-^NLP * (4pi^2 z / g^2 gL^2)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            # ratios
+            muOmumv = 1.0 + mv2/mu2
+            muOmumv = 1.0/muOmumv
+            mvOev = (2.0-xx)*mv2/ev2
+            muOev = mu2 / ev2 / 4.0
+            # XLP terms
+            # note: not calling stripped_pdf_v0 to avoid 1/(1-xx) factor
+            f0XLP  = muOmumv # * (1-xx)
+            f0Term = muOev * (2.0-xx) * f0XLP # * 1/(1-xx)
+            fmXLP  = self.calc_eva_stripped_pdf_vm_xlp(muf, vPID, xx, ebeam, ievo)
+            fmTerm = fmXLP*(1.0 + mvOev)
+            # combine
+            tmpNLP = fmTerm - f0Term
+            return tmpNLP
+         
+
+    def get_eva_mufMin_byPID(self, vPID, fPID):
         return {
-            7:  self.call_eva_get_mf_by_PID(fPID),
-            22: self.call_eva_get_mf_by_PID(fPID),
-            23: self.call_eva_get_mv_by_PID(vPID),
-            24: self.call_eva_get_mv_by_PID(vPID)
+            7:  self.get_eva_mf_by_PID(fPID),
+            22: self.get_eva_mf_by_PID(fPID),
+            23: self.get_eva_mv_by_PID(vPID),
+            24: self.get_eva_mv_by_PID(vPID)
         }.get(abs(vPID),-1)
 
-    def call_eva_get_mf_by_PID(self, fPID):
+    def get_eva_mf_by_PID(self, fPID):
         # these must be the same as in ElectroweakFlux.inc
         return {
             1:  4.67e-3,
@@ -1191,7 +1318,7 @@ class Systematics(object):
             15: 1.77686e0
         }.get(abs(fPID),-1)
 
-    def call_eva_get_mv_by_PID(self, vPID):
+    def get_eva_mv_by_PID(self, vPID):
         # these must be the same as in ElectroweakFlux.inc
          return {
             7:      0e0,
