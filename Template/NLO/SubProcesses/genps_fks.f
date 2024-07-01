@@ -934,7 +934,10 @@ c saves
       common /c_isolsign/isolsign
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
-
+ 
+      double precision pi1(0:3),pi2(0:3)      
+      double precision m1,m2
+ 
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -945,11 +948,23 @@ c saves
       enddo
       if( firsttime .or. iconfig0.ne.iconfigsave ) then
          if (nincoming.eq.2) then
-            if (ebeam(1).le.0.938.or.ebeam(2).le.0.938) then 
-                stot=2d0*ebeam(1)*ebeam(2)
-            else 
-                stot=4d0*ebeam(1)*ebeam(2)
-            endif
+            m1=m(1)
+            m2=m(2)
+            if (abs(lpp(1)) .eq. 1 .or. abs(lpp(1)) .eq. 2) m1 = 0.938d0
+            if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
+            if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
+            if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (abs(lpp(1)) .eq. 4) m1 = 0.105658d0
+            if (abs(lpp(2)) .eq. 4) m2 = 0.105658d0
+            !if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
+            !if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
+            if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
+            if(ebeam(2).lt.m2.and.lpp(2).ne.9) ebeam(2)=m2
+            pi1(0)=ebeam(1)
+            pi1(3)=sqrt(max(ebeam(1)**2-m1**2, 0d0))
+            pi2(0)=ebeam(2)
+            pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
+            stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
          else
             stot=pmass(1)**2
          endif

@@ -23,7 +23,7 @@ c Compile with makefile_rwgt
       character*1000 buff
 c Parameters
       integer    izero
-      integer    l,jmax   !<<varibles for the pA hadronization<<<<<<<AntonS.
+      integer    l,jmax   !varibles for the pA hadronization###########AntonS.
       parameter (izero=0)
 c Common blocks
       character*7         pdlabel,epa_label
@@ -245,7 +245,7 @@ c as XWGTUP
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.               
+!###############################################################AntonS.               
                  if (nn.eq.1) then    
                         jmax=1
                  else if (nn.ne.1.and.asymm_choice.eqv..true.) then
@@ -265,7 +265,7 @@ c as XWGTUP
                     endif
                   enddo
                  enddo
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                 
+!###############################################################AntonS.                 
                  
                else
                   wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
@@ -519,7 +519,7 @@ c add the weights to the array
       return
       end
 
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS      
+!###############################################################AntonS      
       subroutine reweight_pdf_ext
       use weight_lines
       use extra_weights
@@ -662,7 +662,7 @@ c reset to the 0th member of the 1st set
       endif
       return
       end
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS      
+!###############################################################AntonS      
 
       subroutine fill_rwgt_arrays
       use weight_lines
@@ -671,7 +671,7 @@ c reset to the 0th member of the 1st set
       include 'nexternal.inc'
       include 'run.inc'
       integer ii,jj,kk,oo,nn,n,iw,i
-      integer j,jmax  !<<<<<<<<<<<<<<<<varibles for the pA hadronization<<<<<AntonS.
+      integer j,jmax  !###############varibles for the pA hadronization#######AntonS.
       integer orderstag_this
       integer n_orderstags
       integer orderstags_glob(maxorders)
@@ -724,7 +724,7 @@ c reset to the 0th member of the 1st set
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.               
+!##############################################################AntonS.               
                 if (nn.eq.1) then    
                     jmax=1
                 else if (nn.ne.1.and.asymm_choice.eqv..true.) then
@@ -747,7 +747,7 @@ c reset to the 0th member of the 1st set
                      endif
                    enddo
                   enddo
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!##############################################################AntonS.
                else
                   wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
                   iw=iw+1

@@ -658,7 +658,7 @@ class HwU(Histogram):
 
     weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
                                         '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s+(?P<pdf_number0>\S+)*$'%a_float_re,re.IGNORECASE)
     weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
 ############S.A
@@ -669,11 +669,14 @@ class HwU(Histogram):
     
     weight_label_scale_pA_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice1>%s)'%a_int_re+\
                                         '\s*muR\(pA\)\s*=\s*(?P<mur_fact1>%s)'%a_float_re+\
-                                        '\s*muF\(pA\)\s*=\s*(?P<muf_fact1>%s)\s*$'%a_float_re,re.IGNORECASE)
+                                        '\s*muF\(pA\)\s*=\s*(?P<muf_fact1>%s)\s+(?P<pdf_number1>\S+)*$'%a_float_re,re.IGNORECASE)
     
     weight_label_scale_Ap_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice2>%s)'%a_int_re+\
                                         '\s*muR\(Ap\)\s*=\s*(?P<mur_fact2>%s)'%a_float_re+\
-                                        '\s*muF\(Ap\)\s*=\s*(?P<muf_fact2>%s)\s*$'%a_float_re,re.IGNORECASE)
+                                        '\s*muF\(Ap\)\s*=\s*(?P<muf_fact2>%s)\s+(?P<pdf_number2>\S+)*$'%a_float_re,re.IGNORECASE)
+    
+
+    
     
     
 
@@ -914,7 +917,7 @@ class HwU(Histogram):
             elif label_type == 'scale':
                 others.append('muR=%6.3f muF=%6.3f'%(label[1],label[2]))
             elif label_type == 'scale_adv':
-                others.append('dyn=%i muR=%6.3f muF=%6.3f'%(label[1],label[2],label[3]))
+                others.append('dyn=%i muR=%6.3f muF=%6.3f   %i'%(label[1],label[2],label[3],label[4]))
             elif label_type == 'merging_scale':
                 others.append('TMS=%4.2f'%label[1])
             elif label_type == 'pdf':
@@ -935,10 +938,12 @@ class HwU(Histogram):
                 others.append('Ap=%i %s with %s'%(label[1],label[2],label[3]))
                 
             elif label_type == 'scale_adv_pA':
-                others.append('dynam=%i muR(pA)=%6.3f muF(pA)=%6.3f'%(label[1],label[2],label[3]))
+                others.append('dynam=%i muR(pA)=%6.3f muF(pA)=%6.3f   %i'%(label[1],label[2],label[3],label[4]))
                 
             elif label_type == 'scale_adv_Ap':
-                others.append('dynam=%i muR(Ap)=%6.3f muF(Ap)=%6.3f'%(label[1],label[2],label[3]))    
+                others.append('dynam=%i muR(Ap)=%6.3f muF(Ap)=%6.3f   %i'%(label[1],label[2],label[3],label[4]))
+                
+
 #############S.A
 
         return res+' & '.join(others)
@@ -1061,13 +1066,15 @@ class HwU(Histogram):
                     PDF_wgt_Ap = HwU.weight_label_PDF_Ap.match(h)
                     scale_wgt_pA = HwU.weight_label_scale_pA_adv.match(h)
                     scale_wgt_Ap = HwU.weight_label_scale_Ap_adv.match(h)
+
 #######S.A
                     
                     if scale_wgt_adv:
                         header[i] = ('scale_adv',
                                      int(scale_wgt_adv.group('dyn_choice')),
                                      float(scale_wgt_adv.group('mur_fact')),
-                                     float(scale_wgt_adv.group('muf_fact')))
+                                     float(scale_wgt_adv.group('muf_fact')),
+                                     int(scale_wgt_adv.group('pdf_number0')))
                     elif scale_wgt:
                         header[i] = ('scale',
                                      float(scale_wgt.group('mur_fact')),
@@ -1100,14 +1107,18 @@ class HwU(Histogram):
                         header[i] = ('scale_adv_pA',                        
                                      int(scale_wgt_pA.group('dyn_choice1')),
                                      float(scale_wgt_pA.group('mur_fact1')),
-                                     float(scale_wgt_pA.group('muf_fact1')))
+                                     float(scale_wgt_pA.group('muf_fact1')),
+                                     int(scale_wgt_pA.group('pdf_number1')))
                         
                     elif scale_wgt_Ap:
                         header[i] = ('scale_adv_Ap',                        
                                      int(scale_wgt_Ap.group('dyn_choice2')),
                                      float(scale_wgt_Ap.group('mur_fact2')),
-                                     float(scale_wgt_Ap.group('muf_fact2')))
-##########S.A                    
+                                     float(scale_wgt_Ap.group('muf_fact2')),
+                                     int(scale_wgt_Ap.group('pdf_number2')))
+                        
+
+##########S.A              
 
                 return header
             
@@ -1289,6 +1300,42 @@ class HwU(Histogram):
         elif type.upper()=='ALL_SCALE':
             new_wgt_label = 'delta_mu'
             scale_position = -1
+            
+       
+#################S.A       
+        elif type.upper()=='MUR_PA':
+            new_wgt_label  = 'delta_mur_pA'
+            scale_position = -6
+        elif type.upper()=='MUF_PA':
+            new_wgt_label = 'delta_muf_pA'
+            scale_position = -7
+        elif type.upper()=='ALL_SCALE_PA':
+            new_wgt_label = 'delta_mu_pA'
+            scale_position = -5
+#################S.A 
+
+
+
+
+#################S.A       
+        elif type.upper()=='MUR_AP':
+            new_wgt_label  = 'delta_mur_Ap'
+            scale_position = -9
+        elif type.upper()=='MUF_AP':
+            new_wgt_label = 'delta_muf_Ap'
+            scale_position = -10
+        elif type.upper()=='ALL_SCALE_AP':
+            new_wgt_label = 'delta_mu_Ap'
+            scale_position = -8
+#################S.A 
+
+
+
+#################S.A       
+#################S.A 
+          
+            
+            
         elif type.upper()=='PDF':
             new_wgt_label = 'delta_pdf'
             scale_position = -2
@@ -1296,10 +1343,10 @@ class HwU(Histogram):
 #################S.A
 
         elif type.upper()=='RPA':
-            new_wgt_label = 'delta_pA'
+            new_wgt_label = 'delta_pdf_pA'
             scale_position = -3
         elif type.upper()=='RAP':
-            new_wgt_label = 'delta_Ap'
+            new_wgt_label = 'delta_pdf_Ap'
             scale_position = -4
     
 #################S.A
@@ -1334,14 +1381,19 @@ class HwU(Histogram):
             ##########: advanced scale
             dyn_scales=[label[1] for label in self.bins.weight_labels if \
                         HwU.get_HwU_wgt_label_type(label)=='scale_adv']
+            pdfs_scales=[label[4] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='scale_adv']
             # remove doubles in list but keep the order!
             dyn_scales=[scale for n,scale in enumerate(dyn_scales) if scale not in dyn_scales[:n]]
-            for dyn_scale in dyn_scales:
-                wgts=[label for label in self.bins.weight_labels if \
-                      HwU.get_HwU_wgt_label_type(label)=='scale_adv' and label[1]==dyn_scale]
-                if wgts:
-                    wgts_to_consider.append(wgts)
-                    label_to_consider.append(dyn_scale)
+            pdfs_scales=[pdf for n_pdf,pdf in enumerate(pdfs_scales) if pdf not in pdfs_scales[:n_pdf]]
+            for pdf in pdfs_scales:
+            	for dyn_scale in dyn_scales:
+                	wgts=[label for label in self.bins.weight_labels if \
+                      		HwU.get_HwU_wgt_label_type(label)=='scale_adv' and label[1]==dyn_scale and label[4]==pdf]
+                	if wgts:
+                    		wgts_to_consider.append(wgts)
+                    		#label_to_consider.append(dyn_scale)
+                    		label_to_consider.append(pdf)
             ##########: normal scale
             wgts=[label for label in self.bins.weight_labels if \
                                  HwU.get_HwU_wgt_label_type(label)=='scale']
@@ -1359,6 +1411,62 @@ class HwU(Histogram):
                     wgts_to_consider.remove(wgts)
                     wgts = [ label for label in wgts if label[-scale_position]==1.0 ]
                     wgts_to_consider.append(wgts)
+                    
+                    
+##############S.A                    
+        elif scale_position > -8 and scale_position < -4:
+            ##########: advanced scale
+            dyn_scales=[label[1] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='scale_adv_pA']
+            pdfs_scales=[label[4] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='scale_adv_pA']
+            # remove doubles in list but keep the order!
+            dyn_scales=[scale for n,scale in enumerate(dyn_scales) if scale not in dyn_scales[:n]]
+            pdfs_scales=[pdf for n_pdf,pdf in enumerate(pdfs_scales) if pdf not in pdfs_scales[:n_pdf]]
+            for pdf in pdfs_scales:
+            	for dyn_scale in dyn_scales:
+                	wgts=[label for label in self.bins.weight_labels if \
+                      		HwU.get_HwU_wgt_label_type(label)=='scale_adv_pA' and label[1]==dyn_scale and label[4]==pdf]
+                	if wgts:
+                    		wgts_to_consider.append(wgts)
+                    		#label_to_consider.append(dyn_scale)
+                    		label_to_consider.append(pdf)
+            if scale_position > -8 and scale_position < -5:
+                for wgts in wgts_to_consider:
+                    wgts_to_consider.remove(wgts)
+                    wgts = [ label for label in wgts if label[-scale_position]==1.0 ]
+                    wgts_to_consider.append(wgts)           
+
+
+                    
+        elif scale_position < -7 and scale_position > -11:
+            ##########: advanced scale
+            dyn_scales=[label[1] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='scale_adv_Ap']
+            pdfs_scales=[label[4] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='scale_adv_Ap']
+            # remove doubles in list but keep the order!
+            dyn_scales=[scale for n,scale in enumerate(dyn_scales) if scale not in dyn_scales[:n]]
+            pdfs_scales=[pdf for n_pdf,pdf in enumerate(pdfs_scales) if pdf not in pdfs_scales[:n_pdf]]
+            for pdf in pdfs_scales:
+            	for dyn_scale in dyn_scales:
+                	wgts=[label for label in self.bins.weight_labels if \
+                      		HwU.get_HwU_wgt_label_type(label)=='scale_adv_Ap' and label[1]==dyn_scale and label[4]==pdf]
+                	if wgts:
+                    		wgts_to_consider.append(wgts)
+                    		#label_to_consider.append(dyn_scale)
+                    		label_to_consider.append(pdf)
+            if scale_position < -8 and scale_position > -11:
+                for wgts in wgts_to_consider:
+                    wgts_to_consider.remove(wgts)
+                    wgts = [ label for label in wgts if label[-scale_position]==1.0 ]
+                    wgts_to_consider.append(wgts)
+                    
+                    
+                            
+                    
+##############S.A           
+                    
         elif scale_position == -2:
             ##########: advanced PDF
             pdf_sets=[label[2] for label in self.bins.weight_labels if \
@@ -1800,7 +1908,7 @@ class HwUList(histograms_PhysicsObjectList):
     # simply define them in the gnuplot header and increase the number below.
     # It must be <= 9.
     number_line_colors_defined = 8
-    
+        
     def is_valid_element(self, obj):
         """Test wether specified object is of the right type for this list."""
 
@@ -2000,7 +2108,7 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:            
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############S.A
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP','MUR_PA','MUF_PA','MUR_AP','MUF_AP']:##############S.A
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                     
@@ -2018,8 +2126,9 @@ class HwUList(histograms_PhysicsObjectList):
 
 ##############S.A
                     
-                elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
-                    wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
+                elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT','MUR_PA','MUF_PA','MUR_AP','MUF_AP']:
+                    wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])
+                                    
 
         # If merging cut is negative, then pick only the one of the central scale
         # If not specified, then take them all but use the PDF and scale weight
@@ -2042,6 +2151,15 @@ class HwUList(histograms_PhysicsObjectList):
         # Assume central scale is one, unless specified.
         central_MUR   = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
         central_MUF   = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
+##############S.A        
+        central_MUR_pa   = all_weights[2]['MUR_PA'] if all_weights[2]['MUR_PA']!=-1.0 else 1.0
+        central_MUF_pa   = all_weights[2]['MUF_PA'] if all_weights[2]['MUF_PA']!=-1.0 else 1.0
+        
+        central_MUR_ap   = all_weights[2]['MUR_AP'] if all_weights[2]['MUR_AP']!=-1.0 else 1.0
+        central_MUF_ap   = all_weights[2]['MUF_AP'] if all_weights[2]['MUF_AP']!=-1.0 else 1.0
+        
+        
+##############S.A        
         central_alpsfact = all_weights[2]['ALPSFACT'] if all_weights[2]['ALPSFACT']!=-1.0 else 1.0
         
         # Dictionary of selected weights with their position as key and the
@@ -2082,6 +2200,19 @@ class HwUList(histograms_PhysicsObjectList):
                 differences.append('rpa')
             if weight['RAP'] not in [central_RAP,-1]:
                 differences.append('rap')
+                
+                
+                
+            if weight['MUR_PA'] not in [central_MUR_pa, -1.0] or \
+               weight['MUF_PA'] not in [central_MUF_pa, -1.0]:
+                differences.append('mur_muf_scale_pa')
+                
+                
+            if weight['MUR_AP'] not in [central_MUR_ap, -1.0] or \
+               weight['MUF_AP'] not in [central_MUF_ap, -1.0]:
+                differences.append('mur_muf_scale_ap')
+                
+                  
 ##############S.A
                 
             if weight['ALPSFACT'] not in [central_alpsfact, -1]:
@@ -2104,7 +2235,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    not weight[property] is None]
             
             # then add PDF, MUR, MUF and MERGING if present            
-            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########S.A
+            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP','MUR_PA','MUF_PA','MUR_AP','MUF_AP']:#########S.A
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
                     ordered_properties.append(property)
@@ -2174,6 +2305,12 @@ class HwUList(histograms_PhysicsObjectList):
                 wgt_label = ('rpa',weight['RPA'])
             if variations == set(['rap']):
                 wgt_label = ('rap',weight['RAP'])
+                
+                
+            if variations in [set(['mur_muf_scale_pa']),set(['rpa','mur_muf_scale_pa'])]:
+                wgt_label = ('mur_muf_scale_pa',weight['MUR_PA'],weight['MUF_PA'])
+            if variations in [set(['mur_muf_scale_ap']),set(['rap','mur_muf_scale_ap'])]:
+                wgt_label = ('mur_muf_scale_ap',weight['MUR_AP'],weight['MUF_AP'])
 ############S.A     
       
             if variations == set([]):
@@ -2579,6 +2716,11 @@ set style line  28 lt 4 lc rgb "%(col8)s" lw 1.3 dt (3,2)
 set style line  38 lt 6 lc rgb "%(col8)s" lw 1.3 dt (2,1)
 set style line  48 lt 8 lc rgb "%(col8)s" lw 1.3 dt (4,3)
 
+
+set style line  51 lt 1 lc rgb "blue" lw 2.0
+set style line  52 lt 1 lc rgb "red" lw 2.0
+set style line  522 lt 2 lc rgb "red" lw 2.0 dt (6,3)
+
 set style line 999 lt 1 lc rgb "gray" lw 1.3
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
@@ -2642,7 +2784,7 @@ set key invert
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1,
-          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############S.A
+          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap','mur_muf_scale_pa','mur_muf_scale_ap'],############S.A
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
@@ -2854,6 +2996,18 @@ set key invert
             (RAP_var_pos,rap) = self[0].set_uncertainty(type='RAP',lhapdfconfig=lhapdfconfig)
         else:
             (RAP_var_pos,rap) = (None,[None])
+            
+            
+        if 'mur_muf_scale_pa' in uncertainties:
+            (mu_var_pa_pos,mu_pa)  = self[0].set_uncertainty(type='all_scale_pa')
+        else:
+            (mu_var_pa_pos,mu_pa) = (None,[None])
+            
+        if 'mur_muf_scale_ap' in uncertainties:
+            (mu_var_ap_pos,mu_ap)  = self[0].set_uncertainty(type='all_scale_ap')
+        else:
+            (mu_var_ap_pos,mu_ap) = (None,[None])
+            
 
 #########S.A
         
@@ -2883,6 +3037,13 @@ set key invert
         uncertainties_present =  list(uncertainties)
         if RAP_var_pos is None and 'rap' in uncertainties_present:
             uncertainties_present.remove('rap')
+            
+        if mu_var_pa_pos is None and 'mur_muf_scale_pa' in uncertainties_present:
+            uncertainties_present.remove('mur_muf_scale_pa')
+            
+        if mu_var_ap_pos is None and 'mur_muf_scale_ap' in uncertainties_present:
+            uncertainties_present.remove('mur_muf_scale_ap')
+        
 #########S.A
             
         if mu_var_pos is None and 'scale' in uncertainties_present:
@@ -2907,6 +3068,12 @@ set key invert
                 use_band = uncertainties_present
             elif 'scale' in uncertainties_present:
                 use_band = ['scale']
+#########S.A
+            elif 'mur_muf_scale_pa' in uncertainties_present:
+                use_band = ['mur_muf_scale_pa']
+            elif 'mur_muf_scale_ap' in uncertainties_present:
+                use_band = ['mur_muf_scale_ap']
+#########S.A
             else:
                 use_band = [uncertainties_present[0]]
 
@@ -2942,6 +3109,21 @@ set key invert
                raise MadGraph5Error('Not all histograms in this group specify'+\
                  ' PDF uncertainties. It is required to be able to output them'+\
                  ' together.')
+                 
+                 
+                 
+            if (not mu_var_pa_pos is None) and \
+                          mu_var_pa_pos != histo.set_uncertainty(type='all_scale_pa')[0]:
+               raise MadGraph5Error('Not all histograms in this group specify'+\
+                 ' scale uncertainties. It is required to be able to output them'+\
+                 ' together.')
+                 
+            if (not mu_var_ap_pos is None) and \
+                          mu_var_ap_pos != histo.set_uncertainty(type='all_scale_ap')[0]:
+               raise MadGraph5Error('Not all histograms in this group specify'+\
+                 ' scale uncertainties. It is required to be able to output them'+\
+                 ' together.')
+           
 ###########S.A
                  
             if (not merging_var_pos is None) and\
@@ -3006,16 +3188,39 @@ plot \\"""
 %(unset label)s
 %(set_format_y)s
 unset yrange
-set offsets 0 ,0 , 0.1, 0.1
+set yrange [0.0:2.0]
 set origin %(origin_x).4e, %(origin_y).4e
 set size %(size_x).4e, %(size_y).4e
 set mytics %(mytics)d
+set mxtics %(mxtics)d
+set xtics mirror
+set ytics mirror
 %(set_ytics)s
 %(set_format_x)s
 %(set_yscale)s
 %(set_ylabel)s
 %(set_histo_label)s
 plot \\"""
+
+        subhistogram_header2 = \
+"""#-- rendering subhistograms '%(subhistogram_type)s'
+%(unset label)s
+%(set_format_y)s
+unset yrange
+set offsets 0 ,0 , 0.1, 0.1
+set origin %(origin_x).4e, %(origin_y).4e
+set size %(size_x).4e, %(size_y).4e
+set mytics %(mytics)d
+set mxtics %(mxtics)d
+set xtics mirror
+set ytics mirror
+%(set_ytics)s
+%(set_format_x)s
+%(set_yscale)s
+%(set_ylabel)s
+%(set_histo_label)s
+plot \\"""
+
 
         replacement_dic = {}
 
@@ -3046,6 +3251,18 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var])
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+2])
+                
+        if not mu_var_pa_pos is None:
+            for mu_var_pa in mu_var_pa_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_pa])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_pa+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_pa+2])
+                
+        if not mu_var_ap_pos is None:
+            for mu_var_ap in mu_var_ap_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_ap])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_ap+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var_ap+2])
                 
 #############S.A
                 
@@ -3275,7 +3492,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,RPA_var+3,color_index,\
-'%s RPA=%s' % (title,rpa[j].replace('_','\_'))))
+'%s PA=%s' % (title,rpa[j].replace('_','\_'))))
 
             if not RAP_var_pos is None:
                 for j,RAP_var in enumerate(RAP_var_pos):
@@ -3286,7 +3503,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,RAP_var+3,color_index,\
-'%s RAP=%s' % (title,rap[j].replace('_','\_'))))
+'%s AP=%s' % (title,rap[j].replace('_','\_'))))
 
 ##############S.A
 
@@ -3809,10 +4026,6 @@ plot \\"""
             else: 
                 sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000) 
 
-
-
-
-        
         if (Reg!=1):        
         # Now add the tail for this group
             gnuplot_out.extend(['','unset label','unset multiplot','unset xlabel','set key spacing 1','',
@@ -3831,478 +4044,297 @@ plot \\"""
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
-        # We can finally add the last subhistograms for the ratios.
-        for i, histo in enumerate(self[:n_histograms]):
-            if i==0: continue
-        
+        #file = open("/projet/pth/safronov/MG5/Anton-Process/tt-bar/test.txt", "w+")
+        #file.write(str(RPA_var_pos[0]))
+        #file1 = open("/projet/pth/safronov/MG5/Anton-Process/tt-bar/test2.txt", "w+")
+        #file1.write(str(len(pdf)))
         PDFs=['']*len(pdf)
         PDFL=['']*len(pdf)
-        #PDFs=['','']
-        #PDFL=['','']
         for i in range(len(pdf)):
             if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1:
                 PDFs[i]='p'
                 PDFL[i]='p'
+            elif pdf[i].find("JAM")!=-1:
+                PDFs[i]='pion'
+                PDFL[i]='pion'
             elif pdf[i].find("D2")!=-1 or pdf[i].find("2_1")!=-1:
                 PDFs[i]='D'
-                PDFL[i]='A'
+                PDFL[i]='D'
+            elif pdf[i].find("He3")!=-1 or pdf[i].find("3_2")!=-1:
+                PDFs[i]='He-3'
+                PDFL[i]='He-3'
             elif pdf[i].find("He4")!=-1 or pdf[i].find("4_2")!=-1:
-                PDFs[i]='He'
-                PDFL[i]='A'
+                PDFs[i]='He-4'
+                PDFL[i]='He-4'
+            elif pdf[i].find("Li6")!=-1 or pdf[i].find("6_3")!=-1:
+                PDFs[i]='Li-6'
+                PDFL[i]='Li-6'
+            elif pdf[i].find("Li7")!=-1 or pdf[i].find("7_3")!=-1:
+                PDFs[i]='Li-7'
+                PDFL[i]='Li-7'
+            elif pdf[i].find("Be9")!=-1 or pdf[i].find("9_4")!=-1:
+                PDFs[i]='Be'
+                PDFL[i]='Be'
             elif pdf[i].find("C12")!=-1 or pdf[i].find("12_6")!=-1:
                 PDFs[i]='C'
-                PDFL[i]='A'
+                PDFL[i]='C'
             elif pdf[i].find("O16")!=-1 or pdf[i].find("16_8")!=-1:
                 PDFs[i]='O'
-                PDFL[i]='A'
+                PDFL[i]='O'
+            elif pdf[i].find("Al27")!=-1 or pdf[i].find("27_13")!=-1:
+                PDFs[i]='Al'
+                PDFL[i]='Al'
+            elif pdf[i].find("Ne20")!=-1 or pdf[i].find("20_10")!=-1:
+                PDFs[i]='Ne'
+                PDFL[i]='Ne'
+            elif pdf[i].find("Ar40")!=-1 or pdf[i].find("40_18")!=-1:
+                PDFs[i]='Ar'
+                PDFL[i]='Ar'
+            elif pdf[i].find("Ca40")!=-1 or pdf[i].find("40_20")!=-1:
+                PDFs[i]='Ca'
+                PDFL[i]='Ca'
+            elif pdf[i].find("Fe56")!=-1 or pdf[i].find("56_26")!=-1:
+                PDFs[i]='Fe'
+                PDFL[i]='Fe'
+            elif pdf[i].find("Cu64")!=-1 or pdf[i].find("64_32")!=-1:
+                PDFs[i]='Cu'
+                PDFL[i]='Cu'
+            elif pdf[i].find("Kr84")!=-1 or pdf[i].find("84_42")!=-1 or pdf[i].find("84_36")!=-1:
+                PDFs[i]='Kr'
+                PDFL[i]='Kr'
+            elif pdf[i].find("Ag108")!=-1 or pdf[i].find("108_54")!=-1 or pdf[i].find("108_47")!=-1:
+                PDFs[i]='Ag'
+                PDFL[i]='Ag'  
+            elif pdf[i].find("Sn119")!=-1 or pdf[i].find("119_50")!=-1 or pdf[i].find("119_59")!=-1:
+                PDFs[i]='Sn'
+                PDFL[i]='Sn'  
             elif pdf[i].find("Xe131")!=-1 or pdf[i].find("131_54")!=-1:
                 PDFs[i]='Xe'
-                PDFL[i]='A'
+                PDFL[i]='Xe'
+            elif pdf[i].find("W194")!=-1 or pdf[i].find("184_74")!=-1:
+                PDFs[i]='W'
+                PDFL[i]='W'
             elif pdf[i].find("Au197")!=-1 or pdf[i].find("197_79")!=-1:
                 PDFs[i]='Au'
-                PDFL[i]='A'
+                PDFL[i]='Au'
             elif pdf[i].find("Pb208")!=-1 or pdf[i].find("208_82")!=-1:
                 PDFs[i]='Pb'
-                PDFL[i]='A'
+                PDFL[i]='Pb'
             elif pdf[i].find("CT18")!=-1 or pdf[i].find("CT14")!=-1:
                 PDFs[i]='p'
                 PDFL[i]='p'
             else:
                 PDFs[i]='X'
-                PDFL[i]='A'
+                PDFL[i]='X'
+
+        for numb_pdf in range (1,len(pdf)):
+            # We can finally add the last subhistograms for the ratios.
+            for i, histo in enumerate(self[:n_histograms]):
+                if i==0: continue
                 
-                
-                
-        #import numpy as np
-        #sub_string = 'ebeam1'
-        #with open(str(path_to_card)) as file:
-            #lines = file.readlines()
-            #for line in lines:
-                #if sub_string in line:
-                    #s=line
-        #word_list = s.split()
-        #Energy1=float(word_list[0])
-	
-        #sub_string = 'ebeam2'
-        #with open(str(path_to_card)) as file:
-            #lines = file.readlines()
-            #for line in lines:
-                #if sub_string in line:
-                    #s=line
-        #word_list = s.split()
-        #Energy2=float(word_list[0])
-        
-        
-        #if (Energy1<=0.938 or Energy2<=0.938):
-                #sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
-        #else: 
-                #sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
-        
+            if numb_pdf==1:
+                        replacement_dic['unset label'] = 'unset label'
+                        gnuplot_out.extend(['unset multiplot'])
+                        gnuplot_out.extend(['set multiplot'])
 
-        # Add a margin on upper and lower bound.
-        #ymax = ymax# + 0.1# * (ymax - ymin)2
-        #ymin = ymin# - 0.2# * (ymax - ymin)0.5
-        replacement_dic['unset label'] = 'unset label'
+            #replacement_dic['unset label'] = 'unset label'
+            
+            if numb_pdf>1:
+                if numb_pdf%2!=0:
+                        replacement_dic['unset label'] = 'unset label'
+                        gnuplot_out.extend(['unset multiplot'])
+                        gnuplot_out.extend(['set multiplot'])                        
+                else:       
+                        replacement_dic['unset label'] = 'unset label'
+            
+            #gnuplot_out.extend(['unset multiplot'])
+            #gnuplot_out.extend(['set multiplot'])
 
-        gnuplot_out.extend(['unset multiplot'])
-        gnuplot_out.extend(['set multiplot'])
-        gnuplot_out.extend(['set key spacing 0'])
-        replacement_dic['origin_x'] = 0.0000e+00
-        replacement_dic['origin_y'] = 0.85
-        replacement_dic['size_y'] = 1.75000e-01
-        replacement_dic['size_x'] = 1.0000e+00
-        replacement_dic['mytics'] = 5
-        replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x"
-        replacement_dic['set_yscale'] = "unset logscale y"
-        replacement_dic['set_format_y'] = 'unset format'
-        replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[0],PDFL[1])
-
-
-        s=self[0].get_HwU_histogram_name(format='human-no_type')
-        ylab='y'
-        ptlab='p_{T}, [GeV/c^{2}]'
-
-        if s.find("rap")!=-1 or s.find("y")!=-1:
-            gnuplot_out.extend(['set xlabel "%s"'%(ylab)])
-        if s.find("pt")!=-1:
-            gnuplot_out.extend(['set xlabel "%s"'%(ptlab)])
-
-        #replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
-
-        #replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
-        #gnuplot_out.append(subhistogram_header1%replacement_dic)
-        
-        
-        
-        
-        replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
-               
-        if len(pdf)<=2:
-            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']
-        else:
-            replacement_dic['set_histo_label'] = 'set label "%s + \\\{'%(PDFs[0])
-            for i in range(1,len(pdf)):
-                if i!=(len(pdf)-1):
-                    replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s,'%(PDFs[i])
+            for numb_of_canv in range(0,4):
+                value_of_shift_x=0.0+(0.5*(numb_of_canv%2))
+                if numb_pdf%2!=0:
+                    if numb_of_canv<=1:
+                        value_of_shift_y=0.86
+                    #value_of_shift_y=0.86-(0.28*(numb_of_canv%2))
+                    else:
+                        value_of_shift_y=0.58
                 else:
-                    replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s'%(PDFs[i])
-            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] +'\\\}'
-            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] + ', {/Symbol=\\\%d}s = %.2f TeV, PDFs='%(326,sqrtS)
-            for i in range(len(pdf)):
-                replacement_dic['set_histo_label'] = replacement_dic['set_histo_label']+'%s, '%(pdf[i].replace('_','\\\\_'))
-            replacement_dic['set_histo_label'] = replacement_dic['set_histo_label'] +'" font ",9" at graph 0, graph 1.07'
-                 
-        replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
-        gnuplot_out.append(subhistogram_header1%replacement_dic)
+                    if numb_of_canv<=1:
+                        value_of_shift_y=0.3
+                    #value_of_shift_y=0.86-(0.28*(numb_of_canv%2))
+                    else:
+                        value_of_shift_y=0.02
+                    #value_of_shift_y=0.3-(0.28*(numb_of_canv%2))
+                
+                replacement_dic['origin_x'] = value_of_shift_x
+                replacement_dic['origin_y'] = value_of_shift_y
+                replacement_dic['size_y'] = 0.2
+                replacement_dic['size_x'] = 0.45
+                replacement_dic['mytics'] = 5
+                replacement_dic['mxtics'] = 5
+                
+                #if s.find("total")!=-1 :
+                    #gnuplot_out.extend(['set offsets 0 ,0 , 0.1, 0.1'])
+                #else:
+                    #gnuplot_out.extend(['set yrange [0.0:2.0]']) 
+                    
+                replacement_dic['set_ytics'] = 'set ytics auto'
+                replacement_dic['set_format_x'] = "set format x"
+                replacement_dic['set_yscale'] = "unset logscale y"
+                replacement_dic['set_format_y'] = 'unset format'
+                if numb_of_canv<2:
+                    replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[0], PDFL[numb_pdf])
+                elif numb_of_canv>=2:
+                    replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[numb_pdf], PDFL[0])
 
+                s=self[0].get_HwU_histogram_name(format='human-no_type')
+                ylab='y'
+                ptlab='p_{T}, [GeV/c^{2}]'
 
-        uncertainty_plot_lines = []
-        plot_lines = []
-	
-	# Some crap to get the colors right I suppose...
-        n=-1
-        n=n+1
-        copy_swap_re = r"perl -pe 's/^\s*(?<x1>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)\s*(?<x2>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)(?<rest>.*)\n/ $+{x1} $+{x2} $+{rest}\n$+{x2} $+{x1} $+{rest}\n/g'"
-        # Gnuplot escapes the antislash, so we must esacape then once more O_o.
-        # Gnuplot doesn't have raw strings, what a shame...
-        copy_swap_re = copy_swap_re.replace('\\','\\\\')
+                if s.find("rap")!=-1 or s.find("y")!=-1:
+                    gnuplot_out.extend(['set xlabel "%s"'%(ylab)])
+                if s.find("pt")!=-1:
+                    gnuplot_out.extend(['set xlabel "%s"'%(ptlab)])
+
+                #replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[numb_pdf].replace('_','\\\\_'))
+                if numb_of_canv<2:
+                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS)
+                elif numb_of_canv>=2:
+                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV" font ",9" at graph 0, graph 1.07'%(PDFL[numb_pdf], PDFL[0],326,sqrtS)
+                                                
+                replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[numb_pdf])
+                
+                if s.find("total")!=-1 :
+                    gnuplot_out.append(subhistogram_header2%replacement_dic)
+                else:
+                    gnuplot_out.append(subhistogram_header1%replacement_dic)
+                #gnuplot_out.append(subhistogram_header1%replacement_dic)
+
+                uncertainty_plot_lines = []
+                plot_lines = []
+
+                # Some crap to get the colors right I suppose...
+                n=-1
+                n=n+1
+                copy_swap_re = r"perl -pe 's/^\s*(?<x1>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)\s*(?<x2>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)(?<rest>.*)\n/ $+{x1} $+{x2} $+{rest}\n$+{x2} $+{x1} $+{rest}\n/g'"
+                # Gnuplot escapes the antislash, so we must esacape then once more O_o.
+                # Gnuplot doesn't have raw strings, what a shame...
+                copy_swap_re = copy_swap_re.replace('\\','\\\\')
         
-        for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
-            n=n+1
-            k=n
-            block_ratio_pos = block_position+n_histograms+i_histo_ratio
-            color_index     = n%self.number_line_colors_defined+1
-            # Now add the subhistograms
-###############A
+                for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
+                    n=n+1
+                    k=n
+                    block_ratio_pos = block_position+n_histograms+i_histo_ratio
+                    color_index     = n%self.number_line_colors_defined+1    
+                    if numb_of_canv==0: #pA
+                        if not RPA_var_pos is None:
+                                    elem_pdf=RPA_var_pos[numb_pdf-1]
+                                    if not mu_var_pa_pos is None:
+                                        elem_mu=mu_var_pa_pos[numb_pdf-1]
+                                    if j>0 or rpa[j]!='none':
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position+1,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                            if not mu_var_pa_pos is None:
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))
+                                        
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+3,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+4,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+5,51))
+                                            if not mu_var_pa_pos is None:
+                                                #plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 2 title "R_{%s%s} central value + scale uncertainties, LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52,PDFL[0],PDFL[numb_pdf]))
+                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#PDFL[0],PDFL[numb_pdf]))
+                                            
+                                            plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_pdf+4,elem_pdf+5,51))#,PDFL[0],PDFL[numb_pdf]))
+                                            
 
-            if not RPA_var_pos is None:
-                for j,RPA_var in enumerate(RPA_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rpa[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position+1,RPA_var+4,2))
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position+1,RPA_var+5,2))
-
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{%s%s} central value + PDF uncertainties, LO'"\
-                      %(HwU_name,block_position+1,RPA_var+3,1,PDFL[0],PDFL[1]))
-                        plot_lines.append(
-' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
-                      %(copy_swap_re,HwU_name,block_position+1,RPA_var+4,RPA_var+5,2))
-###############ANton
-        plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
-
-        # Now add the uncertainty lines, those not using a band so that they
-        # are not covered by those using a band after we reverse plo_lines
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if not uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-        # then those using a band
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-       
+                    elif numb_of_canv==1: #pA
+                        if not RPA_var_pos is None:
+                                    elem_pdf=RPA_var_pos[numb_pdf-1]
+                                    if not mu_var_pa_pos is None:
+                                        elem_mu=mu_var_pa_pos[numb_pdf-1]
+                                    if j>0 or rpa[j]!='none':
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                            if not mu_var_pa_pos is None:
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522))
+                                                                                
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
+                                            
+                                            if not mu_var_pa_pos is None: 
+                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc. NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[0],PDFL[numb_pdf])) 
+                                             
+                                            plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., NLO"'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[0],PDFL[numb_pdf]))
+                                            
+                                            #plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
+                    elif numb_of_canv==2: #Ap
+                        if not RAP_var_pos is None:
+                                    elem_pdf=RAP_var_pos[numb_pdf-1]
+                                    if not mu_var_ap_pos is None:
+                                        elem_mu=mu_var_ap_pos[numb_pdf-1]
+                                    if j>0 or rap[j]!='none':
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position+1,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                            if not mu_var_ap_pos is None:
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))  
+                                            
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+3,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+4,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+5,51))
+                                            
+                                            if not mu_var_ap_pos is None:                                      
+                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
+                                            
+                                            plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_pdf+4,elem_pdf+5,51))#,PDFL[numb_pdf],PDFL[0]))
+                                                                                        
+                    elif numb_of_canv==3: #Ap\
+                       if not RAP_var_pos is None:
+                                    elem_pdf=RAP_var_pos[numb_pdf-1]
+                                    if not mu_var_ap_pos is None:
+                                        elem_mu=mu_var_ap_pos[numb_pdf-1]
+                                    if j>0 or rap[j]!='none':
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                            if not mu_var_ap_pos is None:
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522)) 
+                                        
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
+                                            plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
+                                            
+                                            if not mu_var_ap_pos is None:
+                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc, NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
+                                            
+                                            plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., NLO"'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[numb_pdf],PDFL[0]))
+                                            
+                #plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
+                # Reverse so that bands appear first
+                plot_lines.reverse()
+                # Add the plot lines
+                if not no_uncertainties:
+                    gnuplot_out.append(',\\\n'.join(plot_lines))
+                    # We finish here when no ratio plot are asked for.
+                if len(self)-n_histograms==0:
+                # Now add the tail for this group                    
+                    gnuplot_out.extend(['','unset label','','################################################################################'])
+                # Return the starting data_block position for the next histogram group
+                    return block_position+len(self)        
         # Reverse so that bands appear first
-        plot_lines.reverse()
+        #plot_lines.reverse()
         # Add the plot lines
-        if not no_uncertainties:
-            gnuplot_out.append(',\\\n'.join(plot_lines))
-	# We finish here when no ratio plot are asked for.
-        if len(self)-n_histograms==0:
-            # Now add the tail for this group
-            gnuplot_out.extend(['','unset label','',
-'################################################################################'])
-            # Return the starting data_block position for the next histogram group
-            return block_position+len(self)
-####################################################################################################################22222
-#################################################################################################################22222
-        # We can finally add the last subhistograms for the ratios.
-        for i, histo in enumerate(self[:n_histograms]):
-            if i==0: continue
-
-        replacement_dic['unset label'] = 'unset label'
-
-        replacement_dic['origin_x'] = 0.0000e+00
-        replacement_dic['origin_y'] = 0.60
-        replacement_dic['size_y'] = 1.75000e-01
-        replacement_dic['size_x'] = 1.0000e+00
-        replacement_dic['mytics'] = 5
-
-        replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x"
-        replacement_dic['set_yscale'] = "unset logscale y"
-        replacement_dic['set_format_y'] = 'unset format'
-        replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[0],PDFL[1])
-
-        replacement_dic['set_histo_label'] = \
-        'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))#replace('_','\_')
-
-        replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
-        gnuplot_out.append(subhistogram_header1%replacement_dic)
-
-
-        uncertainty_plot_lines = []
-        plot_lines = []
-	
-	# Some crap to get the colors right I suppose...
-        n=-1
-        n=n+1
-
-        for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
-            n=n+1
-            k=n
-            block_ratio_pos = block_position+n_histograms+i_histo_ratio
-            color_index     = n%self.number_line_colors_defined+1
-            # Now add the subhistograms
-###############A
-
-            if not RPA_var_pos is None:
-                for j,RPA_var in enumerate(RPA_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rpa[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position,RPA_var+4,2))
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position,RPA_var+5,2))
-
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{%s%s} central value + PDF uncertainties, NLO'"\
-                      %(HwU_name,block_position,RPA_var+3,1,PDFL[0],PDFL[1]))
-                        plot_lines.append(
-' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
-                      %(copy_swap_re,HwU_name,block_position,RPA_var+4,RPA_var+5,2))
-
-###############ANton
-        plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
-
-        # Now add the uncertainty lines, those not using a band so that they
-        # are not covered by those using a band after we reverse plo_lines
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if not uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-        # then those using a band
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-       
-        # Reverse so that bands appear first
-        plot_lines.reverse()
-        # Add the plot lines
-        if not no_uncertainties:
-            gnuplot_out.append(',\\\n'.join(plot_lines))
-	# We finish here when no ratio plot are asked for.
-        if len(self)-n_histograms==0:
-            # Now add the tail for this group
-            gnuplot_out.extend(['','unset label','',
-'################################################################################'])
-            # Return the starting data_block position for the next histogram group
-            return block_position+len(self)
-####################################################################################################################22222
-#################################################################################################################22222
-        # We can finally add the last subhistograms for the ratios.
-        for i, histo in enumerate(self[:n_histograms]):
-            if i==0: continue
-
-        replacement_dic['unset label'] = 'unset label'
-
-        replacement_dic['ymin'] = ymin
-        replacement_dic['ymax'] = ymax
-        replacement_dic['origin_x'] = 0.0000e+00
-        replacement_dic['origin_y'] = 0.35
-        replacement_dic['size_y'] = 1.75000e-01
-        replacement_dic['size_x'] = 1.0000e+00
-        replacement_dic['mytics'] = 5
-        replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x"
-        replacement_dic['set_yscale'] = "unset logscale y"
-        replacement_dic['set_format_y'] = 'unset format'
-        replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[1],PDFL[0])
-        replacement_dic['set_histo_label'] = \
-        'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[1],PDFs[0],326,sqrtS, pdf[1].replace('_','\\\_'), pdf[0].replace('_','\\\\_'))#replace('_','\_')
-        replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[1],PDFL[0])
-        gnuplot_out.append(subhistogram_header1%replacement_dic)
-
-
-        uncertainty_plot_lines = []
-        plot_lines = []
-	
-	# Some crap to get the colors right I suppose...
-        n=-1
-        n=n+1
-
-        for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
-            n=n+1
-            k=n
-            block_ratio_pos = block_position+n_histograms+i_histo_ratio
-            color_index     = n%self.number_line_colors_defined+1
-            # Now add the subhistograms
-###############ANton
-            if not RAP_var_pos is None:
-                for j,RAP_var in enumerate(RAP_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rap[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position+1,RAP_var+4,4))
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position+1,RAP_var+5,4))
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{%s%s} central value + PDF uncertainties, LO'"\
-                      %(HwU_name,block_position+1,RAP_var+3,3,PDFL[1],PDFL[0]))
-                        plot_lines.append(
-' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
-                      %(copy_swap_re,HwU_name,block_position+1,RAP_var+4,RAP_var+5,4))
-###############ANton
-        plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
-
-        # Now add the uncertainty lines, those not using a band so that they
-        # are not covered by those using a band after we reverse plo_lines
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if not uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-        # then those using a band
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-       
-        # Reverse so that bands appear first
-        plot_lines.reverse()
-        # Add the plot lines
-        if not no_uncertainties:
-            gnuplot_out.append(',\\\n'.join(plot_lines))
-	# We finish here when no ratio plot are asked for.
-        if len(self)-n_histograms==0:
-            # Now add the tail for this group
-            gnuplot_out.extend(['','unset label','',
-'################################################################################'])
-            # Return the starting data_block position for the next histogram group
-            return block_position+len(self)
-####################################################################################################################22222
-####################################################################################################################22222
-
-        # We can finally add the last subhistograms for the ratios.
-        for i, histo in enumerate(self[:n_histograms]):
-            if i==0: continue
-
-        replacement_dic['unset label'] = 'unset label'
-        replacement_dic['ymin'] = ymin
-        replacement_dic['ymax'] = ymax
-        replacement_dic['origin_x'] = 0.0000e+00
-        replacement_dic['origin_y'] = 0.1
-        replacement_dic['size_y'] = 1.75000e-01
-        replacement_dic['size_x'] = 1.0000e+00
-        replacement_dic['mytics'] = 5
-        replacement_dic['set_ytics'] = 'set ytics auto'
-        replacement_dic['set_format_x'] = "set format x"
-        replacement_dic['set_yscale'] = "unset logscale y"
-        replacement_dic['set_format_y'] = 'unset format'
-        replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[1],PDFL[0])
-        replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[1],PDFL[0])
-
-        replacement_dic['set_histo_label'] = \
-        'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[1],PDFs[0],326,sqrtS, pdf[1].replace('_','\\\_'), pdf[0].replace('_','\\\\_'))#replace('_','\_')
-
-        gnuplot_out.append(subhistogram_header1%replacement_dic)
-
-        uncertainty_plot_lines = []
-        plot_lines = []
-	
-	# Some crap to get the colors right I suppose...
-        n=-1
-        n=n+1
-
-        for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
-            n=n+1
-            k=n
-            block_ratio_pos = block_position+n_histograms+i_histo_ratio
-            color_index     = n%self.number_line_colors_defined+1
-            # Now add the subhistograms
-###############A
-            if not RAP_var_pos is None:
-                for j,RAP_var in enumerate(RAP_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rap[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position,RAP_var+4,4))
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
-                      %(HwU_name,block_position,RAP_var+5,4))
-                    #uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
-                    #HwU_name, block_position+i, RAP_var+4, color_index+20,'',
-                                        #ratio=True, band='rap' in use_band)
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{%s%s} central value + PDF uncertainties, NLO'"\
-                      %(HwU_name,block_position,RAP_var+3,3,PDFL[1],PDFL[0]))
-                        plot_lines.append(
-' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
-                      %(copy_swap_re,HwU_name,block_position,RAP_var+4,RAP_var+5,4))
-###############A
-        plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
-
-        # Now add the uncertainty lines, those not using a band so that they
-        # are not covered by those using a band after we reverse plo_lines
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if not uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-        # then those using a band
-        for one_plot in uncertainty_plot_lines:
-            for uncertainty_type, lines in one_plot.items():
-                if uncertainty_type in use_band:
-                    plot_lines.extend(lines)
-       
-        #plot_lines.append("1.0 ls 999 title ''")
-
-        # Reverse so that bands appear first
-        plot_lines.reverse()
-        # Add the plot lines
-        gnuplot_out.append(',\\\n'.join(plot_lines))
+        #gnuplot_out.append(',\\\n'.join(plot_lines))
         
         # Now add the tail for this group
-        gnuplot_out.extend(['','unset label','unset multiplot','unset xlabel','set key spacing 1','',
-'################################################################################'])
+        gnuplot_out.extend(['','unset label','unset multiplot','unset xlabel','set key spacing 1','','################################################################################'])
 
         # Return the starting data_block position for the next histogram group
         return block_position+len(self)
-    
+########################################################################################################  
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
@@ -4473,12 +4505,12 @@ if __name__ == "__main__":
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
                       '--keep_all_weights','--colours']
     n_ratios   = -1    
-    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap']#,'scale_pa']#################S.A
+    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap','mur_muf_scale_pa','mur_muf_scale_ap']#,'scale_pa']#################S.A
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
     use_band      = None
     auto_open = True
     ratio_correlations = True    
-    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap']#,'scale_pa']#################S.A
+    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap','mur_muf_scale_pa','mur_muf_scale_ap']#,'scale_pa']#################S.A
 
     def log(msg):
         print("histograms.py :: %s"%str(msg))
@@ -4756,3 +4788,4 @@ def fill_between_steps(x, y1, y2=0, h_align='right', ax=None, **kwargs):
 
     return ax
 ######## end routine from https://gist.github.com/thriveth/835256
+

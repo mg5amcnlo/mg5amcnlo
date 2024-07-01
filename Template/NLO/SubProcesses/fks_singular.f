@@ -2337,17 +2337,14 @@ c wgts() array to include the weights.
 
       double precision, allocatable :: f1_p(:,:,:),f2_p(:,:,:)
 
-      DOUBLE PRECISION f3(0:MAXPROC)
-
-      DOUBLE PRECISION xlum_mod(1:nint(scalevarF(0)))
-      integer ii,bb,k,j,jmax
+      double precision xlum_mod(1:nint(scalevarF(0)))
+      integer ii,j,jmax
       
       
       parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
-      
       do nn=1,lhaPDFid(0)
-      
+
         if (icontr.eq.0) return
               
         if (nn.eq.1) then    
@@ -2359,11 +2356,13 @@ c wgts() array to include the weights.
         endif
 
         
-        do j=1,jmax
-
+       do j=1,jmax
+        
+        call InitPDFm(nn,0)
+        
         if (nn.eq.1.and.asymm_choice.eqv..true.) then
-        allocate(f1_p(nint(scalevarF(0)),icontr,MAXPROC))
-        allocate(f2_p(nint(scalevarF(0)),icontr,MAXPROC))
+            allocate(f1_p(nint(scalevarF(0)),icontr,MAXPROC))
+            allocate(f2_p(nint(scalevarF(0)),icontr,MAXPROC))
         endif
        
       
@@ -2387,7 +2386,6 @@ c coupling)
                mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
                g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
             enddo
-                        
 c factorisation scale variation (require recomputation of the PDFs)
             do kf=1,nint(scalevarF(0))
                if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
@@ -2396,15 +2394,17 @@ c factorisation scale variation (require recomputation of the PDFs)
                q2fact(1)=mu2_f(kf)
                q2fact(2)=mu2_f(kf)
                
-               if (nn.EQ.1) then! ---> central proton PDFs to be stored;
-                      xlum(kf) = dlum()
-                      
+               
+               if (j.eq.1) then
+                    xlum(kf) = dlum()
+                    if (nn.EQ.1) then! ---> central proton PDFs to be stored;                      
                       if (asymm_choice.eqv..true.) then
-                      do ii=1,IPROC
-                        f1_p(kf,i,ii)=PD1(ii)
-                        f2_p(kf,i,ii)=PD2(ii)
-                      enddo
+                        do ii=1,IPROC
+                            f1_p(kf,i,ii)=PD1(ii)
+                            f2_p(kf,i,ii)=PD2(ii)
+                        enddo
                       endif
+                    endif
                       
                     if (separate_flavour_configs .and. ipr(i).ne.0) then
                         if (nincoming.eq.2) then
@@ -2412,69 +2412,26 @@ c factorisation scale variation (require recomputation of the PDFs)
                         else
                             xlum(kf)=pd(ipr(i))
                         endif
-                    endif
-               else
-                    if (j.eq.1) then
-                        xlum_mod(kf)=0D0
-                        call InitPDFm(nn,0)
+                    endif                    
+               else if (j.eq.2) then
               
-                        xlum(kf) = dlum()
+                    xlum(kf) = dlum()
                     
-                        f3(0)=0
+                    xlum(kf)=0
+                    do ii=1,IPROC
+                        xlum(kf)=xlum(kf)+(f1_p(kf,i,ii)*PD2(ii)*conv)
+                    enddo
                         
-                        do ii=1,IPROC
-                            f3(ii)=PD2(ii)*PD1(ii)
-                        enddo
-                        
-                        xlum(kf)=0
-                        
-                        do bb=1,IPROC
-                            xlum(kf) = xlum(kf) + f3(bb)*conv
-                        enddo
-                    
-                    else if (j.eq.2) then
-                    
-                        xlum_mod(kf)=0D0
-                        call InitPDFm(nn,0)
+               else if (j.eq.3) then
               
-                        xlum(kf) = dlum()
+                    xlum(kf) = dlum()
                     
-                        f3(0)=0
-                        
-                        do ii=1,IPROC
-                            f3(ii)=PD2(ii)*f1_p(kf,i,ii)
-                        enddo
-                        
-                        xlum(kf)=0
-                        
-                        do bb=1,IPROC
-                            xlum(kf) = xlum(kf) + f3(bb)*conv
-                        enddo
-                        
-                    else if (j.eq.3) then
+                    xlum(kf)=0                        
+                    do ii=1,IPROC
+                        xlum(kf)=xlum(kf)+(PD1(ii)*f2_p(kf,i,ii)*conv)
+                    enddo
                     
-                        xlum_mod(kf)=0D0
-                        call InitPDFm(nn,0)
-              
-                        xlum(kf) = dlum()
-                    
-                        f3(0)=0
-                        
-                        do ii=1,IPROC
-                            f3(ii)=PD1(ii)*f2_p(kf,i,ii)
-                        enddo
-                        
-                        xlum(kf)=0
-                        
-                        do bb=1,IPROC
-                            xlum(kf) = xlum(kf) + f3(bb)*conv
-                        enddo
-                    
-                    endif
-                    
-                    
-               endif
-               
+               endif               
             enddo
             do kf=1,nint(scalevarF(0))
                if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
@@ -2493,12 +2450,12 @@ c add the weights to the array
             enddo
          enddo
         enddo
-        enddo
+       enddo
       enddo
       
       if (asymm_choice.eqv..true.) then
-      deallocate(f1_p)
-      deallocate(f2_p)
+        deallocate(f1_p)
+        deallocate(f2_p)
       endif
       
       call cpu_time(tAfter)
@@ -2633,21 +2590,19 @@ c wgts() array to include the weights.
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
+      integer              IPROC
+      double precision PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
 
-      DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
+      double precision PD1(0:MAXPROC), PD2(0:MAXPROC)                         
       COMMON /PDFVALUES/ PD1, PD2
 
       double precision, allocatable :: f1_p(:,:),f2_p(:,:)
-      DOUBLE PRECISION f3(0:MAXPROC)
 
-      DOUBLE PRECISION xlum_mod(1:3)
+      double precision xlum_mod(1:3)
       parameter (conv=389379660d0)
-      integer jmax,j,ii,bb,k
+      integer jmax,j,ii
       if (icontr.eq.0) return
-
       do nn=1,lhaPDFid(0)
       
        if (nn.eq.1) then    
@@ -2666,13 +2621,14 @@ c wgts() array to include the weights.
             call InitPDFm(nn,n)
             
             if (jmax==3) then
-            iwgt=iwgt-2
+                iwgt=iwgt-2
             endif
             
-            if (nn.EQ.1 .and.n.EQ.0.and.asymm_choice.eqv..true.) then
-            allocate(f1_p(icontr,MAXPROC))
-            allocate(f2_p(icontr,MAXPROC))
+            if (nn.eq.1.and.n.eq.0.and.asymm_choice.eqv..true.) then
+                allocate(f1_p(icontr,MAXPROC))
+                allocate(f2_p(icontr,MAXPROC))
             endif
+            
             do i=1,icontr
                nFKSprocess=nFKS(i)
                xbk(1) = bjx(1,i)
@@ -2694,7 +2650,7 @@ c Compute the luminosity
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
 	                    
-               if (nn.EQ.1 .and. n.EQ.0 .and.asymm_choice.eqv..true.) then
+               if (nn.eq.1.and.n.eq.0.and.asymm_choice.eqv..true.) then
                       do ii=1,IPROC
                         f1_p(i,ii)=PD1(ii)
                         f2_p(i,ii)=PD2(ii)
@@ -2705,7 +2661,7 @@ c Recompute the strong coupling: alpha_s in the PDF might change
 c add the weights to the array
                do j=1,jmax
               
-              if (j==1) then! pp or AA case
+                if (j==1) then! pp or AA case
               
         wgts(iwgt,i)= xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
@@ -2713,35 +2669,25 @@ c add the weights to the array
         wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
 
-              else if (j==2) then! pA case
+                else if (j==2) then! pA case
                  iwgt=iwgt+1
                                   
-                 f3(0)=0
                  do ii=1,IPROC
-                 f3(ii)=f1_p(i,ii)*PD2(ii)
+                 xlum_mod(2)=xlum_mod(2)+(f1_p(i,ii)*PD2(ii)*conv)
                  enddo
-
-		         do bb=1,IPROC
-        	     xlum_mod(2)=xlum_mod(2) + f3(bb)*conv
-                 enddo
-			
+                 
         wgts(iwgt,i)=xlum_mod(2) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
      
         wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
   
-              else if (j==3) then! Ap case
+                else if (j==3) then! Ap case
                  iwgt=iwgt+1
                                                  
-                 f3(0)=0
                  do ii=1,IPROC
-                 f3(ii)=PD1(ii)*f2_p(i,ii)
+                 xlum_mod(3) = xlum_mod(3)+(PD1(ii)*f2_p(i,ii)*conv)
                  enddo
-
-                 do bb=1,IPROC
-        	     xlum_mod(3) = xlum_mod(3) + f3(bb)*conv
-        	     enddo	
 
         wgts(iwgt,i)=xlum_mod(3) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
@@ -2749,20 +2695,21 @@ c add the weights to the array
         wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
 
-              endif
-              enddo ! i loop
+                endif
+                
+               enddo ! j loop
               
               if (jmax.eq.3.and.icontr.gt.1) then
-              iwgt=iwgt-2
+                iwgt=iwgt-2
               endif              
 
-            enddo ! n loop
+            enddo ! i loop
             
             if (iwgt.ne.counter) then
             iwgt=counter
             endif
             
-         enddo ! j loop 
+         enddo ! n loop 
       enddo ! nn loop
               
       call InitPDFm(1,0)
@@ -2770,8 +2717,8 @@ c add the weights to the array
       tr_pdf=tr_pdf+(tAfter-tBefore)
       
       if (asymm_choice.eqv..true.) then
-      deallocate(f1_p)
-      deallocate(f2_p)
+        deallocate(f1_p)
+        deallocate(f2_p)
       endif
       return
       end
