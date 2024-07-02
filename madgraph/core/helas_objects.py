@@ -4816,10 +4816,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             for wf in self.get_external_wavefunctions()]
 
         if self.get_nonia()>0:
-            print("LS--------------")
-            print("helas_objects.py:get_helicity_matrix()")
-            print("LS::WARNING: make sure that use of indices in the next lines are always correct, if 'allow_reverse' is chosen differently, the indices in hel_per_part are different!")
-            print("LS--------------")
             onia_pairs = self.get_onia_pairs()
             constituent = []
             external_wavefunctions = self.get_external_wavefunctions()
@@ -5765,12 +5761,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         col_basis = color_amp.ColorBasis()
         new_amp = matrix_element.get_base_amplitude()
         matrix_element.set('base_amplitude', new_amp)
-
-        print('LS--------------')
-        print('helas_objects.py:5783::')
-        print("legs:",matrix_element.get('base_amplitude').get('process').get('legs'))
-        print('LS--------------')
-        
         colorize_obj = col_basis.create_color_dict_list(\
                          matrix_element.get('base_amplitude'))
 
@@ -5802,13 +5792,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                list_color_basis[col_index])
         matrix_element.set('color_matrix',
                                list_color_matrices[col_index])
-
-        print('LS--------------')
-        print('helas_objects.py:5742::')
-        print('color basis:',matrix_element.get('color_basis'))
-        # print('color matrix:',matrix_element.get('color_matrix'))
-        print('LS--------------')
-
 
     # Below is the type of HelasMatrixElement which should be created by this
     # HelasMultiProcess class

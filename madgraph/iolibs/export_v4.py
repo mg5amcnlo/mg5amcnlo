@@ -2320,7 +2320,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """append ldmes to ident_card.dat"""
 
         if os.path.isfile(card):
-            print("LS::ident_card")
             with open(card, 'a') as f:
                 for onium_id in onia_ids:
                     f.write("\nldme {id} LDME_{id}\n".format(id=onium_id))
@@ -2336,7 +2335,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def get_ldme_product(self, matrix_element):
 
-        print("LS::LDME product",matrix_element.keys())
         onia = []
         ldmes = []
         for proc in matrix_element.get('processes'):
