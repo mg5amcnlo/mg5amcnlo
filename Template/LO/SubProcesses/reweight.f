@@ -620,6 +620,7 @@ C   local variables
 
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
+c111      logical set_goodjet(n_max_cl) ! variable for debugging unset call 
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
@@ -633,16 +634,12 @@ c     Variables for keeping track of jets
       external is_octet
       setclscales=.true.
 
-       setclscales=.true.
-
-c Workaround for valgrind 'Conditional jump or move depends on uninitialised value(s)'
-c See https://github.com/mg5amcnlo/mg5amcnlo/issues/111
-c FIXME: this is just a workaround to avoid uninitialised values and undefined behaviour...
-c FIXME: a real bug is probably hidden in the code (goodjet must be correctly defined!)...
-c FIXME: adding this workaround may change the behaviour of existing code...
-      do i=1,n_max_cl
-        goodjet(i)=.false. !!FIXME!! there is no reason to choose false instead of true here...
-      end do
+c    WARNING: goodjet() is sometimes accessed for variable which are not
+c      initialised by the algorithm (the line where this was happening is
+c      flagged). To be on a safe side, we initialise all entry to False.
+c      In case of weird behavior, uncomment line c111 to debug/investigate 
+      goodjet(:) = .false.
+c111     set_goodjet(:) = .false.
 
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
@@ -748,11 +745,13 @@ c        partonline gives whether this IS line is parton (start out true for any
 c        goodjet gives whether this cluster line is considered a jet
 c        i.e. if all related/previous clustering are jet
          goodjet(ibeam(i))=partonline(i)
+c111         set_goodjet(ibeam(i))= .true.
       enddo
 
       do i=3,nexternal
          j=ishft(1,i-1)
          goodjet(j)=isjet(ipdgcl(j,igraphs(1),iproc))
+c111         set_goodjet(j)= .true.
       enddo
 
 c     Go through clusterings and set factorization scale points for use in dsig
@@ -793,8 +792,10 @@ c             Stop fact scale where parton line stops
               else if (jfirst(j).eq.0) then
                  jfirst(j) = n
                  goodjet(imo)=.false.
+c111                 set_goodjet(imo)= .true.
               else
                  goodjet(imo)=.false.
+c111                 set_goodjet(imo)= .true.
               endif
 c             If not jet vertex, increase jcode. This is needed
 c             e.g. in VBF if we pass over to the other side and hit
@@ -810,6 +811,7 @@ c             parton vertices again.
                endif
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
+c111               if(.not.set_goodjet(ida(3-i))) stop 1 
               if(goodjet(ida(3-i))) then
                  if(partonline(j).or.
      $ ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
@@ -873,6 +875,7 @@ c                 The first quark is already remove so we shouldn't remove this 
            endif
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
+c111              set_goodjet(imocl(n))= .true.
               cycle
            endif
 
@@ -892,6 +895,7 @@ c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
+c111           set_goodjet(imocl(n))= .true.
             
 c       check case with g > g g
 c       where the hardest gluon is not goodjet but the other is.
@@ -918,6 +922,7 @@ c              write(*,*) 'ipart',ipart(1,imocl(n)),'/', ipart(2,imocl(n)), ipar
 c     $             ipart(1,idacl(n,2)),'/', ipart(2,idacl(n,2))
 c              write(*,*) 'googjet', goodjet(idacl(n,1)),goodjet(idacl(n,2))
               if (ipart(1,imocl(n)).eq.ipart(1, idacl(n,1))) then
+c111                 if(.not.set_goodjet(idacl(n,1)).or..not.set_goodjet(idacl(n,2))) stop 1                  
                   if (.not.goodjet(idacl(n,1)).and.goodjet(idacl(n,2))) then
 c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,2)), ipart(2,idacl(n,2))
                      do m =n_max_cl,n,-1
@@ -928,6 +933,7 @@ c                     write(*,*) 'ggg with hard jet set a QED the second jet lea
                      enddo
                   endif
                else
+c111                 if(.not.set_goodjet(idacl(n,1)).or..not.set_goodjet(idacl(n,2))) stop 1
                   if (.not.goodjet(idacl(n,2)).and.goodjet(idacl(n,1))) then
 c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,1)), ipart(2,idacl(n,1))
                      do m =n_max_cl,n,-1
@@ -1238,8 +1244,12 @@ c
          do i=1,2
             do j=1,2
 c              First adjust goodjet based on iqjets
-               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then ! FIXME: goodjet is uninitialised #111
-                  if(iqjets(ipart(j,ida(i))).eq.0) goodjet(ida(i))=.false.
+c111              if(.not.set_goodjet(ida(i)).and.ipart(j,ida(i)).gt.2) stop 1            
+               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then ! This is where  goodjet can be used uninitialised #111
+                  if(iqjets(ipart(j,ida(i))).eq.0)then
+                      goodjet(ida(i))=.false.
+c111                      set_goodjet(ida(i))=.true.
+                  endif
                endif
 c              Now reset ptclus if jet vertex
                if(ipart(j,ida(i)).gt.2) then
