@@ -3754,10 +3754,17 @@ class Process(PhysicsObject):
         final_legs = [leg for leg in self.get_legs_with_decays() if leg.get('state') == True]
 
         identical_indices = collections.defaultdict(int)
+        onia = []
         for leg in final_legs:
-            key = (leg.get('id'), tuple(leg.get('polarization')))
+            if leg.get('onium'):
+                key = (leg.get('onium').get('id'), tuple(leg.get('polarization')))
+                if leg.get('onium').get('index') in onia:
+                    identical_indices[key] -= 1
+                else:
+                    onia.append(leg.get('onium').get('index'))
+            else:
+                key = (leg.get('id'), tuple(leg.get('polarization')))
             identical_indices[key] += 1
-
 
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
