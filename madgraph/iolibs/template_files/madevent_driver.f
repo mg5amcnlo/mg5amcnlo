@@ -94,6 +94,7 @@ c      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       l2=index(buf,'_')
       if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
      $     read(buf(l1+1:l2-1),*,err=11) ngroup
+      close (lun+1)
  11   print *,'Process in group number ',ngroup
 
 c     Read weight from results.dat if present, to allow event generation
