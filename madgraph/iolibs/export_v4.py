@@ -110,6 +110,8 @@ class VirtualExporter(object):
     exporter = 'v4'
     # language of the output 'v4' for Fortran output
     #                        'cpp' for C++ output
+
+    default_vector_size = 0
     
     
     def __init__(self, dir_path = "", opt=None):
@@ -368,7 +370,7 @@ class ProcessExporterFortran(VirtualExporter):
         # add the makefile in Source directory 
         # now moved to finalize
 
-        self.write_vector_size(writers.FortranWriter('vector.inc'))
+        self.write_vector_size(writers.FortranWriter(pjoin(self.dir_path, 'Source','vector.inc')))
         
         # add the DiscreteSampler information
         files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'DiscreteSampler.f'), 
@@ -484,10 +486,10 @@ class ProcessExporterFortran(VirtualExporter):
 
         filename = pjoin(self.dir_path,'Source','makefile')
         if not second_exporter:
-            self.write_source_makefile(writers.FileWriter(filename))
+            self.write_source_makefile(writers.FileWriter(filename), self.model)
         else:
-           replace_dict = self.write_source_makefile(None)
-           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+           replace_dict = self.write_source_makefile(None, model=self.model)
+           second_exporter.write_source_makefile(writers.FileWriter(filename), model=self.model, default=replace_dict)  
 
         if second_exporter:
             self.has_second_exporter = second_exporter
@@ -731,7 +733,7 @@ class ProcessExporterFortran(VirtualExporter):
     #===========================================================================
     # write_source_makefile
     #===========================================================================
-    def write_source_makefile(self, writer):
+    def write_source_makefile(self, writer, model=None):
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
@@ -970,6 +972,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
         self.opt['exporter'] = self.__class__
+        if 'vector_size' in self.opt:
+            self.opt['output_options']['vector_size'] = self.opt['vector_size']
+        if 'vector_size' not in self.opt['output_options']:
+            self.opt['output_options']['vector_size'] = self.default_vector_size
+
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -2364,6 +2371,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
     matrix_template = "matrix_standalone_v4.inc"
     jamp_optim = True
+    default_vector_size = 0
 
     def __init__(self, *args,**opts):
         """add the format information compare to standard init"""
@@ -2441,7 +2449,29 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename),model)          
-        
+
+        # add default vector.inc for SA code
+        #filename = pjoin(self.dir_path, 'Source', 'vector.inc')
+        #self.write_vector_inc_for_sa(writers.FileWriter(filename), model)
+
+    #===========================================================================
+    # handling vector.inc (needed by the model) for SA (assuming no batch)
+    #===========================================================================     
+    #def write_vector_inc_for_sa(self, writer, model):
+    #    """ """
+#
+#        text="""
+#        INTEGER WARP_SIZE
+#       PARAMETER (WARP_SIZE=1)
+#       INTEGER NB_WARP
+#       PARAMETER (NB_WARP=1)
+#       INTEGER VECSIZE_MEMMAX
+#       PARAMETER (VECSIZE_MEMMAX=1)
+#
+#"""
+#        writer.write(text)
+#        return
+
     #===========================================================================
     # export model files
     #=========================================================================== 
@@ -3414,7 +3444,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
+        self.write_source_makefile(writers.FortranWriter(filename), self.model)
 
 
 
@@ -3889,7 +3919,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     # write_source_makefile
     #===========================================================================
-    def write_source_makefile(self, writer):
+    def write_source_makefile(self, writer, model):
         """Write the nexternal.inc file for madweight"""
 
 
@@ -4185,6 +4215,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         'hel_recycling': False
                         }
     jamp_optim = True
+    default_vector_size = 1
     
 
     def __new__(cls, *args, **opts):
@@ -4210,10 +4241,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if opt and isinstance(opt['output_options'], dict) and \
                                        'vector_size' in opt['output_options']:
+            misc.sprint(opt['output_options']['vector_size'])
             self.opt['vector_size'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['vector_size'], int, 'vector_size')
         else:
-            self.opt['vector_size'] = 0
+            self.opt['vector_size'] = 1
 
         if opt and isinstance(opt['output_options'], dict) and \
                                        'nb_warp' in opt['output_options']:
@@ -4255,8 +4287,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Copy the different python file in the Template
         self.copy_python_file()
 
-        self.write_vector_size(writers.FortranWriter(pjoin(self.dir_path,'Source','vector.inc')))
-        
         if model["running_elements"]:
             if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
                 raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
@@ -6831,10 +6861,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = pjoin(self.dir_path,'Source','makefile')
         if not second_exporter:
-            self.write_source_makefile(writers.FileWriter(filename))
+            self.write_source_makefile(writers.FileWriter(filename), model=self.model)
         else:
            replace_dict = self.write_source_makefile(None)
-           second_exporter.write_source_makefile(writers.FileWriter(filename), default=replace_dict)  
+           second_exporter.write_source_makefile(writers.FileWriter(filename), model=self.model, default=replace_dict)  
 
         if second_exporter:
             second_exporter.finalize(*args, **opts)
@@ -6882,16 +6912,19 @@ class UFO_model_to_mg4(object):
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)   
         try:
             vector_size = self.opt['output_options']['vector_size']
-        except KeyError:
-            vector_size = 1
-        self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
+            self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
+        except KeyError as error:
+            misc.sprint(error)
+            self.vector_size = 0
+
+        misc.sprint(self.vector_size)
         try:
             nb_warp = self.opt['output_options']['nb_warp']
         except KeyError:
             nb_warp = 1
         self.nb_warp = max(1, banner_mod.ConfigFile.format_variable(nb_warp, int, 'nb_warp'))
         if self.opt['mp']:
-            self.vector_size = 0
+            assert self.vector_size in [0,1]
             self.nb_warp = 1
         self.scales = []
         self.MUE = None # extra parameter loop #2 which is running
@@ -7092,6 +7125,7 @@ class UFO_model_to_mg4(object):
         self.create_coupl_inc()
         self.create_write_couplings()
         self.create_couplings()
+        self.create_printout()
         
         # the makefile
         self.create_makeinc()
@@ -7116,7 +7150,7 @@ class UFO_model_to_mg4(object):
         """Copy the standard files for the fortran model."""
         
         #copy the library files
-        file_to_link = ['formats.inc','printout.f', \
+        file_to_link = ['formats.inc', \
                         'rw_para.f', 'testprog.f']
     
         for filename in file_to_link:
@@ -7126,8 +7160,12 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
 
-        includes=["include \'../vector.inc\'",
-                  "include \'coupl.inc\'",
+        if self.vector_size:
+            includes=["include \'../vector.inc\'"]
+        else:
+            includes = []
+        
+        includes +=["include \'coupl.inc\'",
                   "include \'input.inc\'",
                   "include \'model_functions.inc\'"]
         if self.opt['mp']:
@@ -7171,7 +7209,7 @@ class UFO_model_to_mg4(object):
             if self.opt['export_format'] in ['FKS5_default', 'FKS5_optimized']:
                 path = pjoin(self.dir_path, 'makefile')
                 text = open(path).read()
-                text = text.replace('madevent','aMCatNLO')
+                text = text.replace('madevent','aMCatNLO').replace('../vector.inc', '')
                 open(path, 'w').writelines(text)
         elif self.opt['export_format'] in ['standalone', 'standalone_msP','standalone_msF',
                                   'madloop','madloop_optimized', 'standalone_rw', 
@@ -7257,10 +7295,12 @@ C
 
             mp_fsock.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
-                                  'mp_prefix':self.mp_prefix})
+                                  'mp_prefix':self.mp_prefix,
+                                  'vector_size': '(1)' if self.vector_size else ''})
             mp_fsock_same_name.writelines(header%{'real_mp_format':self.mp_real_format,
                                   'complex_mp_format':self.mp_complex_format,
-                                  'mp_prefix':''})
+                                  'mp_prefix':'',
+                                  'vector_size': '' if self.vector_size else ''})
 
         # Write the Mass definition/ common block
         masses = set()
@@ -7325,12 +7365,24 @@ C
 
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
-            mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
-                                                   ','.join(coupling_list)+'\n')
+            c_list = [coupl.name for coupl in self.coups_indep] 
+            if c_list: 
+                mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
+                                                   ','.join(c_list)+'\n')
+                mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
+                                 self.mp_prefix+c for c in c_list])+'\n')
+            if False: #no vector handling in quadruple for the moment
+                c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
+            else:
+                c_list = [coupl.name for coupl in self.coups_dep] 
+            if c_list: 
+                mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
+                                                   ','.join(c_list)+'\n')
+                mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
+                                 self.mp_prefix+c for c in c_list])+'\n')
             mp_fsock_same_name.writelines('common/MP_couplings/ '+\
                                                  ','.join(coupling_list)+'\n\n')                
-            mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
-                                 self.mp_prefix+c for c in coupling_list])+'\n')
+
             mp_fsock.writelines('common/MP_couplings/ '+\
                      ','.join([self.mp_prefix+c for c in coupling_list])+'\n\n')            
         
@@ -7494,6 +7546,20 @@ C
         self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
         self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
         
+
+    def create_printout(self):
+        """create printout.f"""
+
+        replace_dict = {'include_vector': "include '../vector.inc' ! VECSIZE_MEMMAX (needed by coupl.inc)"}
+
+        if not self.vector_size:
+            replace_dict['include_vector'] = ''
+
+        fsock = self.open('printout.f', format='fortran')
+        text = open(pjoin(MG5DIR , 'models', 'template_files','fortran', 'printout.f')).read()
+        text = text % replace_dict
+        fsock.write(text)
+
 
     def create_ewa(self):
         """create electroweakFlux.inc 
@@ -7690,6 +7756,8 @@ C
                             parameter  (PI=3.141592653589793d0)
                             parameter  (ZERO=0d0)
                             include \'model_functions.inc\'""")
+        if self.vector_size:
+            fsock.writelines("include \'../vector.inc\'\n")
         if self.opt['mp']:
             fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
@@ -7701,7 +7769,9 @@ C
         fsock.writelines("""logical updateloop
                             common /to_updateloop/updateloop
                             include \'input.inc\'
-                            include \'../vector.inc\'
+                         """)
+
+        fsock.writelines("""    
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
@@ -7746,7 +7816,7 @@ C
                             double precision model_scale
                             common /model_scale/model_scale
                             """ % \
-                            {'args': 'vecid' if self.vector_size  else '',
+                            {'args': 'vecid' if (self.vector_size) else '',
                             'args_dep': ' integer vecid' if self.vector_size  else ''}
                          )
 
@@ -7755,9 +7825,18 @@ C
             fsock.writelines("""
                             include \'../maxparticles.inc\'
                             include \'../cuts.inc\'
+                             """)
+            if self.vector_size:
+                fsock.writelines("""
                             include \'../vector.inc\'
+                                 """)
+            fsock.writelines("""            
                             include \'../run.inc\'""")        
         elif self.opt['export_format'] in  ['madloop_optimized']:
+            if self.vector_size:
+                fsock.writelines("""
+                            include \'../vector.inc\'
+                                 """)
             fsock.writelines("""
                             include \'../maxparticles.inc\'
                             include \'../cuts.inc\'
@@ -7837,8 +7916,10 @@ C
                             'args_dep': ' integer vecid' if self.vector_size else ''
                             })
         fsock.writelines("""include \'input.inc\'
-                            include \'../vector.inc\'
-                            include \'coupl.inc\'
+                         """)
+        if self.vector_size:
+            fsock.writelines("       include \'../vector.inc\'\n")
+        fsock.writelines("""include \'coupl.inc\'
                             double precision model_scale
                             common /model_scale/model_scale
                             """)
@@ -7881,21 +7962,24 @@ C
 
 
 
+
         if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
     
                                 implicit none
                                 logical READLHA
                                 include \'model_functions.inc\'""")
+            if self.vector_size:
+                fsock.writelines("""include \'../vector.inc\'\n""")
             fsock.writelines("""%s MP__PI, MP__ZERO
                                     parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                     parameter (MP__ZERO=0e0_16)
                                     include \'mp_input.inc\'
                                     include \'mp_coupl.inc\'
                             """%self.mp_real_format)
-            fsock.writelines("""include \'input.inc\'
-                                include \'../vector.inc\'
-                                include \'coupl.inc\'
+            fsock.writelines("""include \'input.inc\'""")
+
+            fsock.writelines("""include \'coupl.inc\'
                                 include \'actualize_mp_ext_params.inc\'
                                 READLHA = .false.
                                 include \'mp_intparam_definition.inc\'\n
@@ -8283,17 +8367,19 @@ C
           %(def_args)s
           include \'model_functions.inc\'"""% {'mp': 'mp_' if mp and not dp else '',
                                                'nb_file': nb_file,
-                                               'args': 'vecid' if vec else '',
+                                               'args': 'vecid' if (vec and not mp) else '',
                                                'def_args': '  integer vecid' if vec else ''})
+
+        if self.vector_size:
+            fsock.writelines("""include '../vector.inc'\n""")
 
         if dp:
             fsock.writelines("""
               double precision PI, ZERO
               parameter  (PI=3.141592653589793d0)
               parameter  (ZERO=0d0)
-              include 'input.inc'
-              include '../vector.inc'
-              include 'coupl.inc'""")
+              include 'input.inc'""")
+            fsock.writelines("""include 'coupl.inc'""")
         if mp:
             fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
@@ -8311,7 +8397,7 @@ C
             if mp:
                 fsock.writelines('%(mp)s%(name)s%(index)s = %(expr)s' % {'mp': self.mp_prefix,
                                           'name': coupling.name,
-                                          'index': '(vecid)' if vec else '',
+                                          'index': '', #no vectorization in quadruple
                                           'expr': self.mp_p_to_f.parse(coupling.expr)})
         fsock.writelines('end')
 

@@ -95,6 +95,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0 
+      selected_col(:) = 0
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
@@ -300,6 +302,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0
+      selected_col(:) = 0 
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)

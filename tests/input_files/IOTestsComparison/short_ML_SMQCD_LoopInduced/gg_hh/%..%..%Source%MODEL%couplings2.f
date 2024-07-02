@@ -12,7 +12,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
       INCLUDE 'input.inc'
-      INCLUDE '../vector.inc'
       INCLUDE 'coupl.inc'
       GC_5 = MDL_COMPLEXI*G
       R2_GGHB = 4.000000D+00*(-((MDL_COMPLEXI*MDL_YB)/MDL_SQRT__2))

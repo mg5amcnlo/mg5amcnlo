@@ -623,7 +623,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'orders.inc'
         amp_split_orders, amp_split_size, amp_split_size_born = \
 			   self.write_orders_file(
-                            writers.FortranWriter(filename),
+                            writers.FortranWriter90(filename),
                             matrix_element)
 
         filename = 'a0Gmuconv.inc'

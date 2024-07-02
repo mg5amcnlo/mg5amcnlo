@@ -467,6 +467,11 @@ class FortranWriter(FileWriter):
         return removed
         
 
+
+class FortranWriter90(FortranWriter):
+
+    comment_char = '        !'
+
 #===============================================================================
 # CPPWriter
 #===============================================================================
