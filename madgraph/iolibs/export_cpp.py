@@ -1517,8 +1517,8 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             """
             replace_dict['madE_caclwfcts_call'] = '&multi_chanel_num, &multi_chanel_denom'
             replace_dict['madE_update_answer'] = '   allMEs[iproc*nprocesses + ievt] *= multi_chanel_num/multi_chanel_denom;'
+
             multi_channel = self.get_multi_channel_dictionary(self.matrix_elements[0].get('diagrams'), self.include_multi_channel)
-            replace_dict['is_LC'] = self.get_icolamp_lines(multi_channel, self.matrix_elements[0], 1)
             replace_dict['nb_channel'] = len(multi_channel)
             replace_dict['nb_color'] = max(1, len(self.matrix_elements[0].get('color_basis')))
 
