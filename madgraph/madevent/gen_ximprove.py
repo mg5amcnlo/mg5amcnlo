@@ -160,6 +160,8 @@ class gensym(object):
                 lines = stdout.strip().split('\n')
                 nb_channel = max([math.floor(float(d)) for d in lines[-1].split()])
             else:
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
                 for matrix_file in misc.glob('matrix*orig.f', Pdir):
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
                 continue # bypass bad process
