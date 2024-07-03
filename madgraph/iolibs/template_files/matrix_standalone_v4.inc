@@ -431,7 +431,7 @@ C     put in common block to expose this variable to python interface
             if(THISNHEL(POS(IPART)).NE.ALLOW_HEL(1+N_COMB*(IPART-1))) GOTO 10 !BYPASS COMPUTATION FOR HELICITY
         ENDDO
         TMP_INTER(:) = 0
-        call  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, TMP_INTER)
+        call  %(proc_prefix)sGET_ALL_INTER(P, THISNHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, TMP_INTER)
         do I = 1, N_COMB*(N_COMB+1)/2
            INTER(I) = INTER(I) + TMP_INTER(I)
         enddo 
