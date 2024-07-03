@@ -114,9 +114,7 @@ c isspecial will be set equal to .true. colour flow by colour flow only
 c if the father is a gluon, and another gluon will be found which is
 c connected to it by both colour and anticolour
       isspecial=.false.
-c
-      if (split_type(qcd_pos)) then
-        ! identify the color partners 
+
 c consider only leading colour flows
         num_leading_cflows=0
         do i=1,max_bcol
@@ -129,6 +127,9 @@ c consider only leading colour flows
             endif
           enddo
         enddo
+c
+      if (split_type(qcd_pos)) then
+        ! identify the color partners 
 c
         do i=1,max_bcol
           if(.not.is_leading_cflow(i))cycle
@@ -540,6 +541,11 @@ c
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_mc(1:amp_split_size)=0d0
+      if (split_type(QED_pos)) then
+         ! QED partners are dynamically found
+         call find_ipartner_QED(pp,nofpartners)
+      endif
+
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
@@ -677,6 +683,10 @@ c -- call to MC counterterm functions
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
+      if (split_type(QED_pos)) then
+         ! QED partners are dynamically found
+         call find_ipartner_QED(p,nofpartners)
+      endif
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
