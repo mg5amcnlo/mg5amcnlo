@@ -5099,7 +5099,7 @@ This implies that with decay chains:
                 onium_index += 1
                 
             elif is_onium_name:
-                onia = pd.read_csv('./madgraph/interface/onia_names_properties.txt', skiprows=range(0,4),sep="\s+", engine='python', index_col = False)
+                onia = pd.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_names_properties.txt'), skiprows=range(0,4),sep="\s+", engine='python', index_col = False)
                 onium_info = onia.loc[onia['name'] == onium]
                 if is_onium_pdgcode:
                     onium_code = int(onium)
