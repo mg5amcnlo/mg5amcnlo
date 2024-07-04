@@ -62,8 +62,7 @@ for j in $1_ftn26.gz ; do
     if [[ -e \$j ]]; then
         rm -f ftn26 >& /dev/null
         rm -f $1_ftn26 >& /dev/null
-        gunzip \$j
-        cp $1_ftn26 ftn26
-        gzip $1_ftn26
+        gunzip --keep \$j
+        mv $1_ftn26 ftn26
     fi
 done"
