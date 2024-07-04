@@ -45,30 +45,24 @@ for i in `cat subproc.mg` ; do
     else
 	cp  results.dat $1_results.dat  >& /dev/null
     fi
-    for k in G* ; do
-	if [[ ! -d $k ]]; then
-	    continue
-	fi
-	cd $k
-	for j in $1_results.dat ; do
-	    if [[ -e $j ]] ; then
-		cp  $j results.dat
-	    else
-		cp  results.dat $j
-	    fi
-	done
-	for j in $1_ftn26.gz ; do
-	    if [[ -e $j ]]; then
-		rm -f ftn26 >& /dev/null
-		rm -f $1_ftn26 >& /dev/null
-		gunzip $j
-		cp $1_ftn26 ftn26
-		gzip $1_ftn26
-	    fi
-	done
-	cd ../
-    done
     cd ../
 done
 
-
+find . -mindepth 2 -maxdepth 2 -type d -name 'G*' -print0 \
+    | xargs --null -P "$(nproc --all)" -I{} bash -c "
+cd {}
+for j in $1_results.dat ; do
+    if [[ -e \$j ]] ; then
+        cp \$j results.dat
+    else
+        cp results.dat \$j
+    fi
+done
+for j in $1_ftn26.gz ; do
+    if [[ -e \$j ]]; then
+        rm -f ftn26 >& /dev/null
+        rm -f $1_ftn26 >& /dev/null
+        gunzip --keep \$j
+        mv $1_ftn26 ftn26
+    fi
+done"
