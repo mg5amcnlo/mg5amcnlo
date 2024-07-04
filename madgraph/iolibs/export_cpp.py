@@ -1760,7 +1760,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             return replace_dict
 
 
-
     def get_icolamp_lines(self, mapconfigs, matrix_element, num_matrix_element):
         """Return the ICOLAMP matrix, showing which JAMPs contribute to
         which configs (diagrams)."""
