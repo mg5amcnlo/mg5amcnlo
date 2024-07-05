@@ -1838,7 +1838,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 part = init_part[i]
 		# We need to boost all particles in the decay event using the momentum
 		# of the decaying particle in the production event
-                boost = lhe_parser.FourMomentum(part)
+        # .    need (E,-P) for the boost
+                boost = -1 * lhe_parser.FourMomentum(part)
+                boost.E *= -1
                 decay_event.boost(boost)                      
                 #print("decay event=",decay_event)         
                 
