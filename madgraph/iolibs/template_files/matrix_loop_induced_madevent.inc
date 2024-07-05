@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, proc_id, ANS, HEL_SELECTED, COL_SELECTED)
 C  
 %(info_lines)s
 C 
@@ -12,6 +12,8 @@ C
 C 
     use DiscreteSampler
     IMPLICIT NONE
+    double precision RHEL, RCOL
+    integer channel, proc_id, hel_selected, col_selected
 C  
 C CONSTANTS
 C  
