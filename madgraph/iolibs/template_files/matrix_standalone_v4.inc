@@ -385,7 +385,7 @@ C
 
 
 
-      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, INTER)
 c     P momenta
 c     NHEL base of helicity that are not changing
 c     POS(N_CHNGING): position of the changing helicity
@@ -398,6 +398,7 @@ CF2PY INTENT(IN) :: POS(N_CHANGING)
 CF2PY INTENT(IN) :: N_CHANGING
 CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(IN) :: ALPHAS
 CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
 c
 C
@@ -410,12 +411,14 @@ C
       INTEGER N_CHANGING, N_COMB
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
+      DOUBLE PRECISION ALPHAS
       DOUBLE COMPLEX INTER(99)
       DOUBLE COMPLEX TMP_INTER(99)
       INTEGER NB_NHEL
       PARAMETER (NB_NHEL=%(ncomb)d)
 c LOCAL
       INTEGER I,IHEL,IPART
+      DOUBLE PRECISION PI
 C
       INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
 C     put in common block to expose this variable to python interface
@@ -424,6 +427,12 @@ C     put in common block to expose this variable to python interface
       DO I=1, N_COMB*(N_COMB+1)/2
         INTER(I) = 0
       enddo
+
+      IF (ALPHAS.ne.0d0) then
+          pi = 3.141592653589793d0
+          G = 2* DSQRT(ALPHAS*pi)
+          call UPDATE_AS_PARAM()
+      ENDIF
 
       DO IHEL =1, NB_NHEL
         THISNHEL(:) = NHEL(:, IHEL)

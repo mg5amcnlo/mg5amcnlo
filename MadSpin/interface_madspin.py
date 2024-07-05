@@ -1921,7 +1921,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             all_p = event.get_all_momenta(orig_order)
             for p in all_p:
                 P = rwgt_interface.ReweightInterface.invert_momenta(p)
-                density = self.all_density[pdir](P, position, nchanging, allow_hel, ncomb)
+                density = self.all_density[pdir](P, position, nchanging, allow_hel, ncomb, event.aqcd)
                 return density
         else : 
             self.all_density[pdir] = self.get_mymod(pdir,'DENSITY')

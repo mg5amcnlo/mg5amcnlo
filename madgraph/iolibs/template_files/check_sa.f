@@ -156,8 +156,8 @@ C---  integer nexternal ! number particles (incoming+outgoing) in the me
 c      density matrix helicity index value for particle 1 
        ALLOW_HEL(1) = +1
        ALLOW_HEL(2) = -1
-c      
-       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+c     (last zero avoid to update as, otherwise new value for as can be  provided
+       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER, 0)
        
        SOL=0
        DO I=1, N_COMB
