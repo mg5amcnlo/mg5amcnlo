@@ -94,8 +94,6 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
 
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
 
     %(real_dp_format)s ML_JAMP2(nLoopFlows)
     common/%(ml_prefix)sJAMP2/ML_JAMP2
@@ -180,7 +178,6 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 
 
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
     DO I=1,NCOMB
        TS(I)=0d0
@@ -270,7 +267,7 @@ C Of course this option can also not be used for polarized beams.
       ELSE ! random helicity
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
-	        
+	        HEL_SELECTED= HEL_PICKED 
 			call cpu_time(t_before)            
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
 			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
@@ -295,17 +292,16 @@ c           Always one helicity at a time
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
 
-			WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
       IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1))) THEN
-         CALL RANMAR(R)
+c         CALL RANMAR(R)
          SUMHEL=0d0
          DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
-            IF(R.LT.SUMHEL)THEN
-          	   WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            IF(RHEL.LT.SUMHEL)THEN
 c         Set right sign for ANS, based on sign of chosen helicity
                ANS=DSIGN(ANS,TS(I))
+               HEL_SELECTED=I
                GOTO 10
             ENDIF
          ENDDO
