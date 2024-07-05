@@ -1,6 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.20 ():
+ANNOUNCMENT: 
+   2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing in december 2025.
+   (end of support june 2026).
+   A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
+
+
+2.9.20 (5/6/24):
     OM: Fix a wrong syntax handling for decay chain like
         generate ... > A A B  , B > ,  A >  , A >
         where due to the different order in production (AAB) and in decay (BAA)
@@ -8,6 +14,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         (present since v1.0.0)
         Note this bug can still be present if A or B are multi-particles, in that case we advise to use
         the same order for the production and decay syntax.
+    OM: Fix an issue with helicity recycling if some processes did not have available phase-space.
+        In some situation, the cross-section was reported as simply zero even if other processes where
+        kinematically allowed (thanks Sihyun Jeon)
+    OM: Improving the detection of cache invalidity for UFO model (thanks A. Valassi)
+    OM: Fix compilation of Stdhep on some unix machine (thanks jmcarcell)
+    OM: Fix an issue with the weight normalization when running PY8@LO
 
 
 2.9.19 (20/03/24):
