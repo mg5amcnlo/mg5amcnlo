@@ -43,7 +43,7 @@ import random
 import six
 StringIO = six
 from six.moves import range
-import pandas as pd
+import pandas
 
 #useful shortcut
 pjoin = os.path.join
@@ -4950,20 +4950,24 @@ This implies that with decay chains:
 
             # check if particle is ONIA
             is_onium = False
-            min_onium_length = 2
-            is_onium_name = False 
-            is_onium_pdgcode = False                      
-            
-            if part_name.find(".") > 0 and part_name.find("(") > 0 and part_name.endswith(")") > 0:
-                onium = re.split(r"[.(]+", part_name[:-1])
-                is_onium = True    
-            elif len(part_name) > min_onium_length:
-                onium = part_name         
-                is_onium_name = True
-                if onium.isdigit():
-                    is_onium_pdgcode = True
-                    print('pdg_code for onium given')
-#                print('There is a onium %s' %onium)
+            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_names_properties.txt'), skiprows=range(0,4),sep="\s+", engine='python', index_col = False)
+            for key in onia.keys():
+                try:
+                    onia[key] = onia[key].str.lower()
+                except:
+                    continue
+            # onium = part_name 
+            # onium_info = onia.loc[onia['name'] == onium]
+            if part_name in onia['notation'].values:
+                is_onium = True
+                onium_info = onia.loc[onia['notation'] == part_name]
+            elif part_name in onia['name'].values:
+                is_onium = True
+                onium_info = onia.loc[onia['name'] == part_name]
+            elif part_name.isdigit(): 
+                if int(part_name) in onia['pid'].values:
+                    is_onium = True
+                    onium_info = onia.loc[onia['pid'] == int(part_name)]                  
 
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
@@ -5075,59 +5079,31 @@ This implies that with decay chains:
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
                 mylegids.extend(self._multiparticles[part_name])
-            elif is_onium:
-                for i in range(2):
-                    mypart = self._curr_model['particles'].get_copy(onium[i])
-                    spectroscopy = onium[2].replace('s','0').replace('p','1')
-                    spectroscopy = [int(i) for i in spectroscopy]
-                    if spectroscopy[0]%2==0:
-                        raise self.InvalidCmd("Quaknonium in spectroscopic state (2*S+1)=%i cannot exist"%spectroscopy[0])
-                    spectroscopy[0] = int((spectroscopy[0]-1)/2)
-                    myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
-                                                            'state':state,
-                                                            'polarization': polarization,
-                                                            'onium': {
-                                                                'id':441,
-                                                                'name':'etac',
-                                                                'index':onium_index,
-                                                                'S':spectroscopy[0],
-                                                                'L':spectroscopy[1],
-                                                                'J':spectroscopy[2],
-                                                                'C':spectroscopy[3]
-                                                                }
-                                                            }))
-                onium_index += 1
                 
-            elif is_onium_name:
-                onia = pd.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_names_properties.txt'), skiprows=range(0,4),sep="\s+", engine='python', index_col = False)
-                onium_info = onia.loc[onia['name'] == onium]
-                if is_onium_pdgcode:
-                    onium_code = int(onium)
-                    onium_info = onia.loc[onia['pdg_code'] == onium_code]
+            elif is_onium:
                 spectroscopy = onium_info['spectroscopy'].to_string(index=False)
                 spectroscopy = [int(i) for i in spectroscopy]
                 if spectroscopy[0]%2==0:
-                    raise self.InvalidCmd("Quaknonium in spectroscopic state (2*S+1)=%i cannot exist"%spectroscopy[0])
-                spectroscopy[0] = int((spectroscopy[0]-1)/2)
-                id_onium = int(onium_info['pdg_code'].to_string(index=False))
-                spin_onium = int(onium_info['spinType'].to_string(index=False))
-                color_onium = int(onium_info['color'].to_string(index=False))
-                charge_onium = int(onium_info['charge'].to_string(index=False))
-                mass_onium = float(onium_info['mass'].to_string(index=False))
-                width_onium = float(onium_info['width'].to_string(index=False))
-                notation_onium = onium_info['notation'].to_string(index=False)
-                constituents = re.split(r"[.(]", notation_onium)
-                #print(constituents)
+                    raise self.InvalidCmd("Quaknonium with spin state (2*S+1)=%i cannot exist"%spectroscopy[0])
+                onium_name = onium_info['name'].to_string(index=False)
+                onium_id = int(onium_info['pid'].to_string(index=False))
+                onium_spin = int((int(onium_info['spinType'].to_string(index=False))-1)/2)
+                onium_color = int(onium_info['color'].to_string(index=False))
+                onium_charge = int(onium_info['charge'].to_string(index=False))
+                onium_mass = float(onium_info['mass'].to_string(index=False))
+                onium_width = float(onium_info['width'].to_string(index=False))
+                onium_notation = onium_info['notation'].to_string(index=False)
+                constituents = [onium_info['particle'].to_string(index=False),onium_info['anti-particle'].to_string(index=False)]
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
                   
                     myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
                                                         'state':state,
                                                         'polarization': polarization,
-                                                        'onium': {'id':id_onium, 'index':onium_index, 'name':onium,
-                                                                  'spin':spin_onium, 'color':color_onium, 'charge':charge_onium,
-                                                                  'mass':mass_onium, 'width':width_onium, 'S':spectroscopy[0],
-                                                                  'L':spectroscopy[1], 'J':spectroscopy[2], 'C':spectroscopy[3]}
+                                                        'onium': {'id':onium_id, 'name':onium_name, 'S':onium_spin,
+                                                                  'L':spectroscopy[1], 'J':spectroscopy[2], 'C':onium_color,
+                                                                  'charge':onium_charge, 'mass':onium_mass, 'width':onium_width,
+                                                                  'index':onium_index}
                                                         	}))      
                 onium_index += 1                
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
@@ -5173,8 +5149,6 @@ This implies that with decay chains:
                                                           'onium': {},
                                                           'is_tagged':is_tagged}))
             elif is_onium:
-                pass
-            elif is_onium_name:
                 pass
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
