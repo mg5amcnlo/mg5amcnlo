@@ -613,6 +613,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
      $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
+      use kinematics_module
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -721,6 +722,7 @@ c -- call to MC counterterm functions
      $           ,cflows))
          enddo
       enddo
+
 ! check the MC cross sections are positive:
       call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       if (mcatnlo_delta) then
@@ -728,10 +730,9 @@ c -- call to MC counterterm functions
          if(any(lzone(1:ipartners(0)))) call complete_xmcsubt(p,lzone
      $        ,xmcxsec,xmcxsec2,MCsec,probne)
       else
-! assign emsca on statistical basis (don't need flow here): 
-         if(any(lzone(1:ipartners(0)))) 
-     $        call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
-     $        ,MCsec,lzone,idum,ddum)
+c$$$         if(any(lzone(1:ipartners(0)))) 
+c$$$     $        call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
+c$$$     $        ,MCsec,lzone,idum,ddum)
 ! include the bogus no-emission probability:
          xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
          amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
@@ -880,13 +881,6 @@ c i_fks is gluon/photon
 c
       return
       end
-
-
-
-
-!!!! WE ARE HERE !!!!
-
-      
 
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
@@ -1455,15 +1449,12 @@ c$$$      include 'madfks_mcatnlo.inc'
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision emsca_bare,ptresc,ref_scale,
-     & scalemin,scalemax,emscainv
+      double precision ptresc,ref_scale,emscainv
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer cflows,jflow
       common/c_colour_flow/jflow
 
-      double precision emsca
-      common/cemsca/emsca,emsca_bare,scalemin,scalemax
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal) ,scalemin_a(nexternal,nexternal)
@@ -2470,220 +2461,238 @@ c
          enddo
       endif
       end
-      
-
+c$$$      
+c$$$      subroutine assign_flow(bornbars,cflow)
+c$$$      implicit none
+c$$$      include 'born_nhel.inc'
+c$$$      include 'orders.inc'
+c$$$      double precision bornbars(max_bcol,nsplitorders)
+c$$$      integer iflow,cflow
+c$$$      double precision sum_born,target,current,ran2
+c$$$      external ran2
+c$$$      sum_born=sum(bornbars(1:max_bcol,1:nsplitorders))
+c$$$      target=ran2()*sum_born
+c$$$      current=0d0
+c$$$      do iflow=1,max_bcol
+c$$$         current=current+sum(bornbars(iflow,1:nsplitorders))
+c$$$         if (current.ge.target) exit
+c$$$      enddo
+c$$$      if (iflow.gt.max_bcol) then
+c$$$         write (*,*) 'Cannot assign_flow',iflow,max_bcol
+c$$$         stop 1
+c$$$      endif
+c$$$      cflow=iflow
+c$$$      end
 
 
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt)
-      use kinematics_module
-      use scale_module
-      implicit none
-      include 'nexternal.inc'
-      include 'run.inc'
-      include "born_nhel.inc"
-c$$$      include 'madfks_mcatnlo.inc'
-      include "genps.inc"
-      include 'nFKSconfigs.inc'
-      double precision tiny
-      parameter       (tiny=1d-7)
-      integer npartner,cflows,i,jflow,jpartner,mpartner
-      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
-     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
-     $     ,dummy
-      logical lzone(nexternal)
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer          ipartners(0:nexternal-1)
-     &                          ,colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(ngraphs),jamp2(0:ncolor)
-      common/to_amps/  amp2         ,jamp2
-c Stuff to be written onto the LHE file
-      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
-     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
-      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     &                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-      double precision emsca,emsca_bare,           scalemin,scalemax
-      common /cemsca/  emsca,emsca_bare,scalemin,scalemax
-      double precision qMC
-      common /cqMC/    qMC
-      INTEGER              NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-      double precision ran2
-      external ran2
-      if (mcatnlo_delta) then
-c Input check
-         do npartner=1,ipartners(0)
-            if(xmcxsec(npartner).lt.0d0)then
-               write(*,*)'Fatal error 1 in complete_xmcsubt'
-               write(*,*)npartner,xmcxsec(npartner)
-               stop
-            endif
-         enddo
-         do cflows=1,max_bcol
-            if(xmcxsec2(cflows).lt.0d0)then
-               write(*,*)'Fatal error 2 in complete_xmcsubt'
-               write(*,*)cflows,xmcxsec2(cflows)
-               stop
-            endif
-         enddo
-
-c Compute MC cross section
-         wgt=0d0
-         wgt2=0d0
-         do i=1,max_bcol
-            sumMCsec(i)=0d0
-         enddo
-         do npartner=1,ipartners(0)
-            wgt=wgt+xmcxsec(npartner)
-         enddo
-         do cflows=1,max_bcol
-            wgt2=wgt2+xmcxsec2(cflows)
-         enddo
-         do cflows=1,max_bcol
-            do npartner=1,ipartners(0)
-               sumMCsec(cflows)=sumMCsec(cflows)+MCsec(npartner,cflows)
-            enddo
-         enddo
-c     
-         if((abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny).or.
-     &        (abs(wgt).le.1.d-10 .and.abs(wgt-wgt2).gt.tiny) )then
-            write(*,*)'Fatal error 3 in complete_xmcsubt'
-            write(*,*)wgt,wgt2
-            stop
-         endif
-         do cflows=1,max_bcol
-            if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.
-     &            abs(sumMCsec(cflows)-xmcxsec2(cflows))/
-     &            abs(sumMCsec(cflows)).gt.tiny) .or.
-     &           (abs(sumMCsec(cflows)).le.1.d-10 .and.
-     &            abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
-               write(*,*)'Fatal error 3 in complete_xmcsubt'
-               write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
-               stop
-            endif
-         enddo
-
-c Assign flow on statistical basis
-         if (wgt2.gt.0d0) then
-            ! use born-bars times kernels
-            rrnd=ran2()
-            wgt1=0d0
-            jflow=0
-            cflows=0
-            do while(jflow.eq.0.and.cflows.lt.max_bcol)
-               cflows=cflows+1
-               wgt1=wgt1+xmcxsec2(cflows)
-               if(wgt1.ge.rrnd*wgt2)jflow=cflows
-            enddo
-            if(jflow.eq.0)then
-               write(*,*)'Error in xmcsubt: flow unweighting failed'
-               stop
-            endif
-         else
-             ! use the born-bars
-            call sborn(p_born,dummy)
-            wgt1=0.d0
-            do i=1,max_bcol
-               wgt1=wgt1+jamp2(i)
-            enddo
-            wgt2=ran2()*wgt1
-            jflow=0
-            wgt1=0d0
-            do while (wgt1 .lt. wgt2)
-               jflow=jflow+1
-               wgt1=wgt1+jamp2(jflow)
-            enddo
-         endif
-c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
-         if(wgt.gt.1d-30)then
-            rrnd=ran2()
-            wgt1=0d0
-            jpartner=0
-            do npartner=1,ipartners(0)
-               if(lzone(npartner).and.jpartner.eq.0)then
-                  wgt1=wgt1+MCsec(npartner,jflow)
-                  if(wgt1.ge.rrnd*xmcxsec2(jflow))then
-                     jpartner=ipartners(npartner)
-                     mpartner=npartner
-                  endif
-               endif
-            enddo
-            if(jpartner.eq.0)then
-               write(*,*)'Error in xmcsubt: emsca unweighting failed'
-               stop
-            else
-               emsca=shower_scale_nbody(mpartner,fksfather)
-            endif
-         else
-            emsca=scalemax
-         endif
-
-      else                      ! mcatnlo-delta = .false.
-c Compute MC cross section
-         wgt=0d0
-         do npartner=1,ipartners(0)
-            if(lzone(npartner))then
-               wgt=wgt+xmcxsec(npartner)
-            endif
-         enddo
-c Assign emsca on statistical basis
-         if(wgt.gt.1d-30)then
-            rrnd=ran2()
-            wgt1=0d0
-            do npartner=1,ipartners(0)
-               if(lzone(npartner))then
-                  wgt1=wgt1+xmcxsec(npartner)
-                  if(wgt1.ge.rrnd*wgt)then
-                     mpartner=ipartners(npartner)
-                     exit
-                  endif
-               endif
-            enddo
-            if(npartner.eq.ipartners(0)+1)then
-               write(*,*)'Error in xmcsubt: emsca unweighting failed'
-               stop
-            else
-               emsca=shower_scale_nbody(mpartner,fksfather)
-            endif
-         else
-            emsca=0d0
-            do npartner=1,ipartners(0)
-               emsca=max(emsca
-     $              ,shower_scale_nbody_max(ipartners(npartner)
-     $              ,fks_father))
-            enddo
-         endif
-      endif
-
-
-c Additional information for LHE
-      ifks_lhe(nFKSprocess)=i_fks
-      jfks_lhe(nFKSprocess)=j_fks
-      fksfather_lhe(nFKSprocess)=min(i_fks,j_fks)
-      if(jpartner.ne.0)then
-         ipartner_lhe(nFKSprocess)=jpartner
-      else
-c min() avoids troubles if ran2()=1
-         ipartner_lhe(nFKSprocess)=min(int(ran2()*ipartners(0))+1,
-     $        ipartners(0) )
-         ipartner_lhe(nFKSprocess)=
-     $        ipartners(ipartner_lhe(nFKSprocess))
-      endif
-      scale1_lhe(nFKSprocess)=qMC
-      if(emsca.lt.scalemin)then
-         write(*,*)'Error in xmcsubt: emsca too small'
-         write(*,*)emsca,jpartner,lzone
-         stop
-      endif
-      return
+c$$$      use kinematics_module
+c$$$      use scale_module
+c$$$      implicit none
+c$$$      include 'nexternal.inc'
+c$$$      include 'run.inc'
+c$$$      include "born_nhel.inc"
+c$$$c$$$      include 'madfks_mcatnlo.inc'
+c$$$      include "genps.inc"
+c$$$      include 'nFKSconfigs.inc'
+c$$$      double precision tiny
+c$$$      parameter       (tiny=1d-7)
+c$$$      integer npartner,cflows,i,jflow,jpartner,mpartner
+c$$$      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
+c$$$     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
+c$$$     $     ,dummy
+c$$$      logical lzone(nexternal)
+c$$$      integer            i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      integer          ipartners(0:nexternal-1)
+c$$$     &                          ,colorflow(nexternal-1,0:max_bcol)
+c$$$      common /MC_info/ ipartners,colorflow
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common /pborn/   p_born
+c$$$c Jamp amplitudes of the Born (to be filled with a call the sborn())
+c$$$      double Precision amp2(ngraphs),jamp2(0:ncolor)
+c$$$      common/to_amps/  amp2         ,jamp2
+c$$$c Stuff to be written onto the LHE file
+c$$$      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+c$$$     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+c$$$      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
+c$$$      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+c$$$     &                fksfather_lhe,ipartner_lhe
+c$$$      common/cto_LHE2/scale1_lhe,scale2_lhe
+c$$$      double precision qMC
+c$$$      common /cqMC/    qMC
+c$$$      INTEGER              NFKSPROCESS
+c$$$      COMMON/C_NFKSPROCESS/NFKSPROCESS
+c$$$      double precision ran2
+c$$$      external ran2
+c$$$      if (mcatnlo_delta) then
+c$$$c Input check
+c$$$         do npartner=1,ipartners(0)
+c$$$            if(xmcxsec(npartner).lt.0d0)then
+c$$$               write(*,*)'Fatal error 1 in complete_xmcsubt'
+c$$$               write(*,*)npartner,xmcxsec(npartner)
+c$$$               stop
+c$$$            endif
+c$$$         enddo
+c$$$         do cflows=1,max_bcol
+c$$$            if(xmcxsec2(cflows).lt.0d0)then
+c$$$               write(*,*)'Fatal error 2 in complete_xmcsubt'
+c$$$               write(*,*)cflows,xmcxsec2(cflows)
+c$$$               stop
+c$$$            endif
+c$$$         enddo
+c$$$
+c$$$c Compute MC cross section
+c$$$         wgt=0d0
+c$$$         wgt2=0d0
+c$$$         do i=1,max_bcol
+c$$$            sumMCsec(i)=0d0
+c$$$         enddo
+c$$$         do npartner=1,ipartners(0)
+c$$$            wgt=wgt+xmcxsec(npartner)
+c$$$         enddo
+c$$$         do cflows=1,max_bcol
+c$$$            wgt2=wgt2+xmcxsec2(cflows)
+c$$$         enddo
+c$$$         do cflows=1,max_bcol
+c$$$            do npartner=1,ipartners(0)
+c$$$               sumMCsec(cflows)=sumMCsec(cflows)+MCsec(npartner,cflows)
+c$$$            enddo
+c$$$         enddo
+c$$$c     
+c$$$         if((abs(wgt).gt.1.d-10 .and.abs(wgt-wgt2)/abs(wgt).gt.tiny).or.
+c$$$     &        (abs(wgt).le.1.d-10 .and.abs(wgt-wgt2).gt.tiny) )then
+c$$$            write(*,*)'Fatal error 3 in complete_xmcsubt'
+c$$$            write(*,*)wgt,wgt2
+c$$$            stop
+c$$$         endif
+c$$$         do cflows=1,max_bcol
+c$$$            if( (abs(sumMCsec(cflows)).gt.1.d-10 .and.
+c$$$     &            abs(sumMCsec(cflows)-xmcxsec2(cflows))/
+c$$$     &            abs(sumMCsec(cflows)).gt.tiny) .or.
+c$$$     &           (abs(sumMCsec(cflows)).le.1.d-10 .and.
+c$$$     &            abs(sumMCsec(cflows)-xmcxsec2(cflows)).gt.tiny) )then
+c$$$               write(*,*)'Fatal error 3 in complete_xmcsubt'
+c$$$               write(*,*)sumMCsec(cflows),xmcxsec2(cflows)
+c$$$               stop
+c$$$            endif
+c$$$         enddo
+c$$$
+c$$$c Assign flow on statistical basis
+c$$$         if (wgt2.gt.0d0) then
+c$$$            ! use born-bars times kernels
+c$$$            rrnd=ran2()
+c$$$            wgt1=0d0
+c$$$            jflow=0
+c$$$            cflows=0
+c$$$            do while(jflow.eq.0.and.cflows.lt.max_bcol)
+c$$$               cflows=cflows+1
+c$$$               wgt1=wgt1+xmcxsec2(cflows)
+c$$$               if(wgt1.ge.rrnd*wgt2)jflow=cflows
+c$$$            enddo
+c$$$            if(jflow.eq.0)then
+c$$$               write(*,*)'Error in xmcsubt: flow unweighting failed'
+c$$$               stop
+c$$$            endif
+c$$$         else
+c$$$             ! use the born-bars
+c$$$            call sborn(p_born,dummy)
+c$$$            wgt1=0.d0
+c$$$            do i=1,max_bcol
+c$$$               wgt1=wgt1+jamp2(i)
+c$$$            enddo
+c$$$            wgt2=ran2()*wgt1
+c$$$            jflow=0
+c$$$            wgt1=0d0
+c$$$            do while (wgt1 .lt. wgt2)
+c$$$               jflow=jflow+1
+c$$$               wgt1=wgt1+jamp2(jflow)
+c$$$            enddo
+c$$$         endif
+c$$$c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
+c$$$         if(wgt.gt.1d-30)then
+c$$$            rrnd=ran2()
+c$$$            wgt1=0d0
+c$$$            jpartner=0
+c$$$            do npartner=1,ipartners(0)
+c$$$               if(lzone(npartner).and.jpartner.eq.0)then
+c$$$                  wgt1=wgt1+MCsec(npartner,jflow)
+c$$$                  if(wgt1.ge.rrnd*xmcxsec2(jflow))then
+c$$$                     jpartner=ipartners(npartner)
+c$$$                     mpartner=npartner
+c$$$                  endif
+c$$$               endif
+c$$$            enddo
+c$$$            if(jpartner.eq.0)then
+c$$$               write(*,*)'Error in xmcsubt: emsca unweighting failed'
+c$$$               stop
+c$$$            else
+c$$$               emsca=shower_scale_nbody(mpartner,fksfather)
+c$$$            endif
+c$$$         else
+c$$$            emsca=scalemax
+c$$$         endif
+c$$$
+c$$$      else                      ! mcatnlo-delta = .false.
+c$$$c Compute MC cross section
+c$$$         wgt=0d0
+c$$$         do npartner=1,ipartners(0)
+c$$$            if(lzone(npartner))then
+c$$$               wgt=wgt+xmcxsec(npartner)
+c$$$            endif
+c$$$         enddo
+c$$$c Assign emsca on statistical basis
+c$$$         if(wgt.gt.1d-30)then
+c$$$            rrnd=ran2()
+c$$$            wgt1=0d0
+c$$$            do npartner=1,ipartners(0)
+c$$$               if(lzone(npartner))then
+c$$$                  wgt1=wgt1+xmcxsec(npartner)
+c$$$                  if(wgt1.ge.rrnd*wgt)then
+c$$$                     mpartner=ipartners(npartner)
+c$$$                     exit
+c$$$                  endif
+c$$$               endif
+c$$$            enddo
+c$$$            if(npartner.eq.ipartners(0)+1)then
+c$$$               write(*,*)'Error in xmcsubt: emsca unweighting failed'
+c$$$               stop
+c$$$            else
+c$$$               emsca=shower_scale_nbody(mpartner,fksfather)
+c$$$            endif
+c$$$         else
+c$$$            emsca=0d0
+c$$$            do npartner=1,ipartners(0)
+c$$$               emsca=max(emsca
+c$$$     $              ,shower_scale_nbody_max(ipartners(npartner)
+c$$$     $              ,fksfather))
+c$$$            enddo
+c$$$         endif
+c$$$      endif
+c$$$
+c$$$
+c$$$c Additional information for LHE
+c$$$      ifks_lhe(nFKSprocess)=i_fks
+c$$$      jfks_lhe(nFKSprocess)=j_fks
+c$$$      fksfather_lhe(nFKSprocess)=min(i_fks,j_fks)
+c$$$      if(jpartner.ne.0)then
+c$$$         ipartner_lhe(nFKSprocess)=jpartner
+c$$$      else
+c$$$c min() avoids troubles if ran2()=1
+c$$$         ipartner_lhe(nFKSprocess)=min(int(ran2()*ipartners(0))+1,
+c$$$     $        ipartners(0) )
+c$$$         ipartner_lhe(nFKSprocess)=
+c$$$     $        ipartners(ipartner_lhe(nFKSprocess))
+c$$$      endif
+c$$$      scale1_lhe(nFKSprocess)=qMC
+c$$$      if(emsca.lt.scalemin)then
+c$$$         write(*,*)'Error in xmcsubt: emsca too small'
+c$$$         write(*,*)emsca,jpartner,lzone
+c$$$         stop
+c$$$      endif
+c$$$      return
       end
 
 
@@ -3057,6 +3066,35 @@ c the same holds for bornbarstilde(i).
       return
       end
 
+      subroutine determine_partner(flow_picked,partner_picked)
+      use process_module
+      use kinematics_module
+      implicit none
+      include 'nexternal.inc'
+      integer ndip(0:nexternal-1),i,flow_picked,partner_picked
+      double precision ran2
+      external ran2
+      ndip(0)=0
+      do i=1,nexternal-1
+         if (valid_dipole_n(i,fksfather,flow_picked)) then
+            ndip(0)=ndip(0)+1
+            ndip(ndip(0))=i
+         endif
+      enddo
+      if (ndip(0).eq.1) then
+         partner_picked=ndip(1)
+      elseif (ndip(0).eq.2) then
+         if (ran2().lt.0.5d0) then
+            partner_picked=ndip(1)
+         else
+            partner_picked=ndip(2)
+         endif
+      else
+         write (*,*) 'Inconsistent dipoles',ndip
+         stop 1
+      endif
+      end
+      
       subroutine get_born_flow(flow_picked)
       ! This assumes that the Born matrix elements are called. This is
       ! always the case if either the compute_born or the virtual

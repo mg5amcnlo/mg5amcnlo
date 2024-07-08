@@ -685,7 +685,7 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,flow_picked
+     $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -812,16 +812,19 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
                call compute_born
                call get_born_flow(flow_picked)
                call Bornonly_shower_scale(p_born,flow_picked)
+               emsca(nFKS_picked_nbody)=get_random_shower_dipole_scale()
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
                call get_born_flow(flow_picked)
                call compute_shower_scale_nbody(p_born,flow_picked)
+               emsca(nFKS_picked_nbody)=get_random_shower_dipole_scale()
             else
                ! Normal: all contributions included
                call compute_born
                call compute_nbody_noborn
+               call get_born_flow(flow_picked)
             endif
          endif
 
@@ -852,6 +855,12 @@ c for different nFKSprocess.
 ! dipole line)
             fks_father=min(i_fks,j_fks)
             call compute_shower_scale_nbody(p_born,-fks_father) 
+! assign emsca: we know flow (from driver_mintMC) and the
+!        father. Therefore the partner is fixed (except when father is a
+!        gluon (then there is a two-fold ambiguity)). Determine the
+!        partner:
+            call determine_partner(flow_picked,partner_picked)
+            emsca(iFKS)=shower_scale_nbody(fks_father,partner_picked)
 
             jac=1d0/vol1
             probne=1d0

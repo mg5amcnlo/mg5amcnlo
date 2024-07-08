@@ -2,18 +2,23 @@ module scale_module
   use process_module
   use kinematics_module
   implicit none
+!  include 'nFKSconfigs.inc'
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
        shower_scale_nbody_max,shower_scale_nbody_min
+!  double precision,public :: emsca(nFKSconfigs)
+  double precision,public :: emsca(1000)
+  integer,public :: flow_picked,partner_picked
   double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
   double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
   double precision,private,parameter :: scaleMCcut=3d0
 
-  public :: compute_shower_scale_nbody,init_scale_module,Bornonly_shower_scale
+  public :: compute_shower_scale_nbody,init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale
   private
 
 contains
+  
   subroutine init_scale_module(nexternal,shower_scale_factor_in)
     implicit none
     integer :: nexternal
@@ -203,6 +208,25 @@ contains
        endif
 !!$    endif
   end subroutine get_global_ref_scale
+
+  double precision function get_random_shower_dipole_scale()
+    implicit none
+    integer :: n_scales,i,j,iscale
+    integer,dimension(next_n**2,2) :: dip
+    double precision,external :: ran2
+    n_scales=0
+    do i=1,next_n
+       do j=1,next_n
+          if (shower_scale_nbody(i,j).gt.0d0) then
+             n_scales=n_scales+1
+             dip(n_scales,1)=i
+             dip(n_scales,2)=j
+          endif
+       enddo
+    enddo
+    iscale=int(ran2()*n_scales)+1
+    get_random_shower_dipole_scale=shower_scale_nbody(dip(iscale,1),dip(iscale,2))
+  end function get_random_shower_dipole_scale
 
   
 end module scale_module
