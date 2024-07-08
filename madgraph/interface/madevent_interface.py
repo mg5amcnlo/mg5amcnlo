@@ -4804,7 +4804,7 @@ tar -czf split_$1.tar.gz split_$1
                     # Make sure to sure the number of split_events determined during the splitting.
                     split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i])
                     split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
-                                                             (float(partition_for_PY8[i])/float(n_events)))
+                                                             (float(partition_for_PY8[i])))
                     # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
                     # the ones in the original PY8 param_card copied.
                     split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),

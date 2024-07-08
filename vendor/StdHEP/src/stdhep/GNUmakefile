@@ -23,7 +23,7 @@ CPPFLGS = $(KPPFLAGS) $(INCS)
 FOBJS =	$(patsubst %.F,%$(SFX).o,$(wildcard *.F))
 COBJS =	$(patsubst %.c,%$(SFX).o,$(wildcard *.c))
 XDROBJS = $(patsubst %.c,%$(SFX).o,$(wildcard mcf*.c))
-UOBJS = copy_stdevent$(SFX).o sum_4vec_d$(SFX).o sum_4vec_f$(SFX).o
+UOBJS = sum_4vec_d$(SFX).o sum_4vec_f$(SFX).o
 
 LIBLIST = $(SLIB)/libstdhep$(SFX).a $(SLIB)/libstdhepC$(SFX).a
 ifdef BUILD_SHARED
