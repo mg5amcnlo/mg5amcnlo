@@ -157,7 +157,7 @@ c      density matrix helicity index value for particle 1
        ALLOW_HEL(1) = +1
        ALLOW_HEL(2) = -1
 c     (last zero avoid to update as, otherwise new value for as can be  provided
-       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER, 0)
+       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, 0d0, INTER)
        
        SOL=0
        DO I=1, N_COMB

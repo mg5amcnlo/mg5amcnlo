@@ -423,7 +423,11 @@ C
       INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
 C     put in common block to expose this variable to python interface
       COMMON/PROCESS_NHEL/NHEL
-      
+C
+C     include coupling definition to update the value of alphas
+C
+      include 'coupl.inc'
+
       DO I=1, N_COMB*(N_COMB+1)/2
         INTER(I) = 0
       enddo
