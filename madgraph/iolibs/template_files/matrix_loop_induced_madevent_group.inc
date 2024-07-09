@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,RHEL, RCOL, channel, proc_id, ANS, hel_selected, col_selected)
+SUBROUTINE SMATRIX%(proc_id)s(P,RHEL, RCOL, channel, proc_id, ANS, hel_selected, icol)
 C  
 %(info_lines)s
 C 
@@ -14,7 +14,7 @@ C
     IMPLICIT NONE
     double precision RHEL
     double precision RCOL
-    integer channel, proc_id, hel_selected, col_selected
+    integer channel, proc_id, hel_selected, icol
 C  
 C CONSTANTS
 C  
@@ -308,6 +308,8 @@ c         Set right sign for ANS, based on sign of chosen helicity
  10      CONTINUE   
       ENDIF
     ENDIF
+
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
