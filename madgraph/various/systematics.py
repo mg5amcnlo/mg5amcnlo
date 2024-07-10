@@ -166,8 +166,8 @@ class Systematics(object):
         nosystlabels=['none','chff','edff']
         for y in ['i','x','0','1','2','3','4']:
             for z in ['i','x','0','1','2','3','4']:
-                upclabels.append('edf'+y+'n'+z+'n')
-                upclabels.append('chf'+y+'n'+z+'n')
+                nosystlabels.append('edf'+y+'n'+z+'n')
+                nosystlabels.append('chf'+y+'n'+z+'n')
         if(self.banner.run_card['pdlabel'] in nosystlabels):
             raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff,chf<y>n<z>n, edf<y>n<z>n')
 
