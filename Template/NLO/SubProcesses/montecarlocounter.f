@@ -425,9 +425,9 @@ c
         if (.not.found) then
           do j=1,nexternal
             if (j.ne.fksfather.and.j.ne.i_fks) then
-              if (particle_charge(fksfather).ne.0d0.and.particle_charge(j).ne.0d0) then
-                ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) / 
-     $            (particle_charge(fksfather) * particle_charge(j))
+               if (particle_charge(j).ne.0d0) then
+                  ppnow=(dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j)) /
+     $            (particle_charge(j) * particle_charge(j))
                 if (ppnow.lt.ppmin) then
                   found=.true.
                   partner=j
