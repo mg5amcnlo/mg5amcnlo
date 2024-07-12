@@ -22,7 +22,7 @@
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
       integer npart
-      double precision shower_scale,shower_scale_a(-nexternal+3:2
+      double precision shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -57,7 +57,7 @@ c
          endif
          Hevents=.true.
          call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        .false.,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
+     &        .false.,ndim,x,jpart,npart,pb,shower_scale_a)
 c Put the Hevent info in a common block
          NUP_H=npart
          do i=1,NUP_H
@@ -79,11 +79,11 @@ c Put the Hevent info in a common block
       endif
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
+     &     putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
 
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale,shower_scale_a,ickkw)
+     $     ,shower_scale_a,ickkw)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -154,9 +154,10 @@ c get info on beam and PDFs
       return
       end
 
-      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
-     $     ,shower_scale_a,ickkw)
+      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale_a
+     $     ,ickkw)
       use extra_weights
+      use scale_module
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -213,7 +214,7 @@ c
             enddo
          enddo
       else
-         scale = shower_scale
+         scale = SCALUP
          do j=1,2*nexternal-3
             do k=1,2*nexternal-3
                if(j.eq.k)cycle

@@ -6,7 +6,7 @@ module scale_module
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
        shower_scale_nbody_max,shower_scale_nbody_min
 !  double precision,public :: emsca(nFKSconfigs)
-  double precision,public :: emsca(1000)
+  double precision,public :: emsca(1000),SCALUP
   integer,public :: flow_picked,partner_picked
   double precision,private :: global_ref_scale,shower_scale_factor
 
@@ -14,7 +14,8 @@ module scale_module
   double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
   double precision,private,parameter :: scaleMCcut=3d0
 
-  public :: compute_shower_scale_nbody,init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale
+  public :: compute_shower_scale_nbody,init_scale_module,Bornonly_shower_scale,&
+            get_random_shower_dipole_scale,get_born_flow,determine_partner
   private
 
 contains
@@ -227,6 +228,66 @@ contains
     iscale=int(ran2()*n_scales)+1
     get_random_shower_dipole_scale=shower_scale_nbody(dip(iscale,1),dip(iscale,2))
   end function get_random_shower_dipole_scale
+      
+  subroutine determine_partner(flow_picked,partner_picked)
+    use process_module
+    use kinematics_module
+    implicit none
+    integer :: ndip(0:next_n),i,flow_picked,partner_picked
+    double precision,external :: ran2
+    ndip(0)=0
+    do i=1,next_n
+       if (valid_dipole_n(i,fksfather,flow_picked)) then
+          ndip(0)=ndip(0)+1
+          ndip(ndip(0))=i
+       endif
+    enddo
+    if (ndip(0).eq.1) then
+       partner_picked=ndip(1)
+    elseif (ndip(0).eq.2) then
+       if (ran2().lt.0.5d0) then
+          partner_picked=ndip(1)
+       else
+          partner_picked=ndip(2)
+       endif
+    else
+       write (*,*) 'Inconsistent dipoles',ndip
+       stop 1
+    endif
+  end subroutine determine_partner
 
+  subroutine get_born_flow(flow_picked)
+    ! This assumes that the Born matrix elements are called. This is
+    ! always the case if either the compute_born or the virtual
+    ! (through bornsoftvirtual) are evaluated.
+    implicit none
+    include 'genps.inc'
+    include "born_nhel.inc"
+    integer :: flow_picked,i
+    double precision :: sumborn,target,sum
+    double precision,external :: ran2
+    double Precision :: amp2(ngraphs),jamp2(0:ncolor)
+    common/to_amps/  amp2         ,jamp2
+    logical :: is_leading_cflow(max_bcol)
+    integer :: num_leading_cflows
+    common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+    ! sumborn is the sum of the leading colour flow contributions to the Born.
+    sumborn=0.d0
+    do i=1,max_bcol
+       if(is_leading_cflow(i)) sumborn=sumborn+jamp2(i)
+    enddo
+    target=ran2()*sumborn
+    sum=0d0
+    do i=1,max_bcol
+       if (.not.is_leading_cflow(i)) cycle
+       sum=sum+jamp2(i)
+       if(sum.gt.target) then
+          flow_picked=i
+          return
+       endif
+    enddo
+    write (*,*) 'Error #1 in get_born_flow',sum,target,i
+    stop 1
+  end subroutine get_born_flow
   
 end module scale_module

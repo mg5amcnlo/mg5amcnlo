@@ -1,7 +1,8 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use scale_module
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -13,7 +14,7 @@ c intermediate resonances. It also boosts the events to the lab frame
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
-      double precision ybst_til_tolab,shower_scale ,shower_scale_a(
+      double precision ybst_til_tolab,shower_scale_a(
      $     -nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
       integer iconfig
       logical Hevents,putonshell
@@ -225,14 +226,14 @@ c Copy the saved information to the arrays actually used
       endif
 c Set the shower scale
       if (Hevents) then
-         shower_scale=SCALUP(nFKSprocess*2)
+c$$$         shower_scale=SCALUP(nFKSprocess*2)
          do i=1,nexternal
             do j=1,nexternal
                shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2,i,j)
             enddo
          enddo
       else
-         shower_scale=SCALUP(nFKSprocess*2-1)
+c$$$         shower_scale=SCALUP(nFKSprocess*2-1)
          do i=1,nexternal
             do j=1,nexternal
                shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2-1,i,j)
@@ -634,14 +635,14 @@ c
             integfour=''
             float=''
             if (need_matching(i).ne.-1) then
-               ptclus=shower_scale
+               ptclus=SCALUP
             else
                if (nincoming.ne.2) then
                   write (*,*) 'need two incoming particles '/
      $                 /'in add_write_info.f'
                   stop 1
                endif
-               ptclus=shower_scale-0.001d0
+               ptclus=SCALUP-0.001d0
             endif
             Write(float,'(f16.5)') ptclus
             write(integfour,'(i4)') ito(i)
