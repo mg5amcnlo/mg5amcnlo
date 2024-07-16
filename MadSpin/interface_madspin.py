@@ -56,7 +56,7 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
-UseDensity = False
+UseDensity = True
 
 class MadSpinOptions(banner.ConfigFile):
     
@@ -1697,7 +1697,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function 
                 _, wgt = self.get_onshell_evt_and_wgt(base_event, decays, decay_dict, inter_prod_dict)
-                print(f"Spyros wgt for max : {wgt}")
+                #print(f"Spyros wgt for max : {wgt}")
                 maxwgt = max(wgt, maxwgt)
             all_maxwgt.append(maxwgt)
             
@@ -1767,8 +1767,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             me1 = self.calculate_matrix_element(full_event)
             # full_event need to be set after since modifies production
         
-        _, me2 = self.calculate_matrix_element_from_density(prod1, dec1, decay_dict, inter_prod_dict)
-        print(f"me1 = {me1} , me2 = {me2} , ratio = {me1/me2}")	
+        #print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	
+        #print(full_event)
+        if abs(1-me1/full_me) > 1E-5:
+            print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	    
+            print(full_event)	
+            raise RuntimeError("ERROR")	    
         return full_event, full_me/(production_me*decay_me)
  
            
@@ -1838,11 +1842,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 part = init_part[i]
 		# We need to boost all particles in the decay event using the momentum
 		# of the decaying particle in the production event
-        # .    need (E,-P) for the boost
+                # need (E,-P) for the boost
                 boost = -1 * lhe_parser.FourMomentum(part)
                 boost.E *= -1
                 decay_event.boost(boost)                      
-                #print("decay event=",decay_event)         
                 
 		# Get all helicity configurations and iden number for production and decay events
                 nhel_p_tot,iden_p = self.get_nhel(production,position[0])
@@ -1874,11 +1877,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                         for j,hel_d in enumerate(nhel_d_tot):
                             #print(f"decay hel = {hel_d}")	    
                             inter_dec = self.get_inter_value(decay_event,hel_d)
+                            print(f"decay_event = {decay_event}")    
 			    # Here the indices for inter_prod and inter_dec need to be the same since
 			    # inter_2_prod = jamp_1_prod * jamp_2_prod.conjugate
 			    # inter_2_dec = jamp_1_dec * jamp_2_dec.conjugate
-                            inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]                      
+                            inter_prod_dec = [inter_prod[k] * inter_dec[k] for k in range(len(inter_prod))]  
+                            for k in range(len(inter_prod)):
+                                print(f"hel_p = {hel_p} , hel_d = {hel_d} , inter_prod[{k}] = {inter_prod[k]} , inter_dec[{k}] = {inter_dec[k]}")           
                             me += sum(inter_prod_dec)/D_D_conj
+                    print(f"iden = {iden_p} , color = {color}, d*dconj = {D_D_conj}") 
                     me = me.real/(iden_p*color)
                 else:
 		    # Get density matrix for production and decay
@@ -1890,7 +1897,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 		    # and superscripts the helicities of the rest of the particles
                     density_prod = self.get_density(production, position, nchanging, allowed_hel, ncomb)
                     density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
-		
+                    		    
 		    # To get the ME we need to multiply the production and decay inters with the same index
                     #print(f"density_prod = {density_prod}")
                     #print(f"density_dec = {density_dec}")
@@ -1898,7 +1905,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                          + density_prod[1]*density_dec[1] \
                          + density_prod[1].conjugate()*density_dec[1].conjugate() \
                          + density_prod[2]*density_dec[2]
-                    me = me.real/(iden_p*color)
+                    me = me.real/(iden_p*color*D_D_conj)
 				
                 # Add decayed event to LHE record
                 for k in range(len(decay_event)-1): 

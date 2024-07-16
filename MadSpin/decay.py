@@ -4431,9 +4431,9 @@ class decay_all_events_density(decay_all_events_onshell):
         misc.sprint(to_decay)
         return line
 
-    def get_full_matrix_command(self, processes): 
-        "No need of full matrix-element in this mode"
-        return ""
+    #def get_full_matrix_command(self, processes): 
+    #    "No need of full matrix-element in this mode"
+    #    return ""
     
     def adapt_production(self, line):
         return line
@@ -4458,14 +4458,14 @@ class decay_all_events_density(decay_all_events_onshell):
             split[i] = element
         return '>'.join(adapt_decay)
     '''
-    def compile(self):
-        logger.info('Compiling code')
-        #my_env = os.environ.copy()
-        #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
-        misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
-                     nb_core=self.mgcmd.options['nb_core'])        
-        misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
-                     nb_core=self.mgcmd.options['nb_core'])
+    #def compile(self):
+    #    logger.info('Compiling code')
+    #    #my_env = os.environ.copy()
+    #    #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
+    #    misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
+    #                 nb_core=self.mgcmd.options['nb_core'])        
+    #    misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
+    #                 nb_core=self.mgcmd.options['nb_core'])
 
     def save_to_file(self, *args):
         import sys
