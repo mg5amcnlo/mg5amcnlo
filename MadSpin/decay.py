@@ -2268,7 +2268,6 @@ class decay_all_events(object):
 
         for proc in self.all_decay:
             for me in self.all_decay[proc]['processes']:
-                #misc.sprint(type(me), me)
                 me['model'] = model
                 to_clean = list(me['decay_chains'])
                 while to_clean:
