@@ -5,7 +5,7 @@ ANNOUNCEMENT:
    (end of support june 2026).
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.5.5 (04/06/24):
+3.5.5 (17/06/24):
      OM: Fix a bug in the new strategy of combining events.
      OM: Allow slurm/condor cluster to specify the wall time of the jobs (cluster_walltime)
      OM: add new (hidden) entry in the run_card to force to keep all the log file (keep_log)
@@ -194,7 +194,7 @@ ANNOUNCEMENT:
                         ** Long Term Stable Update **
 
 
-2.9.20 (5/6/24):
+2.9.20 (17/6/24):
     OM: Fix a wrong syntax handling for decay chain like
         generate ... > A A B  , B > ,  A >  , A >
         where due to the different order in production (AAB) and in decay (BAA)
