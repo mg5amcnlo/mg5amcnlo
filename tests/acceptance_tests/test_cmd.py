@@ -216,13 +216,14 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': True,
-                     'nlo_mixed_expansion': True,
-                     'acknowledged_v3.1_syntax': False,
-                     'contur_path': './HEPTools/contur',
-                     'rivet_path': './HEPTools/rivet',
-                     'yoda_path':'./HEPTools/yoda',
-                      'eMELA': 'eMELA-config',
+                    'auto_convert_model': True,
+                    'nlo_mixed_expansion': True,
+                    'acknowledged_v3.1_syntax': False,
+                    'contur_path': './HEPTools/contur',
+                    'rivet_path': './HEPTools/rivet',
+                    'yoda_path':'./HEPTools/yoda',
+                    'eMELA': 'eMELA-config',
+                    'cluster_walltime': None,
                     }
 
         self.assertEqual(config, expected)
