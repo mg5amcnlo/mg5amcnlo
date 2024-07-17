@@ -707,7 +707,7 @@ class TestMEfromfile(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False
+        self.debuging = True
         if self.debuging:
             self.path = pjoin(MG5DIR, 'ACC_TEST')
             if os.path.exists(self.path):
