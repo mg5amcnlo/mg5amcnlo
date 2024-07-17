@@ -84,7 +84,7 @@ def parse_info_str(fsock):
 def glob(name, path=''):
     """call to glob.glob with automatic security on path"""
     import glob as glob_module
-    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    path = re.sub(r'(?P<name>\?|\*|\[|\])', r'[\g<name>]', path)
     return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
