@@ -1732,7 +1732,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = """ DO CURR_WARP=1, NB_WARP
+            pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+        IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+        ENDIF
+
+        DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
           IB(2) = 2
