@@ -1933,7 +1933,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                     if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                    if re.search(r'^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path

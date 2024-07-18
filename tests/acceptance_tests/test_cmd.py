@@ -216,14 +216,14 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': True,
-                     'nlo_mixed_expansion': True,
-                     'acknowledged_v3.1_syntax': False,
-                     'contur_path': './HEPTools/contur',
-                     'rivet_path': './HEPTools/rivet',
-                     'yoda_path':'./HEPTools/yoda',
-                      'eMELA': 'eMELA-config',
-                      'cluster_walltime': None,
+                    'auto_convert_model': True,
+                    'nlo_mixed_expansion': True,
+                    'acknowledged_v3.1_syntax': False,
+                    'contur_path': './HEPTools/contur',
+                    'rivet_path': './HEPTools/rivet',
+                    'yoda_path':'./HEPTools/yoda',
+                    'eMELA': 'eMELA-config',
+                    'cluster_walltime': None,
                     }
 
         self.assertEqual(config, expected)
@@ -1454,6 +1454,20 @@ P1_qq_wp_wp_lvl
         """ check that we can use standard MG4 name """
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
+
+    def test_decay_chain_identical_particle_outoforder(self):
+        """ check that we can use standard MG4 name """
+        
+        self.do('import model sm')
+        self.do('generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.do('output madevent %s ' % self.out_dir)
+        Pdir = os.listdir(pjoin(self.out_dir, 'SubProcesses')) 
+        self.assertNotIn('P0_ll_zzh_z_ll_z_ll_h_bbx',  Pdir)
+
+
+
+
 
     def test_save_load(self):
         """ check that we can use standard MG4 name """

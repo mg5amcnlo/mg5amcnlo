@@ -504,18 +504,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         writer.close()
         
         # Copy the whole MadLoop5_resources directory (empty at this stage)
-        if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
-                                                        'MadLoop5_resources')):
-            cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
-                    'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
+        ml_path = pjoin(self.dir_path,'SubProcesses', 'MadLoop5_resources')
+        if not os.path.exists(ml_path):
+            os.mkdir(ml_path)
 
         # Link relevant cards from Cards inside the MadLoop5_resources
-        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','param_card.dat'),
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), ml_path)
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'), ml_path)
+        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), ml_path) 
 
         # And remove check_sa in the SubProcess folder since now there is a
         # check_sa tailored to each subprocess.

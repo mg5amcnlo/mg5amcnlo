@@ -3138,23 +3138,19 @@ class FourMomentum(object):
             return out
         
         
-        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
-        # rotation such that it become (E, 0 , 0 , p ) is
-        #  cosT sinF  ,  -sinT  , cosT sinF
-        #  sinT cosF  ,  cosT   , sinT sinF
-        # -sinT       ,   0     , cosF
-        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
-        cosF = pboost.pz / p
-        sinF = math.sqrt(1-cosF**2)
-        sinT = pboost.py/p/sinF
-        cosT = pboost.px/p/sinF
-        
-        out=FourMomentum([self.E,
-                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
-                          -self.px*sinT+      self.py*cosT,
-                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
-                          ])
-        out = out.zboost(E=pboost.E,pz=p)
+        # see here https://physics.stackexchange.com/questions/749036/general-lorentz-boost-of-four-momentum-in-cm-frame-particle-physics
+        vx = pboost.px/pboost.E 
+        vy = pboost.py/pboost.E 
+        vz = pboost.pz/pboost.E 
+        v = pboost.norm/pboost.E
+        v2 = pboost.norm_sq/pboost.E**2
+        gamma = 1./math.sqrt(1.-v**2)
+        gammo = gamma-1.
+        out = FourMomentum(E = gamma*(self.E - vx*self.px - vy*self.py - vz*self.pz),
+                           px= -gamma*vx*self.E + (1+gammo*vx**2/v2)*self.px + gammo*vx*vy/v2*self.py + gammo*vx*vz/v2*self.pz,
+                           py= -gamma*vy*self.E + gammo*vy*vx/v2*self.px + (1+gammo*vy**2/v2)*self.py + gammo*vy*vz/v2*self.pz,
+                           pz= -gamma*vz*self.E + gammo*vz*vx/v2*self.px + gammo*vz*vy/v2*self.py + (1+gammo*vz**2/v2)*self.pz)
+
         return out
         
     def rotate_to_z(self,prot):
