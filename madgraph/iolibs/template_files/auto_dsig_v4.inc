@@ -1,4 +1,4 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
+        DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -407,13 +407,6 @@ C       Call UNWGT to unweight and store events
 	ENDDO
 %(passcuts_end)s
       END
-## if(read_write_good_hel) {
-C
-C     Functionality to handling grid
-C
-%(read_write_good_hel)s
-
-## }
 
 
 
@@ -479,4 +472,7 @@ c         if hel=0 return the number of helicity state possible for that particl
 	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
 	  return
 	  end
+
+
+%(ADDITIONAL_FCT)s
 

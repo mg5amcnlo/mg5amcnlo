@@ -5113,14 +5113,30 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             SUBDIAG(%s) = CHANNELS(IVEC) ! only valid if a single process
             channel = SUBDIAG(%s)""" % (proc_id,proc_id, proc_id)
             #SUBDIAG(%s)" % proc_id
+            replace_dict['ADDITIONAL_FCT'] = ''
         else:
-            replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
+            replace_dict['passcuts_begin'] = "IF (PASSCUTS(P1)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
-            replace_dict['define_subdiag_lines'] = ""
+            replace_dict['define_subdiag_lines'] = "INTEGER IB(2)"
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
             replace_dict['get_channel_vec'] = " channel  = MAPCONFIG(ICONFIG)"
+            # need to extract get_helicities/select color from the group template file
+            text = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', 'super_auto_dsig_group_v4.inc')).read()
+            color_hel_text = writers.FortranWriter.get_routine(text, ['select_color', 'get_helicities'])
+            #misc.sprint(color_hel_text)
+            get_nhel, get_helicity = [],[]
+            get_nhel.append("   integer get_nhel" )
+            get_helicity.append("   do i=1,nexternal")
+            get_helicity.append(
+                    "        nhel(i) = get_nhel(ihel,i)")
+            get_helicity.append("enddo")
+            replace_dict['call_to_local_get_helicities'] = "\n".join(get_helicity)
+            replace_dict['definition_of_local_get_nhel'] = "\n".join(get_nhel)
 
+
+            #raise Exception
+            replace_dict['ADDITIONAL_FCT'] = self.get_dummy_grouping()+ '\n'.join(color_hel_text) % replace_dict
         # extract and replace ncombinations, helicity lines
         ncomb=matrix_element.get_helicity_combinations()
         replace_dict['ncomb']= ncomb
@@ -5143,6 +5159,40 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             writer.writelines(file, context=context)
         else:
             return replace_dict, context
+
+            
+    #===========================================================================
+    # get_dummy_grouping
+    #===========================================================================
+    def get_dummy_grouping(self):
+        """ return dummy function for 
+        prepare_grouping
+        select_grouping
+        for situation where they are no grouping
+        """
+
+        return """
+        
+        subroutine PREPARE_GROUPING_CHOICE(PP, WGT, INIT)
+        double precision PP(*)
+        double precision WGT
+        logical INIT
+        return
+        end
+
+        SUBROUTINE SELECT_GROUPING(IMIRROR, IPROC, ICONF, WGT, IWARP)
+        Integer imirror
+        integer iproc
+        integer iconf
+        double precision WGT
+        integer iwarp
+        return 
+        end
+        
+        
+        """
+
+
     #===========================================================================
     # write_coloramps_file
     #===========================================================================

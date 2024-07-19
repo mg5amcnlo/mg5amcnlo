@@ -424,26 +424,20 @@ class FortranWriter(FileWriter):
             i = i + 1
         return len(splitline)-1
 
-    def remove_routine(self, text, fct_names, formatting=True):
-        """write the incoming text but fully removing the associate routine/function
-           text can be a path to a file, an iterator, a string
-           fct_names should be a list of functions to remove
+    @staticmethod   
+    def get_routine(text, fct_names, call_back=None):
         """
-
+        get the fortran function from a fortran file
+        """
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
         pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                              % {'type':'|'.join(f77_type)}, re.I)
-        
+
+        if isinstance(text, str):
+            text = text.split('\n')
+
+        to_write=False
         removed = []
-        if isinstance(text, str):   
-            if '\n' in text:
-                text = text.split('\n')
-            else:
-                text = open(text)
-        if isinstance(fct_names, str):
-            fct_names = [fct_names]
-        
-        to_write=True     
         for line in text:
             fct = pattern.findall(line)
             if fct:
@@ -451,20 +445,31 @@ class FortranWriter(FileWriter):
                     to_write = False
                 else:
                     to_write = True
-
             if to_write:
-                if formatting:
-                    if line.endswith('\n'):
-                        line = line[:-1]
-                    self.writelines(line)
-                else:
-                    if not line.endswith('\n'):
-                        line = '%s\n' % line
-                    super(FileWriter,self).writelines(line)
+                if call_back:
+                    call_back(line)
             else:
                 removed.append(line)
-                
+
         return removed
+    
+    def remove_routine(self, text, fct_names, formatting=True):
+        """write the incoming text but fully removing the associate routine/function
+           text can be a path to a file, an iterator, a string
+           fct_names should be a list of functions to remove
+        """
+
+        def call_back(line):
+            if formatting:
+                if line.endswith('\n'):
+                    line = line[:-1]
+                self.writelines(line)
+            else:
+                if not line.endswith('\n'):
+                    line = '%s\n' % line
+                super(FileWriter,self).writelines(line) 
+     
+        return self.get_routine(text, fct_names, call_back)
         
 
 
