@@ -1744,7 +1744,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = """ DO CURR_WARP=1, NB_WARP
+            pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+        IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+        ENDIF
+
+        DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
           IB(2) = 2
@@ -6633,16 +6640,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Create a map from subprocess (matrix element) to a list of
         # the diagrams corresponding to each config
-
+        subproc_to_confdiag = self.get_confdiag_from_group_mapconfig(diagrams_for_config)
         lines = []
-
-        subproc_to_confdiag = {}
-        for config in diagrams_for_config:
-            for subproc, diag in enumerate(config):
-                try:
-                    subproc_to_confdiag[subproc].append(diag)
-                except KeyError:
-                    subproc_to_confdiag[subproc] = [diag]
 
         for subproc in sorted(subproc_to_confdiag.keys()):
             lines.extend(self.get_icolamp_lines(subproc_to_confdiag[subproc],
@@ -6746,6 +6745,35 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         return output
                            
 
+    #===========================================================================
+    # write_configs_file
+    #===========================================================================
+    @staticmethod
+    def get_confdiag_from_group_mapconfig(config_subproc_map, subprocid=None):
+            """ This is converting the  mapconfigs generated from the 
+                    subproc_group.get('diagrams_for_configs')
+                and convert it to a datastructure like expected from the 
+                get_icolamp_lines (which does not handle grouping) 
+                
+                if subproc is None it returns the full output as a dictionary
+                with subproc_id as key.
+                if provided it returned the associated list for that subproc id.
+
+                Static method since need to be used from cpp case as well.
+            """
+
+            subproc_to_confdiag = {}
+            for config in config_subproc_map:
+                for subproc, diag in enumerate(config):
+                    try:
+                        subproc_to_confdiag[subproc].append(diag)
+                    except KeyError:
+                        subproc_to_confdiag[subproc] = [diag]
+                        
+            if subprocid is None:
+                return subproc_to_confdiag
+            else:
+                return subproc_to_confdiag[subprocid]
 
     #===========================================================================
     # write_configs_file

@@ -291,7 +291,7 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec, curr_warp, iwarp
+	   integer ivec, curr_warp, iwarp, NB_WARP_USED
 	   integer channels(VECSIZE_MEMMAX)
 C  
 C DATA
@@ -318,7 +318,7 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO CURR_WARP=1, NB_WARP
+	 DO CURR_WARP=1, NB_WARP_USED
 	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
 	     IB(1) = 1
 	     IB(2) = 2

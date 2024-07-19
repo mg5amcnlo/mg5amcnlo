@@ -282,7 +282,7 @@ C     IB gives which beam is which (for mirror processes)
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED      
 
-      INTEGER I, CURR_WARP
+      INTEGER I, CURR_WARP, NB_WARP_USED
       integer grouped_MC_grid_status
 
       integer                                      lpp(2)
@@ -333,7 +333,14 @@ c	  ENDIF
 
 	  ENDDO
 
-      DO CURR_WARP=1, NB_WARP
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1, NB_WARP_USED
          DO I=(CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
 	    IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
@@ -893,7 +900,7 @@ C
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
       INTEGER ICONF_VEC(NB_WARP), IMIRROR_VEC(NB_WARP)
-      INTEGER CURR_WARP, IWARP
+      INTEGER CURR_WARP, IWARP, NB_WARP_USED
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INTEGER VECSIZE_USED
@@ -958,7 +965,14 @@ C       Set momenta according to this permutation
       enddo
       LAST_ICONF=-1
 
-      DO CURR_WARP=1,NB_WARP
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1,NB_WARP_USED
       	   IB(1)=0 ! This is set in auto_dsigX. set it to zero to create segfault if used at wrong time
       	   IB(2)=0 ! Same
 	   IMIRROR = IMIRROR_VEC(CURR_WARP)
@@ -993,7 +1007,7 @@ C       Flip beam identity -> moved to auto_dsigX (since depend of the warp)
 %(call_dsig_proc_lines_vec)s
 
 C    FLIPPING BACK IF NEEDED
-      DO CURR_WARP=1,NB_WARP
+      DO CURR_WARP=1,NB_WARP_USED
       	  IF (IMIRROR_VEC(CURR_WARP).eq.2) then
 	     DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
 	        DO I=1,NEXTERNAL	
