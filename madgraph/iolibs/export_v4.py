@@ -5115,8 +5115,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             #SUBDIAG(%s)" % proc_id
             replace_dict['ADDITIONAL_FCT'] = ''
         else:
-            replace_dict['passcuts_begin'] = "IF (PASSCUTS(P1)) THEN"
-            replace_dict['passcuts_end'] = "ENDIF"
+            replace_dict['passcuts_begin'] = ""#IF (PASSCUTS(PP)) THEN"
+            replace_dict['passcuts_end'] = ""#ENDIF"
             replace_dict['define_subdiag_lines'] = "INTEGER IB(2)"
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
