@@ -58,6 +58,10 @@ contains
           shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
           shower_scale_nbody_min(i,fks_father)=scalemin
           shower_scale_nbody_max(i,fks_father)=scalemax
+          ! symmetrize the matrix:
+          shower_scale_nbody(fks_father,i)=shower_scale_nbody(i,fks_father)
+          shower_scale_nbody_min(fks_father,i)=shower_scale_nbody_min(i,fks_father)
+          shower_scale_nbody_max(fks_father,i)=shower_scale_nbody_max(i,fks_father)
        enddo do_i
     elseif (flow_picked.gt.0) then
        do i=1,next_n

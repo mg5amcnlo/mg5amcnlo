@@ -4,6 +4,8 @@ c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
       use mint_module
+      use process_module
+      use scale_module
       implicit none
       include 'genps.inc'      
       include 'nexternal.inc'
@@ -12,7 +14,8 @@ c*****************************************************************************
       include 'run.inc'
       include 'cuts.inc'
       include 'coupl.inc'
-      include 'born_conf.inc' ! needed for mapconfig
+      include 'born_conf.inc'   ! needed for mapconfig
+      include 'born_nhel.inc'
       double precision ZERO,    one
       parameter       (ZERO=0d0,one=1d0)
       double precision max_fail
@@ -88,6 +91,7 @@ C split orders stuff
       external         ran2
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
+      character*4 abrv
 c
 c     Properly initialize PY8 controls
 c
@@ -96,6 +100,7 @@ c
 c-----
 c  Begin Code
 c-----
+      abrv(1:3)='all'
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
             write (*,*) 'Process generated with [LOonly=QCD]. '/
@@ -151,13 +156,26 @@ c-----
          write(*,*) '**************************************************'
          write(*,*) '  '
          write(*,*) '  '
+         nlo_ps=.true.
+         fixed_order=.false.
+      else
+         nlo_ps=.false.
+         fixed_order=.true.
       endif
 
       call setrun               !Sets up run parameters
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
 
-c
+      ! initialise the global, but process dependent, information in the process module.
+      call init_process_module_global(shower_mc,abrv,nexternal,nincoming
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow)
+      ! Also put all the n-body process dependent stuff here. It does
+      ! not depend on PS point or FKS config, so all global information.
+      call init_process_module_nbody_wrapper()
+      call init_scale_module(nexternal,shower_scale_factor)
+
+      
       write (*,*) 'Give FKS configuration number ("0" loops over all)'
       read (*,*) fks_conf_number
 
@@ -762,3 +780,86 @@ c
      & f4.2) 
       end
 
+      subroutine init_process_module_nbody_wrapper()
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      external get_color
+      double precision mass(1:nexternal-1),get_mass_from_id
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,max_bcol)
+      include 'born_leshouche.inc'
+
+      do i=1,nexternal-1
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do k=1,max_bcol
+         do j=1,nexternal-1
+            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
+            do i=1,nexternal-1
+               if (i.eq.j) cycle
+               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
+               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+                  valid_dipole(i,j,k)=.true.
+               endif
+            enddo
+         enddo
+      enddo
+      
+      call init_process_module_nbody(nexternal-1,mass,colour
+     $     ,max_bcol,valid_dipole)
+      
+      end
+      
+      subroutine init_process_module_n1body_wrapper()
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      integer iFKS,colour(1:nexternal),i,j,k,get_color
+      double precision mass(1:nexternal),get_mass_from_id
+      external get_color
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal,1:nexternal,1:maxflow)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+
+      do i=1,nexternal
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do k=1,maxflow
+         do j=1,nexternal
+            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
+            do i=1,nexternal
+               if (i.eq.j) cycle
+               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
+               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
+     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+                  valid_dipole(i,j,k)=.true.
+               endif
+            enddo
+         enddo
+      enddo
+      
+      call init_process_module_n1body(nexternal,mass,colour
+     $     ,maxflow,valid_dipole)
+      
+      end

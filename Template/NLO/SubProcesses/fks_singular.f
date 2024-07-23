@@ -3083,23 +3083,24 @@ c include it here!
       end
 
       
-      subroutine update_shower_scale_Sevents(ifold_counter,ifold_picked
-     $     ,SCALUP)
+      subroutine update_shower_scale_Sevents(ifold_picked,SCALUP)
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
 c necessarily the same for all of these summed FKS configurations and/or
 c folds).
       use weight_lines
+      use mint_module ! includes the ifold()
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      integer ifold_counter,i,j,k,ifold_picked,icolour(2,nexternal),jj
-     $     ,ii
+      integer i,j,k,ifold_picked,icolour(2,nexternal),jj,ii
       double precision showerscale,SCALUP
       double precision showerscale_a(nexternal,nexternal)
+      integer n_folds
+      n_folds=product(ifold(1:ndim))
       if (icontr.eq.0) return
-      call update_shower_scale_Sevents_v2(ifold_counter,showerscale
+      call update_shower_scale_Sevents_v2(n_folds,showerscale
      $     ,showerscale_a,icolour,ifold_picked)
       SCALUP=showerscale   ! S-event shower scale to be written in the event file
 c Overwrite the shower scale for the S-events for DELTA.
@@ -3120,7 +3121,7 @@ c Overwrite the shower scale for the S-events for DELTA.
       end
 
 
-      subroutine update_shower_scale_Sevents_v2(ifold_counter
+      subroutine update_shower_scale_Sevents_v2(n_folds
      $     ,showerscale,showerscale_a,icolour,ifold_picked)
 c Improved way of assigning shower starting scales. It picks a fold
 c randomly, based on the weight of the fold to the sum over all
@@ -3133,17 +3134,18 @@ c contributions to the picked fold, use the weights of those instead).
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,k,l,ict,ifl,ifold_counter,iFKS,ifold_picked,icolour(2
+      include 'run.inc'
+      integer i,j,k,l,ict,ifl,n_folds,iFKS,ifold_picked,icolour(2
      $     ,nexternal),ii,jj
-      double precision wgt_fold_fks(fks_configs,ifold_counter),ran2
-     $     ,target,tmp_scale(fks_configs,ifold_counter),showerscale
-     $     ,tmp_scale_a(fks_configs,ifold_counter,nexternal,nexternal)
-     $     ,wgt_fold_fks_born(fks_configs,ifold_counter)
-     $     ,wgt_fold(ifold_counter),wgt_sum,wgt_accum
+      double precision wgt_fold_fks(fks_configs,n_folds),ran2
+     $     ,target,tmp_scale(fks_configs,n_folds),showerscale
+     $     ,tmp_scale_a(fks_configs,n_folds,nexternal,nexternal)
+     $     ,wgt_fold_fks_born(fks_configs,n_folds)
+     $     ,wgt_fold(n_folds),wgt_sum,wgt_accum
      $     ,showerscale_a(nexternal,nexternal)
       external ran2
 c
-      do ifl=1,ifold_counter
+      do ifl=1,n_folds
          do iFKS=1,fks_configs
             wgt_fold_fks(iFKS,ifl)=0d0
             wgt_fold_fks_born(iFKS,ifl)=0d0
@@ -3186,38 +3188,41 @@ c contribution to a given FKS configuration and fold.
      $              ,tmp_scale(nFKS(ict),ifl),emsca(nFKS(ict))
                stop 1
             endif
-            do l=1,nexternal
-               do k=1,nexternal
-                  if (tmp_scale_a(nFKS(ict),ifl,l,k).eq.-1d0) then
-                     tmp_scale_a(nFKS(ict),ifl,l,k)=shower_scale_a(ict,l,k)
+            if (mcatnlo_delta) then
+               do l=1,nexternal
+                  do k=1,nexternal
+                     if (tmp_scale_a(nFKS(ict),ifl,l,k).eq.-1d0) then
+                        tmp_scale_a(nFKS(ict),ifl,l,k)=shower_scale_a(ict,l,k)
 c check that all the shower starting scales are identical for all the
 c contribution to a given FKS configuration and fold.
-                  elseif ( abs((tmp_scale_a(nFKS(ict),ifl,l,k)-shower_scale_a(ict,l,k))
-     $               /(tmp_scale_a(nFKS(ict),ifl,l,k)+shower_scale_a(ict,l,k)))
-     $               .gt. 1d-6 ) then
-                     write (*,*) 'ERR 2 in update_shower_scale_Sevents2'
-     $               ,tmp_scale_a(nFKS(ict),ifl,l,k),shower_scale_a(ict,l,k)
-                     stop 1
-                  endif
+                     elseif ( abs((tmp_scale_a(nFKS(ict),ifl,l,k)-shower_scale_a(ict,l,k))
+     $                       /(tmp_scale_a(nFKS(ict),ifl,l,k)+shower_scale_a(ict,l,k)))
+     $                       .gt. 1d-6 ) then
+                        write (*,*)
+     &                       'ERR 2 in update_shower_scale_Sevents2'
+     $                       ,tmp_scale_a(nFKS(ict),ifl,l,k),shower_scale_a(ict,l,k)
+                        stop 1
+                     endif
+                  enddo
                enddo
-            enddo
+            endif
          enddo
       enddo
 c pick the fold at random, weighted by their relative contributions
       wgt_sum=0d0
-      do ifl=1,ifold_counter
+      do ifl=1,n_folds
          wgt_sum=wgt_sum+abs(wgt_fold(ifl))
       enddo
       if (wgt_sum.le.0d0) return
       target=wgt_sum*ran2()
       wgt_accum=0d0
-      do ifl=1,ifold_counter
+      do ifl=1,n_folds
          wgt_accum=wgt_accum+abs(wgt_fold(ifl))
          if (wgt_accum.gt.target) exit
       enddo
-      if (ifl.lt.1 .or. ifl.gt.ifold_counter) then
+      if (ifl.lt.1 .or. ifl.gt.n_folds) then
          write (*,*) 'ERROR in update_shower_starting scale #2',ifl
-     $        ,ifold_counter,target,wgt_accum,wgt_sum
+     $        ,n_folds,target,wgt_accum,wgt_sum
          stop 1
       endif
 c Now that we have the fold, check within that fold to find the FKS
@@ -3462,8 +3467,7 @@ c found the contribution that should be written:
 
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents(ifold_counter,ifold_picked
-     $        ,SCALUP)
+         call update_shower_scale_Sevents(ifold_picked,SCALUP)
          
          do k=1,icontr_sum(0,icontr_picked)
             ict=icontr_sum(k,icontr_picked)

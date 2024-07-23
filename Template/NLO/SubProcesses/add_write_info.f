@@ -115,8 +115,8 @@ c cFKSprocess
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
-      double precision SCALUP(fks_configs*2)
-      common /cshowerscale/SCALUP
+c$$$      double precision SCALUP(fks_configs*2)
+c$$$      common /cshowerscale/SCALUP
       double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
       common /cshowerscale_a/SCALUP_a
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)

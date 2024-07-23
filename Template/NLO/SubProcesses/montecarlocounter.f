@@ -532,7 +532,8 @@ c$$$      include 'madfks_mcatnlo.inc'
 !     dependent in case of delta
       integer cur_part
       common /to_ref_scale/cur_part
-      double precision smin,smax,ptresc,emscafun,qMC
+      double precision smin,smax,ptresc,emscafun,qMC,damping
+     $     ,compute_damping_weight
       first_MCcnt_call=.true.
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
@@ -554,19 +555,11 @@ c$$$         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
      $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
      $        ,bornbars,bornbarstilde,npartner)
          if(.not.lzone(npartner)) cycle
-         if (.not.mcatnlo_delta) then
-            smin=shower_scale_nbody_min(cur_part,fksfather)
-            smax=shower_scale_nbody_max(cur_part,fksfather)
-            qMC=get_qMC(xi_i_fks,y_ij_fks)
-            ptresc=(qMC-smin)/(smax-smin)
-            factor=1d0-emscafun(ptresc,1d0)
-         else
-c min(i_fks,j_fks) is the mother of the FKS pair
-            factor=emscwgt_a(min(i_fks,j_fks),cur_part)
-         endif
+         damping=compute_damping_weight(cur_part,xi_i_fks
+     $        ,y_ij_fks)
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
-            if(isspecial(cflows)) then
+            if (isspecial(cflows)) then
                N_p=2d0
             else
                N_p=1d0
@@ -581,12 +574,12 @@ c min(i_fks,j_fks) is the mother of the FKS pair
                   iord_val=2
                endif
                ione=ione+1
-               MCsec(npartner,colorflow(npartner,cflows))=factor
+               MCsec(npartner,colorflow(npartner,cflows))=damping
      $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
      $              ,cflows),iord)+xkernazi(iord_val)*N_p
      $              *bornbarstilde(colorflow(npartner,cflows),iord))
                amp_split_mc(1:amp_split_size) =
-     $              amp_split_mc(1:amp_split_size)+factor
+     $              amp_split_mc(1:amp_split_size)+damping
      $              *(xkern(iord_val)*N_p
      $              *amp_split_bornbars(1:amp_split_size
      $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
@@ -595,7 +588,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
             enddo
             if (ione.ne.1) then
                write (*,*) 'Error: incompatible split orders in '/
-     $              /'compute_xmcsubt_for_checks',ione
+     $              /'compute_xmcsubt_complete',ione
                stop 1
             endif
             sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
@@ -3008,7 +3001,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
             stop
          endif
       else
-         write(*,*)'unknown ileg in get_mbar'
+         write(*,*)'unknown ileg in get_mbar',ileg
          stop
       endif
 
