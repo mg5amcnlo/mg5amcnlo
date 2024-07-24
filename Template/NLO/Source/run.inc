@@ -107,5 +107,6 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
 c
 c     Asym.system-choice
 c
-      logical    asymm_choice                                    
+      logical    asymm_choice, frame_change                                    
       common/asymm_flag/ asymm_choice
+      common/frame_change/ frame_change

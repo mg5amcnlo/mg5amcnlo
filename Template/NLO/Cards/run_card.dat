@@ -84,6 +84,9 @@
 #***********************************************************************
  %(asymm_choice)s = asymm_choice ! choice of the regime 
 #***********************************************************************
+ %(frame_change)s = frame_change ! choice of the frame. 
+                                 ! False = hardron_cm, True = lab_frame 
+#***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
  %(pdlabel)s = pdlabel ! PDF set
