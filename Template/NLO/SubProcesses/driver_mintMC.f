@@ -849,7 +849,7 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
-
+            
 ! Consider all flows for the shower scale assignment (with assignements
 ! only needed for the dipoles where the fks-mother is one end of the
 ! dipole line)
@@ -870,8 +870,10 @@ c for different nFKSprocess.
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
 
-            call init_process_module_n1body_wrapper()
-c Every contribution has to have a viable set of Born momenta (even if
+            call init_process_module_n1body_wrapper(flow_picked)
+            call compute_shower_scale_n1body(p)
+
+c     Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
 c Set the shower scales            
@@ -1039,39 +1041,43 @@ c Sum the contributions that can be summed before taking the ABS value
      $     ,max_bcol,valid_dipole)
       
       end
+
       
-      subroutine init_process_module_n1body_wrapper()
+      subroutine init_process_module_n1body_wrapper(bornflow)
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      integer iFKS,colour(1:nexternal),i,j,k,get_color
+      integer iFKS,colour(1:nexternal),i,j,k,get_color,bornflow
       double precision mass(1:nexternal),get_mass_from_id
       external get_color
       external get_mass_from_id
-      logical valid_dipole(1:nexternal,1:nexternal,1:maxflow)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+      logical valid_dipole(1:nexternal,1:nexternal)
+      integer icolup(1:2,1:nexternal)
+      integer jpart(7,-nexternal+3:2*nexternal-3)
 
+      call fill_icolor_H(bornflow,jpart)
+      do i=1,nexternal
+        ICOLUP(1,i)=jpart(4,i)
+        ICOLUP(2,i)=jpart(5,i)
+      enddo
+      
       do i=1,nexternal
          mass(i)=get_mass_from_id(idup(i,1))
          colour(i)=get_color(idup(i,1))
       enddo
       valid_dipole=.false.
-      do k=1,maxflow
-         do j=1,nexternal
-            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
-            do i=1,nexternal
-               if (i.eq.j) cycle
-               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
-               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
-                  valid_dipole(i,j,k)=.true.
-               endif
-            enddo
+      do j=1,nexternal
+         if (icolup(1,j).eq.0 .and. icolup(2,j).eq.0) cycle
+         do i=1,nexternal
+            if (i.eq.j) cycle
+            if (icolup(1,i).eq.0 .and. icolup(2,i).eq.0) cycle
+            if ( abs(icolup(1,i)).eq.abs(icolup(1,j)) .or.
+     &           abs(icolup(1,i)).eq.abs(icolup(2,j)) .or.
+     &           abs(icolup(2,i)).eq.abs(icolup(1,j)) .or.
+     &           abs(icolup(2,i)).eq.abs(icolup(2,j)) ) then
+               valid_dipole(i,j)=.true.
+            endif
          enddo
       enddo
       

@@ -693,12 +693,12 @@ c -- call to MC counterterm functions
      $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
      $              ,cflows),iord)+xkernazi(iord_val)*N_p
      $              *bornbarstilde(colorflow(npartner,cflows),iord))
-               amp_split_mc(1:amp_split_size) =
-     $              amp_split_mc(1:amp_split_size)+damping
-     $              *(xkern(iord_val)*N_p
+               amp_split_xmcxsec(1:amp_split_size,npartner) =
+     $              amp_split_xmcxsec(1:amp_split_size,npartner) +
+     $              damping *(xkern(iord_val)*N_p
      $              *amp_split_bornbars(1:amp_split_size
      $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
-     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
+     $              *N_p*amp_split_bornbarstilde(1:amp_split_size
      $              ,colorflow(npartner,cflows),iord))
             enddo
             if (ione.ne.1) then
@@ -944,7 +944,7 @@ c Initialise if first time
 
       qMC=get_qMC(xi_i_fks,y_ij_fks)
 
-c New or standard MC@NLO formulation
+c     New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
 
 c Call barred Born and assign shower scale

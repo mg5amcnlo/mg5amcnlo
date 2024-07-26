@@ -3,7 +3,8 @@ module process_module
   integer :: next_n,next_n1,nexternal_mod,nincoming_mod,max_flows_n,max_flows_n1
   double precision,allocatable,dimension(:) :: mass_n,mass_n1
   integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
-  logical,allocatable,dimension(:,:,:) :: valid_dipole_n,valid_dipole_n1
+  logical,allocatable,dimension(:,:) :: valid_dipole_n1
+  logical,allocatable,dimension(:,:,:) :: valid_dipole_n
   double precision :: collider_energy
   character*10 :: shower_mc_mod
   character*4 :: abrv_mod
@@ -39,7 +40,7 @@ contains
     ! n+1-body:
     if (.not.allocated(mass_n1)) allocate(mass_n1(1:nexternal_mod))
     if (.not.allocated(colour_n1)) allocate(colour_n1(1:nexternal_mod))
-    if (.not.allocated(valid_dipole_n1)) allocate(valid_dipole_n1(1:nexternal_mod,1:nexternal_mod,1:max_flows_n1))
+    if (.not.allocated(valid_dipole_n1)) allocate(valid_dipole_n1(1:nexternal_mod,1:nexternal_mod))
     if (.not.allocated(iRtoB)) allocate(iRtoB(1:nexternal_mod))
   end subroutine init_process_module_global
   
@@ -65,12 +66,12 @@ contains
   end subroutine init_process_module_nbody
 
   subroutine init_process_module_n1body(nexternal_in, mass_in, colour_in, &
-       max_flows_in,valid_dipole_in)
+       max_flows_in)
     implicit none
     integer :: nexternal_in,max_flows_in
     double precision,dimension(nexternal_in) :: mass_in
     integer,dimension(nexternal_in) :: colour_in
-    logical,dimension(nexternal_in,nexternal_in,max_flows_in) :: valid_dipole_in
+    logical,dimension(nexternal_in,nexternal_in) :: valid_dipole_in
     if (next_n1.ne.nexternal_mod) then
        write (*,*) 'ERROR #2 in setting up process module',next_n1,nexternal_mod
        stop 1
