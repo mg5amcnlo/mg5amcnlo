@@ -3178,14 +3178,14 @@ c configuration.
             endif
             wgt_fold(ifl)=wgt_fold(ifl)+wgts(1,ict)
             if (tmp_scale(nFKS(ict),ifl).eq.-1d0) then
-               tmp_scale(nFKS(ict),ifl)=emsca(nFKS(ict))
+               tmp_scale(nFKS(ict),ifl)=emsca_S(nFKS(ict),ifl)
 c check that all the shower starting scales are identical for all the
 c contribution to a given FKS configuration and fold.
-            elseif(abs((tmp_scale(nFKS(ict),ifl)-emsca(nFKS(ict)))
-     $              /(tmp_scale(nFKS(ict),ifl)+emsca(nFKS(ict))))
+            elseif(abs((tmp_scale(nFKS(ict),ifl)-emsca_S(nFKS(ict),ifl))
+     $              /(tmp_scale(nFKS(ict),ifl)+emsca_S(nFKS(ict),ifl)))
      $              .gt. 1d-6 ) then
                write (*,*) 'ERROR in update_shower_scale_Sevents #2'
-     $              ,tmp_scale(nFKS(ict),ifl),emsca(nFKS(ict))
+     $              ,tmp_scale(nFKS(ict),ifl),emsca_S(nFKS(ict),ifl)
                stop 1
             endif
             if (mcatnlo_delta) then
@@ -3452,7 +3452,7 @@ c found the contribution that should be written:
          i_process_addwrite=iproc_picked
          iFKS_picked=nFKS(icontr_picked)
          ifold_picked=ifold_cnt(icontr_picked)
-         SCALUP=shower_scale(icontr_picked)
+         SCALUP=emsca_H(iFKS_picked,ifold_picked)
          do k=1,nexternal
             do l=1,nexternal
                SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked

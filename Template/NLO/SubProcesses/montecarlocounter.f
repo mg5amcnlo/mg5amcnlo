@@ -1452,7 +1452,7 @@ c$$$      include 'madfks_mcatnlo.inc'
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
      $     ,nexternal) ,scalemin_a(nexternal,nexternal)
      $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-     $     ,nexternal)
+     $     ,nexternal),emsca
       common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
      $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled

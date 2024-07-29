@@ -803,6 +803,7 @@ c$$$         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
 ! TODO: fix FxFx scale setting.         
 c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            
          if (passcuts_nbody) then
             pass_cuts_check=.true.
             call set_alphaS(p1_cnt(0,1,0))
@@ -812,14 +813,16 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
                call compute_born
                call get_born_flow(flow_picked)
                call Bornonly_shower_scale(p_born,flow_picked)
-               emsca(nFKS_picked_nbody)=get_random_shower_dipole_scale()
+               emsca_S(nFKS_picked_nbody,ifold_counter)
+     $              =get_random_shower_dipole_scale()
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
                call get_born_flow(flow_picked)
                call compute_shower_scale_nbody(p_born,flow_picked)
-               emsca(nFKS_picked_nbody)=get_random_shower_dipole_scale()
+               emsca_S(nFKS_picked_nbody,ifold_counter)
+     $              =get_random_shower_dipole_scale()
             else
                ! Normal: all contributions included
                call compute_born
@@ -834,7 +837,6 @@ c$$$         call include_shape_in_shower_scale(p,nFKS_picked_nbody
 c$$$     $        ,ifold_counter)
 ! TODO: fix set_colour_con.
          call set_colour_connections(nFKS_picked_nbody,ifold_counter)
-            
          
  11      continue
 c The n+1-body contributions (including counter terms)
@@ -855,12 +857,14 @@ c for different nFKSprocess.
 ! dipole line)
             fks_father=min(i_fks,j_fks)
             call compute_shower_scale_nbody(p_born,-fks_father) 
-! assign emsca: we know flow (from driver_mintMC) and the
-!        father. Therefore the partner is fixed (except when father is a
-!        gluon (then there is a two-fold ambiguity)). Determine the
-!        partner:
+! assign emsca_S: we know flow (from driver_mintMC) and the
+! father. Therefore the partner is fixed (except when father is a gluon
+! (then there is a two-fold ambiguity)). Determine the partner:
             call determine_partner(flow_picked,partner_picked)
-            emsca(iFKS)=shower_scale_nbody(fks_father,partner_picked)
+! The shower scale to be used in the event file (if it's an S-event and
+! fks_picked will be iFKS):
+            emsca_S(iFKS,ifold_counter)=shower_scale_nbody(fks_father
+     $           ,partner_picked)
 
             jac=1d0/vol1
             probne=1d0
@@ -870,12 +874,19 @@ c for different nFKSprocess.
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
 
-            call init_process_module_n1body_wrapper(flow_picked)
-            call compute_shower_scale_n1body(p)
-
-c     Every contribution has to have a viable set of Born momenta (even if
+c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
+
+! fill the valid_dipole array and fill the H-event shower scale array            
+            call init_process_module_n1body_wrapper(flow_picked)
+            call compute_shower_scale_n1body(p)
+! The shower scale to be used in the event file (if it's an H-event and
+! fks_picked will be iFKS). We assume that the emissions by the shower
+! should be softer than the real-emission of the current FKS
+! configuration. Hence, take that dipole scale as upper boundary for
+!     the next emissions.
+            emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks,j_fks)
 c Set the shower scales            
 ! TODO : fix FxFx
 c$$$            if (ickkw.eq.3) then
@@ -994,7 +1005,7 @@ c Sum the contributions that can be summed before taking the ABS value
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       endif
-            
+
       return
       end
 
@@ -1055,6 +1066,9 @@ c Sum the contributions that can be summed before taking the ABS value
       logical valid_dipole(1:nexternal,1:nexternal)
       integer icolup(1:2,1:nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     dummy(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,dummy,niprocs
 
       call fill_icolor_H(bornflow,jpart)
       do i=1,nexternal

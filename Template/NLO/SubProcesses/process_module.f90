@@ -66,7 +66,7 @@ contains
   end subroutine init_process_module_nbody
 
   subroutine init_process_module_n1body(nexternal_in, mass_in, colour_in, &
-       max_flows_in)
+       max_flows_in,valid_dipole_in)
     implicit none
     integer :: nexternal_in,max_flows_in
     double precision,dimension(nexternal_in) :: mass_in
