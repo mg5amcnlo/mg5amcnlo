@@ -34,8 +34,8 @@ C
 c
 c global (due to reading writting) 
 c
-        LOGICAL GOODHEL(NCOMB,2)
-	INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB,2, MAXSPROC)
+	    INTEGER NTRY(2, MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 
 C  
@@ -111,7 +111,7 @@ C ----------
 C BEGIN CODE
 C ----------
 
-    NTRY(IMIRROR)=NTRY(IMIRROR)+1
+    NTRY(IMIRROR, %(proc_id)s)=NTRY(IMIRROR,%(proc_id)s)+1
     THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1 
     DO I=1,NEXTERNAL
        JC(I) = +1
@@ -136,7 +136,7 @@ C ----------
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
+         IF (GOODHEL(I,IMIRROR,%(proc_id)s) .OR. NTRY(IMIRROR,%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
             %(beam_polarization)s
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
@@ -146,7 +146,7 @@ C ----------
             TS(I)=T
          ENDIF
       ENDDO
-      IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+      IF(NTRY(IMIRROR,%(proc_id)s).EQ.(MAXTRIES+1)) THEN
          call reset_cumulative_variable() ! avoid biais of the initialization
       ENDIF
       IF (ISUM_HEL.NE.0) then
@@ -164,21 +164,21 @@ C ----------
           endif
 	  ELSE
         JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.10)THEN
+        IF(NTRY(IMIRROR,%(proc_id)s).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.10)THEN
            DO I=1,NCOMB
 	      IF(init_mode) THEN
                   IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
                      PRINT *, 'Matrix Element/Good Helicity: %(proc_id)s ', i, 'IMIRROR', IMIRROR
 	          ENDIF
-	      ELSE IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-                 GOODHEL(I,IMIRROR)=.TRUE.
+	      ELSE IF (.NOT.GOODHEL(I,IMIRROR,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,IMIRROR,%(proc_id)s)=.TRUE.
                  NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                  IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
+                 PRINT *,'Added good helicity ',I, 'for process %(proc_id)s',TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR, %(proc_id)s), 'local:',THIS_NTRY(IMIRROR), 'mirror', IMIRROR
               ENDIF
            ENDDO
 		endif
-        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
+        IF(NTRY(IMIRROR,%(proc_id)s).EQ.MAXTRIES)THEN
            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
       ENDIF
