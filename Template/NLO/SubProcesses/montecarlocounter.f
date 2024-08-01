@@ -2484,19 +2484,19 @@ c$$$      end
 c$$$      use kinematics_module
 c$$$      use scale_module
 c$$$      implicit none
-c$$$      include 'nexternal.inc'
+      include 'nexternal.inc'
 c$$$      include 'run.inc'
-c$$$      include "born_nhel.inc"
+      include "born_nhel.inc"
 c$$$c$$$      include 'madfks_mcatnlo.inc'
 c$$$      include "genps.inc"
 c$$$      include 'nFKSconfigs.inc'
 c$$$      double precision tiny
 c$$$      parameter       (tiny=1d-7)
-c$$$      integer npartner,cflows,i,jflow,jpartner,mpartner
-c$$$      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
-c$$$     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
-c$$$     $     ,dummy
-c$$$      logical lzone(nexternal)
+      integer npartner,cflows,i,jflow,jpartner,mpartner
+      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
+     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
+     $     ,dummy
+      logical lzone(nexternal)
 c$$$      integer            i_fks,j_fks
 c$$$      common/fks_indices/i_fks,j_fks
 c$$$      integer          ipartners(0:nexternal-1)

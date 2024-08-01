@@ -1038,16 +1038,15 @@ c Sum the contributions that can be summed before taking the ABS value
             do i=1,nexternal-1
                if (i.eq.j) cycle
                if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
-               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+               if ( (abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)).and.icolup(1,i,k).ne.0d0) .or.
+     &              (abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)).and.icolup(1,i,k).ne.0d0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)).and.icolup(2,i,k).ne.0d0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)).and.icolup(2,i,k).ne.0d0) ) then
                   valid_dipole(i,j,k)=.true.
                endif
             enddo
          enddo
       enddo
-      
       call init_process_module_nbody(nexternal-1,mass,colour
      $     ,max_bcol,valid_dipole)
       
@@ -1086,10 +1085,10 @@ c Sum the contributions that can be summed before taking the ABS value
          do i=1,nexternal
             if (i.eq.j) cycle
             if (icolup(1,i).eq.0 .and. icolup(2,i).eq.0) cycle
-            if ( abs(icolup(1,i)).eq.abs(icolup(1,j)) .or.
-     &           abs(icolup(1,i)).eq.abs(icolup(2,j)) .or.
-     &           abs(icolup(2,i)).eq.abs(icolup(1,j)) .or.
-     &           abs(icolup(2,i)).eq.abs(icolup(2,j)) ) then
+            if ( (abs(icolup(1,i)).eq.abs(icolup(1,j)).and.icolup(1,i).ne.0d0) .or.
+     &           (abs(icolup(1,i)).eq.abs(icolup(2,j)).and.icolup(1,i).ne.0d0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(1,j)).and.icolup(2,i).ne.0d0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(2,j)).and.icolup(2,i).ne.0d0) ) then
                valid_dipole(i,j)=.true.
             endif
          enddo
