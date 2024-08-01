@@ -378,7 +378,6 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
-Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
 EOF
 
 # set tune for ee
@@ -601,6 +600,7 @@ JetMatching:etaJetMax = 1000.0    ! max jet rapidity definition
 JetMatching:nJetMax = $NJMAX      ! max multiplicity
 JetMatching:scheme = 1            ! MadGraph MLM-type merging
 JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
+Beams:setProductionScalesFromLHEF = on ! Identify the Weak Jets
 
 EOF
 fi
@@ -609,7 +609,7 @@ cat <<EOF >> $ifile
 ! 10) Matrix-element corrections.
 EOF
 
-if [ "$space_shower_me_corrections" = ".TRUE." ]
+if [ $space_shower_me_corrections = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 SpaceShower:MEcorrections = on     ! MECs for ISR
@@ -620,7 +620,7 @@ SpaceShower:MEcorrections = off     ! no MECs for ISR
 EOF
 fi
 
-if [ "$time_shower_me_corrections" = ".TRUE." ]
+if [ $time_shower_me_corrections = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEcorrections = on     ! MECs for FSR
@@ -631,7 +631,7 @@ TimeShower:MEcorrections = off     ! no MECs for FSR
 EOF
 fi
 
-if [ "$time_shower_me_extended" = ".TRUE." ]
+if [ $time_shower_me_extended = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEextended = on     ! Extended MECs for FSR
@@ -642,7 +642,7 @@ TimeShower:MEextended = off     ! no extended MECs for FSR
 EOF
 fi
 
-if [ "$time_shower_me_after_first" = ".TRUE." ]
+if [ $time_shower_me_after_first = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEafterFirst = on     ! MECs after frst FSR

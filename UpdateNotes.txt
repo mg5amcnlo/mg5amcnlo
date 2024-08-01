@@ -6,6 +6,7 @@ ANNOUNCEMENT:
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.6.0 ():
+      PT+RF: fixed the Pythia8 script so that SCALUP in the LHE file is ignored only when using FxFx or MC@NLO-Delta
       OM: Allow the scan command within the run_card.
           Note that such command can NOT be used if the scan command is used in the param_card.
           so the following command is now working:
