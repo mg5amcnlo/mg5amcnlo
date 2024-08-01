@@ -12,7 +12,7 @@ module scale_module
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
 !!$  double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
-  double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=0d0
+  double precision,private,parameter :: scaleMClow=0d0,scaleMCdelta=3d0
   double precision,private,parameter :: scaleMCcut=3d0
 
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
