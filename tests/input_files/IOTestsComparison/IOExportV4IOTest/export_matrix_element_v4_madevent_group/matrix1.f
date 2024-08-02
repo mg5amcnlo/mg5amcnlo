@@ -179,7 +179,8 @@ C     ----------
             TS(I)=T
           ENDIF
         ENDDO
-        IF(NTRY(1).EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(1).EQ.(MAXTRIES+1).AND.DS_GET_DIM_STATUS('Helicity')
+     $   .NE.-1) THEN
           CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
         IF (ISUM_HEL.NE.0) THEN
