@@ -37,8 +37,8 @@ C
 C     
 C     global (due to reading writting) 
 C     
-      LOGICAL GOODHEL(NCOMB,2)
-      INTEGER NTRY(2)
+      LOGICAL GOODHEL(NCOMB, MAXSPROC)
+      INTEGER NTRY(MAXSPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
 
 C     
@@ -47,19 +47,16 @@ C
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
       INTEGER NHEL(NEXTERNAL,NCOMB)
-      INTEGER ISHEL(2)
+      INTEGER ISHEL
       REAL*8 T,MATRIX1
       REAL*8 R,SUMHEL,TS(NCOMB)
       INTEGER I,IDEN
       INTEGER JC(NEXTERNAL),II
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER NGOOD(2), IGOOD(NCOMB,2)
-      INTEGER JHEL(2), J, JJ
-      INTEGER THIS_NTRY(2)
-      SAVE THIS_NTRY
+      INTEGER NGOOD
+      INTEGER J, JJ
       INTEGER NB_FAIL
       SAVE NB_FAIL
-      DATA THIS_NTRY /0,0/
       DATA NB_FAIL /0/
       DOUBLE PRECISION GET_CHANNEL_CUT
       EXTERNAL GET_CHANNEL_CUT
@@ -105,9 +102,9 @@ C     2 means approximation by the	denominator of the propagator
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       DATA XTRY, XREJ /0,0/
-      DATA NGOOD /0,0/
-      DATA ISHEL/0,0/
-      SAVE YFRAC, IGOOD, JHEL
+      DATA NGOOD /0/
+      DATA ISHEL/0/
+      SAVE YFRAC
       DATA (NHEL(I,   1),I=1,4) / 1,-1,-1, 1/
       DATA (NHEL(I,   2),I=1,4) / 1,-1,-1,-1/
       DATA (NHEL(I,   3),I=1,4) / 1,-1, 1, 1/
@@ -135,8 +132,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-      NTRY(IMIRROR)=NTRY(IMIRROR)+1
-      THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1
+      NTRY(1)=NTRY(1)+1
       DO I=1,NEXTERNAL
         JC(I) = +1
       ENDDO
@@ -158,12 +154,11 @@ C     ----------
 
         !   If the helicity grid status is 0, this means that it is not yet initialized.
         !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
-      IF ((ISHEL(IMIRROR).EQ.0.AND.ISUM_HEL.EQ.0)
+      IF ((ISHEL.EQ.0.AND.ISUM_HEL.EQ.0)
      $ .OR.(DS_GET_DIM_STATUS('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1))
      $  THEN
         DO I=1,NCOMB
-          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR)
-     $     .LE.MAXTRIES.OR.(ISUM_HEL.NE.0).OR.THIS_NTRY(IMIRROR).LE.10)
+          IF (GOODHEL(I,1) .OR. NTRY(1).LE.MAXTRIES.OR.(ISUM_HEL.NE.0))
      $      THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1),I)
 
@@ -184,7 +179,7 @@ C     ----------
             TS(I)=T
           ENDIF
         ENDDO
-        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(1).EQ.(MAXTRIES+1)) THEN
           CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
         IF (ISUM_HEL.NE.0) THEN
@@ -202,26 +197,24 @@ C     ----------
             CALL DS_SET_GRID_MODE('Helicity','init')
           ENDIF
         ELSE
-          JHEL(IMIRROR) = 1
-          IF(NTRY(IMIRROR).LE.MAXTRIES.OR.THIS_NTRY(IMIRROR).LE.10)THEN
+          IF(NTRY(1).LE.MAXTRIES)THEN
             DO I=1,NCOMB
               IF(INIT_MODE) THEN
                 IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
                   PRINT *, 'Matrix Element/Good Helicity: 1 ', I,
      $              'IMIRROR', IMIRROR
                 ENDIF
-              ELSE IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I))
-     $         .GT.ANS*LIMHEL/NCOMB)) THEN
-                GOODHEL(I,IMIRROR)=.TRUE.
-                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-                IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-                PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in'
-     $           //' event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
+              ELSE IF (.NOT.GOODHEL(I,1) .AND. (DABS(TS(I)).GT.ANS
+     $         *LIMHEL/NCOMB)) THEN
+                GOODHEL(I,1)=.TRUE.
+                NGOOD = NGOOD +1
+                PRINT *,'Added good helicity ',I, 'for process 1',TS(I)
+     $           *NCOMB/ANS,' in event ',NTRY(1)
               ENDIF
             ENDDO
           ENDIF
-          IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
-            ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+          IF(NTRY(1).EQ.MAXTRIES)THEN
+            ISHEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
         ENDIF
       ELSE IF (.NOT.INIT_MODE) THEN  ! random helicity 
@@ -515,6 +508,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
 
       RETURN
       END
+
 C     Set of functions to handle the array indices of the split orders
 
 
