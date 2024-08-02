@@ -1711,14 +1711,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
-	# Calculate production ME	
+    	# Calculate production ME	
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
             production_me = self.calculate_matrix_element(production)
             production.me_wgt = production_me
         
-	# Calculate decay ME
+    	# Calculate decay ME
         decay_me = 1.0
         for pdg in decays:
             for dec in decays[pdg]:
@@ -1735,12 +1735,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event = lhe_parser.Event(str(p1))
             full_event = full_event.add_decays(d1)
             me1 = self.calculate_matrix_element(full_event)
-            # full_event need to be set after since modifies production
         
-        if abs(1-me1/full_me) > 1E-6:
-            print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	    
-            print(full_event)	
-            raise RuntimeError("ERROR matrix element from density does not match with full matrix element")	    
+            if abs(1-me1/full_me) > 1E-6:
+                print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	    
+                print(full_event)	
+                raise RuntimeError("ERROR matrix element from density does not match with full matrix element")	    
         return full_event, full_me/(production_me*decay_me)
  
            
@@ -1785,9 +1784,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 for hpair in inter_prod_dict: 
                     #print(f"hpair = {hpair}")
                     inter_prod_dict[hpair] = self.get_inter_value(production, hpair)
-	        # ------------------------- #
 	    
-	         # Get the color, mass and width of decaying particle
+	        # Get the color, mass and width of decaying particle
             width = decay_dict[pdg][0]
             mass = decay_dict[pdg][1]
             color = decay_dict[pdg][2]
@@ -1799,7 +1797,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 	        # Update the status of the particle that decays from 1 to 2
             full_event[position[0]].status = 2 
 	    
-	         # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
+	        # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
             for i,decay_event in enumerate(decays[pdg]):
                 part = init_part[i]
 		        # We need to boost all particles in the decay event using the momentum
@@ -1811,7 +1809,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
 		        # Get all helicity configurations and iden number for production and decay events
                 nhel_p_tot,iden_p = self.get_nhel(production,position[0])		
-                nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
                 
 		        # Get helicities of decay event
                 pos_in_dec = [k+1 for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
@@ -1832,8 +1829,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
                 		    
 		        # To get the ME we need to multiply the production and decay inters with the same index
-                #print(f"density_prod = {density_prod}")
-                #print(f"density_dec = {density_dec}")
                 me = density_prod[0]*density_dec[0] \
                      + density_prod[1]*density_dec[1] \
                      + density_prod[1].conjugate()*density_dec[1].conjugate() \
