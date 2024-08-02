@@ -44,7 +44,7 @@ c
 c global (due to reading writting) 
 c
         LOGICAL GOODHEL(NCOMB,MAXSPROC)
-	INTEGER NTRY
+	INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C ARGUMENTS 
@@ -161,7 +161,7 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 	  CALL %(ml_prefix)sCLEAR_CACHES()
     ENDIF
 
-    NTRY=NTRY+1
+    NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
 
     IF (multi_channel) THEN
         DO I=1,NLOOPDIAGRAMS
@@ -200,7 +200,7 @@ C Of course this option can also not be used for polarized beams.
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       	 DO I=1,NCOMB
-         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY.LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
+         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
 	        
 		    call cpu_time(t_before)
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
@@ -243,19 +243,19 @@ C Of course this option can also not be used for polarized beams.
 	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	  ELSE
-        IF(NTRY.LE.MAXTRIES)THEN
+        IF(NTRY(%(proc_id)s).LE.MAXTRIES)THEN
          DO I=1,NCOMB
             IF (.NOT.GOODHEL(I,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                GOODHEL(I,%(proc_id)s)=.TRUE.
                NGOOD = NGOOD +1
-               PRINT *,'Added good helicity for proc %(proc_id)s ',I,TS(I)*NCOMB/ANS,' in event ',NTRY
+               PRINT *,'Added good helicity for proc %(proc_id)s ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(%(proc_id)s)
             ENDIF
          ENDDO
         ENDIF
-        IF(NTRY.EQ.MAXTRIES)THEN
+        IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
            ISHEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
-        IF(NTRY.EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
 
