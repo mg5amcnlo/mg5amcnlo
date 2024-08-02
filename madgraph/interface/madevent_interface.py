@@ -3967,6 +3967,9 @@ Beware that this can be dangerous for local multicore runs.""")
         for P in Pdir: 
             allG = misc.glob('G*', path=P)
             for G in allG:
+                # avoid case where some file starts with G (madgraph5/madgraph4gpu#947)
+                if not os.path.isdir(G): 
+                    continue
                 if pjoin(P, G) not in Gdir:
                     logger.debug('removing %s', pjoin(P,G))
                     shutil.rmtree(pjoin(P,G))
