@@ -6384,7 +6384,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB MAXSPROC)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
         INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         write(stream_id,*) GOODHEL

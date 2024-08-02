@@ -142,7 +142,7 @@ C ----------
             TS(I)=T
          ENDIF
       ENDDO
-      IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1)) THEN
+      IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1).and.DS_get_dim_status('Helicity').ne.-1) THEN
          call reset_cumulative_variable() ! avoid biais of the initialization
       ENDIF
       IF (ISUM_HEL.NE.0) then
