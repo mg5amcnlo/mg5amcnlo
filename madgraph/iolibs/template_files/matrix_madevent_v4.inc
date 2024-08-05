@@ -1,6 +1,6 @@
 SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
 C  
-(info_lines)s
+%(info_lines)s
 C 
 C MadGraph5_aMC@NLO for Madevent Version
 C 

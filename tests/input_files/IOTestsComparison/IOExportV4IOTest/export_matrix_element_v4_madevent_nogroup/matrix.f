@@ -21,6 +21,7 @@ C
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
+      INCLUDE 'run.inc'
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
       INTEGER    NGRAPHS
