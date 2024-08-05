@@ -107,3 +107,6 @@ c
        integer sde_strat ! 1 means standard single diagram enhancement strategy,
 c                          2 means approximation by the denominator of the propagator
        common/TO_CHANNEL_STRAT/tmin_for_channel, sde_strat
+c
+       double precision limhel
+       common/to_limhel/limhel

@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)s)
     INTEGER    NGRAPHS
@@ -78,17 +79,15 @@ C
     INTEGER IMIRROR,IPROC
     COMMON/TO_MIRROR/ IMIRROR,IPROC
 
-       double precision tmin_for_channel	
-       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c       included vi run.inc    
+c       double precision tmin_for_channel	
+c       integer sde_strat ! 1 means standard single diagram enhancement strategy,
 c      	      	      	   2 means approximation by the	denominator of the propagator
-       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+c       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
 
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
 
-	double precision small_width_treatment
-	common/narrow_width/small_width_treatment
-    
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL

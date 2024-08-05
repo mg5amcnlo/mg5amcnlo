@@ -1,6 +1,6 @@
 SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
 C  
-%(info_lines)s
+(info_lines)s
 C 
 C MadGraph5_aMC@NLO for Madevent Version
 C 
@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    NGRAPHS

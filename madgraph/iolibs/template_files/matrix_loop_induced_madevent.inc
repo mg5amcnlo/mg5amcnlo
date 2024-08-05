@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
 C   Below is the maximum config ID for multichannels which is always less than

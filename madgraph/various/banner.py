@@ -4037,6 +4037,7 @@ class RunCardLO(RunCard):
         self.add_param("cut_decays", False, cut='d')
         self.add_param('dsqrt_shat',0., cut=True)
         self.add_param("nhel", 0, include=False)
+        self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
         self.add_param("ptj", 20.0, cut='j')
         self.add_param("ptb", 0.0, cut='b')
