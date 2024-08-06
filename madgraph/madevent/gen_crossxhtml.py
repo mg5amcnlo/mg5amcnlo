@@ -648,7 +648,7 @@ class RunResults(list):
             if run_card['ickkw'] != 0:
                 #parse the file to have back the information
                 pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
-                pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+                pythiare = re.compile(r"\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
                 for line in pythia_log:
                     info = pythiare.search(line)
                     if not info:
@@ -1623,7 +1623,7 @@ class OneTagResults(dict):
         elif self.debug:
             text = str(self.debug).replace('. ','.<br>')
             if 'http' in text:
-                pat = re.compile('(http[\S]*)')
+                pat = re.compile(r'(http[\S]*)')
                 text = pat.sub(r'<a href=\1> here </a>', text)
             debug = '<br><font color=red>%s<BR>%s</font>' % \
                                            (self.debug.__class__.__name__, text)

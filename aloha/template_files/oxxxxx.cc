@@ -22,7 +22,7 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       fo[5] = ip*sqm[std::abs(im)];
     }
     else{
-      pp = min(p[0],sqrt((p[1]*p[1])+(p[2]*p[2])+(p[3]*p[3])));
+//      pp = min(p[0],sqrt((p[1]*p[1])+(p[2]*p[2])+(p[3]*p[3])));
       sf[0] = double(1+nsf+(1-nsf)*nh)*0.5;
       sf[1] = double(1+nsf-(1-nsf)*nh)*0.5;
       omega[0] = sqrt(p[0]+pp);

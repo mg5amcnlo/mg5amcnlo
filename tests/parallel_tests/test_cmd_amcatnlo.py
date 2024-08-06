@@ -126,7 +126,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ','\\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -203,7 +203,7 @@ class MECmdShell(IOTests.IOTestManager):
         # check the result
         res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
 
-        pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+        pat = re.compile(r'''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
         \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
 
         match = re.search(pat, res)

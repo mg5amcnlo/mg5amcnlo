@@ -378,7 +378,6 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
-Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
 EOF
 
 # set tune for ee
@@ -543,8 +542,6 @@ TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photo
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
-TimeShower:pTminChgQ = 0.01
-TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -556,8 +553,6 @@ SpaceShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photon
 SpaceShower:QEDshowerByL = $QEDSHOWER     ! Prevent leptons from radiating photons
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
-SpaceShower:pTminChgQ = 0.01
-SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = $PKT    ! off = no primordial kT
@@ -605,6 +600,7 @@ JetMatching:etaJetMax = 1000.0    ! max jet rapidity definition
 JetMatching:nJetMax = $NJMAX      ! max multiplicity
 JetMatching:scheme = 1            ! MadGraph MLM-type merging
 JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
+Beams:setProductionScalesFromLHEF = on ! Identify the Weak Jets
 
 EOF
 fi

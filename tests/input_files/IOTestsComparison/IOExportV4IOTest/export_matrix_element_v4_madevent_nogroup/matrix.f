@@ -21,6 +21,7 @@ C
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
+      INCLUDE 'run.inc'
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
       INTEGER    NGRAPHS
@@ -51,7 +52,7 @@ C
       INTEGER I,IDEN
       INTEGER IPROC,JC(NEXTERNAL),II
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
+      INTEGER IDUM, NGOOD, J, JJ
       REAL     XRAN1
       EXTERNAL XRAN1
 
@@ -74,7 +75,7 @@ C
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
       DATA IDUM /-1/
       DATA XTRY, XREJ, NGOOD /0,0,0/
-      SAVE YFRAC, IGOOD, JHEL
+      SAVE YFRAC
 
       DATA (NHEL(I,   1),I=1,4) / 1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,4) / 1,-1,-1, 1/
@@ -154,14 +155,12 @@ C     ----------
             CALL DS_SET_GRID_MODE('Helicity','init')
           ENDIF
         ELSE
-          JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
             DO I=1,NCOMB
               IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL
      $         /NCOMB)) THEN
                 GOODHEL(I)=.TRUE.
                 NGOOD = NGOOD +1
-                IGOOD(NGOOD) = I
                 PRINT *,'Adding good helicity ',I,TS(I)/ANS
               ENDIF
             ENDDO

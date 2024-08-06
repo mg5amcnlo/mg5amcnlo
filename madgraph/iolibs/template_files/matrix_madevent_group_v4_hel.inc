@@ -25,8 +25,6 @@ C
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
-    INTEGER    THEL
-    PARAMETER (THEL=2*NCOMB)
 C  
 C ARGUMENTS 
 C  
@@ -205,7 +203,7 @@ C LOCAL VARIABLES
 C  
     INTEGER I,J,M,N,K
     COMPLEX*16 ZTEMP,TMP_JAMP(%(nb_temp_jamp)i)
-    COMPLEX*16 TMP(6)
+    COMPLEX*16 TMP(%(wavefunctionsize)d)
     REAL*8 CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)

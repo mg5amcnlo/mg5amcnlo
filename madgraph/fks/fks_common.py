@@ -459,7 +459,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
         dict = find_pert_particles_interactions(model, pert)
     ij = []
     num = copy.copy(min(i.get('number'), j.get('number')))
-    
+
     # we do not want j being a massless vector unless also i is or j is initial
     not_double_counting = (j.get('spin') == 3 and j.get('massless') and 
                            i.get('spin') == 3 and i.get('massless')) or \
@@ -470,7 +470,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
     # then we want i to be antipart and j to be 
     if j.get('state') and j.get('id') == - i.get('id'):  
         not_double_counting = not_double_counting and j.get('id') >0
-                          
+
     if i.get('id') in dict['soft_particles'] and \
        j.get('id') in dict['pert_particles'] and \
        i.get('state') and not_double_counting:
@@ -503,6 +503,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
                     'id': parts[0].get_pdg_code(),
                     'state': False,
                     'number': num}))
+
     return to_fks_legs(ij, model)       
 
 

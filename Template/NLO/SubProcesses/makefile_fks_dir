@@ -23,6 +23,7 @@ NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(llhapdf)
+LINKLIBSSUD = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lcernlib 
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
@@ -41,6 +42,9 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o				\
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
+         $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
+         $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
+	 momentum_reshuffling.o						\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
@@ -48,6 +52,12 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
+
+FILESSUD= \
+         $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
+         $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
+	 born.o born_hel.o momentum_reshuffling.o			\
+ 	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
@@ -63,11 +73,20 @@ MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
+# Files for check_sudakov
+EWSUD= $(RUN) check_sudakov.o BinothLHA.o
+
+EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD) 
+EWSUDLIB = $(FILESSUD)
+
+# Files for check_sudakov_angle2
+EWSUD2= $(RUN) check_sudakov_angle2.o BinothLHA.o
+
 # Files for tests
 TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for gensym
-SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o write_event.o
+SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
@@ -107,7 +126,25 @@ test_soft_col_limits: $(TEST) mint_module.o
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
 
-check_poles: $(POLES) $(libmadloop) 
+check_sudakov: $(EWSUD) $(libmadloop)
+	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	strip check_sudakov
+
+ewsudakov_sa: $(EWSUDSA) 
+	$(FC) -o ewsudakov_sa $(EWSUDSA) $(LINKLIBS)  $(LDFLAGS)
+	strip ewsudakov_sa
+
+libsudpy: $(EWSUDLIB)
+	touch __init__.py
+	ar rcs libewsud.$(libext) $(EWSUDLIB)
+	$(F2PY) libewsud.$(libext) -m ewsudpy -c sub_f2py_ewsudakov.f --f77exec=$(FC) --f77flags="-ffixed-line-length-132"  $(LINKLIBSSUD)
+
+
+check_sudakov_angle2: $(EWSUD2) $(libmadloop)
+	$(FC) -o check_sudakov_angle2 $(EWSUD2) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	strip check_sudakov_angle2
+
+check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	strip check_poles
 

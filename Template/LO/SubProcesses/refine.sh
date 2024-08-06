@@ -57,7 +57,11 @@ j=%(directory)s
      for((try=1;try<=16;try+=1)); 
      do
 	 if [ "$keeplog" = true ] ; then
+         if [[ -e ../madevent ]];then
              ../madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+         else
+             %(Ppath)s/madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+         fi
 	     status_code=${PIPESTATUS[0]};
              if [ -s $k ]
              then
@@ -67,7 +71,11 @@ j=%(directory)s
 		 sleep 5
              fi
 	 else
-	     ../madevent 2>&1 >> log.txt <input_sg.txt | tee -a log.txt;
+         if [[ -e ../madevent ]];then
+	         ../madevent 2>&1 >> log.txt <input_sg.txt | tee -a log.txt;
+         else
+              %(Ppath)s/madevent 2>&1 >> $k <input_sg.txt | tee -a $k;
+         fi
 	     status_code=${PIPESTATUS[0]};
 	     if [ -s log.txt ]
              then

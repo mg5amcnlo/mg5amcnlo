@@ -36,10 +36,10 @@ class FileWriter(io.FileIO):
 
     supported_preprocessor_commands = ['if']
     preprocessor_command_re=re.compile(
-                          "\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
+                          r"\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
                                    %('|'.join(supported_preprocessor_commands)))
     preprocessor_endif_re=re.compile(\
-    "\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
+    r"\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
     
     class FileWriterError(IOError):
         """Exception raised if an error occurs in the definition
@@ -191,15 +191,15 @@ class FortranWriter(FileWriter):
         pass
 
     # Parameters defining the output of the Fortran writer
-    keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
-                     '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
-                     '^subroutine': ('^end\s*$', 0),
-                     '^module': ('^end\s*$', 0),
-                     'function': ('^end\s*$', 0)}
-    single_indents = {'^else\s*$':-2,
-                      '^else\s*if.+then\s*$':-2}
-    number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
+    keyword_pairs = {r'^if.+then\s*$': ('^endif', 2),
+                     r'^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
+                     r'^do(?!\s+\d+)\s+': (r'^enddo\s*$', 2),
+                     '^subroutine': (r'^end\s*$', 0),
+                     '^module': (r'^end\s*$', 0),
+                     'function': (r'^end\s*$', 0)}
+    single_indents = {r'^else\s*$':-2,
+                      r'^else\s*if.+then\s*$':-2}
+    number_re = re.compile(r'^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
     uniformcase = True #force everyting to be lower/upper case 
@@ -212,7 +212,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|!\$)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c\$|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|!\$)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):
@@ -429,7 +429,7 @@ class FortranWriter(FileWriter):
         """
 
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
-        pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+        pattern = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                              % {'type':'|'.join(f77_type)}, re.I)
         
         removed = []
@@ -495,50 +495,50 @@ class CPPWriter(FileWriter):
                             '^private': standard_indent,
                             '^protected': standard_indent}
     
-    spacing_patterns = [
-                        ('\s*\"\s*}', '\"'),
-                        ('\s*,\s*', ', '),
-                        ('\s*-\s*', ' - '),
-                        ('([{(,=])\s*-\s*', '\g<1> -'),
-                        ('(return)\s*-\s*', '\g<1> -'),
-                        ('\s*\+\s*', ' + '),
-                        ('([{(,=])\s*\+\s*', '\g<1> +'),
-                        ('\(\s*', '('),
-                        ('\s*\)', ')'),
-                        ('\{\s*', '{'),
-                        ('\s*\}', '}'),
-                        ('\s*=\s*', ' = '),
-                        ('\s*>\s*', ' > '),
-                        ('\s*<\s*', ' < '),
-                        ('\s*!\s*', ' !'),
-                        ('\s*/\s*', '/'),
-                        ('(?<!\(|\*)\s*\*\s*(?!\*)', ' * '),
-                        ('\s*-\s+-\s*', '-- '),
-                        ('\s*\+\s+\+\s*', '++ '),
-                        ('\s*-\s+=\s*', ' -= '),
-                        ('\s*\+\s+=\s*', ' += '),
-                        ('\s*\*\s+=\s*', ' *= '),
-                        ('\s*/=\s*', ' /= '),
-                        ('\s*>\s+>\s*', ' >> '),
-                        ('<\s*double\s*>>\s*', '<double> > '),
-                        ('\s*<\s+<\s*', ' << '),
-                        ('\s*-\s+>\s*', '->'),
-                        ('\s*=\s+=\s*', ' == '),
-                        ('\s*!\s+=\s*', ' != '),
-                        ('\s*>\s+=\s*', ' >= '),
-                        ('\s*<\s+=\s*', ' <= '),
-                        ('\s*&&\s*', ' && '),
-                        ('\s*\|\|\s*', ' || '),
-                        ('\s*{\s*}', ' {}'),
-                        ('\s*;\s*', '; '),
-                        (';\s*\}', ';}'),
-                        (';\s*$}', ';'),
-                        ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
-                        ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
-                        ('(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
-                         '\g<1>e\g<2>\g<3>'),
-                        ('\s+',' '),
-                        ('^\s*#','#')]
+    spacing_patterns = [(r'\s*\"\s*}', '\"'),
+                        (r'\s*,\s*', ', '),
+                        (r'\s*-\s*', ' - '),
+                        (r'([{(,=])\s*-\s*', r'\g<1> -'),
+                        (r'(return)\s*-\s*', r'\g<1> -'),
+                        (r'\s*\+\s*', ' + '),
+                        (r'([{(,=])\s*\+\s*', r'\g<1> +'),
+                        (r'\(\s*', '('),
+                        (r'\s*\)', ')'),
+                        (r'\{\s*', '{'),
+                        (r'\s*\}', '}'),
+                        (r'\s*=\s*', ' = '),
+                        (r'\s*>\s*', ' > '),
+                        (r'\s*<\s*', ' < '),
+                        (r'\s*!\s*', ' !'),
+                        (r'\s*/\s*', '/'),
+                        (r'\s*\*\s*', ' * '),
+                        (r'\s*-\s+-\s*', '-- '),
+                        (r'\s*\+\s+\+\s*', '++ '),
+                        (r'\s*-\s+=\s*', ' -= '),
+                        (r'\s*\+\s+=\s*', ' += '),
+                        (r'\s*\*\s+=\s*', ' *= '),
+                        (r'\s*/=\s*', ' /= '),
+                        (r'\s*>\s+>\s*', ' >> '),
+                        (r'<\s*double\s*>>\s*', '<double> > '),
+                        (r'\s*<\s+<\s*', ' << '),
+                        (r'\s*-\s+>\s*', '->'),
+                        (r'\s*=\s+=\s*', ' == '),
+                        (r'\s*!\s+=\s*', ' != '),
+                        (r'\s*>\s+=\s*', ' >= '),
+                        (r'\s*<\s+=\s*', ' <= '),
+                        (r'\s*&&\s*', ' && '),
+                        (r'\s*\|\|\s*', ' || '),
+                        (r'\s*{\s*}', ' {}'),
+                        (r'\s*;\s*', '; '),
+                        (r';\s*\}', ';}'),
+                        (r';\s*$}', ';'),
+                        (r'\s*<\s*([a-zA-Z0-9]+?)\s*>', r'<\g<1>>'),
+                        (r'^#include\s*<\s*(.*?)\s*>', r'#include <\g<1>>'),
+                        (r'(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
+                         r'\g<1>e\g<2>\g<3>'),
+                        (r'\s+',' '),
+                        (r'^\s*#','#')]
+    
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
 
