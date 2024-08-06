@@ -106,6 +106,7 @@ contains
           if (valid_dipole_n1(i,j)) then
              ref_scale=get_ref_scale_dipole(next_n1,p,i,j)
              call get_scaleminmax(ref_scale,scalemin,scalemax)
+             scalemax=max(scalemax,scaleMCcut)
              shower_scale_n1body(i,j)=scalemax
           else
              shower_scale_n1body(i,j)=-1d0
@@ -122,7 +123,7 @@ contains
     do i=1,next_n
        do j=1,next_n
           if (valid_dipole_n(i,j,flow_picked)) then
-             shower_scale_nbody(i,j)=get_ref_scale_dipole(next_n,p,i,j)
+             shower_scale_nbody(i,j)=max(get_ref_scale_dipole(next_n,p,i,j),scaleMCcut)
           else
              shower_scale_nbody(i,j)=-1d0
           endif
