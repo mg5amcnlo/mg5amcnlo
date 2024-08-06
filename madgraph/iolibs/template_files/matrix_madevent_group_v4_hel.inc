@@ -24,8 +24,6 @@ C
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
-    INTEGER    THEL
-    PARAMETER (THEL=2*NCOMB)
 C  
 C ARGUMENTS 
 C  

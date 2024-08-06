@@ -6380,11 +6380,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         output = """
         subroutine write_good_hel(stream_id)
         implicit none
+        include 'maxamps.inc'
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)
-        INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
+        INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         write(stream_id,*) GOODHEL
         return
@@ -6394,32 +6395,29 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         subroutine read_good_hel(stream_id)
         implicit none
         include 'genps.inc'
+        include 'maxamps.inc'
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)
-        INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
+        INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         read(stream_id,*) GOODHEL
-        NTRY(1) = MAXTRIES + 1
-        NTRY(2) = MAXTRIES + 1
+        NTRY(:) = MAXTRIES + 1
         return
         end 
         
         subroutine init_good_hel()
         implicit none
+        include 'maxamps.inc'
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)        
-        INTEGER NTRY(2)
-        INTEGER I
-        
-        do i=1,NCOMB
-            GOODHEL(I,1) = .false.
-            GOODHEL(I,2) = .false.
-        enddo
-        NTRY(1) = 0
-        NTRY(2) = 0
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)        
+        INTEGER NTRY(MAXSPROC)
+        INTEGER I,J
+
+        GOODHEL(:,:) = .false.        
+        NTRY(:) = 0
         end
         
         integer function get_maxsproc()
