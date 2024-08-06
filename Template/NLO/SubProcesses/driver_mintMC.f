@@ -685,7 +685,7 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum
+     $     ,iFKS,sum,born_flow_picked,partner_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -809,25 +809,27 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv.eq.'born') then
+!TODO: with folding, we should pick the same flow for all folds (use 'save' attribute...)!
                ! Doing only the Born contribution.
                call compute_born
-               call get_born_flow(flow_picked)
-               call Bornonly_shower_scale(p_born,flow_picked)
+               call get_born_flow(born_flow_picked)
+               call Bornonly_shower_scale(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter)
      $              =get_random_shower_dipole_scale()
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
-               call get_born_flow(flow_picked)
-               call compute_shower_scale_nbody(p_born,flow_picked)
+               call get_born_flow(born_flow_picked)
+               call compute_shower_scale_nbody(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter)
      $              =get_random_shower_dipole_scale()
             else
-               ! Normal: all contributions included
+               ! Normal: all contributions included. Determine the
+               ! shower scale when looping over FKS configurations.
                call compute_born
                call compute_nbody_noborn
-               call get_born_flow(flow_picked)
+               call get_born_flow(born_flow_picked)
             endif
          endif
 
@@ -855,12 +857,25 @@ c for different nFKSprocess.
 ! Consider all flows for the shower scale assignment (with assignements
 ! only needed for the dipoles where the fks-mother is one end of the
 ! dipole line)
+            write (*,*) 'What happens to the shower scale for the born'/
+     $           /' if the fks_father is different for each of the '/
+     $           /'considered FKS configs? Which one to use?'
+            stop 1
+            
             fks_father=min(i_fks,j_fks)
             call compute_shower_scale_nbody(p_born,-fks_father) 
 ! assign emsca_S: we know flow (from driver_mintMC) and the
 ! father. Therefore the partner is fixed (except when father is a gluon
 ! (then there is a two-fold ambiguity)). Determine the partner:
-            call determine_partner(flow_picked,partner_picked)
+
+            WRITE (*,*) 'driver_mintMC: what to do if '/
+     $           /'born_flow_picked is not filled? And how does this '/
+     $           /'work with the use of -fks_father in the computation'/
+     $           /' of the nbody shower scale just above?'
+            stop 1
+
+! TODO: Check if we need the same partner for each fold
+            call determine_partner(born_flow_picked,partner_picked)
 ! The shower scale to be used in the event file (if it's an S-event and
 ! fks_picked will be iFKS):
             emsca_S(iFKS,ifold_counter)=shower_scale_nbody(fks_father
@@ -879,7 +894,7 @@ c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
 
 ! fill the valid_dipole array and fill the H-event shower scale array            
-            call init_process_module_n1body_wrapper(flow_picked)
+            call init_process_module_n1body_wrapper(born_flow_picked)
             call compute_shower_scale_n1body(p)
 ! The shower scale to be used in the event file (if it's an H-event and
 ! fks_picked will be iFKS). We assume that the emissions by the shower

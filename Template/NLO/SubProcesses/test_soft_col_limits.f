@@ -22,7 +22,8 @@ c*****************************************************************************
       parameter       (max_fail=0.3d0)
       integer i,j,k,n,l,jj,bs_min,bs_max,iconfig_in,nsofttests
      $     ,ncolltests,imax,iflag,iret,ntry,fks_conf_number
-     $     ,fks_loop_min,fks_loop_max,fks_loop,ilim
+     $     ,fks_loop_min,fks_loop_max,fks_loop,ilim,flow_picked
+     $     ,partner_picked
       double precision fxl(15),wfxl(15),limit(15),wlimit(15),lxp(0:3
      $     ,nexternal+1),xp(15,0:3,nexternal+1),p(0:3,nexternal),wgt
      $     ,x(99),fx,totmass,xi_i_fks_fix_save,y_ij_fks_fix_save

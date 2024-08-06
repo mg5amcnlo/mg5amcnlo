@@ -7,7 +7,6 @@ module scale_module
        shower_scale_nbody_max,shower_scale_nbody_min,shower_scale_n1body
 !  double precision,public :: emsca_S(nFKSconfigs,ifolds)
   double precision,public :: emsca_S(100,100),emsca_H(100,100),SCALUP
-  integer,public :: flow_picked,partner_picked
   double precision,private :: global_ref_scale,shower_scale_factor
 
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
