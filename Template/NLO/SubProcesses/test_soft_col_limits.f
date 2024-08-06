@@ -92,6 +92,7 @@ C split orders stuff
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       character*4 abrv
+      integer fks_father
 c
 c     Properly initialize PY8 controls
 c
@@ -335,6 +336,16 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
                call generate_momenta(ndim,iconfig,wgt,x,p)
                ntry=ntry+1
             enddo
+
+            if (ilim.ne.2) then
+               fks_father=min(i_fks,j_fks)
+               call compute_shower_scale_nbody(p_born,-fks_father) 
+               call get_born_flow(flow_picked)
+               call determine_partner(flow_picked,partner_picked)
+               call init_process_module_n1body_wrapper(flow_picked)
+               call compute_shower_scale_n1body(p)
+            endif
+            
             if(nsofttests.le.10)write (*,*) 'ntry',ntry
             if (ilim.eq.2) then
                calculatedBorn=.false.
@@ -809,53 +820,59 @@ c
             do i=1,nexternal-1
                if (i.eq.j) cycle
                if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
-               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
+               if ( (abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)).and.icolup(1,i,k).ne.0) .or.
+     &              (abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)).and.icolup(1,i,k).ne.0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)).and.icolup(2,i,k).ne.0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)).and.icolup(2,i,k).ne.0) ) then
                   valid_dipole(i,j,k)=.true.
                endif
             enddo
          enddo
       enddo
-      
       call init_process_module_nbody(nexternal-1,mass,colour
      $     ,max_bcol,valid_dipole)
       
       end
+
       
-      subroutine init_process_module_n1body_wrapper()
+      subroutine init_process_module_n1body_wrapper(bornflow)
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      integer iFKS,colour(1:nexternal),i,j,k,get_color
+      integer iFKS,colour(1:nexternal),i,j,k,get_color,bornflow
       double precision mass(1:nexternal),get_mass_from_id
       external get_color
       external get_mass_from_id
-      logical valid_dipole(1:nexternal,1:nexternal,1:maxflow)
+      logical valid_dipole(1:nexternal,1:nexternal)
+      integer icolup(1:2,1:nexternal)
+      integer jpart(7,-nexternal+3:2*nexternal-3)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+     &     dummy(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,dummy,niprocs
 
+      call fill_icolor_H(bornflow,jpart)
+      do i=1,nexternal
+        ICOLUP(1,i)=jpart(4,i)
+        ICOLUP(2,i)=jpart(5,i)
+      enddo
+      
       do i=1,nexternal
          mass(i)=get_mass_from_id(idup(i,1))
          colour(i)=get_color(idup(i,1))
       enddo
       valid_dipole=.false.
-      do k=1,maxflow
-         do j=1,nexternal
-            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
-            do i=1,nexternal
-               if (i.eq.j) cycle
-               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
-               if ( abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)) .or.
-     &              abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)) ) then
-                  valid_dipole(i,j,k)=.true.
-               endif
-            enddo
+      do j=1,nexternal
+         if (icolup(1,j).eq.0 .and. icolup(2,j).eq.0) cycle
+         do i=1,nexternal
+            if (i.eq.j) cycle
+            if (icolup(1,i).eq.0 .and. icolup(2,i).eq.0) cycle
+            if ( (abs(icolup(1,i)).eq.abs(icolup(1,j)).and.icolup(1,i).ne.0) .or.
+     &           (abs(icolup(1,i)).eq.abs(icolup(2,j)).and.icolup(1,i).ne.0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(1,j)).and.icolup(2,i).ne.0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(2,j)).and.icolup(2,i).ne.0) ) then
+               valid_dipole(i,j)=.true.
+            endif
          enddo
       enddo
       
