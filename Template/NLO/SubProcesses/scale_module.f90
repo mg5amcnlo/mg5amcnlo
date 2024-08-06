@@ -47,12 +47,9 @@ contains
     call get_global_ref_scale(next_n,p)
     if (flow_picked .lt. 0) then
        fks_father=-flow_picked
-       do_i : do i=1,next_n
+       do i=1,next_n
           if (i.eq.fks_father) cycle
-          do j=1,max_flows_n
-             if (.not. valid_dipole_n(i,fks_father,j)) cycle do_i
-          enddo
-!!$          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
+          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
           ref_scale=get_ref_scale_dipole(next_n,p,i,fks_father)
           call get_scaleminmax(ref_scale,scalemin,scalemax)
           rrnd=ran2()
@@ -66,7 +63,7 @@ contains
           shower_scale_nbody(fks_father,i)=shower_scale_nbody(i,fks_father)
           shower_scale_nbody_min(fks_father,i)=shower_scale_nbody_min(i,fks_father)
           shower_scale_nbody_max(fks_father,i)=shower_scale_nbody_max(i,fks_father)
-       enddo do_i
+       enddo
     elseif (flow_picked.gt.0) then
        do i=1,next_n
           do j=1,next_n
