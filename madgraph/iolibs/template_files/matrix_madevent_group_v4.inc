@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)s)
@@ -75,7 +76,6 @@ C GLOBAL VARIABLES
 C  
     logical init_mode
     common /to_determine_zero_hel/init_mode
-    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
    
 
