@@ -5142,13 +5142,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ncomb']= ncomb
         helicity_lines = self.get_helicity_lines(matrix_element, add_nb_comb=True)
         replace_dict['helicity_lines'] = helicity_lines
-        
+
+        context = {'read_write_good_hel':True}        
         if not isinstance(self, ProcessExporterFortranMEGroup):            
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+            context['nogrouping'] = True
         else:
             replace_dict['read_write_good_hel'] = ""
-        
-        context = {'read_write_good_hel':True}
+            context['nogrouping'] = False
         
         if writer:
             file = open(pjoin(_file_path, \

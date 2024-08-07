@@ -131,8 +131,12 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
+## if( nogrouping) {
+      ! for no grouping update the scale here (done in main autodsig for grouping  
+      call update_scale_coupling(P1, WGT, Q2FACT)
+## }	 
 
-	 channel = %(get_channel)s
+     channel = %(get_channel)s
 	 call ranmar(RHEL)
 	 call ranmar(RCOL)
          CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
