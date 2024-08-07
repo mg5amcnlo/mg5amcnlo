@@ -126,6 +126,9 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
 
+C     for no grouping update the scale here (done in main autodsig for
+C      grouping  
+      CALL UPDATE_SCALE_COUPLING(PP, WGT)
       IF (ABS(LPP(1)) .GE. 1) THEN
 C       LP=SIGN(1,LPP(1))
         U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
@@ -148,9 +151,6 @@ C       LP=SIGN(1,LPP(2))
       ELSE
         P1 = PP
       ENDIF
-C     for no grouping update the scale here (done in main autodsig for
-C      grouping  
-      CALL UPDATE_SCALE_COUPLING(P1, WGT)
 
       CHANNEL = MAPCONFIG(ICONFIG)
       CALL RANMAR(RHEL)

@@ -121,6 +121,10 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+## if( nogrouping) {
+      ! for no grouping update the scale here (done in main autodsig for grouping  
+      call update_scale_coupling(PP, WGT)
+## }	 
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -131,10 +135,6 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
-## if( nogrouping) {
-      ! for no grouping update the scale here (done in main autodsig for grouping  
-      call update_scale_coupling(P1, WGT)
-## }	 
 
      channel = %(get_channel)s
 	 call ranmar(RHEL)
