@@ -1,4 +1,3 @@
-################################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -3099,12 +3098,10 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
 
-    default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop_matchbox', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran',
-                        'output_dependencies':'external',
-                        'sa_symmetry':True}
+    default_opt = dict(LoopProcessOptimizedExporterFortranSA.default_opt)
+    default_opt['export_format'] = 'madloop_matchbox'
+    default_opt['sa_symmetry'] = True
+    
 
 
 

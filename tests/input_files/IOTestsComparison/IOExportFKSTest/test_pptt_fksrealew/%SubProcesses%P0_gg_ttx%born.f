@@ -322,11 +322,12 @@ C     ----------
       ENDDO
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
-          ! the following lines are to avoid segfaults when glu_ij=0
+C       the following lines are to avoid segfaults when glu_ij=0
         COND_IJ=SKIP(NFKSPROCESS).EQ.0
         IF (.NOT.COND_IJ) COND_IJ=COND_IJ.OR.NHEL(GLU_IJ,IHEL)
      $   .EQ.NHEL(GLU_IJ,1)
-          !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+C       if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq
+C       .0) then
         IF (COND_IJ) THEN
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
      $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.

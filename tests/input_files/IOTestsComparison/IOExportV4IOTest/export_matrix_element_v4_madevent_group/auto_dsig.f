@@ -101,6 +101,8 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
       DSIG1=0D0
 
       IF(IMODE.EQ.1)THEN
@@ -338,6 +340,8 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
 
       IF(IMODE.EQ.1)THEN
         NFACT = DSIG1(ALL_PP(0,1,1), ALL_WGT(1), IMODE)
@@ -478,11 +482,6 @@ C         Call UNWGT to unweight and store events
       ENDDO
 
       END
-C     
-C     Functionality to handling grid
-C     
-
-
 
 
 
@@ -569,5 +568,8 @@ C      particle
       GET_NHEL1 = NHEL(IPART, IABS(HEL))
       RETURN
       END
+
+
+
 
 

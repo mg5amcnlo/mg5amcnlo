@@ -50,6 +50,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'coupl.inc'
       INTEGER CTMODE
       REAL*8 LSCALE
