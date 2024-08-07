@@ -133,7 +133,7 @@ C     Continue only if IMODE is 0, 4 or 5
          endif
 ## if( nogrouping) {
       ! for no grouping update the scale here (done in main autodsig for grouping  
-      call update_scale_coupling(P1, WGT, Q2FACT)
+      call update_scale_coupling(P1, WGT)
 ## }	 
 
      channel = %(get_channel)s

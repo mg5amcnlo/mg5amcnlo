@@ -150,7 +150,7 @@ C       LP=SIGN(1,LPP(2))
       ENDIF
 C     for no grouping update the scale here (done in main autodsig for
 C      grouping  
-      CALL UPDATE_SCALE_COUPLING(P1, WGT, Q2FACT)
+      CALL UPDATE_SCALE_COUPLING(P1, WGT)
 
       CHANNEL = MAPCONFIG(ICONFIG)
       CALL RANMAR(RHEL)
