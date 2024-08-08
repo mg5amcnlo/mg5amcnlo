@@ -2561,7 +2561,7 @@ class ProcessExporterCPP(VirtualExporter):
                      'SubProcesses': [s+'check_sa.cpp']}
     to_link_in_P = ['check_sa.cpp', 'Makefile']
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_src')
-    template_Sub_make = template_src_make
+    template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_sp') 
     create_model_class =  UFOModelConverterCPP
     
 
