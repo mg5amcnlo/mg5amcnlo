@@ -633,7 +633,8 @@ c     Variables for keeping track of jets
       external is_octet
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
+
+      if(ickkw.le.0.and.(xqcut.le.0d0.or.init_mode).and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
             s_scale(ivec)=scale
             n_qcd(ivec)=nqcd(iconfig)
