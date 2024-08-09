@@ -8091,6 +8091,7 @@ C
       %(mpinput)s
 
       include '../cuts.inc'
+      include '../vector.inc'
       INCLUDE 'coupl.inc'
       double precision GMU
 
@@ -8146,6 +8147,7 @@ C
       PARAMETER  (PI=3.141592653589793D0)
 
       include '../cuts.inc'
+      include '../vector.inc'
       INCLUDE 'input.inc'
       %(mpinput)s
       INCLUDE 'coupl.inc'
@@ -8200,6 +8202,7 @@ C
       PARAMETER  (PI=3.141592653589793D0)
 
        include '../cuts.inc'
+       include '../vector.inc'
       INCLUDE 'input.inc'
       %(mpinput)s
       INCLUDE 'coupl.inc'
