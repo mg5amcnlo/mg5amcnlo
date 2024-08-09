@@ -3286,6 +3286,7 @@ class RunCard(ConfigFile):
             starttext = open(pjoin(outdir, path+'.orig')).read()
             fsock.remove_routine(starttext, to_mod[path][0])
             for text in to_mod[path][1]:
+                text = self.retro_compatible_custom_fct(text)
                 fsock.writelines(text)
             fsock.close()
             if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
@@ -3302,7 +3303,33 @@ class RunCard(ConfigFile):
                 files.mv(pjoin(outdir,path+'.orig'), pjoin(outdir, path))
 
 
+    @staticmethod
+    def retro_compatible_custom_fct(lines, mode=None):
 
+        f77_type = ['real*8', 'integer', 'double precision', 'logical']
+        function_pat = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                                % {'type':'|'.join(f77_type)}, re.I+re.M)
+        include_pat = re.compile(r"\s+include\s+[\'\"]([\w\./]*)") 
+        
+        assert isinstance(lines, list)
+        sol = []
+
+        if mode is None or 'vector.inc' in mode:
+            search = True
+            for i,line in enumerate(lines[:]):
+                if search and re.search(include_pat, line):
+                    name = re.findall(include_pat, line)[0]
+                    misc.sprint('DETECTED INCLUDE', name)
+                    if 'vector.inc' in name:
+                        search = False
+                    if 'run.inc' in name:
+                        sol.append("       include 'vector.inc'")
+                        search = False
+                sol.append(line)
+                if re.search(function_pat, line):
+                    misc.sprint("DETECTED FCT")
+                    search = True
+        return sol
 
     def guess_entry_fromname(self, name, value):
         """
