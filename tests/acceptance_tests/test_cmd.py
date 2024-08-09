@@ -276,7 +276,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
         
-        self.do('import model_v4 sm')
+        self.cmd.do_import('model_v4 sm', force=True)
         self.do('set group_subprocesses False')
         self.do('generate e+ e- > e+ e-')
 #        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))

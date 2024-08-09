@@ -252,11 +252,11 @@ C
       double precision RHEL ! random number
       integer channel
 C
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
-%(ee_comp_vars)s
+%(ee_comp_vars_vec)s
       integer i_ee      
 C  
 C EXTERNAL FUNCTIONS

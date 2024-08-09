@@ -108,7 +108,7 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
         else if (abs(ipart).eq.10) then
           ipart = sign(1,ipart) * 15
         endif
-	pdg2pdf = 0d0
+        pdg2pdf = 0d0
 
         if (beamid.lt.0) then
            ih_local = ipart
@@ -122,7 +122,7 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
         endif
         do i_ee = 1, n_ee
           ee_components(i_ee) = compute_eepdf(x,omx_ee(iabs(beamid)),xmu,i_ee,ipart,ih_local)
-	enddo
+        enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
 c        write(*,*), x, beamid ,omx_ee(iabs(beamid)),xmu,1,ipart,ih_local,pdg2pdf
         return

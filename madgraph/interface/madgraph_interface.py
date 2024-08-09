@@ -5612,6 +5612,11 @@ This implies that with decay chains:
             self.clean_process()
             # Import model
             if args[0].endswith('_v4'):
+                logger.critical("Support for V4 model is deprecated and known to not be fully working in this version of MG5aMC. Please consider to use an older (Long Term Stable) version if you can not use UFO model")
+                if not force:
+                    ans = self.ask("Do you want to continue anyway?", "stop", ["continue", "stop"], timeout=20)
+                    if ans == "stop":
+                        return
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
             else:

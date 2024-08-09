@@ -1804,23 +1804,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdgtopdf[pdg] = 6000000 + pdg
                     
             # Get PDF variable declarations for all initial states
+            if vector:
+                vector_ext1 = '(VECSIZE_MEMMAX)' # pass to an array from a double
+                vector_ext2 = ', VECSIZE_MEMMAX' # add a dimenion
+            else:
+                vector_ext1, vector_ext2 = '',''
+
             for i in [0,1]:
                 pdf_definition_lines += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                       ",".join(["%s%d%s" % (pdf_codes[pdg],i+1, vector_ext1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
-                if vector:
-                    pdf_definition_lines_vec += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d(VECSIZE_MEMMAX)" % (pdf_codes[pdg],i+1) \
-                                                 for pdg in \
-                                                 initial_states[i]]) + \
-                                                 "\n"
+                
                 ee_pdf_definition_lines += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
+                                       ",".join(["%s%d_components(n_ee %s)" % (pdf_codes[pdg],i+1, vector_ext2) \
                                                  for pdg in \
                                                  initial_states[i] if abs(pdg) in [11,13]]) + \
                                                  "\n"
+                
 
             # Get PDF data lines for all initial states
             for i in [0,1]:
@@ -1902,29 +1904,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                         data = {'part':pdf_codes[initial_state],
                                 'beam' : i+1,
-                                'pdg': pdgtopdf[initial_state]
+                                'pdg': pdgtopdf[initial_state],
+                                'vecid': ''
                             }
+                        if vector:
+                            data['vecid'] = ', IVEC'
 
                         if vector and subproc_group:
                             template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
                                          "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(IB(%(beam)d), IVEC)))\n"
-                            if dressed_lep and self.opt['vector_size']:
-                                logger.warning("vector code for lepton pdf not implemented. We removed the option to run dressed lepton")
-                                self.proc_characteristic['limitations'].append('dressed_ee')
-                                dressed_lep = False
+                            #if dressed_lep and self.opt['vector_size']:
+                            #    logger.warning("vector code for lepton pdf not implemented. We removed the option to run dressed lepton")
+                            #    self.proc_characteristic['limitations'].append('dressed_ee')
+                            #    dressed_lep = False
                         elif subproc_group:
                             template = "%(part)s%(beam)d=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
                                          "XBK(IB(%(beam)d)), QSCALE)\n"
                         elif vector:
                             template = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(%(beam)d),%(pdg)d, %(beam)d," + \
                                          "ALL_XBK(%(beam)d,IVEC),DSQRT(ALL_Q2FACT(%(beam)d,IVEC)))\n"
-                            if dressed_lep:
-                                raise Exception("vector code for lepton pdf not implemented")
+                            #if dressed_lep:
+                            #    raise Exception("vector code for lepton pdf not implemented")
                         else:
                             template = "%(part)s%(beam)d=PDG2PDF(LPP(%(beam)d),%(pdg)d, %(beam)d," + \
                                          "XBK(%(beam)d),DSQRT(Q2FACT(%(beam)d)))\n"
                         if dressed_lep:
-                            template += "IF (PDLABEL.EQ.'dressed') %(part)s%(beam)d_components(1:4) = ee_components(1:4)\n" 
+                            template += "IF (PDLABEL.EQ.'dressed') %(part)s%(beam)d_components(1:4 %(vecid)s) = ee_components(1:4)\n"
 
                         pdf_lines = pdf_lines + template % data
 
@@ -1969,6 +1974,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pdf_lines += "ENDDO ! IWARP LOOP\n"
                 pdf_lines += "ENDDO ! CURRWARP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
+                comp_list = []
                 for proc in processes:
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
@@ -1979,17 +1985,26 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         if initial_state in list(pdf_codes.keys()):
                             pdf_lines = pdf_lines + "%s%d(IVEC)*" % \
                                         (pdf_codes[initial_state], ibeam)
+                            comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                         else:
                             pdf_lines = pdf_lines + "1d0*"
+                            comp_list.append("DUMMY")
                     # Remove last "*" from pdf_lines
                     pdf_lines = pdf_lines[:-1] + "\n"
+                    # this is for the lepton collisions with electron luminosity 
+                    # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                    if dressed_lep:
+                        pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                             "ALL_PD(IPROC,IVEC)=ee_comp_prod(%s_components(1,IVEC),%s_components(1,IVEC))\n" % \
+                             tuple(comp_list)
                     pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
                     pdf_lines += '\n    ENDDO\n'
-                    ee_pdf_definition_lines = ""
+                    if not dressed_lep:
+                        ee_pdf_definition_lines = ""
 
         # Remove last line break from the return variables                
         if vector:
-            return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1], ee_pdf_definition_lines
+            return pdf_definition_lines[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1], ee_pdf_definition_lines
         else:
             return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
@@ -5093,6 +5108,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                    vector=max(1,int(self.opt['vector_size'])))
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
+        replace_dict['ee_comp_vars_vec'] = eepdf_vars
         replace_dict['pdf_lines_vec'] = pdf_lines
 
 
