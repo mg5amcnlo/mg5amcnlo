@@ -5832,7 +5832,7 @@ This implies that with decay chains:
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model, precmd=True)
             line = self.exec_cmd('import model_v4 %s -modelname' % \
-                                 (reader.model), precmd=True)
+                                 (reader.model), precmd=True, force=True)
         else:
             logging.error('No MG_ME installation detected')
             return

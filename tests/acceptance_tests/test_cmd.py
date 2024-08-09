@@ -265,10 +265,13 @@ class TestCmdShell2(unittest.TestCase,
     
     join_path = TestCmdShell1.join_path
 
-    def do(self, line):
-        """ exec a line in the cmd under test """        
-        self.cmd.exec_cmd(line)
-    
+    def do(self, line, force=False):
+        """ exec a line in the cmd under te
+        st """
+        if force:        
+            self.cmd.exec_cmd(line, force=force)
+        else:   
+           self.cmd.exec_cmd(line) 
     
     def test_output_madevent_directory(self):
         """Test outputting a MadEvent directory"""
@@ -677,7 +680,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
 
-        self.do('import model_v4 heft')
+        self.do('import model_v4 heft', force=True)
         self.do('generate g g > h g g')
         self.do('output standalone %s ' % self.out_dir)
 
