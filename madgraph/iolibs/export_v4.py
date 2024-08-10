@@ -286,7 +286,66 @@ class ProcessExporterFortran(VirtualExporter):
                         pjoin(self.dir_path, 'Cards', 'run_card.dat'))
         
         
-        
+    #===========================================================================
+    # write_vector_size
+    #===========================================================================
+    def write_vector_size(self, fsock):
+        """Write the vector.inc which indicates how many event are handle in parralel."""
+
+        try:
+            vector_size = self.opt['output_options']['vector_size']
+        except KeyError:
+            vector_size = 1
+        vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
+        vector_size = max(1, vector_size)
+
+        try:
+            nb_warp = self.opt['output_options']['nb_warp']
+        except KeyError:
+            nb_warp = 1
+        nb_warp = banner_mod.ConfigFile.format_variable(nb_warp, int, name='nb_warp')
+        nb_warp = max(1, nb_warp)
+
+        text=["""C
+C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
+C this is designed for offloading MEs to GPUs or vectorized C++,
+C but it can also be used for computing MEs in Fortran.
+C If VECSIZE_MEMMAX equals 1, the old scalar API is used:
+C this can only be used for computing MEs in Fortran.
+C
+C Fortran arrays in the vector API can hold up to VECSIZE_MEMMAX
+C events and are statically allocated at compile time.
+C The constant value of VECSIZE_MEMMAX is fixed at codegen time
+C (output madevent ... --vector_size=<VECSIZE_MEMMAX>).
+C
+C While the arrays can hold up to VECSIZE_MEMMAX events,
+C only VECSIZE_USED (<= VECSIZE_MEMAMX) are used in Fortran loops.
+C The value of VECSIZE_USED can be chosen at runtime
+C (typically 8k-16k for GPUs, 16-32 for vectorized C++).
+C
+C The value of VECSIZE_USED represents the number of events
+C handled by one call to the Fortran/cudacpp "bridge".
+C This is not necessarily the number of events which are
+C processed in lockstep within a single SIMD vector on CPUs
+C or within a single "warp" of threads on GPUs. These parameters
+C are internal to the cudacpp bridge and need not be exposed
+C to the Fortran program which calls the cudacpp bridge.
+C
+C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
+C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
+C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
+C
+      INTEGER WARP_SIZE
+      PARAMETER (WARP_SIZE=%i)
+      INTEGER NB_WARP
+      PARAMETER (NB_WARP=%i)
+      INTEGER VECSIZE_MEMMAX
+      PARAMETER (VECSIZE_MEMMAX=%i)
+              
+              """ % (vector_size,nb_warp, vector_size*nb_warp)]
+        fsock.writelines(text)
+        return vector_size        
+
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -5227,66 +5286,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         return True
 
-    #===========================================================================
-    # write_vector_size
-    #===========================================================================
-    def write_vector_size(self, fsock):
-        """Write the vector.inc which indicates how many event are handle in parralel."""
 
-    
-        try:
-            vector_size = self.opt['output_options']['vector_size']
-        except KeyError:
-            vector_size = 1
-        vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
-        vector_size = max(1, vector_size)
-
-        try:
-            nb_warp = self.opt['output_options']['nb_warp']
-        except KeyError:
-            nb_warp = 1
-        nb_warp = banner_mod.ConfigFile.format_variable(nb_warp, int, name='nb_warp')
-        nb_warp = max(1, nb_warp)
-
-        text=["""C
-C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
-C this is designed for offloading MEs to GPUs or vectorized C++,
-C but it can also be used for computing MEs in Fortran.
-C If VECSIZE_MEMMAX equals 1, the old scalar API is used:
-C this can only be used for computing MEs in Fortran.
-C
-C Fortran arrays in the vector API can hold up to VECSIZE_MEMMAX
-C events and are statically allocated at compile time.
-C The constant value of VECSIZE_MEMMAX is fixed at codegen time
-C (output madevent ... --vector_size=<VECSIZE_MEMMAX>).
-C
-C While the arrays can hold up to VECSIZE_MEMMAX events,
-C only VECSIZE_USED (<= VECSIZE_MEMAMX) are used in Fortran loops.
-C The value of VECSIZE_USED can be chosen at runtime
-C (typically 8k-16k for GPUs, 16-32 for vectorized C++).
-C
-C The value of VECSIZE_USED represents the number of events
-C handled by one call to the Fortran/cudacpp "bridge".
-C This is not necessarily the number of events which are
-C processed in lockstep within a single SIMD vector on CPUs
-C or within a single "warp" of threads on GPUs. These parameters
-C are internal to the cudacpp bridge and need not be exposed
-C to the Fortran program which calls the cudacpp bridge.
-C
-C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
-C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
-C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
-C
-      INTEGER WARP_SIZE
-      PARAMETER (WARP_SIZE=%i)
-      INTEGER NB_WARP
-      PARAMETER (NB_WARP=%i)
-      INTEGER VECSIZE_MEMMAX
-      PARAMETER (VECSIZE_MEMMAX=%i)
-              
-              """ % (vector_size,nb_warp, vector_size*nb_warp)]
-        fsock.writelines(text)
-        return vector_size
 
     #===========================================================================
     # write_colors_file
