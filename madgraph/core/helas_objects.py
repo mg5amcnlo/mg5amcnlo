@@ -1586,7 +1586,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             c = output['coup%d'%i]
             if c.startswith('-'):
                 c = c[1:]
-            if coupling_dep and 'aS' in coupling_dep[c]:
+            if c in coupling_dep and 'aS' in coupling_dep[c]:
                 output['vec%d'%i] = "(ivec)"
             else:
                 output['vec%d'%i] = ""
