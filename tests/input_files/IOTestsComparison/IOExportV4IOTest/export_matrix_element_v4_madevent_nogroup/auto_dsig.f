@@ -320,7 +320,7 @@ C
       DOUBLE PRECISION RHEL  ! random number
       INTEGER CHANNEL
 C     
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       INCLUDE '../../Source/PDF/eepdf.inc'
       DOUBLE PRECISION EE_COMP_PROD
