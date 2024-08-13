@@ -34,6 +34,7 @@ import subprocess
 import copy
 import sys
 import shutil
+import pandas
 
 import traceback
 import time
@@ -43,7 +44,6 @@ import random
 import six
 StringIO = six
 from six.moves import range
-import pandas
 
 #useful shortcut
 pjoin = os.path.join
@@ -4951,14 +4951,13 @@ This implies that with decay chains:
 
             # check if particle is ONIA
             is_onium = False
-            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_names_properties.txt'), skiprows=range(0,4),sep="\s+", engine='python', index_col = False)
+            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_list.txt'), comment="#", sep="\s+", engine='python', index_col = False)
             for key in onia.keys():
                 try:
                     onia[key] = onia[key].str.lower()
                 except:
                     continue
-            # onium = part_name 
-            # onium_info = onia.loc[onia['name'] == onium]
+
             if part_name in onia['notation'].values:
                 is_onium = True
                 onium_info = onia.loc[onia['notation'] == part_name]
@@ -4968,7 +4967,14 @@ This implies that with decay chains:
             elif part_name.isdigit(): 
                 if int(part_name) in onia['pid'].values:
                     is_onium = True
-                    onium_info = onia.loc[onia['pid'] == int(part_name)]                  
+                    onium_info = onia.loc[onia['pid'] == int(part_name)]
+                elif int(part_name) in onia['pythia'].values:
+                    is_onium = True
+                    onium_info = onia.loc[onia['pythia'] == int(part_name)]
+
+            # check that only final-state particles are ONIA
+            if is_onium and not state:
+                raise self.InvalidCmd("initial particles cannot be onia")
 
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
@@ -5082,14 +5088,14 @@ This implies that with decay chains:
                 mylegids.extend(self._multiparticles[part_name])
                 
             elif is_onium:
-                spectroscopy = onium_info['spectroscopy'].to_string(index=False)
-                spectroscopy = [int(i) for i in spectroscopy]
-                if spectroscopy[0]%2==0:
-                    raise self.InvalidCmd("Quaknonium with spin state (2*S+1)=%i cannot exist"%spectroscopy[0])
                 onium_name = onium_info['name'].to_string(index=False)
                 onium_id = int(onium_info['pid'].to_string(index=False))
-                onium_spin = int((int(onium_info['spinType'].to_string(index=False))-1)/2)
-                onium_color = int(onium_info['color'].to_string(index=False))
+                onium_pythiaid = int(onium_info['pythia'].to_string(index=False))
+                onium_principal = int(onium_info['n'].to_string(index=False))
+                onium_spin = int((int(onium_info['S'].to_string(index=False))-1)/2)
+                onium_orbit = int(onium_info['L'].to_string(index=False))
+                onium_jtot = int(onium_info['J'].to_string(index=False))
+                onium_color = int(onium_info['C'].to_string(index=False))
                 onium_charge = int(onium_info['charge'].to_string(index=False))
                 onium_mass = float(onium_info['mass'].to_string(index=False))
                 onium_width = float(onium_info['width'].to_string(index=False))
@@ -5101,10 +5107,10 @@ This implies that with decay chains:
                     myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
                                                         'state':state,
                                                         'polarization': polarization,
-                                                        'onium': {'id':onium_id, 'name':onium_name, 'S':onium_spin,
-                                                                  'L':spectroscopy[1], 'J':spectroscopy[2], 'C':onium_color,
-                                                                  'charge':onium_charge, 'mass':onium_mass, 'width':onium_width,
-                                                                  'index':onium_index}
+                                                        'onium': {'id':onium_id, 'pythia_id':onium_pythiaid, 'name':onium_name,
+                                                                  'n':onium_principal, 'S':onium_spin, 'L':onium_orbit, 'J':onium_jtot,
+                                                                  'C':onium_color, 'charge':onium_charge, 'mass':onium_mass,
+                                                                  'width':onium_width, 'index':onium_index}
                                                         	}))      
                 onium_index += 1                
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
