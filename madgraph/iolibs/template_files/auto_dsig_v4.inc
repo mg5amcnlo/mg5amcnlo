@@ -289,9 +289,10 @@ C     Keep track of whether cuts already calculated for this event
       double precision all_rwgt(VECSIZE_MEMMAX)
       
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
+      include '../../Source/PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      INTEGER       LHAID
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 c
 c     local
