@@ -1225,6 +1225,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             echo "import model_v4 sm_v4" > cmd
+            echo "continue" >> cmd
             ./bin/mg5_aMC cmd
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
