@@ -29,8 +29,8 @@ c      parameter (max_host=99,maxplace=199,maxpoints=100,maxans=50)
 c*************************************************************************
 c	Parameters for helicity sums in matrixN.f
 c*************************************************************************
-      REAL*8 LIMHEL
-      PARAMETER(LIMHEL=1e-8) ! ME threshold for helicity filtering
+c      REAL*8 LIMHEL
+c      PARAMETER(LIMHEL=1e-8) -> pass in the run_card.dat
       INTEGER MAXTRIES
       PARAMETER(MAXTRIES=25)
 C     To pass the helicity configuration chosen by the DiscreteSampler to 

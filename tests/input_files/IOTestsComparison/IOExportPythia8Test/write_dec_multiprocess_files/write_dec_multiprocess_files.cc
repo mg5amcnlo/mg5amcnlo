@@ -43,7 +43,7 @@
 void Sigma_sm_gd_ddxd::initProc() {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_sm::getInstance();
-    pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr);
+    pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr);
     pars->setIndependentCouplings();
     // Set massive/massless matrix elements for c/b/mu/tau
 mcME = 0.;
@@ -67,7 +67,7 @@ jamp2[9] = new double[1];
 
 void Sigma_sm_gd_ddxd::sigmaKin() { 
     // Set the parameters which change event by event
-    pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS);
+    pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS);
     pars->setDependentCouplings();
     // Reset color flows
     for(int i=0;i < 1; i++)

@@ -3248,11 +3248,11 @@ class DecayModel(model_reader.ModelReader):
 
         # Define regular expressions
         re_decay = re_module.compile(\
-            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
+            r"^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         re_two_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
         re_three_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
 
         # Define the decay pid, total width
         pid = 0
@@ -4048,8 +4048,8 @@ class Channel(base_objects.Diagram):
         
     @classmethod
     def init_regular_expression(cls):
-        dico = dict((repr(i), '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
-        cls.lor_pattern = re_module.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+        dico = dict((repr(i), '%s' % ','.join([r"\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
+        cls.lor_pattern = re_module.compile(r"""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
                                         Gamma5\(%(2)s\)|

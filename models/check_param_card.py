@@ -649,7 +649,7 @@ class ParamCard(dict):
         #check if we need to write the value of scale for some block
         if os.path.exists(input_inc):
             text = open(input_inc).read()
-            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+            scales = list(set(re.findall(r'mdl__(\w*)__scale', text, re.I)))
         else: 
             scales = []
 
@@ -1000,10 +1000,12 @@ class ParamCardIterator(ParamCard):
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
         # do the loop
         lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
-        for positions in itertools.product(*lengths):
+        from functools import reduce
+        total = reduce((lambda x, y: x * y),[len(x) for x in lengths])
+        for i,positions in enumerate(itertools.product(*lengths)):
             self.itertag = []
             if self.logging:
-                logger.info("Create the next param_card in the scan definition", '$MG:BOLD')
+                logger.info("Create the next param_card in the scan definition (%s/%s)" % (i+1,total), '$MG:BOLD')
             for i, pos in enumerate(positions):
                 key = keys[i]
                 for param, values in all_iterators[key]:

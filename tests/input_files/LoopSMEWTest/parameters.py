@@ -22,13 +22,13 @@ lhv = Parameter(name = 'lhv',
                  nature = 'internal',
                  type = 'real',
                  value = '1.0',
-                 texname = '\lambda_{HV}')
+                 texname = r'\lambda_{HV}')
 
 vep = Parameter(name = 'vep',
                 nature = 'internal',
                 type = 'real',
                 value = '0.0',
-                texname = '\eps')
+                texname = r'\eps')
 
 Ncol = Parameter(name = 'Ncol',
                  nature = 'internal',

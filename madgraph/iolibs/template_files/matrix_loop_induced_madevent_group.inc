@@ -22,6 +22,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
 C   Below is the maximum config ID for multichannels which is always less than
 C   the number of loop diagrams, so we use the latter.
     INTEGER    NLOOPDIAGRAMS
@@ -46,8 +47,8 @@ C   When set negative, the security above is removed
 c
 c global (due to reading writting) 
 c
-        LOGICAL GOODHEL(NCOMB,2)
-	INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB,MAXSPROC)
+	INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C ARGUMENTS 
@@ -58,13 +59,12 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
 		INTEGER I, II, J ,JJ
-        INTEGER ISHEL(2)
+        INTEGER ISHEL
         REAL*8 R,SUMHEL,TS(NCOMB), T
 		REAL*8 HWGT,XTOT
-        INTEGER NGOOD(2), IGOOD(NCOMB,2)         
-  		INTEGER JHEL(2)	
-        DATA NGOOD /0,0/
-        DATA ISHEL/0,0/
+        INTEGER NGOOD
+        DATA NGOOD /0/
+        DATA ISHEL/0/
 C   This stores the different between the full matrix element squared and the sum of multi-channeling factors '|A_i|^2'.
 	DOUBLE PRECISION INTERFERENCE_CONTRIB
 
@@ -80,7 +80,6 @@ C       This is just to temporarily store the reference grid for helicity of the
 C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
 		SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
 
-		SAVE IGOOD, JHEL
 
 		LOGICAL INIT_MADLOOP
 		DATA INIT_MADLOOP/.FALSE./
@@ -164,7 +163,7 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 	  CALL %(ml_prefix)sCLEAR_CACHES()
     ENDIF
 
-    NTRY(IMIRROR)=NTRY(IMIRROR)+1
+    NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
 
     IF (multi_channel) THEN
         DO I=1,NLOOPDIAGRAMS
@@ -200,9 +199,9 @@ C Of course this option can also not be used for polarized beams.
     ELSE
 !   If the helicity grid status is 0, this means that it is not yet initialized.
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
-    IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
+    IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       	 DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
+         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
 	        
 		    call cpu_time(t_before)
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
@@ -245,21 +244,19 @@ C Of course this option can also not be used for polarized beams.
 	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	  ELSE
-        JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+        IF(NTRY(%(proc_id)s).LE.MAXTRIES)THEN
          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-               GOODHEL(I,IMIRROR)=.TRUE.
-               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
+            IF (.NOT.GOODHEL(I,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+               GOODHEL(I,%(proc_id)s)=.TRUE.
+               NGOOD = NGOOD +1
+               PRINT *,'Added good helicity for proc %(proc_id)s ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(%(proc_id)s)
             ENDIF
          ENDDO
         ENDIF
-        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
-           ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
+           ISHEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
-        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
 

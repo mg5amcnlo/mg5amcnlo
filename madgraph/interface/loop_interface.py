@@ -781,7 +781,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
@@ -821,7 +821,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         # Check the validity of the arguments
         self.check_add(args)
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:

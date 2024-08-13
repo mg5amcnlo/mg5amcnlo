@@ -55,7 +55,7 @@ class TestCmdShell1(unittest.TestCase):
         """join path and treat spaces"""   
 
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -216,13 +216,14 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': True,
-                     'nlo_mixed_expansion': True,
-                     'acknowledged_v3.1_syntax': False,
-                     'contur_path': './HEPTools/contur',
-                     'rivet_path': './HEPTools/rivet',
-                     'yoda_path':'./HEPTools/yoda',
-                      'eMELA': 'eMELA-config',
+                    'auto_convert_model': True,
+                    'nlo_mixed_expansion': True,
+                    'acknowledged_v3.1_syntax': False,
+                    'contur_path': './HEPTools/contur',
+                    'rivet_path': './HEPTools/rivet',
+                    'yoda_path':'./HEPTools/yoda',
+                    'eMELA': 'eMELA-config',
+                    'cluster_walltime': None,
                     }
 
         self.assertEqual(config, expected)
@@ -524,7 +525,7 @@ class TestCmdShell2(unittest.TestCase,
 
         #log_output = open(logfile, 'r').read()
         #misc.sprint(log_output)
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -588,7 +589,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_epem_epem'), shell=True)
         (log_output, err) = p.communicate()
         log_output = log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -619,7 +620,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -655,7 +656,7 @@ class TestCmdShell2(unittest.TestCase,
                                                  oneproc), shell=True)
             
                 log_output = open(logfile, 'r').read()
-                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                                    re.IGNORECASE)
                 me_groups = me_re.search(log_output)
                 self.assertTrue(me_groups)
@@ -710,7 +711,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_gg_hgg'), shell=True)
         (log_output, err) = p.communicate()                                         
         log_output =log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -1457,6 +1458,20 @@ P1_qq_wp_wp_lvl
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
 
+    def test_decay_chain_identical_particle_outoforder(self):
+        """ check that we can use standard MG4 name """
+        
+        self.do('import model sm')
+        self.do('generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.do('output madevent %s ' % self.out_dir)
+        Pdir = os.listdir(pjoin(self.out_dir, 'SubProcesses')) 
+        self.assertNotIn('P0_ll_zzh_z_ll_z_ll_h_bbx',  Pdir)
+
+
+
+
+
     def test_save_load(self):
         """ check that we can use standard MG4 name """
         
@@ -1566,7 +1581,7 @@ P1_qq_wp_wp_lvl
                                          'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
