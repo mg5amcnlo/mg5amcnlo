@@ -543,8 +543,6 @@ TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photo
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
-TimeShower:pTminChgQ = 0.01
-TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -556,8 +554,6 @@ SpaceShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photon
 SpaceShower:QEDshowerByL = $QEDSHOWER     ! Prevent leptons from radiating photons
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
-SpaceShower:pTminChgQ = 0.01
-SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = $PKT    ! off = no primordial kT

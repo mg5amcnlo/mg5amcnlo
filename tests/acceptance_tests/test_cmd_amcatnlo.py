@@ -124,7 +124,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        

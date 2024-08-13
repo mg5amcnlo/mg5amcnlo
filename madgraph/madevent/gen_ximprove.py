@@ -158,8 +158,11 @@ class gensym(object):
             (stdout, _) = p.communicate(''.encode())
             stdout = stdout.decode('ascii',errors='ignore')
             if stdout:
-                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
+                lines = stdout.strip().split('\n')
+                nb_channel = max([math.floor(float(d)) for d in lines[-1].split()])
             else:
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
                 for matrix_file in misc.glob('matrix*orig.f', Pdir):
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
                 P_zero_result.append(Pdir)
@@ -297,7 +300,7 @@ class gensym(object):
                     bad_amps_perhel = []
                 if __debug__:
                     mtext = open(matrix_file).read()
-                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    nb_amp = int(re.findall(r'PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
                     logger.debug('(%s) nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', split_file[-1], len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
@@ -1387,7 +1390,7 @@ class gen_ximprove_v4(gen_ximprove):
                     break
                 info = jobs[j]
                 info['script_name'] = 'ajob%i' % script_number
-                info['keeplog'] = 'false'
+                info['keeplog'] = 'false' if self.run_card['keep_log'] != 'debug' else 'true'
                 if "base_directory" not in info:
                     info["base_directory"] = "./"
                 fsock.write(template_text % info)

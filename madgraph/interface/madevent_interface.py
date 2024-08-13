@@ -2974,7 +2974,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
-                while re.search('^(#|\s|\d)', line):
+                while re.search(r'^(#|\s|\d)', line):
                     line = param_card.pop(line_number)
                     if not particle or line.startswith('#'):
                         line=param_card[line_number]
@@ -3225,7 +3225,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 for line in open(pjoin(bias_module_path,'%s.f'%os.path.basename(bias_module_path))):
                     if start and last:
                         break
-                    if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
+                    if not start and not re.search(r'c\s*parameters\s*=\s*{',line, re.I):
                         continue
                     start = True
                     if not line.startswith('C'):
@@ -3234,7 +3234,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     if '{' in line:
                         line = line.split('{')[-1]
                     # split for } ! #
-                    split_result = re.split('(\}|!|\#)', line,1, re.M)
+                    split_result = re.split(r'(\}|!|\#)', line,1, re.M)
                     line = split_result[0]
                     sep = split_result[1] if len(split_result)>1 else None
                     if sep == '}':
@@ -3513,8 +3513,8 @@ Beware that this can be dangerous for local multicore runs.""")
         text = open(conf_path).read()
         min_evt, max_evt = 2500 *(2+rate), 10000*(rate+1) 
         
-        text = re.sub('''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
-        text = re.sub('''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
+        text = re.sub(r'''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
+        text = re.sub(r'''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
@@ -3618,7 +3618,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     alljobs = misc.glob('ajob*', Pdir)
                     
                     #remove associated results.dat (ensure to not mix with all data)
-                    Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                    Gre = re.compile(r"\s*j=(G[\d\.\w]+)")
                     for job in alljobs:
                         Gdirs = Gre.findall(open(job).read())
                         for Gdir in Gdirs:
@@ -3749,18 +3749,31 @@ Beware that this can be dangerous for local multicore runs.""")
 
         partials_info = [] 
         if len(Gdirs) >= max_G:
-            max_G = 80
             start_unweight= time.perf_counter()
-
             # first check in how many chunk we have to split (always use a multiple of nb_core)
             nb_split = 1
-            nb_G = len(Gdirs) // self.options['nb_core']
-            while nb_G > max_G:
+            nb_G = len(Gdirs) // (2* self.options['nb_core'])
+            while nb_G > min(80, max_G):
                nb_split += 1 
-               nb_G = len(Gdirs)//(nb_split*self.options['nb_core']) 
+               nb_G = len(Gdirs)//(nb_split*2*self.options['nb_core'])
+               if nb_G < 10:
+                   nb_split -=1
+                   nb_G = len(Gdirs)//(nb_split*2*self.options['nb_core']) 
             
-            # do the unweighting of each chunk on their own thread
-            nb_chunk = 2 * (nb_split*self.options['nb_core'])
+            #enforce at least 10 directory per thread
+            if nb_G > 10 or nb_split>1: 
+                # do the unweighting of each chunk on their own thread
+                nb_chunk = (nb_split*2*self.options['nb_core'])
+            else:
+                nb_chunk = len(Gdirs) // 10 
+                nb_G =10
+            
+            # security that the number of combine events is too large
+            if nb_chunk >= max_G:
+                nb_chunk = max_G -1
+                nb_G = len(Gdirs) // nb_chunk 
+
+            misc.sprint(nb_chunk, nb_G)
             for i, local_G in enumerate(split(Gdirs, nb_chunk)):
                 line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
                 line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
@@ -3792,8 +3805,11 @@ Beware that this can be dangerous for local multicore runs.""")
                 path = data[0]
                 try:
                     os.remove(path)
-                except Exception:
-                    os.remove(path[:-3]) # try without the .gz
+                except Exception as error:
+                    try: 
+                        os.remove(path[:-3]) # try without the .gz
+                    except:
+                        misc.sprint('no file ', path, 'to clean')
         else:
             for Gdir in Gdirs:
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
@@ -3996,13 +4012,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 #except Exception:
                 #    continue                    
                 # Store log
-                try:
-                    if os.path.exists(pjoin(G_path, 'log.txt')):
-                        input = pjoin(G_path, 'log.txt')
+                input = pjoin(G_path, 'log.txt')
+                if os.path.exists(input): 
+                    if self.run_card['keep_log'] not in ["none", "minimal"]:
                         output = pjoin(G_path, '%s_log.txt' % run)
-                        files.mv(input, output) 
-                except Exception:
-                    continue
+                        try:
+                            files.mv(input, output) 
+                        except Exception:
+                            continue
+                    elif self.run_card['keep_log'] == "none":
+                        try:
+                            os.remove(input)
+                        except Exception:
+                            continue 
                 #try:   
                 #    # Grid
                 #    for name in ['ftn26']:
@@ -4080,7 +4102,7 @@ Beware that this can be dangerous for local multicore runs.""")
         misc.call(['./bin/internal/make_gridpack'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
-        os.system("sed -i.bak \"s/\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
+        os.system("sed -i.bak \"s/\\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
         self.update_status('gridpack created', level='gridpack')
         
@@ -4782,7 +4804,7 @@ tar -czf split_$1.tar.gz split_$1
                     # Make sure to sure the number of split_events determined during the splitting.
                     split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i])
                     split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
-                                                             (float(partition_for_PY8[i])/float(n_events)))
+                                                             (float(partition_for_PY8[i])))
                     # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
                     # the ones in the original PY8 param_card copied.
                     split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
@@ -5054,9 +5076,9 @@ tar -czf split_$1.tar.gz split_$1
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
                 # with central parameters and a different merging scale
-                a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+                a_float_re = r'[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
                 central_merging_re = re.compile(
-                  '^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
+                  r'^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
                                                                   re.IGNORECASE)                
                 cross_sections = dict(
                     (float(central_merging_re.match(xsec).group('merging')),value)
@@ -5107,8 +5129,8 @@ tar -czf split_$1.tar.gz split_$1
     
     def parse_PY8_log_file(self, log_file_path):
         """ Parse a log file to extract number of event and cross-section. """
-        pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
-        pythia_xsec_re = re.compile("Inclusive cross section\s*:\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        pythiare = re.compile(r"Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        pythia_xsec_re = re.compile(r"Inclusive cross section\s*:\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
         sigma_m, Nacc, Ntry = None, None, None
         for line in misc.BackRead(log_file_path): 
             info = pythiare.search(line)
@@ -5249,7 +5271,7 @@ tar -czf split_$1.tar.gz split_$1
             # read the line from the bottom of the file
             #pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
             #                                             '%s_pythia.log' % tag))
-            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            pythiare = re.compile(r"\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
             for line in misc.reverse_readline(pjoin(self.me_dir,'Events', self.run_name, 
                                                          '%s_pythia.log' % tag)):
                 info = pythiare.search(line)
@@ -5710,8 +5732,8 @@ tar -czf split_$1.tar.gz split_$1
                 input_files.append(self.get_pdf_input_filename())
                         
                 #Find the correct ajob
-                Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                origre = re.compile("grid_directory=(G[\d\.\w]+)")
+                Gre = re.compile(r"\s*j=(G[\d\.\w]+)")
+                origre = re.compile(r"grid_directory=(G[\d\.\w]+)")
                 try : 
                     fsock = open(exe)
                 except Exception:
@@ -5719,7 +5741,7 @@ tar -czf split_$1.tar.gz split_$1
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\.\s]*) ; do")
+                    Ire = re.compile(r"for i in ([\d\.\s]*) ; do")
                     data = Ire.findall(text)
                     data = ' '.join(data).split()
                     for nb in data:
@@ -6425,7 +6447,7 @@ tar -czf split_$1.tar.gz split_$1
             elif mode == 'Pythia':
                 stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w')
                 if 'mgpythiacard' in self.banner:
-                    pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
+                    pat = re.compile(r'''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
                     data = pat.search(self.banner['mgpythiacard'])
                     if data:
                         qcut = float(data.group(1))
@@ -6702,7 +6724,7 @@ class SubProcesses(object):
         for line in open(pjoin(path, 'leshouche.inc')):
             if not 'IDUP' in line:
                 continue
-            particles = re.search("/([\d,-]+)/", line)
+            particles = re.search(r"/([\d,-]+)/", line)
             all_ids.append([int(p) for p in particles.group(1).split(',')])
         return all_ids
     

@@ -8345,7 +8345,7 @@ class UFO_model_to_mg4(object):
         """
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
+        fsock.writelines(r"""double complex function cond(condition,truecase,falsecase)
           implicit none
           double complex condition,truecase,falsecase
           if(condition.eq.(0.0d0,0.0d0)) then

@@ -349,6 +349,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
+    files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
@@ -986,8 +987,8 @@ class UFOMG5Converter(object):
                                                            for pole in range(3)]
             CTparameter_patterns[CTparam.name] = (pattern_finder,sub_functions)
         
-        times_zero = re.compile('\*\s*-?ZERO')
-        zero_times = re.compile('ZERO\s*(\*|\/)')
+        times_zero = re.compile(r'\*\s*-?ZERO')
+        zero_times = re.compile(r'ZERO\s*(\*|\/)')
         def is_expr_zero(expresson):
             """ Checks whether a single term (involving only the operations
             * or / is zero. """
@@ -1551,11 +1552,11 @@ class UFOMG5Converter(object):
                 
                 
                 if particle.color == 6:
-                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == -6 :
-                    output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<second>,\g<first>)', term))
                 elif particle.color == 8:
-                    output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
                 elif particle.color in [-3,3]:
                     if particle.pdg_code not in color_info:
@@ -1578,9 +1579,9 @@ class UFOMG5Converter(object):
                             logger.debug('succeed')
                 
                     if color_info[particle.pdg_code] == 3 :
-                        output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<second>,\g<first>)', term))
                     elif color_info[particle.pdg_code] == -3:
-                        output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<first>,\g<second>)', term))
                 else:
                     raise MadGraph5Error("Unknown use of Identity for particle with color %d" \
                           % particle.color)
@@ -1590,7 +1591,7 @@ class UFOMG5Converter(object):
 
         # Change convention for summed indices
         p = re.compile(r'\'\w(?P<number>\d+)\'')
-        data_string = p.sub('-\g<number>', data_string)
+        data_string = p.sub(r'-\g<number>', data_string)
          
         # Shift indices by -1
         new_indices = {}

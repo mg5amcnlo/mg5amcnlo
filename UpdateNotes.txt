@@ -1,5 +1,18 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+ANNOUNCEMENT: 
+   2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing in december 2025.
+   (end of support june 2026).
+   A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
+
+3.5.5 (17/06/24):
+     OM: Fix a bug in the new strategy of combining events.
+     OM: Allow slurm/condor cluster to specify the wall time of the jobs (cluster_walltime)
+     OM: add new (hidden) entry in the run_card to force to keep all the log file (keep_log)
+     OM: Fixing a matchbox issue (introduced in 2.9.0)
+     OM: Dynamical scale choice for NLO can now be set via custom_fcts (was bugged before)
+     OM: INclude fix from (other) LTS 2.9.20
+
 3.5.4 (05/04/23):
       MZ+RF: Bug fixes:
         1) a bug related to event-generation, when virtual corrections include more than one
@@ -179,6 +192,24 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
+
+2.9.20 (17/6/24):
+    OM: Fix a wrong syntax handling for decay chain like
+        generate ... > A A B  , B > ,  A >  , A >
+        where due to the different order in production (AAB) and in decay (BAA)
+        all A particle where decay with both decay mode, instead of their specific ones.
+        (present since v1.0.0)
+        Note this bug can still be present if A or B are multi-particles, in that case we advise to use
+        the same order for the production and decay syntax.
+    OM: Fix an issue with helicity recycling if some processes did not have available phase-space.
+        In some situation, the cross-section was reported as simply zero even if other processes where
+        kinematically allowed (thanks Sihyun Jeon)
+    OM: Improving the detection of cache invalidity for UFO model (thanks A. Valassi)
+    OM: Fix compilation of Stdhep on some unix machine (thanks jmcarcell)
+    OM: Fix an issue with the weight normalization when running PY8@LO
+
+
 2.9.19 (20/03/24):
     OM: Fix a "cot" issue introduced in 2.9.18.
     OM: Fixing some regular expression for the way fortran writter works.
