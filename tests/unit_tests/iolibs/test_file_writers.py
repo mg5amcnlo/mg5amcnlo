@@ -148,7 +148,6 @@ C       Test
       TEST\n
 C     this is a comment
 #ifdef not a comment
-      TEST
 C     $$$C EXAMPLE: cut on top quark pT\n"""
 
         writer = writers.FortranWriter(self.give_pos('fortran_test')).\
