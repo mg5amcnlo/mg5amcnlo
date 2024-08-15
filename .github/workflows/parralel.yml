@@ -29,7 +29,7 @@ jobs:
   # This workflow contains a single job called "build"
 
 
-  par_short_test_short_cross_sqso1:
+  test_short_cross_sqso1:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v2
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_AcceptanceProcOutputIOTests
+      - name: test test_short_cross_sqso1
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
@@ -51,7 +51,7 @@ jobs:
 
 
 
-  par_short_test_gauge_4_e500:
+  test_gauge_4_e500:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v2
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_config
+      - name: test test_gauge_4_e500
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
@@ -70,5 +70,284 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_4_e500 -pP -t0 -l INFO
+
+
+  test_gauge_6_e500:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_gauge_6_e500
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_gauge_6_e500 -pP -t0 -l INFO
+
+
+  test_gauge_6_e90:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_gauge_6_e90
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_gauge_6_e90 -pP -t0 -l INFO
+
+            
+  test_long_sm_vs_stored_HCR_dxd_wpwm_QCD:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_long_sm_vs_stored_HCR_dxd_wpwm_QCD
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_dxd_wpwm_QCD -pP -t0 -l INFO
+
+
+  test_long_sm_vs_stored_HCR_dxd_wpwm_QED:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_long_sm_vs_stored_HCR_dxd_wpwm_QED
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_dxd_wpwm_QED -pP -t0 -l INFO
+
+
+  test_mg5_heft_23:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_heft_23
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_mg5_heft_23 -pP -t0 -l INFO
+
+
+
+  test_mg5_minitest_mssm:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_minitest_mssm
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_mg5_minitest_mssm -pP -t0 -l INFO
+
+
+  test_mg5_minitest_sm:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_minitest_sm
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_mg5_minitest_sm -pP -t0 -l INFO
+
+
+
+  test_mg5_sm_13:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_sm_13
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_mg5_sm_13 -pP -t0 -l INFO
+
+
+
+  test_mg5_sm_22:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_sm_22
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_mg5_sm_22 -pP -t0 -l INFO
+
+
+
+  test_mg5_sm_23_p3:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_mg5_sm_23_p3
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py  test_mg5_sm_23_p3 -pP -t0 -l INFO
+
+
+  test_short_cross_pol:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_short_cross_pol
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py  test_short_cross_pol -pP -t0 -l INFO
+
+
+
+  test_short_cross_sm1:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_short_cross_sm1
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_cross_sm1 -pP -t0 -l INFO
+
+
+
+  test_short_ppgogo_amcatnlo_nlo:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test test_short_ppgogo_amcatnlo_nlo
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_ppgogo_amcatnlo_nlo -pP -t0 -l INFO
 
 
