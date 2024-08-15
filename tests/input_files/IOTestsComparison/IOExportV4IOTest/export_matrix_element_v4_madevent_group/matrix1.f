@@ -146,11 +146,11 @@ C     ----------
         DO I=1,NDIAGS
           AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=2
-        DO I=1,INT(JAMP2(0))
-          JAMP2(I)=0D0
-        ENDDO
       ENDIF
+      JAMP2(0)=2
+      DO I=1,INT(JAMP2(0))
+        JAMP2(I)=0D0
+      ENDDO
       ANS = 0D0
       DO I=1,NCOMB
         TS(I)=0D0

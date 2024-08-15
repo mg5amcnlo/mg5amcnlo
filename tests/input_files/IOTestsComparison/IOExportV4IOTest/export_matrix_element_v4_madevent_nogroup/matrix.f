@@ -110,11 +110,11 @@ C     ----------
         DO I=1,NDIAGS
           AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=2
-        DO I=1,INT(JAMP2(0))
-          JAMP2(I)=0D0
-        ENDDO
       ENDIF
+      JAMP2(0)=2
+      DO I=1,INT(JAMP2(0))
+        JAMP2(I)=0D0
+      ENDDO
       ANS = 0D0
 C     WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
       DO I=1,NCOMB

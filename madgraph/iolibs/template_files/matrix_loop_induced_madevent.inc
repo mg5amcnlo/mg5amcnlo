@@ -166,11 +166,11 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
         DO I=1,NLOOPDIAGRAMS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
     WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
