@@ -3821,7 +3821,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #    logger.error('Could not cd to directory %s' % dirpath)
         #    return 0
 
-        print('4',dirpath)
+
         logger.info('Creating files in directory %s' % dirpath)
 
         # Extract number of external particles
@@ -3902,6 +3902,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ln('leshouche.inc', '../../Source', log=False, cwd=dirpath)
         ln('maxamps.inc', '../../Source', log=False, cwd=dirpath)
         ln('phasespace.inc', '../', log=True, cwd=dirpath)
+        ln('../../Source/vector.inc', log=True, cwd=dirpath)
         # Return to original PWD
         #os.chdir(cwd)
 
@@ -10291,6 +10292,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         ln('nexternal.inc', '../../Source', cwd=Ppath, log=False)
         ln('leshouche.inc', '../../Source', cwd=Ppath, log=False)
         ln('maxamps.inc', '../../Source', cwd=Ppath, log=False)
+        ln('../../Source/vector.inc', cwd=Ppath, log=False)
         ln('../../Source/maxparticles.inc', '.', log=True, cwd=Ppath)
         ln('../../Source/maxparticles.inc', '.', name='genps.inc', log=True, cwd=Ppath)
         ln('phasespace.inc', '../', log=True, cwd=Ppath)
