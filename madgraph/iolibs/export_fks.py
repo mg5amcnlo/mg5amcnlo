@@ -668,7 +668,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_poles.f',
                      'check_sudakov.f',
                      'check_sudakov_angle2.f',
-                     'ewsudakov_functions.f',
                      'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
@@ -756,6 +755,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f']
+
+        if matrix_element.ewsudakov:
+            linkfiles.append('ewsudakov_functions.f')
+        else:
+            linkfiles.append('ewsudakov_functions_dummy.f')
 
         for file in linkfiles:
             ln('../' + file , '.')
