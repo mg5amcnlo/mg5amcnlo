@@ -1110,8 +1110,8 @@ c Sum the contributions that can be summed before taking the ABS value
          stop 1
       endif
       do i=1,nexternal
-         ICOLUP(1,i)=col(1,i)
-         ICOLUP(2,i)=col(2,i)
+         ICOLUP(1,i)=jpart(4,i)
+         ICOLUP(2,i)=jpart(5,i)
       enddo
       
       do i=1,nexternal
