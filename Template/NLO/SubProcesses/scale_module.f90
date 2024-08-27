@@ -42,7 +42,9 @@ contains
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
-    ! loop over dipoles
+    shower_scale_nbody=-1d0
+    shower_scale_nbody_min=-1d0
+    shower_scale_nbody_max=-1d0
     call get_global_ref_scale(next_n,p)
     if (flow_picked .lt. 0) then
        fks_father=-flow_picked
@@ -81,10 +83,6 @@ contains
                 shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
                 shower_scale_nbody_min(i,j)=scalemin
                 shower_scale_nbody_max(i,j)=scalemax
-             else
-                shower_scale_nbody(i,j)=-1d0
-                shower_scale_nbody_min(i,j)=-1d0
-                shower_scale_nbody_max(i,j)=-1d0
              endif
           enddo
        enddo

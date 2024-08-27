@@ -724,11 +724,17 @@ c
       integer fks_father
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      double complex wgt1(2)
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
       sigintF=0d0
+      ! Set the born_flow_picked to 0, so that we can skip S-event
+      ! contributions and also that when we enter
+      ! init_process_module_n1body, we will pick a colour flow at random
+      ! instead of the one corresponding to the born_flow_picked.
+      born_flow_picked=0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -830,7 +836,20 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
                call compute_born
                call compute_nbody_noborn
                call get_born_flow(born_flow_picked)
+               ! We need to fill emsca_S(iFKS_born) with a value that
+               ! will be used if we are in the dead-zone. If we are not
+               ! in the dead-zone, this will not be used (or
+               ! overwritten).
+               call compute_shower_scale_nbody(p_born,born_flow_picked)
+               emsca_S(nFKS_picked_nbody,ifold_counter)
+     $              =get_random_shower_dipole_scale()
             endif
+         else
+            call sborn(p_born,wgt1)
+            call get_born_flow(born_flow_picked)
+! give it a negative value so that we can keep track of the fact that
+! this was obtained with momenta that do not pass the cuts.
+            born_flow_picked=-born_flow_picked
          endif
 
 c Update the shower starting scale. This might be updated again below if
@@ -853,34 +872,26 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
-            
-! Consider all flows for the shower scale assignment (with assignements
-! only needed for the dipoles where the fks-mother is one end of the
-! dipole line)
-            write (*,*) 'What happens to the shower scale for the born'/
-     $           /' if the fks_father is different for each of the '/
-     $           /'considered FKS configs? Which one to use?'
-            stop 1
-            
-            fks_father=min(i_fks,j_fks)
-            call compute_shower_scale_nbody(p_born,-fks_father) 
-! assign emsca_S: we know flow (from driver_mintMC) and the
-! father. Therefore the partner is fixed (except when father is a gluon
-! (then there is a two-fold ambiguity)). Determine the partner:
 
-            WRITE (*,*) 'driver_mintMC: what to do if '/
-     $           /'born_flow_picked is not filled? And how does this '/
-     $           /'work with the use of -fks_father in the computation'/
-     $           /' of the nbody shower scale just above?'
-            stop 1
+            if (born_flow_picked.gt.0) then
+!     Consider all flows for the shower scale assignment (with
+!     assignements only needed for the dipoles where the fks-mother is
+!     one end of the dipole line)
+               fks_father=min(i_fks,j_fks)
+               call compute_shower_scale_nbody(p_born,-fks_father) 
+!     assign emsca_S: we know flow (from driver_mintMC) and the
+!     father. Therefore the partner is fixed (except when father is a gluon
+!     (then there is a two-fold ambiguity)). Determine the partner:
 
-! TODO: Check if we need the same partner for each fold
-            call determine_partner(born_flow_picked,partner_picked)
-! The shower scale to be used in the event file (if it's an S-event and
-! fks_picked will be iFKS):
-            emsca_S(iFKS,ifold_counter)=shower_scale_nbody(fks_father
-     $           ,partner_picked)
-
+!     TODO: Check if we need the same partner for each fold
+!     Determine the partner of the father
+               call determine_partner(born_flow_picked,partner_picked)
+!     The shower scale to be used in the event file (if it's an S-event and
+!     fks_picked will be iFKS):
+               emsca_S(iFKS,ifold_counter)=shower_scale_nbody(fks_father
+     $              ,partner_picked)
+            endif
+               
             jac=1d0/vol1
             probne=1d0
             gfactsf=1.d0
@@ -936,6 +947,13 @@ c check if event or counter-event passes cuts
 c$$$ TODO : fix FxFx
 c$$$            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            if (passcuts_nbody .and. (born_flow_picked .le.0)) then
+               write (*,*) 'something funny is going on: passing cuts,'
+     $              //' but no born_flow assigned.'
+               write (*,*) born_flow_picked
+               stop 1
+            endif
+            
             call set_cms_stuff(mohdr)
 c$$$ TODO : fix FxFx
 c$$$            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
@@ -1084,10 +1102,16 @@ c Sum the contributions that can be summed before taking the ABS value
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs
 
-      call fill_icolor_H(bornflow,jpart)
+      if (bornflow.ne.0) then
+         ! take ABS because bornflow is negative if n-body did not pass the cuts
+         call fill_icolor_H(abs(bornflow),jpart)
+      else
+         write (*,*) 'Born-flow not set in n1body_wrapper'
+         stop 1
+      endif
       do i=1,nexternal
-        ICOLUP(1,i)=jpart(4,i)
-        ICOLUP(2,i)=jpart(5,i)
+         ICOLUP(1,i)=col(1,i)
+         ICOLUP(2,i)=col(2,i)
       enddo
       
       do i=1,nexternal

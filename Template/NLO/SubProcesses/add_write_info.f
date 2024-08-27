@@ -273,6 +273,9 @@ c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
 
+! TODO: we should never(?) pick colour flows only compatible with
+! iconfig. But then we should not write the resonances if they are not
+! compatible with the colour flow picked.
       if (colour_connections(1,1).lt.0) then
          ! colour not yet set: Get color flow that is consistent with
          ! iconfig from Born
