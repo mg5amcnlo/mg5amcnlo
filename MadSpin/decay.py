@@ -2283,7 +2283,7 @@ class decay_all_events(object):
         
     def decaying_events(self,inverted_decay_mapping):
         """perform the decay of each events"""
-
+        time_dec = time.time()
         decay_tools = decay_misc()
         # tools for checking if max_weight is too often broken.
         report = collections.defaultdict(int,{'over_weight': 0}) 
@@ -2450,7 +2450,7 @@ class decay_all_events(object):
                 logger.warning(error)  
         
         
-
+        logger.critical(f"Time for decay: {time.time() - time_dec:.2f} sec")
         logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))

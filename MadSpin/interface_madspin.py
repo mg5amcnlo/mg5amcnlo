@@ -659,15 +659,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             msg = 'Random seed too large ' + str(self.options['seed']) + ' > 30081*30081'
             raise Exception(msg)
 
-        #self.optio²    ns['seed'] = self.seed
+        #self.options['seed'] = self.seed
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
             
-        
+        time_me_generation = time.time()
         self.update_status('generating Madspin matrix element')
         generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
                                                     self.options)
-        
+        logger.critical(f"Time for ME: {time.time()-time_me_generation:.2f} sec")        
         self.update_status('running MadSpin')
         generate_all.run()
                         
@@ -1207,6 +1207,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return {}# this particle is not defined in the current model so ignore it
         name = part.get_name()
         out = {}
+        time_gen_dec = time.time()
         logger.info("generate %s decay event for particle %s" % (int(nb_event), name))
         if name not in self.list_branches:
             return out
@@ -1343,7 +1344,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))     
             if cumul:
                 break
-        
+        time_gen_dec = time.time()-time_gen_dec
+        logger.critical(f"Time for decay event generation = {time_gen_dec:.1f} sec")
         if not output_width:
             return out
         else:
@@ -1360,12 +1362,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         #    => no production+decay if density_method on True
         # 4. determine the maxwgt
         # 5. generate the decay (for each production event)
-        # 3. perform the merge of the events.
+        # 6. perform the merge of the events.
         #    if not enough events. re-generate the missing one.
-        # First define an utility function for generating events when needed
-
+        
+        # Spyros: this is not used - remove?
         args = self.split_arg(line)
 
+        # First define an utility function for generating events when needed
+        # Spyros what should be done here? 
+
+        # Find which particles should be decayed
         asked_to_decay = set()
         for part in self.list_branches.keys():
             if part in self.mg5cmd._multiparticles:
@@ -1374,7 +1380,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 asked_to_decay.add(self.mg5cmd._curr_model.get('name2pdg')[part])
 
-        #0. Define the path where to write the file
+        # 0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
         if self.options['ms_dir']:
             self.path_me = os.path.realpath(self.options['ms_dir'])
@@ -1390,11 +1396,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['fixed_order']:
             orig_lhe.eventgroup = True
 
-        # count the number of particle need to be decayed.
-        to_decay = collections.defaultdict(int)
         # Dictionary with particle properties
         decay_dict = {}
-	
+        
+        # 1. Open input event file and check which particles to decay
+        # - count the number of particles to be decayed.
+        to_decay = collections.defaultdict(int)	
         nb_event = 0
         for event in orig_lhe:
             if self.options['fixed_order']:
@@ -1450,7 +1457,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             for pdg, nb_needed in to_decay.items():
                 # muliply by expected effeciency of generation
                 spin = self.model.get_particle(pdg).get('spin')
-                if spin ==1:
+                if spin == 1:
                     efficiency = 1.1
                 else:
                     efficiency = 2.0
@@ -1487,8 +1494,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
                             pwidth = totwidth
-                        br *= (pwidth / totwidth)**nb_mult
-                        
+                        br *= (pwidth / totwidth)**nb_mult                      
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
@@ -1503,6 +1509,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.error *= self.branching_ratio
         
         # 3. generate the various matrix-elements
+        time_me_generation = time.time()
         self.update_status('generating Madspin matrix element (density_method=%s)' % density_method)
         if density_method:
             self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file,self.options)
@@ -1518,7 +1525,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_inter = {}
         self.all_density = {}
         self.all_matrix = {}
-                 
+        time_me_generation = time.time() - time_me_generation
+        logger.critical(f"Time ME generation: {time_me_generation:.2f} sec")         
 	    # Instantiate dictionary to hold inter for production
 	    # This is to be filled for each production event
         inter_prod_dict = {}
@@ -1535,8 +1543,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             output_lhe.eventgroup = True
         
         self.banner.scale_init_cross(self.branching_ratio)
-        self.banner.write(output_lhe, close_tag=False)
-        
+        self.banner.write(output_lhe, close_tag=False)       
         
         self.efficiency =1.
         nb_try, nb_event = 0, len(orig_lhe)
@@ -1545,12 +1552,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("Start generating decays")
         for curr_event,production in enumerate(orig_lhe):
             if self.options['fixed_order']:
-                production, counterevt= production[0], production[1:]
-            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
+                production, counterevt = production[0], production[1:]
+            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
             	    	    
             while 1:
-                nb_try +=1
+                nb_try += 1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
                 full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays, decay_dict, inter_prod_dict)
                 #print(f"Spyros wgt = {wgt}")
@@ -1561,13 +1568,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.efficiency = curr_event/nb_try
             if self.options['fixed_order']:
                 for evt in full_evt:
-                    # change the weight associate to the event
+                    # change the weight associated to the event
                     evt.wgt *= self.branching_ratio
                     wgts = evt.parse_reweight()
                     for key in wgts:
                         wgts[key] *= self.branching_ratio 
             else:
-                # change the weight associate to the event
+                # change the weight associated to the event
                 full_evt.wgt *= self.branching_ratio
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
@@ -1577,7 +1584,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         output_lhe.write('</LesHouchesEvents>\n')    
         self.efficiency = 1 # to let me5 to write the correct number of events
         logger.info('Done so far. output written in %s' % output_lhe.name)
-        
+        logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
@@ -1711,7 +1718,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise
         import copy
         
-    	# Calculate production ME	
+    	# Calculate production ME and cache it so that if we reject 
+        # the decay the production ME will not be recalculated
         if hasattr(production, 'me_wgt'):
             production_me = production.me_wgt
         else:
@@ -1747,7 +1755,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return all the possible inter for an event"""        
 	
         full_event = lhe_parser.Event(str(production))
-        param_card = self.banner.param_card
         inter_prod_dict_exists = inter_prod_dict is not None
 			
         for pdg in decays:
