@@ -3127,7 +3127,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
-    def do_add(self, line):
+    def do_add(self, line, counter=0):
         """Generate an amplitude for a given process and add to
         existing amplitudes
         or merge two model
@@ -3205,6 +3205,7 @@ This implies that with decay chains:
                                                 " coupling orders constraints.")                    
             else:
                 nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                nb_proc += counter
                 myprocdef = self.extract_process(line, proc_number=nb_proc)
 
             
@@ -4713,10 +4714,34 @@ This implies that with decay chains:
         self.clean_process()
         self._generate_info = line
 
-        # Call add process
-        args = self.split_arg(line)
-        args.insert(0, 'process')
-        self.do_add(" ".join(args))
+        onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_physical.txt'), comment="#", sep="\s+", engine='python', index_col = False)
+        for key in onia.keys():
+            try:
+                onia[key] = onia[key].str.lower()
+            except:
+                continue
+
+        fockstates = {}
+        for onium in onia['name'].values:
+            if (onium+' ' in line.lower()) or line.lower().endswith(onium):
+                fockstate = onia.loc[onia['name'] == onium]
+                fockstates[onium] = fockstate['states'].to_string(index=False).split(',')
+
+        if fockstates:
+            counter = 0
+            for key in fockstates.keys():
+                for fockstate in fockstates[key]:
+                    onium_line = line.lower().replace(key,key.replace('(2s)','')+fockstate)
+                    args = self.split_arg(onium_line)
+                    logger.info("LS:: generating "+" ".join(args))
+                    args.insert(0, 'process')
+                    self.do_add(" ".join(args),counter)
+                    counter += 1
+        else:
+            # Call add process
+            args = self.split_arg(line)
+            args.insert(0, 'process')
+            self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -4951,7 +4976,7 @@ This implies that with decay chains:
 
             # check if particle is ONIA
             is_onium = False
-            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_list.txt'), comment="#", sep="\s+", engine='python', index_col = False)
+            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_fockstates.txt'), comment="#", sep="\s+", engine='python', index_col = False)
             for key in onia.keys():
                 try:
                     onia[key] = onia[key].str.lower()
@@ -4968,9 +4993,6 @@ This implies that with decay chains:
                 if int(part_name) in onia['pid'].values:
                     is_onium = True
                     onium_info = onia.loc[onia['pid'] == int(part_name)]
-                elif int(part_name) in onia['pythia'].values:
-                    is_onium = True
-                    onium_info = onia.loc[onia['pythia'] == int(part_name)]
 
             # check that only final-state particles are ONIA
             if is_onium and not state:

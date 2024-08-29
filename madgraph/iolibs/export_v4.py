@@ -6342,7 +6342,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         contains_onia = False
         if matrix_elements[0].get_nonia()>0:
             if not contains_onia:
-                self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+                if 'onia' not in self.matrix_file:
+                    self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
                 contains_onia = True
 
         # Add the driver.f, all grouped ME's must share the same number of 
