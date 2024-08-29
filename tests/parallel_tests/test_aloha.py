@@ -3796,6 +3796,15 @@ class UFOLorentz(object):
         self.name = name
         self.spins=spins
         self.structure = structure
+
+class UFOPropagator(object):
+    """ simple UFO propagator OBJECT """
+
+    def __init__(self, name='', numerator='1', denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"):
+        self.name = name
+        self.numerator = numerator
+        self.denominator = denominator
+
         
 class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
     
@@ -4992,6 +5001,49 @@ end
         split_routine = routine.split('\n')[18:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
+    def test_short_fortranwriter_drop_fct(self):
+        """test a case where a ratio is present in the lorentz but not needed in the 
+           writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
+        
+        solution = ""
+        FFV = UFOLorentz(name = 'VVS4',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')       
+
+        class Propagators:
+            # propagators with width corrections
+            numV = "(- Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)**2) "
+            denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominatorSq = denominator + "**2"
+            Z1 =  UFOPropagator(name = "Z1",
+                   numerator = "-" +  numV + "* complex(0,1) * Mass(id) * dWZ",
+                   denominator = denominatorSq
+                  )
+
+        class model:
+            propagators = Propagators()
+
+
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.model = model()
+        #builder.apply_conjugation()
+        amp = builder.compute_routine(2, tag=['PZ1'] )
+        routine = amp.write(output_dir=None, language='Fortran')
+
+        self.assertNotIn('FCT0', routine)
+        self.assertNotIn('FCT1', routine) 
+
+
+        split_solution = solution.split('\n')
+        split_solution = split_solution[:1] + split_solution[12:]
+        split_routine = routine.split('\n')
+        split_routine = split_routine[:1] + split_routine[12:]
+        
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
 
 
 
