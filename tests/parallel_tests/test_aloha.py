@@ -5007,7 +5007,47 @@ end
         """test a case where a ratio is present in the lorentz but not needed in the 
            writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
         
-        solution = ""
+        solution = """
+subroutine VVS4PZ1_2(V1, S3, COUP, M2, W2,V2)
+implicit none
+ include "../MODEL/input.inc"
+ include "../MODEL/coupl.inc"
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 FCT1
+ real*8 M2
+ real*8 P1(0:3)
+ real*8 P2(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
+ complex*16 V1(*)
+ complex*16 V2(6)
+ real*8 W2
+ complex*16 denom
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+    V2(1) = +V1(1)+S3(1)
+    V2(2) = +V1(2)+S3(2)
+P2(0) = -dble(V2(1))
+P2(1) = -dble(V2(2))
+P2(2) = -dimag(V2(2))
+P2(3) = -dimag(V2(1))
+ TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
+ TMP1 = (P2(0)*V1(3)-P2(1)*V1(4)-P2(2)*V1(5)-P2(3)*V1(6))
+ TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
+ FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
+    denom = COUP/(FCT1)
+    V2(3)= denom*M2*S3(3)*mdl_dWZ*(-P1(0)*TMP1+V1(3)*TMP2)
+    V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
+    V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
+    V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
+end
+"""
         FFV = UFOLorentz(name = 'VVS4',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')       
@@ -5032,17 +5072,23 @@ end
         amp = builder.compute_routine(2, tag=['PZ1'] )
         routine = amp.write(output_dir=None, language='Fortran')
 
+        #dedicated point of attention
         self.assertNotIn('FCT0', routine)
-        self.assertNotIn('FCT1', routine) 
+        self.assertIn('complex*16 FCT1', routine) 
+        self.assertIn('FCT1 = ', routine)
+        self.assertIn('/(FCT1', routine) 
+        self.assertIn('complex*16 TMP2', routine) 
+        self.assertIn('TMP2 =', routine)
+        self.assertIn('*TMP2', routine)
+        self.assertIn('complex*16 TMP0', routine) 
+        self.assertIn('TMP0 =', routine)
+        self.assertIn('+TMP0', routine)
+        self.assertIn('complex*16 TMP1', routine) 
+        self.assertIn('TMP1 =', routine)
+        self.assertIn('*TMP1', routine)
+        #full check
+        self.assertEqual(solution.strip(), routine.strip())
 
-
-        split_solution = solution.split('\n')
-        split_solution = split_solution[:1] + split_solution[12:]
-        split_routine = routine.split('\n')
-        split_routine = split_routine[:1] + split_routine[12:]
-        
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
 
 
 
