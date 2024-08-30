@@ -6341,6 +6341,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         contains_onia = False
         if matrix_elements[0].get_nonia()>0:
+            self.opt['hel_recycling'] = False
             if not contains_onia:
                 if 'onia' not in self.matrix_file:
                     self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
