@@ -115,7 +115,7 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 	cd $(IREGIDIR); make
 	ln -sf ../Source/$(IREGIDIR)libiregi.a $(LIBDIR)libiregi.a
 
-cleanSource:
+cleanSource: # Clean builds: fortran in this Source
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..
 	cd PDF/gammaUPC; make clean; cd ../../
@@ -128,7 +128,7 @@ cleanSource:
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
 
-clean: cleanSource
+clean: cleanSource # Clean builds: fortran in this Source and in all P*
 	for i in `ls -d ../SubProcesses/P*`; do cd $$i; make clean; cd -; done;
 
 %(additional_clean)s
