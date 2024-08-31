@@ -741,6 +741,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                        'model':model_line,
                        'additional_dsample': '',
                        'additional_dependencies':'',
+                       'additional_clean':'',
                        'running': ''} 
 
         if self.opt['running']:
