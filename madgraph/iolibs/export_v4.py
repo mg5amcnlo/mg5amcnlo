@@ -3013,6 +3013,7 @@ CF2PY integer, intent(in) :: new_value
                        'model':model_line,
                        'additional_dsample': '',
                        'additional_dependencies':'',
+                       'additional_clean':'',
                        'running': running_line} 
 
         text = open(path).read() % replace_dict
