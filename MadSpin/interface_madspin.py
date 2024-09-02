@@ -1714,7 +1714,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             Carefull this modifies production event (pass to the full one)"""
         
         from copy import deepcopy
-        p1 = deepcopy(production)
+        # p1 = deepcopy(production)
         d1 = deepcopy(decays)
 	
         tag, order = production.get_tag_and_order()
@@ -1732,13 +1732,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event = full_event.add_decays(decays)
             full_me = self.calculate_matrix_element(full_event)
         else:
-            if prod_density_cached is None:
-                full_event, full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
-            else:
-                full_event, full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
-            full_event = lhe_parser.Event(str(p1))
+            full_event = lhe_parser.Event(str(production))
+            # Spyros: doesn't work without deepcopy since add_decays changes decay event
             full_event = full_event.add_decays(d1)
             me1 = self.calculate_matrix_element(full_event)
+            if prod_density_cached is None:
+                full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
+            else:
+                full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
         
             if abs(1-me1/full_me) > 1E-6:
                 print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	    
@@ -1768,7 +1769,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, prod_density_cached=None):
         """routine to return all the possible inter for an event"""        
 	
-        full_event = lhe_parser.Event(str(production))
+        # full_event = lhe_parser.Event(str(production))
 			
         for pdg in decays:
             # Get the particle that should decay from the production event
@@ -1793,7 +1794,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             D_D_conj = D*D.conjugate()
 	    
 	        # Update the status of the particle that decays from 1 to 2
-            full_event[position[0]].status = 2 
+            # full_event[position[0]].status = 2 
 	    
 	        # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
             for i,decay_event in enumerate(decays[pdg]):
@@ -1806,7 +1807,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decay_event.boost(boost)                
                 
 		        # Get all helicity configurations and iden number for production and decay events
-                nhel_p_tot,iden_p = self.get_nhel(production,position[0])		
+                _,iden_p = self.get_nhel(production,position[0])		
                 
 		        # Get helicities of decay event
                 pos_in_dec = [k+1 for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
@@ -1842,10 +1843,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 dec_diag = (density_dec[0]+density_dec[2]).real/(color*len(allowed_hel))
                 
                 # Add decayed event to LHE record
-                for k in range(len(decay_event)-1): 
-                    full_event.append(decay_event[k+1])
+                # for k in range(len(decay_event)-1): 
+                #     full_event.append(decay_event[k+1])
                 
-                return full_event, me, density_prod, prod_diag, dec_diag
+                return me, density_prod, prod_diag, dec_diag
 
     def get_density(self, event, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
