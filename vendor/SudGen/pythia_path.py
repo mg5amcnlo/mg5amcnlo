@@ -38,8 +38,8 @@ else:
         pass
     with open(makefile_inc,'w') as f:
         f.write('WORK='+pythia8_path+'\n')
-        f.write('PYTHIA8INCLUDE=\$(WORK)/include \n')
-        f.write('PYTHIA8LIB=\$(WORK)/lib \n')
+        f.write('PYTHIA8INCLUDE=\\$(WORK)/include \n')
+        f.write('PYTHIA8LIB=\\$(WORK)/lib \n')
         f.write('PYTHIA8FLAGS=-lstdc++ -lz -ldl -fPIC \n')
     
 

@@ -162,8 +162,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = " 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
@@ -1082,8 +1082,9 @@ c
         self.assertNotEqual(run_card['pdlabel'], 'xxx')
 
         # dressed electron check list of valid dressed pdf is working
-        self.assertEqual(len(run_card.allowed_lep_densities), 1)
-        self.assertEqual(len(run_card.allowed_lep_densities[(-11,11)]), 6)
+        self.assertEqual(len(run_card.allowed_lep_densities), 2)
+        self.assertEqual(len(run_card.allowed_lep_densities[(-11,11)]), 7)
+        self.assertEqual(len(run_card.allowed_lep_densities[(-13,13)]), 1)
 
         # Dressed lepton
         run_card = bannermod.RunCardLO()

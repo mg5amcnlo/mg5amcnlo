@@ -22,14 +22,45 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'coupl.inc'
       READLHA = .TRUE.
       INCLUDE 'intparam_definition.inc'
-      INCLUDE 'mp_intparam_definition.inc'
+      IF (UPDATELOOP) THEN
+
+        INCLUDE 'mp_intparam_definition.inc'
+
+      ENDIF
 
       CALL COUP1()
+      IF (UPDATELOOP) THEN
+
+        CALL COUP2()
+
+      ENDIF
+
 C     
 couplings needed to be evaluated points by points
 C     
+<<<<<<< HEAD
       CALL COUP2(1)
       CALL MP_COUP2()
+||||||| merged common ancestors
+      CALL COUP2()
+      CALL MP_COUP2()
+=======
+      CALL COUP3()
+C     
+couplings in multiple precision
+C     
+      IF (UPDATELOOP) THEN
+
+        CALL MP_COUP1()
+        CALL MP_COUP2()
+C       
+couplings needed to be evaluated points by points
+C       
+        CALL MP_COUP3()
+
+      ENDIF
+
+>>>>>>> 3.6.0
 
       RETURN
       END
@@ -72,8 +103,14 @@ C
 C     
 couplings needed to be evaluated points by points
 C     
+<<<<<<< HEAD
       ALL_G(VECID) = G
       CALL COUP2(VECID)
+||||||| merged common ancestors
+      CALL COUP2()
+=======
+      CALL COUP3()
+>>>>>>> 3.6.0
 
       RETURN
       END
@@ -125,7 +162,7 @@ C
 C     
 couplings needed to be evaluated points by points
 C     
-      CALL MP_COUP2()
+      CALL MP_COUP3()
 
       RETURN
       END

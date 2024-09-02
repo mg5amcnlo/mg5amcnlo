@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
 C   Below is the maximum config ID for multichannels which is always less than
@@ -58,7 +59,7 @@ C
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-    INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
+    INTEGER IDUM, NGOOD, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
 
@@ -108,7 +109,7 @@ C
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
     DATA XTRY, XREJ, NGOOD /0,0,0/
-    SAVE YFRAC, IGOOD, JHEL
+    SAVE YFRAC
 
 %(helicity_lines)s
 
@@ -231,13 +232,11 @@ C Of course this option can also not be used for polarized beams.
 	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	    ELSE
-           JHEL = 1
            IF(NTRY.LE.MAXTRIES)THEN
              DO I=1,NCOMB
                 IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
                    GOODHEL(I)=.TRUE.
                    NGOOD = NGOOD +1
-                   IGOOD(NGOOD) = I        
                    print *,'Adding good helicity ',I,TS(I)/ANS
                 ENDIF
              ENDDO

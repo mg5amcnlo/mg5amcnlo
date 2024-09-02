@@ -242,7 +242,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'],  
+        keys += ['real_matrix_elements', 'has_isr', 'has_fsr', 'ewsudakov', 
                  'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
 
@@ -482,6 +482,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
+        self['ewsudakov'] = fksmulti['ewsudakov']
 
         logger.info('... Done')
 
@@ -738,7 +739,33 @@ class FKSHelasProcess(object):
                           optimized_output = loop_optimized)
             else: 
                 self.virt_matrix_element = None
+
+            self.sudakov_matrix_elements = []
+            self.ewsudakov = fksproc.ewsudakov
+            for amp in fksproc.sudakov_amps:
+                sudakov_dict = {}
+                for key in amp.keys():
+                    if key == 'amplitude': 
+                        continue
+                    sudakov_dict[key] = amp[key]
+                sudakov_dict['matrix_element'] = helas_objects.HelasMatrixElement(amp['amplitude'], gen_color=True)
+
+                self.sudakov_matrix_elements.append(sudakov_dict)
+
+                ##amp.pop('amplitude')
+
+                ##col_basis = color_amp.ColorBasis()
+                ##new_amp = amp['matrix_element'].get_base_amplitude()
+                ##amp['matrix_element'].set('base_amplitude', new_amp)
+                ##colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+                ##col_basis.build()
+                ##col_matrix = color_amp.ColorMatrix(col_basis)
+                ##amp['matrix_element'].set('color_basis', list_color_basis[col_index])
+                ##amp['matrix_element'].set('color_matrix', list_color_matrices[col_index])                    
+
             self.color_links = []
+
 
 
     def set_color_links(self):
@@ -796,6 +823,8 @@ class FKSHelasProcess(object):
             lorentz_list.extend(real.matrix_element.get_used_lorentz())
         if self.virt_matrix_element:
             lorentz_list.extend(self.virt_matrix_element.get_used_lorentz())
+        for sud_me in self.sudakov_matrix_elements:
+            lorentz_list.extend(sud_me['matrix_element'].get_used_lorentz())
 
         return misc.make_unique(lorentz_list)
     
@@ -808,6 +837,8 @@ class FKSHelasProcess(object):
                         real.matrix_element.get_used_couplings()])
         if self.virt_matrix_element:
             coupl_list.extend(self.virt_matrix_element.get_used_couplings())
+        for sud_me in self.sudakov_matrix_elements:
+            coupl_list.extend(sud_me['matrix_element'].get_used_couplings())
         return coupl_list    
 
     def get_nexternal_ninitial(self):
@@ -829,11 +860,24 @@ class FKSHelasProcess(object):
         othertag = helas_objects.IdentifyMETag.\
                         create_tag(other.born_me.get('base_amplitude'))
 
+        # MZ: if EW sudakov are included, do not combine. 
+        # This is not 100% ideal, as it is quite inefficient, but it is the safest option
+        if self.ewsudakov:
+            logger.warning('With --ewsudakov, matrix elements will not be combined')
+            return False
+
         if selftag != othertag:
             return False
 
         # now the virtuals
-        if self.virt_matrix_element != other.virt_matrix_element:
+        if self.virt_matrix_element and other.virt_matrix_element: 
+            virttag = helas_objects.IdentifyMETag.\
+                        create_tag(self.virt_matrix_element.get('base_amplitude'))
+            othertag = helas_objects.IdentifyMETag.\
+                        create_tag(other.virt_matrix_element.get('base_amplitude'))
+            if virttag != othertag: 
+                return False
+        elif self.virt_matrix_element !=  other.virt_matrix_element: 
             return False
 
         # now the reals

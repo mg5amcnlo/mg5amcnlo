@@ -144,6 +144,124 @@ C      gluon in the initial state
       end
 
 
+      subroutine compute_ewsudakov
+c This subroutine computes the NLO EW corrections in the Sudakov
+c   approximation
+      use extra_weights
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'timing_variables.inc'
+      include 'orders.inc'
+      include 'has_ewsudakov.inc'
+      integer orders_qcd(nsplitorders), orders_ew(nsplitorders)
+      integer iamp
+
+      double precision wgt_c
+      double precision wgt1
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision g22
+      integer get_orders_tag
+
+      double complex amp_split_ewsud_lsc(amp_split_size)
+      common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
+      double complex amp_split_ewsud_ssc(amp_split_size)
+      common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+      double complex amp_split_ewsud_xxc(amp_split_size)
+      common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
+      double complex amp_split_ewsud_par(amp_split_size)
+      common /to_amp_ewsud_par/amp_split_ewsud_par
+      double complex amp_split_ewsud_qcd(amp_split_size)
+      common /to_amp_ewsud_qcd/amp_split_ewsud_qcd
+      double complex amp_split_ewsud_parqcd(amp_split_size)
+      common /to_amp_ewsud_parqcd/amp_split_ewsud_parqcd
+      ! sudakov mode
+      integer sud_mod
+      common /to_sud_mod/ sud_mod
+      include 'ewsudakov_haslo.inc' 
+
+      if (.not.has_ewsudakov) return
+
+      call cpu_time(tBefore)
+      if (f_b.eq.0d0) return
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+
+      if (cpower_pos.gt.0) then
+          write(*,*)'Error, cannot compute EW sudakov with Cpower >0'
+          stop 1
+      endif
+
+      ! sud_mod = 0
+      do sud_mod = 0,1
+
+       call sborn(p_born,wgt_c)
+       call sudakov_wrapper(p_born)
+       do iamp=1, amp_split_size
+        if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_ssc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_par(iamp).eq.0d0.and.
+     $      AMP_SPLIT_EWSUD_QCD(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders_ew)
+        orders_qcd(:) = orders_ew(:)
+        ! we have two arrays of orders, one for the contributions
+        ! of EW origin (from LO1) and one for those of QCD origin
+        ! (from LO2)
+
+        !!!! first the contribution of EW origin
+        ! increase the EW-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born
+        if (has_lo1) then
+          orders_ew(qed_pos)=orders_ew(qed_pos)+2
+          QCD_power=orders_ew(qcd_pos)
+          wgtcpower=0d0
+          !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_ew)
+          wgt1=(amp_split_ewsud_lsc(iamp)+
+     $        amp_split_ewsud_ssc(iamp)+
+     $        amp_split_ewsud_xxc(iamp)+
+     $        amp_split_ewsud_par(iamp))
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+        endif
+
+        !!!! then the contribution of QCD origin
+        ! increase the QCD-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born, and for QCD this is LO2
+        if (has_lo2) then
+          orders_qcd(qcd_pos)=orders_qcd(qcd_pos)+2
+          QCD_power=orders_qcd(qcd_pos)
+          !!wgtcpower=0d0
+          !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_qcd)
+          wgt1=(amp_split_ewsud_qcd(iamp)+
+     $        amp_split_ewsud_parqcd(iamp))
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
+        endif
+       enddo
+      enddo
+      call cpu_time(tAfter)
+      t_ewsud=t_ewsud+(tAfter-tBefore)
+      return
+      end
+
+
 
       subroutine compute_alpha_cnt()
 C This is the counterterm for the change of scheme
@@ -1661,6 +1779,7 @@ c     type=12: MC subtraction with n-body kin.
 c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
 c     type=15: virt-trick: average born contribution
+c     type=20+x: EW sudakov, x=sud_mod
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -1906,7 +2025,8 @@ c subtr term
          H_event(icontr)=.true.
          need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
-     $        .or. type.eq.14 .or. type.eq.15)then
+     $        .or. type.eq.14 .or. type.eq.15
+     $        .or. (type.ge.20 .and. type.le.22)) then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
@@ -2679,6 +2799,9 @@ c     soft-collinear counter
             appl_QES2(4)=scales2(1,i)
             appl_muR2(4)=scales2(2,i)
             appl_muF2(4)=scales2(3,i)
+         else
+            write(*,*) 'ERROR in fill_applgrid_weights', itype(i)
+            stop 1
          endif
       enddo
       return
@@ -2716,7 +2839,8 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7 .and. itype(i).ne.15) then
+     &        .and. itype(i).ne.7 .and. itype(i).ne.15.and.itype(i).lt.20) then
+             ! MZ <20 is needed to exclude the ew sudakov 
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -2773,6 +2897,8 @@ c the momenta are identical.
             plot_id(i)=13 ! collinear counter term
          elseif(itype(i).eq.6) then
             plot_id(i)=14 ! soft collinear counter term
+         elseif(itype(i).ge.20.and.itype(i).le.22) then
+             plot_id(i)=100+itype(i)-20    ! EW sudakov (100-102)
          else
             plot_id(i)=12 ! soft-virtual and soft counter term
          endif
@@ -2854,8 +2980,8 @@ c Fills the function that is returned to the MINT integrator
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6
@@ -3454,8 +3580,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6

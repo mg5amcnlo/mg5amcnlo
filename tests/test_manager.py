@@ -932,7 +932,7 @@ def bypass_for_py3(fct):
             
 if __name__ == "__main__":
 
-    help = """
+    help = r"""
     Detailed information about the IOTests at the wiki webpage:
 https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 

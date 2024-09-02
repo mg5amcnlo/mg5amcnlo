@@ -930,7 +930,7 @@ class OneProcessExporterCPP(object):
         process_string = self.process_string
 
         # Extract process number
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(process_string)
         proc_number = 0
         if proc_number_re:
@@ -939,7 +939,7 @@ class OneProcessExporterCPP(object):
                              proc_number_re.group(3)
 
         # Remove order information
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_pattern = re.compile(r"^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
         order_re = order_pattern.match(process_string)
         while order_re:
             process_string = order_re.group(1)
@@ -2886,6 +2886,417 @@ class ProcessExporterGPU(ProcessExporterCPP):
     
     def compile_model(self):
         return 
+
+class UFOModelConverterCPP(object):
+    """ A converter of the UFO-MG5 Model to the C++ format """
+
+    # Static variables (for inheritance)
+    output_name = 'C++ Standalone'
+    namespace = 'MG5'
+
+    # Dictionary from Python type to C++ type
+    type_dict = {"real": "double",
+                 "complex": "std::complex<double>"}
+
+    # Regular expressions for cleaning of lines from Aloha files
+    compiler_option_re = re.compile(r'^#\w')
+    namespace_re = re.compile('^using namespace')
+
+    slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
+                      ('SMINPUTS', (1,)): ('aEM',)}
+
+    # Template files to use
+    include_dir = '.'
+    cc_file_dir = '.'
+    param_template_h = 'cpp_model_parameters_h.inc'
+    param_template_cc = 'cpp_model_parameters_cc.inc'
+    aloha_template_h = 'cpp_hel_amps_h.inc'
+    aloha_template_cc = 'cpp_hel_amps_cc.inc'
+
+    copy_include_files = []
+    copy_cc_files = []
+
+    def __init__(self, model, output_path, wanted_lorentz = [],
+                 wanted_couplings = [], replace_dict={}):
+        """ initialization of the objects """
+
+        self.model = model
+        self.model_name = ProcessExporterCPP.get_model_name(model['name'])
+
+        self.dir_path = output_path
+        self.default_replace_dict = dict(replace_dict)
+        # List of needed ALOHA routines
+        self.wanted_lorentz = wanted_lorentz
+
+        # For dependent couplings, only want to update the ones
+        # actually used in each process. For other couplings and
+        # parameters, just need a list of all.
+        self.coups_dep = {}    # name -> base_objects.ModelVariable
+        self.coups_indep = []  # base_objects.ModelVariable
+        self.params_dep = []   # base_objects.ModelVariable
+        self.params_indep = [] # base_objects.ModelVariable
+        self.p_to_cpp = parsers.UFOExpressionParserCPP()
+
+        # Prepare parameters and couplings for writeout in C++
+        self.prepare_parameters()
+        self.prepare_couplings(wanted_couplings)
+
+    def write_files(self):
+        """Create all necessary files"""
+
+        # Write Helas Routines
+        self.write_aloha_routines()
+
+        # Write parameter (and coupling) class files
+        self.write_parameter_class_files()
+
+    # Routines for preparing parameters and couplings from the model
+
+    def prepare_parameters(self):
+        """Extract the parameters from the model, and store them in
+        the two lists params_indep and params_dep"""
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = list(self.model['parameters'].keys())
+        keys.sort(key=len)
+        params_ext = []
+        for key in keys:
+            if key == ('external',):
+                params_ext += [p for p in self.model['parameters'][key] if p.name]
+            elif 'aS' in key:
+                for p in self.model['parameters'][key]:
+                    self.params_dep.append(base_objects.ModelVariable(p.name,
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
+            else:
+                for p in self.model['parameters'][key]:
+                    if p.name == 'ZERO':
+                        continue
+                    self.params_indep.append(base_objects.ModelVariable(p.name,
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
+
+        # For external parameters, want to read off the SLHA block code
+        while params_ext:
+            param = params_ext.pop(0)
+            # Read value from the slha variable
+            expression = ""
+            assert param.value.imag == 0
+            if len(param.lhacode) == 1:
+                expression = "%s = slha.get_block_entry(\"%s\", %d, %e);" % \
+                             (param.name, param.lhablock.lower(),
+                              param.lhacode[0], param.value.real)
+            elif len(param.lhacode) == 2:
+                expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
+                             (param.lhacode[0], param.lhacode[1])
+                expression += "%s = slha.get_block_entry(\"%s\", indices, %e);" \
+                              % (param.name, param.lhablock.lower(), param.value.real)
+            else:
+                raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
+            self.params_indep.insert(0,
+                                   base_objects.ModelVariable(param.name,
+                                                   expression,
+                                                              'real'))
+            
+    def prepare_couplings(self, wanted_couplings = []):
+        """Extract the couplings from the model, and store them in
+        the two lists coups_indep and coups_dep"""
+
+        # Keep only dependences on alphaS, to save time in execution
+        keys = list(self.model['couplings'].keys())
+        keys.sort(key=len)
+        for key, coup_list in self.model['couplings'].items():
+            if "aS" in key:
+                for c in coup_list:
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_dep[c.name] = base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend)
+            else:
+                for c in coup_list:
+                    if not wanted_couplings or c.name in wanted_couplings:
+                        self.coups_indep.append(base_objects.ModelVariable(\
+                                                                   c.name,
+                                                                   c.expr,
+                                                                   c.type,
+                                                                   c.depend))
+
+        # Convert coupling expressions from Python to C++
+        for coup in list(self.coups_dep.values()) + self.coups_indep:
+            coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
+
+    # Routines for writing the parameter files
+
+    def write_parameter_class_files(self):
+        """Generate the parameters_model.h and parameters_model.cc
+        files, which have the parameters and couplings for the model."""
+
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
+
+        parameter_h_file = os.path.join(self.dir_path, self.include_dir,
+                                    'Parameters_%s.h' % self.model_name)
+        parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
+                                     'Parameters_%s.cc' % self.model_name)
+
+        file_h, file_cc = self.generate_parameters_class_files()
+
+        # Write the files
+        writers.CPPWriter(parameter_h_file).writelines(file_h)
+        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
+
+        # Copy additional needed files
+        for copy_file in self.copy_include_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.include_dir))
+        # Copy additional needed files
+        for copy_file in self.copy_cc_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.cc_file_dir))
+
+        logger.info("Created files %s and %s in directory" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(parameter_h_file)[0],
+                     os.path.split(parameter_cc_file)[0]))
+
+    def generate_parameters_class_files(self):
+        """Create the content of the Parameters_model.h and .cc files"""
+
+        replace_dict = self.default_replace_dict
+
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['model_name'] = self.model_name
+
+        replace_dict['independent_parameters'] = \
+                                   "// Model parameters independent of aS\n" + \
+                                   self.write_parameters(self.params_indep)
+        replace_dict['independent_couplings'] = \
+                                   "// Model parameters dependent on aS\n" + \
+                                   self.write_parameters(self.params_dep)
+        replace_dict['dependent_parameters'] = \
+                                   "// Model couplings independent of aS\n" + \
+                                   self.write_parameters(self.coups_indep)
+        replace_dict['dependent_couplings'] = \
+                                   "// Model couplings dependent on aS\n" + \
+                                   self.write_parameters(list(self.coups_dep.values()))
+
+        replace_dict['set_independent_parameters'] = \
+                               self.write_set_parameters(self.params_indep)
+        replace_dict['set_independent_couplings'] = \
+                               self.write_set_parameters(self.coups_indep)
+        replace_dict['set_dependent_parameters'] = \
+                               self.write_set_parameters(self.params_dep)
+        replace_dict['set_dependent_couplings'] = \
+                               self.write_set_parameters(list(self.coups_dep.values()))
+
+        replace_dict['print_independent_parameters'] = \
+                               self.write_print_parameters(self.params_indep)
+        replace_dict['print_independent_couplings'] = \
+                               self.write_print_parameters(self.coups_indep)
+        replace_dict['print_dependent_parameters'] = \
+                               self.write_print_parameters(self.params_dep)
+        replace_dict['print_dependent_couplings'] = \
+                               self.write_print_parameters(list(self.coups_dep.values()))
+
+        if 'include_prefix' not in replace_dict:
+            replace_dict['include_prefix'] = ''
+
+
+        file_h = self.read_template_file(self.param_template_h) % \
+                 replace_dict
+        file_cc = self.read_template_file(self.param_template_cc) % \
+                  replace_dict
+        
+        return file_h, file_cc
+
+    def write_parameters(self, params):
+        """Write out the definitions of parameters"""
+
+        # Create a dictionary from parameter type to list of parameter names
+        type_param_dict = {}
+
+        for param in params:
+            type_param_dict[param.type] = \
+                  type_param_dict.setdefault(param.type, []) + [param.name]
+
+        # For each parameter type, write out the definition string
+        # type parameters;
+        res_strings = []
+        for key in type_param_dict:
+            res_strings.append("%s %s;" % (self.type_dict[key],
+                                          ",".join(type_param_dict[key])))
+
+        return "\n".join(res_strings)
+
+    def write_set_parameters(self, params):
+        """Write out the lines of independent parameters"""
+
+        # For each parameter, write name = expr;
+
+        res_strings = []
+        for param in params:
+            res_strings.append("%s" % param.expr)
+
+        # Correct width sign for Majorana particles (where the width
+        # and mass need to have the same sign)        
+        for particle in self.model.get('particles'):
+            if particle.is_fermion() and particle.get('self_antipart') and \
+                   particle.get('width').lower() != 'zero':
+                res_strings.append("if (%s < 0)" % particle.get('mass'))
+                res_strings.append("%(width)s = -abs(%(width)s);" % \
+                                   {"width": particle.get('width')})
+
+        return "\n".join(res_strings)
+
+    def write_print_parameters(self, params):
+        """Write out the lines of independent parameters"""
+
+        # For each parameter, write name = expr;
+
+        res_strings = []
+        for param in params:
+            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
+
+        return "\n".join(res_strings)
+
+    # Routines for writing the ALOHA files
+
+    def write_aloha_routines(self):
+        """Generate the hel_amps_model.h and hel_amps_model.cc files, which
+        have the complete set of generalized Helas routines for the model"""
+        
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
+
+        model_h_file = os.path.join(self.dir_path, self.include_dir,
+                                    'HelAmps_%s.h' % self.model_name)
+        model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
+                                     'HelAmps_%s.cc' % self.model_name)
+
+        replace_dict = {}
+
+        replace_dict['output_name'] = self.output_name
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['namespace'] = self.namespace
+        replace_dict['model_name'] = self.model_name
+
+        # Read in the template .h and .cc files, stripped of compiler
+        # commands and namespaces
+        template_h_files = self.read_aloha_template_files(ext = 'h')
+        template_cc_files = self.read_aloha_template_files(ext = 'cc')
+
+        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
+        aloha_model.add_Lorentz_object(self.model.get('lorentz'))
+        
+        if self.wanted_lorentz:
+            aloha_model.compute_subset(self.wanted_lorentz)
+        else:
+            aloha_model.compute_all(save=False, custom_propa=True)
+            
+        for abstracthelas in dict(aloha_model).values():
+            h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
+                                                              mode='no_include')
+
+            template_h_files.append(h_rout)
+            template_cc_files.append(cc_rout)
+            
+            #aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
+            #                                               self.dir_path)
+            #header = aloha_writer.define_header()
+            #template_h_files.append(self.write_function_declaration(\
+            #                             aloha_writer, header))
+            #template_cc_files.append(self.write_function_definition(\
+            #                              aloha_writer, header))
+
+        replace_dict['function_declarations'] = '\n'.join(template_h_files)
+        replace_dict['function_definitions'] = '\n'.join(template_cc_files)
+
+        file_h = self.read_template_file(self.aloha_template_h) % replace_dict
+        file_cc = self.read_template_file(self.aloha_template_cc) % replace_dict
+
+        # Write the files
+        writers.CPPWriter(model_h_file).writelines(file_h)
+        writers.CPPWriter(model_cc_file).writelines(file_cc)
+
+        logger.info("Created files %s and %s in directory" \
+                    % (os.path.split(model_h_file)[-1],
+                       os.path.split(model_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(model_h_file)[0],
+                     os.path.split(model_cc_file)[0]))
+
+
+    def read_aloha_template_files(self, ext):
+        """Read all ALOHA template files with extension ext, strip them of
+        compiler options and namespace options, and return in a list"""
+
+        template_files = []
+        for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
+            file = open(filename, 'r')
+            template_file_string = ""
+            while file:
+                line = file.readline()
+                if len(line) == 0: break
+                line = self.clean_line(line)
+                if not line:
+                    continue
+                template_file_string += line.strip() + '\n'
+            template_files.append(template_file_string)
+
+        return template_files
+
+#    def write_function_declaration(self, aloha_writer, header):
+#        """Write the function declaration for the ALOHA routine"""
+#
+#        ret_lines = []
+#        for line in aloha_writer.write_h(header).split('\n'):
+#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+#                # Strip out compiler flags and namespaces
+#                continue
+#            ret_lines.append(line)
+#        return "\n".join(ret_lines)
+#
+#    def write_function_definition(self, aloha_writer, header):
+#        """Write the function definition for the ALOHA routine"""
+#
+#        ret_lines = []
+#        for line in aloha_writer.write_cc(header).split('\n'):
+#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+#                # Strip out compiler flags and namespaces
+#                continue
+#            ret_lines.append(line)
+#        return "\n".join(ret_lines)
+
+    def clean_line(self, line):
+        """Strip a line of compiler options and namespace options."""
+
+        if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+            return ""
+
+        return line
+
+    #===============================================================================
+    # Global helper methods
+    #===============================================================================
+    @classmethod
+    def read_template_file(cls, filename, classpath=False):
+        """Open a template file and return the contents."""
+         
+        return OneProcessExporterCPP.read_template_file(filename, classpath)
 
 
 #===============================================================================

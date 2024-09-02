@@ -4,6 +4,13 @@ from six.moves import range
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
+if __name__ == '__main__':
+    import os, sys
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    print(os.path.basename(os.path.dirname(__file__)))
+    __package__ = os.path.basename(os.path.dirname(__file__))
+
+
 from .function_library import *
 
 class ParamCardWriter(object):
@@ -83,7 +90,8 @@ class ParamCardWriter(object):
             self.write_block(lhablock)
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
-            need_writing.sort(self.order_param)
+            from functools import cmp_to_key
+            need_writing.sort(key=cmp_to_key(self.order_param))
             [self.write_param(param, lhablock) for param in need_writing]
             
             if self.generic_output:
@@ -120,7 +128,10 @@ class ParamCardWriter(object):
         import cmath
         from .parameters import all_parameters
         for parameter in all_parameters:
-            exec("%s = %s" % (parameter.name, parameter.value))
+            try:
+                exec("%s = %s" % (parameter.name, parameter.value))
+            except Exception:
+                pass
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"
