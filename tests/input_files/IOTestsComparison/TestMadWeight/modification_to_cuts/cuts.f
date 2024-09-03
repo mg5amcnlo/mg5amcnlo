@@ -21,14 +21,13 @@ c-----
 c      pass_point = passcuts(p)
       end
 C 
-      LOGICAL FUNCTION PASSCUTS(P, VECSIZE_USED)
+      LOGICAL FUNCTION PASSCUTS(P)
 C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,3)           MOMENTUM OF ...
 C            ALL MOMENTA ARE IN THE REST FRAME!!
-C            VECSIZE_USED (used only on 1st call) #events in parallel
 C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED
@@ -43,7 +42,6 @@ C
 C     ARGUMENTS
 C
       REAL*8 P(0:3,nexternal)
-      INTEGER VECSIZE_USED
 
 C
 C     LOCAL
@@ -69,10 +67,9 @@ C
 C
 C     GLOBAL
 C
-      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'cuts.inc'
-
+      include '../../Source/vector.inc'
       
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
@@ -184,7 +181,7 @@ C     Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (isway=0)
       parameter (izero=0)
 
-      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
+      include 'coupl.inc'
 
 C
 C
@@ -259,13 +256,11 @@ c               fixed_ren_scale=.true.
 c               call set_ren_scale(P,scale)
 c            endif
 c         endif
-
-c     If scale is fixed, update G-dependent couplings for VECSIZE_USED events
-c     This is called only once in the application (FIRSTTIME=.true.)
+         
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            do i =1, VECSIZE_USED
+            do i =1, VECSIZE_MEMMAX
                call update_as_param(i)
             enddo
          endif

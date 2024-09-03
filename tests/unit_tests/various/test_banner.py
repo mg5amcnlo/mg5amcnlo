@@ -162,8 +162,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
+        self.config['list_s'] = " 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
@@ -757,7 +757,7 @@ class TestRunCard(unittest.TestCase):
         fct = run_card.add_unknown_entry
 
         # simple one 
-        input = ("STR_INCLUDE_PDF", "True ", False)
+        input = ("STR_INCLUDE_PDF", "True ")
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "INCLUDE_PDF" 
@@ -766,7 +766,7 @@ class TestRunCard(unittest.TestCase):
         self.assertIn(name.lower(), run_card.definition_path[True])
 
         # complex case: list + metadata
-        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]", False)
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "test_data"
@@ -783,7 +783,7 @@ class TestRunCard(unittest.TestCase):
 
 
         # complex case: dictionary 
-        input = ("test_dict", "{'__type__':1.0, '6':3.0}", False)
+        input = ("test_dict", "{'__type__':1.0, '6':3.0}")
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "test_dict"
@@ -794,14 +794,14 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn(name, run_card.includepath[True])
 
         # check that one can overwritte hidden 
-        input = ("max_data<hidden=False>", "3.0", False)
+        input = ("max_data<hidden=False>", "3.0")
         fct(*input)
         name = "max_data"
         self.assertEqual(run_card[name], 3.0)
         self.assertNotIn(name.lower(), run_card.hidden_param)
 
         # check that one can overwritte autodef
-        input = ("max_data2<autodef=False>", "3", False)
+        input = ("max_data2<autodef=False>", "3")
         fct(*input)
         name = "max_data2"
         self.assertEqual(run_card[name], 3.0)
@@ -810,7 +810,7 @@ class TestRunCard(unittest.TestCase):
 
         # check that one can overwritte include to False but autodef to True
         # check that one can overwritte autodef
-        input = ("data3<autodef=True><include=False>", "True", False)
+        input = ("data3<autodef=True><include=False>", "True")
         fct(*input)
         name = "data3"
         self.assertEqual(run_card[name], 1.0)
@@ -824,7 +824,7 @@ class TestRunCard(unittest.TestCase):
         """
 
         run_card = bannermod.RunCardLO()
-        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ", unknow_warning=False)
+        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ")
         f = StringIO.StringIO()
         f.write("c .   this is a comment to test feature of missing end line ")
         run_card.write_autodef(None,output_file=f)
@@ -835,7 +835,7 @@ class TestRunCard(unittest.TestCase):
         self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf", f.getvalue()) #no automatic formatting due to iostring for unittest
 
         # adding a second in place
-        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ", unknow_warning=False)
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
@@ -850,8 +850,8 @@ class TestRunCard(unittest.TestCase):
 
         # reset, keep one , remove one and add a new one (keep same stream)
         run_card = bannermod.RunCardLO()
-        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ", unknow_warning=False)
-        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]", unknow_warning=False)
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]")
         run_card.write_autodef(None,output_file=f)
         self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())

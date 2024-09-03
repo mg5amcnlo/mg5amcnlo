@@ -116,8 +116,7 @@ C     ----------
         TS(I)=0D0
       ENDDO
 
-C     If the helicity grid status is 0, this means that it is not yet
-C      initialized.
+        !   If the helicity grid status is 0, this means that it is not yet initialized.
       IF (ISUM_HEL.EQ.0.OR.(DS_GET_DIM_STATUS('Helicity').EQ.0)) THEN
         DO I=1,NCOMB
           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0))
@@ -144,22 +143,13 @@ C      initialized.
           CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
         IF (ISUM_HEL.NE.0) THEN
-C         We set HEL_PICKED to -HEL_PICKED here so that later on, the
-C          call to DS_add_point in dsample.f does not add anything to
-C          the grid since it was already done here.
+            !         We set HEL_PICKED to -HEL_PICKED here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
           HEL_PICKED = -IABS(HEL_PICKED)
-C         For safety, hardset the helicity sampling jacobian to 0.0d0
-C          to make sure it is not .
+            !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
           HEL_JACOBIAN   = 1.0D0
           IF(DS_GET_DIM_STATUS('Helicity').EQ.1) THEN
-C           If we finished the initialization we can update the grid
-C            so as to start sampling over it.
-C           However the grid will now be filled by dsample with
-C            different kind of weights (including pdf, flux, etc...)
-C            so by setting the grid_mode of the reference grid to
-C            'initialization' we make sure it will be overwritten (as
-C            opposed to 'combined') by the running grid at the next
-C            update.
+              !           If we finished the initialization we can update the grid so as to start sampling over it.
+              !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
             CALL DS_SET_GRID_MODE('Helicity','init')
           ENDIF

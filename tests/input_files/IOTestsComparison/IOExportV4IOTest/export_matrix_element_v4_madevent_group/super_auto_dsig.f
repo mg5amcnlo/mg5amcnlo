@@ -55,7 +55,6 @@ C     TODO: MOVE THIS AS A COMMON BLOCK?
       INTEGER LMAPPED
 
       DOUBLE PRECISION DSIGPROC
-      INCLUDE 'vector.inc'
       INCLUDE 'run.inc'
 C     To limit the number of calls to switchmom, use in DSIGPROC the
 C     cached variable last_iconfig. It is in this subroutine as well
@@ -118,7 +117,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
 
-      SUBROUTINE SELECT_GROUPING(IMIRROR, IPROC, ICONF, WGT, IWARP)
+      SUBROUTINE SELECT_GROUPING(IMIRROR,  IPROC, ICONF, WGT, VECSIZE_MEMMAX)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 C     
@@ -126,16 +125,15 @@ C     INPUT (VIA COMMAND BLOCK)
 C     SELPROC 
 C     SUMPROB
 C     INPUT
-C     VECSIZE_USED (number of weight to update)
+C     VECSIZE_MEMMAX (number of weight to update)
 C     INPUT/OUTPUT
-C     WGT(VECSIZE_USED) #multiplied by the associated jacobian      
+C     WGTS(VECSIZE_MEMMAX) #multiplied by the associated jacobian      
 C     
 C     OUTPUT
 C     
 C     iconf, iproc, imirror
 C     
-      INTEGER  IWARP
-      INTEGER IVEC
+      INTEGER VECSIZE_MEMMAX
       DOUBLE PRECISION WGT(*)
       INTEGER IMIRROR, IPROC, ICONF
 
@@ -174,7 +172,6 @@ C
       INTEGER GROUPED_MC_GRID_STATUS
       REAL*8 MC_GROUPED_PROC_JACOBIAN
       INTEGER LMAPPED
-      INCLUDE 'vector.inc'
       INCLUDE 'run.inc'
 C     Perform the selection
       CALL RANMAR(R)
@@ -210,46 +207,43 @@ C     all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-        DO I=1, WARP_SIZE
-          IVEC = (IWARP -1) *WARP_SIZE + I
-          WGT(IVEC)=WGT(IVEC)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
+        DO I=1, VECSIZE_MEMMAX
+          WGT(I)=WGT(I)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
         ENDDO
 
       ELSE
 C       We are using the grouped_processes grid and it is initialized.
         CALL DS_GET_POINT('grouped_processes',R,LMAPPED
      $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
-        DO I=1, WARP_SIZE
-          IVEC = (IWARP -1) *WARP_SIZE + I
-          WGT(IVEC)=WGT(IVEC)*MC_GROUPED_PROC_JACOBIAN
+        DO I=1, VECSIZE_MEMMAX
+          WGT(I)=WGT(I)*MC_GROUPED_PROC_JACOBIAN
         ENDDO
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP
-     $ ,ICONF_VEC,IPROC,IMIRROR_VEC,ALL_OUT,VECSIZE_USED)
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,ALL_XBK, ALL_Q2FACT,
+     $  ALL_CM_RAP, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_MEMMAX)
 C     ******************************************************
 C     
-C     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_USED)
-C     INPUT/OUtpUT       ALL_WGT(VECSIZE_USED)
-C     VECSIZE_USED = vector size
-C     ALL_OUT(VECSIZE_USED)
+C     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_MEMMAX)
+C     INPUT/OUtpUT       ALL_WGT(VECSIZE_MEMMAX)
+C     VECSIZE_MEMMAX = vector size
+C     ALL_OUT(VECSIZE_MEMMAX)
 C     function (PDf*cross)
 C     ******************************************************
       USE DISCRETESAMPLER
       IMPLICIT NONE
 
-      INTEGER VECSIZE_USED
-      INCLUDE 'vector.inc'
+      INTEGER VECSIZE_MEMMAX
       INCLUDE 'genps.inc'
       DOUBLE PRECISION ALL_P(4*MAXDIM/3+14,*)
       DOUBLE PRECISION ALL_WGT(*)
       DOUBLE PRECISION ALL_XBK(2,*)
       DOUBLE PRECISION ALL_Q2FACT(2,*)
       DOUBLE PRECISION ALL_CM_RAP(*)
-      INTEGER ICONF_VEC(NB_WARP), IPROC, IMIRROR_VEC(NB_WARP)
+      INTEGER ICONF, IPROC, IMIRROR
       DOUBLE PRECISION ALL_OUT(*)
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'maxamps.inc'
@@ -259,11 +253,6 @@ C     ******************************************************
 
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
-
-C     SUBDIAG is vector of diagram numbers for this config
-C     IB gives which beam is which (for mirror processes)
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
 
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
@@ -287,7 +276,7 @@ C     IB gives which beam is which (for mirror processes)
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 
-      INTEGER I, CURR_WARP
+      INTEGER I
       INTEGER GROUPED_MC_GRID_STATUS
 
       INTEGER                                      LPP(2)
@@ -306,17 +295,14 @@ C      entries to the grid for the MC over helicity configuration
 
 
       GROUPED_MC_GRID_STATUS = DS_GET_DIM_STATUS('grouped_processes')
-      IMIRROR_GLOBAL = IMIRROR_VEC(1)
+      IMIRROR_GLOBAL = IMIRROR
       IPROC_GLOBAL = IPROC
-C     ICONFIG=SYMCONF(ICONF_VEC(1))
-C     DO I=1,MAXSPROC
-C     SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
-C     ENDDO
+      ICONFIG = ICONF
 
 C     set the running scale 
 C     and update the couplings accordingly
       CALL UPDATE_SCALE_COUPLING_VEC(ALL_P, ALL_WGT, ALL_Q2FACT,
-     $  VECSIZE_USED)
+     $  VECSIZE_MEMMAX)
 
       IF(GROUPED_MC_GRID_STATUS.EQ.0) THEN
 C       If we were in the initialization phase of the grid for MC over
@@ -326,12 +312,11 @@ C        the call DSIGPROC just below.
         ALLOW_HELICITY_GRID_ENTRIES = .FALSE.
       ENDIF
 
-      CALL DSIGPROC_VEC(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF_VEC
-     $ ,IPROC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,0,ALL_OUT
-     $ ,VECSIZE_USED)
+      CALL DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF,
+     $  IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
 
 
-      DO I =1,VECSIZE_USED
+      DO I =1,VECSIZE_MEMMAX
 C       Reset ALLOW_HELICITY_GRID_ENTRIES
         ALLOW_HELICITY_GRID_ENTRIES = .TRUE.
 
@@ -348,19 +333,13 @@ C       OC(IMIRROR,IPROC,ICONF)))
 C       ENDIF
 
       ENDDO
-
-      DO CURR_WARP=1, NB_WARP
-        DO I=(CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
-          IF(ALL_OUT(I).GT.0D0)THEN
-C           Update summed weight and number of events
-            SUMWGT(IMIRROR_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))
-     $       =SUMWGT(IMIRROR_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))
-     $       +DABS(ALL_OUT(I)*ALL_WGT(I))
-            NUMEVTS(IMIRROR_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))
-     $       =NUMEVTS(IMIRROR_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP)
-     $       )+1
-          ENDIF
-        ENDDO
+      DO I=1, VECSIZE_MEMMAX
+        IF(ALL_OUT(I).GT.0D0)THEN
+C         Update summed weight and number of events
+          SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
+     $     +DABS(ALL_OUT(I)*ALL_WGT(I))
+          NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
+        ENDIF
       ENDDO
 
       RETURN
@@ -452,8 +431,7 @@ C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       DATA  NB_SPIN_STATE /2,2/
       COMMON /NB_HEL_STATE/ NB_SPIN_STATE
 
-      INCLUDE 'vector.inc'  ! defines VECSIZE_MEMMAX
-      INCLUDE 'coupl.inc'  ! needs VECSIZE_MEMMAX (defined in vector.inc)
+      INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
@@ -796,9 +774,9 @@ C     ****************************************************
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      INCLUDE 'vector.inc'  ! defines VECSIZE_MEMMAX
-      INCLUDE 'coupl.inc'  ! needs VECSIZE_MEMMAX (defined in vector.inc)
+      INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INCLUDE 'vector.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -881,13 +859,12 @@ C       Flip CM_RAP (to get rapidity right)
 
 C     not needed anymore ... can be removed ... set for debugging only
 C        
-C     IF (.not.PASSCUTS(P1)) THEN
-C     stop 1
-C     endif
-
+      IF (.NOT.PASSCUTS(P1)) THEN
+        STOP 1
+      ENDIF
 C     set the running scale 
 C     and update the couplings accordingly
-      IF (VECSIZE_MEMMAX.LE.1) THEN  ! no-vector (NB not VECSIZE_USED!)
+      IF (VECSIZE_MEMMAX.LE.1) THEN
         CALL UPDATE_SCALE_COUPLING(PP, WGT)
       ENDIF
 
@@ -917,9 +894,8 @@ C     ccccccccccccccccccccccccc
 C     vectorize version
 C     ccccccccccccccccccccccccc
 
-      SUBROUTINE DSIGPROC_VEC(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP
-     $ ,ICONF_VEC,IPROC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,IMODE
-     $ ,ALL_OUT,VECSIZE_USED)
+      SUBROUTINE DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP,
+     $  ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,ALL_OUT)
 C     ****************************************************
 C     RETURNS DIFFERENTIAL CROSS SECTION 
 C     FOR A PROCESS
@@ -937,9 +913,9 @@ C     ****************************************************
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      INCLUDE 'vector.inc'  ! defines VECSIZE_MEMMAX/WARP_SIZE
-      INCLUDE 'coupl.inc'  ! needs VECSIZE_MEMMAX (defined in vector.inc)
+      INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INCLUDE '../../Source/vector.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -951,11 +927,8 @@ C
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
-      INTEGER ICONF_VEC(NB_WARP), IMIRROR_VEC(NB_WARP)
-      INTEGER CURR_WARP, IWARP
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
-      INTEGER VECSIZE_USED
 C     
 C     GLOBAL VARIABLES
 C     
@@ -992,88 +965,70 @@ C
       INCLUDE 'symperms.inc'
       SAVE ALL_P1,JC
 
-      IF(LAST_ICONF.NE.-1) THEN
-        STOP 25
-      ENDIF
-      LAST_ICONF = 0
-      IWARP = 0  ! position within the current warp
-      CURR_WARP = 1  ! current_warp used
-      DO IVEC=1, VECSIZE_USED
-        IWARP = IWARP + 1
-        IF (IWARP.EQ.1) THEN
-          IF (LAST_ICONF.EQ.-1.OR.LAST_ICONF.NE.ICONF_VEC(CURR_WARP))
-     $      THEN
-            ICONFIG=SYMCONF(ICONF_VEC(CURR_WARP))
-            DO I=1,MAXSPROC
-              SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(CURR_WARP)))
-            ENDDO
-          ENDIF
-C         ICONF = ICONF_VEC(CURR_WARP)
-C         IMIRROR = IMIRROR_VEC(CURR_WARP)
-        ENDIF
+      IF (LAST_ICONF.EQ.-1.OR.LAST_ICONF.NE.ICONF) THEN
+        ICONFIG=SYMCONF(ICONF)
+        DO I=1,MAXSPROC
+          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+        ENDDO
+
 C       Set momenta according to this permutation
-        CALL SWITCHMOM(ALL_P(1,IVEC),ALL_P1(0,1,IVEC),PERMS(1
-     $   ,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
-        LAST_ICONF = ICONF_VEC(CURR_WARP)
-        IF (IWARP.EQ.WARP_SIZE) THEN
-          CURR_WARP = CURR_WARP + 1
-          IWARP = 0
-        ENDIF
-      ENDDO
-      LAST_ICONF=-1
+        DO IVEC=1, VECSIZE_MEMMAX
+          CALL SWITCHMOM(ALL_P(1,IVEC),ALL_P1(0,1,IVEC),PERMS(1
+     $     ,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
-      DO CURR_WARP=1,NB_WARP
-        IB(1)=0  ! This is set in auto_dsigX. set it to zero to create segfault if used at wrong time
-        IB(2)=0  ! Same
-        IMIRROR = IMIRROR_VEC(CURR_WARP)
-        IF(IMIRROR.EQ.2)THEN
+          IF (LAST_ICONF.NE.-1) THEN
+            LAST_ICONF = ICONF
+          ENDIF
+        ENDDO
+      ENDIF
+
+
+      IB(1)=1
+      IB(2)=2
+
+
+      IF(IMIRROR.EQ.2)THEN
+        DO IVEC=1,VECSIZE_MEMMAX
 C         Flip momenta (rotate around x axis)
-          DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
-            DO I=1,NEXTERNAL
-              ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
-              ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
-            ENDDO
-            XDUM=ALL_XBK(1, IVEC)
-            ALL_XBK(1, IVEC) = ALL_XBK(2, IVEC)
-            ALL_XBK(2, IVEC) = XDUM
-            ALL_CM_RAP(IVEC) = - ALL_CM_RAP(IVEC)
-            IB(1) = 0
-            IB(2) = 0
-C           Flip beam identity -> moved to auto_dsigX (since depend of
-C            the warp)
+          DO I=1,NEXTERNAL
+            ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
+            ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
           ENDDO
-
-        ENDIF
-      ENDDO
-
+          XDUM=ALL_XBK(1, IVEC)
+          ALL_XBK(1, IVEC) = ALL_XBK(2, IVEC)
+          ALL_XBK(2, IVEC) = XDUM
+          ALL_CM_RAP(IVEC) = - ALL_CM_RAP(IVEC)
+C         Flip beam identity
+          IB(1)=2
+          IB(2)=1
+        ENDDO
+      ENDIF
 
       ALL_OUT(:)=0D0
 
-      DO IVEC=1,VECSIZE_USED
+C     IF (PASSCUTS(P1)) THEN
+      DO IVEC=1,VECSIZE_MEMMAX
         IF (IMODE.EQ.0D0.AND.NB_PASS_CUTS.LT.2**12.AND.ALL_WGT(IVEC)
      $   .NE.0D0)THEN
           NB_PASS_CUTS = NB_PASS_CUTS + 1
         ENDIF
       ENDDO
 
-      IF(IPROC.EQ.1) CALL DSIG1_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT
-     $ ,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC
-     $ ,IMIRROR_VEC,VECSIZE_USED)  ! u u~ > u u~
-      IF(IPROC.EQ.2) CALL DSIG2_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT
-     $ ,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC
-     $ ,IMIRROR_VEC,VECSIZE_USED)  ! u u~ > d d~
+      IF(IPROC.EQ.1) CALL DSIG1_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT
+     $ ,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT)  ! u u~ > u u~
+      IF(IPROC.EQ.2) CALL DSIG2_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT
+     $ ,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT)  ! u u~ > d d~
+C     ENDIF
 
-C     FLIPPING BACK IF NEEDED
-      DO CURR_WARP=1,NB_WARP
-        IF (IMIRROR_VEC(CURR_WARP).EQ.2) THEN
-          DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
-            DO I=1,NEXTERNAL
-              ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
-              ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
-            ENDDO
+      IF (LAST_ICONF.NE.-1.AND.IMIRROR.EQ.2) THEN
+C       Flip back local momenta P1 if cached
+        DO IVEC=1,VECSIZE_MEMMAX
+          DO I=1,NEXTERNAL
+            ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
+            ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
           ENDDO
-        ENDIF
-      ENDDO
+        ENDDO
+      ENDIF
 
       RETURN
 
@@ -1195,89 +1150,3 @@ C
       STOP 5
       RETURN
       END
-
-
-      SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL)
-      IMPLICIT NONE
-      INCLUDE 'maxamps.inc'  ! for the definition of maxflow
-      INCLUDE 'coloramps.inc'  ! set the coloramps
-C     
-C     argument IN
-C     
-      DOUBLE PRECISION RCOL  ! random number
-      DOUBLE PRECISION JAMP2(0:MAXFLOW)
-      INTEGER ICONFIG  ! amplitude selected
-      INTEGER IPROC  ! matrix element selected
-C     
-C     argument OUT
-C     
-      INTEGER ICOL
-C     
-C     local
-C     
-      INTEGER NC  ! number of assigned color in jamp2
-      LOGICAL IS_LC
-      INTEGER MAXCOLOR
-      DOUBLE PRECISION TARGETAMP(0:MAXFLOW)
-      INTEGER I,J
-      DOUBLE PRECISION XTARGET
-
-      NC = INT(JAMP2(0))
-      IS_LC = .TRUE.
-      MAXCOLOR=0
-      TARGETAMP(0) = 0D0
-      IF(NC.EQ.0)THEN
-        ICOL = 0
-        RETURN
-      ENDIF
-      DO I=1,NC
-        IF(ICOLAMP(I,ICONFIG,IPROC))THEN
-          TARGETAMP(I) = TARGETAMP(I-1) + JAMP2(I)
-        ELSE
-          TARGETAMP(I) = TARGETAMP(I-1)
-        ENDIF
-      ENDDO
-
-C     ensure that at least one leading color is different of zero if
-C      not allow
-C     all subleading color.
-      IF (TARGETAMP(NC).EQ.0)THEN
-        IS_LC = .FALSE.
-        DO ICOL =1,NC
-          TARGETAMP(ICOL) = JAMP2(ICOL)+TARGETAMP(ICOL-1)
-        ENDDO
-      ENDIF
-
-      XTARGET=RCOL*TARGETAMP(NC)
-
-      ICOL = 1
-      DO WHILE (TARGETAMP(ICOL) .LT. XTARGET .AND. ICOL .LT. NC)
-        ICOL = ICOL + 1
-      ENDDO
-
-      RETURN
-      END
-
-      SUBROUTINE GET_HELICITIES(IPROC, IHEL, NHEL)
-      IMPLICIT NONE
-      INCLUDE 'nexternal.inc'
-      INTEGER IPROC
-      INTEGER IHEL
-      INTEGER NHEL(NEXTERNAL)
-      INTEGER I
-      INTEGER GET_NHEL1
-      INTEGER GET_NHEL2
-
-      IF(IPROC.EQ.1)THEN
-        DO I=1,NEXTERNAL
-          NHEL(I) = GET_NHEL1(IHEL,I)
-        ENDDO
-      ELSEIF(IPROC.EQ.2)THEN
-        DO I=1,NEXTERNAL
-          NHEL(I) = GET_NHEL2(IHEL,I)
-        ENDDO
-      ENDIF
-
-      RETURN
-      END
-
