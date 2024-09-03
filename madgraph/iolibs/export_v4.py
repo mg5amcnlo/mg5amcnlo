@@ -1006,7 +1006,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
-            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+            if aloha.unitary_gauge !=3:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                                                 write_dir+'/aloha_functions.f')
+            else:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions_fd.f', 
                                                  write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
@@ -3174,6 +3178,7 @@ CF2PY integer, intent(in) :: new_value
             writers.FortranWriter('nsqso_born.inc').writelines(
                 """INTEGER NSQSO_BORN
                    PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
+            files.cp('nsqso_born.inc', '..')
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
 
@@ -3714,6 +3719,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #    logger.error('Could not cd to directory %s' % dirpath)
         #    return 0
 
+        print('4',dirpath)
         logger.info('Creating files in directory %s' % dirpath)
 
         # Extract number of external particles
@@ -4630,6 +4636,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        self.proc_characteristic['gauge'] = mg5options['gauge']
 
         # set limitation linked to the model
     
@@ -4889,6 +4896,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
+            if hasattr(self.model, '_curr_gauge') and self.model._curr_gauge == 'FD':
+                replace_dict['wavefunctionsize'] = 7
 
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)
@@ -6236,7 +6245,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         except os.error:
             logger.error('Could not cd to directory %s' % subprocdir)
             return 0
-
         logger.info('Creating files in directory %s' % subprocdir)
 
         # Create the matrix.f files, auto_dsig.f files and all inc files
@@ -6688,11 +6696,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         output = """
         subroutine write_good_hel(stream_id)
         implicit none
+        include 'maxamps.inc'
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)
-        INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
+        INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         write(stream_id,*) GOODHEL
         return
@@ -6702,32 +6711,29 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         subroutine read_good_hel(stream_id)
         implicit none
         include 'genps.inc'
+        include 'maxamps.inc'
         integer stream_id
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)
-        INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
+        INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
         read(stream_id,*) GOODHEL
-        NTRY(1) = MAXTRIES + 1
-        NTRY(2) = MAXTRIES + 1
+        NTRY(:) = MAXTRIES + 1
         return
         end 
         
         subroutine init_good_hel()
         implicit none
+        include 'maxamps.inc'
         INTEGER                 NCOMB
         PARAMETER (             NCOMB=%(ncomb)d)
-        LOGICAL GOODHEL(NCOMB, 2)        
-        INTEGER NTRY(2)
-        INTEGER I
-        
-        do i=1,NCOMB
-            GOODHEL(I,1) = .false.
-            GOODHEL(I,2) = .false.
-        enddo
-        NTRY(1) = 0
-        NTRY(2) = 0
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)        
+        INTEGER NTRY(MAXSPROC)
+        INTEGER I,J
+
+        GOODHEL(:,:) = .false.        
+        NTRY(:) = 0
         end
         
         integer function get_maxsproc()
@@ -6898,7 +6904,8 @@ class UFO_model_to_mg4(object):
             self.opt.update(opt)
             
         self.coups_dep = []    # (name, expression, type)
-        self.coups_indep = []  # (name, expression, type)
+        self.coups_indep_noloop = []  # (name, expression, type)
+        self.coups_indep_loop = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
@@ -7040,9 +7047,18 @@ class UFO_model_to_mg4(object):
                     self.coups_dep += to_add
                     used_running_key.update(set(key))
             else:
-                self.coups_indep += [c for c in coup_list if
+                self.coups_indep_noloop += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
-                                      wanted_couplings)]
+                                      wanted_couplings) and \
+                                      not any([tag in c.name.lower() for tag in ['uv', 'r2']])]
+                self.coups_indep_loop += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings) and \
+                                      any([tag in c.name.lower() for tag in ['uv', 'r2']])]
+
+        # keep track of all couplings (for backward compatibility and/or tests
+        self.coups_indep = self.coups_indep_noloop + self.coups_indep_loop
+               
         #store the running parameter that are used
         self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
@@ -7335,8 +7351,9 @@ C
         
         # Write the Couplings
         if self.coups_indep:
-            c_list = [coupl.name for coupl in self.coups_indep]  
-            fsock.writelines('double complex '+', '.join(c_list)+'\n') 
+            c_list = [coupl.name for coupl in self.coups_indep_noloop + self.coups_indep_loop]  
+            if c_list:
+                fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
@@ -7345,7 +7362,7 @@ C
         
         if c_list:
             fsock.writelines('double complex '+', '.join(c_list)+'\n')   
-        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
 
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
@@ -7384,7 +7401,7 @@ C
             return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
         
         # Write the Couplings
-        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
+        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
         fsock.writelines('\n'.join(lines))
         
         
@@ -7679,19 +7696,38 @@ C
         nb_def_by_file = self.nb_def_by_file
         
         self.create_couplings_main(nb_def_by_file)
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
-        for i in range(nb_coup_indep):
-            # For the independent couplings, we compute the double and multiple
-            # precision ones together
-            data = self.coups_indep[nb_def_by_file * i: 
-                             min(len(self.coups_indep), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1, data, dp=True, mp=self.opt['mp'])
+        for i in range(nb_coup_indep_noloop):
+            ##### For the independent couplings, we compute the double and multiple
+            ##### precision ones together
+            # For the EW sudakov approximation, because of the numerical derivatives
+            # we need to separate MP vs DP also here
+            data = self.coups_indep_noloop[nb_def_by_file * i: 
+                             min(len(self.coups_indep_noloop), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1, data, dp=True, mp=False)
+
+            if self.opt['mp']:
+                self.create_couplings_part( i + 1, data, dp=False,mp=True)
+
+        for i in range(nb_coup_indep_loop):
+            ##### For the independent couplings, we compute the double and multiple
+            ##### precision ones together
+            # For the EW sudakov approximation, because of the numerical derivatives
+            # we need to separate MP vs DP also here
+            data = self.coups_indep_loop[nb_def_by_file * i: 
+                             min(len(self.coups_indep_loop), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1 + nb_coup_indep_noloop, data, dp=True, mp=False)
+
+            if self.opt['mp']:
+                self.create_couplings_part( i + 1 + nb_coup_indep_noloop, data, dp=False,mp=True)
             
         for i in range(nb_coup_dep):
             # For the dependent couplings, we compute the double and multiple
             # precision ones in separate subroutines.
+            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
@@ -7730,15 +7766,24 @@ C
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
         if self.opt['mp']:
+            fsock.writelines("if (updateloop) then\n")
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
+            fsock.writelines("endif\n")
         
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
 
 
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep_noloop)]))
+
+        fsock.writelines('if (updateloop) then\n')
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (i + 1 + nb_coup_indep_noloop) for i in range(nb_coup_indep_loop)]))
+        fsock.writelines('\nendif\n')
         
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
@@ -7746,10 +7791,25 @@ C
                     ['call coup%(i)s(%(args)s)' %  {'i': nb_coup_indep + i + 1,
                                                     'args':'1' if self.vector_size  else ''} \
                       for i in range(nb_coup_dep)]))
+
+        # the MP-version is there also for those couplings which do not depend 
+        #  on the PSP
         if self.opt['mp']:
+            fsock.write_comments('\ncouplings in multiple precision\n')
+
+            fsock.writelines('if (updateloop) then\n')
+
+            fsock.writelines('\n'.join(\
+                    ['call mp_coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+        
+            fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
             fsock.writelines('\n'.join(\
                     ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
+
+            fsock.writelines('\nendif\n')
+
         fsock.writelines('''\n return \n end\n''')
 
         fsock.writelines("""subroutine update_as_param(%(args)s)
@@ -7835,7 +7895,10 @@ C
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
                 fsock.writelines('endif')
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
@@ -7925,7 +7988,9 @@ C
                                 include \'mp_intparam_definition.inc\'\n
                              """)
             
-            nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+            nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+            nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
 
             if self.model['running_elements']:
@@ -8356,7 +8421,8 @@ C
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
-        
+        # put in lower case and remove duplicate
+        additional_fct = list({f.lower():'' for f in additional_fct if f.lower() not in ['condif', 'reglog', 'reglogp', 'reglogm', 'recms', 'arg', 'grreglog', 'regsqrt']}) 
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
           double complex condif
@@ -8400,7 +8466,7 @@ C
         """
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
+        fsock.writelines(r"""double complex function cond(condition,truecase,falsecase)
           implicit none
           double complex condition,truecase,falsecase
           if(condition.eq.(0.0d0,0.0d0)) then
@@ -9502,17 +9568,21 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
+        
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '
 
-
-        nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
-        nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // self.nb_def_by_file 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // self.nb_def_by_file
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
+        nb_coup_dep = 1 + len(self.coups_dep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
-            couplings_files+=['mp_couplings%s.o' % (i+1) for i in \
-                               range(nb_coup_dep,nb_coup_dep + nb_coup_indep) ]
+            # this part changed to include also the couplings which do not 
+            # depend on the PSP
+            couplings_files+=['mp_couplings%s.o' % (i+1) \
+                                for i in range(nb_coup_dep + nb_coup_indep) ]
         text += ' '.join(couplings_files)
         fsock.writelines(text)
         
@@ -9826,6 +9896,18 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._export_dir, amcatnlo_options)
 
+    # Then treat the EW sudakov Standalone output     
+    elif output_type=='ewsudsa':
+        import madgraph.iolibs.export_fks as export_fks
+        ExporterClass=None
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['mp'] = False
+        logger.info("Writing out the EW Sudakov approximation in a standalone format")
+        ExporterClass = export_fks.ProcessExporterEWSudakovSA
+        amcatnlo_options['export_format']='FKS5_optimized'
+        return ExporterClass(cmd._export_dir, amcatnlo_options)
+
 
     # Then the default tree-level output
     elif output_type=='default':
@@ -9942,7 +10024,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
             os.mkdir(pjoin(pathdir, subprocdir))
         except os.error as error:
             logger.warning(error.strerror + " " + subprocdir)
-
 
         logger.info('Creating files in directory %s' % subprocdir)
         Ppath = pjoin(pathdir, subprocdir)

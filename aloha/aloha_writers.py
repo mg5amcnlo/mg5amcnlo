@@ -35,13 +35,20 @@ class WriteALOHA:
     type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
+
             
     def __init__(self, abstract_routine, dirpath):
         if aloha.loop_mode:
             self.momentum_size = 4
         else:
             self.momentum_size = 2
-            
+
+        if aloha.unitary_gauge == 3: #FD gauge
+            # need to check for non goldstone scalar
+            self.type_to_size = {'S':7, 'T':18, 'V':7, 'F':6,'R':18}
+        else:
+            self.type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
+
         self.has_model_parameter = False
         
         name = get_routine_name(abstract = abstract_routine)
@@ -536,7 +543,11 @@ class ALOHAWriterForFortran(WriteALOHA):
         if KERNEL.has_pi:
             out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         
-        
+        if aloha.unitary_gauge == 3: # FG gauge 
+            self.declaration.add(('int','i'))
+            out.write(" COMPLEX*16 CZERO\n")
+            out.write("PARAMETER (CZERO=(0D0,0D0)) \n")
+
         for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
@@ -548,11 +559,16 @@ class ALOHAWriterForFortran(WriteALOHA):
                 elif name[0] in ['F','V']:
                     if aloha.loop_mode:
                         size = 8
+                    elif aloha.unitary_gauge == 3 and name[0] in 'V':
+                        size = 7
                     else:
                         size = 6
                 elif name[0] == 'S':
                     if aloha.loop_mode:
                         size = 5
+                    elif aloha.unitary_gauge == 3: # FD gauge 
+                        # Need to fix since this need to be dependent if S is a goldstone or not
+                        size = 7
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
@@ -655,6 +671,13 @@ class ALOHAWriterForFortran(WriteALOHA):
                           .format(i+1))
                 #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
+        if self.offshell and aloha.unitary_gauge == 3: # FD gauge
+            type = self.particles[self.outgoing-1]
+            if type in ["S","V"]: 
+                out.write("      DO I = 3, 7\n")
+                out.write(" %(type)s%(out)s(I) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
+                out.write(" ENDDO\n")      
+
         # Returning result
         return out.getvalue()
 
@@ -695,6 +718,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             shift = 0
         else:
             shift =  self.momentum_size 
+            if aloha.unitary_gauge ==3 and match.group('var').startswith('S'):
+                shift += 4
         return '%s(%s)' % (match.group('var'), int(match.group('num')) + shift)
               
     def change_var_format(self, name): 
@@ -715,7 +740,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -799,8 +824,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
 
-        
-        misc.sprint(self.name, coup_name, cond="VVS11_14P1N" in self.name)
         if not self.offshell:
             if coup_name == 'COUP':
                 formatted = self.write_obj(numerator.get_rep([0]))
@@ -863,8 +886,11 @@ class ALOHAWriterForFortran(WriteALOHA):
                             formatted = formatted[1:]
                         else:
                             formatted = '(-1)*%s' % formatted[1:]
+                shift = 1
+                if aloha.unitary_gauge == 3 and self.outname[0] == "S":
+                    shift = 5
                 to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+shift, 
                         coeff, formatted)
             key = list(to_order.keys())
             key.sort()
@@ -880,8 +906,20 @@ class ALOHAWriterForFortran(WriteALOHA):
         #return '%s\n    call %s(%s)' % \
         #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
 
-    def get_foot_txt(self):
-        return 'end\n\n' 
+    def get_foot_txt(self, combine=False):
+        text = ' ' 
+    
+        if not combine and aloha.unitary_gauge == 3: # FD gauge
+            if self.outgoing and 'P1N' not in self.tag:
+                name = self.particles[self.outgoing-1]
+                if name.startswith(('V','S')):
+                    # need to be smarter for Higgs
+                    text += 'CALL MULTIPLY_PROPAGATOR_FACTOR(%(name)s%(i)s,%(mass)s%(i)s, %(name)s%(i)s)\n' %\
+                    {'name':name, 'mass': 'M%s' % name[1:], 'i': self.outgoing }
+
+
+        text += 'end\n\n' 
+        return text
 
     def write_combined(self, lor_names, mode='self', offshell=None):
         """Write routine for combine ALOHA call (more than one coupling)"""
@@ -956,7 +994,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         text.write(self.get_declaration_txt())
         text.write(routine.getvalue())
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
 
         text = text.getvalue()
@@ -1281,7 +1319,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
+    p=re.compile(r'^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1407,7 +1445,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
             
     def get_fct_format(self, fct):
@@ -1676,11 +1714,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                 if not aloha.complex_mass:
                     if self.routine.denominator:
                         if self.routine.denominator == "1":
-                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s\n' % \
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s;\n' % \
                                   mydict) 
                         else:
                             mydict['denom'] = self.routine.denominator
-                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s)\n' % \
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s);\n' % \
                                   mydict) 
                     else:
                         out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
@@ -1707,7 +1745,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile(r'std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -2115,7 +2153,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
 

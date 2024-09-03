@@ -342,7 +342,7 @@ in presence of majorana particle/flow violation"""
                     #    #propagator incoming
                         lorentz *= complex(0,1) * SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
-                    if massless or not aloha.unitary_gauge: 
+                    if massless or aloha.unitary_gauge in [0,3]: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
                     else:
                         lorentz *= VectorPropagator(id, 'I2', id)
@@ -678,7 +678,7 @@ class AbstractALOHAModel(dict):
         # Option
         self.explicit_combine = explicit_combine
         # Extract the model name if combined with restriction
-        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_pattern = re.compile(r"^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
         if model_name_re:
             name = model_name_re.group('name')
@@ -1112,6 +1112,7 @@ class AbstractALOHAModel(dict):
         """ write the full set of Helicity Routine in output_dir"""
 
         for abstract_routine in self.values():
+            #misc.sprint(abstract_routine.name, abstract_routine.outgoing, abstract_routine.spins, abstract_routine.expr)
             abstract_routine.write(output_dir, language)
 
         for routine in self.external_routines:

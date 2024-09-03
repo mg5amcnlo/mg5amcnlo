@@ -70,6 +70,5 @@ tests/input_files/*/*.pkl
 vendor/StdHEP/log.*
 tmp
 check_sa_born_splitOrders.f
-models/*/
 models/*.tgz
 nsqso_born.inc

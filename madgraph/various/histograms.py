@@ -632,34 +632,34 @@ class HwU(Histogram):
     # than necessary because the HwU standard allows for spaces from within
     # the name of a weight
     weight_header_re = re.compile(
-                       '&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
+                       r'&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
     
     # ================================
     #  Histo weight specification RE's
     # ================================
     # The start of a plot
-    histo_start_re = re.compile('^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
-                                   '(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
+    histo_start_re = re.compile(r'^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
+                                   r'(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
     # A given weight specifier
-    a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
-    histo_bin_weight_re = re.compile('(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
-    a_int_re = '[\+|-]?\d+'
+    a_float_re = r'[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+    histo_bin_weight_re = re.compile(r'(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
+    a_int_re = r'[\+|-]?\d+'
     
     # The end of a plot
     histo_end_re = re.compile(r'^\s*<\\histogram>\s*$')
     # A scale type of weight
-    weight_label_scale = re.compile('^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                   '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_PDF_XML = re.compile('^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_TMS = re.compile('^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
-    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
+    weight_label_scale = re.compile(r'^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                   r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_PDF_XML = re.compile(r'^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_TMS = re.compile(r'^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
+    weight_label_alpsfact = re.compile(r'^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
                                                                   re.IGNORECASE)
 
-    weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
-                                        '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
+    weight_label_scale_adv = re.compile(r'^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
+                                        r'\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                                        r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF_adv = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
     
     class ParseError(MadGraph5Error):
@@ -926,7 +926,7 @@ class HwU(Histogram):
                 res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)))
             res[-1] += ' '.join('%+16.7e'%bin.wgts[key] for key in 
                 self.bins.weight_labels if key not in ['central','stat_error'])
-        res.append('<\histogram>')
+        res.append(r'<\histogram>')
         return res
     
     def output(self, path=None, format='HwU', print_header=True):
@@ -1149,6 +1149,8 @@ class HwU(Histogram):
             boundaries = [0.0,0.0]
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
+                if (j == len(weight_header)):
+                    continue
                 if j == len(all_weight_header):
                     raise HwU.ParseError("There is more bin weights"+\
                               " specified than expected (%i)"%len(weight_header))
@@ -1803,7 +1805,7 @@ class HwUList(histograms_PhysicsObjectList):
             # Filter empty weights coming from the split
             weight_label_list = [wgt.strip() for wgt in 
                 str(selected_run_node.getAttribute('header')).split(';') if
-                                                      not re.match('^\s*$',wgt)]
+                                                      not re.match(r'^\s*$',wgt)]
             ordered_weight_label_list = [w for w in weight_label_list if w not\
                                                              in ['xmin','xmax']]
             # Remove potential repetition of identical weight labels
@@ -1827,7 +1829,7 @@ class HwUList(histograms_PhysicsObjectList):
         all_weights = []
         for wgt_position, wgt_label in \
             enumerate(str(selected_run_node.getAttribute('header')).split(';')):
-            if not re.match('^\s*$',wgt_label) is None:
+            if not re.match(r'^\s*$',wgt_label) is None:
                 continue
             all_weights.append({'POSITION':wgt_position})
             for wgt_item in wgt_label.strip().split('_'):
@@ -2714,7 +2716,7 @@ set key invert
 
         # First the global gnuplot header for this histogram group
         global_header =\
-"""
+r"""
 ################################################################################
 ### Rendering of the plot titled '%(title)s'
 ################################################################################
@@ -2862,9 +2864,9 @@ plot \\"""
                 major_title = ', '.join(major_title)                    
             
             if not mu[0] in ['none',None]:
-                major_title += ', dynamical\_scale\_choice=%s'%mu[0]
+                major_title += r', dynamical\_scale\_choice=%s'%mu[0]
             if not pdf[0] in ['none',None]:
-                major_title += ', PDF=%s'%pdf[0].replace('_','\_')
+                major_title += ', PDF=%s'%pdf[0].replace('_',r'\_')
 
             # Do not show uncertainties for individual jet samples (unless first
             # or specified explicitely and uniquely)
@@ -2937,7 +2939,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var+3,color_index,\
-'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
+r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
@@ -2947,7 +2949,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
-'%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
+'%s PDF=%s' % (title,pdf[j].replace('_',r'\_'))))
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines

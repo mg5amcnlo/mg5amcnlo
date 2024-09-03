@@ -351,7 +351,7 @@ c#endif
             fo(6) = ip     * sqm(abs(im))
          else
 
-            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
             omega(1) = dsqrt(p(0)+pp)
@@ -2054,7 +2054,7 @@ c     local variable
       enddo
       return
       end
-      
+     
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors
