@@ -72,4 +72,5 @@ tmp
 check_sa_born_splitOrders.f
 models/*/
 models/*.tgz
+tests/status
 nsqso_born.inc
