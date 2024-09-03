@@ -23,6 +23,7 @@ C
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
+      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'run.inc'
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
@@ -81,7 +82,6 @@ C     GLOBAL VARIABLES
 C     
       LOGICAL INIT_MODE
       COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE
-      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
 
 
@@ -146,18 +146,20 @@ C     ----------
         DO I=1,NDIAGS
           AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=2
-        DO I=1,INT(JAMP2(0))
-          JAMP2(I)=0D0
-        ENDDO
       ENDIF
+      JAMP2(0)=2
+      DO I=1,INT(JAMP2(0))
+        JAMP2(I)=0D0
+      ENDDO
       ANS = 0D0
       DO I=1,NCOMB
         TS(I)=0D0
       ENDDO
 
-        !   If the helicity grid status is 0, this means that it is not yet initialized.
-        !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
+C     If the helicity grid status is 0, this means that it is not yet
+C      initialized.
+C     If HEL_PICKED==-1, this means that calls to other matrix<i>
+C      where in initialization mode as well for the helicity.
       IF ((ISHEL.EQ.0.AND.ISUM_HEL.EQ.0)
      $ .OR.(DS_GET_DIM_STATUS('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1))
      $  THEN
@@ -188,16 +190,27 @@ C     ----------
           CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
         IF (ISUM_HEL.NE.0) THEN
-            !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+C         We set HEL_PICKED to -1 here so that later on, the call to
+C          DS_add_point in dsample.f does not add anything to the grid
+C          since it was already done here.
           HEL_PICKED = -1
-            !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
+C         For safety, hardset the helicity sampling jacobian to 0.0d0
+C          to make sure it is not .
           HEL_JACOBIAN   = 1.0D0
-            !         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
+C         We don't want to re-update the helicity grid if it was
+C          already updated by another matrix<i>, so we make sure that
+C          the reference grid is empty.
           REF_HELICITY_GRID = DS_GET_DIMENSION(REF_GRID,'Helicity')
           IF((DS_GET_DIM_STATUS('Helicity').EQ.1)
      $     .AND.(REF_HELICITY_GRID%%N_TOT_ENTRIES.EQ.0)) THEN
-              !           If we finished the initialization we can update the grid so as to start sampling over it.
-              !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
+C           If we finished the initialization we can update the grid
+C            so as to start sampling over it.
+C           However the grid will now be filled by dsample with
+C            different kind of weights (including pdf, flux, etc...)
+C            so by setting the grid_mode of the reference grid to
+C            'initialization' we make sure it will be overwritten (as
+C            opposed to 'combined') by the running grid at the next
+C            update.
             CALL DS_UPDATE_GRID('Helicity')
             CALL DS_SET_GRID_MODE('Helicity','init')
           ENDIF

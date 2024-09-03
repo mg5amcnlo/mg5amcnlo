@@ -2,13 +2,18 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      DOUBLE PRECISION G, ALL_G(1)
+C     
+C     NB: VECSIZE_MEMMAX is defined in vector.inc
+C     NB: vector.inc must be included before coupl.inc
+C     
+
+      DOUBLE PRECISION G, ALL_G
       COMMON/STRONG/ G, ALL_G
 
       DOUBLE COMPLEX GAL(2)
       COMMON/WEAK/ GAL
 
-      DOUBLE PRECISION MU_R, ALL_MU_R(1)
+      DOUBLE PRECISION MU_R, ALL_MU_R
       COMMON/RSCALE/ MU_R, ALL_MU_R
 
       DOUBLE PRECISION NF
@@ -28,8 +33,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       DOUBLE COMPLEX GC_30, GC_33, GC_37
 
-      DOUBLE COMPLEX GC_5(1), R2_GGHB(1), R2_GGHT(1), R2_GGHHB(1),
-     $  R2_GGHHT(1)
+      DOUBLE COMPLEX GC_5, R2_GGHB, R2_GGHT, R2_GGHHB, R2_GGHHT
 
       COMMON/COUPLINGS/ GC_5, R2_GGHB, R2_GGHT, R2_GGHHB, R2_GGHHT,
      $  GC_30, GC_33, GC_37

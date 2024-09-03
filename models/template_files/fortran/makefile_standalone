@@ -37,7 +37,6 @@ clean:
 
 couplings.o: ../maxparticles.inc ../run.inc ../cuts.inc ../vector.inc
 
-
 ../maxparticles.inc:
 	touch ../maxparticles.inc
 

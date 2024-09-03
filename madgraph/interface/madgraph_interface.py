@@ -1646,7 +1646,6 @@ This will take effect only in a NEW terminal
                 args.pop(0)
                 if hasattr(output_cls, 'change_output_args'):
                     args[:] = output_cls.change_output_args(args, self) 
-                self.export
             else:
                 self._export_format = default
         else:
@@ -2510,7 +2509,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_wrap=1']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -5640,6 +5639,11 @@ This implies that with decay chains:
             self.clean_process()
             # Import model
             if args[0].endswith('_v4'):
+                logger.critical("Support for V4 model is deprecated and known to not be fully working in this version of MG5aMC. Please consider to use an older (Long Term Stable) version if you can not use UFO model")
+                if not force:
+                    ans = self.ask("Do you want to continue anyway?", "stop", ["continue", "stop"], timeout=20)
+                    if ans == "stop":
+                        return
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
             else:
@@ -5857,7 +5861,7 @@ This implies that with decay chains:
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model, precmd=True)
             line = self.exec_cmd('import model_v4 %s -modelname' % \
-                                 (reader.model), precmd=True)
+                                 (reader.model), precmd=True, force=True)
         else:
             logging.error('No MG_ME installation detected')
             return
@@ -6178,7 +6182,6 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-        misc.sprint(return_code)
         if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
@@ -8197,6 +8200,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         args = self.split_arg(line)
         # Check Argument validity
+        self._export_plugin = None
         self.check_output(args)
 
         noclean = '-noclean' in args

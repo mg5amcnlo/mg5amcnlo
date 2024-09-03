@@ -68,11 +68,11 @@ C         this is for the orders of the born to integrate
             ENDIF
           ENDDO
 
-            !if (keep_order(i)) then
-            ! write(*,*) 'SDK8: keeping split order ', i
-            !else
-            ! write(*,*) 'SDK8: not keeping split order ', i
-            !endif
+C         if (keep_order(i)) then
+C         write(*,*) 'SDK8: keeping split order ', i
+C         else
+C         write(*,*) 'SDK8: not keeping split order ', i
+C         endif
         ENDDO
 
         FIRSTTIME = .FALSE.
@@ -96,7 +96,7 @@ C     reset the amp_split_ewsud array
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX_B(J, I)
           ENDDO
-            !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
+C         amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
           IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_EWSUD(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) =
      $      ANS(I) / IDEN

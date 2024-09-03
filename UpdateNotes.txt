@@ -59,6 +59,9 @@ ANNOUNCEMENT:
       SJ: Fixing rivet running due to some library not correctly linked
       OM: Include bug fix from 2.9.19
 
+3.6.0:
+      OM: Stop support for model in the legacy v4 format
+
 3.5.3 (22/12/23)
       OM: Include Bug fix from 2.9.18
       OM: Update inner representation of the shower_card allowing to support any py8 parameter

@@ -19,6 +19,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       LOGICAL UPDATELOOP
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'input.inc'
+
+
       INCLUDE 'coupl.inc'
       READLHA = .TRUE.
       INCLUDE 'intparam_definition.inc'
@@ -38,13 +40,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 C     
 couplings needed to be evaluated points by points
 C     
-<<<<<<< HEAD
-      CALL COUP2(1)
-      CALL MP_COUP2()
-||||||| merged common ancestors
-      CALL COUP2()
-      CALL MP_COUP2()
-=======
       CALL COUP3()
 C     
 couplings in multiple precision
@@ -60,15 +55,14 @@ C
 
       ENDIF
 
->>>>>>> 3.6.0
 
       RETURN
       END
 
-      SUBROUTINE UPDATE_AS_PARAM(VECID)
+      SUBROUTINE UPDATE_AS_PARAM()
 
       IMPLICIT NONE
-      INTEGER VECID
+
       DOUBLE PRECISION PI, ZERO
       LOGICAL READLHA, FIRST
       DATA FIRST /.TRUE./
@@ -103,28 +97,22 @@ C
 C     
 couplings needed to be evaluated points by points
 C     
-<<<<<<< HEAD
-      ALL_G(VECID) = G
-      CALL COUP2(VECID)
-||||||| merged common ancestors
-      CALL COUP2()
-=======
       CALL COUP3()
->>>>>>> 3.6.0
 
       RETURN
       END
 
-      SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2 ,VECID)
+      SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2 )
 
       IMPLICIT NONE
 
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
       DOUBLE PRECISION MU_R2, AS2
-      INTEGER VECID
+
       INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
+
       INCLUDE 'coupl.inc'
       DOUBLE PRECISION MODEL_SCALE
       COMMON /MODEL_SCALE/MODEL_SCALE
@@ -135,7 +123,7 @@ C
       G = SQRT(4.0D0*PI*AS2)
       AS = AS2
 
-      CALL UPDATE_AS_PARAM(VECID)
+      CALL UPDATE_AS_PARAM()
 
 
       RETURN

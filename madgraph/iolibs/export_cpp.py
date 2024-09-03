@@ -707,10 +707,6 @@ class OneProcessExporterCPP(object):
 
         self.include_multi_channel = config_map
         self.generate_process_files() 
-        misc.sprint(proc_id)
-        misc.sprint(config_map)
-        misc.sprint(subproc_number)
-        misc.sprint("Done")
 #        raise Exception("working fine but not fully implemented so far")
 
 
@@ -2063,7 +2059,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                      self.get_initProc_lines(color_amplitudes)
         replace_dict['reset_jamp_lines'] = \
                                      self.get_reset_jamp_lines(color_amplitudes)
-        replace_dict['sigmaKin_lines'] = \
+        
+
+        replace_dict['sigmaKin_lines'], _ = \
                                      self.get_sigmaKin_lines(color_amplitudes)
         replace_dict['sigmaHat_lines'] = \
                                      self.get_sigmaHat_lines()
@@ -2562,7 +2560,7 @@ class ProcessExporterCPP(VirtualExporter):
                      'SubProcesses': [s+'check_sa.cpp']}
     to_link_in_P = ['check_sa.cpp', 'Makefile']
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_src')
-    template_Sub_make = template_src_make
+    template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_sp') 
     create_model_class =  UFOModelConverterCPP
     
 
@@ -3478,7 +3476,6 @@ def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
     opt['output_options'] = cmd_options
     cformat = cmd._export_format
     
-    misc.sprint(cformat)
     if cformat == 'pythia8':
         return ProcessExporterPythia8(cmd._export_dir, opt)
     elif cformat == 'standalone_cpp':

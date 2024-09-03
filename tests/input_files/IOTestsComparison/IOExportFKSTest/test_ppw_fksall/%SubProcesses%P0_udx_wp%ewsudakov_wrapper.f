@@ -140,7 +140,8 @@ C       call the born amplitude and store the result
             HEL(HEL(0)) = IHEL
             IGOOD_HEL(HEL(0)) = 1
           ENDIF
-            !write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel, nhel(:,ihel), good_hel(ihel)
+C         write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel,
+C          nhel(:,ihel), good_hel(ihel)
           FIRSTTIME_HEL(IHEL) = .FALSE.
         ENDIF
 

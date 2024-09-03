@@ -2,13 +2,18 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      DOUBLE PRECISION G, ALL_G(1)
+C     
+C     NB: VECSIZE_MEMMAX is defined in vector.inc
+C     NB: vector.inc must be included before coupl.inc
+C     
+
+      DOUBLE PRECISION G, ALL_G
       COMMON/STRONG/ G, ALL_G
 
       DOUBLE COMPLEX GAL(2)
       COMMON/WEAK/ GAL
 
-      DOUBLE PRECISION MU_R, ALL_MU_R(1)
+      DOUBLE PRECISION MU_R, ALL_MU_R
       COMMON/RSCALE/ MU_R, ALL_MU_R
 
       DOUBLE PRECISION NF
@@ -28,14 +33,12 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       DOUBLE COMPLEX GC_11
 
-      DOUBLE COMPLEX GC_4(1), GC_5(1), GC_6(1), R2_3GQ(1), R2_3GG(1),
-     $  R2_GQQ(1), R2_GGQ(1), R2_GGB(1), R2_GGT(1), R2_GGG_1(1),
-     $  R2_GGG_2(1), R2_QQQ(1), R2_QQB(1), R2_QQT(1), UV_3GG_1EPS(1),
-     $  UV_3GB_1EPS(1), UV_GQQG_1EPS(1), UV_GQQB_1EPS(1),
-     $  UV_BMASS_1EPS(1), UV_TMASS_1EPS(1), UVWFCT_B_0_1EPS(1),
-     $  UVWFCT_G_1_1EPS(1), R2_BXTW(1), UV_3GB(1), UV_3GT(1),
-     $  UV_GQQB(1), UV_GQQT(1), UV_BMASS(1), UV_TMASS(1), UVWFCT_B_0(1)
-     $ , UVWFCT_T_0(1), UVWFCT_G_1(1), UVWFCT_G_2(1)
+      DOUBLE COMPLEX GC_4, GC_5, GC_6, R2_3GQ, R2_3GG, R2_GQQ, R2_GGQ,
+     $  R2_GGB, R2_GGT, R2_GGG_1, R2_GGG_2, R2_QQQ, R2_QQB, R2_QQT,
+     $  UV_3GG_1EPS, UV_3GB_1EPS, UV_GQQG_1EPS, UV_GQQB_1EPS,
+     $  UV_BMASS_1EPS, UV_TMASS_1EPS, UVWFCT_B_0_1EPS, UVWFCT_G_1_1EPS
+     $ , R2_BXTW, UV_3GB, UV_3GT, UV_GQQB, UV_GQQT, UV_BMASS, UV_TMASS
+     $ , UVWFCT_B_0, UVWFCT_T_0, UVWFCT_G_1, UVWFCT_G_2
 
       COMMON/COUPLINGS/ GC_4, GC_5, GC_6, R2_3GQ, R2_3GG, R2_GQQ,
      $  R2_GGQ, R2_GGB, R2_GGT, R2_GGG_1, R2_GGG_2, R2_QQQ, R2_QQB,

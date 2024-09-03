@@ -122,11 +122,11 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
     DO I=1,NCOMB
        TS(I)=0d0

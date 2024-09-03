@@ -90,6 +90,7 @@ C
 C
 C GLOBAL VARIABLES
 C
+      %(include_vector)s
       include 'coupl.inc'
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE

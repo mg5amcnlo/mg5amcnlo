@@ -279,11 +279,12 @@ class HelasCallWriter(base_objects.PhysicsObject):
         corresponding to the key"""
 
         try:
-            #misc.sprint(wavefunction['number_external'])
-            call = self["wavefunctions"][wavefunction.get_call_key()](\
-                                                                   wavefunction)
+            fct =  self["wavefunctions"][wavefunction.get_call_key()]
         except KeyError as error:
             return ""
+        else:
+           call = fct(wavefunction) 
+
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
             call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)

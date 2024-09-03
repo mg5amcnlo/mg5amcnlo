@@ -37,8 +37,12 @@ c
       integer jmax,i,j,ipole
       integer itmax_adjust
 
-      integer imirror, iproc, iconf
-      integer ivec ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+c      integer imirror, iproc, iconf
+      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP) 
+      integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+      integer ilock             !  position of the event in the current warp (max is WARP_SIZE)
+      integer iwarp               ! position of the current warp (max is NB_WARP)
+c     NOTE THAT IVEC = (IWARP-1)*NB_WARP + ILOCK      
 
 c
 c     External
@@ -161,6 +165,8 @@ c
       ievent = 0
       iter = 1
       ivec = 0
+      ilock = 0
+      iwarp = 1
       do while(iter .le. itmax)
 c
 c     Get integration point
@@ -174,6 +180,11 @@ c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             CUTSPASSED=.FALSE.
             if (passcuts(p,VECSIZE_USED)) then
                ivec=ivec+1
+               ilock = ilock+1
+               if (ilock.gt.WARP_SIZE)then
+                  ilock = 1
+                  iwarp = iwarp +1
+               endif
 c              write(*,*) 'pass_point ivec is ', ivec
                all_p(:,ivec) = p(:)
                all_wgt(ivec) = wgt
@@ -187,25 +198,38 @@ c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.VECSIZE_USED)then
+               if (ilock.ne.WARP_SIZE)then
                   cycle
                endif
-               ivec=0
+
                if (VECSIZE_USED.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
+                  ivec=0
+                  ilock=0
+                  iwarp=1 
                else
-               do i=1, VECSIZE_USED
+c                 Here "i" is the position in the full grid of the event                  
+                  do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
+                     
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
                   q2fact(:) = all_q2fact(:,i)
                   CUTSDONE=.TRUE.
                   CUTSPASSED=.TRUE.
-                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
+                  call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
                enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_USED)
+               call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+               if (ivec.lt.VECSIZE_USED)then
+                  cycle
+               endif
+c              reset variable for the next grid               
+               ivec = 0
+               ilock = 0
+               iwarp =1
+               
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,VECSIZE_USED)
+     &                          iconf_vec, iproc, imirror_vec, all_fx,VECSIZE_USED)
 
                 do i=1, VECSIZE_USED
 c                 need to restore common block                  

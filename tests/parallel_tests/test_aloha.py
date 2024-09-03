@@ -3352,22 +3352,22 @@ entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
 #define VVS1_1_guard
 #include <complex>
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 #ifndef VVS1_2_1_guard
 #define VVS1_2_1_guard
 #include <complex>
 
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 """
         goal_cpp = """#include "VVS1_1.h"
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  OM1;
@@ -3391,12 +3391,12 @@ P1[3] = -V1[0].imag();
     V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
 }
 
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 
  VVS1_1(V2,S3,COUP,M1,W1,V1);
 }
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -3409,7 +3409,7 @@ while (i < 6)
  i++;
 }
 }
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -5028,18 +5028,17 @@ P1(3) = -dimag(F1(1))
     def test_short_Cppwriter_C(self):
         """ test that python writer works """
 
- 
         solution_h = """#ifndef FFV1C1_1_guard
 #define FFV1C1_1_guard
 #include <complex>
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[]);
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[]);
 #endif
 
 """
         solution_c="""#include "FFV1C1_1.h"
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[])
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P2[4];
@@ -5070,6 +5069,9 @@ P2[3] = -F2[0].imag();
         
         split_solution = solution_h.split('\n')
         split_routine = routine[0].split('\n')
+
+
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
@@ -5088,14 +5090,14 @@ P2[3] = -F2[0].imag();
 #define FFV1C1_2_guard
 #include <complex>
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[]);
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[]);
 #endif
 
 """
 
         solution_c = """#include "FFV1C1_2.h"
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[])
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5237,9 +5239,9 @@ P1(3) = -dimag(S1(1))
 #define SSS1_1_guard
 #include <complex>
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
 #endif
 
 """     
@@ -5260,7 +5262,7 @@ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<d
 
         solution_c = """#include "SSS1_1.h"
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5275,12 +5277,12 @@ P1[3] = -S1[0].imag();
     S1[2]= denom*cI * S3[2]*S2[2];
 }
 
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
 }
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);

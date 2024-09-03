@@ -1067,6 +1067,8 @@ class MultiEventFile(EventFile):
             #special case for 1>N
             init_information = run_card.get_banner_init_information()
             event = next(self)
+            if not len(event): #if parse-momenta was false we have to parse the first event
+                event = Event(str(event))
             init_information["idbmup1"] = event[0].pdg
             init_information["ebmup1"] = event[0].mass
             init_information["idbmup2"] = 0 

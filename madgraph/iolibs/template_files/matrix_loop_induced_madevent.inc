@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, proc_id, ANS, HEL_SELECTED, ICOL)
 C  
 %(info_lines)s
 C 
@@ -12,6 +12,8 @@ C
 C 
     use DiscreteSampler
     IMPLICIT NONE
+    double precision RHEL, RCOL
+    integer channel, proc_id, hel_selected, icol
 C  
 C CONSTANTS
 C  
@@ -164,11 +166,11 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
         DO I=1,NLOOPDIAGRAMS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
     WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
@@ -294,6 +296,8 @@ c           Include the Jacobian from helicity sampling
  10       CONTINUE   
        ENDIF
     ENDIF
+
+   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 
    IF (MULTI_CHANNEL) THEN
         XTOT=0D0

@@ -1,4 +1,4 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
+        DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -95,6 +95,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0 
+      selected_col(:) = 0
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
@@ -119,6 +121,10 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+## if( nogrouping) {
+      ! for no grouping update the scale here (done in main autodsig for grouping  
+      call update_scale_coupling(PP, WGT)
+## }	 
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -130,7 +136,7 @@ C     Continue only if IMODE is 0, 4 or 5
            P1 = PP
          endif
 
-	 channel = %(get_channel)s
+     channel = %(get_channel)s
 	 call ranmar(RHEL)
 	 call ranmar(RCOL)
          CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
@@ -182,7 +188,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, VECSIZE_USED)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -223,15 +229,19 @@ C
       DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
       INTEGER IMODE
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER IMIRROR_VEC(*)
+      INTEGER ICONF_VEC(*)
       INTEGER VECSIZE_USED
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)      
 C ----------
 C BEGIN CODE
 C ----------
 C  
 C LOCAL VARIABLES 
 C
-      double precision QSCALE
       INTEGER I,ITYPE,LP,IPROC
+      DOUBLE PRECISION QSCALE
 %(pdf_vars_vec)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX) 
@@ -242,11 +252,11 @@ C
       double precision RHEL ! random number
       integer channel
 C
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
-%(ee_comp_vars)s
+%(ee_comp_vars_vec)s
       integer i_ee      
 C  
 C EXTERNAL FUNCTIONS
@@ -279,16 +289,17 @@ C     Keep track of whether cuts already calculated for this event
       double precision all_rwgt(VECSIZE_MEMMAX)
       
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
+      include '../../Source/PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      INTEGER       LHAID
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec
-
+	   integer ivec, curr_warp, iwarp
+	   integer channels(VECSIZE_MEMMAX)
 C  
 C DATA
 C  
@@ -296,6 +307,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0
+      selected_col(:) = 0 
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
@@ -314,11 +327,21 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,VECSIZE_USED
-c        Do not need those three here do I?	 
-	 XBK(:) = ALL_XBK(:,IVEC)
-c	 CM_RAP = ALL_CM_RAP(IVEC)
-	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+	 DO CURR_WARP=1, NB_WARP
+	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
+	     IB(1) = 1
+	     IB(2) = 2
+	   else
+	     IB(1) = 2
+	     IB(2) = 1	   
+	   endif
+	   DO IWARP=1, WARP_SIZE
+	      IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+c        Do not need those three here. do I?	 
+	      XBK(:) = ALL_XBK(:,IVEC)
+c	      CM_RAP = ALL_CM_RAP(IVEC)
+	      Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+
 
 C     Select a flavor combination (need to do here for right sign)
        CALL RANMAR(R)
@@ -327,7 +350,7 @@ C     Select a flavor combination (need to do here for right sign)
           IPSEL=IPSEL+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
-       channel = %(get_channel)s
+       %(get_channel_vec)s
 
 
        ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
@@ -339,8 +362,9 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-	 ENDDO
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+	 ENDDO ! end loop on IWARP/IVEC	 
+	 ENDDO ! end loop on the CURR_WARP
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO IVEC=1,VECSIZE_USED
@@ -388,13 +412,6 @@ C       Call UNWGT to unweight and store events
 	ENDDO
 %(passcuts_end)s
       END
-## if(read_write_good_hel) {
-C
-C     Functionality to handling grid
-C
-%(read_write_good_hel)s
-
-## }
 
 
 
@@ -405,8 +422,8 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col, VECSIZE_USED)
-     USE OMP_LIB
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, out, selected_hel, selected_col, VECSIZE_USED)
+%(OMP_LIB)s
      implicit none
 
      include 'nexternal.inc'
@@ -417,7 +434,7 @@ C
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
-     integer channel
+     integer channels(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
@@ -425,22 +442,23 @@ C
 
      integer ivec
 
+%(additional_header)s
 
-!$OMP PARALLEL
-!$OMP DO
+
+%(OMP_PREFIX)s
       DO IVEC=1, VECSIZE_USED
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
      &                           col_rand(IVEC),
-     &				 channel,
+     &				 channels(IVEC),
      &                           IVEC,
      &				 out(IVEC),
      &				 selected_hel(IVEC),
      &				 selected_col(IVEC)
      &				 )
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
+%(OMP_POSTFIX)s
+
      return
      end
 
@@ -459,4 +477,7 @@ c         if hel=0 return the number of helicity state possible for that particl
 	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
 	  return
 	  end
+
+
+%(ADDITIONAL_FCT)s
 
