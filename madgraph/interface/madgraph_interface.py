@@ -1543,7 +1543,7 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['group_subprocesses']:
             if args[1].lower() not in ['false', 'true', 'auto', 'gpu']:
-                raise self.InvalidCmd('%s needs argument False, True or Auto, got %s' % \
+                raise self.InvalidCmd('%s needs argument False, True, gpu or Auto, got %s' % \
                                       (args[0], args[1]))
         if args[0] in ['ignore_six_quark_processes']:
             if args[1] not in list(self._multiparticles.keys()) and args[1].lower() != 'false':
@@ -2608,11 +2608,13 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, opts)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
+            if args[1] in ['complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
                            'include_lepton_initiated_processes',\
                            'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
                 return self.list_completion(text, ['False', 'True', 'default'])
+            elif args[1] in ['group_subprocesses']:
+                return self.list_completion(text, ['False', 'True', 'Auto', 'gpu', 'nlo'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
             elif args[1].lower() == 'ewscheme':
