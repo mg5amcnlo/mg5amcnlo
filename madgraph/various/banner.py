@@ -4608,7 +4608,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-13)
+        self.add_param("OSThres", 1.0e-8)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)
