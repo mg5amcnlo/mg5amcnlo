@@ -5060,8 +5060,6 @@ c Definition and initialisation of variables
       max_scale=scalemax
       xmp2=dot(pip,pip) ! mass squared of the partner
       e0sq=dot(pip,pifat) ! father-partner dot product (Born level)
-      theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
-      theta2p=theta2p**2
       xmm2=xm12*(4-ileg) ! emitter mass squared
       xmr2=xm22*(4-ileg)-xm12*(3-ileg) ! global-recoiler mass squared
       ww=w1*(4-ileg)-w2*(3-ileg) ! FKS parent/sister dot product
@@ -5103,6 +5101,8 @@ c
          if(xi.lt.upscale2)lzone=.true.
 c
       elseif(shower_mc.eq.'PYTHIA6Q')then
+         theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
+         theta2p=theta2p**2
          if(ileg.le.2)then
             if(mstp67.eq.2.and.ip.gt.2.and.
      &         4*xi/s/(1-z).ge.theta2p)lzone=.false.
