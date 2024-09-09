@@ -344,7 +344,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
                call get_born_flow(flow_picked)
                call determine_partner(flow_picked,partner_picked)
                call init_process_module_n1body_wrapper(flow_picked)
-               call compute_shower_scale_n1body(p)
+               call compute_shower_scale_n1body(p,i_fks,j_fks)
             endif
             
             if(nsofttests.le.10)write (*,*) 'ntry',ntry

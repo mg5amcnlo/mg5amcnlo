@@ -906,7 +906,7 @@ c counter-event momenta do not exist).
 
 ! fill the valid_dipole array and fill the H-event shower scale array            
             call init_process_module_n1body_wrapper(born_flow_picked)
-            call compute_shower_scale_n1body(p)
+            call compute_shower_scale_n1body(p,i_fks,j_fks)
 ! The shower scale to be used in the event file (if it's an H-event and
 ! fks_picked will be iFKS). We assume that the emissions by the shower
 ! should be softer than the real-emission of the current FKS

@@ -92,16 +92,29 @@ contains
     endif
   end subroutine compute_shower_scale_nbody
 
-  subroutine compute_shower_scale_n1body(p)
+  subroutine compute_shower_scale_n1body(p,i_fks,j_fks)
     implicit none
     double precision,dimension(0:3,next_n1) :: p
-    integer i,j
+    integer i,j,ii,i_fks,j_fks
     double precision ref_scale,scalemin,scalemax
     call get_global_ref_scale(next_n1,p)
     do i=1,next_n1
        do j=1,next_n1
           if (valid_dipole_n1(i,j)) then
              ref_scale=get_ref_scale_dipole(next_n1,p,i,j)
+             call get_scaleminmax(ref_scale,scalemin,scalemax)
+             scalemax=max(scalemax,scaleMCcut)
+             shower_scale_n1body(i,j)=scalemax
+          elseif ((i.eq.i_fks .and. j.eq.j_fks) .or. (j.eq.i_fks .and. i.eq.j_fks)) then
+             ! find the partner of i_fks and j_fks
+             ref_scale=99d99
+             do ii=1,next_n1
+                if (valid_dipole_n1(ii,i_fks)) then
+                   ref_scale=min(get_ref_scale_dipole(next_n1,p,ii,i_fks),ref_scale)
+                elseif( valid_dipole_n1(ii,j_fks)) then
+                   ref_scale=min(get_ref_scale_dipole(next_n1,p,ii,j_fks),ref_scale)
+                endif
+             enddo
              call get_scaleminmax(ref_scale,scalemin,scalemax)
              scalemax=max(scalemax,scaleMCcut)
              shower_scale_n1body(i,j)=scalemax
