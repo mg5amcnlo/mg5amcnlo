@@ -1659,8 +1659,14 @@ class Event(list):
         this_4mom = FourMomentum(this_particle)
         nb_part = len(self) #original number of particle
         
-        thres = decay_particle.E*1e-10
-        assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
+        thres = decay_particle.E*1e-5
+        at_rest = True
+        if abs(decay_particle.px-this_particle.px)< thres:
+            assert max(abs(decay_particle.py-this_particle.py), abs(decay_particle.pz-this_particle.pz)) < thres,\
+            "not boosted correctly %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz)  
+            at_rest = False
+        else:           
+            assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
             "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
         
         self.nexternal += decay_event.nexternal -1
@@ -1679,7 +1685,10 @@ class Event(list):
             if old_scales:
                 self.matched_scale_data.append(old_scales[initial_pos+jet_position])
             # compute and assign the new four_momenta
-            new_momentum = FourMomentum(new_particle).boost(this_4mom)
+            if at_rest:
+                new_momentum = FourMomentum(new_particle).boost(this_4mom)
+            else:
+                new_momentum = FourMomentum(new_particle) 
             new_particle.set_momentum(new_momentum)
             # compute the new mother
             for tag in ['mother1', 'mother2']:
