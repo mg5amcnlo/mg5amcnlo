@@ -140,7 +140,7 @@
 
 #! Nb_core to use (None = all) This is use only for multicore run
 #!  This correspond also to the number core used for code compilation for cluster mode
-# nb_core = None
+nb_core = 1 
 
 #! Pythia-PGS Package
 #!  relative path start from main directory
