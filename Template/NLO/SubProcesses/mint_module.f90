@@ -154,7 +154,7 @@ module mint_module
   double precision, dimension(2), private :: HwU_values
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
   double precision, private :: upper_bound,vol_chan
-  double precision, dimension(ndimmax), private :: rand
+  double precision, allocatable, private :: rand(:,:)
   double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
 
 ! Common blocks used elsewhere in the code
@@ -198,6 +198,7 @@ contains
       implicit none
       integer, intent(in) :: vector_size
       allocate(icell(ndimmax,vector_size))
+      allocate(rand(ndimmax,vector_size))
       allocate(x_bjork(ndimmax,vector_size))
       allocate(jacobian(vector_size))
       allocate(f_local(nintegrals,vector_size))
@@ -207,6 +208,7 @@ contains
 
    subroutine deallocate_mint
       if (allocated(icell)) deallocate(icell)
+      if (allocated(rand)) deallocate(rand)
       if (allocated(x_bjork)) deallocate(x_bjork)
       if (allocated(jacobian)) deallocate(jacobian)
       if (allocated(f_local)) deallocate(f_local)
@@ -883,15 +885,17 @@ contains
 !    double precision, allocatable :: x(:,:)
 ! find random x, and its random cell
     do kdim=1,ndim
+      do index=1,vector_size
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
        if (even_rn) then
-          rand(kdim)=ran3(even_rn)
-          ncell(kdim)= min(int(rand(kdim)*nint_used)+1,nint_used)
-          rand(kdim)=rand(kdim)*nint_used-(ncell(kdim)-1)
+          rand(kdim,index)=ran3(even_rn)
+          ncell(kdim)= min(int(rand(kdim,index)*nint_used)+1,nint_used)
+          rand(kdim,index)=rand(kdim,index)*nint_used-(ncell(kdim)-1)
        else
           ncell(kdim)=min(int(nint_used/ifold(kdim)*ran3(even_rn))+1,nint_used/ifold(kdim))
-          rand(kdim)=ran3(even_rn)
+          rand(kdim,index)=ran3(even_rn)
        endif
+      enddo
     enddo
     kfold(1:ndim)=1
 !    entry get_random_x_next_fold(x,vol,kfold,vector_size)
@@ -908,7 +912,7 @@ contains
          icell(kdim,index)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
          dx=xgrid(icell(kdim,index),kdim,ichan)-xgrid(icell(kdim,index)-1,kdim,ichan)
          jacobian(index)=jacobian(index)*dx*nintcurr
-         x_bjork(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
+         x_bjork(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim,index)*dx
          if(imode.eq.0) nhits(icell(kdim,index),kdim,ichan)=nhits(icell(kdim,index),kdim,ichan)+1
        enddo
     enddo
@@ -1738,7 +1742,7 @@ contains
     implicit none
     integer, intent(in) :: vector_size
 !    include 'vectorize.inc'
-    integer :: kdim,nintcurr,kint
+    integer :: kdim,nintcurr,kint,index
     integer, dimension(ndimmax) :: kfold
 !    double precision :: vol,r
 !    double precision, allocatable :: vol(:)
@@ -1754,7 +1758,9 @@ contains
              exit
           endif
        enddo
-       rand(kdim)=ran3(.false.)
+      do index=1,vector_size
+       rand(kdim,index)=ran3(.false.)
+      enddo
     enddo
     kfold(1:ndim)=1
     call get_random_x_next_fold(kfold,vector_size)
