@@ -1712,9 +1712,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
-
-        from copy import deepcopy
-        dec = deepcopy(decays) if __debug__ else decays
         	
         tag, order = production.get_tag_and_order()
         try:
@@ -1737,8 +1734,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
             # Create full event from production and decays
             full_event = lhe_parser.Event(str(production))
-            full_event = full_event.add_decays(dec)
-            if True: # Spyros: Change to if __debug__
+            full_event = full_event.add_decays(decays)
+            if __debug__:
                 me1 = self.calculate_matrix_element(full_event)
                 if abs(1-me1/full_me) > 1E-6:
                     print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")	    
