@@ -165,7 +165,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.seed = None
         self.err_branching_ratio = 0
         self.me_run_name = "" # Events diretory name where to stotre the events (used by madevent) not use internally
-        
+        self.all_iden = {}
         
         if event_path:
             logger.info("Extracting the banner ...")
@@ -1712,7 +1712,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
-        	
+
+
+
         tag, order = production.get_tag_and_order()
         try:
             info = self.generate_all.all_me[tag]
@@ -1730,7 +1732,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             if prod_density_cached is None:
                 full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
-            else:
+            else:                
                 full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
             # Create full event from production and decays
             full_event = lhe_parser.Event(str(production))
@@ -1766,7 +1768,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return all the possible inter for an event"""        
 	
         # full_event = lhe_parser.Event(str(production))
-			
+
+        # Get all helicity configurations and iden number for production and decay events
+        iden_p = self.get_iden(production)
+
         for pdg in decays:
             # Get the particle that should decay from the production event
             init_part = [part for part in production if part.pid == pdg and part.status == 1]
@@ -1802,8 +1807,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 boost.E *= -1
                 decay_event.boost(boost)                
                 
-		        # Get all helicity configurations and iden number for production and decay events
-                _,iden_p = self.get_nhel(production,position[0])		
+		
                 
 		        # Get helicities of decay event
                 pos_in_dec = [k+1 for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
@@ -1897,10 +1901,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def get_nhel(self,event,position):
 
         pdir,orig_order = self.get_pdir(event)
-
         if pdir in self.all_nhel:
-
             iden,NHEL = self.all_nhel[pdir]()
+            if position == -1:
+                return iden
             nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
             groups = {} 
             nhel = sorted(nhel) 
@@ -1916,6 +1920,15 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             return self.get_nhel(event,position)
 
+    def get_iden(self, event):
+
+        pdir = self.get_pdir(event) 
+        if pdir in self.all_iden:
+            return self.all_iden[pdir]
+        else:
+            _, iden = self.get_nhel(event, 1)
+            self.all_iden[pdir] = iden
+            return iden
 
     def get_mymod(self,pdir,MODE): 
 
