@@ -3315,7 +3315,7 @@ P1(3) = -dimag(V1(1))
     V1(4)= denom*S3(3)*(-CI*(V2(4))+CI*(P1(1)*OM1*TMP0))
     V1(5)= denom*S3(3)*(-CI*(V2(5))+CI*(P1(2)*OM1*TMP0))
     V1(6)= denom*S3(3)*(-CI*(V2(6))+CI*(P1(3)*OM1*TMP0))
-end
+ end
 
 
 
@@ -3342,7 +3342,7 @@ entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
  do i = 3, 6
         V1(i) = V1(i) + Vtmp(i)
  enddo
-end
+ end
 
 """
         self.assertEqual(text.split('\n'),goal.split('\n')) 
@@ -3352,22 +3352,22 @@ end
 #define VVS1_1_guard
 #include <complex>
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 #ifndef VVS1_2_1_guard
 #define VVS1_2_1_guard
 #include <complex>
 
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 """
         goal_cpp = """#include "VVS1_1.h"
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  OM1;
@@ -3391,12 +3391,12 @@ P1[3] = -V1[0].imag();
     V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
 }
 
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 
  VVS1_1(V2,S3,COUP,M1,W1,V1);
 }
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -3409,7 +3409,7 @@ while (i < 6)
  i++;
 }
 }
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -4326,7 +4326,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * S3(3)*(P2(0)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))+(P2(1)*(-1d0)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))+(P2(2)*(-CI*(R1(3))+CI*(R1(8)+R1(15))-R1(12))-P2(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))))
     F2(5)= denom*CI * M2*S3(3)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))
     F2(6)= denom*(-CI )* M2*S3(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))
-end
+ end
 
 
 """
@@ -4360,7 +4360,7 @@ implicit none
  complex*16 vertex
  TMP0 = (F2(5)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))-F2(6)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))
  vertex = COUP*(-CI * TMP0*S3(3))
-end
+ end
     
     
 """
@@ -4414,7 +4414,7 @@ P1(3) = -dimag(R1(1))
     R1(16)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-P1(1)-CI*(P1(2))))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(P1(0)+2d0*(P1(3)))))+F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(6))
     R1(17)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))+ -5d0/3d0)+(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+1d0/3d0*(P1(0)*M1*M1))+(-1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(-P1(1)+CI*(P1(2)))+(+1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
     R1(18)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(0)*M1*M1))+(+1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
-end
+ end
 
 
 """
@@ -4875,7 +4875,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * FCT0*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI * FCT0*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI )* FCT0*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -4926,7 +4926,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * FCT1*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI * FCT1*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI )* FCT1*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -4970,7 +4970,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI)*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -5013,7 +5013,7 @@ P1(3) = -dimag(F1(1))
     F1(4)= denom*CI*(F2(3)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))-P1(3)*(V3(4)+CI*(V3(5))))))+(F2(4)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)-CI*(V3(5)))+(P1(2)*(+CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+M1*(F2(5)*(V3(4)+CI*(V3(5)))-F2(6)*(V3(3)+V3(6)))))
     F1(5)= denom*CI*(F2(5)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)+CI*(V3(5)))+(P1(2)*(-CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+(F2(6)*(P1(0)*(V3(4)-CI*(V3(5)))+(P1(1)*(-1d0)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))+P1(3)*(V3(4)-CI*(V3(5))))))+M1*(F2(3)*(-1d0)*(V3(3)+V3(6))+F2(4)*(-V3(4)+CI*(V3(5))))))
     F1(6)= denom*(-CI)*(F2(5)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)-V3(6))+(P1(2)*(+CI*(V3(3))-CI*(V3(6)))+P1(3)*(V3(4)+CI*(V3(5))))))+(F2(6)*(P1(0)*(V3(3)+V3(6))+(P1(1)*(-V3(4)+CI*(V3(5)))+(P1(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P1(3)*(V3(3)+V3(6)))))+M1*(F2(3)*(V3(4)+CI*(V3(5)))+F2(4)*(V3(3)-V3(6)))))
-end
+ end
 
 
 """
@@ -5028,18 +5028,17 @@ end
     def test_short_Cppwriter_C(self):
         """ test that python writer works """
 
- 
         solution_h = """#ifndef FFV1C1_1_guard
 #define FFV1C1_1_guard
 #include <complex>
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[]);
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[]);
 #endif
 
 """
         solution_c="""#include "FFV1C1_1.h"
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[])
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P2[4];
@@ -5070,6 +5069,9 @@ P2[3] = -F2[0].imag();
         
         split_solution = solution_h.split('\n')
         split_routine = routine[0].split('\n')
+
+
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
@@ -5088,14 +5090,14 @@ P2[3] = -F2[0].imag();
 #define FFV1C1_2_guard
 #include <complex>
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[]);
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[]);
 #endif
 
 """
 
         solution_c = """#include "FFV1C1_2.h"
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[])
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5205,7 +5207,7 @@ P1(2) = -dimag(S1(2))
 P1(3) = -dimag(S1(1))
     denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1**2)
     S1(3)= denom*CI * S3(3)*S2(3)
-end
+ end
 
 
 
@@ -5237,9 +5239,9 @@ end
 #define SSS1_1_guard
 #include <complex>
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
 #endif
 
 """     
@@ -5260,7 +5262,7 @@ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<d
 
         solution_c = """#include "SSS1_1.h"
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5275,12 +5277,12 @@ P1[3] = -S1[0].imag();
     S1[2]= denom*cI * S3[2]*S2[2];
 }
 
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
 }
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
@@ -5318,7 +5320,7 @@ P3(3) = -dimag(V3(1))
     V3(4)= denom*(-CI)*(F2(4)*F1(5)+F2(3)*F1(6)-F2(6)*F1(3)-F2(5)*F1(4))
     V3(5)= denom*(-CI)*(-CI*(F2(6)*F1(3)+F2(3)*F1(6))+CI*(F2(5)*F1(4)+F2(4)*F1(5)))
     V3(6)= denom*(-CI)*(F2(6)*F1(4)+F2(3)*F1(5)-F2(5)*F1(3)-F2(4)*F1(6))
-end
+ end
 
 
 """
@@ -5345,7 +5347,7 @@ P3(3) = -dimag(V3(1))
     V3(4)= denom*(-CI)*(-F2(6)*F1(3)-F2(5)*F1(4)+F2(4)*F1(5)+F2(3)*F1(6))
     V3(5)= denom*(-CI)*(-CI*(F2(6)*F1(3)+F2(3)*F1(6))+CI*(F2(5)*F1(4)+F2(4)*F1(5)))
     V3(6)= denom*(-CI)*(-F2(5)*F1(3)-F2(4)*F1(6)+F2(6)*F1(4)+F2(3)*F1(5))
-end
+ end
 
 
 """

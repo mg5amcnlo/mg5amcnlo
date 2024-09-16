@@ -552,6 +552,8 @@ c**************************************************************************
       if (btest(mlevel,1))
      $   write (*,*)'New event'
 
+      iwin = 0
+      jwin = 0
       cluster=.false.
       clustered=.false.
       do i=0,3
@@ -663,7 +665,8 @@ c        Set info for LH clustering output
 c     initialize graph storage
       igraphs(0)=0
       nleft=nexternal
-c     cluster 
+c     cluster
+      if (iwin.eq.0.or.jwin.eq.0) stop 21
       do n=1,nexternal-2
 c     combine winner
          imocl(n)=imap(iwin,2)+imap(jwin,2)

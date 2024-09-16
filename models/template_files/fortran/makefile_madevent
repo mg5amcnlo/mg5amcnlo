@@ -3,7 +3,7 @@
 # Makefile for model library
 #
 # ----------------------------------------------------------------------------
-
+# template models/template_files/makefile_madevent
 # Check for ../make_opts
 ifeq ($(wildcard ../make_opts), ../make_opts)
   include ../make_opts

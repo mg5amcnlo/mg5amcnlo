@@ -67,7 +67,7 @@ def parse_info_str(fsock):
     """
 
     info_dict = {}
-    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+    pattern = re.compile(r"(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
     for entry in fsock:
         entry = entry.strip()
@@ -84,7 +84,7 @@ def parse_info_str(fsock):
 def glob(name, path=''):
     """call to glob.glob with automatic security on path"""
     import glob as glob_module
-    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    path = re.sub(r'(?P<name>\?|\*|\[|\])', r'[\g<name>]', path)
     return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
@@ -614,10 +614,10 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
     #search file
     file_to_change=find_makefile_in_dir(directory)
     if compiler_type == 'gfortran':
-        comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
         var = 'FC'
     elif compiler_type == 'cpp':
-        comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)CXX\s*=\s*(.+)\s*$')
         var = 'CXX'
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
@@ -861,9 +861,9 @@ def detect_current_compiler(path, compiler_type='fortran'):
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
     if compiler_type == 'fortran':
-        comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*FC\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     elif compiler_type == 'cpp':
-        comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*CXX\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
@@ -1001,7 +1001,19 @@ def call_stdout(arg, *args, **opt):
 def copytree(src, dst, symlinks = False, ignore = None):
   if not os.path.exists(dst):
     os.makedirs(dst)
-    shutil.copystat(src, dst)
+    try:
+      shutil.copystat(src, dst)
+    except PermissionError:
+        if os.path.realpath(src).startswith('/cvmfs') and os.path.realpath(dst).startswith('/afs'):
+           # allowing missmatch from cvmfs to afs since sounds to not create issue --at least in general-- 
+           logger.critical(f'Ignoring that we could not copy permissions from {src} to {dst}')
+        else:
+           logger.critical(f'Permission error detected from {src} to {dst}.\n'+\
+                          'If you are using WSL with windows partition, please try using python3.12\n'+\
+                          'or avoid moving your data from the WSL partition to the UNIX one')
+           # we do not have enough experience in WSL to allow it to get trough.
+           raise
+      
   lst = os.listdir(src)
   if ignore:
     excl = ignore(src, lst)
@@ -1895,12 +1907,12 @@ class EasterEgg(object):
     May4_banner = "*                           _____                          *\n" + \
         "*                       ,-~\"     \"~-.                      *\n" + \
         "*        *            ,^ ___         ^.             *      *\n" + \
-        "*          *         / .^   ^.         \         *         *\n" + \
+        "*          *         / .^   ^.         \\         *         *\n" + \
         "*            *      Y  l  o  !          Y      *           *\n" + \
         "*              *   l_  `.___.'         _,[   *             *\n" + \
         "*                * |^~\"--------------~\"\"^| *               *\n" + \
         "*              *   !     May the 4th     !   *             *\n" + \
-        "*            *       \                 /       *           *\n" + \
+        "*            *       \\                 /       *           *\n" + \
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
@@ -1909,13 +1921,13 @@ class EasterEgg(object):
         "* M::::::::::M       M::::::::::M                          *\n" + \
         "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
         "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
-        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \\__ \\                *\n" + \
         "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
         "* M::::::M   M:::::::M   M::::::M                          *\n" + \
         "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
-        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \\| '__|       *\n" + \
         "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
-        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M   |_/\\/\\___/|_|          *\n" + \
         "* M::::::M               M::::::M                          *\n" + \
         "* MMMMMMMM               MMMMMMMM                          *\n" + \
         "*                                                          *\n" + \
@@ -2233,39 +2245,51 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir,candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as  error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
     if not use_lhapdf:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib64')):
+            candidates += [pjoin(os.pardir,'local', 'lib64', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib64', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
         if not use_lhapdf:
             try:
                 import lhapdf

@@ -101,6 +101,8 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
       DSIG1=0D0
 
       IF(IMODE.EQ.1)THEN
@@ -281,7 +283,7 @@ C
       DOUBLE PRECISION RHEL  ! random number
       INTEGER CHANNEL
 C     
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       INCLUDE '../../Source/PDF/eepdf.inc'
       DOUBLE PRECISION EE_COMP_PROD
@@ -320,15 +322,16 @@ C     Keep track of whether cuts already calculated for this event
       DOUBLE PRECISION ALL_RWGT(VECSIZE_MEMMAX)
 
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      INCLUDE '../../Source/PDF/pdf.inc'
+C     CHARACTER*7         PDLABEL,EPA_LABEL
+C     INTEGER       LHAID
+C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 C     
 C     local
 C     
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
-      INTEGER IVEC, CURR_WARP, IWARP
+      INTEGER IVEC, CURR_WARP, IWARP, NB_WARP_USED
       INTEGER CHANNELS(VECSIZE_MEMMAX)
 C     
 C     DATA
@@ -338,6 +341,8 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      SELECTED_HEL(:) = 0
+      SELECTED_COL(:) = 0
 
       IF(IMODE.EQ.1)THEN
         NFACT = DSIG1(ALL_PP(0,1,1), ALL_WGT(1), IMODE)
@@ -348,7 +353,14 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
 
-      DO CURR_WARP=1, NB_WARP
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
           IB(2) = 2
@@ -385,7 +397,7 @@ C           LP=SIGN(1,LPP(IB(2)))
         RETURN
       ENDIF
 
-      DO CURR_WARP=1, NB_WARP
+      DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
           IB(2) = 2
@@ -478,11 +490,6 @@ C         Call UNWGT to unweight and store events
       ENDDO
 
       END
-C     
-C     Functionality to handling grid
-C     
-
-
 
 
 
@@ -569,5 +576,8 @@ C      particle
       GET_NHEL1 = NHEL(IPART, IABS(HEL))
       RETURN
       END
+
+
+
 
 

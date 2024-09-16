@@ -124,7 +124,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -266,6 +266,21 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+
+    def test_ttbar_ewsudakov(self):
+        self.generate(['p p > t t~ [QCD] '], 'loop_qcd_qed_sm_Gmu_forSudakov')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertIn('10000 = nevents', card)
+        card = card.replace('10000 = nevents', '1000 = nevents')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.do('generate_events aMC@NLO --parton -f')
+        card = open('%s/Cards/reweight_card_default.dat' % self.path).read()
+        self.assertIn('#change include_sudakov True', card)
+        card = card.replace('#change include_sudakov True', 'change include_sudakov True')
+        open('%s/Cards/reweight_card.dat' % self.path, 'w').write(card)
+        self.do('reweight run_01 -f')
+
 
 
     def test_gen_evt_onlygen(self):

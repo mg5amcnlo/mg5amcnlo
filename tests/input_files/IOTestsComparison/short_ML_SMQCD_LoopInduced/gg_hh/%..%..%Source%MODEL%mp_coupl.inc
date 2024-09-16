@@ -24,8 +24,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON/MP_WIDTHS/ MP__MDL_WH,MP__MDL_WT,MP__MDL_WW,MP__MDL_WZ
 
 
+      COMPLEX*32 MP__GC_30,MP__GC_33,MP__GC_37
+
       COMPLEX*32 MP__GC_5,MP__R2_GGHB,MP__R2_GGHT,MP__R2_GGHHB
-     $ ,MP__R2_GGHHT,MP__GC_30,MP__GC_33,MP__GC_37
+     $ ,MP__R2_GGHHT
 
       COMMON/MP_COUPLINGS/ MP__GC_5,MP__R2_GGHB,MP__R2_GGHT
      $ ,MP__R2_GGHHB,MP__R2_GGHHT,MP__GC_30,MP__GC_33,MP__GC_37

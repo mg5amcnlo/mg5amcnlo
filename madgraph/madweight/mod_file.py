@@ -533,7 +533,7 @@ class Mod_file:
     def decomment_text(self,text,comment_tag):
         """ remove comment inserted by comment_text """
 
-        carac_line=re.compile(comment_tag+'\+'+71*'-'+'\+')
+        carac_line=re.compile(comment_tag+r'\+'+71*'-'+r'\+')
 
         def decomment_line(line,comment_tag):
             if line[:6]==comment_tag+'|    ':
@@ -581,7 +581,7 @@ class Mod_file:
 
         ## Step A: remove escape '_' and '+'
         exp=exp.replace('\\\\','@888@') #stupid security against string like (\\_)
-        exp=exp.replace('\_','_').replace('\+','+')
+        exp=exp.replace(r'\_','_').replace(r'\+','+')
         exp=exp.replace('@888@','\\\\') #end of the trick
 
 

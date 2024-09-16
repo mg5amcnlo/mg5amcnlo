@@ -646,7 +646,10 @@ class MultiCore(Cluster):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
                         if isinstance(opt['stdout'],str):
-                            opt['stdout'] = open(opt['stdout'],'w')
+                            if opt['stdout'] == '/dev/null':
+                                opt['stdout'] = os.open(os.devnull, os.O_RDWR)
+                            else:    
+                                opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         if arg:
@@ -671,11 +674,12 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(*arg, **opt)
-                        if returncode != 0:
-                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
+                        try:
+                            returncode = exe(*arg, **opt)
+                        except Exception as error:
+                            #logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                            self.remove("fct %s does raise %s\n %s" % (exe, error))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))
@@ -700,7 +704,7 @@ class MultiCore(Cluster):
             
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
-               log=None, required_output=[], nb_submit=0):
+               log=None, required_output=[], nb_submit=0, python_opts={}):
         """submit a job on multicore machine"""
         
         # open threads if needed   
@@ -720,7 +724,7 @@ class MultiCore(Cluster):
             return tag
         else:
             # python function
-            self.queue.put((tag, prog, argument, {}))
+            self.queue.put((tag, prog, argument, python_opts))
             self.submitted.put(1)
             return tag            
         
@@ -908,6 +912,10 @@ class CondorCluster(Cluster):
         else:
             requirement = ''
 
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+            requirement+='\n MaxRuntime =  %s' % self.options['cluster_walltime'] 
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -936,7 +944,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         output = output.decode(errors='ignore')
         try:
             id = pat.search(output).groups()[0]
@@ -1025,7 +1033,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         output = output.decode(errors='ignore')
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1588,7 +1596,7 @@ class GECluster(Cluster):
 
         output = a.communicate()[0].decode(errors='ignore')
         #Your job 874511 ("test.sh") has been submitted
-        pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+        pat = re.compile(r"Your job (\d*) \(",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1606,7 +1614,7 @@ class GECluster(Cluster):
         if not status:
             return 'F'
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-        pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+        pat = re.compile(r"^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
         stat = ''
         for line in status.stdout.read().decode(errors='ignore').split('\n'):
             if not line:
@@ -1636,7 +1644,7 @@ class GECluster(Cluster):
             cmd = 'qstat -s %s' % statusflag
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-            pat = re.compile("^(\d+)")
+            pat = re.compile(r"^(\d+)")
             for line in status.stdout.read().decode(errors='ignore').split('\n'):
                 line = line.strip()
                 try:
@@ -1715,6 +1723,7 @@ class SLURMCluster(Cluster):
             stderr = stdout
         if log is None:
             log = '/dev/null'
+
         
         command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
@@ -1726,6 +1735,12 @@ class SLURMCluster(Cluster):
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
 
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+                command.insert(1, '-t')
+                command.insert(2, self.options['cluster_walltime'])            
+            
+
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
@@ -1736,7 +1751,7 @@ class SLURMCluster(Cluster):
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
-            id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
+            id = re.findall(r'Submitted batch job ([\d\.]+)', ' '.join(output_arr))
             
             if not id or len(id)>1:
                 raise ClusterManagmentError( 'fail to submit to the cluster: \n%s' \

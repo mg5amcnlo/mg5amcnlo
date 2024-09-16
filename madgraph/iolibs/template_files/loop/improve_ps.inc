@@ -222,7 +222,8 @@ C
 	  double precision BUFFDPA,BUFFDPB
 C  
 C GLOBAL VARIABLES
-C 
+C
+      %(include_vector)s
       include '%(coupl_inc_name)s'
 
 	  %(masses_def)s
@@ -518,6 +519,7 @@ C     PT STANDS FOR PTOT
 C  
 C GLOBAL VARIABLES
 C 
+      %(include_vector)s
       include '%(coupl_inc_name)s'
 
 	  %(masses_def)s
@@ -669,6 +671,7 @@ C
 C
 C GLOBAL VARIABLES
 C 
+      %(include_vector)s
       include '%(coupl_inc_name)s'
 
 C ----------
@@ -907,6 +910,7 @@ C
 C
 C GLOBAL VARIABLES
 C 
+      %(include_vector)s
       include '%(coupl_inc_name)s'
 
 C ----------

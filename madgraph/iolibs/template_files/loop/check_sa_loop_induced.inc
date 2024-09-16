@@ -26,6 +26,7 @@ C
 C     INCLUDE FILES
 C     
 C the include file with the values of the parameters and masses      
+      %(include_vector)s
       INCLUDE "coupl.inc"
 C particle masses
       REAL*8 PMASS(NEXTERNAL)      
@@ -178,7 +179,7 @@ C     In standalone mode, always use sqrt_s as the renormalization scale.
       MU_R=SQRTS
 
 C     Update the couplings with the new MU_R
-      CALL UPDATE_AS_PARAM()
+      CALL UPDATE_AS_PARAM(1)
 
 C     Optionally the user can set where to find the MadLoop5_resources folder.
 C     Otherwise it will look for it automatically and find it if it has not
@@ -409,7 +410,7 @@ C **********************************************************************
 	  PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
       DIMENSION XM(*),P(4,*)
       DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4),B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING),E(NEXTERNAL-NINCOMING),V(NEXTERNAL-NINCOMING),IWARN(5)
-      SAVE ACC,ITMAX,IBEGIN,IWARN
+      SAVE ACC,ITMAX,IBEGIN,IWARN,TWOPI, Z, PO2LOG
       DATA ACC/1.D-14/,ITMAX/6/,IBEGIN/0/,IWARN/5*0/
 C
 C INITIALIZATION STEP: FACTORIALS FOR THE PHASE SPACE WEIGHT

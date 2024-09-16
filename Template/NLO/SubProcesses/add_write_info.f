@@ -1215,12 +1215,23 @@ c QED corrections, for what is relevant to i_fks and j_fks
         elseif(i.eq.j_fks)then
           idpartj=jpart(1,j_fks)
           idparti=jpart(1,i_fks)
+          idpart=0
           if(.not.Hevents)then
 c S events
             xmi=0.d0
             if(idparti.eq.-idpartj.and.j_fks.gt.nincoming) then
                if (split_type(qcd_pos)) idpart=21
                if (split_type(qed_pos)) idpart=22
+               if (idpart.eq.0) then
+                  ! special for LOonly=QCD
+                  if (abs(idparti).eq.21 .and. abs(idpartj).eq.21) then
+                     idpart=21
+                  else
+                     write (*,*) 'ERROR #32 in put_on_MC_mshell',idparti
+     $                    ,idpartj
+                     stop 1
+                  endif
+               endif
             elseif(idparti.eq.idpartj.and.j_fks.le.nincoming) then
                if (split_type(qcd_pos)) idpart=21
                if (split_type(qed_pos)) idpart=22

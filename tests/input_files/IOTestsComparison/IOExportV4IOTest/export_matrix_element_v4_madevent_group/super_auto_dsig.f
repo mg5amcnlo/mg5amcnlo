@@ -287,7 +287,7 @@ C     IB gives which beam is which (for mirror processes)
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 
-      INTEGER I, CURR_WARP
+      INTEGER I, CURR_WARP, NB_WARP_USED
       INTEGER GROUPED_MC_GRID_STATUS
 
       INTEGER                                      LPP(2)
@@ -349,7 +349,14 @@ C       ENDIF
 
       ENDDO
 
-      DO CURR_WARP=1, NB_WARP
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1, NB_WARP_USED
         DO I=(CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
           IF(ALL_OUT(I).GT.0D0)THEN
 C           Update summed weight and number of events
@@ -952,7 +959,7 @@ C
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
       INTEGER ICONF_VEC(NB_WARP), IMIRROR_VEC(NB_WARP)
-      INTEGER CURR_WARP, IWARP
+      INTEGER CURR_WARP, IWARP, NB_WARP_USED
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INTEGER VECSIZE_USED
@@ -1022,7 +1029,14 @@ C       Set momenta according to this permutation
       ENDDO
       LAST_ICONF=-1
 
-      DO CURR_WARP=1,NB_WARP
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+      ENDIF
+
+      DO CURR_WARP=1,NB_WARP_USED
         IB(1)=0  ! This is set in auto_dsigX. set it to zero to create segfault if used at wrong time
         IB(2)=0  ! Same
         IMIRROR = IMIRROR_VEC(CURR_WARP)
@@ -1064,7 +1078,7 @@ C            the warp)
      $ ,IMIRROR_VEC,VECSIZE_USED)  ! u u~ > d d~
 
 C     FLIPPING BACK IF NEEDED
-      DO CURR_WARP=1,NB_WARP
+      DO CURR_WARP=1,NB_WARP_USED
         IF (IMIRROR_VEC(CURR_WARP).EQ.2) THEN
           DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
             DO I=1,NEXTERNAL
@@ -1125,11 +1139,12 @@ C
 
       SUBROUTINE WRITE_GOOD_HEL(STREAM_ID)
       IMPLICIT NONE
+      INCLUDE 'maxamps.inc'
       INTEGER STREAM_ID
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB, 2)
-      INTEGER NTRY(2)
+      LOGICAL GOODHEL(NCOMB, MAXSPROC)
+      INTEGER NTRY(MAXSPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
       WRITE(STREAM_ID,*) GOODHEL
       RETURN
@@ -1139,32 +1154,29 @@ C
       SUBROUTINE READ_GOOD_HEL(STREAM_ID)
       IMPLICIT NONE
       INCLUDE 'genps.inc'
+      INCLUDE 'maxamps.inc'
       INTEGER STREAM_ID
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB, 2)
-      INTEGER NTRY(2)
+      LOGICAL GOODHEL(NCOMB, MAXSPROC)
+      INTEGER NTRY(MAXSPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
       READ(STREAM_ID,*) GOODHEL
-      NTRY(1) = MAXTRIES + 1
-      NTRY(2) = MAXTRIES + 1
+      NTRY(:) = MAXTRIES + 1
       RETURN
       END
 
       SUBROUTINE INIT_GOOD_HEL()
       IMPLICIT NONE
+      INCLUDE 'maxamps.inc'
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB, 2)
-      INTEGER NTRY(2)
-      INTEGER I
+      LOGICAL GOODHEL(NCOMB, MAXSPROC)
+      INTEGER NTRY(MAXSPROC)
+      INTEGER I,J
 
-      DO I=1,NCOMB
-        GOODHEL(I,1) = .FALSE.
-        GOODHEL(I,2) = .FALSE.
-      ENDDO
-      NTRY(1) = 0
-      NTRY(2) = 0
+      GOODHEL(:,:) = .FALSE.
+      NTRY(:) = 0
       END
 
       INTEGER FUNCTION GET_MAXSPROC()

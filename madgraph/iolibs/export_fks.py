@@ -28,6 +28,7 @@ import platform
 
 import madgraph
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.base_objects as base_objects
 import madgraph.fks.fks_helas_objects as fks_helas_objects
@@ -623,7 +624,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'orders.inc'
         amp_split_orders, amp_split_size, amp_split_size_born = \
 			   self.write_orders_file(
-                            writers.FortranWriter(filename),
+                            writers.FortranWriter90(filename),
                             matrix_element)
 
         filename = 'a0Gmuconv.inc'
@@ -665,6 +666,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         linkfiles = ['BinothLHADummy.f',
                      'check_poles.f',
+                     'check_sudakov.f',
+                     'check_sudakov_angle2.f',
+                     'ewsudakov_functions.f',
+                     'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -777,7 +782,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Generate info page
         gen_infohtml.make_info_html_nlo(self.dir_path)
 
-
         return calls, amp_split_orders
 
     #===========================================================================
@@ -852,6 +856,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             makejpg = True
         output_dependencies = mg5options['output_dependencies']
         
+        self.proc_characteristic['ew_sudakov'] = 'ewsudakov' in matrix_elements.keys() and \
+                                                 matrix_elements['ewsudakov']
         
         self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
@@ -859,7 +865,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
-        order = re.findall("\[(.*)\]", firstprocess)
+        order = re.findall(r"\[(.*)\]", firstprocess)
         if 'QED' in order[0]:
             perturbation_order.append('QED')
         if 'QCD' in order[0]:
@@ -1322,10 +1328,29 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         except AttributeError:
             pass
 
+        # special treatment needed for the case when the sudakov
+        # matrix elements are generated. This can be either the case
+        # of LOonly=SDK (no virtual/reals, only sudakov)
+        # or of [QCD SDK] virtual and reals, but of QCD origin.
+        # In both case a coupling combination corresponding to 
+        # born_orders + 2*QED must be added
+        if  matrix_element.ewsudakov:
+            # compute the born orders
+            born_orders = []
+            split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+            for ordd in split_orders:
+                born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
+            # increase the QED order
+            born_orders[split_orders.index('QED')] += 2
+            if tuple(born_orders) not in amp_split_orders:
+                amp_split_orders.append(tuple(born_orders))
+
         amp_split_size=len(amp_split_orders)
+
         text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
+
         text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
         step = 5
         if len(split_orders) < step:
@@ -1340,7 +1365,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 if stop > len(split_orders):
                     stop = len(split_orders)
                 text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
-
 
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
@@ -2192,6 +2216,51 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                             nsqorders,
                             fortran_model)
 
+        # finally the matrix elements needed for the sudakov approximation
+        # of ew corrections. 
+        # First, the squared amplitudes involving the goldstones
+
+        filename = 'has_ewsudakov.inc'
+        self.write_has_ewsudakov(writers.FortranWriter(filename), matrix_element.ewsudakov)
+
+        filename = 'ewsudakov_haslo.inc'
+        has_lo = self.write_ewsud_has_lo(writers.FortranWriter(filename), matrix_element)
+
+        for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] == 'goldstone']):
+            filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
+            self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
+                         sud_me['matrix_element'], j, fortran_model)
+            # the file where the numeric derivative for the parameter renormalisation
+            #   is computed 
+            filename = "numder_ewsudakov_goldstone_me_%d.f" % (j + 1)
+            self.write_numder_me(writers.FortranWriter(filename),
+                         j, fortran_model)
+
+        if matrix_element.ewsudakov:
+            # the file where the numeric derivative for the parameter renormalisation
+            #   is computed for the born 
+            filename = "numder_born.f" 
+            self.write_numder_me(writers.FortranWriter(filename),
+                             None, fortran_model)
+
+        # Then, the interferences with the goldstones or with the born amplitudes
+        for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] != 'goldstone']):
+            filename = "ewsudakov_me_%d.f" % (j + 1)
+            if sud_me['base_amp']:
+                # remember, base_amp ==0 means the born, from 1 onwards it refers
+                # to the sudakov matrix elements
+                base_me = matrix_element.sudakov_matrix_elements[sud_me['base_amp']-1]['matrix_element']
+            else:
+                base_me = matrix_element.born_me
+            self.write_sudakov_me(writers.FortranWriter(filename),
+                         base_me, sud_me, j, fortran_model)
+
+        # finally, the wrapper for all matrix elements needed
+        # for the Sudakov approximation
+        filename = "ewsudakov_wrapper.f"
+        self.write_sudakov_wrapper(writers.FortranWriter(filename),
+                                   matrix_element,has_lo,fortran_model)
+
 
 
     def generate_virtuals_from_OLP(self,process_list,export_path, OLP):
@@ -2639,7 +2708,7 @@ Parameters              %(params)s\n\
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
+
         # Extract the number of FKS process
         replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()),1)
 
@@ -2783,6 +2852,564 @@ Parameters              %(params)s\n\
                           'iolibs/template_files/sborn_sf_fks.inc')).read()
         file = file % replace_dict
         writer.writelines(file)
+
+    
+    def get_sudakov_imag_power(self, base_me, sudakov_me):
+        """return the exponent of I to account for the Z -> Chi replacement.
+        Since the result is base * conj(sudakov), the exponent is the difference
+        between the number of Chi's in base_me and in sudakov_me
+        """
+        base_ids = [leg['id'] for leg in base_me['processes'][0]['legs']]
+        other_ids = [leg['id'] for leg in sudakov_me['processes'][0]['legs']]
+        return base_ids.count(250) - other_ids.count(250)
+
+
+
+    def get_chargeprod(self, charge_list, ninitial, n, m):
+        """return the product of charges (as a string) of particles m and n.
+        Special sign conventions may be needed for initial/final state particles
+        """
+        return charge_list[n - 1] * charge_list[m - 1]
+
+
+    def write_sudakov_wrapper(self, writer, matrix_element, has_lo, fortran_model):
+        """Write the wrapper for the sudakov matrix elements.
+        has_lo is a dictionary with keys i=1,2, which tells if LO_i exists
+        """
+
+        born_me = matrix_element.born_me
+        sudakov_list = matrix_element.sudakov_matrix_elements
+
+        # need to know the number of splitorders at the born
+        squared_orders, amp_orders = born_me.get_split_orders_mapping()
+        amp_split_size_born =  len(squared_orders)
+
+        # classify the different kind of matrix-elements
+        goldstone_mes = [sud for sud in sudakov_list if sud['type'] == 'goldstone']
+        non_goldstone_mes = [sud for sud in sudakov_list if sud['type'] != 'goldstone']
+        non_goldstone_mes_lsc = [sud for sud in non_goldstone_mes if sud['type'] == 'cew'] 
+        non_goldstone_mes_ssc_n1 = [sud for sud in non_goldstone_mes if sud['type'] == 'iz1'] 
+        non_goldstone_mes_ssc_n2 = [sud for sud in non_goldstone_mes if sud['type'] == 'iz2'] 
+        non_goldstone_mes_ssc_c = [sud for sud in non_goldstone_mes if sud['type'] == 'ipm2'] 
+
+        replace_dict = {}
+
+        # number of matrix elmenets
+        replace_dict['ngoldstone_me'] = max(len(goldstone_mes),1)
+        # identical particle factors
+        if goldstone_mes:
+            replace_dict['sdk_ident_goldstone'] = ",".join(
+                    [str(me['matrix_element']['identical_particle_factor']) for me in goldstone_mes])
+        else:
+            replace_dict['sdk_ident_goldstone'] = "0"
+
+        den_factor_lines = self.get_den_factor_lines(matrix_element)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+        replace_dict['bornspincol'] = born_me.get_denominator_factor() / born_me['identical_particle_factor']
+
+        helicity_lines = self.get_helicity_lines(born_me)
+        replace_dict['helicity_lines'] = helicity_lines
+
+        # Extract ncomb
+        ncomb = born_me.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+
+        ifsign_dict = {True: 1, False: -1}
+        replace_dict['iflist'] = "iflist = (/%s/)" % ','.join([str(ifsign_dict[leg['state']]) for leg in born_me['processes'][0]['legs']])
+
+        calls_to_me = ""
+
+        # the calls to the goldstone matrix elements (for longitudinal polarisations and the born
+        for i, me in enumerate(goldstone_mes+[{'matrix_element': born_me}]):
+            # skip everything if there are no sudakovs
+            if not matrix_element.ewsudakov:
+                continue
+
+
+            if i==len(goldstone_mes):
+                # the last one (or only one if no MEs with goldstones exists), will use the born
+                if goldstone_mes:
+                    calls_to_me += "else\n"
+                calls_to_me += "call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)\n"
+                calls_to_me += "comp_idfac = 1d0\n"
+                par_ren = "par_ren_sborn_onehel"
+                i = -1 # so that i+1 is 0
+            else:
+                # these will use the ME's with goldstones
+                if i==0:
+                    # the first one
+                    calls_to_me += "if"
+                else:
+                    calls_to_me += "else if"
+
+                conditions = ["nhel(%d,ihel).eq.0" % (leg['number']) for leg in me['legs']]
+                calls_to_me += " (%s) then\n" % ".and.".join(conditions)
+                calls_to_me += "call EWSDK_GOLD_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (i + 1)
+                calls_to_me += "comp_idfac = compensate_identical_factor(%d)\n" % (i + 1)
+                par_ren = "par_ren_EWSDK_GOLD_ME_%d" % (i + 1)
+
+            # here the calls to all contributions where the particles of base_amp are not changed
+            # these are corrections on top of the LO1
+            if has_lo[1]:
+                calls_to_me += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "C the LSC term (diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "C the SSC term (neutral/diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "C the C term (diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+
+            # terms of QCD origin on top of LO2, if it exists
+            if has_lo[2]:
+                calls_to_me += "C the terms stemming from QCD corrections on top of the LO2\n" 
+#                calls_to_me += "AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)+AMP_SPLIT_EWSUD_LO2(:)*get_qcd_lo2(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "DO IAMP = 1, AMP_SPLIT_SIZE\n"
+                calls_to_me += "  AMP_SPLIT_EWSUD_QCD(IAMP) = AMP_SPLIT_EWSUD_QCD(IAMP)+AMP_SPLIT_EWSUD_LO2(IAMP)*GET_QCD_LO2(PDGLIST,NHEL(1,IHEL),IFLIST,INVARIANTS,IAMP)*COMP_IDFAC\n"
+                calls_to_me += "ENDDO\n"
+
+            # the parameter renormalisation needs to be written in any case, and it will check internally
+            # what parameters to take into account base on ewsudakov_haslo.inc
+            calls_to_me += "C the parameter renormalisation\n"
+            calls_to_me += "call %s(P,nhel(1,ihel),ihel,invariants)\n" % par_ren
+            calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)*comp_idfac\n"
+
+            # now the call to the LSC and C non-diagonal, if LO1 exists
+            if not has_lo[1]: 
+                continue
+
+            mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]
+            if mes_same_charge_lsc:
+                calls_to_me += "C LSC and C non diag\n"
+            for mesc in mes_same_charge_lsc:
+                idx = non_goldstone_mes.index(mesc)
+                calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in mesc['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d)*comp_idfac\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
+                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_nondiag(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d)*comp_idfac\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
+
+            # now the calls to the SSC non-diagonal, with one particle different wrt base amp
+            mes_same_charge_ssc1 = [me for me in non_goldstone_mes_ssc_n1 if me['base_amp'] == i+1]
+            if mes_same_charge_ssc1:
+                calls_to_me += "C SSC non diag #1\n"
+            for mesc in mes_same_charge_ssc1:
+                idx = non_goldstone_mes.index(mesc)
+                calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in mesc['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_nondiag_1(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d)*comp_idfac\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # number, old and new pdg of the leg that changes
+
+            # now the calls to the SSC non-diagonal, with two particles different wrt base amp
+            mes_same_charge_ssc2 = [me for me in non_goldstone_mes_ssc_n2 if me['base_amp'] == i+1]
+            if mes_same_charge_ssc2:
+                calls_to_me += "C SSC non diag #2\n"
+            for mesc in mes_same_charge_ssc2:
+                idx = non_goldstone_mes.index(mesc)
+                calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in mesc['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_nondiag_2(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d,%d,%d,%d)*comp_idfac\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0], \
+                                         mesc['legs'][1]['number'],mesc['pdgs'][0][1], mesc['pdgs'][1][1]) # number, old and new pdg of the legs that change
+
+            # SSC calls, charged
+            mes_ssc_charged = [me for me in non_goldstone_mes_ssc_c if me['base_amp'] == i+1]
+            if mes_ssc_charged:
+                calls_to_me += "C the SSC terms (charged)\n"
+            for messc in mes_ssc_charged:
+                idx = non_goldstone_mes.index(messc)
+                calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
+                calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in messc['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_c(%d,%d,pdglist,%d,%d,nhel(1,ihel),iflist,invariants)*comp_idfac\n" % \
+                                (messc['legs'][0]['number'], messc['legs'][1]['number'], messc['pdgs'][1][0], messc['pdgs'][1][1])
+
+        if goldstone_mes:
+            calls_to_me += "endif\n"
+            
+        replace_dict['calls_to_me'] = calls_to_me
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_wrapper.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
+
+
+
+    #===============================================================================
+    # write_sudakov_goldstone_me
+    #===============================================================================
+    def write_numder_me(self, writer, ime, fortran_model):
+        """Create the file where the derivative of the ime-th sudakov matrix element 
+        (or of the Born, if ime=None) is computed
+        """
+
+        replace_dict = {}
+        
+        if ime != None:
+            replace_dict['mename'] = 'EWSDK_GOLD_ME_%d' % (ime + 1)
+            replace_dict['hell'] = ''
+        else:
+            replace_dict['mename'] = 'SBORN_ONEHEL'
+            replace_dict['hell'] = 'hell,'
+
+        if not 'Gmu' in  self.model.get('name'):
+            logger.warning('Warning, the parameter renormalisation should be done in the alpha(MZ) scheme')
+            file = open(os.path.join(_file_path, \
+                              'iolibs/template_files/ewsudakov_numder_me_alphamz.inc')).read()
+        else:
+            logger.warning('Warning, the parameter renormalisation should be done in the Gmu scheme')
+            file = open(os.path.join(_file_path, \
+                              'iolibs/template_files/ewsudakov_numder_me_gmu.inc')).read()
+
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
+
+
+
+    def write_has_ewsudakov(self, writer, has_sudakov):
+        """Write the include file which tells whether the process
+        has been generated with or without Sudakov matrix elements
+        """
+
+        bool_dict = {True: '.true.', False: '.false.'}
+        text = "      logical has_ewsudakov\n      parameter (has_ewsudakov=%s)\n" % \
+                bool_dict[has_sudakov]
+        
+        # Write the file
+        writer.writelines(text)
+    
+        return 
+
+
+    def write_ewsud_has_lo(self, writer, matrix_element):
+        """write an include file with the information whether the matrix element
+        has contributions from LO1 and has a LO2, and the corresponding 
+        position (iamp)
+        """
+        # get the coupling combination of the born
+        squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+        split_orders = \
+                matrix_element.born_me['processes'][0]['split_orders']
+
+        # compute the born orders
+        born_orders = []
+        split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+        for ordd in split_orders:
+            born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
+
+        # check that there is at most one coupling combination
+        # that satisfies the born_orders constraints 
+        # (this is a limitation of the current implementation of the EW sudakov
+        nborn = 0
+        for orders in squared_orders_born:
+            if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
+                nborn += 1
+
+
+        if nborn > 1:
+            raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+                    " the Born has more than one coupling combination, found %d)" % nborn)
+
+        # now we can see if the process has a LO1
+        has_lo1 = bool(nborn)
+        if has_lo1:
+            lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+        else:
+            lo1_pos = -100
+
+        # now determine the LO2 orders
+        lo2_orders = born_orders
+        lo2_orders[split_orders.index('QCD')] += -2
+        lo2_orders[split_orders.index('QED')] += 2
+
+        has_lo2 = tuple(lo2_orders) in squared_orders_born
+
+        if has_lo2:
+            lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
+        else:
+            lo2_pos = -100
+
+        bool_dict = {True: '.true.', False: '.false.'}
+
+        text = "      logical has_lo1, has_lo2\n      parameter (has_lo1=%s)\n      parameter (has_lo2=%s)\n" % \
+                        (bool_dict[has_lo1], bool_dict[has_lo2])
+        text+= "      integer lo1_pos, lo2_pos\n      parameter (lo1_pos=%d)\n      parameter (lo2_pos=%d)\n" % \
+                        (lo1_pos, lo2_pos)
+        
+        # Write the file
+        writer.writelines(text)
+
+        return {1: has_lo1, 2: has_lo2}
+
+
+
+
+    #===============================================================================
+    # write_sudakov_goldstone_me
+    #===============================================================================
+    def write_sudakov_goldstone_me(self, writer, sudakov_me, ime, fortran_model):
+        """Create the sudakov_goldstone_me_*.f file with external goldstone bosones
+        for the sudakov approximation of EW corrections
+        """
+
+        matrix_element = copy.copy(sudakov_me)
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+        
+        replace_dict['ime'] = ime + 1
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines 
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(sudakov_me)
+        replace_dict['process_lines'] = self.get_process_info_lines(sudakov_me)
+
+        # Extract den_factor_lines
+        den_factor = matrix_element.get_denominator_factor()
+        replace_dict['den_factor'] = den_factor
+    
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+    
+        # Extract nwavefuncs (this is for the sudakov me)
+        nwavefuncs = sudakov_me.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # Extract helas calls of the base  matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls).replace('AMP','AMP')
+
+        # Extract JAMP lines
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_goldstone_splitorders_fks.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
+
+
+
+    #===============================================================================
+    # write_sudakov_me
+    #===============================================================================
+    def write_sudakov_me(self, writer, base_me, sudakov, ime, fortran_model):
+        """Create the sudakov_me_*.f file for the sudakov approximation of EW
+        corrections
+        """
+
+        sudakov_me = sudakov['matrix_element']
+        ibase_me = sudakov['base_amp']
+        pdgs = copy.copy(sudakov['pdgs'])
+        legs = copy.copy(sudakov['legs'])
+
+        matrix_element = copy.copy(base_me)
+        model = matrix_element.get('processes')[0].get('model')
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+        
+        replace_dict['ime'] = ime + 1
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines 
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(sudakov_me)
+        replace_dict['process_lines'] = "C  Sudakov approximation for the interference " + \
+         "between\n" + self.get_process_info_lines(base_me) + "\nC" + \
+         " and\n" + self.get_process_info_lines(sudakov_me)
+
+        # Extract den_factor_lines
+        den_factor = base_me.get_denominator_factor()
+        replace_dict['den_factor'] = den_factor
+    
+        # Extract ngraphs
+        ngraphs1 = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs1'] = ngraphs1
+        ngraphs2 = sudakov_me.get_number_of_amplitudes()
+        replace_dict['ngraphs2'] = ngraphs2
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+    
+        # Extract nwavefuncs (take the max of base_me and sudakov me)
+        nwavefuncs1 = matrix_element.get_number_of_wavefunctions()
+        nwavefuncs2 = sudakov_me.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = max([nwavefuncs1, nwavefuncs2])
+    
+        # Extract ncolor
+        ncolor1 = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor1'] = ncolor1
+        ncolor2 = max(1, len(sudakov_me.get('color_basis')))
+        replace_dict['ncolor2'] = ncolor2
+
+        # compute the color matrix between basis of the Born and of the Sudakov
+        color_matrix= color_amp.ColorMatrix(matrix_element.get('color_basis'), sudakov_me.get('color_basis'))
+    
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines_from_color_matrix(color_matrix)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # the power of the imaginary unit to compensate for the neutral Goldstones
+        replace_dict['imag_power'] = self.get_sudakov_imag_power(base_me, sudakov_me)
+
+        # Extract helas calls of the base  matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls1'] = "\n".join(helas_calls).replace('AMP','AMP1')
+
+        # Extract helas calls of the sudakov matrix element
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    sudakov_me)
+        replace_dict['helas_calls2'] = "\n".join(helas_calls).replace('AMP','AMP2')
+    
+        # Extract JAMP lines
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders,
+                                                        JAMP_format="JAMP1(%s,{0})")
+
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines).replace('AMP(', 'AMP1(') 
+        replace_dict['nb_temp_jamp1'] = nb_tmp_jamp
+
+        # now the jamp for the sudakov me
+        # NOTE: this ASSUMES that the splitorders of the sudakov and of the born me
+        # are the same
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(sudakov_me)
+        else:
+            squared_orders, amp_orders = sudakov_me.get_split_orders_mapping()
+            # safety check
+            if replace_dict['nAmpSplitOrders'] != len(amp_orders) or \
+               replace_dict['nSqAmpSplitOrders'] != len(squared_orders) or \
+               replace_dict['nSplitOrders'] != len(split_orders):
+                raise MadGraph5Error("ERROR in write_sudakov_me (%d,%d,%d) != (%d,%d,%d)" % (
+                             replace_dict['nAmpSplitOrders'],replace_dict['nSqAmpSplitOrders'],replace_dict['nSplitOrders'],
+                                len(amp_orders),len(squared_orders),len(split_orders)))
+
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                       sudakov_me,amp_orders,split_order_names=split_orders,
+                                                    JAMP_format="JAMP2(%s,{0})")
+
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('AMP(', 'AMP2(')   
+        replace_dict['nb_temp_jamp2'] = nb_tmp_jamp
+
+        # the calls for the momentum reshuffling
+        replace_dict['reshuffle_calls'] = 'pass_reshuffle = .true.\n'
+
+        pdgs_in, pdgs_out = pdgs
+        # make sure all the lists have lenght = 2. In case, pad with zero's
+        for resh_list in [legs, pdgs_in, pdgs_out]:
+            while len(resh_list) < 2:
+                if resh_list == legs:
+                    resh_list.append({'number':0})
+                else:
+                    resh_list.append(0)
+
+        replace_dict['reshuffle_calls'] += "call reshuffle_momenta(p,p_resh,(/%s/),(/%s/),(/%s/),pass_reshuffle)\n" \
+                                        % (','.join(['%d' % leg['number'] for leg in legs]), 
+                                           ','.join(['%d' % p for p in pdgs_in]),
+                                           ','.join(['%d' % p for p in pdgs_out]))
+        replace_dict['reshuffle_calls'] += "p(:,:)=p_resh(:,:)\n"
+    
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_splitorders_fks.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return
 
 
     def get_chargeprod(self, charge_list, ninitial, n, m):
@@ -4386,3 +5013,205 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
 
             
+class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
+    """exports the EW sudakov matrix element in a standalone format
+    """
+    dirstopdg = []
+
+    def finalize(self, *args, **opts):
+        """do the usual finalize, then call the function that writes
+        the python module with all the calls
+        """
+        super(ProcessExporterEWSudakovSA, self).finalize(*args, **opts)
+        self.write_python_wrapper(os.path.join(self.dir_path, 'bin', 'internal', 'ewsud_pydispatcher.py'))
+
+    def write_python_wrapper(self, fname):
+        """write a wrapper to be able to call the Sudakov for a specific subfolder given its PDG"""
+        
+        template = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_pydispatcher.inc')).read()
+
+        replace_dict = {}
+        replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
+        replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
+        replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
+                ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+
+        replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=False))) \
+                                                for dd in self.dirstopdg])
+
+        outfile = open(fname ,'w')
+        outfile.write(template % replace_dict)
+        outfile.close()
+
+    def get_pdg_tuple(self, pdgs, nincoming, sortfinal):
+        """write a tuple of 2 tuple, with the incoming particles unsorted
+        and the outgoing ones sorted if sortfinal = True
+        """
+        incoming = pdgs[:nincoming]
+        outgoing = pdgs[nincoming:]
+        if sortfinal:
+            return (tuple(incoming), tuple(sorted(outgoing)))
+        else:
+            return (tuple(incoming), tuple(outgoing))
+
+
+    #===============================================================================
+    # generate_directories_fks
+    #===============================================================================
+    def generate_directories_fks(self, matrix_element, fortran_model, me_number,
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
+        """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
+        only generating the relevant files for the EW Sudakov"""
+        proc = matrix_element.born_me['processes'][0]
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
+        
+        cwd = os.getcwd()
+        try:
+            os.chdir(path)
+        except OSError as error:
+            error_msg = "The directory %s should exist in order to be able " % path + \
+                        "to \"export\" in it. If you see this error message by " + \
+                        "typing the command \"export\" please consider to use " + \
+                        "instead the command \"output\". "
+            raise MadGraph5Error(error_msg) 
+        
+        calls = 0
+        
+        self.fksdirs = []
+        #first make and cd the direcrory corresponding to the born process:
+        borndir = "P%s" % \
+        (matrix_element.born_me.get('processes')[0].shell_string())
+        os.mkdir(borndir)
+        os.chdir(borndir)
+        logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
+
+## write the files corresponding to the born process in the P* directory
+        self.generate_born_fks_files(matrix_element,
+                fortran_model, me_number, path)
+
+
+#write the infortions for the different real emission processes
+        sqsorders_list = \
+            self.write_real_matrix_elements(matrix_element, fortran_model)
+
+        filename = 'extra_cnt_wrapper.f'
+        self.write_extra_cnt_wrapper(writers.FortranWriter(filename),
+                                     matrix_element.extra_cnt_me_list, 
+                                     fortran_model)
+
+        filename = 'iproc.dat'
+        self.write_iproc_file(writers.FortranWriter(filename),
+                              me_number)
+
+        filename = 'fks_info.inc'
+        # write_fks_info_list returns a set of the splitting types
+        self.proc_characteristic['splitting_types'] = list(\
+                set(self.proc_characteristic['splitting_types']).union(\
+                    self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)))
+
+        filename = 'leshouche_info.dat'
+        nfksconfs,maxproc,maxflow,nexternal=\
+                self.write_leshouche_info_file(filename,matrix_element)
+
+        # if no corrections are generated ([LOonly] mode), get 
+        # these variables from the born
+        if nfksconfs == maxproc == maxflow == 0:
+            nfksconfs = 1
+            (dummylines, maxproc, maxflow) = self.get_leshouche_lines(
+                    matrix_element.born_me, 1)
+
+        filename = 'genps.inc'
+        ngraphs = matrix_element.born_me.get_number_of_amplitudes()
+        ncolor = max(1,len(matrix_element.born_me.get('color_basis')))
+        self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
+
+#        filename = 'maxconfigs.inc'
+#        self.write_maxconfigs_file(writers.FortranWriter(filename),
+#                max(nconfigs,matrix_element.born_me.get_number_of_amplitudes()))
+
+        filename = 'nexternal.inc'
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+
+        filename = 'orders.inc'
+        amp_split_orders, amp_split_size, amp_split_size_born = \
+			   self.write_orders_file(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+
+        filename = 'amp_split_orders.inc'
+        self.write_amp_split_orders_file(
+                            writers.FortranWriter(filename),
+                            amp_split_orders)
+        self.proc_characteristic['ninitial'] = ninitial
+        self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
+        
+        filename = 'maxparticles.inc'
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     nexternal)
+        
+        filename = 'pmass.inc'
+        try:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.real_processes[0].matrix_element)
+        except IndexError:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.born_me)
+
+        #draw the diagrams
+        self.draw_feynman_diagrams(matrix_element)
+
+        linkfiles = ['sa_ewsudakov.f',
+                     'sub_f2py_ewsudakov.f',
+                     'sa_ewsudakov_dummyfcts.f',
+                     'ewsudakov_functions.f',
+                     'momentum_reshuffling.f',
+                     'splitorders_stuff.f',
+                     'add_write_info.f',
+                     'coupl.inc',
+                     'weight_lines.f',
+                     'run.inc',
+                     'run_card.inc',
+                     'q_es.inc',
+                     'setscales.f',
+                     'randinit',
+                     'timing_variables.inc',
+                     'orderstag_base.inc',
+                     'orderstags_glob.dat']
+
+        for file in linkfiles:
+            ln('../' + file , '.')
+        os.system("ln -s ../../Cards/param_card.dat .")
+
+        #copy the makefile 
+        os.system("ln -s ../makefile_fks_dir ./makefile")
+
+        # touch a dummy analyse_opts
+
+        os.system('touch %s/analyse_opts' % os.path.join(self.dir_path,'SubProcesses'))
+
+        # Return to SubProcesses dir
+        os.chdir(os.path.pardir)
+        # Add subprocess to subproc.mg
+        filename = 'subproc.mg'
+        files.append_to_file(filename,
+                             self.write_subproc,
+                             borndir)
+            
+        os.chdir(cwd)
+        # Generate info page
+        gen_infohtml.make_info_html_nlo(self.dir_path)
+        
+        # update the dirs to pdg information
+        self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in matrix_element.born_me['processes']])
+
+        return calls, amp_split_orders

@@ -485,7 +485,7 @@ class AddVariable(list):
         text += super(AddVariable,self).__repr__()
         return text        
     
-    def count_term(self):
+    def count_term(self, priority=[]):
         # Count the number of appearance of each variable and find the most 
         #present one in order to factorize her
         count = defaultdict(int)
@@ -501,9 +501,16 @@ class AddVariable(list):
                 # allow to find optimized factorization for identical count
                 for val2 in set_term:
                     correlation[val1][val2] += 1
-
-        maxnb = max(count.values()) if count else 0
-        possibility = [v for v,val in count.items() if val == maxnb]
+        if priority:
+            prio_count = {v:val for v,val in count.items() if v in priority}
+            if not prio_count:
+                maxnb = 0
+            else: 
+                maxnb = max(prio_count.values()) if count else 0
+                possibility = [v for v,val in prio_count.items() if val == maxnb]
+        if not priority or maxnb == 0: 
+            maxnb = max(count.values()) if count else 0        
+            possibility = [v for v,val in count.items() if val == maxnb]
         if maxnb == 1:
             return 1, None
         elif len(possibility) == 1:
@@ -527,10 +534,18 @@ class AddVariable(list):
                     str_maxvar = new_str
         return maxnb, maxvar
     
-    def factorize(self):
+    def factorize(self, priority=None):
         """ try to factorize as much as possible the expression """
+        
+        #if priority is None:
+        #    priority = [KERNEL['V%i_%i' % (j,i)] for j in range(1,5) for i in range(0,5) if 'V%i_%i' % (j,i) in KERNEL] 
+        max, maxvar = self.count_term(priority)
+        # next line would allow to have a given wavefunction factor out together
+        #if maxvar:
+        #    name = str(KERNEL.objs[maxvar])
+        #    if name[-2] == '_':
+        #        priority = [KERNEL['%s_%i' % (name[:-2],i)] for i in range(0,5) if '%s_%i' % (name[:-2],i) in KERNEL] 
 
-        max, maxvar = self.count_term()
         if max <= 1:
             #no factorization possible
             return self
@@ -585,7 +600,7 @@ class AddVariable(list):
         
         
         if len(constant) > 1:
-            constant = constant.factorize()
+            constant = constant.factorize(priority)
         elif constant:
             constant = constant[0]
         else:

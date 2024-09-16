@@ -20,6 +20,10 @@ on:
 env:
   commitmsg: ${{ github.event.head_commit.message }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -1225,6 +1229,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             echo "import model_v4 sm_v4" > cmd
+            echo "continue" >> cmd
             ./bin/mg5_aMC cmd
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1941,3 +1946,24 @@ jobs:
             echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
             ./tests/test_manager.py  test_nlo_reweighting -pA -t0 -l INFO
+
+
+  acceptancetest_ewsudakov:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_tt_ewsudakov
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_ttbar_ewsudakov -pA -t0 -l INFO

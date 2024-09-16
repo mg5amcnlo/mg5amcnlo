@@ -1,4 +1,4 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
+        DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -95,6 +95,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0 
+      selected_col(:) = 0
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
@@ -119,6 +121,10 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+## if( nogrouping) {
+      ! for no grouping update the scale here (done in main autodsig for grouping  
+      call update_scale_coupling(PP, WGT)
+## }	 
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -130,7 +136,7 @@ C     Continue only if IMODE is 0, 4 or 5
            P1 = PP
          endif
 
-	 channel = %(get_channel)s
+     channel = %(get_channel)s
 	 call ranmar(RHEL)
 	 call ranmar(RCOL)
          CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
@@ -246,11 +252,11 @@ C
       double precision RHEL ! random number
       integer channel
 C
-C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     STUFF FOR DRESSED EE COLLISIONS
 C     
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
-%(ee_comp_vars)s
+%(ee_comp_vars_vec)s
       integer i_ee      
 C  
 C EXTERNAL FUNCTIONS
@@ -283,9 +289,10 @@ C     Keep track of whether cuts already calculated for this event
       double precision all_rwgt(VECSIZE_MEMMAX)
       
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
+      include '../../Source/PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      INTEGER       LHAID
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 c
 c     local
@@ -300,6 +307,8 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      selected_hel(:) = 0
+      selected_col(:) = 0 
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
@@ -403,13 +412,6 @@ C       Call UNWGT to unweight and store events
 	ENDDO
 %(passcuts_end)s
       END
-## if(read_write_good_hel) {
-C
-C     Functionality to handling grid
-C
-%(read_write_good_hel)s
-
-## }
 
 
 
@@ -475,4 +477,7 @@ c         if hel=0 return the number of helicity state possible for that particl
 	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
 	  return
 	  end
+
+
+%(ADDITIONAL_FCT)s
 

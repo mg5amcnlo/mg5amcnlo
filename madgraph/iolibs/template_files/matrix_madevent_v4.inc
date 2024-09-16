@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, DUM, IVEC, ANS, SELECTED_HEL, SELECTED_COL)
 C  
 %(info_lines)s
 C 
@@ -15,10 +15,12 @@ C
 C  
 C CONSTANTS
 C  
+    Include '../../Source/vector.inc' 
     Include 'genps.inc'
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
     INTEGER    NGRAPHS
@@ -27,10 +29,12 @@ C
     PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
-C  
+C 
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    REAL*8 RHEL, RCOL
+    INTEGER DUM, SELECTED_HEL, SELECTED_COL, IVEC
 c
 c global (due to reading writting)
 c 
@@ -49,7 +53,7 @@ C
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
     REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-    INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
+    INTEGER IDUM, NGOOD, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
 
@@ -59,8 +63,8 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    CHARACTER*101        HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
+c    CHARACTER*101        HEL_BUFF
+c    COMMON/TO_HELICITY/  HEL_BUFF
     
 	REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
@@ -71,7 +75,7 @@ C
 %(define_iconfigs_lines)s
     DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
-    SAVE YFRAC, IGOOD, JHEL
+    SAVE YFRAC
 
 %(helicity_lines)s
 %(den_factor_line)s
@@ -87,13 +91,13 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
+c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
@@ -102,7 +106,7 @@ C ----------
     IF (ISUM_HEL.EQ.0.or.(DS_get_dim_status('Helicity').eq.0)) THEN
         DO I=1,NCOMB
            IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
-               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
+               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1), IVEC)            
             %(beam_polarization)s
 			 IF (ISUM_HEL.NE.0) then
 			   call DS_add_entry('Helicity',I,T)
@@ -126,13 +130,11 @@ C ----------
 			CALL DS_SET_GRID_MODE('Helicity','init')
           endif
 	    ELSE
-          JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
            DO I=1,NCOMB
               IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I)=.TRUE.
                  NGOOD = NGOOD +1
-                 IGOOD(NGOOD) = I        
                  print *,'Adding good helicity ',I,TS(I)/ANS
               ENDIF
            ENDDO
@@ -146,13 +148,14 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 			
-			T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
+			T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1), IVEC)            
             %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
-            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
+            SELECTED_HEL = I
+c            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
     ENDIF
     IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.le.0)) THEN
     R=XRAN1(IDUM)*ANS
@@ -160,7 +163,8 @@ c           Include the Jacobian from helicity sampling
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))
        IF(R.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+           SELECTED_HEL = I
+c          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
           ANS=DSIGN(ANS,TS(I))		  
           GOTO 10
        ENDIF
@@ -180,10 +184,13 @@ c           Include the Jacobian from helicity sampling
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG, 1,  SELECTED_COL)
+
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IVEC)
 C  
 %(info_lines)s
 C
@@ -197,7 +204,8 @@ C
 C CONSTANTS
 C  
     INTEGER    NGRAPHS
-    PARAMETER (NGRAPHS=%(ngraphs)d) 
+    PARAMETER (NGRAPHS=%(ngraphs)d)
+    include '../../Source/vector.inc'
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
@@ -217,6 +225,7 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  

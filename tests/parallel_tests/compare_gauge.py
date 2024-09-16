@@ -58,12 +58,15 @@ class GaugeComparator(unittest.TestCase):
         
         mg5feynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='Feynman')
         mg5feynman_runner.setup(MG5DIR, MG5DIR)
-        
+
+        mg5FD_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='FD')
+        mg5FD_runner.setup(MG5DIR, MG5DIR)         
         # ADD FOR Feynmam and CMS + Feynman
                 
         # Create and setup a comparator
         my_comp = me_comparator.MEComparatorGauge()
-        my_comp.set_me_runners(cmsunit_runner, cmsfeynman_runner,mg5feynman_runner,mg5unit_runner) # can add Feynman+...
+        my_comp.set_me_runners(cmsunit_runner, cmsfeynman_runner,mg5feynman_runner,mg5unit_runner,
+                             mg5FD_runner) # can add Feynman+...
         
 
         # Run the actual comparison

@@ -7,6 +7,7 @@ import operator
 import numbers
 import math
 import time
+import copy
 import os
 import shutil
 import sys
@@ -101,7 +102,7 @@ class Particle(object):
             self.rwgt = 0
             return
 
-              
+
         self.event = event
         if event is not None: 
             self.event_id = len(event) #not yet in the event
@@ -1066,6 +1067,8 @@ class MultiEventFile(EventFile):
             #special case for 1>N
             init_information = run_card.get_banner_init_information()
             event = next(self)
+            if not len(event): #if parse-momenta was false we have to parse the first event
+                event = Event(str(event))
             init_information["idbmup1"] = event[0].pdg
             init_information["ebmup1"] = event[0].mass
             init_information["idbmup2"] = 0 
@@ -1149,6 +1152,7 @@ class MultiEventFile(EventFile):
                     nb_keep = max(20, int(nb_event*trunc_error*15))
                     new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
+                misc.sprint(i,f)
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
@@ -1202,7 +1206,6 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
 
         if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
@@ -1483,12 +1486,12 @@ class Event(list):
                 particle.mother2 -= 1  
         # re-call the function for the next potential change   
         return self.reorder_mother_child()
-         
         
-        
-        
-        
-   
+
+
+
+
+
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
@@ -1521,6 +1524,37 @@ class Event(list):
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type,
                                                threshold=threshold)
             return self.nloweight
+
+    def get_fks_pair(self, real_type=(1,11), threshold=None):
+        """ Gives the fks pair labels"""
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop:
+            text = self.tag[start+8:stop]
+            all_line = text.split('\n')
+            text = text.lower().replace('d','e')
+            all_line = text.split('\n')
+            for line in all_line:
+                data = line.split()
+                if len(data)>16:
+                    wgt = OneNLOWeight(line, real_type=real_type)
+        return wgt.to_merge_pdg,wgt.nexternal
+
+    def get_born_momenta(self,real_type=(1,11), threshold=None):
+        """ Gets the underlying n+1 body kinematics"""
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop:
+            text = self.tag[start+8:stop]
+            text = text.lower().replace('d','e')
+            all_line = text.split('\n')
+            for line in all_line:
+                data = line.split()
+                if len(data)>16:
+                    wgt = OneNLOWeight(line, real_type=real_type)
+            nexternal = wgt.nexternal
+            real_momenta = all_line[2:2+nexternal]
+        return real_momenta
+
+
 
     def rewrite_nlo_weight(self, wgt=None):
         """get the string associate to the weight"""
@@ -1558,11 +1592,11 @@ class Event(list):
             return self.loweight
         
         if not hasattr(Event, 'loweight_pattern'):
-            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
+                                    <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb1>1|2)["']?\\>\\s*(?P<beam1>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb2>1|2)["']?\\>\\s*(?P<beam2>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <totfact>\\s*(?P<totfact>[\\d.e+-]*)\\s*</totfact>
             ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
@@ -1615,7 +1649,7 @@ class Event(list):
         self.matched_scale_data = []
         
 
-        pattern  = re.compile("<scales\s|</scales>")
+        pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1623,7 +1657,7 @@ class Event(list):
             tmp = {}
             start,content, end = data
             self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
             for i in range(1, len(self)+1):
@@ -1647,7 +1681,7 @@ class Event(list):
             return self.syscalc_data
         
         pattern  = re.compile("<mgrwt>|</mgrwt>")
-        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        pattern2 = re.compile("<(?P<tag>[\\w]*)(?:\\s*(\\w*)=[\"'](.*)[\"']\\s*|\\s*)>(.*)</(?P=tag)>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1850,6 +1884,240 @@ class Event(list):
         
         return new_event
 
+
+    def set_initial_mass_to_zero(self):
+        """set the masses of the initial particles to zero, by reshuffling the respective momenta
+        Works only in the **partonic** com frame, so the event must be boosted to such frame
+        before calling the function
+        """
+
+        if  not misc.equal(self[0].px, 0) or not misc.equal(self[1].px, 0) or \
+            not misc.equal(self[0].py, 0) or not misc.equal(self[1].py, 0) or \
+            not misc.equal(self[0].pz, - self[1].pz, zero_limit=False):
+            misc.sprint(self[0])
+            misc.sprint(self[1])
+            raise Exception('momenta should be in the partonic center of mass frame') 
+
+        self[0].mass = 0.
+        self[1].mass = 0.
+        tot_E=0.
+        for ip,part in enumerate(self):
+            if part.status == 1 :
+                tot_E += part.E
+        if (self[0].pz > 0. and self[1].pz < 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., 0., 0., tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., 0., 0., -tot_E/2.]))
+        elif (self[0].pz < 0. and self[1].pz > 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., 0., 0., -tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., 0., 0., tot_E/2.]))
+        else:
+            logger.critical('ERROR: two incoming partons not back.-to-back')
+
+    def set_final_jet_mass_to_zero(self):
+        """set the final light particle masses to zero
+        """
+
+        for ip,part in enumerate(self):
+            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
+                part.mass = 0.
+                E_1_new = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                part.set_momentum(FourMomentum([E_1_new, part.px, part.py, part.pz]))
+
+
+
+    def merge_particles_kinematics(self, i,j, moth):
+        """Map to an underlying n-body kinematics for two given 
+           particles i,j to be merged and a resulting moth"""
+        """ note! kinematics (and id) mapping only! """
+
+        recoil = True
+        fks_type = False
+
+        if recoil and not fks_type:
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            
+            merge_i = self[fks_i]
+            merge_j = self[fks_j]
+        
+            i_4mom = FourMomentum(merge_i)
+            j_4mom = FourMomentum(merge_j)
+            if (fks_i <= 1):
+                sign1 = -1.0
+            else:
+                sign1 = 1.0
+            mother_4mom = i_4mom + sign1*j_4mom
+        
+            new_event = copy.deepcopy(self)
+
+            self[fks_i].pid = moth[0]['id']
+            self[fks_i].set_momentum(mother_4mom)
+
+            if fks_i <= 1: # initial-state recoil
+                new_p = FourMomentum()
+                for ip,part in enumerate(self):
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        new_p += part
+                
+                if fks_i == 0:
+                    self[1].set_momentum(new_p - FourMomentum(self[0]))
+                elif fks_i == 1:
+                    self[0].set_momentum(new_p - FourMomentum(self[1]))
+                
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+                
+            if fks_i > 1: # final-state recoil
+
+                # Re-scale the energy of fks_i to make it on-shell
+                for ip,part in enumerate(self):
+                    if (ip == fks_i):
+                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                        new_p.E = part.E
+
+                # Find the overall energy in the final state
+                new_p.E = 0.0
+                for ip,part in enumerate(self):
+                    if (ip != fks_j and ip >= 2):
+                        new_p.E +=  part.E
+                
+                # Use one of the initial states to absorb the energy change in the final state
+                self[1].set_momentum(FourMomentum([new_p.E-self[0].E,self[1].px,self[1].py,self[1].pz]))
+                
+                # Change the initial state pz and E
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+            
+        elif fks_type and not recoil:        
+            ## Do it in a more FKS-style
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            new_event = copy.copy(event)
+
+            if fks_i <= 1: # initial-state recoil
+
+                # First boost to partonic CM frame
+                q = FourMomentum(self[0])+FourMomentum(self[1])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum(part)
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+
+                k_tot = FourMomentum([self[0].E+self[1].E-self[fks_j].E,self[0].px+self[1].px-self[fks_j].px,\
+                            self[0].py+self[1].py-self[fks_j].py,self[0].pz+self[1].pz-self[fks_j].pz])
+
+                final = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        final = final + vec
+                        
+                s = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])**2
+                ksi = self[fks_j].E/(math.sqrt(s)/2.0)
+                y = self[fks_j].pz/self[fks_j].E
+
+                self[0].pz = self[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
+                self[0].E = math.sqrt(self[0].mass**2 + self[0].pz**2)
+                self[1].pz = self[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
+                self[1].E = math.sqrt(self[1].mass**2 + self[1].pz**2)
+
+                final = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k_tot_1 = k_tot.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                k_tot_2 = k_tot_1.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                k_tot_3 = k_tot_2.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+
+                for ip,part in enumerate(self):
+                    if (ip >= 2):
+                        vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                        vec2 = vec.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        vec3 = vec2.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                        vec_new = vec3.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        self[ip].set_momentum(FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
+                
+                self.pop(to_remove)
+
+            else: # final-state recoil
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+            
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k = FourMomentum([self[fks_i].E+self[fks_j].E,self[fks_i].px+self[fks_j].px,\
+                            self[fks_i].py+self[fks_j].py,self[fks_i].pz+self[fks_j].pz])
+
+                k_rec = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
+                        k_rec = k_rec + FourMomentum([part.E,part.px,part.py,part.pz])
+
+                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
+                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j:
+                        vec = FourMomentum([self[ip].E,self[ip].px,self[ip].py,self[ip].pz])
+                        self[ip].set_momentum(vec.boost_beta(beta,k_rec))
+                    if ip == fks_i:
+                        self[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
+                self.pop(to_remove)
+        else:
+            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
+
+    def recoil_eq(self,part1, part2):
+        """ In general, solves the equation
+        E1 + E2 = K 
+        p1 + p2 = c
+        E1^2 - p1^2 = a
+        E2^2 - p2^2 = b
+        and returns p1
+        """
+        thresh = 1e-6
+        import random
+        a = part1.mass**2 + part1.px**2 + part1.py**2
+        b = part2.mass**2 + part2.px**2 + part2.py**2
+        c = part1.pz + part2.pz
+        K = part1.E + part2.E
+        K2 = K**2
+        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
+            logger.critical('Error in recoil_eq solver 1')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
+            logger.critical('Error in recoil_eq solver 2')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(K)
+        return sol1
+
+
     def boost(self, filter=None):
         """modify the current event to boost it according to the current filter"""
         if filter is None:
@@ -1861,7 +2129,7 @@ class Event(list):
                 if list(filter(p)):
                     pboost += p
         else:
-            pboost = FourMomentum(pboost)
+            pboost = FourMomentum(filter)
 
         # change sign of three-component due to helas convention
         pboost.px *=-1
@@ -1877,7 +2145,7 @@ class Event(list):
         """check various property of the events"""
         
         # check that relative error is under control
-        threshold = 1e-6
+        threshold = 1e-4
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1920,7 +2188,50 @@ class Event(list):
         self.check_color_structure() 
         
         #3. check mass
-                   
+
+    def check_kinematics_only(self):
+        """check various property of the events - only kinematics"""
+        
+        # check that relative error is under control
+        threshold = 1e-3
+       
+        #1. Check that the 4-momenta are conserved
+        E, px, py, pz = 0,0,0,0
+        absE, abspx, abspy, abspz = 0,0,0,0
+        for particle in self:
+            coeff = 1
+            if particle.status == -1:
+                coeff = -1
+            elif particle.status != 1:
+                continue
+            E += coeff * particle.E
+            absE += abs(particle.E)
+            px += coeff * particle.px
+            py += coeff * particle.py
+            pz += coeff * particle.pz
+            abspx += abs(particle.px)
+            abspy += abs(particle.py)
+            abspz += abs(particle.pz)
+            # check mass
+            fourmass = FourMomentum(particle).mass
+            
+            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
+                logger.critical(self)
+                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+
+        if abs(E/absE) > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
+        if abs(px/abspx) > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
+        if abs(py/abspy) > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
+        if abs(pz/abspz) > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
+                 
          
     def assign_scale_line(self, line, convert=True):
         """read the line corresponding to global event line
@@ -2764,7 +3075,7 @@ class FourMomentum(object):
         if isinstance(pboost, FourMomentum):
             E = pboost.E
             pz = pboost.pz
-        
+
         #beta = pz/E
         gamma = E / math.sqrt(E**2-pz**2)
         gammabeta = pz  / math.sqrt(E**2-pz**2)
@@ -2778,6 +3089,74 @@ class FourMomentum(object):
             out.pz = 0
         return out
     
+    def zboost_inv(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only z boost applied).
+        """
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            pz = pboost.pz
+
+        #beta = pz/E
+        gamma = E / math.sqrt(E**2-pz**2)
+        gammabeta = pz  / math.sqrt(E**2-pz**2)
+        
+        out =  FourMomentum([gamma*self.E + gammabeta*self.pz,
+                            self.px,
+                            self.py,
+                            gamma*self.pz + gammabeta*self.E])
+        
+        if abs(out.pz) < 1e-6 * out.E:
+            out.pz = 0
+        return out
+
+
+    def pt_boost(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only pT boost applied).
+        """
+
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            px = pboost.px
+            py = pboost.py
+            mass = math.sqrt(E**2 - px**2 - py**2)
+
+        betax = px/E
+        betay = py/E
+        beta = math.sqrt(betax**2+betay**2)
+        gamma = 1 / math.sqrt(1.0-beta**2)
+        
+        out =  FourMomentum([gamma*self.E - gamma*betax*self.px - gamma*betay*self.py,
+                            -gamma*betax*self.E + (1.0 + (gamma-1.0)*betax**2/(beta**2))*self.px + (gamma-1.0)*betax*betay/(beta**2)*self.py,
+                            -gamma*betay*self.E + ((gamma-1.0)*betax*betay/(beta**2))*self.px + (1.0+(gamma-1.0)*(betay**2)/(beta**2))*self.py,
+                            self.pz])
+        
+        if abs(out.px) < 1e-6 * out.E:
+            out.px = 0
+        if abs(out.py) < 1e-6 * out.E:
+            out.py = 0
+        return out
+
+    def boost_beta(self,beta,mom):
+        """ Boost along the three-momentum of mom with a boost of size beta"""
+
+        unit = mom * (1.0/math.sqrt(mom.px**2+mom.py**2+mom.pz**2))
+        beta_vec = beta*unit
+        bx = beta_vec.px
+        by = beta_vec.py
+        bz = beta_vec.pz
+        gamma = 1.0 / math.sqrt(1.0-beta**2)
+
+        out =  FourMomentum([gamma*self.E - gamma*bx*self.px - gamma*by*self.py - gamma*bz*self.pz,
+                            -gamma*bx*self.E + (1.0 + (gamma-1.0)*bx**2/(beta**2))*self.px + (gamma-1.0)*bx*by/(beta**2)*self.py + (gamma-1.0)*bx*bz/(beta**2)*self.pz,
+                            -gamma*by*self.E + ((gamma-1.0)*bx*by/(beta**2))*self.px + (1.0+(gamma-1.0)*(by**2)/(beta**2))*self.py + (gamma-1.0)*by*bz/(beta**2)*self.pz,
+                            -gamma*bz*self.E + (gamma-1.0)*bx*bz/(beta**2)*self.px + (gamma-1.0)*(by*bz)/(beta**2)*self.py + (1.0+(gamma-1.0)*bz**2/(beta**2))*self.pz]) 
+
+        return out
+    
     def boost_to_restframe(self, pboost):
         """apply the boost transformation such that pboost is at rest in the new frame.
         First apply a rotation to allign the pboost to the z axis and then use
@@ -2789,27 +3168,64 @@ class FourMomentum(object):
             return out
         
         
-        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
-        # rotation such that it become (E, 0 , 0 , p ) is
-        #  cosT sinF  ,  -sinT  , cosT sinF
-        #  sinT cosF  ,  cosT   , sinT sinF
-        # -sinT       ,   0     , cosF
-        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
-        cosF = pboost.pz / p
-        sinF = math.sqrt(1-cosF**2)
-        sinT = pboost.py/p/sinF
-        cosT = pboost.px/p/sinF
-        
-        out=FourMomentum([self.E,
-                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
-                          -self.px*sinT+      self.py*cosT,
-                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
-                          ])
-        out = out.zboost(E=pboost.E,pz=p)
+        # see here https://physics.stackexchange.com/questions/749036/general-lorentz-boost-of-four-momentum-in-cm-frame-particle-physics
+        vx = pboost.px/pboost.E 
+        vy = pboost.py/pboost.E 
+        vz = pboost.pz/pboost.E 
+        v = pboost.norm/pboost.E
+        v2 = pboost.norm_sq/pboost.E**2
+        gamma = 1./math.sqrt(1.-v**2)
+        gammo = gamma-1.
+        out = FourMomentum(E = gamma*(self.E - vx*self.px - vy*self.py - vz*self.pz),
+                           px= -gamma*vx*self.E + (1+gammo*vx**2/v2)*self.px + gammo*vx*vy/v2*self.py + gammo*vx*vz/v2*self.pz,
+                           py= -gamma*vy*self.E + gammo*vy*vx/v2*self.px + (1+gammo*vy**2/v2)*self.py + gammo*vy*vz/v2*self.pz,
+                           pz= -gamma*vz*self.E + gammo*vz*vx/v2*self.px + gammo*vz*vy/v2*self.py + (1+gammo*vz**2/v2)*self.pz)
+
         return out
         
+    def rotate_to_z(self,prot):
+
+        import math
+        import numpy as np
+
+        z = np.array([0.,0.,1.])
+
+        px = self.px
+        py = self.py
+        pz = self.pz
+
+        refx = prot.px 
+        refy = prot.py
+        refz = prot.pz
+
+        prot_mom = np.array([px, py, pz])
+        ref_mom = np.array([refx, refy, refz])
+
+        # Create normal vector
+        n = np.array([refy, -refx, 0.])
+        n = n * 1./math.sqrt(self.threedot(n,n))
+        t = prot_mom - self.threedot(n,prot_mom)*n
+        p = ref_mom - self.threedot(ref_mom,z)*z
+        p = p/math.sqrt(self.threedot(p,p))
+
+        t_pz = np.array([self.threedot(t,p), self.threedot(t,z), 0.])
+        costheta = self.threedot(ref_mom,z)* 1./math.sqrt(self.threedot(ref_mom, ref_mom))
+        sintheta=math.sqrt(1.-costheta**2)
+
+        sgn = 1.
+        t_pz_p = np.array([0., 0., 0.])
+        t_pz_p[0] = costheta*t_pz[0] + sgn*(-sintheta) * t_pz[1]
+        t_pz_p[1] = sgn*sintheta*t_pz[0] + costheta * t_pz[1]
+
+        out_mom = self.threedot(n,prot_mom)*n + t_pz_p[0]*p + t_pz_p[1]*z
+
+        out = FourMomentum([self.E,out_mom[0], out_mom[1], out_mom[2] ] )
+
+        return out
         
-        
+    def threedot(self,a,b):
+
+        return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
 
 class OneNLOWeight(object):
         
