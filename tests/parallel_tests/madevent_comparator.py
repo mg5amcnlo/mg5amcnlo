@@ -18,7 +18,6 @@ formats (txt, tex, ...).
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import datetime
 import glob
 import itertools
@@ -567,7 +566,7 @@ class MG5Runner(MadEventRunner):
         text = open(filepath).read()    
         
         #id="#P1_qq_ll" href=#P1_qq_ll onClick="check_link('#P1_qq_ll','#P1_qq_ll','#P1_qq_ll')"> 842.9
-        info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
+        info = re.findall(r'id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
         for name,value in info:
             output['cross_'+name] = value
             
@@ -660,7 +659,9 @@ class MG5gaugeRunner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output %s -f\n" % \
                      os.path.join(self.mg5_path, self.temp_dir_name)
-        v5_string += "launch -f \n"
+        v5_string += "launch \n"
+        v5_string += "set SDE_strategy 1\n"
+        v5_string += "set nevents 1k\n"
         
         v5_string += 'set complex_mass_scheme False \n'
         v5_string += 'set gauge unitary'

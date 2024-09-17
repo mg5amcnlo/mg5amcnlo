@@ -161,9 +161,21 @@ c         endif
 C       Fill common block for Les Houches init info
       do i=1,2
         if(lpp(i).eq.1.or.lpp(i).eq.2) then
-          idbmup(i)=2212
+          if (nb_proton(i).eq.1.and.nb_neutron(i).eq.0) then
+              idbmup(i)=2212
+          elseif (nb_proton(i).eq.0.and.nb_neutron(i).eq.1) then
+              idbmup(i)=2112
+          else
+              idbmup(i) = 1000000000 + (nb_proton(i)+nb_neutron(i))*10
+     $                               + nb_proton(i)*10000
+          endif
         elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
-          idbmup(i)=-2212
+          if (nb_proton(i).eq.1.and.nb_neutron(i).eq.0) then
+              idbmup(i)=-2212
+          else
+              idbmup(i) = -1*(1000000000 + (nb_proton(i)+nb_neutron(i))*10
+     $                                    + nb_proton(i)*10000)
+          endif
         elseif(lpp(i).eq.3) then
           idbmup(i)=11
         elseif(lpp(i).eq.-3) then
@@ -199,12 +211,14 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=19)
+      parameter (npdfs=21)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
      $   'eva',
      $   'iww',
+     $   'edff',
+     $   'chff',
      $     'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
@@ -226,7 +240,9 @@ C-------------------------------------------------
      $   00000,
      $   00000,
      $   00000,
-     $   00000, 
+     $   00000,
+     $   00000,
+     $   00000,
      $   20250,
      $   20270,
      $   19150,

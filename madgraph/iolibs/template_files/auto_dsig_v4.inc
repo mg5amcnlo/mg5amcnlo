@@ -50,6 +50,10 @@ C
       double precision ee_comp_prod
 %(ee_comp_vars)s
       integer i_ee
+C
+C     STUFF FOR UPC
+C
+      double precision photonpdfsquare
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -72,10 +76,11 @@ C     Keep track of whether cuts already calculated for this event
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+      include '../../Source/PDF/pdf.inc'
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+C      CHARACTER*7         PDLABEL,EPA_LABEL
+C      INTEGER       LHAID
+C      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 c
 c     local
 c

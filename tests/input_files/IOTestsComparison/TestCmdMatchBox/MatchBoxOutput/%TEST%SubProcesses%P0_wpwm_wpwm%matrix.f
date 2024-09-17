@@ -175,6 +175,7 @@ C
       COMPLEX*16 ZTEMP
       REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), LNJAMP(NCOLOR)
+      COMPLEX*16 TMP_JAMP(0)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
@@ -215,8 +216,8 @@ C     Amplitude(s) for diagram number 6
       CALL VVV1_3(W(1,1),W(1,3),GC_53,MDL_MZ,MDL_WZ,W(1,5))
 C     Amplitude(s) for diagram number 7
       CALL VVV1_0(W(1,4),W(1,2),W(1,5),GC_53,AMP(7))
-      JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
-      LNJAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      JAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      LNJAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
 
       MG5_0_MATRIX = 0.D0
       DO I = 1, NCOLOR
@@ -277,6 +278,7 @@ C
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), LNJAMP(NCOLOR)
       COMMON/MG5_0_JAMP/JAMP,LNJAMP
 
+      COMPLEX*16 TMP_JAMP(0)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
@@ -321,8 +323,8 @@ C     Amplitude(s) for diagram number 6
       CALL VVV1_3(W(1,1),W(1,3),GC_53,MDL_MZ,MDL_WZ,W(1,5))
 C     Amplitude(s) for diagram number 7
       CALL VVV1_0(W(1,4),W(1,2),W(1,5),GC_53,AMP(7))
-      JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
-      LNJAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      JAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      LNJAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
 
       END
 

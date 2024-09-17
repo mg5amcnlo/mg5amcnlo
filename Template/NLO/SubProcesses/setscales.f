@@ -537,6 +537,8 @@ c a scale to be used as a reference for renormalization scale
       integer i,j
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
+      double precision user_dynamical_scale
+      external user_dynamical_scale
 c
       tmp=0
       if(ickkw.eq.-1)then
@@ -567,21 +569,18 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           tmp=tmp/2d0
           temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
-      elseif(dynamical_scale_choice.eq.0) then
-c         fixed scale
+       elseif(dynamical_scale_choice.eq.-2) then
+c     fixed scale
           tmp=muR_ref_fixed
-          temp_scale_id='fixed scale'
-      elseif(dynamical_scale_choice.eq.10) then
+          temp_scale_id='fixed scale'          
+      elseif(dynamical_scale_choice.eq.10.or.dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: ENTER YOUR CODE HERE                                 cc
 cc      to use this code you must set                                            cc
 cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         write(*,*) "User-defined scale not set"
-         stop 1
-         temp_scale_id='User-defined dynamical scale' ! use a meaningful string
-         tmp = 0d0
+         tmp = user_dynamical_scale(PP)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

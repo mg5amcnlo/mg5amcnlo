@@ -15,7 +15,6 @@
 """ Command interface for Re-Weighting """
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import difflib
 import logging
 import math
@@ -35,6 +34,7 @@ import six
 
 pjoin = os.path.join
 
+import madgraph
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
@@ -225,7 +225,7 @@ class ReweightInterface(extended_cmd.Cmd):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
-        process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        process, order, final = re.split(r'\[\s*(.*)\s*\]', proc)
         if process.strip().startswith(('generate', 'add process')):
             process = process.replace('generate', '')
             process = process.replace('add process','')
@@ -263,7 +263,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
+            result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
@@ -694,9 +694,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
 
         # perform the scanning
-        reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
         if param_card_iterator:
-            reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            if self.options['rwgt_name']:
+                reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            else:
+                reweight_name = None
             for i,card in enumerate(param_card_iterator):
                 if reweight_name:
                     self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)
@@ -782,7 +784,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\\d+)|(?P<id2>[_\\w\\-\\.]+))(?P<rwgttype>\\s*|_\\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
@@ -1079,6 +1081,9 @@ class ReweightInterface(extended_cmd.Cmd):
             
         event.parse_reweight()
         event.parse_nlo_weight(threshold=self.soft_threshold) 
+        if not event.nloweight.ispureqcd():
+            raise Exception('NLO reweighting does not support mixed expansion mode. Only LO accurate mode is allowed.')
+        
         if self.output_type != 'default':
             event.nloweight.modified = True # the internal info will be changed
                                             # so set this flage to True to change
@@ -1110,8 +1115,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
-                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
-                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
+                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2**2)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2**2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
                 ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
@@ -1587,7 +1592,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
-        commandline = re.sub('@\s*\d+', '', commandline)
+        commandline = re.sub(r'@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem']:
@@ -1664,7 +1669,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -1697,7 +1702,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                  if line.startswith('generate')]
                 data['processes'] += [' '.join(line.split()[2:]) 
                                       for line in self.banner.proc_card
-                                      if re.search('^\s*add\s+process', line)]
+                                      if re.search(r'^\s*add\s+process', line)]
             #object_collector
             #self.id_to_path_second = {}   
             #data['id2path'] = self.id_to_path_second 
@@ -1730,7 +1735,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif line.startswith('define'):
                 try:
                     mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
-                except Exception:
+                except madgraph.InvalidCmd:
                     pass 
                           
         # 1. Load model---------------------------------------------------------  
@@ -1751,8 +1756,11 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
-                mgcmd.exec_cmd("define %s = %s" % (name, content))
-        
+                try:
+                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                except madgraph.InvalidCmd:
+                    pass
+                    
         if  second and 'tree_path' in self.dedicated_path:
             files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
             if 'virtual_path' in self.dedicated_path:
@@ -1898,7 +1906,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             allids, all_pids = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
-            all_prefix = [''.join([i.decode(errors='ignore') for i in j]).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}

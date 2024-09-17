@@ -563,9 +563,16 @@ class ProcessExporterFortran(VirtualExporter):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
+        # this is for LHAPDF
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.writelines(template % changer)
+
+        # this is for eMELA
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_emela.f"),"r").read()
         ff.writelines(template % changer)
         
         
@@ -688,6 +695,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
@@ -1582,38 +1590,63 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             and recall itself (this is add to the X size)
         """
         self.myjamp_count +=1
-        
+
         if not nb_line:
             for i,j in all_element:
                 if i+1 > nb_line:
                     nb_line = i+1
                 if j+1> nb_col:
-                    nb_col = j+1      
+                    nb_col = j+1  
+            if nb_col > 600 and added==0:
+                all_element1, all_element2 = {}, {}
+                for (k1,k2) in all_element:
+                    if k2 >= nb_col//2:
+                        all_element2[(k1,1+k2-(nb_col//2))] = all_element[(k1,k2)]
+                    else:
+                        all_element1[(k1,k2)] = all_element[(k1,k2)]
+
+                all_element1, newdef1 = self.optimise_jamp(all_element1)
+                nb_added1 = len(newdef1)
+
+                all_element2, newdef2 = self.optimise_jamp(all_element2)
+
+                for (k1,k2) in all_element2:
+                    if k2 >= 0:
+                        all_element1[(k1,k2+(nb_col//2)-1)] = all_element2[(k1,k2)]
+                    if k2 < 0: 
+                        all_element1[(k1,k2-nb_added1)] = all_element2[(k1,k2)]
+                # new_def format: added,j1,j2,R, max_count
+                for k, j1,j2, R, c in newdef2:
+                    if j2 > 0:
+                        k2 = j2+nb_col//2 -1
+                    else:
+                        k2 = j2-nb_added1 
+                    if j1 > 0:
+                        k1 = j1+nb_col//2 -1
+                    else:
+                        k1 = j1-nb_added1
+                    newdef1.append((k+nb_added1, k1, k2, R, c))
+                if newdef1:
+                    all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
+                    newdef1 = newdef1 + new_def
+                return all_element, newdef1
 
         max_count = 0
         all_index = []
         operation = collections.defaultdict(lambda: collections.defaultdict(int))
-        for i in range(nb_line):
-            for j1 in range(-added, nb_col):
-                v1 = all_element.get((i,j1), 0)
-                if not v1: 
-                    continue                    
-                for j2 in range(j1+1, nb_col):
-                    R = all_element.get((i,j2), 0)/v1
-                    if not R:
-                        continue
-                    
-                    operation[(j1,j2)][R] +=1 
-                    if operation[(j1,j2)][R] > max_count:
-                        max_count = operation[(j1,j2)][R]
-                        all_index = [(j1,j2, R)]
-                    elif operation[(j1,j2)][R] == max_count:
-                        all_index.append((j1,j2, R))
+        for (i,j1), v1 in all_element.items():
+            ratios = [(j2,all_element.get((i,j2), 0)/v1) for j2 in range(j1+1, nb_col) if all_element.get((i,j2), 0)]
+            for j2, R in ratios:                   
+                operation[(j1,j2)][R] +=1 
+                if operation[(j1,j2)][R] > max_count:
+                    max_count = operation[(j1,j2)][R]
+                    all_index = [(j1,j2, R)]
+                elif operation[(j1,j2)][R] == max_count:
+                    all_index.append((j1,j2, R))
+
         if max_count <= 1:
             return all_element, []
-        #added += 1
-        #misc.sprint(max_count, len(all_index))
-        #misc.sprint(operation)
+
         to_add = []
         for index in all_index:
             j1,j2,R = index
@@ -1714,6 +1747,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -1748,6 +1797,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             if dressed_lep:
                                 pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
                                 (pdf_codes[initial_state],i + 1)
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            if 22 in initial_states[0] and 22 in initial_states[1]:
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -2030,19 +2082,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler['f2py']
+        elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+            f2py_compiler = 'f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)
+        elif misc.which('f2py%d' %(sys.version_info.major)):
+            f2py_compiler = 'f2py%d' %(sys.version_info.major)            
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
-        elif sys.version_info[1] == 6:
-            if misc.which('f2py-2.6'):
-                f2py_compiler = 'f2py-2.6'
-            elif misc.which('f2py2.6'):
-                f2py_compiler = 'f2py2.6'
-        elif sys.version_info[1] == 7:
-            if misc.which('f2py-2.7'):
-                f2py_compiler = 'f2py-2.7'
-            elif misc.which('f2py2.7'):
-                f2py_compiler = 'f2py2.7'            
-        
+
+
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
         
@@ -2137,7 +2184,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             import platform
             version, _, _ = platform.mac_ver()
             if not version:# not linux 
-                version = 14 # set version to remove MACFLAG
+                majversion = 14 # set version to remove MACFLAG
             else:
                 majversion, version = [int(x) for x in version.split('.',3)[:2]]
 
@@ -2165,6 +2212,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     MadGraph v4 StandAlone format."""
 
     matrix_template = "matrix_standalone_v4.inc"
+    jamp_optim = True
 
     def __init__(self, *args,**opts):
         """add the format information compare to standard init"""
@@ -3111,6 +3159,14 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     def make(self,*args,**opts):
         pass
 
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
+        try:
+            misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        except OSError:
+            pass
+        return super().finalize(matrix_elements, history, mg5options, flaglist)
+    
+
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
                        JAMP_formatLC=None):
     
@@ -3146,13 +3202,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb2 = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
         text += text2 
         
-        return text, 0
+        return text, max(nb,nb2)
 
 
 
@@ -3186,6 +3242,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
+        self.handle_cuts_inc()
+
         try:
             subprocess.call([os.path.join(self.dir_path, 'Source','MadWeight','bin','internal','pass_to_madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -3207,6 +3265,23 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_source_makefile(writers.FortranWriter(filename))
 
 
+
+    def handle_cuts_inc(self):
+
+        text = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'r').read()
+        text = text.replace('maxjetflavor','dummy_maxjetflavor')
+
+        fsock = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'w')
+        fsock.write(text)
+
+        fsock.write('''            
+                logical fixed_extra_scale
+                integer maxjetflavor
+                double precision mue_over_ref
+                double precision mue_ref_fixed
+                common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+                ''')
+        fsock.close()
 
         
     #===========================================================================
@@ -3354,6 +3429,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for gammaUPC")
+        misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
         misc.compile(arg=['../lib/libcernlib.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for GENERIC")
@@ -3665,7 +3742,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 
@@ -6183,7 +6260,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         printzeroamp = []
         for iproc in range(len(matrix_elements)):
             printzeroamp.append(\
-                "        call print_zero_amp_%i()" % ( iproc + 1))
+                "        call print_zero_amp%i()" % ( iproc + 1))
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
@@ -7779,6 +7856,7 @@ class UFO_model_to_mg4(object):
                         towrite = towrite.replace('math.pi', 'MP__pi')
                         towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
                         data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
+
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
             text += template % data   
@@ -7836,11 +7914,12 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg",
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
-        
+        # put in lower case and remove duplicate
+        additional_fct = list({f.lower():'' for f in additional_fct if f.lower() not in ['condif', 'reglog', 'reglogp', 'reglogm', 'recms', 'arg', 'grreglog', 'regsqrt']}) 
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
           double complex condif
@@ -7884,7 +7963,7 @@ class UFO_model_to_mg4(object):
         """
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
+        fsock.writelines(r"""double complex function cond(condition,truecase,falsecase)
           implicit none
           double complex condition,truecase,falsecase
           if(condition.eq.(0.0d0,0.0d0)) then
@@ -8942,7 +9021,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                        "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
@@ -9530,7 +9609,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
@@ -9544,7 +9623,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         if not tot_calls:
             tot_calls = 0
         return tot_calls
-
 
     #===========================================================================
     # Helper functions

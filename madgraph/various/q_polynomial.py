@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-from __future__ import print_function
 import array
 import copy
 import math
@@ -810,7 +809,7 @@ class FromGolem95FortranCodeGenerator():
 
     @classmethod
     def generate_mapping(cls, R, k):
-        """
+        r"""
             Generates a mapping from tensor components \hat{C}(a_1, ..., a_k)
             into a one dimensional array.
     

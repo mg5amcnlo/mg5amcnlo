@@ -83,6 +83,9 @@ c     forbid unweighting close to the fks pole (should not happen but better saf
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       double precision xi_i_fks_ev,y_ij_fks_ev
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer n_orderstags,oo,tag
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c
 c Auxiliary quantities used when writing events
       integer kwgtinfo
@@ -94,6 +97,7 @@ c Auxiliary quantities used when writing events
      & MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
      & PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c maximum weight ratio for the partial unweighting
       integer                                   npoints
       double precision            cross_section
@@ -130,19 +134,21 @@ c --- fill the multi-weight common blocks with the scale and PDF
 c --- variation weights
       i_wgt=1
       if (do_rwgt_scale) then
+       do oo=0,n_orderstags
          do kk=1,dyn_scale(0)
             if (lscalevar(kk)) then
                do ii=1,nint(scalevarF(0))
                   do jj=1,nint(scalevarR(0))
                      i_wgt=i_wgt+1
-                     wgtxsecmu(jj,ii,kk)= wwgts(i_wgt)
+                     wgtxsecmu(oo,jj,ii,kk)= wwgts(i_wgt)
                   enddo
                enddo
             else
                i_wgt=i_wgt+1
-               wgtxsecmu(1,1,kk)= wwgts(i_wgt)
+               wgtxsecmu(oo,1,1,kk)= wwgts(i_wgt)
             endif
          enddo
+       enddo
       endif
       if (do_rwgt_pdf) then
          do nn=1,lhaPDFid(0)
@@ -201,7 +207,7 @@ c --- prepare the buffer information
 c --- write the event
       call write_lhef_event(41,
      &     npart,IDPRUP,wwgts(1),0d0,0d0,0d0,
-     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       end

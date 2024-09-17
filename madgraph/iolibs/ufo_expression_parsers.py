@@ -18,7 +18,6 @@ different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import os
 import re
@@ -163,7 +162,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'
@@ -873,7 +872,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
         elif p[1] == 'reglogp': p[0] = 'reglogp' + p[2]
         elif p[1] == 'reglogm': p[0] = 'reglogm' + p[2]
-        elif p[1] in self.buitin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
+        elif p[1] in self.builtin_equiv: p[0] = self.builtin_equiv[p[1]] + p[2]
         
 
     def p_expression_real(self, p):

@@ -453,9 +453,12 @@ class IOExportPythonTest(unittest.TestCase):
             exec(matrix_methods[process])
             # Calculate the matrix element for the momentum p
             value = eval("Matrix_0_epem_aaa().smatrix(p, full_model)")
-            self.assertTrue(abs(value-answer)/answer < 1e-6,
-                            "Value is: %.9e should be %.9e" % \
-                            (abs(value), answer))
+            self.assertLess(
+                abs(value-answer)/answer,
+                1e-6,
+                "Value is: %.9e should be %.9e" % \
+                            (abs(value), answer)
+            )
 
 
     def test_export_matrix_element_python_madevent_group(self):
@@ -529,8 +532,8 @@ class IOExportPythonTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

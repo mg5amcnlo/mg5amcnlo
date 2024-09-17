@@ -634,19 +634,25 @@ class Test_DecayParticleList(unittest.TestCase):
         #Test the conversion in __init__
         decay_partlist = decay_objects.DecayParticleList(self.mg5_partlist)
         for i in range(0, 5):
-            self.assertTrue(isinstance(decay_partlist[i], 
-                                       decay_objects.DecayParticle))
+            self.assertIsInstance(
+                decay_partlist[i],
+                decay_objects.DecayParticle
+            )
 
         #Test the conversion in append
         decay_partlist.append(self.mg5_part)
-        self.assertTrue(isinstance(decay_partlist[-1], 
-                                   decay_objects.DecayParticle))
-        self.assertTrue(isinstance(decay_partlist,
-                                   decay_objects.DecayParticleList))
+        self.assertIsInstance(
+            decay_partlist[-1],
+            decay_objects.DecayParticle
+        )
+        self.assertIsInstance(
+            decay_partlist,
+            decay_objects.DecayParticleList
+        )
         
         #Test the conversion in generate_dict
         for num, part in decay_partlist.generate_dict().items():
-            self.assertTrue(isinstance(part, decay_objects.DecayParticle))
+            self.assertIsInstance(part, decay_objects.DecayParticle)
 
 #===============================================================================
 # TestDecayModel
@@ -709,13 +715,17 @@ class Test_DecayModel2(unittest.TestCase):
         # Test the particle is DecayParticle during generator stage
         # Test the default_setup first
         temp_model = decay_objects.DecayModel()
-        self.assertTrue(isinstance(temp_model.get('particles'),
-                              decay_objects.DecayParticleList))
+        self.assertIsInstance(
+            temp_model.get('particles'),
+            decay_objects.DecayParticleList
+        )
 
 
         # Test the embeded set in __init__
-        self.assertTrue(isinstance(self.decay_model.get('particles'), 
-                                   decay_objects.DecayParticleList))
+        self.assertIsInstance(
+            self.decay_model.get('particles'),
+            decay_objects.DecayParticleList
+        )
 
 
         # Test the conversion into DecayParticle explicitly
@@ -728,13 +738,17 @@ class Test_DecayModel2(unittest.TestCase):
         # Using ParticleList to set should be fine, the result is converted
         # into DecayParticleList.
         self.assertTrue(result)
-        self.assertTrue(isinstance(self.decay_model['particles'],
-                              decay_objects.DecayParticleList))
+        self.assertIsInstance(
+            self.decay_model['particles'],
+            decay_objects.DecayParticleList
+        )
 
 
         # particle_dict should contain DecayParticle
-        self.assertTrue(isinstance(self.decay_model.get('particle_dict')[6],
-                                   decay_objects.DecayParticle))
+        self.assertIsInstance(
+            self.decay_model.get('particle_dict')[6],
+            decay_objects.DecayParticle
+        )
 
 
         # Test if the set function returns correctly when assign a bad value
@@ -748,7 +762,7 @@ class Test_DecayModel2(unittest.TestCase):
 
 
         # Test if the particls in interaction is converted to DecayParticle
-        self.assertTrue(isinstance(self.decay_model['interactions'][-1]['particles'], decay_objects.DecayParticleList))
+        self.assertIsInstance(self.decay_model['interactions'][-1]['particles'], decay_objects.DecayParticleList)
            
     def test_read_param_card(self):
         """Test reading a param card"""
@@ -1015,7 +1029,7 @@ class Test_DecayModel(unittest.TestCase):
                                         (1000022,)])
         for i, group in enumerate(decay_mssm.get('decay_groups')):
             pdg = sorted([p.get('pdg_code') for p in group])
-            self.assertTrue( pdg in goal_groups)
+            self.assertIn(pdg, goal_groups)
         self.assertEqual(len(goal_groups), i+1)
             
         # Test if all useless interactions are deleted.
@@ -1693,8 +1707,10 @@ class Test_Channel(unittest.TestCase):
                 l['number'] = 7
         #print new_channel.get_final_legs()
 
-        self.assertFalse(new_channel.get_final_legs()\
-                             == h_tt_bwbmuvm.get_final_legs())
+        self.assertNotEqual(
+            new_channel.get_final_legs(),
+            h_tt_bwbmuvm.get_final_legs()
+        )
         # reset final_legs to be normal one
         new_channel['final_legs'][l_index]['number'] = l_num
 
@@ -1809,7 +1825,7 @@ class Test_Channel(unittest.TestCase):
         Nice string of channel_a,b,c (new leg ordering):
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) \ mu(8) vm(12)
+                         \\ mu(7) vm(11) \\ mu(8) vm(12)
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
           \t~(6) 
@@ -1826,7 +1842,7 @@ class Test_Channel(unittest.TestCase):
           \t (4) 
           \t~(5) 
           \t~(6) > b~(6) w-(9)          w-(10)
-                         \ mu(9) vm(11) \ mu(10) vm(12)
+                         \\ mu(9) vm(11) \\ mu(10) vm(12)
         Channel_b:
         ((10(13),12(-14)>10(-24),id:44),(9(13),11(-14)>9(-24),id:44),
         (6(-5),9(-24),10(-24)>6(-6),id:901),(3(-5),8(-24)>3(-6),id:54),
@@ -1836,10 +1852,10 @@ class Test_Channel(unittest.TestCase):
         --------------
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) 
+                         \\ mu(7) vm(11) 
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
-                          \ mu(10) vm(12)
+                          \\ mu(10) vm(12)
           \t~(6) 
         Channel_c:
         ((10(13),12(-14)>10(-24),id:44),(7(13),11(-14)>7(-24),id:44),
@@ -1969,8 +1985,8 @@ class Test_Channel(unittest.TestCase):
         # Test the get function
         self.assertFalse(channel_a['tag'])
         self.assertEqual(channel_a.get('tag'), Tag_a)
-        self.assertTrue(Tag_a == Tag_b)
-        self.assertFalse(Tag_a == Tag_c)
+        self.assertEqual(Tag_a, Tag_b)
+        self.assertNotEqual(Tag_a, Tag_c)
 
         # Test the check_channels_equiv function
         self.assertTrue(decay_objects.Channel.check_channels_equiv(channel_a,
@@ -2031,9 +2047,9 @@ class Test_Channel(unittest.TestCase):
         Tag_e = diagram_generation.DiagramTag(channel_e)
         Tag_f = diagram_generation.DiagramTag(channel_f)
 
-        self.assertTrue(Tag_d == Tag_e)
-        self.assertFalse(Tag_d == Tag_f)
-        self.assertFalse(Tag_e == Tag_f)
+        self.assertEqual(Tag_d, Tag_e)
+        self.assertNotEqual(Tag_d, Tag_f)
+        self.assertNotEqual(Tag_e, Tag_f)
 
         
     def test_findchannels(self):
@@ -2437,7 +2453,7 @@ class Test_Channel(unittest.TestCase):
         #Z_offshell_channels = full_sm.get_particle(23).get_channels(2, False)
         #print Z_offshell_channels.nice_string()
         #print WZ_err
-        self.assertTrue(WZ_err != 0)
+        self.assertNotEqual(WZ_err, 0)
 
         # Choose h > z w+ w-
         for c in higgs.get_channels(3, False):
@@ -2779,14 +2795,14 @@ class Test_IdentifyHelasTag(unittest.TestCase):
 
 
         #print h_zz_eemumu_Tag, h_zz_eeveve_Tag
-        self.assertTrue(h_zz_ssss_Tag == h_zz_bbbb_Tag)
-        self.assertTrue(h_zz_eemumu_Tag == h_zz_mumumumu_Tag)
+        self.assertEqual(h_zz_ssss_Tag, h_zz_bbbb_Tag)
+        self.assertEqual(h_zz_eemumu_Tag, h_zz_mumumumu_Tag)
         # Lorentz structure of z > e e~ != z > ve ve~
-        self.assertFalse(h_zz_eemumu_Tag == h_zz_eeveve_Tag)
+        self.assertNotEqual(h_zz_eemumu_Tag, h_zz_eeveve_Tag)
         # Lorentz structure of z > up-type up-type != z > down-type down-type
-        self.assertFalse(h_zz_ssss_Tag == h_zz_sscc_Tag)
-        self.assertFalse(h_zz_sscc_Tag == h_ww_sscc_Tag)
-        self.assertFalse(h_zz_sscc_Tag == h_zz_eemumu_Tag)
+        self.assertNotEqual(h_zz_ssss_Tag, h_zz_sscc_Tag)
+        self.assertNotEqual(h_zz_sscc_Tag, h_ww_sscc_Tag)
+        self.assertNotEqual(h_zz_sscc_Tag, h_zz_eemumu_Tag)
 
         # Test diagram_from_tag
         new_diagram = h_zz_ssss_Tag.diagram_from_tag(self.my_testmodel)
@@ -2794,7 +2810,7 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         new_tag = diagram_generation.DiagramTag(new_diagram)
         old_tag = diagram_generation.DiagramTag(h_zz_ssss)
         #print new_tag, old_tag
-        self.assertTrue(new_tag == old_tag)
+        self.assertEqual(new_tag, old_tag)
 
     def test_helas_helpers(self):
         """ Test related helpers in DecayModel, Channel, DecayParticles. """
@@ -2814,8 +2830,8 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         self.assertFalse(t_bw['helastag'] and t_bw['std_diagram'])
         tag, std_diagram = t_bw.get_helas_properties(self.my_testmodel)
         self.assertTrue(t_bw['helastag'] and t_bw['std_diagram'])
-        self.assertTrue(isinstance(tag, decay_objects.IdentifyHelasTag))
-        self.assertTrue(isinstance(std_diagram, base_objects.Diagram))
+        self.assertIsInstance(tag, decay_objects.IdentifyHelasTag)
+        self.assertIsInstance(std_diagram, base_objects.Diagram)
         t_bw['helastag'] = None
         t_bw['std_diagram'] = None
 
@@ -2827,7 +2843,7 @@ class Test_IdentifyHelasTag(unittest.TestCase):
                           self.my_testmodel.add_helascalls, 2, t_bw)
         tag, std_diagram = t_bw.get_helas_properties(self.my_testmodel)
         self.my_testmodel.add_helascalls(2, t_bw)
-        self.assertTrue(len(self.my_testmodel.get_helascalls(2))==1)
+        self.assertEqual(len(self.my_testmodel.get_helascalls(2)), 1)
         self.assertTrue(self.my_testmodel.get_helascalls(2)[0]['helastag'])
 
         #     The helas calls should be a deepcopy of the argument.
@@ -2871,7 +2887,7 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         std_diagram = self.my_testmodel.get_helascalls(3)[t_beve['helas_number']]
         self.assertEqual(t_beve['helas_number'],
                          t_bmuvm['helas_number'])
-        self.assertTrue(std_diagram['helastag'] == t_bmuvm['helastag'])
+        self.assertEqual(std_diagram['helastag'], t_bmuvm['helastag'])
         
 
 #===============================================================================
@@ -3125,8 +3141,8 @@ class Test_DecayAmplitude(unittest.TestCase):
         amplt_h_mmvv.get('apx_decaywidth')
         amplt_h_epairs.get('apx_decaywidth')
 
-        self.assertTrue(amplt_h_mmvv in higgs.get_amplitudes(4))
-        self.assertTrue(amplt_h_epairs in higgs.get_amplitudes(4))
+        self.assertIn(amplt_h_mmvv, higgs.get_amplitudes(4))
+        self.assertIn(amplt_h_epairs, higgs.get_amplitudes(4))
 
         # Test that all the final_legs has the same number
         for amp in higgs.get_amplitudes(4):
@@ -3149,11 +3165,11 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertRaises(decay_objects.DecayAmplitude.PhysicsObjectError,
                           amp_list.decaytable_string,'wrongformat')
         # Test for type
-        self.assertTrue(isinstance(amp_list.decaytable_string('full'), str))
-        self.assertTrue(isinstance(amp_list.decaytable_string(), str))
+        self.assertIsInstance(amp_list.decaytable_string('full'), str)
+        self.assertIsInstance(amp_list.decaytable_string(), str)
 
         # Test for decaytable_string from DecayParticle
-        self.assertTrue(isinstance(higgs.decaytable_string(), str))
+        self.assertIsInstance(higgs.decaytable_string(), str)
 
         self.my_testmodel.write_decay_table(os.path.join(_file_path,'../input_files/param_card_sm.dat'), 
                                             'full', 'mysmallmodel')
@@ -3433,7 +3449,7 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(len(ab_model['abstract_particles_dict'][(2,3,False)]),
                          3)
         newpart = ab_model['abstract_particles_dict'][(2,3, False)][-1]
-        self.assertTrue(newpart in ab_model.get('particles'))
+        self.assertIn(newpart, ab_model.get('particles'))
         # Test if the get_particle can find the correct anti-particle
         self.assertEqual(ab_model.get_particle(-newpart.get_pdg_code())['is_part'],
                         False)
@@ -3448,8 +3464,10 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model.add_ab_particle(999)
 
         # Check if new particle is in paticles and abstract_particles_dict
-        self.assertTrue((4,6, True) in \
-                            list(ab_model['abstract_particles_dict'].keys()))
+        self.assertIn(
+            (4,6, True),
+            list(ab_model['abstract_particles_dict'].keys())
+        )
         self.assertTrue(ab_model.get_particle(9914601))
 
         # Check properties
@@ -3542,8 +3560,10 @@ class Test_AbstractModel(unittest.TestCase):
                                                                inter['color']]))
 
             # Test if the abstract_interactions_dict has been established
-            self.assertTrue(inter_type in \
-                                list(ab_model['abstract_interactions_dict'].keys()))
+            self.assertIn(
+                inter_type,
+                list(ab_model['abstract_interactions_dict'].keys())
+            )
 
             # Test if the coupling_dict has been established
             for ab_key, real_coup in \
@@ -3583,7 +3603,7 @@ class Test_AbstractModel(unittest.TestCase):
 
         for ab_inter in ab_model['interactions']:
             self.assertEqual(id_list.count(ab_inter['id']), 1)
-            self.assertTrue(ab_inter in new_inter_list)
+            self.assertIn(ab_inter, new_inter_list)
 
 
         # Test if the lorentz and color types have no intersection
@@ -3657,7 +3677,7 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(len(ab_model['abstract_interactions_dict'][inter_type]),  
                          2)
         new_inter = ab_model['abstract_interactions_dict'][inter_type][-1]
-        self.assertTrue(new_inter in ab_model.get('interactions'))
+        self.assertIn(new_inter, ab_model.get('interactions'))
 
         # Check properties
         type_sn = int(new_inter.get('id') /1000)
@@ -4201,8 +4221,10 @@ class Test_AbstractModel(unittest.TestCase):
                              1)
             # The CP is not invariant for w > q q'~
             if model_type == 'full_sm':
-                self.assertTrue(ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][0]['coup_dict'] != \
-                                    ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][1]['coup_dict'])
+                self.assertNotEqual(
+                    ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][0]['coup_dict'],
+                    ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][1]['coup_dict']
+                )
 
 
         ab_model.generate_ab_matrixelements_all()

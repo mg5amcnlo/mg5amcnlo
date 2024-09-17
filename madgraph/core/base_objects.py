@@ -274,13 +274,39 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
+    def nice_string(self):
+        """String representation of the object. Outputs valid Python 
+        with improved format."""
 
+        mystr = '{\n'
+        for prop in self.get_sorted_keys():
+            if prop == 'spin':
+               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               if self[prop] in spin_name:
+                   spin_name = spin_name[self[prop]]
+               else:
+                   spin_name = 'unknown'
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
+                (self[prop], spin_name)
+            elif isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -327,7 +353,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
@@ -1223,7 +1249,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Ensure no doublets in particle list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
@@ -1231,7 +1258,8 @@ class Model(PhysicsObject):
 
         if name == 'interactions':
             # Ensure no doublets in interaction list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -4126,6 +4154,9 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
+    if not doubletlist:
+        return
+    
     assert isinstance(doubletlist, list), \
            "Argument to make_unique must be list"
     

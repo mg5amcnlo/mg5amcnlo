@@ -40,7 +40,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import array
 import cmath
 import collections
@@ -1812,15 +1811,18 @@ class DecayModel(model_reader.ModelReader):
                     one_subdiag = True
                 else:
                     continue
-                
                 #check that all substructure are valid
-                #remove if any radiation and two times the same particle in a vertex
+                #remove if any radiation add two times the same particle in a vertex
                 # 2020: relaxed to avoid only twice initial particle in the vertex
                 for v in proc['vertices']:
                     if any([get_mass(l)==0 for l in v.get('legs')]):
                         self['invalid_Npoint'].append(vertex['id'])
                         return False
-                    init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    try:
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    except:
+                        l_num = min([l['number'] for l in v.get('legs')])
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==l_num][0]
                     nb_part = [1 for l in v.get('legs') if abs(l['id']) in [abs(init_pdg), abs(initpart.get('pdg_code'))]]
                     if len(nb_part) > 1:
                         self['invalid_Npoint'].append(vertex['id'])
@@ -3246,11 +3248,11 @@ class DecayModel(model_reader.ModelReader):
 
         # Define regular expressions
         re_decay = re_module.compile(\
-            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
+            r"^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         re_two_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
         re_three_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
 
         # Define the decay pid, total width
         pid = 0
@@ -4046,8 +4048,8 @@ class Channel(base_objects.Diagram):
         
     @classmethod
     def init_regular_expression(cls):
-        dico = dict((repr(i), '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
-        cls.lor_pattern = re_module.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+        dico = dict((repr(i), '%s' % ','.join([r"\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
+        cls.lor_pattern = re_module.compile(r"""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
                                         Gamma5\(%(2)s\)|
