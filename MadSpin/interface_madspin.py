@@ -1712,9 +1712,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
             Carefull this modifies production event (pass to the full one)"""
-
-
-
+            
         tag, order = production.get_tag_and_order()
         try:
             info = self.generate_all.all_me[tag]
@@ -1772,14 +1770,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Get all helicity configurations and iden number for production and decay events
         iden_p = self.get_iden(production)
 
+        # Find the particles that should decay
+        init_part = [part for pdg in decays for part in production if part.pid == pdg and part.status == 1]
+
+        # Spyros: this should later be removed for allowing more than one decays
+        nchanging = len(init_part)
+        assert nchanging == 1 
+        
+        # Loop over decaying particles
         for pdg in decays:
-            # Get the particle that should decay from the production event
-            init_part = [part for part in production if part.pid == pdg and part.status == 1]
-	     
-	        # Spyros: this should later be removed for allowing more than one decays
-            nchanging = len(init_part)
-            assert nchanging == 1 
-            
 	        # This is the position of the particle that decays in the production event
             position = [k+1 for k in range(len(production)) if production[k].pid == pdg]  # +1 to convert to fortran conversion	    
             # Allowed helicities of decaying particle - make this more generic
@@ -1798,6 +1797,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             # full_event[position[0]].status = 2 
 	    
 	        # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
+            # SOS: This loop is not correct - the return statement should be outside of the loop
+            # How to calculate ME in such a case?
             for i,decay_event in enumerate(decays[pdg]):
                 part = init_part[i]
 		        # We need to boost all particles in the decay event using the momentum
@@ -1806,9 +1807,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 boost = -1 * lhe_parser.FourMomentum(part)
                 boost.E *= -1
                 decay_event.boost(boost)                
-                
-		
-                
+
 		        # Get helicities of decay event
                 pos_in_dec = [k+1 for k in range(len(decay_event)) if decay_event[k].pid == pdg] 
 		
@@ -1830,23 +1829,26 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
 
                 # Call function to return indices of density matrix for prod*dec convolution
+                conv_ind_sym, conv_ind_asym =  self.get_density_matrix_indices(len(allowed_hel))
 
 		        # To get the ME we need to multiply the production and decay inters with the same index
-                me = density_prod[0]*density_dec[0] \
-                     + density_prod[1]*density_dec[1] \
-                     + density_prod[1].conjugate()*density_dec[1].conjugate() \
-                     + density_prod[2]*density_dec[2]
+                for i in conv_ind_sym:
+                    me += density_prod[i]*density_dec[i]
+                for i in conv_ind_asym:
+                    me += density_prod[i]*density_dec[i] \
+                        + density_prod[i].conjugate()*density_dec[i].conjugate()
                 me = me.real/(iden_p*color*D_D_conj)
 
                 # Get production and decay ME from diagonal elements of density matrix
                 prod_diag = (density_prod[0]+density_prod[2]).real/(iden_p)
                 dec_diag = (density_dec[0]+density_dec[2]).real/(color*len(allowed_hel))
                 
-                # Add decayed event to LHE record
-                # for k in range(len(decay_event)-1): 
-                #     full_event.append(decay_event[k+1])
-                
                 return me, density_prod, prod_diag, dec_diag
+
+    def get_density_matrix_indices(self, nhel_decay):
+        diag = [sum(range(nhel_decay, nhel_decay - i, -1)) for i in range(nhel_decay)]
+        off_diag = [i for i in list(range(nhel_decay * (nhel_decay + 1) // 2)) if i not in diag]
+        return diag, off_diag
 
     def get_density(self, event, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
