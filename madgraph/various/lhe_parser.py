@@ -1,6 +1,5 @@
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import random
 import re
@@ -449,6 +448,7 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
+
         if not get_wgt:
             def weight(event):
                 return event.wgt
@@ -1137,6 +1137,7 @@ class MultiEventFile(EventFile):
                     nb_keep = max(20, int(nb_event*trunc_error*15))
                     new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
+                misc.sprint(i,f)
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
@@ -1190,7 +1191,6 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
 
         if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
@@ -1542,11 +1542,11 @@ class Event(list):
             return self.loweight
         
         if not hasattr(Event, 'loweight_pattern'):
-            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
+                                    <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb1>1|2)["']?\\>\\s*(?P<beam1>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb2>1|2)["']?\\>\\s*(?P<beam2>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <totfact>\\s*(?P<totfact>[\\d.e+-]*)\\s*</totfact>
             ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
@@ -1599,7 +1599,7 @@ class Event(list):
         self.matched_scale_data = []
         
 
-        pattern  = re.compile("<scales\s|</scales>")
+        pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1607,7 +1607,7 @@ class Event(list):
             tmp = {}
             start,content, end = data
             self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
             for i in range(1, len(self)+1):
@@ -1631,7 +1631,7 @@ class Event(list):
             return self.syscalc_data
         
         pattern  = re.compile("<mgrwt>|</mgrwt>")
-        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        pattern2 = re.compile("<(?P<tag>[\\w]*)(?:\\s*(\\w*)=[\"'](.*)[\"']\\s*|\\s*)>(.*)</(?P=tag)>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -2761,23 +2761,19 @@ class FourMomentum(object):
             return out
         
         
-        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
-        # rotation such that it become (E, 0 , 0 , p ) is
-        #  cosT sinF  ,  -sinT  , cosT sinF
-        #  sinT cosF  ,  cosT   , sinT sinF
-        # -sinT       ,   0     , cosF
-        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
-        cosF = pboost.pz / p
-        sinF = math.sqrt(1-cosF**2)
-        sinT = pboost.py/p/sinF
-        cosT = pboost.px/p/sinF
-        
-        out=FourMomentum([self.E,
-                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
-                          -self.px*sinT+      self.py*cosT,
-                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
-                          ])
-        out = out.zboost(E=pboost.E,pz=p)
+        # see here https://physics.stackexchange.com/questions/749036/general-lorentz-boost-of-four-momentum-in-cm-frame-particle-physics
+        vx = pboost.px/pboost.E 
+        vy = pboost.py/pboost.E 
+        vz = pboost.pz/pboost.E 
+        v = pboost.norm/pboost.E
+        v2 = pboost.norm_sq/pboost.E**2
+        gamma = 1./math.sqrt(1.-v**2)
+        gammo = gamma-1.
+        out = FourMomentum(E = gamma*(self.E - vx*self.px - vy*self.py - vz*self.pz),
+                           px= -gamma*vx*self.E + (1+gammo*vx**2/v2)*self.px + gammo*vx*vy/v2*self.py + gammo*vx*vz/v2*self.pz,
+                           py= -gamma*vy*self.E + gammo*vy*vx/v2*self.px + (1+gammo*vy**2/v2)*self.py + gammo*vy*vz/v2*self.pz,
+                           pz= -gamma*vz*self.E + gammo*vz*vx/v2*self.px + gammo*vz*vy/v2*self.py + (1+gammo*vz**2/v2)*self.pz)
+
         return out
         
         
@@ -3168,6 +3164,19 @@ class NLO_PARTIALWEIGHT(object):
             self.parse(input)
         
             
+    def ispureqcd(self):
+        """return True if the born does not correspond to a unique power of alphas
+           This allows to prevent to use re-weighting in mode where it is known to be 
+           failing to scale correctly.
+        """
+        for cevt in self.cevents:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
+                return False
+                nb_wgt_check += len(cevt.wgts)
+
+        return True
+
+       
         
     def parse(self, text):
         """create the object from the string information (see example below)"""

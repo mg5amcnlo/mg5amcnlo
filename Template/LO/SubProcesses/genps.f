@@ -146,10 +146,11 @@ c
 c     Global
 c
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      character*7 pdsublabel(2)
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
+      include '../../Source/PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      INTEGER       LHAID
+c      character*7 pdsublabel(2)
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
 
       double precision pmass(nexternal)
       common/to_mass/  pmass
@@ -681,6 +682,12 @@ c        Start graph mapping
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
+         if (mincfig.eq.0) then
+            iconfig = 1
+            nconfigs = mapconfig(mapconfig(0))
+            mincfig=1
+            maxcfig=mapconfig(0)
+         endif
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
 c         maxwgt=0d0
 c         nparticles   = nexternal
@@ -1866,12 +1873,12 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
          d1 = iforest(1, -i, config)
          d2 = iforest(2, -i, config)
          do j=0,3
-            if (d1.gt.0.and.d1.le.2) then
+            if (d1.gt.0.and.d1.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
             endif
-            if (d2.gt.0.and.d2.le.2) then
+            if (d2.gt.0.and.d2.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)
@@ -1881,7 +1888,7 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             if(sde_strat.eq.2)then
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
-               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
+               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass)+stot*1d-10)**2
             endif
 c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
             t = t/stot 

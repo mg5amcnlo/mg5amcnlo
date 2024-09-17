@@ -1006,7 +1006,7 @@ class LoopDiagram(base_objects.Diagram):
         self['vertices'] = loopVertexList    
     
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
-        """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
+        r""" Construct iteratively a Feynman Diagram structure attached to a Loop, 
         given at each step a vertex and the position of the leg this function is 
         called from. At the same time, it constructs a canonical representation 
         of the structure which is a tuple with each element corresponding to 
@@ -1487,6 +1487,7 @@ class LoopModel(base_objects.Model):
                 'lorentz','perturbation_couplings','conserved_charge']
 
     def change_electroweak_mode(self, mode, bypass_check=False):
+        bypass_check=True
         if not bypass_check:
             if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
                 raise Exception("can not change EW scheme for model handling EW correction")

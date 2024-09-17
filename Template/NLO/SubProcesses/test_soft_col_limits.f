@@ -55,6 +55,10 @@ c*****************************************************************************
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
       double precision alsf,besf
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
@@ -82,6 +86,13 @@ C split orders stuff
       common /to_amp_split_mc/amp_split_mc
       double precision ran2
       external         ran2
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+c
+c     Properly initialize PY8 controls
+c
+      include 'pythia8_control.inc'
+      include 'pythia8_control_setup.inc'
 c-----
 c  Begin Code
 c-----
@@ -145,23 +156,7 @@ c-----
       call setrun               !Sets up run parameters
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
-      call setcuts              !Sets up cuts 
 
-c When doing hadron-hadron collision reduce the effect collision energy.
-c Note that tests are always performed at fixed energy with Bjorken x=1.
-      totmass = 0.0d0
-      include 'pmass.inc' ! make sure to set the masses after the model has been included
-      do i=nincoming+1,nexternal
-         if (is_a_j(i) .and. i.ne.nexternal) then
-            totmass = totmass + max(ptj,pmass(i))
-         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
-            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
-         else
-            totmass = totmass + pmass(i)
-         endif
-      enddo
-      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
-      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
 c
       write (*,*) 'Give FKS configuration number ("0" loops over all)'
       read (*,*) fks_conf_number
@@ -191,6 +186,38 @@ c
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
       nndim=ndim
+
+
+      call setcuts              !Sets up cuts 
+c When doing hadron-hadron collision reduce the effect collision energy.
+c Note that tests are always performed at fixed energy with Bjorken x=1.
+      totmass = 0.0d0
+      include 'pmass.inc' ! make sure to set the masses after the model has been included
+      do i=nincoming+1,nexternal
+         if (is_a_j(i) .and. i.ne.nexternal) then
+            totmass = totmass + max(ptj,pmass(i))
+         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
+            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
+         elseif (is_a_ph(i)) then
+            totmass = totmass + ptgmin
+         else
+            if (any(mxxmin(i,i+1:nexternal-1).gt.0d0)) then
+               do k=i+1,nexternal-1
+                  if (mxxmin(i,k).gt.0d0) then
+                     totmass = totmass + mxxmin(i,k)
+                  endif
+               enddo
+            elseif (etmin(i).gt.0d0) then
+               totmass=totmass+max(etmin(i),pmass(i))
+            else
+               totmass = totmass + pmass(i)
+           endif
+         endif
+      enddo
+      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
+      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
+
+      
       write(*,*)'  '
       write(*,*)'  '
       write(*,*)"Enter graph number (iconfig), "
@@ -207,7 +234,7 @@ c
          bs_min=iconfig_in
          bs_max=iconfig_in
       endif
-
+      
       do iconfig=bs_min,bs_max  ! Born configurations
          ichan=1
          iconfigs(1)=iconfig
@@ -278,6 +305,7 @@ c
                x(jj)=ran2()
             enddo
             new_point=.true.
+            MCcntcalled=0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
                wgt=1d0
@@ -285,6 +313,7 @@ c
                   x(jj)=ran2()
                enddo
                new_point=.true.
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                ntry=ntry+1
             enddo
@@ -298,6 +327,7 @@ c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
 c configurations close to the soft-collinear limit
                xi_i_fks_fix=0.d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(0)
@@ -328,6 +358,7 @@ c Now generate the momenta for the original xi_i_fks=0.1, slightly shifted,
 c because otherwise fresh random will be used...
                xi_i_fks_fix=0.100001d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(-100)
@@ -358,6 +389,7 @@ c because otherwise fresh random will be used...
             do i=2,imax
                xi_i_fks_fix=xi_i_fks_fix/10d0
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                if (ilim.eq.2) then
                   calculatedBorn=.false.
@@ -520,6 +552,7 @@ c
                x(jj)=ran2()
             enddo
             new_point=.true.
+            MCcntcalled=0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
                wgt=1d0
@@ -527,6 +560,7 @@ c
                   x(jj)=ran2()
                enddo
                new_point=.true.
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                ntry=ntry+1
             enddo
@@ -580,6 +614,7 @@ c
             do i=2,imax
                y_ij_fks_fix=1-0.1d0**i
                wgt=1d0
+               MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                if (ilim.eq.2) then
                   calculatedBorn=.false.

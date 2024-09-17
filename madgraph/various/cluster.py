@@ -12,7 +12,6 @@
 #                                                                               
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import subprocess
 import logging
 import os
@@ -28,13 +27,19 @@ from six.moves import input
 logger = logging.getLogger('madgraph.cluster') 
 
 try:
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, MG5DIR
     import madgraph.various.misc as misc
+    MADEVENT=False
 except Exception as error:
     if __debug__:
         print(str(error))
     from internal import MadGraph5Error
     import internal.misc as misc
+    MADEVENT=True
+    LOCALDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), os.path.pardir,
+                                                                os.path.pardir))
+
+
 
 pjoin = os.path.join
    
@@ -191,8 +196,9 @@ class Cluster(object):
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
                 'arguments': ' '.join([str(a) for a in argument]),
-                'program': ' ' if '.py' in prog else 'bash'}
+                'program': sys.executable if '.py' in prog else 'bash'}
         
+        temp_file_name = temp_file_name.replace("/","_")
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
         open(new_prog, 'w').write(text % dico)
@@ -603,6 +609,12 @@ class MultiCore(Cluster):
             self.nb_core = args[0]
         else:
             self.nb_core = 1
+        # flag controlling if one keep the thread open or not after a wait()
+        if 'keep_thread' in opt:
+            self.keep_thread = opt['keep_thread']
+        else:
+            self.keep_thread = False
+
         self.update_fct = None
         
         self.lock = threading.Event() # allow nice lock of the main thread
@@ -611,9 +623,6 @@ class MultiCore(Cluster):
         self.done_pid_queue = six.moves.queue.Queue()
         self.fail_msg = None
 
-        # starting the worker node
-        for _ in range(self.nb_core):
-            self.start_demon()
 
         
     def start_demon(self):
@@ -629,7 +638,7 @@ class MultiCore(Cluster):
         import six.moves._thread
         while not self.stoprequest.isSet():
             try:
-                args = self.queue.get()
+                args = self.queue.get(timeout=10)
                 tag, exe, arg, opt = args
                 try:
                     # check for executable case
@@ -637,7 +646,10 @@ class MultiCore(Cluster):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
                         if isinstance(opt['stdout'],str):
-                            opt['stdout'] = open(opt['stdout'],'w')
+                            if opt['stdout'] == '/dev/null':
+                                opt['stdout'] = os.open(os.devnull, os.O_RDWR)
+                            else:    
+                                opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         if arg:
@@ -662,11 +674,12 @@ class MultiCore(Cluster):
                         self.pids.put(pid)
                         # the function should return 0 if everything is fine
                         # the error message otherwise
-                        returncode = exe(*arg, **opt)
-                        if returncode != 0:
-                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
+                        try:
+                            returncode = exe(*arg, **opt)
+                        except Exception as error:
+                            #logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                            self.remove("fct %s does raise %s\n %s" % (exe, error))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))
@@ -686,13 +699,18 @@ class MultiCore(Cluster):
                     continue
             except six.moves.queue.Empty:
                 continue
-            
-            
+        import threading
+        self.demons.remove(threading.current_thread())  
             
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
-               log=None, required_output=[], nb_submit=0):
+               log=None, required_output=[], nb_submit=0, python_opts={}):
         """submit a job on multicore machine"""
+        
+        # open threads if needed   
+        self.stoprequest.clear()     
+        if len(self.demons) < self.nb_core:
+            self.start_demon()
         
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
@@ -706,7 +724,7 @@ class MultiCore(Cluster):
             return tag
         else:
             # python function
-            self.queue.put((tag, prog, argument, {}))
+            self.queue.put((tag, prog, argument, python_opts))
             self.submitted.put(1)
             return tag            
         
@@ -742,7 +760,7 @@ class MultiCore(Cluster):
                 continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
-            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -827,9 +845,11 @@ class MultiCore(Cluster):
                     raise self.fail_msg
                 elif isinstance(self.fail_msg, str):
                     raise Exception(self.fail_msg)
-                else:
-                    misc.sprint(self.fail_msg)
+                elif self.fail_msg:
+                    # can happend that stoprequest is set bu not fail if no job have been resubmitted
                     six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                # self.fail_msg is None can happen when no job was submitted -> ignore
+
             # reset variable for next submission
             try:
                 self.lock.clear()
@@ -844,6 +864,7 @@ class MultiCore(Cluster):
             self.stoprequest.clear()
             self.id_to_packet = {}
 
+
         except KeyboardInterrupt:
             # if one of the node fails -> return that error
             if isinstance(self.fail_msg, Exception):
@@ -854,6 +875,9 @@ class MultiCore(Cluster):
                 six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
             # else return orignal error
             raise 
+
+        if not self.keep_thread:
+            self.stoprequest.set()
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -887,6 +911,10 @@ class CondorCluster(Cluster):
         else:
             requirement = ''
 
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+            requirement+='\n MaxRuntime =  %s' % self.options['cluster_walltime'] 
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -915,7 +943,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         output = output.decode(errors='ignore')
         try:
             id = pat.search(output).groups()[0]
@@ -1004,7 +1032,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         output = output.decode(errors='ignore')
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1026,8 +1054,12 @@ class CondorCluster(Cluster):
                                                          stderr=subprocess.PIPE)
         
         error = status.stderr.read().decode(errors='ignore')
-        if status.returncode or error:
+        if status.returncode and error:
             raise ClusterManagmentError('condor_q returns error: %s' % error)
+        elif status.returncode:
+            raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+        elif error:
+            sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
         return status.stdout.readline().decode(errors='ignore').strip()
     
@@ -1053,8 +1085,12 @@ class CondorCluster(Cluster):
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE)
             error = status.stderr.read().decode(errors='ignore')
-            if status.returncode or error:
+            if status.returncode and error:
                 raise ClusterManagmentError('condor_q returns error: %s' % error)
+            elif status.returncode:
+                raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+            elif error:
+                sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
             for line in status.stdout:
                 id, status = line.decode(errors='ignore').strip().split()
@@ -1559,7 +1595,7 @@ class GECluster(Cluster):
 
         output = a.communicate()[0].decode(errors='ignore')
         #Your job 874511 ("test.sh") has been submitted
-        pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+        pat = re.compile(r"Your job (\d*) \(",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1577,7 +1613,7 @@ class GECluster(Cluster):
         if not status:
             return 'F'
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-        pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+        pat = re.compile(r"^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
         stat = ''
         for line in status.stdout.read().decode(errors='ignore').split('\n'):
             if not line:
@@ -1607,7 +1643,7 @@ class GECluster(Cluster):
             cmd = 'qstat -s %s' % statusflag
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-            pat = re.compile("^(\d+)")
+            pat = re.compile(r"^(\d+)")
             for line in status.stdout.read().decode(errors='ignore').split('\n'):
                 line = line.strip()
                 try:
@@ -1668,8 +1704,14 @@ class SLURMCluster(Cluster):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = self.get_jobs_identifier(cwd, prog)
-        
-        
+        import sys
+        if prog == sys.executable:
+            argument.insert(0, prog)
+            if MADEVENT:
+                prog = pjoin(LOCALDIR,'bin','internal','eval.sh') 
+            else:
+                prog = pjoin(MG5DIR, 'Template','Common','bin','internal','eval.sh')
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -1680,14 +1722,24 @@ class SLURMCluster(Cluster):
             stderr = stdout
         if log is None:
             log = '/dev/null'
+
         
         command = ['sbatch', '-o', stdout,
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
 
+
+
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
+
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+                command.insert(1, '-t')
+                command.insert(2, self.options['cluster_walltime'])            
+            
+
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
@@ -1698,7 +1750,7 @@ class SLURMCluster(Cluster):
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
-            id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
+            id = re.findall(r'Submitted batch job ([\d\.]+)', ' '.join(output_arr))
             
             if not id or len(id)>1:
                 raise ClusterManagmentError( 'fail to submit to the cluster: \n%s' \
@@ -1714,8 +1766,12 @@ class SLURMCluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'squeue j'+str(id)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
+                                  stderr=open(os.devnull,'w'),env=env)
         
         for line in status.stdout:
             line = line.decode(errors='ignore').strip()
@@ -1733,7 +1789,11 @@ class SLURMCluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "squeue"
-        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
+        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE,env=env)
 
         me_dir = self.get_jobs_identifier(me_dir)
 

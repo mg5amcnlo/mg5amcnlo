@@ -1,4 +1,4 @@
-################################################################################
+#############################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -349,6 +349,7 @@ def import_full_model(model_path, decay=False, prefix=''):
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
+    files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
@@ -986,8 +987,8 @@ class UFOMG5Converter(object):
                                                            for pole in range(3)]
             CTparameter_patterns[CTparam.name] = (pattern_finder,sub_functions)
         
-        times_zero = re.compile('\*\s*-?ZERO')
-        zero_times = re.compile('ZERO\s*(\*|\/)')
+        times_zero = re.compile(r'\*\s*-?ZERO')
+        zero_times = re.compile(r'ZERO\s*(\*|\/)')
         def is_expr_zero(expresson):
             """ Checks whether a single term (involving only the operations
             * or / is zero. """
@@ -1551,11 +1552,11 @@ class UFOMG5Converter(object):
                 
                 
                 if particle.color == 6:
-                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == -6 :
-                    output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<second>,\g<first>)', term))
                 elif particle.color == 8:
-                    output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
                 elif particle.color in [-3,3]:
                     if particle.pdg_code not in color_info:
@@ -1578,9 +1579,9 @@ class UFOMG5Converter(object):
                             logger.debug('succeed')
                 
                     if color_info[particle.pdg_code] == 3 :
-                        output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<second>,\g<first>)', term))
                     elif color_info[particle.pdg_code] == -3:
-                        output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<first>,\g<second>)', term))
                 else:
                     raise MadGraph5Error("Unknown use of Identity for particle with color %d" \
                           % particle.color)
@@ -1590,7 +1591,7 @@ class UFOMG5Converter(object):
 
         # Change convention for summed indices
         p = re.compile(r'\'\w(?P<number>\d+)\'')
-        data_string = p.sub('-\g<number>', data_string)
+        data_string = p.sub(r'-\g<number>', data_string)
          
         # Shift indices by -1
         new_indices = {}
@@ -1802,6 +1803,9 @@ class OrganizeModelExpression:
             depend_on = self.find_dependencies(expr)
             parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
             # Add consistently in the couplings/all_expr
+            if 'aS' in depend_on and 'QCD' not in coupling.order:
+                logger.warning('coupling %s=%s has direct dependence in aS but has QCD order set to 0. Automatic computation of scale uncertainty can be wrong for such model.',
+                               coupling.name, coupling.value)
             try:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
@@ -2052,7 +2056,13 @@ class RestrictModel(model_reader.ModelReader):
             self.get('order_hierarchy')
             self.get('expansion_order')
 
-
+        if os.path.exists(param_card.replace('restrict', 'param')):
+            path = param_card.replace('restrict', 'param')
+            logger.info('default value set as in file %s' % path)
+            self.set_parameters_and_couplings(path,
+                                              complex_mass_scheme=complex_mass_scheme,
+                                              auto_width=self.modify_autowidth)
+                          
 
         
     def locate_coupling(self):
@@ -2093,6 +2103,17 @@ class RestrictModel(model_reader.ModelReader):
         keys.sort()
         for name in keys:
             value = self['coupling_dict'][name]
+
+            def limit_to_6_digit(a):
+                x = a.real
+                if x != 0:
+                    x = round(x, int(abs(round(math.log(abs(x), 10),0))+10))
+                y = a.imag
+                if y !=0:
+                    y = round(y, int(abs(round(math.log(abs(y), 10),0))+10))
+                return complex(x,y)
+            
+
             if value == 0:
                 zero_coupling.append(name)
                 continue
@@ -2104,7 +2125,8 @@ class RestrictModel(model_reader.ModelReader):
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
-            
+            value = limit_to_6_digit(value)
+
             if value in dict_value_coupling or -1*value in dict_value_coupling:
                 if value in dict_value_coupling:
                     iden_key.add(value)
@@ -2331,6 +2353,7 @@ class RestrictModel(model_reader.ModelReader):
         logger_mod.log(self.log_level, ' Fuse the Following coupling (they have the same value): %s '% \
                         ', '.join([str(obj) for obj in couplings]))
 
+        #names = [name for (name,ratio) in couplings if ratio ==1]
         main = couplings[0][0]
         assert couplings[0][1] == 1
         self.del_coup += [c[0] for c in couplings[1:]] # add the other coupl to the suppress list
@@ -2491,6 +2514,26 @@ class RestrictModel(model_reader.ModelReader):
                 logger_mod.log(self.log_level, 'Modify counterterm of particle %s'%part_name+\
                                  ' with loop particles (%s)'%loop_parts+\
                                  ' perturbing order %s'%order)  
+
+        # looping over all vertex and remove all link to lorentz structure that are not used anymore
+        for vertex in mod_vertex:
+            lorentz_used = set()
+            for key in vertex['couplings']:
+                lorentz_used.add(key[1])
+            if not lorentz_used:
+                continue
+            lorentz_used = list(lorentz_used)
+            lorentz_used.sort()
+            map = {j:i for i,j in enumerate(lorentz_used)}            
+            new_lorentz = [l for i,l in enumerate(vertex['lorentz']) if i in lorentz_used]
+            new_coup = {}
+            for key in vertex['couplings']:
+                new_key = list(key)
+                new_key[1] = map[new_key[1]]
+                new_coup[tuple(new_key)] = vertex['couplings'][key]
+            vertex['lorentz'] = new_lorentz
+            vertex['couplings'] = new_coup                    
+
 
         return
                 

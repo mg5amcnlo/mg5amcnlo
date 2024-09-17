@@ -294,6 +294,10 @@ in presence of majorana particle/flow violation"""
             except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR('unknow type in Lorentz Evaluation: %s ' % str(error)) 
+            except Exception:
+                msg = 'unknow Exception in Lorentz Evaluation (%s):%s' %(str(lorentz), str(error))
+                logger.error(msg)
+                raise ALOHAERROR(msg)                 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):
@@ -478,6 +482,7 @@ in presence of majorana particle/flow violation"""
                 numerator =  "VFM(1,id)*VFMC(2,id)"
             denominator = "(2*Tnorm(id)*TnormZ(id))*(P(-1,id)*P(-1,id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         elif propa == "1PS":
+            # This is for the photon/gluon phase-space gauge of Kentarou/Hagiwara
             numerator = "(-1*(P(-1,id)*PBar(-1,id)) * Metric(1, 2) + P(1,id)*PBar(2,id) + PBar(1,id)*P(2,id))"
             denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
         elif propa == "1N":
@@ -673,7 +678,7 @@ class AbstractALOHAModel(dict):
         # Option
         self.explicit_combine = explicit_combine
         # Extract the model name if combined with restriction
-        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_pattern = re.compile(r"^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
         if model_name_re:
             name = model_name_re.group('name')
@@ -871,14 +876,22 @@ class AbstractALOHAModel(dict):
                 for vertex in self.model.all_vertices:
                     if lorentz in vertex.lorentz:
                         for i,part in enumerate(vertex.particles):
-                            new_prop = False
+                            new_props = [['P1N']] # default add those for hel recycling
                             if hasattr(part, 'propagator') and part.propagator:
-                                new_prop = ['P%s' % part.propagator.name]
+                                new_props.append(['P%s' % part.propagator.name])
                             elif part.mass.name.lower() == 'zero':
-                                new_prop = ['P0'] 
-                            if new_prop and (i+1, new_prop) not in routines:
-                                routines.append((i+1, new_prop))
-            
+                                new_props.append(['P0']) 
+                            # routine for polarised production
+                            if part.spin == 3: # vector
+                                new_props += [['P1L'], ['P1T'], ['P1A']]
+                                if part.mass.name.lower() == 'zero':
+                                    new_props.append(['P1PS']) # phase-space gauge 
+                            elif part.spin == 2: #fermion
+                                new_props += [['P1P'], ['P1M']]
+                            for new_prop in new_props:
+                                if new_prop and (i+1, new_prop) not in routines:
+                                    routines.append((i+1, new_prop))
+
             builder = AbstractRoutineBuilder(lorentz, self.model)
             self.compute_aloha(builder, routines=routines)
 

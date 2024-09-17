@@ -55,7 +55,7 @@ class TestCmdShell1(unittest.TestCase):
         """join path and treat spaces"""   
 
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -216,12 +216,14 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': False,
-                     'nlo_mixed_expansion': True,
-                     'acknowledged_v3.1_syntax': False,
-                     'contur_path': './HEPTools/contur',
-                     'rivet_path': './HEPTools/rivet',
-                     'yoda_path':'./HEPTools/yoda',
+                    'auto_convert_model': True,
+                    'nlo_mixed_expansion': True,
+                    'acknowledged_v3.1_syntax': False,
+                    'contur_path': './HEPTools/contur',
+                    'rivet_path': './HEPTools/rivet',
+                    'yoda_path':'./HEPTools/yoda',
+                    'eMELA': 'eMELA-config',
+                    'cluster_walltime': None,
                     }
 
         self.assertEqual(config, expected)
@@ -305,7 +307,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'get_color.f')))
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -313,7 +316,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
         self.do('set group_subprocesses True')
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -518,7 +522,7 @@ class TestCmdShell2(unittest.TestCase,
 
         #log_output = open(logfile, 'r').read()
         #misc.sprint(log_output)
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -582,7 +586,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_epem_epem'), shell=True)
         (log_output, err) = p.communicate()
         log_output = log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -613,7 +617,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -649,7 +653,7 @@ class TestCmdShell2(unittest.TestCase,
                                                  oneproc), shell=True)
             
                 log_output = open(logfile, 'r').read()
-                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                                    re.IGNORECASE)
                 me_groups = me_re.search(log_output)
                 self.assertTrue(me_groups)
@@ -704,7 +708,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_gg_hgg'), shell=True)
         (log_output, err) = p.communicate()                                         
         log_output =log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -832,7 +836,7 @@ C
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV1P0_3.f')).read()
         
-        self.assertFalse('OM3' in text)
+        self.assertNotIn('OM3', text)
         ffv1p0 = [l.strip() for l in ffv1p0.strip().split('\n')]
         text = [l.strip() for l in text.strip().split('\n')]
         self.assertEqual(ffv1p0, text)
@@ -905,7 +909,7 @@ C
 
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV2_3.f')).read()
-        self.assertTrue('OM3' in text)
+        self.assertIn('OM3', text)
         ffv2 = [l.strip() for l in ffv2.strip().split('\n')]
         text = [l.strip() for l in text.strip().split('\n')]
         self.assertEqual(ffv2, text) 
@@ -1071,11 +1075,12 @@ C
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq',
                                                     'matrix11.jpg')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'HTML',
                                                     'card.jpg')))
         # Check that the run_config.inc file has been modified correctly
@@ -1450,6 +1455,20 @@ P1_qq_wp_wp_lvl
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
 
+    def test_decay_chain_identical_particle_outoforder(self):
+        """ check that we can use standard MG4 name """
+        
+        self.do('import model sm')
+        self.do('generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.do('output madevent %s ' % self.out_dir)
+        Pdir = os.listdir(pjoin(self.out_dir, 'SubProcesses')) 
+        self.assertNotIn('P0_ll_zzh_z_ll_z_ll_h_bbx',  Pdir)
+
+
+
+
+
     def test_save_load(self):
         """ check that we can use standard MG4 name """
         
@@ -1559,7 +1578,7 @@ P1_qq_wp_wp_lvl
                                          'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -1577,7 +1596,7 @@ P1_qq_wp_wp_lvl
         
         # check that the Cards have been modified
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
-        self.assertTrue("'tt'     = run_tag" in run_card)
-        self.assertTrue("200       = nevents" in run_card)
+        self.assertIn("'tt'     = run_tag", run_card)
+        self.assertIn("200       = nevents", run_card)
         os.chdir(cwd)
         

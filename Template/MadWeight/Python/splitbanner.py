@@ -15,7 +15,6 @@
 ##                                                                      ##
 ##########################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 from six.moves import input
 # patch if symbolic directory replace by real file
@@ -37,8 +36,8 @@ dico={'MGVersion':'old_version',
 
 class banner:
 
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     def __init__(self,pos):
 

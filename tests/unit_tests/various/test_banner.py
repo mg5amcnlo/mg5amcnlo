@@ -59,7 +59,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue('slha' in mybanner)
+        self.assertIn('slha', mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -68,8 +68,8 @@ class TestBanner(unittest.TestCase):
         #charge a card
         mybanner.charge_card('param_card')
         self.assertTrue(hasattr(mybanner, 'param_card'))
-        self.assertTrue(isinstance(mybanner.param_card, models.check_param_card.ParamCard))
-        self.assertTrue('mass' in mybanner.param_card)
+        self.assertIsInstance(mybanner.param_card, models.check_param_card.ParamCard)
+        self.assertIn('mass', mybanner.param_card)
         
 
         # access element of the card
@@ -106,7 +106,7 @@ class TestConfigFileCase(unittest.TestCase):
 
         self.assertEqual(type(config2), bannermod.ConfigFile)
         self.assertFalse(dict.__contains__(config2, 'UPPER2'))
-        self.assertTrue('UPPER2' in config2)
+        self.assertIn('UPPER2', config2)
         
         # from a dictionary add a config file
         config3 = a + self.config
@@ -162,8 +162,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = " 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
@@ -173,6 +173,19 @@ class TestConfigFileCase(unittest.TestCase):
         # Fail to have the correct behavior for that one. Should be ok in general               
         #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
         #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
+
+        # check status with allowed (auto filtering) and correct check
+        self.config.add_param("list_a", [1], allowed=[0,1,2])
+        self.assertEqual(self.config['list_a'], [1])
+        self.config['list_a'] = "1 , 2"
+        self.assertEqual(self.config['list_a'],[1,2])
+        self.config['list_a'] = ["1"]
+        self.assertEqual(self.config['list_a'],[1])
+        self.config['list_a'] = "1,2,3"
+        self.assertEqual(self.config['list_a'],[1,2]) # dropping not valid entry
+        self.config['list_a'] = "3,4"
+        self.assertEqual(self.config['list_a'],[1,2]) #default is to keep previous value
+
 
     def test_handling_dict_of_values(self):
         """check that the read/write of a list of value works"""
@@ -206,6 +219,9 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertRaises(Exception, self.config.__setitem__, 'dict', {'test':'test'})
         self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")
 
+        self.config['dict'] = " {'TimeShower:QEDshowerByQ':0, 'TimeShower:QEDshowerByL':1.0}"
+        self.assertEqual(self.config['dict'],{'TimeShower:QEDshowerByQ':0.0, 'TimeShower:QEDshowerByL': 1.0})
+        
     def test_integer_handling(self):
 
         self.config.add_param("int", 1)
@@ -254,8 +270,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.config['lower'] = 'auto'
         self.assertEqual(self.config['lower'],'auto')
         self.assertEqual(dict.__getitem__(self.config,'lower'),1)
-        self.assertTrue('lower' in self.config.auto_set)
-        self.assertFalse('lower' in self.config.user_set)
+        self.assertIn('lower', self.config.auto_set)
+        self.assertNotIn('lower', self.config.user_set)
         
         self.config['lower'] = 2 
         self.assertEqual(self.config['lower'], 2)
@@ -328,9 +344,29 @@ class TestConfigFileCase(unittest.TestCase):
         for key in self.config:
             keys.append(key)
         self.assertEqual(set(keys), set(self.config.keys()))
-        self.assertTrue('upper' not in keys)
-        self.assertTrue('UPPER' in keys)
-    
+        self.assertNotIn('upper', keys)
+        self.assertIn('UPPER', keys)
+
+    def test_guess_type(self):
+        """check the guess_type_from_value(value) static function"""
+
+        fct = bannermod.ConfigFile.guess_type_from_value
+        self.assertEqual(fct("1.0"), "float")
+        self.assertEqual(fct("1"), "int")
+        self.assertEqual(fct("35"), "int")
+        self.assertEqual(fct("35."), "float")
+        self.assertEqual(fct("True"), "bool")
+        self.assertEqual(fct("T"), "str")
+        self.assertEqual(fct("auto"), "str")
+        self.assertEqual(fct("my_name"), "str")
+        self.assertEqual(fct("import tensorflow; sleep(10)"), "str")
+
+        self.assertEqual(fct(1.0), "float")
+
+        self.assertEqual(fct("[1,2]"), "list")
+        self.assertEqual(fct("{1:2}"), "dict")
+
+
 #    def test_in(self):
 #        """actually tested in sum_object"""
 #       
@@ -504,6 +540,8 @@ Beams:LHEF='events_ouaf.lhe.gz'
         read_PY8Card=bannermod.PY8Card(out)
         self.assertEqual(modified_PY8Card, read_PY8Card)
 
+
+
 import shutil
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
@@ -533,27 +571,27 @@ class TestRunCard(unittest.TestCase):
         
         # check the class factory works        
         run_card = bannermod.RunCard()
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardNLO)
         
         path = pjoin(_file_path, '..', 'input_files', 'run_card_matching.dat')
         run_card = bannermod.RunCard(path)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))        
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardNLO)
         
         path = pjoin(_file_path,'..', 'input_files', 'run_card_nlo.dat')
         run_card = bannermod.RunCard(path)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardNLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardLO)
         
         #check the copy
         run_card2 = bannermod.RunCard(run_card)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardNLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardLO)
         #check all list/dict are define
         self.assertTrue(hasattr(run_card2, 'user_set'))
         self.assertTrue(hasattr(run_card2, 'hidden_param'))
@@ -597,11 +635,11 @@ class TestRunCard(unittest.TestCase):
             key = key.lower()
             if run_card[key] != run_card3[key]:
                 has_difference = True
-                self.assertTrue(key.lower() in run_card.hidden_param) 
-                self.assertTrue(key.lower not in run_card3.user_set)
+                self.assertIn(key.lower(), run_card.hidden_param)
+                self.assertNotIn(key.lower, run_card3.user_set)
             if key in run_card3.user_set:
                 has_userset=True   
-                self.assertFalse(key in run_card.user_set)            
+                self.assertNotIn(key, run_card.user_set)
         self.assertTrue(has_difference)
         self.assertTrue(has_userset)
         
@@ -655,6 +693,317 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
+    def test_guess_entry_fromname(self):
+        """ check that the function guess_entry_fromname works as expected
+        """
+
+        run_card = bannermod.RunCardLO()
+        fct = run_card.guess_entry_fromname
+        input = ("STR_INCLUDE_PDF", "True ")
+        expected = ("str", "INCLUDE_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("INCLUDE_PDF", "True ")
+        expected = ("bool", "INCLUDE_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        # note MIN is case sensitive
+        input = ("min_PDF", "1.45")
+        expected = ("float", "min_PDF", {'cut':True})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("MIN_PDF", "12345")
+        expected = ("int", "MIN_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_list", "[1,2,3,4,5]")
+        expected = ("list", "test_list", {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_data", "[1,2,3,4,5]")
+        expected = ("list", "test_data",  {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
+        expected = ("list", "test_data",  
+        {'typelist': int, 'cut':True, 'include':False , 'fortran_name':'input_2', 'autodef':False})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("list_float_data", "[1,2,3,4,5]")
+        expected = ("list", "data",  {'typelist': float})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("list_data", "[1,2,3,4,5]")
+        expected = ("list", "data",  {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("data", "{'__type__':1.0, 'value':3.0}")
+        expected = ("dict", "data", {'autodef': False, 'include': False})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("data", "1,2,3")
+        expected = ("list", "data", {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+    def test_add_unknown_entry(self):
+        """check that one can added complex structure via unknown entry functionality with the smart detection.
+        
+           note that the smart detection is done via guess_entry_fromname which is tested by
+           test_guess_entry_fromname. So this test is mainly to test that the output function of that function is corrrectly
+           linked to add_param as done in add_unknown_entry
+        """
+
+        run_card = bannermod.RunCardLO()
+        fct = run_card.add_unknown_entry
+
+        # simple one 
+        input = ("STR_INCLUDE_PDF", "True ")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "INCLUDE_PDF" 
+        self.assertEqual(run_card[name], "True")
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertIn(name.lower(), run_card.definition_path[True])
+
+        # complex case: list + metadata
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "test_data"
+        self.assertEqual(run_card[name], [1,2,3,4,5]) # this check that list are correctly formatted
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertNotIn(name.lower(), run_card.definition_path[True]) # since include is False
+        # check that metadata was passed correctly
+        self.assertNotIn(name, run_card.includepath[True])
+        self.assertIn(name, run_card.cuts_parameter)
+        self.assertIn(name, run_card.fortran_name)
+        self.assertEqual(run_card.fortran_name[name], "input_2")
+        self.assertIn(name, run_card.list_parameter)
+        self.assertEqual(run_card.list_parameter[name], int)
+
+
+        # complex case: dictionary 
+        input = ("test_dict", "{'__type__':1.0, '6':3.0}")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "test_dict"
+        self.assertEqual(run_card[name], {'__type__':1.0, '6':3.0}) # this check that list are correctly formatted
+        self.assertIn(name.lower(), run_card.hidden_param)
+        # default for dict is not to include in Fortran
+        self.assertNotIn(name.lower(), run_card.definition_path[True]) 
+        self.assertNotIn(name, run_card.includepath[True])
+
+        # check that one can overwritte hidden 
+        input = ("max_data<hidden=False>", "3.0")
+        fct(*input)
+        name = "max_data"
+        self.assertEqual(run_card[name], 3.0)
+        self.assertNotIn(name.lower(), run_card.hidden_param)
+
+        # check that one can overwritte autodef
+        input = ("max_data2<autodef=False>", "3")
+        fct(*input)
+        name = "max_data2"
+        self.assertEqual(run_card[name], 3.0)
+        self.assertNotIn(name.lower(), run_card.definition_path[True])
+        self.assertIn(name.lower(), run_card.hidden_param)
+
+        # check that one can overwritte include to False but autodef to True
+        # check that one can overwritte autodef
+        input = ("data3<autodef=True><include=False>", "True")
+        fct(*input)
+        name = "data3"
+        self.assertEqual(run_card[name], 1.0)
+        self.assertIn(name.lower(), run_card.definition_path[True])
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertNotIn(name, run_card.includepath[True])
+
+    def test_add_definition(self):
+        """ check the functionality that add an entry to an include file.
+            check also that the common block is added automatically
+        """
+
+        run_card = bannermod.RunCardLO()
+        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ")
+        f = StringIO.StringIO()
+        f.write("c .   this is a comment to test feature of missing end line ")
+        run_card.write_autodef(None,output_file=f)
+        self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
+        self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf", f.getvalue()) #no automatic formatting due to iostring for unittest
+
+        # adding a second in place
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.write_autodef(None,output_file=f)
+        self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
+        # order of the two variable within the common block is not important
+        if "COMMON/USER_CUSTOM_RUN/include_pdf," in f.getvalue():
+            self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf,include_pdf2", f.getvalue())
+        else:
+            self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,include_pdf", f.getvalue())
+
+        # reset, keep one , remove one and add a new one (keep same stream)
+        run_card = bannermod.RunCardLO()
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]")
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+        # check common block part
+        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
+        if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
+            self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
+        else:
+            self.assertIn("COMMON/USER_CUSTOM_RUN/test_list,include_pdf2", f.getvalue())
+
+        #change list size
+        run_card["test_list"] = [1,2,3,4,5,6,7]
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+        self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
+        # check common block part
+        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
+        if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
+            self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
+        else:
+            self.assertIn("COMMON/USER_CUSTOM_RUN/test_list,include_pdf2", f.getvalue())
+
+        #check that cleaning is occuring correctly 
+        run_card = bannermod.RunCardLO()
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertNotIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
+        # check common block part
+        self.assertNotIn("C START USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
+
+    def test_autodef_nomissmatch(self):
+        """
+        check that the code detects LO/NLO cards missmatch and crash correctly in that case
+        """
+        
+        LO = bannermod.RunCardLO()
+        NLO = bannermod.RunCardNLO()
+        flo = StringIO.StringIO()
+        fnlo = StringIO.StringIO()
+        LO.write(flo)
+        NLO.write(fnlo)
+        loinput = flo.getvalue().split('\n')
+        nloinput = fnlo.getvalue().split('\n')
+        
+        # check that LO card  can not be used for NLO run
+        self.assertRaises(bannermod.InvalidRunCard, NLO.read, loinput)
+
+        # check that NLO card  can not be used for LO run    
+        self.assertRaises(bannermod.InvalidRunCard, LO.read, nloinput)
+
+
+    def test_custom_fcts(self):
+        """check that the functionality to replace user_define function is 
+        working as expected"""
+
+        custom_contents1 = """
+      subroutine get_dummy_x1(sjac, X1, R, pbeam1, pbeam2, stot, shat)
+      implicit none
+      include 'maxparticles.inc'
+      include 'run.inc'
+c      include 'genps.inc'
+      double precision sjac ! jacobian. should be updated not reinit
+      double precision X1   ! bjorken X. output
+      double precision R    ! random value after grid transfrormation. between 0 and 1
+      double precision pbeam1(0:3) ! momentum of the first beam (input and/or output)
+      double precision pbeam2(0:3) ! momentum of the second beam (input and/or output)
+      double precision stot        ! total energy  (input and /or output)
+      double precision shat        ! output
+
+c     global variable to set (or not)
+      double precision cm_rap
+      logical set_cm_rap
+      common/to_cm_rap/set_cm_rap,cm_rap
+
+      set_cm_rap=.true. ! then cm_rap will be set as .5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+                         ! ebeam(1) and ebeam(2) are defined here thanks to 'run.inc'
+      shat = x1**2*ebeam(1)*ebeam(2)
+      CHECK1
+      return
+      end
+     """   
+        custom_contents2 = """
+     logical  function dummy_boostframe()
+      implicit none
+c
+c
+      dummy_boostframe = .true.
+      CHECK2
+      return
+      end
+        """
+        custom_contents = custom_contents1 + custom_contents2
+
+        # prepare simplify setup
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','LO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents)
+        
+        #launch the function
+        LO = bannermod.RunCardLO()
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+        
+        #test the functionality
+        #check that .orig is indeed created
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+
+        #check that new function have been written
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECK1', new_text)
+        self.assertIn('CHECK2', new_text)
+        self.assertIn("DUMMY_CUTS=.TRUE.", new_text)
+        self.assertIn("SHAT = X(1)*X(2)*EBEAM(1)*EBEAM(2)", new_text)
+        self.assertIn("LOGICAL  FUNCTION DUMMY_BOOSTFRAME()", new_text)
+
+        # launch the function with only one editted
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents1)
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+
+        #test the functionality
+        #check that .orig is still created
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        orig = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')).read()
+        self.assertNotIn('CHECK1', orig)
+        self.assertNotIn('CHECK2', orig)
+
+        #check that new function have been written
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECK1', new_text)
+        self.assertNotIn('CHECK2', new_text)
+        self.assertIn("DUMMY_CUTS=.TRUE.", new_text)
+        self.assertIn("SHAT = X(1)*X(2)*EBEAM(1)*EBEAM(2)", new_text)
+        self.assertIn("LOGICAL  FUNCTION DUMMY_BOOSTFRAME()", new_text)
+
+        # check that cleaning works
+        LO.edit_dummy_fct_from_file([], self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertEqual(orig, new_text)
+        self.assertNotIn('CHECK1', new_text)
+        self.assertNotIn('CHECK2', new_text)
 
 
     def test_pdlabel_block(self):
@@ -837,7 +1186,7 @@ class TestMadLoopParam(unittest.TestCase):
             for i,value in enumerate(data['correct']):
                 param1[name] = value
                 self.assertEqual(param1[name],  data['target'][i])
-                self.assertTrue(name.lower() not in param1.user_set)
+                self.assertNotIn(name.lower(), param1.user_set)
                 self.assertEqual(type(data['target'][i]), type(param1[name]))
             for value in data['wrong']:
                 self.assertRaises(Exception, param1.__setitem__, (name, value))
@@ -858,7 +1207,7 @@ class TestMadLoopParam(unittest.TestCase):
         #check that they are correct
         for key, value in param1.items():
             self.assertEqual(value, param2[key])
-            self.assertTrue(key.lower() in param2.user_set)
+            self.assertIn(key.lower(), param2.user_set)
             
     def test_sum_object(self):
         
@@ -873,18 +1222,18 @@ class TestMadLoopParam(unittest.TestCase):
         ########################################################################        
         param2 = param1 + new
 
-        self.assertTrue(isinstance(param2, MadLoopParam))
-        self.assertTrue(isinstance(param2, dict))
+        self.assertIsInstance(param2, MadLoopParam)
+        self.assertIsInstance(param2, dict)
         self.assertNotEqual(id(param1), id(param2))
         
         #check that they are correct
         for key, value in param1.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)        
+            self.assertNotIn(key.lower(), param2.user_set)
         for key, value in new.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)  
-        self.assertTrue('test' not in param1)
+            self.assertNotIn(key.lower(), param2.user_set)
+        self.assertNotIn('test', param1)
                    
         
         
@@ -897,11 +1246,11 @@ class TestMadLoopParam(unittest.TestCase):
         for key, value in param1.items():
             if key != 'CTLoopLibrary':
                 self.assertEqual(value, param2[key])
-                self.assertFalse(key.lower() in param2.user_set)   
+                self.assertNotIn(key.lower(), param2.user_set)
                      
         for key, value in new.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)   
+            self.assertNotIn(key.lower(), param2.user_set)
             
             
         ########################################################################
@@ -910,8 +1259,8 @@ class TestMadLoopParam(unittest.TestCase):
         param2 = new + param1   
         
         #check sanity
-        self.assertFalse(isinstance(param2, MadLoopParam))
-        self.assertTrue(isinstance(param2, dict))
+        self.assertNotIsInstance(param2, MadLoopParam)
+        self.assertIsInstance(param2, dict)
         self.assertNotEqual(id(new), id(param2))
         self.assertNotEqual(id(param1), id(param2))
         

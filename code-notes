@@ -1,0 +1,107 @@
+
+______________________________________________________________________________
+Code structure of the MG5_aMC/SudGen+PY8+DIRE interface as of Mon, Oct 8 2018
+------------------------------------------------------------------------------
+
+- All Pythia code is in the "Pythia" directory of the PY8meetsMG5aMC branch.
+- The Sudakov tabulation code is available in the "SudGen" directory
+- The aMC-PY8 link is through "Template/NLO/Subprocesses/montecarlocounter.f"
+- SudGen and aMC interface to PY+Dire in two fundamentally different ways
+  * SudGen assumes that PY+Dire is only used for Sudakov pre-tabulation. 
+  * aMC assumes that PY+Dire is used for various tasks (scale definition,
+    event processing before writing to LHEF,
+    previously on-the-fly no-emission-probabilities)
+- SudGen interfaces to PY+Dire through functions defined/declared in
+  SudGen/ps_interface.cc accessed from the main function of
+  SudGen/gridsudgen.f (executes dire_init_) and from the py_compute_sudakov
+  (executes dire_get_no_emission_prob_).
+  * SudGen/ps_interface.cc : C struct with global Pythia/Dire/Merging objects
+- Template/NLO/Subprocesses/montecarlocounter.f interfaces through 
+  Template/NLO/Subprocesses/pythia8_wrapper, which includes 
+  * Template/NLO/Subprocesses/LHAFortran_aMCatNLO.h : Defines a class to read
+    events from common block and interface to Pythia.
+  * Template/NLO/Subprocesses/pythia8_fortran.cc : Defines a class to write
+    events from Pythia to a common block.
+    Defines a class to access the Pythia evolution after the first emission
+    (to write the state after first emission to common block)
+    Contains C struct with global Pythia objects.
+  * Template/NLO/Subprocesses/dire_fortran.cc : Same as pythia8_fortran.cc,
+    but contains C struct with global Pythia/Dire/Merging objects.
+  montecarlocounter.f calls PY+Dire functions from the complete_xmcsubt
+  function 
+
+Description of declarations/definitions in SudGen/ps_interface.cc:
+- dire_init_
+  * Initializes Pythia, Dire, Merging objects using a default setup.
+  * Initialization includes a hard-coded definition of shower enhancement 
+    factors (see ``boost")
+  * Performs one Pythia step for hard-coded process (QCD dijets) to 
+    complete/check initialization. Subsequent usage should not rely on the
+    hard-coded process used here.
+- dire_get_no_emission_prob_
+  * Intention: Calculate and return no-emission probability
+  * Directly uses parton shower code (via forward through Merging object)
+    + Calls Merging::generateSingeSudakov function
+  * Returns no-emission probability as double value 
+  * Notes:
+    + Requires starting scale and stopping scale to define
+      integration region, requires dipole mass, radiator id, and 
+      type of radiator-recoiler system (II, IF, FI, FF)
+    + Will call generateSingleSudakov with dummy arguments for sHadronic
+      (7000 GeV) and x_{Bjorken, Radiator} (0.1)
+- Merging::generateSingeSudakov is defined in
+  Pythia/Dire/dire-src/include/Dire/Merging.h
+  and declared in 
+  Pythia/Dire/dire-src/src/Merging.cc
+  and is currently a direct forward to the function
+  DireSpace::noEmissionProbability 
+  Notes:
+  * This must be extended to include a forward to
+    DireTimes::noEmissionProbability
+- DireSpace::noEmissionProbability is an addition to the core shower code
+  and declared in
+  Pythia/Dire/dire-src/include/Dire/DireSpace.h
+  and defined in 
+  Pythia/Dire/dire-src/src/DireSpace.cc
+  * Intention: Calculate and return the Sudakov for II and IF configurations
+    by using trial showers.
+  * Calculation flow:
+    + Set up dummy event (called "state") with
+      predefined radiator (from input) and recoiler (assumption: recoiler
+      id <==> recoiler id; should be amended for IF; assumption: dummy
+      sHadronic, x_{Bjorken, Radiator})
+    + Set up one (two) dipole(s) for evolution of quark (gluon) radiators
+      (using getQCDdip core shower function)
+    + Perform nTrials weighted trial showers. nTrials hard-coded.
+      Trial showers performed by calling new DireSpace::pTnext() function
+      (new addition to the core shower code)
+      = Proposes pT (and z) values of next state change, until proposed
+        pT falls below pTendAll input value.
+    + DireSpace:pTnext proposed pT values.
+      = Clears bookkeeping og shower weights
+      = Draws one pT for each dipole end partaking in the evolution
+        and stores the weights of proposed branchings if necessart
+      = Returns proposed pT value (max of all drawn pT values)
+
+Description of declarations/definitions in 
+Template/NLO/Subprocesses/LHAFortran_aMCatNLO.h,
+Template/NLO/Subprocesses/pythia8_fortran.cc,
+Template/NLO/Subprocesses/dire_fortran.cc:
+- Still to be completed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

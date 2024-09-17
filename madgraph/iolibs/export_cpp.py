@@ -428,7 +428,7 @@ class OneProcessExporterCPP(object):
         process_string = self.process_string
 
         # Extract process number
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(process_string)
         proc_number = 0
         if proc_number_re:
@@ -437,7 +437,7 @@ class OneProcessExporterCPP(object):
                              proc_number_re.group(3)
 
         # Remove order information
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_pattern = re.compile(r"^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
         order_re = order_pattern.match(process_string)
         while order_re:
             process_string = order_re.group(1)
@@ -1939,7 +1939,7 @@ class UFOModelConverterCPP(object):
                  "complex": "std::complex<double>"}
 
     # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile('^#\w')
+    compiler_option_re = re.compile(r'^#\w')
     namespace_re = re.compile('^using namespace')
 
     slha_to_depend = {('SMINPUTS', (3,)): ('aS',),

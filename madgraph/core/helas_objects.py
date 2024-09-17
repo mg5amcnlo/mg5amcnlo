@@ -5437,6 +5437,15 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     for index in fs_indices[fs_id]:
                         chains.append([me for me in decay_elements[index] if me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id])
+                elif (len(fs_legs) == len(decay_elements) and \
+                     all(len(d)==1 for d in decay_is_ids) and \
+                     sorted(fs_ids) == sorted([d[0] for d in decay_is_ids])):
+                    # this cover the out of order case where only one particle is decaying in each
+                    for index in range(len(decay_elements)):
+                        out = [me for me in decay_elements[index] if me.get('processes')[0].\
+                                             get_initial_ids()[0] == fs_id]
+                        if out:
+                            chains.append(out)
 
                 if len(fs_legs) != len(decay_elements) or not chains or not chains[0]:
                     # In second case, or no chains are found
@@ -5459,7 +5468,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         combine = False
 
                 red_decay_chains = []
-
                 for prod in itertools.product(*chains):
                     # Now, need to ensure that we don't append
                     # duplicate chain combinations, e.g. (a>bc, a>de) and

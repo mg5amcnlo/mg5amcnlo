@@ -20,7 +20,6 @@ Lex + Yacc framework"""
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import numbers
 import os
@@ -119,7 +118,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'

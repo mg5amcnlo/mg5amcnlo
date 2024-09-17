@@ -15,7 +15,6 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import contextlib
 import itertools
@@ -31,7 +30,6 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-from distutils.version import LooseVersion, StrictVersion
 import six
 from six.moves import zip_longest
 from six.moves import range
@@ -59,6 +57,7 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+misc = locals
    
 #===============================================================================
 # parse_info_str
@@ -68,7 +67,7 @@ def parse_info_str(fsock):
     """
 
     info_dict = {}
-    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+    pattern = re.compile(r"(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
     for entry in fsock:
         entry = entry.strip()
@@ -85,7 +84,7 @@ def parse_info_str(fsock):
 def glob(name, path=''):
     """call to glob.glob with automatic security on path"""
     import glob as glob_module
-    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    path = re.sub(r'(?P<name>\?|\*|\[|\])', r'[\g<name>]', path)
     return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
@@ -148,10 +147,14 @@ def get_pkg_info(info_str=None):
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-        PACKAGE_INFO = info_dict
-        
-    return info_dict
-
+        if info_dict:                                          
+           PACKAGE_INFO = info_dict
+        else:
+           info_dict ={}
+           info_dict['version'] = '3.x.x'
+           info_dict['date'] = '20xx-xx-xx'
+           PACKAGE_INFO = info_dict        
+        return PACKAGE_INFO
 #===============================================================================
 # get_time_info
 #===============================================================================
@@ -172,6 +175,42 @@ def get_time_info():
 def is_MA5_compatible_with_this_MG5(ma5path):
     """ Returns None if compatible or, it not compatible, a string explaining 
     why it is so."""
+
+    class version:
+        def __init__(input):
+            self.info = input.split('.')
+
+        def __lt__(input):
+            if isinstance(input, str):
+                input = version(input)
+            
+            for a,b in zip(self.info, input.info):
+                both_int = True
+                try:
+                    a = int(a)
+                except Exception:
+                     both_int = False
+                try:
+                    b = int(b)
+                except Exception:
+                    both_int = False
+                if both_int:
+                    if a !=b:
+                        return a<b
+                    continue
+                elif isinstance(a, int):
+                    return False
+                elif isinstance(a, False):
+                    return False
+                elif a == b:
+                    continue
+                else:
+                    return a < b
+            else:
+                return len(self.info) < len(input.info)                   
+
+    def LooseVersion(input):
+        return version(input)
 
     ma5_version = None
     try:
@@ -282,16 +321,11 @@ def has_f2py():
     has_f2py = False
     if which('f2py'):
         has_f2py = True
-    elif sys.version_info[1] == 6:
-        if which('f2py-2.6'):
-            has_f2py = True
-        elif which('f2py2.6'):
-            has_f2py = True                 
-    else:
-        if which('f2py-2.7'):
-            has_f2py = True 
-        elif which('f2py2.7'):
-            has_f2py = True  
+    elif which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+        has_f2py = True
+    elif which('f2py%d' %(sys.version_info.major)):
+        has_f2py = True
+
     return has_f2py       
         
 #===============================================================================
@@ -348,7 +382,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     if dependency=='ninja':
         if cmd.options['ninja'] in ['None',None,''] or\
          (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
-         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'lib','libninja.a')) is None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
@@ -414,12 +448,14 @@ def multiple_try(nb_try=5, sleep=20):
 
     def deco_retry(f):
         def deco_f_retry(*args, **opt):
+            my_error = None
             for i in range(nb_try):
                 try:
                     return f(*args, **opt)
                 except KeyboardInterrupt:
                     raise
                 except Exception as error:
+                    my_error = error
                     global wait_once
                     if not wait_once:
                         text = """Start waiting for update. (more info in debug mode)"""
@@ -433,7 +469,7 @@ def multiple_try(nb_try=5, sleep=20):
 
             if __debug__:
                 raise
-            raise error.__class__('[Fail %i times] \n %s ' % (i+1, error))
+            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, my_error))
         return deco_f_retry
     return deco_retry
 
@@ -578,10 +614,10 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
     #search file
     file_to_change=find_makefile_in_dir(directory)
     if compiler_type == 'gfortran':
-        comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
         var = 'FC'
     elif compiler_type == 'cpp':
-        comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)CXX\s*=\s*(.+)\s*$')
         var = 'CXX'
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
@@ -825,9 +861,9 @@ def detect_current_compiler(path, compiler_type='fortran'):
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
     if compiler_type == 'fortran':
-        comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*FC\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     elif compiler_type == 'cpp':
-        comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*CXX\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
@@ -867,8 +903,8 @@ def rm_old_compile_file():
     
     # remove related libraries
     libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
-                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
-                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libgammaUPC.a','libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so', 'libgammaUPC.so']
     lib_pos='./lib'
     [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
                                  if os.path.exists(os.path.join(lib_pos, lib))]
@@ -1234,7 +1270,8 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read().encode())
+        with ziplib.open(stdout, 'wb') as f:
+            f.write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
@@ -1310,7 +1347,7 @@ class open_file(object):
             configuration = {'text_editor': None,
                              'eps_viewer':None,
                              'web_browser':None}
-        
+
         for key in configuration:
             if key == 'text_editor':
                 # Treat text editor ONLY text base editor !!
@@ -1334,13 +1371,24 @@ class open_file(object):
             elif key == 'eps_viewer':
                 if configuration[key]:
                     cls.eps_viewer = configuration[key]
-                    continue
+                if sys.platform == 'darwin':
+                    import platform
+                    ver, _, _ =  platform.mac_ver()
+                    # open does not support eps anymore since 13.0
+                    # pass by a converter first
+                    if int(ver.split('.')[0]) > 12: 
+                        if which('pstopdf'):
+                            cls.eps_viewer = 'pstopdf'
+                        elif  which('ps2pdf'):
+                            cls.eps_viewer = 'ps2pdf'
+
                 # else keep None. For Mac this will use the open command.
             elif key == 'web_browser':
                 if configuration[key]:
                     cls.web_browser = configuration[key]
                     continue
                 # else keep None. For Mac this will use the open command.
+
 
     @staticmethod
     def find_valid(possibility, program='program'):
@@ -1379,11 +1427,21 @@ class open_file(object):
 
     def open_mac_program(self, program, file_path):
         """ open a text with the text editor """
-        
+
         if not program:
             # Ask to mac manager
             os.system('open %s' % file_path)
-        elif which(program):
+        elif program == 'pstopdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, '-o', output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif program == 'ps2pdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif which(program): 
             # shell program
             arguments = program.split() # Allow argument in program definition
             arguments.append(file_path)
@@ -1823,7 +1881,7 @@ class EasterEgg(object):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -1837,16 +1895,37 @@ class EasterEgg(object):
     May4_banner = "*                           _____                          *\n" + \
         "*                       ,-~\"     \"~-.                      *\n" + \
         "*        *            ,^ ___         ^.             *      *\n" + \
-        "*          *         / .^   ^.         \         *         *\n" + \
+        "*          *         / .^   ^.         \\         *         *\n" + \
         "*            *      Y  l  o  !          Y      *           *\n" + \
         "*              *   l_  `.___.'         _,[   *             *\n" + \
         "*                * |^~\"--------------~\"\"^| *               *\n" + \
         "*              *   !     May the 4th     !   *             *\n" + \
-        "*            *       \                 /       *           *\n" + \
+        "*            *       \\                 /       *           *\n" + \
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
-    special_banner = {(4,5): May4_banner}
+    Zcommezorglub =  "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M::::::::::M       M::::::::::M                          *\n" + \
+        "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
+        "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \\__ \\                *\n" + \
+        "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
+        "* M::::::M   M:::::::M   M::::::M                          *\n" + \
+        "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \\| '__|       *\n" + \
+        "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
+        "* M::::::M               M::::::M   |_/\\/\\___/|_|          *\n" + \
+        "* M::::::M               M::::::M                          *\n" + \
+        "* MMMMMMMM               MMMMMMMM                          *\n" + \
+        "*                                                          *\n" + \
+        "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
+
+
+
+
+
+    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -1898,7 +1977,26 @@ class EasterEgg(object):
         if MADEVENT:
             return
         import madgraph.interface.madgraph_interface as madgraph_interface
-        madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
+        if date == (14,10):
+            def flip(text):
+                new_text = []
+                for line in text.split('\n'):
+                    new_line = []
+                    for word in line.split(' '):
+                        if "%" in word:
+                            new_line.append(word)
+                            continue
+                        new_line.append(''.join(list(reversed(list(word)))))
+                    new_text.append(' '.join(new_line))
+                return '\n'.join(new_text)
+
+            madgraph_interface.CmdExtended.intro_banner= flip(self.default_banner_1) + \
+                                                        self.special_banner[date] + \
+                                                        flip(self.default_banner_2) #+ \
+                                                        #"\n* homage to Franquin (text above in zorgland)              *" +\
+                                                        #"\n************************************************************"
+        else:
+            madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
 
     def call_apple(self, msg):
@@ -2132,39 +2230,51 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir,candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as  error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
     if not use_lhapdf:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib64')):
+            candidates += [pjoin(os.pardir,'local', 'lib64', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib64', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
         if not use_lhapdf:
             try:
                 import lhapdf
@@ -2180,7 +2290,10 @@ def import_python_lhapdf(lhapdfconfig):
         
     if use_lhapdf:
         python_lhapdf = lhapdf
-        python_lhapdf.setVerbosity(0)
+        try:
+            python_lhapdf.setVerbosity(0)
+        except Exception:
+            pass
     else:
         python_lhapdf = None
     return python_lhapdf

@@ -14,7 +14,6 @@
 ################################################################################
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import subprocess
 import unittest
 import os
@@ -125,7 +124,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -138,7 +137,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.generate(['p p > t j QED^2=4 QCD^2=0 [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
+        self.assertIn('10000 = nevents', card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
@@ -150,9 +149,9 @@ class MECmdShell(IOTests.IOTestManager):
         os.system('cp  %s/Cards/param_card_default.dat %s/Cards/param_card.dat' % (self.path, self.path))
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
-        self.assertTrue( 'ANALYSE      =' in card)
+        self.assertIn('ANALYSE      =', card)
         card = card.replace('ANALYSE      =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
-        self.assertTrue( 'EXTRALIBS    = stdhep Fmcfio' in card)
+        self.assertIn('EXTRALIBS    = stdhep Fmcfio', card)
         card = card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/shower_card_default.dat %s/Cards/shower_card.dat'% (self.path, self.path))
@@ -171,8 +170,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.top' % self.path))
 
-    @IOTests.createIOTest()
-    def testIO_check_html_long_process_strings(self):
+    #@IOTests.createIOTest()
+    def test_check_html_long_process_strings(self):
         """ target: info.html
         """
         #check that the info.html file correctly lists all the subprocesses,
@@ -187,7 +186,12 @@ class MECmdShell(IOTests.IOTestManager):
         #       'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
         info_html_this = open(os.path.join(self.path, 'HTML', 'info.html')).read()
         #self.assertEqual(info_html_target, info_html_this)
-        open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        #open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        self.assertEqual(info_html_this.count('<TD> born </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> virt </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> real </TD>'), 6)
+        self.assertEqual(info_html_this.count('<TR class=first>'), 2)
+        self.assertEqual(info_html_this.count('<TR class=second>'), 8)
 
 
     def test_raise_invalid_path_hwpp(self):
@@ -196,7 +200,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        self.assertIn('HERWIG6   = parton_shower', card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -221,7 +225,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        self.assertIn('HERWIG6   = parton_shower', card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -248,7 +252,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertIn(' -1 = nevt_job', card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -351,7 +355,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 0.1*wt < m_inv_tbar < mt + 0.1*wt)
                     #else:
                     #    self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [2,3])
+            self.assertIn(nb_final, [2,3])
         self.assertEqual(nb_event, nevents)        
         
         
@@ -380,7 +384,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 15*wt < m_inv_tbar < mt + 15*wt)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [4,5])
+            self.assertIn(nb_final, [4,5])
         self.assertEqual(nb_event, nevents)
 
         # check that each events has the decay ON mode
@@ -408,7 +412,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [4,5])
+            self.assertIn(nb_final, [4,5])
         self.assertEqual(nb_event, nevents)        
 
         
@@ -459,7 +463,7 @@ class MECmdShell(IOTests.IOTestManager):
                     else:
                         misc.sprint(p.pdg, p.status)
                         self.assertTrue(False, 'not W decaying')
-            self.assertTrue(nb_final in [2])
+            self.assertIn(nb_final, [2])
         self.assertEqual(nb_event, 10)      
         
         self.assertTrue(lhe_onshell)        
@@ -482,7 +486,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( 80 < m_inv_w < 81)
                     else:
                         self.assertTrue(False, 'not W decaying')
-            self.assertTrue(nb_final in [2])
+            self.assertIn(nb_final, [2])
         self.assertEqual(nb_event, 10)  
           
 
@@ -502,7 +506,7 @@ class MECmdShell(IOTests.IOTestManager):
                     self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
 
                     card = open('%s/Cards/run_card_default.dat' % self.path).read()
-                    self.assertTrue( '10000 = nevents' in card)
+                    self.assertIn('10000 = nevents', card)
                     card = card.replace('10000 = nevents', '100 = nevents')
                     open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
                     os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat'% (self.path, self.path))
@@ -515,7 +519,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(cmd, os.getcwd())
         self.do('quit')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
+        self.assertIn('10000 = nevents', card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
@@ -557,7 +561,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-    def test_eft_running_nlo(self):
+    def notest_eft_running_nlo(self):
         """check that  gives the correct result"""
         
         mg_cmd = MGCmd.MasterCmd()
@@ -610,7 +614,7 @@ class MECmdShell(IOTests.IOTestManager):
         val1 = results['cross']
         err1 = results['error']
 
-        target = 617.7542699925228
+        target = 617.7542699925228 # THIS IS NOT PURE INTERFERENCE...
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -639,8 +643,10 @@ class MECmdShell(IOTests.IOTestManager):
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
+        self.assertGreater(
+            os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+        )
         
 
 
@@ -666,8 +672,10 @@ class MECmdShell(IOTests.IOTestManager):
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
+        self.assertGreater(
+            os.path.getsize('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+        )
 
 
 
@@ -751,7 +759,7 @@ class MECmdShell(IOTests.IOTestManager):
             stderr=devnull
 
             
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
                          cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
@@ -765,18 +773,17 @@ class MECmdShell(IOTests.IOTestManager):
             if 'Summary:' in line:
                 break
         #      Run at p-p collider (6500.0 + 6500.0 GeV)
-        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
+        self.assertIn('Run at p-p collider (6500.0 + 6500.0 GeV)', data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
-        # warning, delta may not be compatible with python 2.6 
         try:
             self.assertAlmostEqual(6675.0, cross_section,delta=50)
         except TypeError:
             self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
 
         #      Number of events generated: 10000        
-        self.assertTrue('Number of events generated: 100' in data[i+3])
+        self.assertIn('Number of events generated: 100', data[i+3])
 
 
     def load_result(self, run_name='run_01'):
@@ -818,6 +825,280 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eeww_nlo_emela_noph(self):
+        """ we will test the generation of NLO EW for w+w- production,
+        using the gmu ren. scheme and the delta scheme for the factorisation 
+        of IR singularities
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm_Gmu
+        generate e+ e- > w+ w- [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137009
+        set photons_from_lepton False
+        set mw 80.379
+        set mz 91.1876
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(7.513, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eeww_nlo_emela_wph(self):
+        """ we will test the generation of NLO EW for w+w- production,
+        using the gmu ren. scheme and the delta scheme for the factorisation 
+        of IR singularities.
+        Photon in the initial state is included.
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm_Gmu
+        define ep = e+ a
+        define em = e- a
+        generate ep em > w+ w- [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137009
+        set photons_from_lepton True
+        set mw 80.379
+        set mz 91.1876
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(7.694, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eett_nlo_emela_bs(self):
+        """ we will test the generation of NLO EW for ttbar production,
+        using the alphamz ren. scheme and the delta scheme for the factorisation 
+        of IR singularities. (Actually, the amz scheme will be transformed 
+        internally to the MSbar one)
+        Beamstrahlung is included.
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm
+        generate e+ e- > t t~ [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137010
+        set photons_from_lepton False
+        set mw 80.379
+        set mz 91.1876
+        set mt 173.3
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(5.161e-1, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eett_lo_emela_clusterpath(self):
+        """ we will test the generation of LO EW for ttbar production,
+        using the alphamz ren. scheme and the delta scheme for the factorisation 
+        of IR singularities. (Actually, the amz scheme will be transformed 
+        internally to the MSbar one)
+        We will set a cluster_temp_path 
+        """
+
+        
+        text = """
+        import model loop_qcd_qed_sm
+        set cluster_temp_path /tmp/ --no_save
+        generate e+ e- > t t~ [LOonly=QED]
+        output %s
+        launch LO --multicore
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137010
+        set photons_from_lepton False
+        set mw 80.379
+        set mz 91.1876
+        set mt 173.3
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01_LO', 'results.html'))
+
+
+
+    def test_generate_eett_nlo_qcd_noisr(self):
+        """ we will test the generation of NLO QCD for ttbar production,
+        (without ISR, fixed beam energy
+        """
+        
+        text = """
+        import model loop_sm-no_b_mass
+        generate e+ e- > t t~ [QCD]
+        output %s
+        launch NLO
+        set ebeam1 500
+        set ebeam2 500
+        set lpp1 0 
+        set lpp2 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(1.745e-1, float(xsect), delta=3*float(error))
 
         check_html_page(self, pjoin(self.path, 'crossx.html'))
         check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))

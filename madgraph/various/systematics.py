@@ -15,7 +15,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 from six.moves import range
 from six.moves import zip
 if __name__ == "__main__":
@@ -163,9 +162,9 @@ class Systematics(object):
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
             #self.b1 = beam1//2212
             isEVAxDIS=True
-        # none
-        if(self.banner.run_card['pdlabel']=='none'):
-            raise SystematicsError('Systematics not supported for pdlabel=none')
+        # none, chff, edff
+        if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
+            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
@@ -228,8 +227,10 @@ class Systematics(object):
         if not lhapdf and not isEVA:
             log('fail to load lhapdf: doe not perform systematics')
             return
-        elif lhapdf:
+        try:
             lhapdf.setVerbosity(0)
+        except Exception:
+            pass
         self.pdfsets = {}  
         if isinstance(pdf, str):
             pdf = pdf.split(',')
@@ -333,9 +334,9 @@ class Systematics(object):
                 break
             elif ',' in id:
                 min_value, max_value = [int(v) for v in id.split(',')]
-                self.remove_wgts += [i for i in range(min_value, max_value+1)]
+                self.keep_wgts += [i for i in range(min_value, max_value+1)]
             else:
-                self.remove_wgts.append(id)  
+                self.keep_wgts.append(id)  
                 
         # input to start the id in the weight
         self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
@@ -544,7 +545,7 @@ class Systematics(object):
         if max_scale:
             resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100))
         if max_alps:
-            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100))
+            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
         if self.banner.run_card['pdlabel']=='eva':
@@ -581,7 +582,7 @@ class Systematics(object):
             else:
                 resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
 
-        dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
+        dyn_name = {1: r'\sum ET', 2:r'\sum\sqrt{m^2+pt^2}', 3:r'0.5 \sum\sqrt{m^2+pt^2}',4:r'\sqrt{\hat s}' }
         for key, curr in dyns.items():
             if key ==-1:
                 continue
@@ -788,7 +789,7 @@ class Systematics(object):
             return int(self.start_wgt_id)
         
         if 'initrwgt' in self.banner:
-            pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
+            pattern = re.compile('<weight id=(?:\'|\")([_\\w]+)(?:\'|\")', re.S+re.I+re.M)
             matches =  pattern.findall(self.banner['initrwgt'])
             matches.append('0') #ensure to have a valid entry for the max 
             return  max([int(wid) for wid in  matches if wid.isdigit()])+1

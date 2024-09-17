@@ -274,13 +274,39 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
+    def nice_string(self):
+        """String representation of the object. Outputs valid Python 
+        with improved format."""
 
+        mystr = '{\n'
+        for prop in self.get_sorted_keys():
+            if prop == 'spin':
+               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               if self[prop] in spin_name:
+                   spin_name = spin_name[self[prop]]
+               else:
+                   spin_name = 'unknown'
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
+                (self[prop], spin_name)
+            elif isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -327,7 +353,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
@@ -1223,7 +1249,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Ensure no doublets in particle list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
@@ -1231,7 +1258,8 @@ class Model(PhysicsObject):
 
         if name == 'interactions':
             # Ensure no doublets in interaction list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -1600,7 +1628,7 @@ class Model(PhysicsObject):
         # recast all parameter in prefix_XX
         for key in keys:
             for param in self['parameters'][key]:
-                value = param.name.lower()
+                value = param.name.lower()   
                 if value in ['as','mu_r', 'zero','aewm1','g']:
                     continue
                 elif value.startswith(prefix):
@@ -1619,7 +1647,7 @@ class Model(PhysicsObject):
                                                   ('__%d'%(i+1) if i>0 else ''))
                 change[var.name] = new_name
                 var.name = new_name
-                to_change.append(var.name)
+                #to_change.append(var.name)
         assert 'zero' not in to_change
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
@@ -1638,13 +1666,12 @@ class Model(PhysicsObject):
             self.map_CTcoup_CTparam = dict( (coup_name, 
             [change[name] if (name in change) else name for name in params]) 
                   for coup_name, params in self.map_CTcoup_CTparam.items() )
-
+        
         i=0
         while i*1000 <= len(to_change): 
             one_change = to_change[i*1000: min((i+1)*1000,len(to_change))]
             i+=1
             rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(one_change))))
-            
             # change parameters
             for key in keys:
                 if key == ('external',):
@@ -1669,9 +1696,14 @@ class Model(PhysicsObject):
                 if str(part.get('width')) in one_change:
                     part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
                 if  hasattr(part, 'partial_widths'):
-                    for key, value in part.partial_widths.items():    
+                    for key, value in part.partial_widths.items():
                         part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
+            # change running
+            if self['running_elements']:
+                for el in self['running_elements']:
+                    el.value = rep_pattern.sub(replace, el.value)
+
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
         self.get('particle_dict') 
@@ -1800,6 +1832,7 @@ class Model(PhysicsObject):
                 return True
             else:
                 return False
+            
 
     def change_mass_to_complex_scheme(self, toCMS=True, bypass_check=False):
         """modify the expression changing the mass to complex mass scheme"""
@@ -1858,13 +1891,13 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):
                     status = self.change_electroweak_mode(
-                                                   set(['mz','mw','alpha']), bypass_check)
+                                                   set(['mz','mw','alpha']), bypass_check=bypass_check)
                     # Use the newly defined parameter for the W mass
                     mass = self.get_parameter(particle.get('mass'))
                     if not status:
                         logger.warning('The W mass is not an external '+
                         'parameter in this model and the automatic change of'+
-                        ' electroweak scheme changed. This is not advised for '+
+                        ' electroweak scheme failed. This is not advised for '+
                                             'applying the complex mass scheme.')
 
                 # Add A new parameter CMASS
@@ -4121,6 +4154,9 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
+    if not doubletlist:
+        return
+    
     assert isinstance(doubletlist, list), \
            "Argument to make_unique must be list"
     

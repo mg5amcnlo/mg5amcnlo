@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import collections
 import cmath
@@ -173,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -318,7 +317,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
-        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use the global configuration')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
         logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
@@ -537,7 +536,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("               the test relies on linear scaling of the width, so 'always' is ")
         logger.info("               only for double-checks")
         logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
-        logger.info("      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
+        logger.info(r"      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
         logger.info("      In the list expression, you must escape spaces. Also, this option")
         logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-6'")
         logger.info("      for which an optimal list of progressive values is picked up to 1.0e-6")
@@ -782,7 +781,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
         logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
-        logger.info(" > (default False) Do not include real emission with leptons in the initial state.")
+        logger.info(" > (default False) Do not include processes with leptons in the initial state (nlo gen. only).")
         logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
         logger.info(" > Note that pressing tab always stops the timer.")
@@ -1092,14 +1091,14 @@ class CheckValidForCmd(cmd.CheckCmd):
             return
 
         # request that we have one or two > in the process
-        nbsep = len(re.findall('>\D', process)) # not use process.count because of QCD^2>2
+        nbsep = len(re.findall(r'>\D', process)) # not use process.count because of QCD^2>2
         if nbsep not in [1,2]:
             raise self.InvalidCmd(
                'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found'
                % (process, nbsep))
 
         # we need at least one particles in each pieces
-        particles_parts = re.split('>\D', process)
+        particles_parts = re.split(r'>\D', process)
         for particles in particles_parts:
             if re.match(r'^\s*$', particles):
                 raise self.InvalidCmd(
@@ -1107,10 +1106,10 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         # '/' and '$' sould be used only after the process definition
         for particles in particles_parts[:-1]:
-            if re.search('\D/', particles):
+            if re.search(r'\D/', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
-            if re.search('\D\$', particles):
+            if re.search(r'\D\$', particles):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
                 
@@ -1119,17 +1118,17 @@ class CheckValidForCmd(cmd.CheckCmd):
         if nbsep == 2:
             if '{' in particles_parts[1]:
                 raise self.InvalidCmd('Polarization restriction can not be used as required s-channel')
-        split = re.split('\D[$|/]',particles_parts[-1],1)
+        split = re.split(r'\D[$|/]',particles_parts[-1],1)
         if len(split)==2:
             if '{' in split[1]:
                 raise self.InvalidCmd('Polarization restriction can not be used in forbidding particles')
             
         if '[' in process and '{' in process:
             valid = False
-            if 'noborn' in process or 'sqrvirt' in process:
-                valid = True
-            else:
-                raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
+            #if 'noborn' in process or 'sqrvirt' in process:
+            #    valid = True
+            #else:
+            #    raise self.InvalidCmd('Polarization restriction can not be used for NLO processes')
 
             # below are the check when [QCD] will be valid for computation            
             order = process.split('[')[1].split(']')[0]
@@ -1138,8 +1137,15 @@ class CheckValidForCmd(cmd.CheckCmd):
             if order.strip().lower() != 'qcd':
                 raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
+            def check(p):
+                if p.get('color') != 1:
+                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
+                elif p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+ 
 
-            for p in particles_parts[1].split():
+
+            for p in particles_parts[0].split()+ particles_parts[-1].split():
                 if '{' in p:
                     part = p.split('{')[0]
                 else:
@@ -1150,12 +1156,13 @@ class CheckValidForCmd(cmd.CheckCmd):
                         if part in self._multiparticles:
                             for part2 in self._multiparticles[part]:
                                 p = self._curr_model.get_particle(part2)
-                                if p.get('color') != 1:
-                                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                        continue
-                    if p.get('color') != 1:
-                        raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-        
+                                check(p)
+                        else:
+                            p = self._curr_model.get_particle(part.lower())
+                            check(p)
+                    else:
+                        check(p)
+                    
 
 
     def check_tutorial(self, args):
@@ -1208,6 +1215,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             lastmodel = max(models, key=os.path.getmtime)
             logger.info('last model found is %s', lastmodel)
             args.insert(1, lastmodel)
+            self.history.info['model'] = lastmodel
 
         if not args:
             self.help_import()
@@ -1466,10 +1474,18 @@ This will take effect only in a NEW terminal
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
                 elif arg == 'global':
-                    if 'HOME' in os.environ:
-                        args.remove('global')
-                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-                        has_path = True
+                    legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                    if os.path.exists(legacy_config_dir):
+                        config_dir = legacy_config_dir
+                    else:
+                        config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                    config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+                    args.remove('global')
+                    args.insert(1, config_file)
+
+                    has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -1546,17 +1562,6 @@ This will take effect only in a NEW terminal
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
-
-        if args[0] in ['low_mem_multicore_nlo_generation']:
-            if args[1]:
-                if sys.version_info[0] == 2:
-                    if  sys.version_info[1] == 6:
-                        raise Exception('python2.6 does not support such functionalities please use python2.7')
-                #else:
-                #    raise Exception('python3.x does not support such functionalities please use python2.7')
-        
-
-
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman', 'axial']:
@@ -2184,8 +2189,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             completion = {}
             completion['options'] = self.list_completion(text,
-                            ['--path=', '--output=', '--min_br=0.\$',
-                             '--precision_channel=0.\$', '--body_decay=', '--nlo'])
+                            ['--path=', '--output=', r'--min_br=0.\$',
+                             r'--precision_channel=0.\$', '--body_decay=', '--nlo'])
             completion['particles'] = self.model_completion(text, '', line)
 
         return self.deal_multiple_categories(completion,formatting)
@@ -2619,7 +2624,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
             elif args[1] == 'cluster_type':
                 return self.list_completion(text, list(cluster.from_name.keys()) + ['default'])
-            elif args[1] == 'cluster_queue':
+            elif args[1] in ['cluster_queue', 'cluster_walltime']:
                 return []
             elif args[1] == 'automatic_html_opening':
                 return self.list_completion(text, ['False', 'True', 'default'])
@@ -2910,7 +2915,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
-                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur']
+                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -2968,7 +2973,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
+                       'cluster_walltime': None,
                        'fastjet':'fastjet-config',
+                       'eMELA':'eMELA-config',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -2987,7 +2994,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_size':100,
                        'output_dependencies':'external',
                        'crash_on_error':False,
-                       'auto_convert_model': False,
+                       'auto_convert_model': True,
                        'acknowledged_v3.1_syntax': False
                        }
 
@@ -3333,8 +3340,15 @@ This implies that with decay chains:
         
         #Need to do the work!!!        
         import models.usermod as usermod
-        base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
-        
+        try:
+            base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
+        except Exception:
+            base_model_tmp = usermod.UFOModel(self._curr_model.get('modelpath'))
+            with misc.TMP_variable(base_model_tmp, 'model',None):
+                base_model = copy.deepcopy(base_model_tmp)
+            base_model.model = base_model_tmp.model
+            del base_model_tmp
+                    
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
@@ -3383,8 +3397,8 @@ This implies that with decay chains:
         #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
         # raise UFOError, "" -> raise UFOError()
-        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
-                      'raise \g<1>("\g<2>")', text)
+        text = re.sub('raise (\\w+)\\s*,\\s*["\']([^"]+)["\']',
+                      r'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
@@ -3492,7 +3506,7 @@ This implies that with decay chains:
                     raise self.InvalidCmd('no particle %s in current model' % arg)
 
                 print("Particle %s has the following properties:" % particle.get_name())
-                print(str(particle))
+                print(particle.nice_string())
 
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
@@ -3602,7 +3616,6 @@ This implies that with decay chains:
             hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
-
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')
@@ -4710,7 +4723,7 @@ This implies that with decay chains:
 
         orig_line = line
         # Check basic validity of the line
-        if not len(re.findall('>\D', line)) in [1,2]:
+        if not len(re.findall(r'>\D', line)) in [1,2]:
             self.do_help('generate')
             raise self.InvalidCmd('Wrong use of \">\" special character.')
 
@@ -4725,7 +4738,7 @@ This implies that with decay chains:
         # and process number, starting from the back
 
         # Start with process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(line)
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
@@ -4734,8 +4747,8 @@ This implies that with decay chains:
         
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
-                               "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile(r"^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+                               r"(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
         LoopOption= 'tree'
@@ -4762,8 +4775,8 @@ This implies that with decay chains:
                         
         ## Now check for orders/squared orders/constrained orders
         order_pattern = re.compile(\
-           "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
-                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*?(?P<after>.*)")
+           r"^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+                    r"(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*?(?P<after>.*)")
         order_re = order_pattern.match(line)
         squared_orders = {}
         orders = {}
@@ -4820,7 +4833,7 @@ This implies that with decay chains:
                     type = "<="
                 squared_orders[basename] = (value,type)
             else:
-                if name not in model_orders:
+                if name not in model_orders and name!='WEIGHTED':
                     valid = list(model_orders) + list(coupling_alias.keys())
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
@@ -4890,9 +4903,9 @@ This implies that with decay chains:
         forbidden_particles = ""
         if slash > 0:
             if dollar > slash:
-                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)(\$.*)$", line)
+                forbidden_particles_re = re.match(r"^(.+)\s*/\s*(.+\s*)(\$.*)$", line)
             else:
-                forbidden_particles_re = re.match("^(.+)\s*/\s*(.+\s*)$", line)
+                forbidden_particles_re = re.match(r"^(.+)\s*/\s*(.+\s*)$", line)
             if forbidden_particles_re:
                 forbidden_particles = forbidden_particles_re.group(2)
                 line = forbidden_particles_re.group(1)
@@ -4900,14 +4913,14 @@ This implies that with decay chains:
                     line = line + forbidden_particles_re.group(3)
 
         # Now check for forbidden schannels, specified using "$$"
-        forbidden_schannels_re = re.match("^(.+)\s*\$\s*\$\s*(.+)\s*$", line)
+        forbidden_schannels_re = re.match(r"^(.+)\s*\$\s*\$\s*(.+)\s*$", line)
         forbidden_schannels = ""
         if forbidden_schannels_re:
             forbidden_schannels = forbidden_schannels_re.group(2)
             line = forbidden_schannels_re.group(1)
 
         # Now check for forbidden onshell schannels, specified using "$"
-        forbidden_onsh_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        forbidden_onsh_schannels_re = re.match(r"^(.+)\s*\$\s*(.+)\s*$", line)
         forbidden_onsh_schannels = ""
         if forbidden_onsh_schannels_re:
             forbidden_onsh_schannels = forbidden_onsh_schannels_re.group(2)
@@ -5322,7 +5335,7 @@ This implies that with decay chains:
         # Extract the options:
         #
         # A. Remove process number (identified by "@")
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(line)
         if proc_number_re:
             line = proc_number_re.group(1) + proc_number_re.group(3)
@@ -5330,7 +5343,7 @@ This implies that with decay chains:
         # B. search for the beginning of the option string
         pos=1000
         # start with order
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_pattern = re.compile(r"^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
         order_re = order_pattern.match(line)
         if (order_re):
             pos_order=line.find(order_re.group(2))
@@ -5494,14 +5507,14 @@ This implies that with decay chains:
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1)
             if proc_number_re.group(3):
-                order_pattern = re.compile("^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
+                order_pattern = re.compile(r"^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
                 order_line = proc_number_re.group(3)
                 order_re = order_pattern.match(order_line)
                 while order_re:
@@ -5643,7 +5656,7 @@ This implies that with decay chains:
                         if 1 not in self._curr_model.get('gauge') :
                             logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
-                                                'QCD loop cmputations with it.')
+                                                'and QCD loop computations with it.')
                         else:
                             logger.info('Change to the gauge to Feynman because '+\
                           'this loop model allows for more than just tree level'+\
@@ -6008,14 +6021,21 @@ This implies that with decay chains:
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(None))
-            
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
         if 'heptools_install_dir' in self.options:
             prefix = self.options['heptools_install_dir']
-            config_file = '~/.mg5/mg5_configuration.txt'
+            legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+            if os.path.exists(legacy_config_dir):
+                config_dir = legacy_config_dir
+            else:
+                config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+            config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
             prefix = pjoin(MG5DIR, 'HEPTools')
             config_file = ''
@@ -6123,8 +6143,8 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-
-        if return_code == 0:
+        misc.sprint(return_code)
+        if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
             
@@ -6182,6 +6202,9 @@ This implies that with decay chains:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
+        elif tool == 'eMELA':
+            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
+            self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6220,6 +6243,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'rivet')):
                 self.options['rivet_path'] = pjoin(prefix, 'rivet')
                 to_save.append('rivet_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet')
+            if os.path.exists(pjoin(prefix, 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
                  printcmd=False, log=False)  
         elif tool == 'rivet':
@@ -6229,12 +6258,23 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if os.path.exists(pjoin(prefix, 'yoda')):
                 self.options['yoda_path'] = pjoin(prefix, 'yoda')
                 to_save.append('yoda_path')
+            if os.path.exists(pjoin(prefix, 'fastjet')):
+                self.options['fastjet'] = pjoin(prefix, 'fastjet','bin', 'fastjet-config')
+                to_save.append('fastjet')
+            if os.path.exists(pjoin(prefix, 'hepmc')):
+                self.options['hepmc_path'] = pjoin(prefix, 'hepmc')
+                to_save.append('hepmc_path') 
             self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
-                 printcmd=False, log=False) 
+                 printcmd=False, log=False)
+        elif tool == 'fastjet':
+            self.options['fastjet'] = pjoin(prefix, tool,'bin', 'fastjet-config') 
+            self.exec_cmd('save options %s fastjet'  % (config_file),
+                 printcmd=False, log=False)  
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
-            
+        else:
+            logger.warning("path not saved for %s", tool)
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
         path_to_be_set = []
@@ -6499,6 +6539,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if returncode:
             raise MadGraph5Error('Fail to download correctly the File. Stop')
 
+        if name == "RunningCoupling":
+            name = "Template/Running"
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -6623,7 +6665,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 elif six.PY3:
                     logger.warning('Plugin not python3 compatible! It will run with python2')
                     text = open(os.path.join(MG5DIR, 'PLUGIN', name, '__init__.py')).read()
-                    if re.search('^\s*new_interface\s*=\s*(?!None).', text, re.M):
+                    if re.search(r'^\s*new_interface\s*=\s*(?!None).', text, re.M):
                         new_interface = True
                         pyvers = 2
                     else:
@@ -6857,7 +6899,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             #=== modified file 'Template/LO/Cards/run_card.dat'
             #--- old/Template/Cards/run_card.dat     2012-12-06 10:01:04 +0000
             #+++ new/Template/LO/Cards/run_card.dat  2013-12-09 02:35:59 +0000
-            pattern=re.compile('''=== modified file \'(?P<new>[^\']*)\'[^\n]*\n\-\-\- old/(?P<old>\S*)[^\n]*\n\+\+\+ new/(?P=new)''',re.S)
+            pattern=re.compile('''=== modified file \'(?P<new>[^\']*)\'[^\n]*\n\\-\\-\\- old/(?P<old>\\S*)[^\n]*\n\\+\\+\\+ new/(?P=new)''',re.S)
             for match in pattern.findall(text):
                 new = pjoin(MG5DIR, match[0])
                 old = pjoin(MG5DIR, match[1])
@@ -6933,7 +6975,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
             # check if it need to download binary:
-            pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
+            pattern = re.compile(r"""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
             if pattern.search(text):
                 return True
             else:
@@ -7168,8 +7210,15 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+                config_path = os.path.join(config_dir, "mg5_configuration.txt")
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',
@@ -7178,6 +7227,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         if not os.path.exists(config_path):
             files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'), config_path)
+        if not os.path.exists(pjoin(MG5DIR,'input','default_run_card_lo.dat')) and madgraph.ReadWrite:
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_lo.dat'), pjoin(MG5DIR,'input','default_run_card_lo.dat'))
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_nlo.dat'), pjoin(MG5DIR,'input','default_run_card_nlo.dat'))
+
         config_file = open(config_path)
 
         # read the file and extract information
@@ -7302,6 +7355,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 if self.options[key] in ['False', 'True']:
                     self.allow_notification_center = eval(self.options[key])
                     self.options[key] = self.allow_notification_center
+            elif key in ['lhapdf_py3', 'lhapdf_py2']:
+                if self.options[key] not in [None, 'none', 'None']:
+                    # Default: try to set parameter
+                    try:
+                        self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                    except MadGraph5Error as error:
+                        print(error)
+                        logger.warning("Option %s from config file not understood" \
+                                    % key)
+                    else:
+                        if key in self.options_madgraph:
+                            self.history.append('set %s %s' % (key, self.options[key]))
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -7633,7 +7698,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             if '_path' in key and os.path.basename(self.options[key]) == 'None':
                                 continue
                             to_define[key] = self.options[key]
-                        elif key == 'cluster_queue' and self.options[key] is None:
+                        elif key in ['cluster_queue', 'cluster_walltime'] and self.options[key] is None:
                             to_define[key] = self.options[key]
     
                 if '--all' in args:
@@ -7876,6 +7941,28 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                      " needed for loop color flow computation.")
                 self.do_set('loop_optimized_output True',False)
 
+        elif args[0] == 'eMELA':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                output = output.decode()
+                res = 0
+            except Exception:
+                res = 1
+
+            if res != 0 or error:
+                logger.info('%s does not seem to correspond to a valid eMELA-config ' % args[1] + \
+                 'executable.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).' +
+                        '\n MG5_aMC> set eMELA /PATH/TO/eMELA-config\n')
+                self.options[args[0]] = None
+                if self.history and 'eMELA' in self.history[-1]:
+                    self.history.pop()
+            else: #everything is fine
+                logger.info('set eMELA to %s' % args[1])
+                self.options[args[0]] = args[1]
+
         elif args[0] == 'fastjet':
             try:
                 p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
@@ -7999,7 +8086,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.options[args[0]] = tmp
         elif args[0] in ['zerowidth_tchannel']:
             self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
-        elif args[0] in ['cluster_queue']:
+        elif args[0] in ['cluster_queue', 'cluster_walltime']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in ['low_mem_multicore_nlo_generation']:	    
             if six.PY3 and self.options['OLP'] != 'MadLoop':
@@ -8110,7 +8197,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:
-                aloha_model.compute_all(save=False)
+                aloha_model.compute_all(save=False, custom_propa=True)
             aloha_model.write(output, format)
             return
 
@@ -8545,18 +8632,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
-                                                                    'hepmc_path']
+                                                                    'hepmc_path', 'eMELA']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:
                     to_keep[opt] = self.options[opt]
-            self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
+            self.do_save('options %s' % filename.replace(' ', r'\ '), check=False, \
                     to_keep = to_keep)
 
         elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename.replace(' ', '\ '), check=False,
+            self.do_save('options %s' % filename.replace(' ', r'\ '), check=False,
                          to_keep={'mg5_path':MG5DIR})
 
         # Dedicated finalize function.
@@ -9033,8 +9120,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             #print process
             self._generate_info = process[9:]
             #print self._generate_info
+        elif skip_2body:
+            logger.info("No three body-decay (or higher) is found for %s", pids) 
         else:
-            logger.info("No decay is found")
+            logger.info("No decay is found for %s", pids)
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""
