@@ -155,7 +155,7 @@ def compile_dir(*arguments):
         logger.info('    %s done.' % p_dir) 
         return 0
     except MadGraph5Error as msg:
-        return msg
+        raise aMCatNLOError(msg)
 
 
 def check_compiler(options, block=False):
