@@ -119,6 +119,7 @@ class Cluster(object):
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
+
         self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' in opts else 0
         self.cluster_retry_wait = float(opts['cluster_retry_wait']) if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
@@ -622,16 +623,13 @@ class MultiCore(Cluster):
         self.done_pid = []  # list of job finisned
         self.done_pid_queue = six.moves.queue.Queue()
         self.fail_msg = None
-
-
-        
+   
     def start_demon(self):
         import threading
         t = threading.Thread(target=self.worker)
         t.daemon = True
         t.start()
         self.demons.append(t)
-
 
     def worker(self):
         import six.moves.queue
@@ -727,7 +725,8 @@ class MultiCore(Cluster):
             self.queue.put((tag, prog, argument, python_opts))
             self.submitted.put(1)
             return tag            
-        
+    
+    #Called in CRI 1624, 2328, 3345
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                 stderr=None, log=None, **opts):
         """launch one job and wait for it"""    
@@ -761,7 +760,6 @@ class MultiCore(Cluster):
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
-
 
     def wait(self, me_dir, update_status, update_first=None):
         """Waiting that all the jobs are done. This function also control that
@@ -1269,7 +1267,6 @@ class PBSCluster(Cluster):
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
         self.submitted_ids = []
 
-
 class SGECluster(Cluster):
     """Basic class for dealing with cluster submission"""
     # Class written by Arian Abrahantes.
@@ -1421,7 +1418,6 @@ class SGECluster(Cluster):
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
         self.submitted_ids = []
-
 
 class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -1686,7 +1682,6 @@ def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     mc.submit(exe, argument, cwd, stdout, **opt)
     mc.need_waiting = True
     return mc.lock
-
 
 class SLURMCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -2221,9 +2216,125 @@ class HTCaaS2Cluster(Cluster):
             cmd = "htcaas-job-cancel -m %s" % str(id)
             status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
+class DaskClusterBase(Cluster):
+    """class for submitting to dask schedulers"""
+
+    def __init__(self, *args, **opt):
+        """
+        Init the cluster 
+        Many of the dask clusers need simmilar initilisation parameters so we parse them here.
+        If a value is not set here it or set to auto it may be checked again in a subclass.
+        """
+        super(DaskClusterBase, self).__init__(self, *args, **opt)
+
+        if 'nb_core' in opt:
+            self.nb_core = int(opt['nb_core'])
+        elif isinstance(args[0],int):
+            self.nb_core = int(args[0])
+        elif os.getenv('SLURM_NTASKS'):
+            pass
+        else:
+            raise ValueError("nb_core must be set")
+
+        if 'cluster_memory' in opt:
+            self.cluster_memory = opt['cluster_memory']
+        else:
+            self.cluster_memory = 'auto' 
+
+        if 'nb_workers' in opt:
+            self.nb_workers = int(opt['nb_workers'])
+        else:
+            # This will be checked again in DaskMPI
+            self.nb_workers = self.nb_core
+      
+        if 'nb_threads_per_worker' in opt:
+            self.nb_threads_per_worker = int(opt['nb_threads_per_worker'])
+        else:
+            self.nb_threads_per_worker = 1   
+
+        self.results = []
+
+    
+    # Dask Client abstracts the scheduler allowing our cluster control to be generic across multiple types of dask
+    # initilisation the following functions are thus applicable to all the dask cluster classes
+
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
+               log=None, required_output=[], nb_submit=0):
+        """submit a job to the dask scheduler"""
+        if isinstance(prog, str):
+            opt = {'cwd': cwd, 
+                   'stdout':stdout,
+                   'stderr': stderr}
+            if os.path.exists(prog) and not prog.startswith('/'):
+                exe = './' + prog
+            if isinstance(opt['stdout'],str):
+                opt['stdout'] = open(opt['stdout'],'w')
+            if opt['stderr'] == None:
+                opt['stderr'] = subprocess.STDOUT
+            if argument:
+                future = self.client.submit(misc.call, [prog] + argument,  **opt)
+            else:
+                future = self.client.submit(misc.call, prog,  **opt)
+            self.results.append(future)
+            return self.results[-1].key
+        else:
+            # python function
+            print(prog, argument)
+            future = self.client.submit(prog, argument)
+            self.results.append(future)
+            return self.results[-1].key          
+    
+    @check_interupt()
+    def wait(self, *args, **kwargs):
+        from dask.distributed import wait, progress
+        progress(self.results, notebook=False)
+        self.client.gather(self.results)
+        return 0
+
+    def remove(self, *args, **opts):
+        self.client.cancel()
+
+class DaskLocal(DaskClusterBase):
+    """class for dealing with a local cluser e.g. a multicore machiene or an interactive HPC session"""
+
+    def __init__(self, *args, **opt):
+        """Init the cluster """
+        super(DaskLocal, self).__init__(self, *args, **opt)
+        from dask.distributed import Client, LocalCluster
+        # This may require more config options but the skelton is here
+        self._cluster = LocalCluster(
+            n_workers=self.nb_workers, 
+            threads_per_worker=self.nb_threads_per_worker, 
+            memory_limit=self.cluster_memory,
+            processes=False)
+        self.client = Client(self._cluster)
+        
+class DaskMPI(DaskClusterBase):
+    """class for dealing with the submission in multiple node systems such as HPC facilities via job 
+    submissions scripts, this launches one large job rather than many small jobs which can cause issues
+    when clusters have job submission limits"""
+
+    def __init__(self, *args, **opt):
+        """Init the cluster """
+        super(DaskMPI, self).__init__(self, *args, **opt)
+        from dask.distributed import Client
+
+        sched_file = os.getenv('SLURM_JOB_ID')+'.sched'
+
+        # Initialise Dask cluster client
+        self.client = Client(scheduler_file=sched_file) # This will find the MPI cluster
+
+        N = int(os.getenv('SLURM_NTASKS'))
+        # Wait for these workers and report
+        self.client.wait_for_workers(n_workers=N)
+        num_workers = len(self.client.scheduler_info()['workers'])
+        print(f"{num_workers} dask workers available and ready")
+
+
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster, 
-             'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster}
+             'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster,
+             'daskmpi': DaskMPI, 'dasklocal': DaskLocal}
 
 onecore=MultiCore(1) # create a thread to run simple bash job without having to
                      #fork the main process

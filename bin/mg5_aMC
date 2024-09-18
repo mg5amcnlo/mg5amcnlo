@@ -58,7 +58,7 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
 parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
-                  help='For mac user, forbids to use caffeinate when running with a script')                               
+                  help='For mac user, forbids to use caffeinate when running with a script')                        
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -145,6 +145,7 @@ try:
 except:
     pass
 
+
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
@@ -155,7 +156,6 @@ try:
     misc.EasterEgg('loading')
 except:
     pass
-
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
@@ -180,8 +180,6 @@ elif options.web:
     cmd_line = interface.MasterCmdWeb()
 else: 
     cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
-
-
 
 # Call the cmd interface main loop
 try:

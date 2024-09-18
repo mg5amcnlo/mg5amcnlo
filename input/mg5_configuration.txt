@@ -101,23 +101,21 @@
 
 #! Allow/Forbid the automatic opening of the web browser  (on the status page)
 #!  when launching MadEvent [True/False]
-# automatic_html_opening = True
+automatic_html_opening = False
 #! allow notification of finished job in the notification center (Mac Only)
 # notification_center = True
 
 
 #! Default Running mode 
 #!  0: single machine/ 1: cluster / 2: multicore
-# run_mode = 2
+run_mode = 1
 
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2|dasklocal|daskmpi] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
 #!  And size of the cluster (some part of the code can adapt splitting accordingly)
-#! Daskmpi is configured during the submission script and is only compatable with slurm
-# cluster_type = condor
+cluster_type = daskmpi
 # cluster_queue = madgraph
 # cluster_size = 150 
-# cluster_walltime =  # time in minute for slurm and second for condor (not supported for other scheduller)
 
 #! Path to a node directory to avoid direct writing on the central disk
 #!  Note that condor clusters avoid direct writing by default (therefore this
@@ -142,11 +140,9 @@
 
 #! For Multicore: Nb_core to use (None = all) This is use only for multicore run
 #! For Cluster: This correspond also to the number core used for code compilation for cluster mode
-#! For Dask Local Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
-#! and scheduler) there is no auto.
+#! For Local Dask Cluster: This is the number of physical cores.
 #! Dask MPI is configured in/by the job submission script.
-#! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
-# nb_core = None
+# nb_core = 96
 
 #! Please note for dask clusters the LocalCluster is far more forgiving and usable on your local machine
 #! for daskmpi the submission script needs to be matched to your settings here or things will go wrong.
@@ -156,18 +152,18 @@
 
 #! Dask clusters, likely the defaults are the best option, see dask docs for more info
 #! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this must be (nb_core - 2)
-#! nb_thread_per_worker (None = 1) set the number of threads to.
+#! nb_thread_per_worker (None = 1) set the number of threads to
 #! Dask MPI is configured in/by the job submission script.
-# nb_workers = None
+# nb_workers = 94
 # nb_threads_per_worker = 1 
 
-#! For Dask Clusters we need to know the memory (per core) 
+#! For Local Dask Clusters we need to know the memory (per core), dask mpi is handled by the job submission script
 #! https://docs.dask.org/en/stable/deploying-python.html?highlight=localcluster#localcluster in bytes
 #! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html#dask_mpi.core.initialize
 #! Please use e.g. XGiB, XMB, X where X is an integer value, defalut is auto which splits system memory across workers
-#! Dask MPI is configured in/by the job submission script.
 #! Gib to GB is 1 to 1.074
-#! cluster_memory = auto
+#! Dask MPI is configured in/by the job submission script.
+# cluster_memory = 3700MB
 
 #! Pythia-PGS Package
 #!  relative path start from main directory
@@ -202,10 +198,6 @@
 #! fastjet-config
 #!  If None: try to find one available on the system
 # fastjet = fastjet-config
-
-#! eMELA-config 
-#!  If None: try to find one available on the system
-# eMELA = eMELA-config
 
 #! MCatNLO-utilities 
 #!  relative path starting from main directory
@@ -259,5 +251,4 @@
 #! Absolute paths to the config script in the bin directory of PineAPPL
 #! (to generate PDF-independent fast-interpolation grids).
 # pineappl = pineappl
-
 
