@@ -1415,7 +1415,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     width = self.banner.get('param_card', 'decay', abs(particle.pdg)).value
                     mass  = self.banner.get('param_card', 'mass', abs(particle.pdg)).value
                     color = self.model.get_particle(particle.pdg).get('color')
-                    decay_dict[particle.pdg] = [width, mass, color]
+                    decay_dict[particle.pdg] = [width, mass, particle.helicity, color]
                 	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -1775,31 +1775,37 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Spyros: this should later be removed for allowing more than one decays
         nchanging = len(init_part)
-        assert nchanging == 1 
-        
+        #assert nchanging == 1 
+
+        # Initialise me values
+        me = 0
+        prod_diag = 0
+        dec_diag = 0
+            
         # Loop over decaying particles
-        for pdg in decays:
+        # decays is a dictionary containing the pdg of the decaying particle as key
+        # and a list of Particles corresponding to the decay event
+        for pdg, decay_events in decays.items():
 	        # This is the position of the particle that decays in the production event
             position = [k+1 for k in range(len(production)) if production[k].pid == pdg]  # +1 to convert to fortran conversion	    
-            # Allowed helicities of decaying particle - make this more generic
-            allowed_hel = [1, -1]
 	    	        
-	        # Get the color, mass and width of decaying particle
+	        # Get the color, mass, spin and width of decaying particle
             width = decay_dict[pdg][0]
             mass = decay_dict[pdg][1]
-            color = decay_dict[pdg][2]
+            spin = decay_dict[pdg][2]
+            color = decay_dict[pdg][3]
             
+            # Allowed helicities of decaying particle
+            allowed_hel = [1, -1]
+            if spin == 0: allowed_hel = [0]
+            elif spin == 3: allowed_hel = [-1,0,1]
+
 	        # propagator of the decaying particle on-shell
             D = complex(0,mass * width)
             D_D_conj = D*D.conjugate()
-	    
-	        # Update the status of the particle that decays from 1 to 2
-            # full_event[position[0]].status = 2 
-	    
-	        # Spyros: I am not sure why we need this loop on top of (for pdg in decays)
-            # SOS: This loop is not correct - the return statement should be outside of the loop
-            # How to calculate ME in such a case?
-            for i,decay_event in enumerate(decays[pdg]):
+            	    
+            # decays[pdg] corresponds to a list of particles in the decay event
+            for i,decay_event in enumerate(decay_events):
                 part = init_part[i]
 		        # We need to boost all particles in the decay event using the momentum
 		        # of the decaying particle in the production event
@@ -1813,8 +1819,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 		
 		        # Number of helicity combinations to consider
                 ncomb = nchanging*len(allowed_hel)
-				
-                me = 0
  		
 		        # Get density matrix for production and decay
 		        # get_density gives the inters that already contain the sum over helicities
@@ -1829,21 +1833,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_dec = self.get_density(decay_event, pos_in_dec, nchanging, allowed_hel, ncomb)
 
                 # Call function to return indices of density matrix for prod*dec convolution
-                conv_ind_sym, conv_ind_asym =  self.get_density_matrix_indices(len(allowed_hel))
+                conv_ind_diag, conv_ind_offdiag =  self.get_density_matrix_indices(len(allowed_hel))
 
 		        # To get the ME we need to multiply the production and decay inters with the same index
-                for i in conv_ind_sym:
-                    me += density_prod[i]*density_dec[i]
-                for i in conv_ind_asym:
-                    me += density_prod[i]*density_dec[i] \
-                        + density_prod[i].conjugate()*density_dec[i].conjugate()
+                for k in conv_ind_diag:
+                    me += density_prod[k]*density_dec[k]
+                    prod_diag += density_prod[k]
+                    dec_diag += density_dec[k]
+                for k in conv_ind_offdiag:
+                    me += density_prod[k]*density_dec[k] \
+                        + density_prod[k].conjugate()*density_dec[k].conjugate()
                 me = me.real/(iden_p*color*D_D_conj)
 
                 # Get production and decay ME from diagonal elements of density matrix
-                prod_diag = (density_prod[0]+density_prod[2]).real/(iden_p)
-                dec_diag = (density_dec[0]+density_dec[2]).real/(color*len(allowed_hel))
+                prod_diag = prod_diag.real/(iden_p)
+                dec_diag = dec_diag.real/(color*len(allowed_hel))
                 
-                return me, density_prod, prod_diag, dec_diag
+        return me, density_prod, prod_diag, dec_diag
 
     def get_density_matrix_indices(self, nhel_decay):
         diag = [sum(range(nhel_decay, nhel_decay - i, -1)) for i in range(nhel_decay)]
@@ -1853,9 +1859,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def get_density(self, event, position, nchanging, allow_hel, ncomb):
         pdir,orig_order = self.get_pdir(event)
         
-        if len(allow_hel) != 2:
-            raise RuntimeError("Density matrix formalism not yet implemented for particles with spin != 1/2")
-        density = [[0,0]]*2 
+        density = [[0 for _ in range(len(allow_hel))] for _ in range(len(allow_hel))]
 		
         if pdir in self.all_density:
             all_p = event.get_all_momenta(orig_order)
