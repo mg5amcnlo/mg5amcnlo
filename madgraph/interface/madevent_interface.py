@@ -7031,7 +7031,10 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
-                    nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
+                    if self.results.current['cross'] == 0 and self.run_card['gridpack']:
+                        nb_event= self.nb_event
+                    else:
+                        nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
                     AllEvent = lhe_parser.MultiEventFile()
