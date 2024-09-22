@@ -3626,22 +3626,32 @@ class RunCardLO(RunCard):
             #for pure lepton final state go back to sde_strategy=1
             pure_lepton=True
             proton_initial=True
+            no_qcd=True
             for proc in proc_def:
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                if 'QCD' not in proc[0].get('orders'):
+                    no_qcd = False
+                elif proc[0].get('orders')['QCD'] != 0:
+                    no_qcd = False 
+                #misc.sprint(proc.get_order())
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
             if pure_lepton and proton_initial:
                 self['sde_strategy'] = 1
-        else:
-            # check if  multi-jet j 
-            is_multijet = True
-            for proc in proc_def:
-                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
-                    is_multijet = False
-                    break
-            if is_multijet:
-                self['sde_strategy'] = 2
+            elif not no_qcd:
+                self['sde_strategy'] = 1 
+
+
+        #else:
+        #    # check if  multi-jet j 
+        #    is_multijet = True
+        #    for proc in proc_def:
+        #        if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
+        #            is_multijet = False
+        #            break
+        #    if is_multijet:
+        #        self['sde_strategy'] = 2
             
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles
