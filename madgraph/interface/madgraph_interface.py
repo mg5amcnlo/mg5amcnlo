@@ -6184,9 +6184,13 @@ This implies that with decay chains:
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
         if return_code in [0,11]:
-            logger.info("%s successfully installed in %s."%(
+            if tool_to_install not in self.install_plugin:
+                logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
-            
+            else:
+                logger.info("%s successfully installed in PLUGIN directory."%(
+                   tool_to_install),'$MG:color:GREEN')                
+
             if tool=='madanalysis5':
                 if not any(o.startswith(('--with_','--veto_','--update')) for o in add_options):
                     logger.info('    To install recasting capabilities of madanalysis5 and/or', '$MG:BOLD')
@@ -6362,7 +6366,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    install_plugin = ['maddm', 'maddump', 'MadSTR']
+    install_plugin = ['maddm', 'maddump', 'MadSTR', 'cudacpp']
     install_ad = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
