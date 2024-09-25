@@ -73,6 +73,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
     prompt = 'Reweight>'
     debug_output = 'Reweight_debug'
+    sa_class = 'standalone_rw'
 
     @misc.mute_logger()
     def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
@@ -501,32 +502,10 @@ class ReweightInterface(extended_cmd.Cmd):
         model = self.banner.get('proc_card', 'model')
         self.load_model( model, True, False)
 
-        if not self.has_standalone_dir:     
-            if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
-                self.load_from_pickle()
-                if opts['rwgt_name']:
-                    self.options['rwgt_name'] = opts['rwgt_name']
-                if not self.rwgt_dir:
-                    self.me_dir = self.rwgt_dir
-                self.load_module()       # load the fortran information from the f2py module
-            elif self.multicore == 'wait':
-                i=0
-                while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
-                    time.sleep(10+i)
-                    i+=5
-                if not self.rwgt_dir:
-                    self.rwgt_dir = self.me_dir
-                self.load_from_pickle(keep_name=True)
-                self.load_module()
-            else:
-                self.create_standalone_directory()
-                self.compile()
-                self.load_module()  
-                if self.multicore == 'create':
-                    self.load_module()
-                    if not self.rwgt_dir:
-                        self.rwgt_dir = self.me_dir
-                    self.save_to_pickle()      
+        if not self.has_standalone_dir:
+            out = self.setup_f2py_interface()
+            if out:
+                return
 
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
@@ -560,20 +539,36 @@ class ReweightInterface(extended_cmd.Cmd):
                 tag_strip=tag[1:]
                 type_rwgt.append('2'+tag_strip)
 
-        if type_rwgt==[]:
-            type_rwgt=['2001']
+
             
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
-        
+
+        return self.launch_actual_reweighting(param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me)
+
+
+
+    def launch_actual_reweighting(self, param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me):
+       
         if self.inc_sudakov:
             tag_name = ''
+
+        if type_rwgt==[]:
+            type_rwgt=['2001']
 
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-                
+
+
+         
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -763,6 +758,40 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
+
+    def setup_f2py_interface(self):
+        """ ensure that all f2py interface are ready/loaded/compiled
+            if this function does not return None then nothing is executed after this
+            usefull for some plugin
+        """
+
+        if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
+            self.load_from_pickle()
+            if opts['rwgt_name']:
+                self.options['rwgt_name'] = opts['rwgt_name']
+            if not self.rwgt_dir:
+                self.me_dir = self.rwgt_dir
+            self.load_module()       # load the fortran information from the f2py module
+        elif self.multicore == 'wait':
+            i=0
+            while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
+                time.sleep(10+i)
+                i+=5
+            if not self.rwgt_dir:
+                self.rwgt_dir = self.me_dir
+            self.load_from_pickle(keep_name=True)
+            self.load_module()
+        else:
+            self.create_standalone_directory()
+            self.compile()
+            self.load_module()  
+            if self.multicore == 'create':
+                self.load_module()
+                if not self.rwgt_dir:
+                    self.rwgt_dir = self.me_dir
+                self.save_to_pickle()  
+
+
 
     def handle_param_card(self, model_line, args, type_rwgt):
         
@@ -1759,7 +1788,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(type(error))
             raise
         
-        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
+        commandline = 'output %s %s --prefix=int' % (self.sa_class, pjoin(path_me,data['paths'][0]))
         if self.inc_sudakov:
             # in this case, the sudakov output format has to be changed
             commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
@@ -2147,15 +2176,21 @@ class ReweightInterface(extended_cmd.Cmd):
                 if not os.path.isdir(pjoin(path_me,onedir)):
                     continue
                 pdir = pjoin(path_me, onedir, 'SubProcesses')
-                if self.mother:
-                    nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
-                else:
-                    nb_core = 1
-                os.environ['MENUM'] = '2'
-                misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-                if not (self.second_model or self.second_process or self.dedicated_path):
-                    os.environ['MENUM'] = '3'
-                    misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+                self.compile_SubProcess_dir(pdir)
+
+
+    def compile_SubProcess_dir(self, Sdir):
+        """compile a full Subprocess directory"""
+
+        if self.mother:
+            nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+        else:
+            nb_core = 1
+        os.environ['MENUM'] = '2'
+        misc.compile(['allmatrix2py.so'], cwd=Sdir, nb_core=nb_core)
+        if not (self.second_model or self.second_process or self.dedicated_path):
+            os.environ['MENUM'] = '3'
+            misc.compile(['allmatrix3py.so'], cwd=Sdir, nb_core=nb_core)
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
