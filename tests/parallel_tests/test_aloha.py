@@ -3809,6 +3809,15 @@ class UFOLorentz(object):
         self.name = name
         self.spins=spins
         self.structure = structure
+
+class UFOPropagator(object):
+    """ simple UFO propagator OBJECT """
+
+    def __init__(self, name='', numerator='1', denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"):
+        self.name = name
+        self.numerator = numerator
+        self.denominator = denominator
+
         
 class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
     
@@ -4941,6 +4950,95 @@ P2(3) = -dimag(F2(1))
         split_routine = routine.split('\n')[18:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
+    def test_short_fortranwriter_drop_fct(self):
+        """test a case where a ratio is present in the lorentz but not needed in the 
+           writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
+        
+        solution = """
+subroutine VVS4PZ1_2(V1, S3, COUP, M2, W2,V2)
+implicit none
+ include "../MODEL/input.inc"
+ include "../MODEL/coupl.inc"
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 FCT1
+ real*8 M2
+ real*8 P1(0:3)
+ real*8 P2(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
+ complex*16 V1(*)
+ complex*16 V2(6)
+ real*8 W2
+ complex*16 denom
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+    V2(1) = +V1(1)+S3(1)
+    V2(2) = +V1(2)+S3(2)
+P2(0) = -dble(V2(1))
+P2(1) = -dble(V2(2))
+P2(2) = -dimag(V2(2))
+P2(3) = -dimag(V2(1))
+ TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
+ TMP1 = (P2(0)*V1(3)-P2(1)*V1(4)-P2(2)*V1(5)-P2(3)*V1(6))
+ TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
+ FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
+    denom = COUP/(FCT1)
+    V2(3)= denom*M2*S3(3)*mdl_dWZ*(-P1(0)*TMP1+V1(3)*TMP2)
+    V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
+    V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
+    V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
+end
+"""
+        FFV = UFOLorentz(name = 'VVS4',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')       
+
+        class Propagators:
+            # propagators with width corrections
+            numV = "(- Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)**2) "
+            denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominatorSq = denominator + "**2"
+            Z1 =  UFOPropagator(name = "Z1",
+                   numerator = "-" +  numV + "* complex(0,1) * Mass(id) * dWZ",
+                   denominator = denominatorSq
+                  )
+
+        class model:
+            propagators = Propagators()
+
+
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.model = model()
+        #builder.apply_conjugation()
+        amp = builder.compute_routine(2, tag=['PZ1'] )
+        routine = amp.write(output_dir=None, language='Fortran')
+
+        #dedicated point of attention
+        self.assertNotIn('FCT0', routine)
+        self.assertIn('complex*16 FCT1', routine) 
+        self.assertIn('FCT1 = ', routine)
+        self.assertIn('/(FCT1', routine) 
+        self.assertIn('complex*16 TMP2', routine) 
+        self.assertIn('TMP2 =', routine)
+        self.assertIn('*TMP2', routine)
+        self.assertIn('complex*16 TMP0', routine) 
+        self.assertIn('TMP0 =', routine)
+        self.assertIn('+TMP0', routine)
+        self.assertIn('complex*16 TMP1', routine) 
+        self.assertIn('TMP1 =', routine)
+        self.assertIn('*TMP1', routine)
+        #full check
+        self.assertEqual(solution.strip(), routine.strip())
+
+
 
 
 

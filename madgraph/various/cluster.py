@@ -679,7 +679,7 @@ class MultiCore(Cluster):
                         except Exception as error:
                             #logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does raise %s\n %s" % (exe, error))
+                            self.remove("Function %s raised the following exception: %s\n %s" % (exe, type(error), error))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))

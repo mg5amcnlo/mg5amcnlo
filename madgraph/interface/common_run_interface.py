@@ -1478,7 +1478,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             for plot in plot_files:
                 command = ['gnuplot',plot]
                 try:
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=subprocess.PIPE)
+                    fsock = open(os.devnull, 'w')
+                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
+                    fsock.close()
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
                             "merging plots with gnuplot failed. Try the"+\

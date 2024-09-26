@@ -896,7 +896,32 @@ class ALOHAWriterForFortran(WriteALOHA):
             key.sort()
             for i in key:
                 out.write(to_order[i])
-        return out.getvalue()
+
+        txt = out.getvalue() 
+        # in rare case FCT/TMP might not be needed (multiply by zero)
+        # This is detected here and in such case we remove those FCT/TMP
+        # from the routine block are recall this routine
+        found=False
+        # detection for FCT
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            if txt.count(name) == 1:
+                del self.routine.fct[name]
+                found = True
+        #detection for TMP variable
+        all_keys = list(self.routine.contracted.keys())
+        all_keys.sort()
+        for name in all_keys:
+            if txt.count(name) == 1:
+                del self.routine.contracted[name]
+                self.declaration.discard(('complex', name))
+                found = True
+        if found:
+            # retry when removing the useless part.
+            return self.define_expression()
+
+        return txt
 
     def define_symmetry(self, new_nb, couplings=None):
         return ''

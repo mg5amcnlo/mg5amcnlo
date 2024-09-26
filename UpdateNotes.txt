@@ -1,8 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 ANNOUNCEMENT: 
-   2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing in december 2025.
-   (end of support june 2026).
+   2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.6.0 ():
@@ -13,7 +12,15 @@ ANNOUNCEMENT:
           set ebeam scan1:[6500,7000]
           Thanks to Kentarou Mawatari for pushing me to implement this.
       DP+TV+MZ: Implementation of EW Sudakov corrections. See 2110.03714 and 2309.00452
+      AV+SR+SH+ZW+DM+OM: Implementation of the support for batch of events at LO.
+          This will allow to support the cudacpp plugin that will offer
+            - GPU support for LO processes
+            - SIMD support on cpu
+          This feature add OpenMP support for LO process (deactivated by default in favor of multi-process).
 
+3.5.6 (26/9/24):
+  OM: Include fix from LTS 2.9.21
+  OM: fixing gridpack with large number of events (issue with the new strategy of combining events)
 
 3.5.5 (17/06/24):
      OM: Fix a bug in the new strategy of combining events.
@@ -207,6 +214,14 @@ ANNOUNCEMENT:
                         ** Long Term Stable Update **
 
 
+2.9.21 (26/9/24):
+    OM: Adding support for GCC14 (thanks to joequant)
+    OM: Fixing a rare issue within aloha where some generated code was not compiling
+    OM: Fix issue with Pythia8 when running in run_mode=0
+    OM: Fixing gnuplot related issue (when pythia8 was running)
+    OM: Avoid numerical inacuracy issue when the user were requested boost to the center of mass frame for non lorentz invariant amplitude
+    OM: Avoid to use sde=2 by default for more processes (like Drell-Yan)
+    
 2.9.20 (17/6/24):
     OM: Fix a wrong syntax handling for decay chain like
         generate ... > A A B  , B > ,  A >  , A >
