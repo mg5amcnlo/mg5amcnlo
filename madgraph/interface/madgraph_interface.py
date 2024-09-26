@@ -6013,32 +6013,31 @@ This implies that with decay chains:
         elif not HepToolsInstaller_web_address is None:
             shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
         if not HepToolsInstaller_web_address is None:
-            logger.info('Downloading the HEPToolInstaller at:\n   %s'%
-                                                  HepToolsInstaller_web_address)
-            # Guess if it is a local or web address
-            if '//' in HepToolsInstaller_web_address:
-                misc.wget(HepToolsInstaller_web_address,
-                          pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'),
-                          stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
-                                                                         cwd=MG5DIR)
+            # Download HEPToolsInstaller (unless the --local option is used)
+            if not '--local' in add_options:
+                logger.info('Downloading the HEPToolInstaller at:\n   %s'%
+                                                      HepToolsInstaller_web_address)
+                # Guess if it is a local or web address
+                if '//' in HepToolsInstaller_web_address:
+                    misc.wget(HepToolsInstaller_web_address,
+                              pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'),
+                              stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                                                                             cwd=MG5DIR)
+                else:
+                    # If it is a local tarball, then just copy it
+                    shutil.copyfile(HepToolsInstaller_web_address,
+                               pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+                # Untar the file
+                returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
+                         cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
+                # Remove the tarball
+                os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+            # FOR DEBUGGING ONLY (if '--local' in add_options), take HEPToolsInstaller locally
             else:
-                # If it is a local tarball, then just copy it
-                shutil.copyfile(HepToolsInstaller_web_address,
-                           pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
-
-            # Untar the file
-            returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
-                     cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
-            
-            # Remove the tarball
-            os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
-
-            
-            # FOR DEBUGGING ONLY, Take HEPToolsInstaller locally
-            if '--local' in add_options:
                 add_options.remove('--local')
                 logger.warning('you are using a local installer. This is intended for debugging only!')
-                shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+                if os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
+                    shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 misc.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 
