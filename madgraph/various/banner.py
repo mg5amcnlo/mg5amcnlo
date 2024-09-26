@@ -1867,7 +1867,7 @@ class PY8Card(ConfigFile):
         
         # Visible parameters
         # ==================
-        self.add_param("Main:numberOfEvents", -1)
+        self.add_param("Main:numberOfEvents", 0)
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
@@ -4124,7 +4124,7 @@ class RunCardLO(RunCard):
         self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6], hidden=True)
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
-        self.add_param("use_syst", True)
+        self.add_param("use_syst", True, comment='Add in the lhef file information needed for the computation of systematic uncertainty (scale variation and pdf)')
         self.add_param('systematics_program', 'systematics', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
         self.add_param('systematics_arguments', ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset'], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
         
@@ -4686,22 +4686,32 @@ class RunCardLO(RunCard):
             #for pure lepton final state go back to sde_strategy=1
             pure_lepton=True
             proton_initial=True
+            no_qcd=True
             for proc in proc_def:
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                if 'QCD' not in proc[0].get('orders'):
+                    no_qcd = False
+                elif proc[0].get('orders')['QCD'] != 0:
+                    no_qcd = False 
+                #misc.sprint(proc.get_order())
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
             if pure_lepton and proton_initial:
                 self['sde_strategy'] = 1
-        else:
-            # check if  multi-jet j 
-            is_multijet = True
-            for proc in proc_def:
-                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
-                    is_multijet = False
-                    break
-            if is_multijet:
-                self['sde_strategy'] = 2
+            elif not no_qcd:
+                self['sde_strategy'] = 1 
+
+
+        #else:
+        #    # check if  multi-jet j 
+        #    is_multijet = True
+        #    for proc in proc_def:
+        #        if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
+        #            is_multijet = False
+        #            break
+        #    if is_multijet:
+        #        self['sde_strategy'] = 2
             
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles
