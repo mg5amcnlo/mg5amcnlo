@@ -523,17 +523,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     scale_rwgt_info.append(i[start+11:start+15])
                     
         if self.inc_sudakov:
-            import importlib
-            import numpy as np
-            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
-            for onedir in rwgt_dir_possibility:
-                if not os.path.exists(pjoin(path_me,onedir)):
-                    continue 
-
-                sys.path.insert(0, path_me)
-                sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
-            logger.info('EW Sudakov reweight module imported')
-
             type_rwgt=[]
             for tag in scale_rwgt_info:
                 tag_strip=tag[1:]
@@ -558,6 +547,16 @@ class ReweightInterface(extended_cmd.Cmd):
        
         if self.inc_sudakov:
             tag_name = ''
+            import importlib
+            import numpy as np
+            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+            for onedir in rwgt_dir_possibility:
+                if not os.path.exists(pjoin(path_me,onedir)):
+                    continue 
+
+                sys.path.insert(0, path_me)
+                sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
+            logger.info('EW Sudakov reweight module imported')
 
         if type_rwgt==[]:
             type_rwgt=['2001']
