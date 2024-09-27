@@ -549,7 +549,7 @@ c
 
       double precision pmass(nexternal), tmp
       common/to_mass/  pmass
-
+      double precision local_mass
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps)
 c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 c      data ncolflow/maxamps*0/
@@ -638,37 +638,69 @@ c
       if (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
-            if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then
+           if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0).and.xbk(2).ne.1d0) then
                ! construct the beam momenta in each frame and compute the related (z)boost
+               if (pmass(1).eq.0d0.and.(abs(lpp(1)).eq.3.or.abs(lpp(1)).eq.4).and.ebeam(1).gt.10d0*m1)then
+                  local_mass = 0d0
+              else
+                  local_mass = m1
+              endif
                ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = DSQRT(ebi(0)**2-m1**2)
+               ebi(3) = DSQRT(ebi(0)**2-local_mass**2)
                ebo(0) = ebeam(1)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = DSQRT(ebo(0)**2-m1**2)
+               ebo(3) = DSQRT(ebo(0)**2-local_mass**2)
                beta = get_betaz(ebi, ebo)
+               if (xbk(1).eq.1d0) then
+                pb(0,isym(1,jsym)) = ebo(0)
+                pb(1,isym(1,jsym)) = ebo(1)
+                pb(2,isym(1,jsym)) = ebo(2)
+                pb(3,isym(1,jsym)) = ebo(3)
+                pb(4,isym(1,jsym)) = pmass(1)
+                endif
+               do j=1,nexternal
+                  if (j.eq.1.and.xbk(1).eq.1d0) cycle
+                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  pb(4,isym(j,jsym))=pmass(j)
+               enddo
+
             else
+               if (pmass(1).eq.0d0.and.(abs(lpp(1)).eq.3.or.abs(lpp(1)).eq.4.and.ebeam(2).gt.10d0*m2))then
+                  local_mass = 0d0
+              else
+                  local_mass = m2
+              endif
+               ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
                ebi(0) = p(0,2)/xbk(2) ! this assumes that particle 2 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = -1d0*DSQRT(ebi(0)**2-m2**2)
+               ebi(3) = -1d0*DSQRT(ebi(0)**2-local_mass**2)
                ebo(0) = ebeam(2)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = -1d0*DSQRT(ebo(0)**2-m2**2)
+               ebo(3) = -1d0*DSQRT(ebo(0)**2-local_mass**2)
                beta = get_betaz(ebi, ebo)
+               if (xbk(2).eq.1d0) then
+                pb(0,isym(2,jsym)) = ebo(0)
+                pb(1,isym(2,jsym)) = ebo(1)
+                pb(2,isym(2,jsym)) = ebo(2)
+                pb(3,isym(2,jsym)) = ebo(3)
+                pb(4,isym(2,jsym)) = pmass(2)
+               endif
+               do j=1,nexternal
+                  if (j.eq.2.and.xbk(2).eq.1d0) cycle
+                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  pb(4,isym(j,jsym))=pmass(j)
+               enddo
                ! wrong boost if both parton are massive!
             endif
          else
             write(*,*) 'Warning bad x1 or x2 in write_leshouche',
      $           xbk(1),xbk(2)
          endif
-         do j=1,nexternal
-            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
-            pb(4,isym(j,jsym))=pmass(j)
-         enddo
       else
          do j=1,nexternal
             call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))

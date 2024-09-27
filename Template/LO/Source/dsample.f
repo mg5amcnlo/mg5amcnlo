@@ -751,7 +751,7 @@ c
       common/read_grid_file/read_grid_file
 
       data use_cut/2/            !Grid: 0=fixed , 1=standard, 2=non-zero
-      data ituple/1/             !1=htuple, 2=sobel 
+      data ituple/1/             !1=MC (htuple or ranmar or ...), 2=sobel (no clear support anymore-> do not try in production) 
       data Minvar(1,1)/-1/       !No special variable mapping
 
 c-----
