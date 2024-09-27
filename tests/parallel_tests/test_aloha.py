@@ -4995,7 +4995,7 @@ P2(3) = -dimag(V2(1))
     V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
     V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
     V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
-end
+ end
 """
         FFV = UFOLorentz(name = 'VVS4',
                  spins = [ 3, 3, 1 ],
