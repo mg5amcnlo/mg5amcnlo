@@ -169,6 +169,7 @@ jobs:
       - name: test test_mg5_heft_23
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt-get install breezy
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             sudo pip install numpy
             which f2py
