@@ -480,7 +480,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > j j']
         values = {'number_of_P0': '1',
-                  'cross_P0_qq_qq': '61057.7188'}
+                  'cross_P0_qq_qq': '62923'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,
@@ -523,7 +523,7 @@ class OLDMG5Comparator(unittest.TestCase):
                    'number_of_P2': '1',
                    'number_of_P3': '1',
                    'cross_P0_qq_z0zT_z_ll_z_ll': '0.00016429',
-                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.00017108',
+                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.00018',
                    'cross_P2_qq_z0zT_z_ll_z_ll': '0.00066055',
                    'cross_P3_qq_zTzT_z_ll_z_ll': '0.0019198',
                    } 

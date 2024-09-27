@@ -658,7 +658,6 @@ class HelicityRecycler():
             self.template_dict['ncomb'] = len(External.good_hel)
 
     def nhel_string(self, hel_comb):
-        print("656",hel_comb)
         old_id = External.good_hel[hel_comb]
         self.counter += 1
         formatted_hel = [f'{hel}' if hel < 0 else f' {hel}' for hel in hel_comb]
