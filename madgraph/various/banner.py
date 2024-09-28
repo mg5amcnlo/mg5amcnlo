@@ -2966,8 +2966,8 @@ class RunCard(ConfigFile):
 
 
     def reset_simd(self, old_value, new_value, name, *args, **opts):
-        #return
-        raise Exception('pass in reset simd')
+        return
+        #raise Exception('pass in reset simd')
 
     def make_clean(self,old_value, new_value, name, dir):
         raise Exception('pass make clean for ', dir)
