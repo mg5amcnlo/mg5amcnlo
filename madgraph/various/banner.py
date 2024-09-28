@@ -538,7 +538,7 @@ class Banner(dict):
             return self.param_card
         elif tag == 'mgruncard':
             with misc.TMP_variable(RunCard, 'allow_scan', True):
-                self.run_card = RunCard(self[tag], consistency=False, unknow_warning=False)
+                self.run_card = RunCard(self[tag], consistency=False, unknown_warning=False)
             return self.run_card
         elif tag == 'mg5proccard':
             proc_card = self[tag].split('\n')
