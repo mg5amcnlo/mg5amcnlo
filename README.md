@@ -69,7 +69,8 @@ MadGraph5_aMC@NLO is licensed under an [adapted University of Illinois/NCSA lice
 ## Github Contribution
 Contributors are encouraged to implement test associated to their new feature and to allow to run the CI/CD in their repo to check that their commit does not break the tests implemented before them.
 PR can target the following branch: 
-  - bug fixing should target the branch 2.9.(X+1) when the official LTS release is 2.9.X (if the bug is present in the LTS branch)
+  - bug fixing should target the latest LTS release (which contains the bug fix)
+    - so either 2.9.(X+1) (up to december 2025) or 3.5.(X+1)  
   - small improvment of the code should target 3.X.(Y+1) when the latest release is 3.X.Y
   - large implementation should target 3.(X+1).0 when the latest release is 3.X.Y
 
