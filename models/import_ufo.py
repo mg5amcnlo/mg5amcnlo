@@ -2192,7 +2192,11 @@ class OrganizeModelExpression:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
                 self.couplings[depend_on] = [parameter]
-            self.all_expr[coupling.value] = parameter 
+            if coupling.value not in self.all_expr:
+                # the if statement is only to prevent overwritting definition in all_expr
+                # when a coupling is equal to a single parameter
+                # note that coupling are always mapped to complex, while parameter can be real.
+                self.all_expr[coupling.value] = parameter 
         
 
     def find_dependencies(self, expr):

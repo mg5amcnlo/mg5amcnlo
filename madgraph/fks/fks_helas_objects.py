@@ -828,7 +828,6 @@ class FKSHelasProcess(object):
 
         return misc.make_unique(lorentz_list)
     
-    
     def get_used_couplings(self):
         """the get_used_couplings function references to born, reals
         and virtual matrix elements"""

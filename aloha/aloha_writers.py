@@ -896,7 +896,32 @@ class ALOHAWriterForFortran(WriteALOHA):
             key.sort()
             for i in key:
                 out.write(to_order[i])
-        return out.getvalue()
+
+        txt = out.getvalue() 
+        # in rare case FCT/TMP might not be needed (multiply by zero)
+        # This is detected here and in such case we remove those FCT/TMP
+        # from the routine block are recall this routine
+        found=False
+        # detection for FCT
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            if txt.count(name) == 1:
+                del self.routine.fct[name]
+                found = True
+        #detection for TMP variable
+        all_keys = list(self.routine.contracted.keys())
+        all_keys.sort()
+        for name in all_keys:
+            if txt.count(name) == 1:
+                del self.routine.contracted[name]
+                self.declaration.discard(('complex', name))
+                found = True
+        if found:
+            # retry when removing the useless part.
+            return self.define_expression()
+
+        return txt
 
     def define_symmetry(self, new_nb, couplings=None):
         return ''
@@ -1377,13 +1402,15 @@ class ALOHAWriterForCPP(WriteALOHA):
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
     extension = '.c'
+    prefix =''
     writer = writers.CPPWriter
 
     type2def = {}    
     type2def['int'] = 'int '
     type2def['double'] = 'double '
     type2def['complex'] = 'std::complex<double> '
-    
+    type2def['pointer_vertex'] = '&' # using complex<double> & vertex)
+    type2def['pointer_coup'] = ''
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
@@ -1497,19 +1524,27 @@ class ALOHAWriterForCPP(WriteALOHA):
             else:
                 type = self.type2def[format]
                 list_arg = ''
-            args.append('%s%s%s'% (type, argname, list_arg))
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = 'std::complex<double> & vertex'
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointer_vertex': self.type2def['pointer_vertex']}
             #self.declaration.add(('complex','vertex'))
         else:
-            output = 'std::complex<double> %(spin)s%(id)d[]' % {
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
                      'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
-        out.write('void %(name)s(%(args)s,%(output)s)' % \
-                  {'output':output, 'name': name, 'args': ', '.join(args)})
+        out.write('%(prefix)s void %(name)s(%(args)s,%(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', '.join(args)})
         if 'is_h' in mode:
             out.write(';\n')
         else:
@@ -1666,27 +1701,59 @@ class ALOHAWriterForCPP(WriteALOHA):
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict = {'num': self.write_obj(numerator.get_rep([0]))}
+                for c in ['coup', 'vertex']:
+                    if self.type2def['pointer_%s' %c] in ['*']:
+                        mydict['pre_%s' %c] = '(*'
+                        mydict['post_%s' %c] = ')'
+                    else:
+                        mydict['pre_%s' %c] = ''
+                        mydict['post_%s'%c] = ''
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
+                            mydict)
             else:
-                out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict= {}
+                if self.type2def['pointer_vertex'] in ['*']:
+                    mydict['pre_vertex'] = '(*'
+                    mydict['post_vertex'] = ')'
+                else:
+                    mydict['pre_vertex'] = ''
+                    mydict['post_vertex'] = ''                 
+                mydict['data'] = self.write_obj(numerator.get_rep([0]))
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(data)s;\n' % 
+                          mydict)
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
+                mydict = {}
+                if self.type2def['pointer_coup'] in ['*']:
+                    mydict['pre_coup'] = '(*'
+                    mydict['post_coup'] = ')'
+                else:
+                    mydict['pre_coup'] = ''
+                    mydict['post_coup'] = ''
+                mydict['coup'] = coup_name
+                mydict['i'] = self.outgoing
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/(%(denom)s);\n' % {'COUP': coup_name,\
-                                'denom':self.write_obj(self.routine.denominator)}) 
+                        if self.routine.denominator == "1":
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s;\n' % \
+                                  mydict) 
+                        else:
+                            mydict['denom'] = self.routine.denominator
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s);\n' % \
+                                  mydict) 
                     else:
-                        out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                                  mydict)
                 else:
                     if self.routine.denominator:
                         raise Exception('modify denominator are not compatible with complex mass scheme')                
 
-                    out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                    out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
+                              mydict)
 
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1887,9 +1954,17 @@ class ALOHAWriterForCPP(WriteALOHA):
 class ALOHAWriterForGPU(ALOHAWriterForCPP):
     
     extension = '.cu'
-    realoperator = '.re'
-    imagoperator = '.im'
-    ci_definition = 'complex<double> cI = mkcmplx(0., 1.);\n'
+    prefix ='__device__'
+    realoperator = '.real()'
+    imagoperator = '.imag()'
+    ci_definition = 'cxtype cI = cxtype(0., 1.);\n'
+    
+    type2def = {}    
+    type2def['int'] = 'int '
+    type2def['double'] = 'fptype '
+    type2def['complex'] = 'cxtype '
+    type2def['pointer_vertex'] = '*' # using complex<double> * vertex)
+    type2def['pointer_coup'] = ''
     
     def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
@@ -1897,8 +1972,8 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
             - definition of variable
         """
         text = StringIO()
-        if not 'is_h' in mode:
-            text.write('__device__=__forceinclude__\n')
+        #if not 'is_h' in mode:
+        #    text.write('__device__=__forceinclude__\n')
         text.write(ALOHAWriterForCPP.get_header_txt(self, name, couplings, mode))
         return text.getvalue()
         
@@ -1909,7 +1984,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#ifndef '+ self.name + '_guard\n')
             h_string.write('#define ' + self.name + '_guard\n')
-            h_string.write('#include "cmplx.h"\n')
+            h_string.write('#include "mgOnGpuTypes.h"\n')
             h_string.write('using namespace std;\n\n')
 
         h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)
@@ -1923,8 +1998,133 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#endif\n\n')
 
+        
         return h_string.getvalue()
     
+    
+    def write_obj_Add_test(self, obj, prefactor=True):
+        """Turns addvariable into a string"""
+
+        data = defaultdict(list)
+        number = []
+        [data[p.prefactor].append(p) if hasattr(p, 'prefactor') else number.append(p)
+             for p in obj]
+
+        file_str = StringIO()
+        
+        if prefactor and obj.prefactor != 1:
+            formatted = self.change_number_format(obj.prefactor)
+            if formatted.startswith(('+','-')):
+                file_str.write('(%s)' % formatted)
+            else:
+                file_str.write(formatted)
+            file_str.write('*(')
+        else:
+            file_str.write('(')
+        first=True
+        for value, obj_list in data.items():
+            add= '+'
+            if value not in  [-1,1]:
+                nb_str = self.change_number_format(value)
+                if nb_str[0] in ['+','-']:
+                    file_str.write(nb_str)
+                else:
+                    file_str.write('+')
+                    file_str.write(nb_str)
+                file_str.write('*(')
+            elif value == -1:
+                add = '-' 
+                file_str.write('-')
+            elif not first:
+                file_str.write('+')
+            else:
+                file_str.write('')
+            first = False
+            file_str.write(add.join([self.write_obj(obj, prefactor=False) 
+                                                          for obj in obj_list]))
+            if value not in [1,-1]:
+                file_str.write(')')
+        if number:
+            total = sum(number)
+            file_str.write('+ %s' % self.change_number_format(total))
+
+        file_str.write(')')
+        return file_str.getvalue()    
+    
+    def write_MultVariable_test(self, obj, prefactor=True):
+        """Turn a multvariable into a string"""
+        
+        mult_list = [self.write_variable_id(id) for id in obj]
+        
+        tmp = mult_list[0]
+        for obj in mult_list[1:]:
+            tmp = 'cuCmul(%s,%s)' % (obj, tmp)
+        
+        
+        data = {'factors': tmp}
+        if prefactor and obj.prefactor != 1:
+            if obj.prefactor != -1:
+                text = '%(prefactor)s * %(factors)s'
+                data['prefactor'] = self.change_number_format(obj.prefactor)
+            else:
+                text = '-%(factors)s'
+        else:
+            text = '%(factors)s'
+        return text % data
+    
+    
+    def get_header_txt(self, name=None, couplings=None,mode=''):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+        if name is None:
+            name = self.name
+           
+        if mode=='':
+            mode = self.mode
+        
+        
+        
+        out = StringIO()
+        # define the type of function and argument
+        if not 'no_include' in mode:
+            out.write('#include \"%s.h\"\n\n' % self.name)
+        args = []
+        for format, argname in self.define_argument_list(couplings):
+            if format.startswith('list'):
+                type = self.type2def[format[5:]]
+                list_arg = '[]'
+            else:
+                type = self.type2def[format]
+                list_arg = ''
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
+                
+        if not self.offshell:
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointer_vertex': self.type2def['pointer_vertex']}
+            #self.declaration.add(('complex','vertex'))
+        else:
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
+                     'spin': self.particles[self.outgoing -1],
+                     'id': self.outgoing}
+            self.declaration.add(('list_complex', output))
+        
+        out.write('%(prefix)s void %(name)s(const %(args)s, %(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', const '.join(args)})
+        if 'is_h' in mode:
+            out.write(';\n')
+        else:
+            out.write('\n{\n')
+
+        return out.getvalue() 
 
 class ALOHAWriterForPython(WriteALOHA):
     """ A class for returning a file/a string for python evaluation """
@@ -2307,7 +2507,11 @@ class Declaration_list(set):
 class WriterFactory(object):
     
     def __new__(cls, data, language, outputdir, tags):
-        language = language.lower()
+        try:
+            language = language.lower()
+        except AttributeError:
+            pass
+
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
             if 'MP' in tags:
@@ -2323,8 +2527,10 @@ class WriterFactory(object):
             return ALOHAWriterForPython(data, outputdir)
         elif language == 'cpp':
             return ALOHAWriterForCPP(data, outputdir)
-        elif language == 'gpu':
+        elif language in ['gpu','cudac']:
             return ALOHAWriterForGPU(data, outputdir)
+        elif issubclass(language, WriteALOHA):
+            return language(data, outputdir)
         else:
             raise Exception('Unknown output format')
 

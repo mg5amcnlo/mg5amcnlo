@@ -171,7 +171,8 @@ c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-      
+
+      include 'vector.inc'
       include 'run.inc'
 
 
@@ -605,6 +606,7 @@ c**************************************************************************
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
+      include 'vector.inc'
       include 'run.inc'
 
 c     local
@@ -755,6 +757,7 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      include 'vector.inc'
       include 'run.inc'
 
 c-----
@@ -1750,11 +1753,34 @@ C     -----------------------------------------
 
       integer ids(nexternal)
       integer i,j
+      logical trivial_boost 
 
 c     uncompress
       call mapid(frame_id, ids)
       pboost(:) = 0d0
       p2(:,:) = 0d0
+c     avoid trivial boost (check only for  0 0 1 1 1... so sum of the
+c     final state. 1 1 0 0 0 .... should not go within this function   
+      trivial_boost=.true.
+      do i=1,nexternal
+        if (i.le.nincoming)then
+            if (ids(i).ne.0)then
+                trivial_boost=.false.
+                EXIT ! stop do loop
+            endif
+        else
+            if (ids(i).ne.1)then
+                  trivial_boost=.false.
+                  EXIT ! stop do loop
+              endif
+        endif
+        enddo
+
+        if (trivial_boost)then
+            p2(:,:) = p1(:,:)
+            return
+        endif
+
 c     find the boost momenta --sum of particles--
       do i=1,nexternal
        if (ids(i).eq.1)then
@@ -1779,7 +1805,8 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
-      include 'coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 c     include 'run.inc'
 
       double precision p(0:3, nexternal)

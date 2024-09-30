@@ -917,8 +917,11 @@ class MEComparatorGauge(MEComparator):
                        (list_res[0] + list_res[1] + 1e-99)
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
-            diff_FD = abs(list_res[2] - list_res[4]) / \
+            if len(list_res) == 5:
+                diff_FD = abs(list_res[2] - list_res[4]) / \
                        (list_res[2] + list_res[4] + 1e-99) 
+            else:
+                diff_FD = 0 
             max_diff = max(diff_feyn, diff_unit, diff_cms, diff_fixw, diff_FD)
 
             res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
@@ -974,8 +977,11 @@ class MEComparatorGauge(MEComparator):
                        (list_res[0] + list_res[1] + 1e-99)
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
-            diff_FD = abs(list_res[2] - list_res[4]) / \
+            if len(list_res) == 5:
+                diff_FD = abs(list_res[2] - list_res[4]) / \
                        (list_res[2] + list_res[4] + 1e-99) 
+            else:
+                diff_FD=0
 
             if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-3 or \
                diff_unit > 1e-2 or diff_FD > 1e-4:          

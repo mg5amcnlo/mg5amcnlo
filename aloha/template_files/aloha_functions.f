@@ -1201,7 +1201,7 @@ c       real    prot(0:3)      : four-momentum p in the rotated frame
 c
       implicit none
       double precision p(0:3),q(0:3),prot(0:3),qt2,qt,psgn,qq,p1
-
+      volatile qt, p1, qq ! prevent optimizations with -O3 (workaround for SIGFPE crashes in rotxxx: madgraph5/madgraph4gpu#855)
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 

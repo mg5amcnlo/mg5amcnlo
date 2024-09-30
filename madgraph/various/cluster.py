@@ -763,6 +763,7 @@ class MultiCore(Cluster):
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
 
 
+
     def wait(self, me_dir, update_status, update_first=None):
         """Waiting that all the jobs are done. This function also control that
         the submission by packet are handle correctly (i.e. submit the function)"""

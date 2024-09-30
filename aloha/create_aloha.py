@@ -1110,6 +1110,7 @@ class AbstractALOHAModel(dict):
 
     def write(self, output_dir, language):
         """ write the full set of Helicity Routine in output_dir"""
+
         for abstract_routine in self.values():
             #misc.sprint(abstract_routine.name, abstract_routine.outgoing, abstract_routine.spins, abstract_routine.expr)
             abstract_routine.write(output_dir, language)
@@ -1319,7 +1320,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
         aloha_files.append('additional_aloha_function.o')
     
     text="ALOHARoutine = "
-    text += ' '.join(aloha_files)
+    text += ' '.join(sorted(aloha_files))
     text +='\n'
     
 

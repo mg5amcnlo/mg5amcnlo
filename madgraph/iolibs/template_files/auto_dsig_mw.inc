@@ -19,6 +19,7 @@ C
       include 'phasespace.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
+      include 'run.inc'
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=1d0)  !NO CONV (GeV^n)
       REAL*8     PI
@@ -37,6 +38,7 @@ C
       DOUBLE PRECISION g1,g2
       DOUBLE PRECISION a1,a2
       DOUBLE PRECISION XPQ(-7:7)
+      double precision qscale
       DOUBLE PRECISION DSIGUU
 C
 C     STUFF FOR UPC
@@ -54,7 +56,7 @@ C
       COMMON /SubProc/ PD, IPROC
 %(define_subdiag_lines)s
       include 'coupl.inc'
-      include 'run.inc'
+
       include '../../Source/PDF/pdf.inc'
 C     Common blocks
 C      CHARACTER*7         PDLABEL,EPA_LABEL

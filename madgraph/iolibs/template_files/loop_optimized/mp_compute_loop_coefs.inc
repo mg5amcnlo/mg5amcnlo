@@ -94,6 +94,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+      %(include_vector)s
 	  include 'mp_coupl_same_name.inc'
 
 	  include 'MadLoopParams.inc'

@@ -1,4 +1,3 @@
-################################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -92,7 +91,8 @@ class LoopExporterFortran(object):
                         'SubProc_prefix': 'P',
                         'output_dependencies': 'external',
                         'compute_color_flows': False,
-                        'mode':''})
+                        'mode':'',
+                        'vector_size':0})
 
     include_names    = {'ninja' : 'mninja.mod',
                         'golem' : 'generic_function_1p.mod',
@@ -1254,10 +1254,11 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
-    def generate_subprocess_directory(self, matrix_element, fortran_model):
+    def generate_subprocess_directory(self, matrix_element, fortran_model, second_exporter=None):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
+        assert second_exporter is None
         self.unique_id +=1
         return self.generate_loop_subprocess(matrix_element,fortran_model,
                                                             unique_id=self.unique_id)
@@ -1278,6 +1279,10 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         else:
             file = open(os.path.join(self.template_dir,\
                                           'check_sa_loop_induced.inc')).read()
+            if self.opt['vector_size']:
+                replace_dict["include_vector"] = "include '../../Source/vector.inc'"
+            else:
+               replace_dict["include_vector"] = '' 
         file=file%replace_dict
         writer.writelines(file)
          
@@ -1335,6 +1340,12 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
         replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'\
                             %{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for \
                                                   i, m in enumerate(mass_list)])
+        
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
+
         file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
         file_mp=file_mp%replace_dict
         #
@@ -1396,6 +1407,10 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
 
         # First write CT_interface which interfaces MG5 with CutTools.
         replace_dict=copy.copy(matrix_element.rep_dict)
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
         
         # We finalize CT result differently wether we used the built-in 
         # squaring against the born.
@@ -2324,7 +2339,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                      ','.join(['.TRUE.' if l else '.FALSE.' for l in 
                                            has_HEFT_vertex[k:k + chunk_size]])))
         replace_dict['has_HEFT_list'] = '\n'.join(has_HEFT_list)
-
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
         file = file % replace_dict
         
         FPR = q_polynomial.FortranPolynomialRoutines(
@@ -2366,7 +2384,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                  ','.join('%2r'%ind for ind in indices_list[k:k + chunk_size])))
 
         replace_dict['collier_coefmap'] = '\n'.join(map_definition) 
- 
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
+
         file = file % replace_dict
         
         if writer:
@@ -2530,6 +2553,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(matrix_element.rep_dict)                 
 
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
+
         # Extract helas calls
         squared_orders = matrix_element.get_squared_order_contribs()
         split_orders = matrix_element.get('processes')[0].get('split_orders')
@@ -2577,6 +2605,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 context=context)
 
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
                     
         file = file % replace_dict
  
@@ -2960,6 +2993,11 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
         replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
                                        matrix_element.get_beams_hel_avg_factor()
+        
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
 
         if write_auxiliary_files:
             # Write out the color matrix
@@ -3034,6 +3072,11 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         matrix_element.rep_dict['coef_construction']=replace_dict['coef_construction']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
+        misc.sprint(self.opt['vector_size'], self.__class__)
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
         file = file % replace_dict
         number_of_calls = len([call for call in loop_CT_calls if call.find('CALL LOOP') != 0])   
         if writer:
@@ -3052,12 +3095,10 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
 
-    default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop_matchbox', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran',
-                        'output_dependencies':'external',
-                        'sa_symmetry':True}
+    default_opt = dict(LoopProcessOptimizedExporterFortranSA.default_opt)
+    default_opt['export_format'] = 'madloop_matchbox'
+    default_opt['sa_symmetry'] = True
+    
 
 
 
@@ -3103,6 +3144,9 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                                        't_strategy' in self.opt['output_options']:
             self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
                   self.opt['output_options']['t_strategy'], int, 't_strategy')
+            
+        self.opt['vector_size'] = 1 
+
     
     def get_context(self,*args,**opts):
         """ Make sure that the contextual variable MadEventOutput is set to
@@ -3330,11 +3374,13 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         LoopInducedExporterME.finalize(self,*args,**opts)
         
     def generate_subprocess_directory(self, subproc_group,
-                                                    fortran_model,group_number):
+                                                    fortran_model,group_number,
+                                                    second_exporter=None,
+                                                    second_helas=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-        
+        assert second_exporter is None
         # Generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
@@ -3347,6 +3393,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
                             unique_id=self.unique_id)
         
         # Then generate the MadEvent files
+        self.opt['vector_size'] =1 
         export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory(
                                  self, subproc_group,fortran_model,group_number)
         

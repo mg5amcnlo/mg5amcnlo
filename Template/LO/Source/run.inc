@@ -49,12 +49,12 @@ c     Parameters for systematics variations info
 c
       logical use_syst
 c     Common block for systematics variations
-      DOUBLE PRECISION s_scale
-      INTEGER n_qcd,n_alpsem
-      DOUBLE PRECISION s_qalps(max_particles-2)
-      INTEGER n_pdfrw(2),i_pdgpdf(max_particles-2,2)
-      DOUBLE PRECISION s_xpdf(max_particles-2,2),s_qpdf(max_particles-2,2)
-      DOUBLE PRECISION s_rwfact
+      DOUBLE PRECISION s_scale(VECSIZE_MEMMAX)
+      INTEGER n_qcd(VECSIZE_MEMMAX),n_alpsem(VECSIZE_MEMMAX)
+      DOUBLE PRECISION s_qalps(max_particles-2,VECSIZE_MEMMAX)
+      INTEGER n_pdfrw(2,VECSIZE_MEMMAX),i_pdgpdf(max_particles-2,2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION s_xpdf(max_particles-2,2,VECSIZE_MEMMAX),s_qpdf(max_particles-2,2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION s_rwfact(VECSIZE_MEMMAX)
       COMMON/TO_SYST/use_syst,n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
 c

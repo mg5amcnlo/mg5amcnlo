@@ -972,6 +972,7 @@ class Interaction(PhysicsObject):
         '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
 
 
+
 #===============================================================================
 # InteractionList
 #===============================================================================
@@ -1218,29 +1219,36 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
-        if (name == 'got_majoranas') and self[name] == None:
+        elif (name == 'got_majoranas') and self[name] == None:
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
-        if (name == 'coupling_orders') and self[name] == None:
+        elif (name == 'coupling_orders') and self[name] == None:
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
-        if (name == 'order_hierarchy') and not self[name]:
+        elif (name == 'order_hierarchy') and not self[name]:
             if self['interactions']:
                 self['order_hierarchy'] = self.get_order_hierarchy()    
 
-        if (name == 'expansion_order') and self[name] == None:
+        elif (name == 'expansion_order') and self[name] == None:
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
                    
-        if (name == 'name2pdg') and 'name2pdg' not in self:
+        elif (name == 'name2pdg') and 'name2pdg' not in self:
             self['name2pdg'] = {}
             for p in self.get('particles'):
                 self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
                 self['name2pdg'][p.get('name')] =  p.get('pdg_code')
-                
+        
+        elif (name == 'coupling_dep' and 'coupling_dep' not in self):
+            self['coupling_dep'] = {}
+            if self.get('couplings'):
+                for key, couplings in self.get('couplings').items():
+                    for coup in couplings:
+                        self['coupling_dep'][coup.name] = key
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value, force = False):
@@ -1511,7 +1519,28 @@ class Model(PhysicsObject):
         
         return correlated   
 
+    def get_all_running_coupling(self):
+        """ return the list of all coupling which are running for this model """
+
+        all_running_coupling = []
+        all_running_type = ['aS'] + self.get_running()
+        not_running_index = [] # to allow to add at the end of the list the non running one
+        for type_coup, coup_list in self.get('couplings').items():
+            if any([c in all_running_type for c in type_coup]):
+                all_running_coupling += coup_list
+        return all_running_coupling
+    
+    def is_running_coupling(self, name, reset_cache=False):
+        """check if a coupling runs or not"""
+
+        if reset_cache or not hasattr(self, 'cache_running_coupling'):
+            self.cache_running_coupling = self.get_all_running_coupling()
         
+        if name.startswith('-'):
+            name = name[1:]
+        return name in self.cache_running_coupling
+
+
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""

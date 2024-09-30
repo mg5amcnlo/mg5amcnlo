@@ -102,9 +102,9 @@ C         this is for the orders of the counterterms
           NORD_INTEGRATED_BORN = 0
           IF (KEEP_ORDER(I)) THEN
             NORD_INTEGRATED_BORN = NORD_INTEGRATED_BORN + 1
-              !write(*,*) 'BORN: keeping split order ', i
-              !else
-              !write(*,*) 'BORN: not keeping split order ', i
+C           write(*,*) 'BORN: keeping split order ', i
+C           else
+C           write(*,*) 'BORN: not keeping split order ', i
           ENDIF
         ENDDO
 
@@ -312,7 +312,8 @@ C     reset the amp_split array
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX_B(J, I)
           ENDDO
-            !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,I)
+C         amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) =
+C          ans(1,I)
           IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_EWSUD(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) =
      $      ANS(1,I) / IDEN
@@ -492,11 +493,12 @@ C     ----------
       ENDDO
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
-          ! the following lines are to avoid segfaults when glu_ij=0
+C       the following lines are to avoid segfaults when glu_ij=0
         COND_IJ=SKIP(NFKSPROCESS).EQ.0
         IF (.NOT.COND_IJ) COND_IJ=COND_IJ.OR.NHEL(GLU_IJ,IHEL)
      $   .EQ.NHEL(GLU_IJ,1)
-          !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+C       if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq
+C       .0) then
         IF (COND_IJ) THEN
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
      $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.

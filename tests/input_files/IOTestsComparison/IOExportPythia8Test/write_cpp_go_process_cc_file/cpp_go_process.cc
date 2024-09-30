@@ -206,7 +206,7 @@ void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[])
 }
 double CPPProcess::matrix_uux_gogo() 
 {
-  int i, j; 
+
   // Local variables
   const int ngraphs = 1; 
   const int ncolor = 2; 
@@ -222,16 +222,16 @@ double CPPProcess::matrix_uux_gogo()
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(j = 0; j < ncolor; j++ )
+    for(int j = 0; j < ncolor; j++ )
       ztemp = ztemp + cf[i][j] * jamp[j]; 
     matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
   }
 
   // Store the leading color flows for choice of color
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
     jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
 
   return matrix; 

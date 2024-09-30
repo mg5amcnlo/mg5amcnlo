@@ -767,13 +767,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
     class RunWebHandling(object):
         
-        def __init__(self, me_dir, crashifpresent=True, warnifpresent=True):
+        def __init__(self, me_dir, crashifpresent=True, warnifpresent=True, force_run=False):
             """raise error if RunWeb already exists
             me_dir is the directory where the write RunWeb"""
             
             self.remove_run_web = True
             self.me_dir = me_dir
-            
+            if force_run:
+                self.remove_run_web = False
+                return            
             if crashifpresent or warnifpresent:
                 if os.path.exists(pjoin(me_dir, 'RunWeb')):
                     pid = open(pjoin(me_dir, 'RunWeb')).read()
@@ -1476,7 +1478,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             for plot in plot_files:
                 command = ['gnuplot',plot]
                 try:
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=subprocess.PIPE)
+                    fsock = open(os.devnull, 'w')
+                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
+                    fsock.close()
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
                             "merging plots with gnuplot failed. Try the"+\
@@ -4146,9 +4150,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
 
         madspin_cmd.import_command_file(path)
-
-
-        if not madspin_cmd.me_run_name: 
+        if not madspin_cmd.me_run_name:
             # create a new run_name directory for this output
             i = 1
             while os.path.exists(pjoin(self.me_dir,'Events', '%s_decayed_%i' % (self.run_name,i))):
@@ -6475,6 +6477,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
             
+            if 'dressed_ee' in  proc_charac['limitations']:
+                if self.run_card['lpp1'] not in [0,1,-1] or self.run_card['lpp1'] not in [0,1,-1]:
+                    raise InvalidCmd("dressed lepton mode is not available for this process (see warning associated to the code generation to understand why)")
+            # 
             if 'fix_scale' in proc_charac['limitations']:
                 if not self.run_card['fixed_fac_scale'] or not self.run_card['fixed_ren_scale']:
                     raise InvalidCmd("Your model is identified as having not SM running of the strong coupling.\n"+\

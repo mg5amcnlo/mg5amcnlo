@@ -2,9 +2,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      SUBROUTINE COUP1()
+      SUBROUTINE COUP1( )
 
       IMPLICIT NONE
+
       INCLUDE 'model_functions.inc'
 
       DOUBLE PRECISION PI, ZERO

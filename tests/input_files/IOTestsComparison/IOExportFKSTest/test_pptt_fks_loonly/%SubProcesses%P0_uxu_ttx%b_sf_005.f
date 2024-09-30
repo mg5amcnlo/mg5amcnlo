@@ -71,7 +71,8 @@ C     reset the amp_split_cnt array
 C           take into account the fact that this is for QCD
             IF (J.EQ.QCD_POS) AMP_ORDERS(J) = AMP_ORDERS(J) + 2
           ENDDO
-            !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+C         amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos)
+C          = ans(I)
           IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1
      $     ,QCD_POS) = ANS(I)

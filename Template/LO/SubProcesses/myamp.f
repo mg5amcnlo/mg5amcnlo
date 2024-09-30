@@ -12,6 +12,7 @@ c
       include 'nexternal.inc'
       double precision   zero
       parameter (zero = 0d0)
+      include 'vector.inc'
       include 'run.inc'
 c
 c     Arguments
@@ -52,7 +53,8 @@ c
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
       
-      include 'coupl.inc'
+c      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
@@ -265,6 +267,7 @@ c
       real*8         emass(nexternal)
       common/to_mass/emass
 
+      include 'vector.inc'
       include 'run.inc'
 
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
@@ -285,7 +288,7 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
 C
 C     SPECIAL CUTS

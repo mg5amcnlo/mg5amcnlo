@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -19,6 +19,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)s)
@@ -32,6 +33,14 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    double precision RHEL ! random number for selecting helicity
+    double precision RCOL ! random number for selecting helicity
+    integer channel ! channel to keep for the multi-channel
+    integer ivec ! for using the correct coupling
+c
+c   output argument
+c
+    integer ihel, icol
 c
 c global (due to reading writting) 
 c
@@ -68,15 +77,12 @@ C
     logical init_mode
     common /to_determine_zero_hel/init_mode
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
    
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
 
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
-    INTEGER IMIRROR,IPROC
+    INTEGER IMIRROR, IPROC
     COMMON/TO_MIRROR/ IMIRROR,IPROC
 
 c       included vi run.inc    
@@ -116,13 +122,12 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
@@ -132,7 +137,7 @@ C ----------
     IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
             %(beam_polarization)s
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
 			  call DS_add_entry('Helicity',I,T)
@@ -179,26 +184,25 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
 
             %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
-
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+	    IHEL = HEL_PICKED
     ELSE
 	ANS = 1D0
 	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
-    CALL RANMAR(R)
+c    CALL RANMAR(R) ! rhel passed as input
     SUMHEL=0d0
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS
-       IF(R.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+       IF(RHEL.LT.SUMHEL)THEN
+          IHEL = I
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
           GOTO 10
@@ -221,7 +225,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
             endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+		ANS=ANS*AMP2(channel)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
@@ -233,10 +237,13 @@ c         Set right sign for ANS, based on sign of chosen helicity
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+
     END
- 
- 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL)
+
+
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -273,6 +280,7 @@ C
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     INTEGER IHEL
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  
@@ -295,10 +303,10 @@ C
       INTEGER SQSOINDEX%(proc_id)s
 C  
 C GLOBAL VARIABLES
-C  
+C
+   include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
+    include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
