@@ -6883,11 +6883,15 @@ class GridPackCmd(MadEventCmd):
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
-            self.options['nb_core']  = 1
-            self.exec_cmd('systematics %s --from_card' % 
-                          pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
-                                               postcmd=False,printcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                    self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+        else:
+            path = pjoin('Events', self.run_name, 'unweighted_events.lhe.gz')
+            if self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+                self.options['nb_core']  = 1
+                self.exec_cmd('systematics %s --from_card' % path, postcmd=False, printcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight %s --threshold=%s" % (path, self.run_card['time_of_flight']) ,postcmd=False)
             
 
     def refine4grid(self, nb_event):
