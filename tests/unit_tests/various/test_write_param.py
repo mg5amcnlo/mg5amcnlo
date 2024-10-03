@@ -289,7 +289,7 @@ Block mass
 Block sminputs 
     1 1.325070e+02 # aEWM1 
     2 1.166390e-05 # Gf 
-    3 1.180000e-01 # aS (Note that Parameter not used if you use a PDF set) 
+    3 1.180000e-01 # aS (Note: this Parameter is not used if you use a PDF set) 
 
 ###################################
 ## INFORMATION FOR YUKAWA
