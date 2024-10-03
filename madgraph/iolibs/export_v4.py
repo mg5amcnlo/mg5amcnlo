@@ -7020,7 +7020,6 @@ class UFO_model_to_mg4(object):
             misc.sprint(error)
             self.vector_size = 0
 
-        misc.sprint(self.vector_size)
         try:
             nb_warp = self.opt['output_options']['nb_warp']
         except KeyError:
