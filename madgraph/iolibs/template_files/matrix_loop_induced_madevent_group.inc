@@ -22,6 +22,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    Include '../../Source/vector.inc'
     include 'run.inc'
 C   Below is the maximum config ID for multichannels which is always less than
 C   the number of loop diagrams, so we use the latter.
