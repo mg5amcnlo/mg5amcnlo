@@ -1112,8 +1112,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             order = process.split('[')[1].split(']')[0]
             if '=' in order:
                 order = order.split('=')[1]
-            if order.strip().lower() != 'qcd':
-                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
+#            if order.strip().lower() != 'qcd':
+#                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
 
             for p in particles_parts[1].split():
