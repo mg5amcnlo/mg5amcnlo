@@ -135,7 +135,8 @@ module mint_module
 !  include 'mint_vectorize.inc'
 !  integer, dimension(ndimmax,vec_size_mint), private :: icell
   integer, allocatable, private :: icell(:,:)
-  integer, dimension(ndimmax), private :: ncell
+!   integer, dimension(ndimmax), private :: ncell
+  integer, allocatable, private :: ncell(:,:)
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
   integer, dimension(maxchannels), private :: nhits_in_grids
@@ -198,6 +199,7 @@ contains
       implicit none
       integer, intent(in) :: vector_size
       allocate(icell(ndimmax,vector_size))
+      allocate(ncell(ndimmax,vector_size))
       allocate(rand(ndimmax,vector_size))
       allocate(x_bjork(ndimmax,vector_size))
       allocate(jacobian(vector_size))
@@ -208,6 +210,7 @@ contains
 
    subroutine deallocate_mint
       if (allocated(icell)) deallocate(icell)
+      if (allocated(ncell)) deallocate(ncell)
       if (allocated(rand)) deallocate(rand)
       if (allocated(x_bjork)) deallocate(x_bjork)
       if (allocated(jacobian)) deallocate(jacobian)
@@ -773,7 +776,7 @@ contains
 ! update the upper bounding envelope total rate
     prod=1d0
     do kdim=1,ndim
-       prod=prod*ymax(ncell(kdim),kdim,ichan)
+       prod=prod*ymax(ncell(kdim,amp_index),kdim,ichan)
     enddo
     prod=(f(1,amp_index)/prod)
     if (prod.gt.1d0) then
@@ -785,7 +788,7 @@ contains
        prod=min(2d0,prod)
        prod=prod**(1d0/dble(ndim))
        do kdim=1,ndim
-          ymax(ncell(kdim),kdim,ichan)=ymax(ncell(kdim),kdim,ichan)*prod
+          ymax(ncell(kdim,amp_index),kdim,ichan)=ymax(ncell(kdim,amp_index),kdim,ichan)*prod
        enddo
     endif
 ! Update the upper bounding envelope virtual. Do not include the
@@ -889,10 +892,10 @@ contains
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
        if (even_rn) then
           rand(kdim,index)=ran3(even_rn)
-          ncell(kdim)= min(int(rand(kdim,index)*nint_used)+1,nint_used)
-          rand(kdim,index)=rand(kdim,index)*nint_used-(ncell(kdim)-1)
+          ncell(kdim,index)= min(int(rand(kdim,index)*nint_used)+1,nint_used)
+          rand(kdim,index)=rand(kdim,index)*nint_used-(ncell(kdim,index)-1)
        else
-          ncell(kdim)=min(int(nint_used/ifold(kdim)*ran3(even_rn))+1,nint_used/ifold(kdim))
+          ncell(kdim,index)=min(int(nint_used/ifold(kdim)*ran3(even_rn))+1,nint_used/ifold(kdim))
           rand(kdim,index)=ran3(even_rn)
        endif
       enddo
@@ -902,6 +905,7 @@ contains
     entry get_random_x_next_fold(kfold,vector_size)
     do index=1,vector_size
       jacobian(index)=1d0/(vol_chan*vector_size) * wgt_mult
+      ! jacobian(index)=1d0/(vol_chan) * wgt_mult
     enddo
 !    vol=1d0/(vol_chan*vec_size) * wgt_mult
     ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
@@ -909,7 +913,7 @@ contains
        nintcurr=nint_used/ifold(kdim)
 !      nintcurr=nint_used/(ifold(kdim)*vec_size)
       do index=1,vector_size
-         icell(kdim,index)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
+         icell(kdim,index)=ncell(kdim,index)+(kfold(kdim)-1)*nintcurr
          dx=xgrid(icell(kdim,index),kdim,ichan)-xgrid(icell(kdim,index)-1,kdim,ichan)
          jacobian(index)=jacobian(index)*dx*nintcurr
          x_bjork(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim,index)*dx
@@ -1754,7 +1758,9 @@ contains
        r=ran3(.false.)
        do kint=1,nintcurr
           if(r.lt.xmmm(kint,kdim,ichan)) then
-             ncell(kdim)=kint
+             do index=1,vector_size
+                ncell(kdim,index)=kint
+             enddo
              exit
           endif
        enddo
@@ -1766,7 +1772,9 @@ contains
     call get_random_x_next_fold(kfold,vector_size)
     upper_bound=1d0
     do kdim=1,ndim
-       upper_bound=upper_bound*ymax(ncell(kdim),kdim,ichan)
+       do index=1,vector_size
+         upper_bound=upper_bound*ymax(ncell(kdim,index),kdim,ichan)
+       enddo
     enddo
   end subroutine get_weighted_cell
   
