@@ -910,9 +910,21 @@ c counter-event momenta do not exist).
 ! The shower scale to be used in the event file (if it's an H-event and
 ! fks_picked will be iFKS). We assume that the emissions by the shower
 ! should be softer than the real-emission of the current FKS
-! configuration. Hence, take that dipole scale as upper boundary for
-!     the next emissions.
-            emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks,j_fks)
+! configuration. Hence, take that dipole scale as upper boundary for the
+! next emissions. (We don't want this anymore. Maybe only for
+! MC@NLO-Delta?)
+c$$$            emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks,j_fks)
+!     To make sure that (soft/collinear) real-emission still "cancels
+!     the divergence in the virtual" these configurations should have a
+!     shower scale related to the underlying S-event. 
+            if (born_flow_picked.gt.0) then
+               emsca_H(iFKS,ifold_counter)=max(shower_scale_n1body(i_fks
+     $              ,j_fks),shower_scale_nbody(fks_father
+     $              ,partner_picked)
+            else
+               emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks
+     $              ,j_fks)
+            endif
 c Set the shower scales            
 ! TODO : fix FxFx
 c$$$            if (ickkw.eq.3) then

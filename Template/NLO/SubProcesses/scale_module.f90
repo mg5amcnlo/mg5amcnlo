@@ -229,13 +229,13 @@ contains
              do i=0,3
                 pQCD(i,NN)=p(i,j)
              enddo
-          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).ne.0d0) then
-             !     reduce by ET of massive QCD particles
-             global_ref_scale=min(global_ref_scale,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
-          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).eq.0d0) then
-             write (*,*) 'Error in assign_ref_scale(): colored' &
-                  //' massless particle that does not enter jets'
-             stop 1
+!!$          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).ne.0d0) then
+!!$             !     reduce by ET of massive QCD particles
+!!$             global_ref_scale=min(global_ref_scale,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
+!!$          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).eq.0d0) then
+!!$             write (*,*) 'Error in assign_ref_scale(): colored' &
+!!$                  //' massless particle that does not enter jets'
+!!$             stop 1
           endif
        enddo
        ! reduce by kT-cluster scale of massless QCD partons
