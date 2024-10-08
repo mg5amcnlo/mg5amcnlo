@@ -4,7 +4,7 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.6.0 ():
+3.6.0 (30/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/24):
       PT+RF: fixed the Pythia8 script so that SCALUP in the LHE file is ignored only when using FxFx or MC@NLO-Delta
       OM: Allow the scan command within the run_card.
           Note that such command can NOT be used if the scan command is used in the param_card.
@@ -16,7 +16,8 @@ ANNOUNCEMENT:
           This will allow to support the cudacpp plugin that will offer
             - GPU support for LO processes
             - SIMD support on cpu
-          This feature add OpenMP support for LO process (deactivated by default in favor of multi-process).
+          Those modes need to install the cudacpp plugin (can be done via the command "install cudacpp")
+          This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
 
 3.5.6 (26/9/24):
   OM: Include fix from LTS 2.9.21

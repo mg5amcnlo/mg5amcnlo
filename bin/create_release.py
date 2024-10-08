@@ -257,8 +257,8 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
         else:
             os.rename(data, data.replace('compile.py','.compile.py'))
 
-os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+#os.remove(path.join(filepath, 'README.developer'))
+#shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
 
 # 1. Add information for the auto-update
