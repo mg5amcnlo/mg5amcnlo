@@ -6042,6 +6042,10 @@ c           This is dummy particle used in multiparticle vertices
         else:
             replace_dict['secondparam']=''            
 
+        replace_dict['DRIVER_EXTRA_HEADER'] = ""
+        replace_dict['DRIVER_EXTRA_INITIALISE'] = ""
+        replace_dict['DRIVER_EXTRA_FINALISE'] = ""
+
         if writer:
             text = open(path).read() % replace_dict
             writer.write(text)

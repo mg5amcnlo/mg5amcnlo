@@ -77,12 +77,13 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       INTEGER VECSIZE_USED
       DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime
-
+%(DRIVER_EXTRA_HEADER)s
 C-----
 C  BEGIN CODE
 C----- 
       call cpu_time(t_before)
       CUMULATED_TIMING = t_before
+%(DRIVER_EXTRA_INITIALISE)s
 c
 c     Read process number
 c
@@ -218,6 +219,7 @@ c      write(*,*) 'Final xsec: ',xsec
       rewind(lun)
 
       close(lun)
+%(DRIVER_EXTRA_FINALISE)s
       end
 
 c     $B$ get_user_params $B$ ! tag for MadWeight
