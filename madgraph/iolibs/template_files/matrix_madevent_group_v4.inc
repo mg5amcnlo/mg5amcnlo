@@ -67,7 +67,10 @@ C
 	DATA NB_FAIL /0/
         double precision get_channel_cut
         external get_channel_cut
-	
+C
+        INTEGER NGOODHEL ! -1 if not yet retrieved and printed
+        SAVE NGOODHEL
+        DATA NGOODHEL/-1/	
 c
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
@@ -178,6 +181,17 @@ C ----------
 		endif
         IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
            ISHEL=MIN(ISUM_HEL,NGOOD)
+C           Print the number of good helicities
+            IF (NGOODHEL.EQ.-1) THEN
+              NGOODHEL=0
+              DO I=1,NCOMB
+                IF (GOODHEL(I,1)) THEN
+                  NGOODHEL=NGOODHEL+1
+                ENDIF
+              ENDDO
+              WRITE (6,*) 'NGOODHEL =', NGOODHEL
+              WRITE (6,*) 'NCOMB =', NCOMB
+            ENDIF
         ENDIF
       ENDIF
     ELSE IF (.not.init_mode) then            ! random helicity 
