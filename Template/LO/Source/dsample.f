@@ -175,7 +175,9 @@ c
          if (iter .le. itmax) then
 c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             ievent=ievent+1
+%(start_profiling_x2f)s
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
+%(stop_profiling_x2f)s
             CUTSDONE=.FALSE.
             CUTSPASSED=.FALSE.
             if (passcuts(p,VECSIZE_USED)) then
@@ -247,6 +249,7 @@ c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                do I=1, VECSIZE_USED
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo
+%(start_profiling_putpoint_vec)s
                do i =1, VECSIZE_USED
 c     if last paremeter is true -> allow grid update so only for a full page
                   lastbin(:) = all_lastbin(:,i)
@@ -254,6 +257,7 @@ c     if last paremeter is true -> allow grid update so only for a full page
 c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_USED                   
                   call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.VECSIZE_USED) !Store result
                enddo
+%(stop_profiling_putpoint_vec)s
                if (VECSIZE_USED.ne.1.and.force_reset)then
                   call reset_cumulative_variable()
                   force_reset=.false.
@@ -264,7 +268,9 @@ c     if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
             else
                fx =0d0
                wgt=0d0
+%(start_profiling_putpoint)s
                call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
+%(stop_profiling_putpoint)s
             endif
 
          endif
@@ -429,7 +435,9 @@ c
          call sample_get_config(wgt,iter,ipole)
          if (iter .le. itmax) then
             ievent=ievent+1
+%(start_profiling_x2f)s
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
+%(stop_profiling_x2f)s
             if (pass_point(p)) then
                xzoomfact = 1d0
                fx = dsig(p,wgt,0) !Evaluate function
@@ -445,7 +453,9 @@ c
             endif
             
             if (nzoom .le. 0) then
+%(start_profiling_putpoint)s
                call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
+%(stop_profiling_putpoint)s
             else
                nzoom = nzoom -1
                ievent=ievent-1

@@ -87,6 +87,7 @@ C-----
 c
 c     Read process number
 c
+%(start_profiling_driver_init)s
       call open_file(lun+1, 'dname.mg', fopened)
       if (.not.fopened)then
          goto 11
@@ -157,6 +158,7 @@ c   If CKKW-type matching, read IS Sudakov grid
           print *,'Running CKKW as lower mult sample'
         endif
       endif
+%(stop_profiling_driver_init)s
 
 c     
 c     Get user input
