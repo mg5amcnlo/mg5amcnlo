@@ -309,7 +309,9 @@ c      	ENDDO
 
 c     set the running scale 
 c     and update the couplings accordingly
+%(start_profiling_update_scale_coupling_vec)s
       call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, VECSIZE_USED)
+%(stop_profiling_update_scale_coupling_vec)s
 
       IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
