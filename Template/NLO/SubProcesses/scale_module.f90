@@ -210,18 +210,15 @@ contains
     endif
   end function mass
 
-  
   subroutine get_global_ref_scale(n,p)
     ! this is the global reference shower scale (i.e., without damping),
-    ! i.e. HT/2 for non-delta (no longer used), and shat reduced by kT of
-    ! splitting, or ET of massive in case of delta (now for both delta and
-    ! non-delta).
+    ! i.e. HT/2 reduced by kT of splitting.
     implicit none
     integer :: n
     double precision,dimension(0:3,n) :: p,pQCD
     integer :: i,j,NN
- ! start from s-hat      
-       global_ref_scale=sqrt(2d0*dot(p(0,1),p(0,2)))
+ ! start from HT/2
+       global_ref_scale=HTo2(n,p)
        NN=0
        do j=nincoming_mod+1,n
           if (abs(colour(n,j)).ne.1 .and. mass(n,j).eq.0d0) then
