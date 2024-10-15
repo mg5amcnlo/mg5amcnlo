@@ -9,7 +9,7 @@ module kinematics_module
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
 
-  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y,HTo2
+  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT
   private
 
 contains
@@ -253,14 +253,20 @@ contains
 
   double precision function HTo2(n,p)
     implicit none
+    integer :: n
+    double precision,dimension(0:3,n) :: p
+    HTo2=HT(n,p)/2d0
+  end function HTo2
+  
+  double precision function HT(n,p)
+    implicit none
     integer :: n,j
     double precision,dimension(0:3,n) :: p
-    HTo2=0d0
+    HT=0d0
     do j=3,n
-       HTo2=HTo2+sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j)))
+       HT=HT+sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j)))
     enddo
-    HTo2=HTo2/2d0
-  end function HTo2
+  end function HT
   
   double precision function sumdot(p1,p2,sign)
     implicit  none

@@ -217,8 +217,8 @@ contains
     integer :: n
     double precision,dimension(0:3,n) :: p,pQCD
     integer :: i,j,NN
- ! start from HT/2
-       global_ref_scale=HTo2(n,p)
+ ! start from HT
+       global_ref_scale=HT(n,p)
        NN=0
        do j=nincoming_mod+1,n
           if (abs(colour(n,j)).ne.1 .and. mass(n,j).eq.0d0) then
