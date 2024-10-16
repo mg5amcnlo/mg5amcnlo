@@ -69,18 +69,16 @@
 # Choice of the collision system in terms of PDFs:
 #    True/False = asymmetric / symmetric
 #
-# In "symmetric" case you're going to use default MG5aMC_NLO calculation.
+# In "symmetric" case you're going to use the default MG5aMC_NLO calculation.
 #
 # In "asymmetric" case, the first PDF in the list will be taken as a baseline. 
-# And for all of the PDFs after you're going to get cross-products of PDF1_X_PDF2.
+# And for all the PDFs after, you're going to get cross-products of PDF1_X_PDF2.
 # As the final output, Nuclear Modification Factors are also going to be computed.
 #  
-# Works only with:
-#    lhapdf = pdlabel
-#	    and
-#    reweight_PDF = True  	reweight_scale  = True
-#	  or/and
-#    reweight_PDF = True  	reweight_scale  = False
+# Works only with: 
+#
+#		lhapdf = pdlabel
+#
 #***********************************************************************
  %(asymm_choice)s = asymm_choice ! choice of the regime 
 #***********************************************************************

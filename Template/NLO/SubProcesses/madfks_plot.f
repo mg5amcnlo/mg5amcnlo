@@ -236,8 +236,6 @@ c     to "setrun")
      $              /'extra_weights.f to ',nmemPDF(nn)+1
                stop
             endif
-c set the weights_info string for PDF variation
-            if (lpdfvar(nn)) then
                 if (nn.eq.1) then    
                     jmax=1
                 else if (nn.ne.1.and.asymm_choice.eqv..true.) then
@@ -245,6 +243,17 @@ c set the weights_info string for PDF variation
                 else if (nn.ne.1.and.asymm_choice.eqv..false.) then
                     jmax=1
                 endif
+            
+            
+c set the weights_info string for PDF variation
+            if (lpdfvar(nn)) then
+                !if (nn.eq.1) then    
+                    !jmax=1
+                !else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                    !jmax=3
+                !else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                    !jmax=1
+                !endif
            
 
            !do j=1,jmax
@@ -271,26 +280,61 @@ c set the weights_info string for PDF variation
      $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(nn)))
 
-              else if (j==3) then !Ap
+               else if (j==3) then !Ap
                   
                   write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n !Here we fill HwU file with Ap crossections only if we have the right flag in run_card dat
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(1)))
 
-              endif
-	      enddo
-	      enddo
+               endif
+	            enddo
+               enddo
               
 
             else
-               nwgt=nwgt+1
-               allocate(ctemp(nwgt))
-               ctemp(1:nwgt-1)=weights_info
-               call move_alloc(ctemp,weights_info)
-               write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
-               write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
-     $              /' '//trim(adjustl(lhaPDFsetname(nn)))
+            
+            
+                do n=0,nmemPDF(nn)                  
+                do j=1,jmax
+                  nwgt=nwgt+1
+                  allocate(ctemp(nwgt))
+                  ctemp(1:nwgt-1)=weights_info
+                  call move_alloc(ctemp,weights_info)
+              
+               if (j==1) then !pp
+
+                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))
+                  !enddo
+
+               else if (j==2) then !pA
+                   
+                  write(temp,'(a4,i8)') "pA=",lhaPDFid(nn) !Here we fill HwU file with pA crossections only if we have the right flag in run_card dat
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(nn)))
+
+               else if (j==3) then !Ap
+                  
+                  write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn) !Here we fill HwU file with Ap crossections only if we have the right flag in run_card dat
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))
+
+               endif
+                    enddo
+                enddo
+            
+            
+               !nwgt=nwgt+1
+               !allocate(ctemp(nwgt))
+               !ctemp(1:nwgt-1)=weights_info
+               !call move_alloc(ctemp,weights_info)
+               !write(temp,'(a4,i8)') "PDR=",lhaPDFid(nn)
+               !write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+!     $              /' '//trim(adjustl(lhaPDFsetname(nn)))
             
              endif
          enddo

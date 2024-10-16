@@ -1629,6 +1629,7 @@ class HwU(Histogram):
 
 ###################S.A
             # Now add the corresponding weight to all Bins
+            #file = open("otus.txt", "w+")
             for bin in self.bins:
 ###################S.A
                 if type!='PDF' and type!='RPA' and type!='RAP': 
@@ -1658,7 +1659,16 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-		    
+                    
+                elif type=='RPA' and use_lhapdf and label != 'none' and len(wgts) == 1:
+                    bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
+                    bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
+                    bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]
+                    
+                elif type=='RAP' and use_lhapdf and label != 'none' and len(wgts) == 1:
+                    bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
+                    bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
+                    bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]		    
 ###################S.A
                                                   
                 elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) > 1:
@@ -1668,14 +1678,38 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
                     
-                elif type=='PDF' and use_lhapdf and label != 'none' and len(bin.wgts) == 1:
+                    #file.write(str(bin.wgts))
+                    #file.write(str(pdfs))
+                    #file.write(str(len(pdfs)))
+                    
+                elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) == 1:
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]
+                    
+                    #file.write(str(bin.wgts))
+                    #file.write(str(wgts))
+                    
+                    
+                    #file.write(str(1.1))
+                    #file.write(str(1.2))
+                      
                 else:
                     pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]                    
                     pdf_up     = 0.0
                     pdf_down   = 0.0
+                    #
+                    
+                    #file.write(str(bin.wgts))
+                    #file.write(str(wgts))
+                    
+                    #file.write(str(2.1))
+                    #file.write(str(2.2))
+                    #file.write(str(bin.wgts))
+                    #file.write(str(pdfs))
+                    #file.write(str(type))
+                    #file.write(str(bin.wgts[pdfs[0]]))
+                    #
                     cntrl_val  = bin.wgts['central']
                     if wgts[0][1] <= 90000:
                         # use Hessian method (CTEQ & MSTW)
@@ -1689,7 +1723,7 @@ class HwU(Histogram):
                             pdf_down = cntrl_val - math.sqrt(pdf_down)
                         else:
                             pdf_up   = bin.wgts[pdfs[0]]
-                            pdf_down = bin.wgts[pdfs[0]]
+                            pdf_down = bin.wgts[pdfs[0]]  
                     elif wgts[0] in range(90200, 90303) or \
                          wgts[0] in range(90400, 90433) or \
                          wgts[0] in range(90700, 90801) or \
@@ -1740,6 +1774,9 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = pdf_down
                     bin.wgts[new_wgt_labels[2]] = pdf_up
+                    #file.write(str(bin.wgts[new_wgt_labels[0]]))
+                    #file.write(str(bin.wgts[new_wgt_labels[1]]))
+                    #file.write(str(bin.wgts[new_wgt_labels[2]]))
 
         # And return the position in self.bins.weight_labels of the first
         # of the two new weight label added.
@@ -4198,9 +4235,9 @@ plot \\"""
 
                 #replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[numb_pdf].replace('_','\\\\_'))
                 if numb_of_canv<2:
-                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS)
+                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS, pdf[numb_pdf].replace('_','\\\_'))
                 elif numb_of_canv>=2:
-                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV" font ",9" at graph 0, graph 1.07'%(PDFL[numb_pdf], PDFL[0],326,sqrtS)
+                    replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV, %s" font ",9" at graph 0, graph 1.07'%(PDFL[numb_pdf], PDFL[0],326,sqrtS, pdf[numb_pdf].replace('_','\\\_'))
                                                 
                 replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[numb_pdf])
                 
@@ -4234,16 +4271,16 @@ plot \\"""
                                     if j>0 or rpa[j]!='none':
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position+1,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
                                             if not mu_var_pa_pos is None:
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))
                                         
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+3,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+4,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+5,51))
                                             if not mu_var_pa_pos is None:
                                                 #plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 2 title "R_{%s%s} central value + scale uncertainties, LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52,PDFL[0],PDFL[numb_pdf]))
-                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#PDFL[0],PDFL[numb_pdf]))
+                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#PDFL[0],PDFL[numb_pdf]))
                                             
                                             plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_pdf+4,elem_pdf+5,51))#,PDFL[0],PDFL[numb_pdf]))
                                             
@@ -4256,16 +4293,16 @@ plot \\"""
                                     if j>0 or rpa[j]!='none':
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
                                             if not mu_var_pa_pos is None:
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522))
                                                                                 
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
                                             
                                             if not mu_var_pa_pos is None: 
-                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc. NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[0],PDFL[numb_pdf])) 
+                                                plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc. NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[0],PDFL[numb_pdf])) 
                                              
                                             plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., NLO"'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[0],PDFL[numb_pdf]))
                                             
@@ -4278,16 +4315,16 @@ plot \\"""
                                     if j>0 or rap[j]!='none':
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position+1,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
                                             if not mu_var_ap_pos is None:
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))  
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_mu+5,522))  
                                             
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+3,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+4,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position+1,elem_pdf+5,51))
                                             
                                             if not mu_var_ap_pos is None:                                      
-                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
+                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
                                             
                                             plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., LO"'%(copy_swap_re,HwU_name,block_position+1,elem_pdf+4,elem_pdf+5,51))#,PDFL[numb_pdf],PDFL[0]))
                                                                                         
@@ -4299,16 +4336,16 @@ plot \\"""
                                     if j>0 or rap[j]!='none':
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
                                             if not mu_var_ap_pos is None:
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$5,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$6,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
-                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$7,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522)) 
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522)) 
                                         
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
                                             plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
                                             
                                             if not mu_var_ap_pos is None:
-                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc, NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
+                                                plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc, NLO"'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
                                             
                                             plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc., NLO"'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[numb_pdf],PDFL[0]))
                                             
