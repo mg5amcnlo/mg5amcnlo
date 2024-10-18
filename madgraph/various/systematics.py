@@ -1144,7 +1144,7 @@ class Systematics(object):
         elif(evaorder==2):  # next-to-leading power
             return self.calc_eva_stripped_pdf_vm_nlp(muf, vPID, xx, ebeam, ievo)
         elif(evaorder==1):  # full leading power
-            return self.calc_eva_stripped_pdf_vp_xlp(muf, vPID, xx, ebeam, ievo)
+            return self.calc_eva_stripped_pdf_vt_xlp(muf, vPID, xx, ebeam, ievo)
         else:               # leading log approximation (default)
             return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, xx, ebeam, ievo)
     
@@ -1156,7 +1156,7 @@ class Systematics(object):
         elif(evaorder==2):  # next-to-leading power
             return self.calc_eva_stripped_pdf_vp_nlp(muf, vPID, xx, ebeam, ievo)
         elif(evaorder==1):  # full leading power
-            return self.calc_eva_stripped_pdf_vp_xlp(muf, vPID, xx, ebeam, ievo)
+            return self.calc_eva_stripped_pdf_vt_xlp(muf, vPID, xx, ebeam, ievo)
         else:               # leading log approximation (default)
             return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, xx, ebeam, ievo)
     
@@ -1211,13 +1211,11 @@ class Systematics(object):
             # return
             tmpOut = muOmumv - split*mvoev*(xxlog-muOmumv)
             return tmpOut
-    
-
-
-
-    
+        
     # scale dependence of f_V+ and f_V- at LLA
     def calc_eva_stripped_pdf_vt_lla(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV+^LLA * (4pi^2 z / g^2 gL^2) * 1/(1-z)^2
+            # = fV-^LLA * (4pi^2 z / g^2 gL^2) 
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             # prefactor - none
@@ -1225,28 +1223,37 @@ class Systematics(object):
             # log term
             muOmv = mu2/mv2
             # return
-            return math.log(muOmv)
-
+            tmpOut = math.log(muOmv)
+            return tmpOut
     
-
-
 
     # scale dependence of f_V+ at full LP
-    def calc_eva_stripped_pdf_vp_xlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV+^LP * (4pi^2 z / g^2 gL^2)
+    def calc_eva_stripped_pdf_vt_xlp(self, muf, vPID, xx, ebeam, ievo=0):
+            # = fV+^LP * (4pi^2 z / g^2 gL^2) * 1/(1-z)^2
+            # = fV-^LP * (4pi^2 z / g^2 gL^2) 
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
-            # prefactor
-            prefact = 0.5*(1.0-xx)**2
+            # prefactor - none
             # O(1) term
-            muOmumv = 1.0 + mv2/mu2
-            muOmumv = 1.0/muOmumv
-            # log term
-            mumvOmv = mu2/mv2 + 1.0
-            logmuf2 = math.log(mumvOmv)
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
             # return
-            return prefact*(logmuf2 - muOmumv)
-    
+            tmpOut = math.log(mumvOmv) - muOmumv
+            return tmpOut
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # scale dependence of f_V- at full LP
     def calc_eva_stripped_pdf_vm_xlp(self, muf, vPID, xx, ebeam, ievo=0):
             # = fV-^LP * (4pi^2 z / g^2 gL^2)
