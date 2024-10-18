@@ -4,9 +4,9 @@ c     /* ********************************************************* *
 c     File: ElectroweakFluxDriver.f
 c     R. Ruiz (2021 February)
 c     R. Ruiz (2024 June -- update)
-c     For details, see companion papers by:
-c     -- EVA in MG5aMC: Ruiz, Costantini, et al [arXiv:2111.02442]
-c     -- iEVA(EVA@NLP): Bigaran & Ruiz [arXiv:24xx.yyyyy]
+c     For details, see companion papers:
+c     -- EVA@LLA in MG5aMC: Ruiz, Costantini, et al [arXiv:2111.02442]
+c     -- EVA@LP/NLP: Bigaran & Ruiz [arXiv:24xx.yyyyy]
 c     /* ********************************************************* *
 c     function eva_get_pdf_by_PID:
 c     - wrapper for eva_get_pdf_by_PID_evo
@@ -30,10 +30,10 @@ c     - assign left couplings of fermion by vPID and fPID
 c     /* ********************************************************* *
       double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,evaorder)
       implicit none
-      integer evaorder ! 0=EVA, 1=iEVA, 2=iEVA@nlp
+      integer evaorder ! 0=EVA@lla, 1=EVA@lp, 2=iEVA@nlp
       integer ievo ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       integer vPID,fPID,vpol
-      double precision fLpol,x,mu2,ebeam
+      double precision fLpol,x,mu2,ebeam,xMin
       double precision eva_get_pdf_by_PID_evo
       double precision eva_get_pdf_photon_evo
       double precision eva_get_pdf_neutrino_evo
@@ -44,13 +44,14 @@ c     /* ********************************************************* *
       include 'ElectroweakFlux.inc'
       
       tiny  = 1d-8
-      mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID  
-
+      mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID
+      
 
 c     do the following checks before calling PDF:
 c     1. momentum fraction, x
 c     2. fermion polarization fraction, fLpol
-c     3. vector boson (or neutrino) polarization by PID, vpol vPID
+c     3a. vector boson energy by PID, x*ebeam eva_mz/mw
+c     3b. vector boson (or neutrino) polarization by PID, vpol vPID
 c     4. evolution scale, mu2
 c     5. QED conservation check
 c     start checks
@@ -79,7 +80,13 @@ c     also set lower bound on muf2 scale evolution by PID
             return
          endif
       case (23) ! z
+         xMin   = eva_mz / ebeam
          mu2min = eva_mz2
+         if(x.lt.xMin) then 
+c            write(*,*) 'eva: setting PDF to zero since x*Ebeam < MZ',x
+            eva_get_pdf_by_PID = 0d0
+            return
+         endif
          if(iabs(vPol).ne.1.and.vPol.ne.0) then
             write(*,*) 'vPol out of range for Z',vPol
             stop 23
@@ -87,7 +94,13 @@ c     also set lower bound on muf2 scale evolution by PID
             return
          endif
       case (24) ! w
+         xMin   = eva_mw / ebeam
          mu2min = eva_mw2
+         if(x.lt.xMin) then 
+c            write(*,*) 'eva: setting PDF to zero since x*Ebeam < MW',x
+            eva_get_pdf_by_PID = 0d0
+            return
+         endif
          if(iabs(vPol).ne.1.and.vPol.ne.0) then
             write(*,*) 'vPol out of range for W',vPol
             stop 24
@@ -226,7 +239,7 @@ c
 c     /* ********************************************************* *
       double precision function eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ebeam,ievo,evaorder)
       implicit none
-      integer evaorder
+      integer evaorder,tmpevaorder
       integer vPID,fPID,vpol,ievo
       double precision fLpol,x,mu2,ebeam
       double precision eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
@@ -241,12 +254,13 @@ c     /* ********************************************************* *
          call eva_get_gR2_by_PID(gL2,vPID,fPID)
          call eva_get_gL2_by_PID(gR2,vPID,fPID)
       endif
+      tmpevaorder = 0 ! always use LLA since m_photon = 0
 c      
       select case (vpol)
       case (-1)
-         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,evaorder)
+         tmpPDF = eva_fX_to_vm(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,tmpevaorder)
       case (+1)
-         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,evaorder)
+         tmpPDF = eva_fX_to_vp(gg2,gL2,gR2,fLpol,mf2,x,mu2,ebeam,ievo,tmpevaorder)
       case default
          write(*,*) 'vPol out of range; should not be here',vPol
          stop
