@@ -1183,7 +1183,7 @@ class Systematics(object):
     
     # scale dependence of f_V0 at full LP
     def calc_eva_stripped_pdf_v0_xlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV0^LP * [4pi^2 z / g^2 gL^2 (1-z)]
+            # = fV0^LP * [4pi^2 z / g^2 gL^2] * 1/(1-z)
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             # prefactor - none
@@ -1196,26 +1196,26 @@ class Systematics(object):
     
     # scale dependence of f_V0 at full NLP
     def calc_eva_stripped_pdf_v0_nlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV0^NLP * [4pi^2 z / g^2 gL^2 (1-z)]
+            # = fV0^NLP * [4pi^2 z / g^2 gL^2] * 1/(1-z)
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             ev2 = (xx*ebeam)**2
             # prefactor
             split = (2.0 - 2.0*xx + xx**2) / (1.0-xx) / 4 # = [1 + (1-z)^2]/4(1-z)
             # O(1) term
-            mvoev   = mv2 / ev2
+            mvOev   = mv2 / ev2
             muOmumv = 1.0/(1.0 + mv2/mu2)
             mumvOmv = 1.0 + mu2/mv2
             # log term
             xxlog = math.log(mumvOmv)
             # return
-            tmpOut = muOmumv - split*mvoev*(xxlog-muOmumv)
+            tmpOut = muOmumv - split*mvOev*(xxlog-muOmumv)
             return tmpOut
         
     # scale dependence of f_V+ and f_V- at LLA
     def calc_eva_stripped_pdf_vt_lla(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV+^LLA * (4pi^2 z / g^2 gL^2) * 1/(1-z)^2
-            # = fV-^LLA * (4pi^2 z / g^2 gL^2) 
+            # = fV+^LLA * (4pi^2 z / g^2 gL^2) * 2/(1-z)^2
+            # = fV-^LLA * (4pi^2 z / g^2 gL^2) * 2
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             # prefactor - none
@@ -1227,10 +1227,10 @@ class Systematics(object):
             return tmpOut
     
 
-    # scale dependence of f_V+ at full LP
+    # scale dependence of f_V+ and f_V- at full LP
     def calc_eva_stripped_pdf_vt_xlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV+^LP * (4pi^2 z / g^2 gL^2) * 1/(1-z)^2
-            # = fV-^LP * (4pi^2 z / g^2 gL^2) 
+            # = fV+^LP * (4pi^2 z / g^2 gL^2) * 2/(1-z)^2
+            # = fV-^LP * (4pi^2 z / g^2 gL^2) * 2
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             # prefactor - none
@@ -1242,81 +1242,49 @@ class Systematics(object):
             return tmpOut
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    # scale dependence of f_V- at full LP
-    def calc_eva_stripped_pdf_vm_xlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV-^LP * (4pi^2 z / g^2 gL^2)
-            mu2 = muf*muf
-            mv2 = (self.get_eva_mv_by_PID(vPID))**2
-            # prefactor
-            prefact = 0.5
-            # O(1) term
-            muOmumv = 1.0 + mv2/mu2
-            muOmumv = 1.0/muOmumv
-            # log term
-            mumvOmv = mu2/mv2 + 1.0
-            logmuf2 = math.log(mumvOmv)
-            # return
-            return prefact*(logmuf2 - muOmumv)
-    
-
-    
-    # scale dependence of f_V+ at NLP
+    # scale dependence of f_V+ at full NLP
     def calc_eva_stripped_pdf_vp_nlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV+^NLP * (4pi^2 z / g^2 gL^2)
+            # = fV+^NLP * [4pi^2 z / g^2 gL^2] * 2/(1-z)
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             ev2 = (xx*ebeam)**2
-            # ratios
-            mvOev   = (2.0-xx)*mv2/ev2
-            muOev   = mu2 / ev2 / 4.0
-            muOmumv = 1.0 + mv2/mu2 # for fVp@LP
-            muOmumv = 1.0/muOmumv   # for fVp@LP
-            mumvOmv = mu2/mv2 + 1.0 # for fVp@LP
-            # XLP terms
-            f0XLP  = self.calc_eva_stripped_pdf_v0_xlp(muf, vPID, xx, ebeam, ievo)
-            f0Term = muOev * (2.0-xx) * f0XLP
-            # note: not calling stripped_pdf_vp to avoid 1/(1-xx) factor
-            prefact = 0.5*(1.0-xx) # *(1-x)
-            logmuf2 = math.log(mumvOmv)
-            fpXLP   = prefact*(1.0-xx)*(logmuf2 - muOmumv)
-            fpMoE   = prefact*mvOev   *(logmuf2 - muOmumv) 
-            fpTerm  = fpXLP + fpMoE
-            # combine
-            tmpNLP = fpTerm - f0Term
-            return tmpNLP
+            # O(1) term
+            mvOev   = mv2 / ev2
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            muO2ev  = mu2 / ev2 / 2.0
+            # prefactor
+            tmpXLP1 = (1.0 - xx)    # this is the difference w.r.t. V-@nlp
+            tmpXLP2 = tmpXLP1
+            tmpNLP1 = (2.0 - xx)*mvOev
+            tmpNLP2 = tmpNLP1 + (2.0 - xx)*muO2ev
+            # log term
+            xxlog = math.log(mumvOmv)        
+            # return
+            tmpOut = (tmpXLP1 + tmpNLP1)*xxlog - muOmumv*(tmpXLP2 + tmpNLP2)
+            return tmpOut
     
-    # scale dependence of f_V- at NLP
+    # scale dependence of f_V- at full NLP
     def calc_eva_stripped_pdf_vm_nlp(self, muf, vPID, xx, ebeam, ievo=0):
-            # = fV-^NLP * (4pi^2 z / g^2 gL^2)
+            # = fV-^NLP * [4pi^2 z / g^2 gL^2] * 2
             mu2 = muf*muf
             mv2 = (self.get_eva_mv_by_PID(vPID))**2
             ev2 = (xx*ebeam)**2
-            # ratios
-            muOmumv = 1.0 + mv2/mu2
-            muOmumv = 1.0/muOmumv
-            mvOev = (2.0-xx)*mv2/ev2
-            muOev = mu2 / ev2 / 4.0
-            # XLP terms
-            # note: not calling stripped_pdf_v0 to avoid 1/(1-xx) factor
-            f0XLP  = muOmumv # * (1-xx)
-            f0Term = muOev * (2.0-xx) * f0XLP # * 1/(1-xx)
-            fmXLP  = self.calc_eva_stripped_pdf_vm_xlp(muf, vPID, xx, ebeam, ievo)
-            fmTerm = fmXLP*(1.0 + mvOev)
-            # combine
-            tmpNLP = fmTerm - f0Term
-            return tmpNLP
+            # O(1) term
+            mvOev   = mv2 / ev2
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            muO2ev  = mu2 / ev2 / 2.0
+            # prefactor
+            tmpXLP1 = 1.0       # this is the difference w.r.t. V+@nlp
+            tmpXLP2 = tmpXLP1
+            tmpNLP1 = (2.0 - xx)*mvOev
+            tmpNLP2 = tmpNLP1 + (2.0 - xx)*muO2ev
+            # log term
+            xxlog = math.log(mumvOmv)        
+            # return
+            tmpOut = (tmpXLP1 + tmpNLP1)*xxlog - muOmumv*(tmpXLP2 + tmpNLP2)
+            return tmpOut
          
 
     def get_eva_mufMin_byPID(self, vPID, fPID):
