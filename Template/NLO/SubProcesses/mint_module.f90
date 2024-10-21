@@ -96,7 +96,9 @@ module mint_module
   double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
-  logical :: only_virt,new_point,pass_cuts_check
+!   logical :: only_virt,new_point,pass_cuts_check
+  logical :: only_virt,new_point!,pass_cuts_check
+  logical, allocatable :: pass_cuts_check(:)
   ! public variables for vectorisation
   double precision, allocatable, public :: x_bjork(:,:), jacobian(:), f_local(:,:), x_local(:,:)
 
@@ -132,6 +134,7 @@ module mint_module
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
+  integer, private :: vec_size_mint
 !  include 'mint_vectorize.inc'
 !  integer, dimension(ndimmax,vec_size_mint), private :: icell
   integer, allocatable, private :: icell(:,:)
@@ -198,6 +201,8 @@ contains
   subroutine allocate_mint(vector_size)
       implicit none
       integer, intent(in) :: vector_size
+      vec_size_mint=vector_size
+      allocate(pass_cuts_check(vector_size))
       allocate(icell(ndimmax,vector_size))
       allocate(ncell(ndimmax,vector_size))
       allocate(rand(ndimmax,vector_size))
@@ -209,6 +214,7 @@ contains
    end subroutine allocate_mint
 
    subroutine deallocate_mint
+      if (allocated(pass_cuts_check)) deallocate(pass_cuts_check)
       if (allocated(icell)) deallocate(icell)
       if (allocated(ncell)) deallocate(ncell)
       if (allocated(rand)) deallocate(rand)
@@ -658,7 +664,7 @@ contains
     integer :: i
     do i=1,nintegrals
 ! Number of phase-space points used
-       ntotcalls(i)=ncalls*kpoint_iter
+       ntotcalls(i)=ncalls*kpoint_iter*vec_size_mint
 ! Special for the computation of the 'computed virtual'
        if (i.eq.4 .and. non_zero_point(i).ne.0 ) &
             ntotcalls(i) = non_zero_point(i)
@@ -825,7 +831,7 @@ contains
     do i=1,nintegrals
        if (f(i,amp_index).ne.0d0) non_zero_point(i)=non_zero_point(i)+1
     enddo
-    if (pass_cuts_check) pass_cuts_point=pass_cuts_point+1
+    if (pass_cuts_check(amp_index)) pass_cuts_point=pass_cuts_point+1
 ! Add the PS point to the result of this iteration
     vtot(1:nintegrals,ichan)=vtot(1:nintegrals,ichan)+f(1:nintegrals,amp_index)
     etot(1:nintegrals,ichan)=etot(1:nintegrals,ichan)+f(1:nintegrals,amp_index)**2
@@ -904,7 +910,7 @@ contains
 !    entry get_random_x_next_fold(x,vol,kfold,vector_size)
     entry get_random_x_next_fold(kfold,vector_size)
     do index=1,vector_size
-      jacobian(index)=1d0/(vol_chan*vector_size) * wgt_mult
+      jacobian(index)=1d0/(vol_chan) * wgt_mult
       ! jacobian(index)=1d0/(vol_chan) * wgt_mult
     enddo
 !    vol=1d0/(vol_chan*vec_size) * wgt_mult
@@ -1590,7 +1596,8 @@ contains
 ! Make sure that hypercubes are newly initialized
     firsttime=.true.
 ! Number of elements in which we can split one dimension
-    ng=(ncalls0/2.)**(1./ndim)
+    ng=(vec_size_mint*ncalls0/2.)**(1./ndim)
+   !  ng=(ncalls0/2.)**(1./ndim)
 ! Total number of hypercubes
     k=ng**ndim
 ! Number of PS points in each hypercube (at least 2)

@@ -7017,7 +7017,7 @@ class UFO_model_to_mg4(object):
             
             module rscale
                 implicit none
-                double precision, allocatable :: MU_R
+                double precision, allocatable :: MU_R(:)
             contains
                 subroutine allocate_rscale(vector_size)
                     implicit none
@@ -7038,27 +7038,28 @@ class UFO_model_to_mg4(object):
         fsock.writelines(header)
         
         # Write the Couplings
-        coupling_list = [coupl.name+'(:)' for coupl in self.coups_dep + self.coups_indep]    
+        coupling_list1 = [coupl.name+'(:)' for coupl in self.coups_dep + self.coups_indep]
+        coupling_list2 = [coupl.name for coupl in self.coups_dep + self.coups_indep]    
         fsock.writelines('module couplings')
         fsock.writelines('use strong')
         fsock.writelines('use rscale')
         fsock.writelines('implicit none')   
-        fsock.writelines('double complex, allocatable :: '+', '.join(coupling_list)+'')
+        fsock.writelines('double complex, allocatable :: '+', '.join(coupling_list1)+'')
         fsock.writelines('contains')
         fsock.writelines('subroutine allocate_couplings(vector_size)')
         fsock.writelines('implicit none')
         fsock.writelines('integer, intent(in) :: vector_size')
-        for coupl in coupling_list:
+        for coupl in coupling_list2:
             fsock.writelines('allocate(%s(vector_size))' % coupl)
         fsock.writelines('end subroutine allocate_couplings')
         fsock.writelines('subroutine reset_couplings()')
         fsock.writelines('implicit none')
-        for coupl in coupling_list:
-            fsock.writelines('%s(:) = (0.d0,0.d0)' % coupl)
+        for coupl in coupling_list1:
+            fsock.writelines('%s = (0.d0,0.d0)' % coupl)
         fsock.writelines('end subroutine reset_couplings')
         fsock.writelines('subroutine deallocate_couplings()')
         fsock.writelines('implicit none')
-        for coupl in coupling_list:
+        for coupl in coupling_list2:
             fsock.writelines('if(allocated(%s)) deallocate(%s)' % (coupl, coupl))
         fsock.writelines('end subroutine deallocate_couplings')
         fsock.writelines('end module couplings\n')
