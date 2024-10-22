@@ -797,7 +797,7 @@ c anything else) cluster).
       implicit none
       integer next,imap(next),iwin,jwin,id_ij,win_id,nbr,nconf
      $     ,cluster_list(2*nbr,nconf),i,j,iBWlist(2,0:nbr)
-     $     ,cluster_type(maskr(next)),particle_type(next),cl(0:2)
+     $     ,cluster_type(*),particle_type(next),cl(0:2)
       double precision p(0:4,next),cluster_scale,min_scale,scale
       logical in_list,valid_conf(nconf),is_bw
       external in_list,cluster_scale

@@ -218,9 +218,9 @@ contains
     double precision,dimension(0:3,n) :: p,pQCD
     integer :: i,j,NN,iproc
     integer :: nFxFx_ren_scales
-    double precision,dimension(0:n) :: FxFx_ren_scales
+    double precision,dimension(0:next_n1) :: FxFx_ren_scales
     double precision,dimension(2) :: FxFx_fac_scale
-    integer,dimension(n) :: need_matching
+    integer,dimension(next_n1) :: need_matching
     double precision :: dummy1,dummy2
     INTEGER              NFKSPROCESS
     COMMON/C_NFKSPROCESS/NFKSPROCESS
