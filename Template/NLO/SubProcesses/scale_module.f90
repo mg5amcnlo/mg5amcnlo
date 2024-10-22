@@ -216,7 +216,35 @@ contains
     implicit none
     integer :: n
     double precision,dimension(0:3,n) :: p,pQCD
-    integer :: i,j,NN
+    integer :: i,j,NN,iproc
+    integer :: nFxFx_ren_scales
+    double precision,dimension(0:n) :: FxFx_ren_scales
+    double precision,dimension(2) :: FxFx_fac_scale
+    integer,dimension(n) :: need_matching
+    double precision :: dummy1,dummy2
+    INTEGER              NFKSPROCESS
+    COMMON/C_NFKSPROCESS/NFKSPROCESS
+
+    if (n.eq.next_n1) then
+       iproc=nFKSprocess
+    else
+       iproc=0
+    endif
+    
+    call cluster_and_reweight(iproc,dummy1 &
+            ,dummy2,nFxFx_ren_scales,FxFx_ren_scales(0) &
+            ,fxfx_fac_scale(1),need_matching)
+
+    if (nFxFx_ren_scales.gt.0) then
+       global_ref_scale=FxFx_ren_scales(1)
+    else
+       global_ref_scale=FxFx_ren_scales(0)
+    endif
+    
+    return
+
+
+    
  ! start from HT
        global_ref_scale=HT(n,p)
        NN=0
