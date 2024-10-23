@@ -2,13 +2,13 @@
 # ONIA FILE #
 #############
 
-# n: principal quantum number
+# N: principal quantum number
 # S: spin type
 # L: orbital angular momentum quantum number
 # J: total angular momentum quantum number
 # C: color type
 
-pid			pythia  name			notation		particle	anti-particle	n	S	L	J	C	charge	mass	width
+pid			pythia  name			notation		particle	anti-particle	N	S	L	J	C	charge	mass	width
 
 ####################
 # Charmonia        #
@@ -17,7 +17,7 @@ pid			pythia  name			notation		particle	anti-particle	n	S	L	J	C	charge	mass	widt
 # etac
 4411001		441		etac(1|1S01)	c.c~(1|1S01)	c			c~				1	1	0	0	1	0		2.98100	0.02970
 4411008		9940001	etac(1|1S08)	c.c~(1|1S08)	c			c~				1	1	0	0	8	0		3.18100	0.0
-4421001		9999999	etac(2|1S01)	c.c~(2|1S01)	c			c~				2	1	0	0	1	0		0.0		0.0
+4421001		100441	etac(2|1S01)	c.c~(2|1S01)	c			c~				2	1	0	0	1	0		0.0		0.0
 4421008		9999999	etac(2|1S08)	c.c~(2|1S08)	c			c~				2	1	0	0	8	0		0.0		0.0
 
 # J/psi
@@ -31,18 +31,18 @@ pid			pythia  name			notation		particle	anti-particle	n	S	L	J	C	charge	mass	widt
 ####################
 
 # Meson
-5411001		9999999	Bc+(1|1S01)		c.b~(1|1S01)	c			b~				1	1	0	0	1	1		0.0		0.0
+5411001		541		Bc+(1|1S01)		c.b~(1|1S01)	c			b~				1	1	0	0	1	1		0.0		0.0
 5411008		9999999	Bc+(1|1S08)		c.b~(1|1S08)	c			b~				1	1	0	0	8	1		0.0		0.0
 
-5413011		9999999	Bc+*(1|3S11)	c.b~(1|1S11)	c			b~				1	3	0	1	1	1		0.0		0.0
-5413018		9999999	Bc+*(1|3S18)	c.b~(1|1S18)	c			b~				1	3	0	1	8	1		0.0		0.0
+5413011		543		B*c+(1|3S11)	c.b~(1|3S11)	c			b~				1	3	0	1	1	1		0.0		0.0
+5413018		9999999	B*c+(1|3S18)	c.b~(1|3S18)	c			b~				1	3	0	1	8	1		0.0		0.0
 
 # Anti-meson
--5411001	9999999	Bc-(1|1S01)		b.c~(1|1S01)	b			c~				1	1	0	0	1	-1		0.0		0.0
+-5411001	-541	Bc-(1|1S01)		b.c~(1|1S01)	b			c~				1	1	0	0	1	-1		0.0		0.0
 -5411008	9999999	Bc-(1|1S08)		b.c~(1|1S08)	b			c~				1	1	0	0	8	-1		0.0		0.0
 
--5413011	9999999	Bc-*(1|3S11)	b.c~(1|1S11)	b			c~				1	3	0	1	1	-1		0.0		0.0
--5413018	9999999	Bc-*(1|3S18)	b.c~(1|1S18)	b			c~				1	3	0	1	8	-1		0.0		0.0
+-5413011	-543	B*c-(1|3S11)	b.c~(1|3S11)	b			c~				1	3	0	1	1	-1		0.0		0.0
+-5413018	9999999	B*c-(1|3S18)	b.c~(1|3S18)	b			c~				1	3	0	1	8	-1		0.0		0.0
 
 ####################
 # Bottomonia       #
@@ -51,14 +51,14 @@ pid			pythia  name			notation		particle	anti-particle	n	S	L	J	C	charge	mass	widt
 # etab
 5511001		551		etab(1|1S01)	b.b~(1|1S01)	b			b~				1	1	0	0	1	0		9.40000	0.010
 5511008		9950001	etab(1|1S08)	b.b~(1|1S08)	b			b~				1	1	0	0	8	0		9.60000	0.0
-5521001		9999999	etab(2|1S01)	b.b~(2|1S01)	b			b~				2	1	0	0	1	0		0.0		0.0
+5521001		100551	etab(2|1S01)	b.b~(2|1S01)	b			b~				2	1	0	0	1	0		0.0		0.0
 5521008		9999999	etab(2|1S08)	b.b~(2|1S08)	b			b~				2	1	0	0	8	0		0.0		0.0
 
 # upsilon
 5513011		553		upsilon(1|3S11)	b.b~(1|3S11)	b			b~				1	3	0	1	1	0		9.46030	0.00005
 5513018		9950003	upsilon(1|3S18)	b.b~(1|3S18)	b			b~				1	3	0	1	8	0		9.6603	0.0
-5523011		9999999	upsilon(2|3S11)	b.b~(2|3S11)	b			b~				2	3	0	1	1	0		0.0		0.0
-5523018		9999999	upsilon(2|3S18)	b.b~(2|3S18)	b			b~				2	3	0	1	8	0		0.0		0.0
+5523011		100553	upsilon(2|3S11)	b.b~(2|3S11)	b			b~				2	3	0	1	1	0		0.0		0.0
+5523018		9950103	upsilon(2|3S18)	b.b~(2|3S18)	b			b~				2	3	0	1	8	0		0.0		0.0
 
 ####################
 # Toponia          #
@@ -67,5 +67,11 @@ pid			pythia  name			notation		particle	anti-particle	n	S	L	J	C	charge	mass	widt
 # etat
 6611001		661		etat(1|1S01)	t.t~(1|1S01)	t			t~				1	1	0	0	1	0		0.0		0.0
 6611008		9960001	etat(1|1S08)	t.t~(1|1S08)	t			t~				1	1	0	0	8	0		0.0		0.0
-6621001		9999999	etat(2|1S01)	t.t~(2|1S01)	t			t~				2	1	0	0	1	0		0.0		0.0
+6621001		100661	etat(2|1S01)	t.t~(2|1S01)	t			t~				2	1	0	0	1	0		0.0		0.0
 6621008		9999999	etat(2|1S08)	t.t~(2|1S08)	t			t~				2	1	0	0	8	0		0.0		0.0
+
+# thetat
+6613011		663		thetat(1|3S11)	t.t~(1|3S11)	t			t~				1	3	0	1	1	0		0.0		0.0
+6613018		9960003	thetat(1|3S18)	t.t~(1|3S18)	t			t~				1	3	0	1	8	0		0.0		0.0
+6623011		100663	thetat(2|3S11)	t.t~(2|3S11)	t			t~				2	3	0	1	1	0		0.0		0.0
+6623018		9960103	thetat(2|3S18)	t.t~(2|3S18)	t			t~				2	3	0	1	8	0		0.0		0.0
