@@ -5113,7 +5113,7 @@ This implies that with decay chains:
                 onium_name = onium_info['name'].to_string(index=False)
                 onium_id = int(onium_info['pid'].to_string(index=False))
                 onium_pythiaid = int(onium_info['pythia'].to_string(index=False))
-                onium_principal = int(onium_info['n'].to_string(index=False))
+                onium_principal = int(onium_info['N'].to_string(index=False))
                 onium_spin = int((int(onium_info['S'].to_string(index=False))-1)/2)
                 onium_orbit = int(onium_info['L'].to_string(index=False))
                 onium_jtot = int(onium_info['J'].to_string(index=False))
