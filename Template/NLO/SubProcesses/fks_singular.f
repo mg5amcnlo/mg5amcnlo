@@ -1093,7 +1093,7 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
          if (.not.already_set) then
             call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
      $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1),need_matching)
+     $           ,fxfx_fac_scale(1),need_matching,.false.)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
@@ -1151,7 +1151,7 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
          if (.not. already_set) then
             call cluster_and_reweight(nFKSprocess,rewgt_mohdr
      $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1),need_matching)
+     $           ,fxfx_fac_scale(1),need_matching,.false.)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
