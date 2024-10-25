@@ -553,7 +553,7 @@ c prev_qcd_scale, since all Sudakovs up to that scale have been applied.
      &           hard_qcd_scale.gt.prev_qcd_scale) then
                call QCDsudakov(lowest_qcd_scale,hard_qcd_scale
      $              ,prev_qcd_scale,next,type,mass,exponent_sudakov
-     $              ,expanded_exponent_sudakov)
+     $              ,expanded_exponent_sudakov,for_mcatnlo_scale)
                prev_qcd_scale=hard_qcd_scale
             endif
          endif
