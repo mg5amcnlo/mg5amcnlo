@@ -345,7 +345,7 @@ os.system(install_str)
 
 collier_link = "http://collier.hepforge.org/collier-latest.tar.gz" 
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
-ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
+ninja_link = "https://github.com/peraro/ninja/archive/344f2379fd22d7e44ae14c02eb225f98b38d7b12.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 # Add the tarball for SMWidth

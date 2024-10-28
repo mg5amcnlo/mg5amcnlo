@@ -103,7 +103,7 @@ class TestMG5aMCDistribution(unittest.TestCase):
             """ Test whether the current Offline Ninja+oneloop+collier tarball is up to date."""
         
             test_tarballs = [
-                    ('ninja','https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz',pjoin(MG5DIR,'vendor','ninja.tar.gz')),
+                    ('ninja','https://github.com/peraro/ninja/archive/344f2379fd22d7e44ae14c02eb225f98b38d7b12.tar.gz',pjoin(MG5DIR,'vendor','ninja.tar.gz')),
                     ('collier','http://collier.hepforge.org/collier-latest.tar.gz',pjoin(MG5DIR,'vendor','collier.tar.gz')),
                     ('oneloop','http://helac-phegas.web.cern.ch/helac-phegas/tar-files/OneLOop-3.6.tgz',pjoin(MG5DIR,'vendor','oneloop.tar.gz'))]
             with misc.TMP_directory() as tmp_path:
