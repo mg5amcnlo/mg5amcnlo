@@ -164,6 +164,11 @@ class DiagramTag(object):
         legs = base_objects.LegList(sorted([l for l,v in leg_vertices],
                                            key= lambda l: l.get('number'), reverse=True))
 
+        # LS::ONIUM PROPERTIES ARE MISSING IN link.links
+        # for i in range(len(legs)):
+        #     if (legs[i].get('number')==3) or (legs[i].get('number')==4):
+        #         legs[i].set('onium',{'name': 'my_hardcoded_onium'})
+
         # The daughter vertices are in the second entry
         vertices = base_objects.VertexList(sum([v for l, v in leg_vertices],
                                                []))
@@ -241,11 +246,13 @@ class DiagramTag(object):
     def leg_from_link(link):
         """Return a leg from a link"""
 
+        # LS:: ONIUM PROPERTIES HAVE TO BE CHECKED
         if link.end_link:
             # This is an external leg, info in links
             return base_objects.Leg({'number':link.links[0][1],
                                      'id':link.links[0][0][0],
                                      'state':(link.links[0][0][1] == 0),
+                                     'onium':link.links[0][0][2],
                                      'onshell':False})
 
         # This shouldn't happen
@@ -277,7 +284,7 @@ class DiagramTag(object):
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the default end link for a leg: ((id, state), number).
+        """Returns the default end link for a leg: ((id, state, onium), number).
         Note that the number is not taken into account if tag comparison,
         but is used only to extract leg permutations."""
         if leg.get('state'):
@@ -285,7 +292,7 @@ class DiagramTag(object):
             return [((leg.get('id'), 0), leg.get('number'))]
         else:
             # Distinguish identical initial state particles
-            return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+            return [((leg.get('id'), leg.get('number'), leg.get('onium')), leg.get('number'))]
 
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):

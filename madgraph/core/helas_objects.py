@@ -181,7 +181,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         return [((number, id, part.get('spin'), leg.get('onshell'),
                   part.get('is_part'), part.get('self_antipart'),
                   part.get('mass'), part.get('width'), part.get('color')),
-                 leg.get('number'))]
+                 leg.get('number'),leg.get('onium'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -449,7 +449,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         
         return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
-                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+                 (leg.get('number'),leg.get('id'),leg.get('state'),leg.get('onium')))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -508,10 +508,16 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         """Return a leg from a link"""
 
         if link.end_link:
+            if (link.links[0][1][0]==3) or (link.links[0][1][0]==4):
+                onium = {'name':'my_onium'}
+            else:
+                onium = {}
             # This is an external leg, info in links
             leg = base_objects.Leg({'number':link.links[0][1][0],
                                      'id':link.links[0][1][1],
                                      'state':link.links[0][1][2],
+                                     'onium':onium,
+                                     # 'onium':link.links[0][1][3],
                                      'onshell':None})
             return leg
         # This shouldn't happen
@@ -649,7 +655,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #
         #
         self['polarization'] = []
-        self['onium'] = []
+        self['onium'] = {}
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -844,6 +850,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if i not in [-1, 1, 2, -2, 3, -3, 0, 99]:
                     raise self.PhysicsObjectError( \
                       "%s is not a valid polarization" % str(value))
+
+        elif name == 'onium':
+            print("LS:: check for validity of onium inputs!")
 
         return True
 
@@ -3774,7 +3783,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
-        
+
 
         self.set('diagrams', helas_diagrams)
 
