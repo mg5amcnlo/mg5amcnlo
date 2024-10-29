@@ -77,7 +77,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
 
         return [((leg.get('number'), spin,
                   mass, width, part.get('color')),
-                 leg.get('number'))]
+                 leg.get('number'),leg.get('onium'))]
 
     
     @staticmethod
@@ -256,6 +256,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             replace('+', 'p').replace('-', 'm')
         name += "_"
         for (fs_part, leg) in fs:
+            if leg.get('onium'):
+                if fs_part<0:
+                    continue
+                else:
+                    name += leg.get('onium').get('name').replace('(','').replace(')','').replace('|','')
+                    continue
             part = process.get('model').get_particle(fs_part)
             if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
@@ -280,7 +286,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 elif leg.get('polarization') == [1]:
                     name += 'R'
                 else:
-                    name += '%s' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])   
+                    name += '%s' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])  
 
         
         for dc in process.get('decay_chains'):
