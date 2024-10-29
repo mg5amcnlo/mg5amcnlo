@@ -1149,6 +1149,8 @@ class HwU(Histogram):
             boundaries = [0.0,0.0]
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
+                if (j == len(weight_header)):
+                    continue
                 if j == len(all_weight_header):
                     raise HwU.ParseError("There is more bin weights"+\
                               " specified than expected (%i)"%len(weight_header))
@@ -1846,9 +1848,9 @@ class HwUList(histograms_PhysicsObjectList):
         # Also cast them in the proper type
         for wgt_label in all_weights:
             for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT']:
-                if mandatory_attribute not in wgt_label:
+                if mandatory_attribute not in wgt_label or wgt_label[mandatory_attribute] is None:
                     wgt_label[mandatory_attribute] = '-1'
-                if mandatory_attribute=='PDF':
+                elif mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
                 elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                

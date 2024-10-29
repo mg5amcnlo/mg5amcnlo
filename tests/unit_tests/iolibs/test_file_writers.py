@@ -127,6 +127,8 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         lines.append("bah=2")
         lines.append(" endif")
         lines.append("test")
+        lines.append("# this is a comment")
+        lines.append('#ifdef not a comment')
         lines.append("c$$$C EXAMPLE: cut on top quark pT")
 
         goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHHHH
@@ -143,7 +145,9 @@ C       Test
  20   ELSE
         BAH=2
       ENDIF
-      TEST
+      TEST\n
+C     this is a comment
+#ifdef not a comment
 C     $$$C EXAMPLE: cut on top quark pT\n"""
 
         writer = writers.FortranWriter(self.give_pos('fortran_test')).\

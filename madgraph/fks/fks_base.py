@@ -24,6 +24,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
+import madgraph.fks.sudakov as sudakov
 import copy
 import logging
 import array
@@ -54,6 +55,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
+        self['ewsudakov'] = False
 
         if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
@@ -65,7 +67,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcess, self).get_sorted_keys()
         keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 
-                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 
+                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 'ewsudakov',
                  'loop_filter']
         return keys
 
@@ -153,16 +155,23 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             olp = options['OLP']
             del options['OLP']
 
+        # EW sudakov
+        ewsudakov = False
+        if 'ewsudakov' in list(options.keys()):
+            ewsudakov = options['ewsudakov']
+            del options['ewsudakov']
+
+        # leptons in initial state
         self['init_lep_split']=False
         if 'init_lep_split' in list(options.keys()):
             self['init_lep_split']=options['init_lep_split']
             del options['init_lep_split']
 
-        ncores_for_proc_gen = 0
         # ncores_for_proc_gen has the following meaning
         #   0 : do things the old way
         #   > 0 use ncores_for_proc_gen
         #   -1 : use all cores
+        ncores_for_proc_gen = 0
         if 'ncores_for_proc_gen' in list(options.keys()):
             ncores_for_proc_gen = options['ncores_for_proc_gen']
             del options['ncores_for_proc_gen']
@@ -181,6 +190,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                " For this, use the 'virt=' mode, without multiparticle labels.")
 
         self['OLP'] = olp
+        self['ewsudakov'] = ewsudakov 
         self['ncores_for_proc_gen'] = ncores_for_proc_gen
 
         #check process definition(s):
@@ -238,7 +248,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                    i + 1, len(amps)))
 
             born = FKSProcess(amp, ncores_for_proc_gen = self['ncores_for_proc_gen'], \
-                                   init_lep_split=self['init_lep_split'])
+                                   init_lep_split=self['init_lep_split'], \
+                                   ewsudakov = self['ewsudakov'])
             self['born_processes'].append(born)
 
             born.generate_reals(self['pdgs'], self['real_amplitudes'], combine = False)
@@ -299,6 +310,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
         self['OLP'] = other['OLP']
         self['ncores_for_proc_gen'] = other['ncores_for_proc_gen']
+        self['ewsudakov'] = self['ewsudakov'] or other['ewsudakov']
+
 
 
     def get_born_amplitudes(self):
@@ -553,7 +566,7 @@ class FKSProcess(object):
 
 ###############################################################################
     
-    def __init__(self, start_proc = None, remove_reals = True, ncores_for_proc_gen=0, init_lep_split = False):
+    def __init__(self, start_proc = None, remove_reals = True, ncores_for_proc_gen=0, init_lep_split = False, ewsudakov = False):
         """initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -575,6 +588,7 @@ class FKSProcess(object):
         self.born_amp = diagram_generation.Amplitude()
         self.extra_cnt_amp_list = diagram_generation.AmplitudeList()
         self.ncores_for_proc_gen = ncores_for_proc_gen
+        self.sudakov_amps = []
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
@@ -617,6 +631,11 @@ class FKSProcess(object):
             # e.g. to be used in merged sampels at high multiplicities
             if self.born_amp['process']['NLO_mode'] != 'LOonly':
                 self.find_reals()
+
+            # if ewsudakov is true, then look for the corresponding matrix elements
+            self.ewsudakov = ewsudakov
+            if ewsudakov:
+                self.sudakov_amps = sudakov.get_sudakov_amps(self.born_amp)
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

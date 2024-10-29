@@ -63,6 +63,7 @@ C
 C     GLOBAL VARIABLES
 C     
       INCLUDE 'MadLoopParams.inc'
+
       INCLUDE 'coupl.inc'
       INTEGER CTMODE
       REAL*8 LSCALE

@@ -13,9 +13,10 @@ c
       include 'genps.inc'
       include 'run_config.inc'
       include 'PDF/pdf.inc'
+      include 'vector.inc'      ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'alfas.inc'
-      include 'MODEL/coupl.inc'
+      include 'MODEL/coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       double precision D
       common/to_dj/D

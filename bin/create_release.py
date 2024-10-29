@@ -121,7 +121,7 @@ auto_update = True
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
 MG_branch = p.stdout.read().decode().strip()
 if MG_branch not in  ['3.x']:
-    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
+    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -257,8 +257,8 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
         else:
             os.rename(data, data.replace('compile.py','.compile.py'))
 
-os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+#os.remove(path.join(filepath, 'README.developer'))
+#shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
 
 # 1. Add information for the auto-update

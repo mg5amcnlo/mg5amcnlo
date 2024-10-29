@@ -42,6 +42,7 @@ c
       subroutine get_dummy_x1(sjac, X1, R, pbeam1, pbeam2, stot, shat)
       implicit none
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 c      include 'genps.inc'
       double precision sjac ! jacobian. should be updated not reinit
@@ -66,6 +67,7 @@ c     global variable to set (or not)
       subroutine get_dummy_x1_x2(sjac, X, R, pbeam1, pbeam2, stot,shat)
       implicit none
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 c      include 'genps.inc'
       double precision sjac ! jacobian. should be updated not reinit
@@ -104,6 +106,7 @@ c     allow to define your own dynamical scale, need to set dynamical_scale_choi
       double precision P(0:3, nexternal)
 c     Commmon to have access to all variable defined in the run_card      
       include 'genps.inc'
+      include 'vector.inc'
       include 'run.inc'
       write(0,*) "dynamical scale set to 0"
       write(0,*) "need to be defined via user_hook method"

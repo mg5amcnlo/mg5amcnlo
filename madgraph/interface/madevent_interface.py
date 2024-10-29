@@ -2392,13 +2392,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # Check argument's validity
         mode = self.check_generate_events(args)
         switch_mode = self.ask_run_configuration(mode, args)
-        if not args:
-            # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
-        else:
-            self.set_run_name(args[0], None, 'parton', True)
-            args.pop(0)
-            
+        with misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+            run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'), consistency=False)
+        if not run_card.scan_set:
+            if not args:
+                # No run name assigned -> assigned one automaticaly 
+                self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
+            else:
+                self.set_run_name(args[0], None, 'parton', True)
+                args.pop(0) 
+
+        
         self.run_generate_events(switch_mode, args)
 
         self.postprocessing()
@@ -2559,7 +2563,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.update_status("postprocessing contur done", level="rivet")
 
     # this decorator handle the loop related to scan.
-    @common_run.scanparamcardhandling()
+    @common_run.scanparamcardhandling(run_card_scan=True)
     def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
@@ -2592,7 +2596,6 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             # Regular run mode
             logger.info('Generating %s events with run name %s' %
                         (self.run_card['nevents'], self.run_name))
-        
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
             nb_event = self.run_card['nevents']
@@ -3190,7 +3193,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
       
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
-                run_card = banner_mod.RunCard(opt['run_card'])
+                run_card = banner_mod.RunCard(opt['run_card'], path=pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             else:
                 run_card = self.run_card
             self.run_card = run_card
@@ -3692,6 +3695,7 @@ Beware that this can be dangerous for local multicore runs.""")
         """Advanced commands: Launch combine events"""
         start=time.time()
         args = self.split_arg(line)
+        start = time.time()
         # Check argument's validity
         self.check_combine_events(args)
         self.update_status('Combining Events', level='parton')
@@ -3717,6 +3721,10 @@ Beware that this can be dangerous for local multicore runs.""")
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
 
+        if self.run_card['gridpack']:
+            return 
+        
+        
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
@@ -3773,7 +3781,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_chunk = max_G -1
                 nb_G = len(Gdirs) // nb_chunk 
 
-            misc.sprint(nb_chunk, nb_G)
             for i, local_G in enumerate(split(Gdirs, nb_chunk)):
                 line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
                 line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
@@ -3843,6 +3850,7 @@ Beware that this can be dangerous for local multicore runs.""")
             logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
             logger.warning("  - reduce the number of requested events (if set too high)")
             logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+            logger.warning("  - regenerate your process directory by selecting another gauge (in particular try FD gauge).")
 
 
                    
@@ -3852,7 +3860,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.correct_bias()
         elif self.run_card['custom_fcts']:
             self.correct_bias()
-        
         logger.info("combination of events done in %s s ", time.time()-start)
         
         self.to_store.append('event')
@@ -4083,6 +4090,9 @@ Beware that this can be dangerous for local multicore runs.""")
         for P in Pdir: 
             allG = misc.glob('G*', path=P)
             for G in allG:
+                # avoid case where some file starts with G (madgraph5/madgraph4gpu#947)
+                if not os.path.isdir(G): 
+                    continue
                 if pjoin(P, G) not in Gdir:
                     logger.debug('removing %s', pjoin(P,G))
                     shutil.rmtree(pjoin(P,G))
@@ -4219,6 +4229,10 @@ Beware that this can be dangerous for local multicore runs.""")
         HepMC_event_output = None
         tag = self.run_tag
         
+        if self.options ['run_mode'] == 0 :
+            if hasattr(self, 'run_card') and PY8_Card['Main:numberOfEvents'] in [0,-1]:
+                PY8_Card.userSet('Main:numberOfEvents', self.run_card['nevents'])
+
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
 
         hepmc_format = PY8_Card['HEPMCoutput:file'].lower()
@@ -6148,7 +6162,7 @@ tar -czf split_$1.tar.gz split_$1
                        'syscalc':[],
                        'rivet':['rivet']}
 
-        if name == self.run_name:        
+        if name and name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = banner_mod.RunCard(run_card)
@@ -7031,7 +7045,10 @@ class GridPackCmd(MadEventCmd):
                 sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
-                    nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
+                    if self.results.current['cross'] == 0 and self.run_card['gridpack']:
+                        nb_event= self.nb_event
+                    else:
+                        nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current['cross']),self.run_card['nevents'])
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
                     AllEvent = lhe_parser.MultiEventFile()

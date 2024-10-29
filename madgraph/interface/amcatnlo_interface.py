@@ -119,6 +119,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args[1] = 'loop' 
 
     def check_add(self, args):
+
+        # this is for the Sudakov approximation of EW corrections
+        logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
+                       'Please cite arxiv:2110.03714, arxiv:2309.00452')
+        if "--ewsudakov" in args:
+            self.ewsudakov = True
+            args.remove('--ewsudakov')
         
         super(CheckFKS, self).check_add(args)        
         if '$' in args:
@@ -135,7 +142,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
                   
-        self._export_format = 'NLO'
+        if args and args[0] == 'ewsudakovsa':
+            self._export_format = 'ewsudsa'
+            args.pop(0)
+        else:
+            self._export_format = 'NLO'
+
         forbidden_formats = ['madevent', 'standalone']
         
 
@@ -444,6 +456,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         
         args = self.split_arg(line)
         # Check the validity of the arguments
+        self.ewsudakov = False
+
         self.check_add(args)
 
         if args[0] == 'model':
@@ -486,6 +500,15 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
 
         geninfo = self._generate_info
+
+        # this warning is to remind us that for the moment adding EW sudakov
+        # corrections lacks the LO2 contributions unless EW corrections are
+        # also computed
+        if self.ewsudakov and not 'QED' in proc_type[2]:
+            logger.warning('The EW Sudakov corrections might be incomplete.' + \
+                           'They will not include contributions of QCD origin ' + \
+                           'stemming from the LO2, if it exists.')
+
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
         self._generate_info = geninfo
 
@@ -664,6 +687,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
+                       'ewsudakov': self.ewsudakov,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
                        'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
 
@@ -716,15 +740,17 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # For NLO, the group_subprocesses is automatically set to false
         group_processes = False
         # initialize the writer
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO','ewsudsa']:
+            output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa'}
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                      output_type='amcatnlo',group_subprocesses=group_processes)
+                      output_type=output_type_dict[self._export_format],
+                      group_subprocesses=group_processes)
             
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['NLO']:
+               and self._export_format in ['NLO', 'ewsudsa']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be deleted and replaced.')
@@ -739,7 +765,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
@@ -846,7 +872,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         path = self._export_dir
 
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             path = os.path.join(path, 'SubProcesses')
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 

@@ -60,7 +60,7 @@ import tests.IOTests
 import aloha
 import aloha.aloha_lib as aloha_lib
 
-from madgraph import MG4DIR
+from madgraph import MG4DIR, MG5DIR
 from madgraph.interface.extended_cmd import Cmd
 from madgraph.iolibs.files import cp, ln, mv
 import madgraph.various.misc as misc
@@ -208,6 +208,11 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
         ff = open(pjoin(root_path,'tests','time_db'), 'w')
         ff.write('\n'.join(['%s %s' % a  for a in TestSuiteModified.time_db.items()]))
         ff.close()
+
+
+    ff = open(pjoin(MG5DIR,'tests','status'),'w')
+    ff.write(str(len(output.errors) + len(output.failures)))
+    ff.close()
 
     return output
     #import tests

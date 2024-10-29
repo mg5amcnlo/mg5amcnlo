@@ -537,7 +537,8 @@ class Banner(dict):
             self.param_card = param_card_reader.ParamCard(param_card)
             return self.param_card
         elif tag == 'mgruncard':
-            self.run_card = RunCard(self[tag])
+            with misc.TMP_variable(RunCard, 'allow_scan', True):
+                self.run_card = RunCard(self[tag], consistency=False, unknown_warning=False)
             return self.run_card
         elif tag == 'mg5proccard':
             proc_card = self[tag].split('\n')
@@ -976,6 +977,8 @@ class ConfigFile(dict):
     """ a class for storing/dealing with input file.
     """     
 
+    allow_scan = False
+
     def __init__(self, finput=None, **opt):
         """initialize a new instance. input can be an instance of MadLoopParam,
         a file, a path to a file, or simply Nothing"""                
@@ -993,6 +996,7 @@ class ConfigFile(dict):
         # Initialize it with all the default value
         self.user_set = set()
         self.auto_set = set()
+        self.scan_set = {} #key -> type of list (int/float/bool/str/... for scan
         self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = {} #key -> type of list (int/float/bool/str/...
@@ -1002,14 +1006,18 @@ class ConfigFile(dict):
         self.allowed_value = {}
         
         self.default_setup()
+        self.plugin_input(finput)
         
 
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput, **opt)
+        
 
 
 
+    def plugin_input(self, finput=None):
+        pass
 
 
     def default_setup(self):
@@ -1105,6 +1113,8 @@ class ConfigFile(dict):
         #1. check if the parameter is set to auto -> pass it to special
         if lower_name in self:
             targettype = type(dict.__getitem__(self, lower_name))
+            if lower_name in self.scan_set:
+                targettype = self.scan_set[lower_name] 
             if targettype != str and isinstance(value, str) and value.lower() == 'auto':
                 self.auto_set.add(lower_name)
                 if lower_name in self.user_set:
@@ -1114,12 +1124,25 @@ class ConfigFile(dict):
                 return 
             elif lower_name in self.auto_set:
                 self.auto_set.remove(lower_name)
-            
+
+ 
+            #1. check if the parameter is set to auto -> pass it to special
+            scan_targettype = None 
+            if self.allow_scan and isinstance(value, str) and value.strip().startswith('scan'):
+                if lower_name in self.user_set:
+                    self.user_set.remove(lower_name)
+                self.scan_set[lower_name] = type(self[lower_name])
+                dict.__setitem__(self, lower_name, value)
+                #keep old value.
+                self.post_set(lower_name,value, change_userdefine, raiseerror)
+                return                
+            elif lower_name in self.scan_set:
+                scan_targettype = self.scan_set[lower_name] 
+                del self.scan_set[lower_name]
+
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
             targettype = self.list_parameter[lower_name]
-            
-            
             
             if isinstance(value, str):
                 # split for each comma/space
@@ -1244,8 +1267,11 @@ class ConfigFile(dict):
             if change_userdefine:
                 self.user_set.add(lower_name)
             return self.post_set(lower_name, None, change_userdefine, raiseerror)
-        elif name in self:            
-            targettype = type(self[name])
+        elif name in self:  
+            if scan_targettype:
+               targettype = targettype
+            else:
+                 targettype = type(self[name])
         else:
             logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
               'This argument is not defined by default. Please consider adding it.')
@@ -1258,7 +1284,7 @@ class ConfigFile(dict):
             if change_userdefine:
                 self.user_set.add(lower_name)
             return self.post_set(lower_name, None, change_userdefine, raiseerror)
-    
+        
         value = self.format_variable(value, targettype, name=name)
         #check that the value is allowed:
         if lower_name in self.allowed_value and '*' not in self.allowed_value[lower_name]:
@@ -1487,7 +1513,10 @@ class ConfigFile(dict):
                                     v /=  float(split[2*i+2])
                         except:
                             v=0
-                            raise InvalidCmd("%s can not be mapped to a float" % value)
+                            if "scan" in value:
+                               raise InvalidCmd("%s is not supported here. Note that scan command can not be present simultaneously in  the run_card and param_card." % value) 
+                            else:
+                                raise InvalidCmd("%s can not be mapped to a float" % value)
                         finally:
                             value = v
             else:
@@ -1733,10 +1762,12 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('splitting_types',[], typelist=str)
         self.add_param('perturbation_order', [], typelist=str)        
         self.add_param('limitations', [], typelist=str)        
+        self.add_param('ew_sudakov', False)
         self.add_param('hel_recycling', False)  
         self.add_param('single_color', True)
         self.add_param('nlo_mixed_expansion', True)    
-
+        self.add_param('gauge', 'U')
+    
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
@@ -1867,7 +1898,7 @@ class PY8Card(ConfigFile):
         
         # Visible parameters
         # ==================
-        self.add_param("Main:numberOfEvents", -1)
+        self.add_param("Main:numberOfEvents", 0)
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
@@ -2610,7 +2641,6 @@ class RunBlock(object):
 #            card.user_set.remove('pdlabel')
 
 
-
 class RunCard(ConfigFile):
 
     filename = 'run_card'
@@ -2622,7 +2652,28 @@ class RunCard(ConfigFile):
     default_include_file = 'run_card.inc'
     default_autodef_file = 'run.inc'
     donewarning = []
+    include_as_parameter = []
 
+    def plugin_input(self, finput):
+
+        if not finput and not MADEVENT:
+            return
+        curr_dir = None
+        if isinstance(finput, file):
+            # expected path to be like "XXXX/Cards/run_card.dat"
+            curr_dir = os.path.dirname(os.path.dirname(finput.name))
+        elif isinstance(finput, str):
+            curr_dir = os.path.dirname(os.path.dirname(finput))
+        
+        if curr_dir:
+            if os.path.exists(pjoin(curr_dir, 'bin', 'internal', 'plugin_run_card')):
+                # expected format {} passing everything as optional argument
+                for line in open(pjoin(curr_dir, 'bin', 'internal', 'plugin_run_card')):
+                    if line.startswith('#'):
+                        continue
+                    opts = dict(eval(line))
+                    self.add_param(**opts)
+        
     @classmethod
     def fill_post_set_from_blocks(cls):
         """set the post_set function for any parameter defined in a run_block"""
@@ -2648,18 +2699,48 @@ class RunCard(ConfigFile):
             elif isinstance(finput, cls):
                 target_class = finput.__class__
             elif isinstance(finput, str):
+                path = finput
                 if '\n' not in finput:
                     finput = open(finput).read()
                 if 'req_acc_FO' in finput:
                     target_class = RunCardNLO
                 else:
                     target_class = RunCardLO
+                    if MADEVENT and os.path.exists(pjoin(MEDIR, 'bin','internal', 'launch_plugin.py')):
+                        with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(MEDIR, 'bin', 'internal')]):
+                            from importlib import reload
+                            try:
+                                reload('launch_plugin')
+                            except Exception as error:
+                                import launch_plugin
+                        target_class = launch_plugin.RunCard
+                    elif not MADEVENT:
+                        if 'run_card.dat' in path:
+                            launch_plugin_path = path.replace('run_card.dat', '../bin/internal/launch_plugin.py')
+                        elif 'run_card_default.dat' in path:
+                             launch_plugin_path = path.replace('run_card_default.dat', '../bin/internal/launch_plugin.py')
+                        else:
+                            launch_plugin_path = None
+                        if launch_plugin_path and os.path.exists(launch_plugin_path):
+                            misc.sprint('try to use plugin class', path.replace('run_card.dat', '../bin/internal/launch_plugin.py'))
+                            pydir = os.path.dirname(launch_plugin_path)
+                            with  misc.TMP_variable(sys, 'path', sys.path + [pydir]):
+                                from importlib import reload
+                                try:
+                                    reload('launch_plugin')
+                                except Exception as error:
+                                    import launch_plugin
+                            target_class = launch_plugin.RunCard
+            elif issubclass(finput, RunCard):
+                target_class = finput
             else:
                 return None
 
             target_class.fill_post_set_from_blocks()
-
-            return super(RunCard, cls).__new__(target_class, finput, **opt)
+            out = super(RunCard, cls).__new__(target_class, finput, **opt)
+            if not isinstance(out, RunCard): #should not happen but in presence of missmatch of library loaded.
+                out.__init__(finput, **opt)
+            return out
         else:
             return super(RunCard, cls).__new__(cls, finput, **opt)
 
@@ -2687,7 +2768,7 @@ class RunCard(ConfigFile):
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
-
+        self.fct_mod = {} # {param: (fct_pointer, *argument, **opts)}
 
         self.cut_class = {} 
         self.warned=False
@@ -2724,7 +2805,7 @@ class RunCard(ConfigFile):
 
     def add_param(self, name, value, fortran_name=None, include=True, 
                   hidden=False, legacy=False, cut=False, system=False, sys_default=None,
-                  autodef=False, 
+                  autodef=False, fct_mod=None,
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
@@ -2738,6 +2819,7 @@ class RunCard(ConfigFile):
                  If a path (Source/PDF/pdf.inc) the definition will be added within that file
                  Default is False (does not add the definition)
                  entry added in the run_card will automatically have this on True.
+        fct_mod: defines a function to run if the parameter is modify in the include file
         options of **opts:
         - allowed: list of valid options. '*' means anything else should be allowed.
                  empty list means anything possible as well. 
@@ -2762,15 +2844,22 @@ class RunCard(ConfigFile):
         if autodef:
             self.definition_path[autodef].append(name)
             self.user_set.add(name)
+        # function to trigger if a value is modified in the include file
+        # main target is action to force correct recompilation (like for compilation flag/...)
+        if fct_mod:
+            self.fct_mod[name] = fct_mod
 
-    def read(self, finput, consistency=True):
+    def read(self, finput, consistency=True, unknown_warning=True, **opt):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
            
         if isinstance(finput, str):
             if "\n" in finput:
                 finput = finput.split('\n')
+                if 'path' in opt:
+                    self.path = opt['path']
             elif os.path.isfile(finput):
+                self.path = finput
                 finput = open(finput)
             else:
                 raise Exception("No such file %s" % finput)
@@ -2785,7 +2874,7 @@ class RunCard(ConfigFile):
             name = name.lower().strip()
             if name not in self:
                 #looks like an entry added by a user -> add it nicely
-                self.add_unknown_entry(name, value)
+                self.add_unknown_entry(name, value, unknown_warning)
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
@@ -2797,7 +2886,7 @@ class RunCard(ConfigFile):
                         logger.warning(str(error))
                     else:
                         raise
-    def add_unknown_entry(self, name, value):
+    def add_unknown_entry(self, name, value, unknow_warning):
         """function to add an entry to the run_card when the associated parameter does not exists.
            This is based on the guess_entry_fromname for the various syntax providing input.
            This then call add_param accordingly.
@@ -2836,7 +2925,7 @@ class RunCard(ConfigFile):
                 raise Exception("dictionary need to have at least one entry")
             default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
 
-        if name not in RunCard.donewarning:
+        if name not in RunCard.donewarning and unknow_warning:
             logger.warning("Found unexpected entry in run_card: \"%s\" with value \"%s\".\n"+\
                 "  The type was assigned to %s. \n"+\
                 "  The definition of that variable will %sbe automatically added to fortran file %s\n"+\
@@ -2874,7 +2963,17 @@ class RunCard(ConfigFile):
                 return False 
         else:
             return True      
-                    
+
+
+    def reset_simd(self, old_value, new_value, name, *args, **opts):
+        return
+        #raise Exception('pass in reset simd')
+
+    def make_clean(self,old_value, new_value, name, dir):
+        raise Exception('pass make clean for ', dir)
+
+    def make_Ptouch(self,old_value, new_value, name, reset):
+        raise Exception('pass Ptouch for ', reset)             
                 
     def write(self, output_file, template=None, python_template=False,
                     write_hidden=False, template_options=None, **opt):
@@ -2899,11 +2998,12 @@ class RunCard(ConfigFile):
         if python_template and not to_write:
             import string
             if self.blocks:
-                text = string.Template(text)
                 mapping = {}
                 for b in self.blocks:
                     mapping[b.name] =  b.get_template(self)
-                text = text.substitute(mapping)
+                    if "$%s" % b.name not in text:
+                        text += "\n$%s\n" % b.name
+                text = string.Template(text).substitute(mapping)
 
             if not self.list_parameter:
                 text = text % self
@@ -3049,6 +3149,72 @@ class RunCard(ConfigFile):
         else:
             output_file.write(text)
 
+    def get_last_value_include(self, output_dir):
+        """For paraeter in self.fct_mod
+        parse the associate inc file to get the value of the previous run.
+        We return a dictionary {name: old_value}
+        if inc file does not exist we will return the current value (i.e. set has no change)
+        """
+
+        #remember that 
+        # default_include_file is a class variable
+        # self.includepath is on the form include_path : [list of param ]
+        out = {}
+
+        # setup inc_to_parse to be like self.includepath (include_path : [list of param ])
+        # BUT only containing the parameter that need to be tracked for the fct_mod option
+        inc_to_parse = {}
+        for inc_file, params in self.includepath.items():
+            if not inc_file:
+                continue
+            if any(p in params for p in self.fct_mod):
+                inc_to_parse[inc_file] = [name for name in self.includepath[inc_file] if name in self.fct_mod]
+
+        # now loop over the files and ask the associate function
+        for inc_file, params in inc_to_parse.items():
+            if inc_file is True:
+                inc_file = self.default_include_file
+            out.update(self.get_value_from_include(inc_file, params, output_dir))
+
+        return out
+
+    def get_value_from_include(self, path, list_of_params, output_dir):
+        """for a given include file return the current value of the requested parameter
+        return a dictionary {name: value}
+        if path does not exists return the current value in self for all parameter"""
+
+        #WARNING DOES NOT HANDLE LIST/DICT so far
+        # handle case where file is missing
+        if not os.path.exists(pjoin(output_dir,path)):
+            misc.sprint("include file not existing", pjoin(output_dir,path))
+            out = {name: self[name] for name in list_of_params}
+
+        with open(pjoin(output_dir,path), 'r') as fsock:
+            text = fsock.read()
+        
+        to_track = [self.fortran_name[name] if name in self.fortran_name else name for name in list_of_params]
+        pattern = re.compile(r"\(?(%(names)s)\s?=\s?([^)]*)\)?" % {'names':'|'.join(to_track)}, re.I)
+        out =  dict(pattern.findall(text))
+        for name in list_of_params:
+            if name in self.fortran_name:
+                value = out[self.fortran_name[name]]
+                del out[self.fortran_name[name]]
+                out[name] = value
+
+        for name, value in out.items():
+            try:
+                out[name] = self.format_variable(value, type(self[name]))
+            except Exception:
+                continue
+
+        if len(out) != len(list_of_params):
+            misc.sprint(list_of_params)
+            misc.sprint(to_track)
+            misc.sprint(self.fortran_name)
+            misc.sprint(text)
+            raise Exception
+        return out 
+
 
     def get_default(self, name, default=None, log_level=None):
         """return self[name] if exist otherwise default. log control if we 
@@ -3147,6 +3313,7 @@ class RunCard(ConfigFile):
             starttext = open(pjoin(outdir, path+'.orig')).read()
             fsock.remove_routine(starttext, to_mod[path][0])
             for text in to_mod[path][1]:
+                text = self.retro_compatible_custom_fct(text)
                 fsock.writelines(text)
             fsock.close()
             if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
@@ -3163,7 +3330,33 @@ class RunCard(ConfigFile):
                 files.mv(pjoin(outdir,path+'.orig'), pjoin(outdir, path))
 
 
+    @staticmethod
+    def retro_compatible_custom_fct(lines, mode=None):
 
+        f77_type = ['real*8', 'integer', 'double precision', 'logical']
+        function_pat = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                                % {'type':'|'.join(f77_type)}, re.I+re.M)
+        include_pat = re.compile(r"\s+include\s+[\'\"]([\w\./]*)") 
+        
+        assert isinstance(lines, list)
+        sol = []
+
+        if mode is None or 'vector.inc' in mode:
+            search = True
+            for i,line in enumerate(lines[:]):
+                if search and re.search(include_pat, line):
+                    name = re.findall(include_pat, line)[0]
+                    misc.sprint('DETECTED INCLUDE', name)
+                    if 'vector.inc' in name:
+                        search = False
+                    if 'run.inc' in name:
+                        sol.append("       include 'vector.inc'")
+                        search = False
+                sol.append(line)
+                if re.search(function_pat, line):
+                    misc.sprint("DETECTED FCT")
+                    search = True
+        return sol
 
     def guess_entry_fromname(self, name, value):
         """
@@ -3339,71 +3532,94 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
+        if output_dir: #output_dir is set to None in some unittest
+            value_in_old_include = self.get_last_value_include(output_dir)
+        else:
+           value_in_old_include = {} 
+
         if output_dir:
             self.write_autodef(output_dir, output_file=None)
             # check/fix status of customised functions
             self.edit_dummy_fct_from_file(self["custom_fcts"], os.path.dirname(output_dir))
         
         for incname in self.includepath:
-            if incname is True:
-                pathinc = self.default_include_file
-            elif incname is False:
-                continue
-            else:
-                pathinc = incname
+            self.write_one_include_file(output_dir, incname, output_file)
+ 
+        for name,value in value_in_old_include.items():
+            if value != self[name]:
+                self.fct_mod[name][0](value, self[name], name, *self.fct_mod[name][1],**self.fct_mod[name][2])
 
-            if output_file:
-                fsock = output_file
+    def write_one_include_file(self, output_dir, incname, output_file=None):
+        """write one include file at the time"""
+
+        if incname is True:
+            pathinc = self.default_include_file
+        elif incname is False:
+            return
+        else:
+            pathinc = incname
+
+        if output_file:
+            fsock = output_file
+        else:
+            fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))
+
+
+        for key in self.includepath[incname]:                
+            #define the fortran name
+            if key in self.fortran_name:
+                fortran_name = self.fortran_name[key]
             else:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))  
-            for key in self.includepath[incname]:                
-                #define the fortran name
-                if key in self.fortran_name:
-                    fortran_name = self.fortran_name[key]
+                fortran_name = key
+                
+            if incname in self.include_as_parameter:
+                fsock.writelines('INTEGER %s\n' % fortran_name)
+            #get the value with warning if the user didn't set it
+            value = self.get_default(key)
+            if hasattr(self, 'mod_inc_%s' % key):
+                value = getattr(self, 'mod_inc_%s' % key)(value)
+            # Special treatment for strings containing a list of
+            # strings. Convert it to a list of strings
+            if isinstance(value, list):
+                # in case of a list, add the length of the list as 0th
+                # element in fortran. Only in case of integer or float
+                # list (not for bool nor string)
+                targettype = self.list_parameter[key]                        
+                if targettype is bool:
+                    pass
+                elif targettype is int:
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+                    fsock.writelines(line)
+                elif targettype is float:
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
+                    fsock.writelines(line)
+                # output the rest of the list in fortran
+                for i,v in enumerate(value):
+                    line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
+                    fsock.writelines(line)
+            elif isinstance(value, dict):
+                for fortran_name, onevalue in value.items():
+                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
+                    fsock.writelines(line)                       
+            elif isinstance(incname,str) and 'compile' in incname:
+                if incname in self.include_as_parameter:
+                    line = 'PARAMETER (%s=%s)' %( fortran_name, value)
                 else:
-                    fortran_name = key
-                    
-                #get the value with warning if the user didn't set it
-                value = self.get_default(key)
-                if hasattr(self, 'mod_inc_%s' % key):
-                    value = getattr(self, 'mod_inc_%s' % key)(value)
-                # Special treatment for strings containing a list of
-                # strings. Convert it to a list of strings
-                if isinstance(value, list):
-                    # in case of a list, add the length of the list as 0th
-                    # element in fortran. Only in case of integer or float
-                    # list (not for bool nor string)
-                    targettype = self.list_parameter[key]                        
-                    if targettype is bool:
-                        pass
-                    elif targettype is int:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
-                        fsock.writelines(line)
-                    elif targettype is float:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
-                        fsock.writelines(line)
-                    # output the rest of the list in fortran
-                    for i,v in enumerate(value):
-                        line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
-                        fsock.writelines(line)
-                elif isinstance(value, dict):
-                    for fortran_name, onevalue in value.items():
-                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
-                        fsock.writelines(line)                       
-                elif isinstance(incname,str) and 'compile' in incname:
                     line = '%s = %s \n' % (fortran_name, value)
-                    fsock.write(line)
+                fsock.write(line)
+            else:
+                if incname in self.include_as_parameter:
+                    line = 'PARAMETER (%s=%s)' %( fortran_name, self.f77_formatting(value))
                 else:
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
-                    fsock.writelines(line)
-            if not output_file:
-                fsock.close()
-                path = pjoin(output_dir,pathinc)
-                if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
-                    files.mv(path+'.tmp', path)
-                else:
-                    os.remove(path+'.tmp')
-
+                fsock.writelines(line)
+        if not output_file:
+            fsock.close()
+            path = pjoin(output_dir,pathinc)
+            if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
+                files.mv(path+'.tmp', path)
+            else:
+                os.remove(path+'.tmp')
 
     def write_autodef(self, output_dir, output_file=None):
         """ Add the definition of variable to run.inc if the variable is set with autodef.
@@ -3753,13 +3969,15 @@ template_on = \
    %(tmin_for_channel)s = tmin_for_channel ! limit the non-singular reach of --some-- channel of integration related to T-channel diagram (value between -1 and 0), -1 is no impact
    %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
    %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
-   %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
+   %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)  
 #*********************************************************************
-# Compilation flag. No automatic re-compilation (need manual "make clean" in Source)
+# Compilation flag. 
 #*********************************************************************   
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
+   %(vector_size)s = vector_size ! size of fortran arrays allocated in the multi-event API for SIMD/GPU (VECSIZE_MEMMAX)
+   %(nb_warp)s = nb_warp ! total number of warp/frontwave
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
@@ -3805,7 +4023,8 @@ class PDLabelBlock(RunBlock):
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
-        if abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
+        if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
+            abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
             raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
 
     def status(self, card):
@@ -3919,6 +4138,8 @@ class RunCardLO(RunCard):
                       "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
     
+    include_as_parameter = ['vector.inc']
+
     if MG5DIR:
         default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
     
@@ -4009,6 +4230,7 @@ class RunCardLO(RunCard):
         self.add_param("cut_decays", False, cut='d')
         self.add_param('dsqrt_shat',0., cut=True)
         self.add_param("nhel", 0, include=False)
+        self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
         self.add_param("ptj", 20.0, cut='j')
         self.add_param("ptb", 0.0, cut='b')
@@ -4124,7 +4346,7 @@ class RunCardLO(RunCard):
         self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6], hidden=True)
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
-        self.add_param("use_syst", True)
+        self.add_param("use_syst", True, comment='Add in the lhef file information needed for the computation of systematic uncertainty (scale variation and pdf)')
         self.add_param('systematics_program', 'systematics', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
         self.add_param('systematics_arguments', ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset'], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
         
@@ -4157,10 +4379,18 @@ class RunCardLO(RunCard):
         self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
         self.add_param('hel_zeroamp', True, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
         self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
-        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
-        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
-        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3')        
-        
+        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check',
+                       fct_mod=(self.make_clean, ('Source'),{}))
+        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math',
+                       fct_mod=(self.make_clean, ('Source/DHELAS'),{}))
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3',
+                       fct_mod=(self.make_Ptouch, ('matrix'),{}))        
+        self.add_param('vector_size', 1, include='vector.inc', hidden=True, comment='lockstep size for parralelism run', 
+                       fortran_name='WARP_SIZE', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('nb_warp', 1, include='vector.inc', hidden=True, comment='number of warp for parralelism run', 
+                       fortran_name='NB_WARP', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('vecsize_memmax', 0, include='vector.inc', system=True)
+
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
@@ -4450,7 +4680,7 @@ class RunCardLO(RunCard):
             self['mxxmin4pdg'] =[0.] 
             self['mxxpart_antipart'] = [False]
             
-                    
+        self['vecsize_memmax'] = self['nb_warp'] * self['vector_size']       
            
     def create_default_for_process(self, proc_characteristic, history, proc_def):
         """Rules
@@ -4681,27 +4911,37 @@ class RunCardLO(RunCard):
         # here pick strategy 2 if only one QCD color flow
         # and for pure multi-jet case
         jet_id = [21] + list(range(1, self['maxjetflavor']+1))
-        if proc_characteristic['single_color']:
+        if proc_characteristic['gauge'] != 'FD' and proc_characteristic['single_color']:
             self['sde_strategy'] = 2
             #for pure lepton final state go back to sde_strategy=1
             pure_lepton=True
             proton_initial=True
+            no_qcd=True
             for proc in proc_def:
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                if 'QCD' not in proc[0].get('orders'):
+                    no_qcd = False
+                elif proc[0].get('orders')['QCD'] != 0:
+                    no_qcd = False 
+                #misc.sprint(proc.get_order())
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
             if pure_lepton and proton_initial:
                 self['sde_strategy'] = 1
-        else:
-            # check if  multi-jet j 
-            is_multijet = True
-            for proc in proc_def:
-                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
-                    is_multijet = False
-                    break
-            if is_multijet:
-                self['sde_strategy'] = 2
+            elif not no_qcd:
+                self['sde_strategy'] = 1 
+
+
+        #else:
+        #    # check if  multi-jet j 
+        #    is_multijet = True
+        #    for proc in proc_def:
+        #        if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
+        #            is_multijet = False
+        #            break
+        #    if is_multijet:
+        #        self['sde_strategy'] = 2
             
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles
@@ -5580,9 +5820,10 @@ class RunCardNLO(RunCard):
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
-            if self['lpp%s' % i ] not in [1,2]:
+            # do not for proton mass if not proton PDF (or when scan initialization)
+            if self['lpp%s' % i ] not in [1,2] or isinstance(self['ebeam%i' % i], str):
                 continue
-
+ 
             if self['ebeam%i' % i] < 0.938:
                 if self['ebeam%i' %i] == 0:
                     logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
@@ -6032,3 +6273,181 @@ class eMELA_info(ConfigFile):
             xcard = banner.charge_card(card)
             xcard[par[0]].param_dict[(par[1],)].value = v
             xcard.write(os.path.join(self.me_dir, 'Cards', '%s.dat' % card))
+
+
+
+
+class RunCardIterator(object):
+    """A class keeping track of the scan: flag in the param_card and 
+       having an __iter__() function to scan over all the points of the scan.
+    """
+
+    logging = True
+    def __init__(self, input_path=None):
+        with misc.TMP_variable(RunCard, 'allow_scan', True):
+            self.run_card = RunCard(input_path, consistency=False)
+        self.run_card.allow_scan = True
+
+        self.itertag = [] #all the current value use
+        self.cross = []   # keep track of all the cross-section computed 
+        self.param_order = []
+        
+    def __iter__(self):
+        """generate the next param_card (in a abstract way) related to the scan.
+           Technically this generates only the generator."""
+        
+        if hasattr(self, 'iterator'):
+            return self.iterator
+        self.iterator = self.iterate()
+        return self.iterator
+    
+    def write(self, path):
+        self.__iter__.write(path)
+
+    def next(self, autostart=False):
+        """call the next iteration value"""
+        try:
+            iterator = self.iterator
+        except:
+            if autostart:
+                iterator = self.__iter__()
+            else:
+                raise
+        try:
+            out = next(iterator)
+        except StopIteration:
+            del self.iterator
+            raise
+        return out
+    
+    def iterate(self):
+        """create the actual generator"""
+        all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
+        pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+
+        # fill all_iterators with the run_card information
+        for name in self.run_card.scan_set:
+            value = self.run_card[name]
+            try:
+               key, def_list = pattern.findall(value)[0] 
+            except Exception as error:
+               misc.sprint(error)
+               raise Exception("Fail to handle scanning tag in run_card: Please check that the syntax is valid") 
+            if key == '': 
+                key = -1 * len(all_iterators)
+            if key not in all_iterators:
+                all_iterators[key] = []
+            try:
+                all_iterators[key].append( (name, eval(def_list)))
+            except SyntaxError as error:
+                raise Exception("Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error))
+        
+        #prepare to keep track of parameter changing for the report
+        keys = list(all_iterators.keys()) # need to fix an order for the scan
+        #store the type of parameter
+        for key in keys:
+            for param, values in all_iterators[key]:
+                self.param_order.append("run_card#%s" % (param))
+
+        # do the loop
+        lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
+        from functools import reduce
+        total = reduce((lambda x, y: x * y),[len(x) for x in lengths])
+        for i,positions in enumerate(itertools.product(*lengths)):
+            self.itertag = []
+            if self.logging:
+                logger.info("Create the next run_card in the scan definition (%s/%s) " %( i+1, total), '$MG:BOLD')
+            for i, pos in enumerate(positions):
+                key = keys[i]
+                for param, values in all_iterators[key]:
+                    # assign the value in the card.
+                    self.run_card[param] = values[pos]
+                    self.itertag.append(values[pos])
+                    if self.logging:
+                        logger.info("change parameter %s to %s", \
+                                   param, values[pos])
+            
+            
+            # retrun the current param_card up to next iteration
+            yield self.run_card
+        
+    
+    def store_entry(self, run_name, cross, error=None, run_card_path=None):
+        """store the value of the cross-section"""
+        
+        if isinstance(cross, dict):
+            info = dict(cross)
+            info.update({'bench' : self.itertag, 'run_name': run_name})
+            self.cross.append(info)
+        else:
+            if error is None:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
+            else:
+                self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross, 'error(pb)':error})   
+        
+
+    def write_summary(self, path, order=None, lastline=False, nbcol=20):
+        """ """
+
+        if path:
+            ff = open(path, 'w')
+            path_events = path.rsplit("/", 1)[0]
+            #identCard = open(pjoin(path.rsplit("/", 2)[0], "Cards", "ident_card.dat"))
+            #identLines = identCard.readlines()
+            #identCard.close()
+        else:
+            ff = StringIO.StringIO()        
+        if order:
+            keys = order
+        else:
+            keys = list(self.cross[0].keys())
+            if 'bench' in keys: keys.remove('bench')
+            if 'run_name' in keys: keys.remove('run_name')
+            keys.sort()
+            if 'cross(pb)' in keys:
+                keys.remove('cross(pb)')
+                keys.append('cross(pb)')
+            if 'error(pb)' in keys:
+                keys.remove('error(pb)')
+                keys.append('error(pb)')
+
+        formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
+                                             ('%%-%is ' % (nbcol))* len(keys))
+        # header
+        if not lastline:
+            ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
+        formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
+                                             ('%%-%ie ' % (nbcol))* len(keys))
+
+        if not lastline:
+            to_print = self.cross
+        else:
+            to_print = self.cross[-1:]
+        for info in to_print:
+            name = info['run_name']
+            bench = info['bench']
+            data = []
+            for k in keys:
+                if k in info:
+                    data.append(info[k])
+                else:
+                    data.append(0.)
+            ff.write(formatting % tuple([name] + bench + data))
+            ff_single = open(pjoin(path_events, name, "params.dat"), "w")
+            for i_bench in range(0, len(bench)):
+                ff_single.write(self.param_order[i_bench] + " = " + str(bench[i_bench]) +"\n")
+            ff_single.close()
+
+        if not path:
+            return ff.getvalue()
+        
+         
+    def get_next_name(self, run_name):
+        """returns a smart name for the next run"""
+    
+        if '_' in run_name:
+            name, value = run_name.rsplit('_',1)
+            if value.isdigit():
+                return '%s_%02i' % (name, float(value)+1)
+        # no valid '_' in the name
+        return '%s_scan_02' % run_name

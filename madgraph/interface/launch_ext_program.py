@@ -27,6 +27,7 @@ import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_mod
+import sys
 
 #from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 #from madgraph.iolibs.files import cp
@@ -637,7 +638,16 @@ class MELauncher(ExtLauncher):
         stdout_level = self.cmd_int.options['stdout_level']
         
         with ME.MadEventCmd.RunWebHandling(self.running_dir):
-            if self.shell:
+            if os.path.exists(pjoin(self.running_dir, 'bin','internal', 'launch_plugin.py')):
+                with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(self.running_dir, 'bin', 'internal')]):
+                    from importlib import reload
+                    try:
+                        reload('launch_plugin')
+                    except Exception as error:
+                        misc.sprint(error)
+                        import launch_plugin
+                usecmd = launch_plugin.MEINTERFACE(me_dir=self.running_dir, options=self.options, force_run=True)
+            elif self.shell:
                 usecmd = ME.MadEventCmdShell(me_dir=self.running_dir, options=self.options, force_run=True)
             else:
                 usecmd = ME.MadEventCmd(me_dir=self.running_dir, options=self.options, force_run=True)

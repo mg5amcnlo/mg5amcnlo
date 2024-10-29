@@ -3,7 +3,7 @@
 # Makefile for model library
 #
 # ----------------------------------------------------------------------------
-
+# template models/template_files/makefile_madevent
 # Check for ../make_opts
 ifeq ($(wildcard ../make_opts), ../make_opts)
   include ../make_opts
@@ -41,7 +41,8 @@ $(LIBDIR)$(LIBRARY): $(MODEL)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 
-couplings.f: ../maxparticles.inc ../run.inc
+couplings.o: ../maxparticles.inc ../run.inc ../vector.inc
+couplings2.o: ../vector.inc
 
 ../run.inc:
 	touch ../run.inc

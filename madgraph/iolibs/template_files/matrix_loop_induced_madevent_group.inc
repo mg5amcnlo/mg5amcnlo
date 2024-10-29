@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P,RHEL, RCOL, channel, proc_id, ANS, hel_selected, icol)
 C  
 %(info_lines)s
 C 
@@ -12,6 +12,9 @@ C
 C 
     use DiscreteSampler
     IMPLICIT NONE
+    double precision RHEL
+    double precision RCOL
+    integer channel, proc_id, hel_selected, icol
 C  
 C CONSTANTS
 C  
@@ -19,6 +22,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include 'run.inc'
 C   Below is the maximum config ID for multichannels which is always less than
 C   the number of loop diagrams, so we use the latter.
     INTEGER    NLOOPDIAGRAMS
@@ -43,8 +47,8 @@ C   When set negative, the security above is removed
 c
 c global (due to reading writting) 
 c
-        LOGICAL GOODHEL(NCOMB,2)
-	INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB,MAXSPROC)
+	INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 C  
 C ARGUMENTS 
@@ -55,13 +59,12 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
 		INTEGER I, II, J ,JJ
-        INTEGER ISHEL(2)
+        INTEGER ISHEL
         REAL*8 R,SUMHEL,TS(NCOMB), T
 		REAL*8 HWGT,XTOT
-        INTEGER NGOOD(2), IGOOD(NCOMB,2)         
-  		INTEGER JHEL(2)	
-        DATA NGOOD /0,0/
-        DATA ISHEL/0,0/
+        INTEGER NGOOD
+        DATA NGOOD /0/
+        DATA ISHEL/0/
 C   This stores the different between the full matrix element squared and the sum of multi-channeling factors '|A_i|^2'.
 	DOUBLE PRECISION INTERFERENCE_CONTRIB
 
@@ -77,7 +80,6 @@ C       This is just to temporarily store the reference grid for helicity of the
 C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
 		SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
 
-		SAVE IGOOD, JHEL
 
 		LOGICAL INIT_MADLOOP
 		DATA INIT_MADLOOP/.FALSE./
@@ -91,8 +93,6 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
 
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
 
     %(real_dp_format)s ML_JAMP2(nLoopFlows)
     common/%(ml_prefix)sJAMP2/ML_JAMP2
@@ -163,21 +163,20 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 	  CALL %(ml_prefix)sCLEAR_CACHES()
     ENDIF
 
-    NTRY(IMIRROR)=NTRY(IMIRROR)+1
+    NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
 
     IF (multi_channel) THEN
         DO I=1,NLOOPDIAGRAMS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF     
 
 
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
     DO I=1,NCOMB
        TS(I)=0d0
@@ -200,9 +199,9 @@ C Of course this option can also not be used for polarized beams.
     ELSE
 !   If the helicity grid status is 0, this means that it is not yet initialized.
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
-    IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
+    IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       	 DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
+         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.OR.ISUM_HEL.ne.0) THEN
 	        
 		    call cpu_time(t_before)
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
@@ -245,21 +244,19 @@ C Of course this option can also not be used for polarized beams.
 	    call reset_cumulative_variable() ! avoid biais of the initialization
           endif
 	  ELSE
-        JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+        IF(NTRY(%(proc_id)s).LE.MAXTRIES)THEN
          DO I=1,NCOMB
-            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-               GOODHEL(I,IMIRROR)=.TRUE.
-               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
+            IF (.NOT.GOODHEL(I,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+               GOODHEL(I,%(proc_id)s)=.TRUE.
+               NGOOD = NGOOD +1
+               PRINT *,'Added good helicity for proc %(proc_id)s ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(%(proc_id)s)
             ENDIF
          ENDDO
         ENDIF
-        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
-           ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
+           ISHEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
-        IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
 
@@ -267,7 +264,7 @@ C Of course this option can also not be used for polarized beams.
       ELSE ! random helicity
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
-	        
+	        HEL_SELECTED= HEL_PICKED 
 			call cpu_time(t_before)            
 			CALL %(ml_prefix)sSLOOPMATRIXHEL_THRES(P,I,ANS_ML,-1.0d0,PREC_FOUND,ML_RET_CODE)
 			CALL PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,t_before,T,ANS_ML(1,0),ANS_ML(2,0),ANS_ML(3,0),PREC_FOUND(0),ML_RET_CODE)
@@ -292,23 +289,24 @@ c           Always one helicity at a time
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
 
-			WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
       IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1))) THEN
-         CALL RANMAR(R)
+c         CALL RANMAR(R)
          SUMHEL=0d0
          DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
-            IF(R.LT.SUMHEL)THEN
-          	   WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            IF(RHEL.LT.SUMHEL)THEN
 c         Set right sign for ANS, based on sign of chosen helicity
                ANS=DSIGN(ANS,TS(I))
+               HEL_SELECTED=I
                GOTO 10
             ENDIF
          ENDDO
  10      CONTINUE   
       ENDIF
     ENDIF
+
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0

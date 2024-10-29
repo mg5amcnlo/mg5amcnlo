@@ -44,6 +44,7 @@ C
 C
 C GLOBAL VARIABLES
 C
+      %(include_vector)s
       include 'coupl.inc'
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE
@@ -362,6 +363,7 @@ C     Hook for numerator function for Samurai
 C
 C GLOBAL VARIABLES
 C
+      %(include_vector)s
       include 'coupl.inc'
 
 	  %(real_dp_format)s LSCALE
@@ -647,6 +649,7 @@ C
 C
 C GLOBAL VARIABLES
 C
+      %(include_vector)s
       include 'coupl.inc'
 
 	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT
@@ -873,6 +876,7 @@ C
 C
 C GLOBAL VARIABLES
 C
+      %(include_vector)s
       include 'coupl.inc'
 
 	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT

@@ -24,7 +24,8 @@ c**************************************************
       include 'nexternal.inc'
       include 'message.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'
+c      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'sudakov.inc'
       include 'maxparticles.inc'
       include 'run.inc'
@@ -97,7 +98,8 @@ c**************************************************
       include 'message.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'      
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       integer ipdg,imode
       double precision q0, Q11
       double precision gamma,DGAUSS
@@ -203,6 +205,7 @@ c**************************************************
 
       include 'cuts.inc'
       include 'genps.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       integer ipdg, irfl
@@ -425,7 +428,8 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
          ipart(2,imo)=ipart(2,ida1)
       else
          write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
-         write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
+         write(*,*) "failed for ipartupdate."
+         write(*,*) "Please retry without MLM/default dynamical scale"
          stop 3
       endif
       
@@ -548,7 +552,7 @@ c***************************************************
       return
       end
 
-      logical function setclscales(p, keepq2bck)
+      logical function setclscales(p, keepq2bck, ivec)
 c**************************************************
 c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
@@ -556,15 +560,16 @@ c     keepq2bck allow to not reset the parameter q2bck
 c**************************************************
       implicit none
 
+      integer ivec              ! for event number in batch for common block
       logical keepq2bck
       include 'message.inc'
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'run.inc'
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run_config.inc'
 C   
 C   ARGUMENTS 
@@ -615,6 +620,7 @@ C   local variables
 
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
+c111      logical set_goodjet(n_max_cl) ! variable for debugging unset call 
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
@@ -628,15 +634,21 @@ c     Variables for keeping track of jets
       external is_octet
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
+c    WARNING: goodjet() is sometimes accessed for variable which are not
+c      initialised by the algorithm (the line where this was happening is
+c      flagged). To be on a safe side, we initialise all entry to False.
+c      In case of weird behavior, uncomment line c111 to debug/investigate 
+      goodjet(:) = .false.
+c111     set_goodjet(:) = .false.
+      if(ickkw.le.0.and.(xqcut.le.0d0.or.init_mode).and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
-            s_scale=scale
-            n_qcd=nqcd(iconfig)
-            n_alpsem=0
+            s_scale(ivec)=scale
+            n_qcd(ivec)=nqcd(iconfig)
+            n_alpsem(ivec)=0
             do i=1,2
-               n_pdfrw(i)=0
+               n_pdfrw(i,ivec)=0
             enddo
-            s_rwfact=1d0
+            s_rwfact(ivec)=1d0
          endif
       return
       endif
@@ -651,7 +663,7 @@ c      are flagged as jets)
       if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
       endif
- 100  clustered = cluster(p(0,1))
+ 100  clustered = cluster(p(0,1), ivec)
       if(.not.clustered) then
          if(init_mode) goto 999
          open(unit=26,file='../../../error',status='unknown',err=999)
@@ -673,7 +685,7 @@ c     Reset chcluster to run_card value
      $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
      $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
-          write(*,*)'   icluster(',i,')=',(icluster(j,i),j=1,4)
+          write(*,*)'   icluster(',i,',ivec)=',(icluster(j,i, ivec),j=1,4)
         enddo
         write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
@@ -732,11 +744,13 @@ c        partonline gives whether this IS line is parton (start out true for any
 c        goodjet gives whether this cluster line is considered a jet
 c        i.e. if all related/previous clustering are jet
          goodjet(ibeam(i))=partonline(i)
+c111         set_goodjet(ibeam(i))= .true.
       enddo
 
       do i=3,nexternal
          j=ishft(1,i-1)
          goodjet(j)=isjet(ipdgcl(j,igraphs(1),iproc))
+c111         set_goodjet(j)= .true.
       enddo
 
 c     Go through clusterings and set factorization scale points for use in dsig
@@ -777,8 +791,10 @@ c             Stop fact scale where parton line stops
               else if (jfirst(j).eq.0) then
                  jfirst(j) = n
                  goodjet(imo)=.false.
+c111                 set_goodjet(imo)= .true.
               else
                  goodjet(imo)=.false.
+c111                 set_goodjet(imo)= .true.
               endif
 c             If not jet vertex, increase jcode. This is needed
 c             e.g. in VBF if we pass over to the other side and hit
@@ -794,6 +810,7 @@ c             parton vertices again.
                endif
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
+c111               if(.not.set_goodjet(ida(3-i))) stop 1 
               if(goodjet(ida(3-i))) then
                  if(partonline(j).or.
      $ ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
@@ -857,6 +874,7 @@ c                 The first quark is already remove so we shouldn't remove this 
            endif
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
+c111              set_goodjet(imocl(n))= .true.
               cycle
            endif
 
@@ -876,6 +894,7 @@ c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
+c111           set_goodjet(imocl(n))= .true.
             
 c       check case with g > g g
 c       where the hardest gluon is not goodjet but the other is.
@@ -902,6 +921,7 @@ c              write(*,*) 'ipart',ipart(1,imocl(n)),'/', ipart(2,imocl(n)), ipar
 c     $             ipart(1,idacl(n,2)),'/', ipart(2,idacl(n,2))
 c              write(*,*) 'googjet', goodjet(idacl(n,1)),goodjet(idacl(n,2))
               if (ipart(1,imocl(n)).eq.ipart(1, idacl(n,1))) then
+c111                 if(.not.set_goodjet(idacl(n,1)).or..not.set_goodjet(idacl(n,2))) stop 1                  
                   if (.not.goodjet(idacl(n,1)).and.goodjet(idacl(n,2))) then
 c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,2)), ipart(2,idacl(n,2))
                      do m =n_max_cl,n,-1
@@ -912,6 +932,7 @@ c                     write(*,*) 'ggg with hard jet set a QED the second jet lea
                      enddo
                   endif
                else
+c111                 if(.not.set_goodjet(idacl(n,1)).or..not.set_goodjet(idacl(n,2))) stop 1
                   if (.not.goodjet(idacl(n,2)).and.goodjet(idacl(n,1))) then
 c                     write(*,*) 'ggg with hard jet set a QED the second jet lead to', ipart(1,idacl(n,1)), ipart(2,idacl(n,1))
                      do m =n_max_cl,n,-1
@@ -1222,8 +1243,12 @@ c
          do i=1,2
             do j=1,2
 c              First adjust goodjet based on iqjets
-               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then
-                  if(iqjets(ipart(j,ida(i))).eq.0) goodjet(ida(i))=.false.
+c111              if(.not.set_goodjet(ida(i)).and.ipart(j,ida(i)).gt.2) stop 1            
+               if(goodjet(ida(i)).and.ipart(j,ida(i)).gt.2)then ! This is where  goodjet can be used uninitialised #111
+                  if(iqjets(ipart(j,ida(i))).eq.0)then
+                      goodjet(ida(i))=.false.
+c111                      set_goodjet(ida(i))=.true.
+                  endif
                endif
 c              Now reset ptclus if jet vertex
                if(ipart(j,ida(i)).gt.2) then
@@ -1247,18 +1272,18 @@ c     Store information for systematics studies
 c
 
       if(use_syst)then
-         s_scale=scale
-         n_qcd=nqcd(igraphs(1))
-         n_alpsem=0
+         s_scale(ivec)=scale
+         n_qcd(ivec)=nqcd(igraphs(1))
+         n_alpsem(ivec)=0
          do i=1,2
-            n_pdfrw(i)=0
+            n_pdfrw(i,ivec)=0
          enddo
-         s_rwfact=1d0
+         s_rwfact(ivec)=1d0
       endif
       return
       end
 
-      double precision function custom_bias(p, original_weight, numproc)
+      double precision function custom_bias(p, original_weight, numproc, ivec)
 c***********************************************************
 c     Returns a bias weight as instructed by the bias module
 c***********************************************************
@@ -1268,11 +1293,12 @@ c***********************************************************
       include 'maxparticles.inc'
       include 'run_config.inc'
       include 'lhe_event_infos.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       integer numproc
-
+      integer ivec
       double precision original_weight
 
       double precision bias_weight
@@ -1286,7 +1312,7 @@ C     The weight specified at this stage is irrelevant since we
 C     use do_write_events set to .False.
       AlreadySetInBiasModule = .False.      
       if (requires_full_event_info) then
-        call write_leshouche(p,-1.0d0,numproc,.False.)
+        call write_leshouche(p,-1.0d0,numproc,.False., ivec)
 C     Write the event in the string evt_record, part of the
 C     lhe_event_info common block
         event_record(:) = ''
@@ -1304,7 +1330,7 @@ c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
 
       end
 
-      double precision function rewgt(p)
+      double precision function rewgt(p, ivec)
 c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
@@ -1313,18 +1339,18 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'run.inc'
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run_config.inc'
 C   
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
-
+      integer ivec
 C
 C   global variables
 C     Present process number
@@ -1383,6 +1409,9 @@ c     ipart gives external particle number chain
       external isqcd,isjet,isparton,ispartonvx
       external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
 
+      double precision all_scale(VECSIZE_MEMMAX)
+      common/to_scale_vec/all_scale
+      
       rewgt=1.0d0
       clustered=.false.
 
@@ -1419,10 +1448,10 @@ c     Set incoming particle identities
 c     Store pdf information for systematics studies (initial)
          if(use_syst)then
             do j=1,2
-                n_pdfrw(j)=1
-                i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-                s_xpdf(1,j)=xbk(ib(j))
-                s_qpdf(1,j)=sqrt(q2fact(j))
+                n_pdfrw(j,ivec)=1
+                i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+                s_xpdf(1,j,ivec)=xbk(ib(j))
+                s_qpdf(1,j,ivec)=sqrt(q2fact(j))
             enddo
            endif
          asref=0 ! usefull for syscalc
@@ -1430,10 +1459,10 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p,.true.)) then ! assign the correct id information.(preserve q2bck)
-         write(*,*) "Fail to cluster the events from the rewgt function"
-         stop 1
-c        rewgt = 0d0
+      if(.not.setclscales(p,.true., ivec)) then ! assign the correct id information.(preserve q2bck)
+c         write(*,*) "Fail to cluster the events from the rewgt function"
+c         stop 1
+        rewgt = 0d0
         return
       endif
 
@@ -1442,10 +1471,10 @@ c     Store pdf information for systematics studies (initial)
 c     need to be done after      setclscales since that one clean the syscalc value
       if(use_syst)then
          do j=1,2
-            n_pdfrw(j)=1
-            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-            s_xpdf(1,j)=xbk(ib(j))
-            s_qpdf(1,j)=sqrt(q2fact(j))
+            n_pdfrw(j,ivec)=1
+            i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+            s_xpdf(1,j,ivec)=xbk(ib(j))
+            s_qpdf(1,j,ivec)=sqrt(q2fact(j))
          enddo
       endif
 
@@ -1521,14 +1550,18 @@ c        Set jet identities according to chosen subprocess
 c   
 c   Set strong coupling used
 c   
-      asref=G**2/(4d0*PI)
+      asref=all_G(ivec)**2/(4d0*PI)
 
 c   Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
 c       scale for alpha_s reweighting
         q2now=pt2ijcl(n)
         if(n.eq.nexternal-2) then
-           q2now = scale**2
+           q2now = all_scale(ivec)**2
+           if (q2now.eq.0)then
+              q2now = scale**2
+           endif
+c           q2now = scale**2
         endif
         if (btest(mlevel,3)) then
           write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1),igraphs(1),iproc),
@@ -1558,8 +1591,8 @@ c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
 c             Store information for systematics studies
               if(use_syst)then
-                 n_alpsem=n_alpsem+1
-                 s_qalps(n_alpsem)=sqrt(q2now)
+                 n_alpsem(ivec)=n_alpsem(ivec)+1
+                 s_qalps(n_alpsem(ivec),ivec)=sqrt(q2now)
               endif
               if (btest(mlevel,3)) then
                  write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1),iproc),
@@ -1670,14 +1703,14 @@ c                          Scale too low for heavy quark
                         rewgt=rewgt*pdfj1/pdfj2
 c     Store information for systematics studies
                         if(use_syst)then
-                           n_pdfrw(j)=n_pdfrw(j)+1
-                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
+                           n_pdfrw(j,ivec)=n_pdfrw(j,ivec)+1
+                           i_pdgpdf(n_pdfrw(j,ivec),j,ivec)=ipdgcl(idacl(n,i),igraphs(1),iproc)
                            if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
-                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
+                              s_xpdf(n_pdfrw(j,ivec),j,ivec)=xnow(j)/zcl(n)
                            else
-                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
+                              s_xpdf(n_pdfrw(j,ivec),j,ivec)=xnow(j) 
                            endif
-                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
+                           s_qpdf(n_pdfrw(j,ivec),j,ivec)=sqrt(q2now)
                         endif
                         if (btest(mlevel,3)) then
                            write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1),iproc),' by pdfs: '
@@ -1758,24 +1791,135 @@ c           fs sudakov weight
 
 c     Set reweight factor for systematics studies
       if(use_syst)then
-         s_rwfact = rewgt
+         s_rwfact(ivec) = rewgt
          
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
-                s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
-     $           s_xpdf(1,i),s_qpdf(1,i))
+                s_rwfact(ivec)=s_rwfact(ivec)*pdg2pdf(abs(lpp(IB(i))),
+     $           i_pdgpdf(1,i,ivec)*sign(1,lpp(IB(i))),IB(i),
+     $           s_xpdf(1,i,ivec),s_qpdf(1,i,ivec))
             endif
          enddo
-         if (asref.gt.0d0.and.n_qcd.le.nexternal)then
-            s_rwfact=s_rwfact*asref**n_qcd
+         if (asref.gt.0d0.and.n_qcd(ivec).le.nexternal)then
+            s_rwfact(ivec)=s_rwfact(ivec)*asref**n_qcd(ivec)
 c         else
 c            s_rwfact=0d0
          endif
       endif
 
+      return
+      end
+
+      subroutine update_scale_coupling(p, wgt)
+      implicit none
+
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+      
+      include 'genps.inc'
+
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc'     ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'run.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
+C      include 'maxparticles.inc'
+      
+      double precision all_p(4*maxdim/3+14,1), all_wgt(1)
+      double precision p(4*maxdim/3+14), wgt
+      double precision all_q2fact(2,1)
+      all_p(:,1) = p(:)
+      all_wgt(1) = wgt
+      call update_scale_coupling_vec(all_p, all_wgt,all_q2fact, 1)
+      wgt = all_wgt(1)
+      return
+      end
+
+      
+      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
+      implicit none
+
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+      
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc'     ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'run.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
+C      include 'maxparticles.inc'
+      
+      double precision all_p(4*maxdim/3+14,*), all_wgt(*)
+      double precision all_q2fact(2,*)
+      integer i,j,k, VECSIZE_USED
+
+      logical setclscales
+      external setclscales
+
+      double precision alphas
+      external alphas
+
+      double precision all_scale(VECSIZE_MEMMAX)
+      common/to_scale_vec/all_scale
+      
+c     integer firsttime
+c      data firsttime/.true./
+c      save firsttime
+      if(.not.fixed_ren_scale) then
+         scale = 0d0
+      endif
+      do i =1, VECSIZE_USED
+
+         if(.not.fixed_ren_scale) then
+            call set_ren_scale(all_p(1,i),scale)
+            if(scale.gt.0)then
+               G = SQRT(4d0*PI*ALPHAS(scale))
+               all_scale(i) = scale
+            endif
+         endif
+
+         if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
+            call set_fac_scale(all_p(1,i),q2fact)
+         endif
+
+         if(.not.setclscales(all_p(1,i) , .false., i))then
+            all_wgt(i) = 0d0
+         else
+            all_q2fact(1,i) = q2fact(1)
+            all_q2fact(2,i) = q2fact(2)
+            vec_igraph1(i) = igraphs(1)
+         endif
+c         call save_cl_val_to(i)
+c      endif
+
+c     Set couplings in model files
+        if(.not.fixed_ren_scale.or..not.fixed_couplings) then
+           if (.not.fixed_couplings)then
+              write(*,*) 'form factor with fixed_couplings not supported anymore'
+              write(*,*) ' please update model to use lorentz structure        '
+              stop 5
+c              pp(:)=all_p(:,i)
+           endif
+           call update_as_param(i)
+        endif
+
+c      IF (FIRSTTIME) THEN
+c        FIRSTTIME=.FALSE.
+c        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
+c      ENDIF
+
+      enddo
       return
       end
       

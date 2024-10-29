@@ -214,6 +214,7 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'process_info.inc'
       INCLUDE 'unique_id.inc'
+
       INCLUDE 'coupl.inc'
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
