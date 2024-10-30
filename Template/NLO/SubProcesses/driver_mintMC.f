@@ -805,9 +805,7 @@ c 1/proc_map(0,0)*vol1)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-c$$$         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
-! TODO: fix FxFx scale setting.         
-c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             
          if (passcuts_nbody) then
@@ -851,11 +849,6 @@ c$$$         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
 ! this was obtained with momenta that do not pass the cuts.
             born_flow_picked=-born_flow_picked
          endif
-
-c Update the shower starting scale. This might be updated again below if
-c the nFKSprocess is the same.
-c$$$         call include_shape_in_shower_scale(p,nFKS_picked_nbody
-c$$$     $        ,ifold_counter)
 ! TODO: fix set_colour_con.
          call set_colour_connections(nFKS_picked_nbody,ifold_counter)
          
@@ -872,7 +865,6 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
-
             if (born_flow_picked.gt.0) then
 !     Consider all flows for the shower scale assignment (with
 !     assignements only needed for the dipoles where the fks-mother is
@@ -908,15 +900,11 @@ c counter-event momenta do not exist).
             call init_process_module_n1body_wrapper(born_flow_picked)
             call compute_shower_scale_n1body(p,i_fks,j_fks)
 ! The shower scale to be used in the event file (if it's an H-event and
-! fks_picked will be iFKS). We assume that the emissions by the shower
-! should be softer than the real-emission of the current FKS
-! configuration. Hence, take that dipole scale as upper boundary for the
-! next emissions. (We don't want this anymore. Maybe only for
-! MC@NLO-Delta?)
-c$$$            emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks,j_fks)
-!     To make sure that (soft/collinear) real-emission still "cancels
-!     the divergence in the virtual" these configurations should have a
-!     shower scale related to the underlying S-event. 
+! fks_picked will be iFKS). If the emission is hard, we take the dipole
+! scale as upper boundary for the next emissions. On the other hand, to
+! make sure that (soft/collinear) real-emission still "cancels the
+! divergence in the virtual" these configurations should have a shower
+! scale related to the underlying S-event.
             if (born_flow_picked.gt.0) then
                emsca_H(iFKS,ifold_counter)=max(
      $              shower_scale_n1body(i_fks,j_fks),
@@ -925,39 +913,19 @@ c$$$            emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks,j_fks)
                emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks
      $              ,j_fks)
             endif
-c Set the shower scales            
-! TODO : fix FxFx
-c$$$            if (ickkw.eq.3) then
-c$$$               call set_FxFx_scale(0,p) ! reset the FxFx scales
-c$$$            endif
-
-! This can go:            
-c$$$            call set_cms_stuff(izero)
-c$$$            call set_shower_scale_noshape(p,iFKS*2-1)
-
-! TODO: fix FxFx
-c$$$            if (ickkw.eq.3) then
-c$$$               call set_FxFx_scale(2,p1_cnt(0,1,0))
-c$$$            endif
-
-! This can go:            
-c$$$            call set_cms_stuff(mohdr)
-c$$$            call set_shower_scale_noshape(p,iFKS*2)
-
-! TODO : fix FxFx
-c$$$            if (ickkw.eq.3) then
-c$$$               if (p(0,1).gt.0d0) then
-c$$$                  call set_FxFx_scale(3,p)
-c$$$               endif
-c$$$            endif
-
-!
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
+c Include the FxFx Sudakovs into the prefactors
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p) ! reset the FxFx scales
+               call set_cms_stuff(izero)
+               call set_FxFx_scale(2,p1_cnt(0,1,0))
+               call set_cms_stuff(mohdr)
+               if (p(0,1).gt.0d0) call set_FxFx_scale(3,p)
+            endif
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
-c$$$ TODO : fix FxFx
-c$$$            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
             if (passcuts_nbody .and. (born_flow_picked .le.0)) then
                write (*,*) 'something funny is going on: passing cuts,'
@@ -967,8 +935,7 @@ c$$$            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             endif
             
             call set_cms_stuff(mohdr)
-c$$$ TODO : fix FxFx
-c$$$            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             if (passcuts_nbody .and. abrv.ne.'real') then
@@ -976,8 +943,7 @@ c$$$            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
-c$$$ TODO : fix FxFx
-c$$$                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
                   call compute_MC_subt_term(p,passcuts_nbody,gfactsf
@@ -995,8 +961,7 @@ c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_cms_stuff(izero)
-c$$$ TODO : fix FxFx
-c$$$               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
                call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
@@ -1012,8 +977,7 @@ c Include the real-emission contribution.
             if (passcuts_n1body) then
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
-c$$$ TODO : fix FxFx
-c$$$               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
                call include_multichannel_enhance(2)
                sudakov_damp=probne
@@ -1021,7 +985,6 @@ c$$$               if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             endif
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.
-c$$$            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
             call set_colour_connections(iFKS,ifold_counter)
          enddo
  12      continue

@@ -996,7 +996,7 @@ c Main loop over colour partners used to begin here
       endif
 c Compute dead zones
       call get_dead_zone(z(npartner),xi,qMC
-     $     ,ipartners(npartner),fksfather,lzone(npartner),PY6PTweight)
+     $     ,ipartners(npartner),lzone(npartner),PY6PTweight)
 
 c Compute MC subtraction terms
       if(lzone(npartner))then
@@ -4952,15 +4952,13 @@ c
 
 
 
-      subroutine get_dead_zone(z,xi,qMC,ipartner,ifather,lzone
-     $     ,PY6PTweight)
-      ! TODO: check that we can use fksfather instead of ifather
+      subroutine get_dead_zone(z,xi,qMC,ipartner,lzone,PY6PTweight)
       use process_module
       use kinematics_module
       use scale_module
       implicit none
       include 'nexternal.inc'
-      integer ipartner,ifather,i
+      integer ipartner,i
       double precision z,xi,qMC,PY6PTweight
       logical lzone
 
@@ -4971,7 +4969,7 @@ c
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision pip(0:3),pifather(0:3)
+      double precision ppartner(0:3),pfather(0:3)
 
       ! PYTHIA6 variables
       integer mstj50,mstp67
@@ -4987,13 +4985,13 @@ c Skip if unphysical shower variables
 c Definition and initialisation of variables
       lzone=.true.
       PY6PTweight=-1d0
-      max_scale=shower_scale_nbody_max(ipartner,ifather)
+      max_scale=shower_scale_nbody_max(ipartner,fksfather)
       do i=0,3
-         pifather(i)=p_born(i,ifather) ! father momentum (Born level)
-         pip(i)  =p_born(i,ipartner) ! partner momentum (Born level)
+         pfather(i)=p_born(i,fksfather) ! father momentum (Born level)
+         ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)
       enddo
-      if (shower_mc_mod(1:6).eq.'HERWIG') e0sq=dot(pip,pifather)
-      theta2p=get_angle(pip,pifather)**2
+      if (shower_mc_mod(1:6).eq.'HERWIG') e0sq=dot(ppartner,pfather)
+      theta2p=get_angle(ppartner,pfather)**2
       if(ileg.eq.3 .or. ileg.eq.4) then
          if (ileg.eq.3) then
             xmm2=xm12           ! emitter mass squared
@@ -5004,8 +5002,8 @@ c Definition and initialisation of variables
             ww=w2               ! FKS parent/sister dot product
             xmr2=xm12           ! global-recoiler mass squared
          endif
-         Q2=sumdot(pifather,pip,1d0) ! parent dipole mass squared (Born level)
-         xmp2=dot(pip,pip)      ! mass squared of the partner
+         Q2=sumdot(pfather,ppartner,1d0) ! parent dipole mass squared (Born level)
+         xmp2=dot(ppartner,ppartner)     ! mass squared of the partner
          if (shower_mc_mod(1:8).eq.'HERWIGPP')
      &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
          if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then

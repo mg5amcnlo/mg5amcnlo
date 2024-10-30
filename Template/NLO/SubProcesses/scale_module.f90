@@ -153,8 +153,8 @@ contains
     scalemin=min(scalemin,scalemax)
     if(abrv_mod.ne.'born' .and. shower_mc_mod(1:7).eq.'PYTHIA6' .and. &
          ileg.eq.3)then
-! TODO: Shower scale depends on xm12: This is the mass^2 of j_fks. Hence, this
-! introduces FKS info into subtraction terms.
+! WARNING: Shower scale depends on xm12: This is the mass^2 of j_fks. Hence,
+! this introduces FKS info into Pythia6 subtraction terms.
        scalemin=max(scalemin,sqrt(xm12))
        scalemax=max(scalemin,scalemax)
     endif

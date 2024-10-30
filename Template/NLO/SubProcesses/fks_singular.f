@@ -1099,12 +1099,13 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
             need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
-c Update shower starting scale to be the scale down to which the MINLO
-c Sudakov factors are included.
-            shower_S_scale(nFKSprocess*2-1)=
-     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-            shower_S_scale(nFKSprocess*2)=
-     $           shower_S_scale(nFKSprocess*2-1)
+! TODO: check that the correct shower scale does not need any updating anymore
+c$$$c Update shower starting scale to be the scale down to which the MINLO
+c$$$c Sudakov factors are included.
+c$$$            shower_S_scale(nFKSprocess*2-1)=
+c$$$     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+c$$$            shower_S_scale(nFKSprocess*2)=
+c$$$     $           shower_S_scale(nFKSprocess*2-1)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -1155,19 +1156,20 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
-c Update shower starting scale
-            pthardness=ref_H_scale(nFKSprocess*2)-
-     $           shower_H_scale(nFKSprocess*2)
-            shower_H_scale(nFKSprocess*2)=
-     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
-     $           +pthardness
-            pthardness=ref_H_scale(nFKSprocess*2-1)-
-     $           shower_H_scale(nFKSprocess*2-1)
-            shower_H_scale(nFKSprocess*2-1)= 
-     $           shower_H_scale(nFKSprocess*2)
-            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
-     $           +pthardness
+! TODO: check that the correct shower scale does not need any updating anymore
+c$$$c Update shower starting scale
+c$$$            pthardness=ref_H_scale(nFKSprocess*2)-
+c$$$     $           shower_H_scale(nFKSprocess*2)
+c$$$            shower_H_scale(nFKSprocess*2)=
+c$$$     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+c$$$            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
+c$$$     $           +pthardness
+c$$$            pthardness=ref_H_scale(nFKSprocess*2-1)-
+c$$$     $           shower_H_scale(nFKSprocess*2-1)
+c$$$            shower_H_scale(nFKSprocess*2-1)= 
+c$$$     $           shower_H_scale(nFKSprocess*2)
+c$$$            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
+c$$$     $           +pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
@@ -3945,336 +3947,6 @@ c
 c
       tmp=v(0)**2-v(1)**2-v(2)**2-v(3)**2
       xlen4=sign(1.d0,tmp)*sqrt(abs(tmp))
-      return
-      end
-
-
-      
-! TODO : THIS FUNCTION SHOULD BE RE-WRITTEN ! (FOR NOW COMMENT OUT THE SAFETY MEASURE)
-      subroutine set_shower_scale(p,iFKS,Hevents)
-c$$$      implicit none
-c$$$      include "nexternal.inc"
-c$$$c$$$      include "madfks_mcatnlo.inc"
-c$$$      include 'run.inc'
-c$$$      integer iFKS,i,j
-c$$$      logical Hevents
-c$$$      double precision xi_i_fks_ev,y_ij_fks_ev,p(0:3,nexternal),ddum(6)
-c$$$      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-c$$$      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-c$$$      double precision sqrtshat_ev,shat_ev
-c$$$      common/parton_cms_ev/sqrtshat_ev,shat_ev
-c$$$      double precision emsca,scalemin,scalemax,emsca_bare
-c$$$      logical emscasharp
-c$$$      common/cemsca/emsca,emsca_bare,emscasharp,scalemin,scalemax
-c$$$      double precision emsca_a(nexternal,nexternal)
-c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-c$$$     $     ,nexternal)
-c$$$      logical emscasharp_a(nexternal,nexternal)
-c$$$      double precision scalemin_a(nexternal,nexternal)
-c$$$     $     ,scalemax_a(nexternal,nexternal),emscwgt_a(nexternal
-c$$$     $     ,nexternal)
-c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2,emscasharp_a
-c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
-c$$$      character*4 abrv
-c$$$      common/to_abrv/abrv
-c$$$      include 'nFKSconfigs.inc'
-c$$$      double precision SCALUP(fks_configs*2)
-c$$$      common /cshowerscale/SCALUP
-c$$$      double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
-c$$$      common /cshowerscale_a/SCALUP_a
-c$$$      double precision shower_S_scale(fks_configs*2)
-c$$$     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
-c$$$     &     ,pt_hardness
-c$$$      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
-c$$$     &     ,pt_hardness
-c$$$      integer izero,mohdr
-c$$$      parameter (izero=0,mohdr=-100)
-c$$$      double precision xm12
-c$$$      integer ileg
-c$$$      common/cscaleminmax/xm12,ileg
-c$$$      double precision SCALUP_tmp_S(nexternal,nexternal)
-c$$$      double precision SCALUP_tmp_H(nexternal,nexternal)
-c$$$      common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
-c$$$      integer              MCcntcalled
-c$$$      common/c_MCcntcalled/MCcntcalled
-c$$$!     common block used to make the (scalar) reference scale partner
-c$$$!     dependent in case of delta
-c$$$      integer cur_part
-c$$$      common /to_ref_scale/cur_part
-c$$$c
-c$$$! 1st bit (1) of MCcntcalled: call to set_shower_scale_noshape for S-event (or Born) done
-c$$$! 2nd bit (2) of MCcntcalled: call to set_shower_scale_noshape for H-event done
-c$$$! 3rd bit (4) of MCcntcalled: call to xmcsubt done (and is_pt_hard == false)
-c$$$! 4th bit (8) of MCcntcalled: call to complete_xmcsubt done
-c$$$! 5th bit (16) of MCcntcalled: is_pt_hard==True      
-c$$$
-c$$$! initialize to zero
-c$$$      SCALUP(iFKS)=0d0
-c$$$      SCALUP_a(iFKS,1:nexternal,1:nexternal)=0d0
-c$$$      
-c$$$      if (MCcntcalled.eq.15) then
-c$$$         ! both complete_xmcsubt and MC counter have been called. Set
-c$$$         ! scales based on emsca and scalemax (for SCALUP), except for
-c$$$         ! scale-array for H-events, which is based on what's returned
-c$$$         ! by pythia.
-c$$$         if (.not. Hevents) then
-c$$$            SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
-c$$$            do i=1,nexternal
-c$$$               do j=1,nexternal
-c$$$                  if(j.eq.i)cycle
-c$$$                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_S(i,j)
-c$$$               enddo
-c$$$            enddo
-c$$$         else
-c$$$            SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
-c$$$     $                   ref_H_scale(iFKS)-min(emsca,scalemax)))
-c$$$            do i=1,nexternal
-c$$$               do j=1,nexternal
-c$$$                  if(j.eq.i)cycle
-c$$$                  SCALUP_a(iFKS,i,j)=SCALUP_tmp_H(i,j)
-c$$$               enddo
-c$$$            enddo
-c$$$         endif
-c$$$      elseif (MCcntcalled.eq.3 .or. MCcntcalled.eq.1) then
-c$$$         ! Either we're doing Born, or MC counter terms have not been
-c$$$         ! called.
-c$$$         ! If Born: just use shower_S_scale (i.e., shower scale without
-c$$$         ! shape)
-c$$$         ! Else: set emsca and scaleminmax, and include them in the
-c$$$         ! shower scale (if momenta are defined, else don't use shape)
-c$$$         if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
-c$$$            if (mcatnlo_delta) cur_part=0 ! use s-hat as reference scale.
-c$$$            call set_cms_stuff(mohdr)
-c$$$            call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
-c$$$            if (mcatnlo_delta)
-c$$$     $           call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
-c$$$            call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat_ev,p
-c$$$     $           ,ileg,xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5)
-c$$$     $           ,ddum(6))
-c$$$            call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
-c$$$     $           ,scalemax,ileg,xm12)
-c$$$            if (mcatnlo_delta)
-c$$$     $           call assign_scaleminmax_array(shat_ev,xi_i_fks_ev
-c$$$     $           ,scalemin_a,scalemax_a,ileg,xm12)
-c$$$            if (.not. Hevents) then
-c$$$               SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
-c$$$               if (mcatnlo_delta) then
-c$$$                  do i=1,nexternal
-c$$$                     do j=1,nexternal
-c$$$                        if(j.eq.i)cycle
-c$$$                        SCALUP_a(iFKS,i,j)=min(emsca_a(i,j),
-c$$$     $                       scalemax_a(i,j))
-c$$$                     enddo
-c$$$                  enddo
-c$$$               endif
-c$$$            else
-c$$$               SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
-c$$$     $              ref_H_scale(iFKS)-min(emsca,scalemax)))
-c$$$               if (mcatnlo_delta) then
-c$$$                  do i=1,nexternal
-c$$$                     do j=1,nexternal
-c$$$                        if(j.eq.i)cycle
-c$$$                        SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS) ! we don't need the shape here
-c$$$                     enddo
-c$$$                  enddo
-c$$$               endif
-c$$$            endif
-c$$$         else ! abrv.eq.Born .or. p(0,1).eq.-99
-c$$$            SCALUP(iFKS)=shower_S_scale(iFKS)
-c$$$            if (mcatnlo_delta) then
-c$$$               do i=1,nexternal
-c$$$                  do j=1,nexternal
-c$$$                     if(j.eq.i)cycle
-c$$$                     SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
-c$$$                  enddo
-c$$$               enddo
-c$$$            endif
-c$$$         endif
-c$$$      elseif (MCcntcalled.eq.19) then
-c$$$         ! is_pt_hard is true. Use shower_s_scale and shower_h_scale for
-c$$$         ! S and H events respectively. Hence, no shape function
-c$$$         ! included.
-c$$$         if (.not. Hevents) then
-c$$$            SCALUP(iFKS)=shower_S_scale(iFKS)
-c$$$            if (mcatnlo_delta) then
-c$$$               do i=1,nexternal
-c$$$                  do j=1,nexternal
-c$$$                     if(j.eq.i)cycle
-c$$$                     SCALUP_a(iFKS,i,j)=shower_S_scale(iFKS)
-c$$$                  enddo
-c$$$               enddo
-c$$$            endif
-c$$$         else
-c$$$            SCALUP(iFKS)=shower_H_scale(iFKS)
-c$$$            if (mcatnlo_delta) then
-c$$$               do i=1,nexternal
-c$$$                  do j=1,nexternal
-c$$$                     if(j.eq.i)cycle
-c$$$                     SCALUP_a(iFKS,i,j)=shower_H_scale(iFKS)
-c$$$                  enddo
-c$$$               enddo
-c$$$            endif
-c$$$         endif
-c$$$      elseif (MCcntcalled.eq.7) then
-c$$$         if (mcatnlo_delta) then
-c$$$            write (*,*) "Incompatible 'MCcntcalled':"
-c$$$            write (*,*) "When doing MCatNLO-delta, complete_xmcsubt "/
-c$$$     $           /"should always be called if pt_hard is not true."
-c$$$            stop 1
-c$$$         endif
-c$$$         if (.not. Hevents) then
-c$$$            SCALUP(iFKS)=min(emsca,scalemax,shower_S_scale(iFKS))
-c$$$         else
-c$$$            SCALUP(iFKS)=min(scalemax,max(shower_H_scale(iFKS),
-c$$$     $                   ref_H_scale(iFKS)-min(emsca,scalemax)))
-c$$$         endif
-c$$$         ! Do not need to fill the SCALUP_a() array
-c$$$      else
-c$$$         write (*,*) 'ERROR: MCcntcalled assigned wrongly.',MCcntcalled
-c$$$         stop 1
-c$$$      endif
-c$$$
-c$$$      
-c$$$c Safety measure
-c$$$      SCALUP(iFKS)=max(SCALUP(iFKS),scaleMCcut)
-c$$$      if (mcatnlo_delta) then
-c$$$         do i=1,nexternal
-c$$$            do j=1,nexternal
-c$$$               if(j.eq.i)cycle
-c$$$               if (SCALUP_a(iFKS,i,j).ne.-1d0) then
-c$$$                  SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
-c$$$               endif
-c$$$            enddo
-c$$$         enddo
-c$$$      endif
-      return
-      end
-
-
-      subroutine set_shower_scale_noshape(pp,iFKS)
-      implicit none
-      integer iFKS,j,i,iSH,nmax
-      include "nexternal.inc"
-c$$$      include "madfks_mcatnlo.inc"
-      include 'run.inc'
-      include 'nFKSconfigs.inc'
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL  IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-      double precision shower_S_scale(fks_configs*2)
-     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
-     &     ,pt_hardness
-      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
-     &     ,pt_hardness
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      double precision ptparton,pt,pp(0:3,nexternal),ppp(0:3,nexternal)
-      external pt
-c jet cluster algorithm
-      integer NN,NJET,JET(nexternal)
-      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
-     $     ,palg,amcatnlo_fastjetdmergemax,di(nexternal)
-      external amcatnlo_fastjetdmergemax
-
-      if (btest(iFKS,0)) then
-         MCcntcalled=MCcntcalled+1
-      else
-         MCcntcalled=MCcntcalled+2
-      endif
-c Initialise
-      NN=0
-      ppp=0d0
-      pQCD=0d0
-      pt_hardness=0d0
-      do j=1,nexternal
-         if (j.gt.nincoming.and.is_a_j(j)) then
-            NN=NN+1
-            ptparton=pt(pp(0,j))
-         endif
-      enddo
-
-c Unphysical situation
-      if(NN.le.0)then
-         write(*,*)'Error in set_shower_scale_noshape:'
-         write(*,*)'not enough QCD partons in process ',NN
-         stop
-c Processes without jets at the Born
-      elseif(NN.eq.1)then
-         shower_S_scale(iFKS)=sqrtshat_cnt(0)
-         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
-c$$$         shower_H_scale(iFKS)=sqrtshat_cnt(0)
-         ref_H_scale(iFKS)=0d0
-c Processes with jets at the Born (iSH = 1 (2) means S (H) events)
-      else
-         do iSH=1,2
-            if(iSH.eq.1)then
-               nmax=nexternal-1
-               do j=1,nmax
-                  do i=0,3
-                     ppp(i,j)=p_born(i,j)
-                  enddo
-               enddo
-            elseif(iSH.eq.2)then
-               nmax=nexternal
-               do j=1,nmax
-                  do i=0,3
-                     ppp(i,j)=pp(i,j)
-                  enddo
-               enddo
-            else
-               write(*,*)'Wrong iSH inset_shower_scale_noshape: ',iSH
-               stop
-            endif
-            if(ppp(0,1).gt.0d0)then
-c Put all (light) QCD partons in momentum array for jet clustering.
-               NN=0
-               do j=nincoming+1,nmax
-                  if (is_a_j(j))then
-                     NN=NN+1
-                     do i=0,3
-                        pQCD(i,NN)=ppp(i,j)
-                     enddo
-                  endif
-               enddo
-c One MUST use kt, and no lower pt cut. The radius parameter can be changed
-               palg=1d0         ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-               sycut=0d0        ! minimum jet pt
-               rfj=1d0          ! the radius parameter
-               call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
-     &                                            pjet,njet,jet)
-               do i=1,NN
-                  di(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
-                  if (i.gt.1)then
-                     if(di(i).gt.di(i-1))then
-                        write(*,*)'Error in set_shower_scale_noshape'
-                        write(*,*)NN,i,di(i),di(i-1)
-                        stop
-                     endif
-                  endif
-               enddo
-               if(iSH.eq.1)shower_S_scale(iFKS)=di(NN)
-               if(iSH.eq.2)then
-                  ref_H_scale(iFKS)=di(NN-1)
-                  pt_hardness=di(NN)
-c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
-                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
-               endif
-            else
-               if(iSH.eq.1)shower_S_scale(iFKS)=sqrtshat_cnt(0)
-               if(iSH.eq.2)then
-                  ref_H_scale(iFKS)=shower_S_scale(iFKS)
-                  shower_H_scale(iFKS)=ref_H_scale(iFKS)
-               endif
-            endif
-         enddo
-      endif
-
       return
       end
 
