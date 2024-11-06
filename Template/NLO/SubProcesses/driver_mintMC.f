@@ -15,6 +15,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'nFKSconfigs.inc'
       integer ncall_virt,ncall_novi
       character*4 abrv
       common /to_abrv/ abrv
@@ -174,7 +175,7 @@ c Only do the reweighting when actually generating the events
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
       nndim=ndim
-c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
+c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
      #       (muF1_over_ref*muF1_ref_fixed) .ne.
@@ -205,11 +206,12 @@ c     Prepare the MINT folding
 
       ! initialise the global, but process dependent, information in the process module.
       call init_process_module_global(shower_mc,abrv,nexternal,nincoming
-     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used)
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used,ickkw)
       ! Also put all the n-body process dependent stuff here. It does
       ! not depend on PS point or FKS config, so all global information.
       call init_process_module_nbody_wrapper()
-      call init_scale_module(nexternal,shower_scale_factor)
+      call init_scale_module(nexternal,shower_scale_factor,fks_configs
+     $     ,product(ifold(1:ndim)))
          
       
 c*************************************************************

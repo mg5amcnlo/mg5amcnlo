@@ -2,28 +2,22 @@ module scale_module
   use process_module
   use kinematics_module
   implicit none
-!  include 'nFKSconfigs.inc'
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
-       shower_scale_nbody_max,shower_scale_nbody_min,shower_scale_n1body
-!  double precision,public :: emsca_S(nFKSconfigs,ifolds)
-  double precision,public :: emsca_S(100,100),emsca_H(100,100),SCALUP
+       shower_scale_nbody_max,shower_scale_nbody_min,shower_scale_n1body,emsca_S,emsca_H
+  double precision,public :: SCALUP
   double precision,private :: global_ref_scale,shower_scale_factor
-
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
-!!$  double precision,private,parameter :: scaleMClow=10d0,scaleMCdelta=20d0
   double precision,private,parameter :: scaleMClow=0d0,scaleMCdelta=3d0
   double precision,private,parameter :: scaleMCcut=3d0
-
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        get_born_flow,determine_partner
   private
-
 contains
   
-  subroutine init_scale_module(nexternal,shower_scale_factor_in)
+  subroutine init_scale_module(nexternal,shower_scale_factor_in,nfks,nfold)
     implicit none
-    integer :: nexternal
+    integer :: nexternal,nfks,nfold
     double precision :: shower_scale_factor_in
     if (.not.allocated(shower_scale_nbody)) &
          allocate(shower_scale_nbody(nexternal-1,nexternal-1))
@@ -33,6 +27,10 @@ contains
          allocate(shower_scale_nbody_min(nexternal-1,nexternal-1))
     if (.not.allocated(shower_scale_n1body)) &
          allocate(shower_scale_n1body(nexternal,nexternal))
+    if (.not.allocated(emsca_S)) &
+         allocate(emsca_S(nfks,nfold))
+    if (.not.allocated(emsca_H)) &
+         allocate(emsca_H(nfks,nfold))
     shower_scale_factor=shower_scale_factor_in
   end subroutine init_scale_module
     
@@ -46,6 +44,14 @@ contains
     shower_scale_nbody_min=-1d0
     shower_scale_nbody_max=-1d0
     call get_global_ref_scale(next_n,p)
+    if (ickkw_mod.eq.3) then
+       ! For FxFx, the scale should be the smallest clustering scale as
+       ! returned by the clustering routine. This is the global_ref_scale
+       shower_scale_nbody=shower_scale_factor*global_ref_scale
+       shower_scale_nbody_min=shower_scale_factor*global_ref_scale
+       shower_scale_nbody_max=shower_scale_factor*global_ref_scale+scaleMCdelta
+       return
+    endif
     if (flow_picked .lt. 0) then
        fks_father=-flow_picked
        do i=1,next_n
@@ -98,6 +104,12 @@ contains
     integer i,j,ii,i_fks,j_fks
     double precision ref_scale,scalemin,scalemax
     call get_global_ref_scale(next_n1,p)
+    if (ickkw_mod.eq.3) then
+       ! For FxFx, the scale should be the smallest clustering scale as
+       ! returned by the clustering routine. This is the global_ref_scale
+       shower_scale_n1body=shower_scale_factor*global_ref_scale
+       return
+    endif
     do i=1,next_n1
        do j=1,next_n1
           if (valid_dipole_n1(i,j)) then
@@ -130,6 +142,14 @@ contains
     integer :: i,j,flow_picked
     double precision,dimension(0:3,next_n) :: p
     call get_global_ref_scale(next_n,p)
+    if (ickkw_mod.eq.3) then
+       ! For FxFx, the scale should be the smallest clustering scale as
+       ! returned by the clustering routine. This is the global_ref_scale
+       shower_scale_nbody=shower_scale_factor*global_ref_scale
+       shower_scale_nbody_min=-1d0
+       shower_scale_nbody_max=-1d0
+       return
+    endif
     do i=1,next_n
        do j=1,next_n
           if (valid_dipole_n(i,j,flow_picked)) then
@@ -212,7 +232,7 @@ contains
 
   subroutine get_global_ref_scale(n,p)
     ! this is the global reference shower scale (i.e., without damping),
-    ! i.e. HT/2 reduced by kT of splitting.
+    ! i.e. the smallest scale returned by the clustering routine.
     implicit none
     integer :: n
     double precision,dimension(0:3,n) :: p,pQCD
@@ -225,57 +245,16 @@ contains
     logical,parameter :: for_mcatnlo_scale=.true.
     INTEGER              NFKSPROCESS
     COMMON/C_NFKSPROCESS/NFKSPROCESS
-    
     if (n.eq.next_n1) then
        iproc=nFKSprocess
     else
        iproc=0
     endif
-    
     call cluster_and_reweight(iproc,dummy1 &
             ,dummy2,nFxFx_ren_scales,FxFx_ren_scales(0) &
             ,fxfx_fac_scale(1),need_matching,for_mcatnlo_scale)
-
-    if (nFxFx_ren_scales.gt.0) then
-       global_ref_scale=FxFx_ren_scales(1)
-    else
-       global_ref_scale=FxFx_ren_scales(0)
-    endif
-    
+    global_ref_scale=minval(FxFx_ren_scales(0:nFxFx_ren_scales))
     return
-
-
-    
- ! start from HT
-       global_ref_scale=HT(n,p)
-       NN=0
-       do j=nincoming_mod+1,n
-          if (abs(colour(n,j)).ne.1 .and. mass(n,j).eq.0d0) then
-             NN=NN+1
-             do i=0,3
-                pQCD(i,NN)=p(i,j)
-             enddo
-!!$          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).ne.0d0) then
-!!$             !     reduce by ET of massive QCD particles
-!!$             global_ref_scale=min(global_ref_scale,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
-!!$          elseif (abs(colour(n,j)).ne.1 .and. abs(mass(n,j)).eq.0d0) then
-!!$             write (*,*) 'Error in assign_ref_scale(): colored' &
-!!$                  //' massless particle that does not enter jets'
-!!$             stop 1
-          endif
-       enddo
-       ! reduce by kT-cluster scale of massless QCD partons
-       if (NN.eq.1) then
-          global_ref_scale=min(global_ref_scale,pt(pQCD(0,1)))
-       elseif (NN.ge.2) then
-          do i=1,NN
-             do j=i+1,NN
-                global_ref_scale=min(global_ref_scale,min(pt(pQCD(0,i)),pt(pQCD(0,j))) &
-                                                      *deltaR(pQCD(0,i),pQCD(0,j)))
-             enddo
-             global_ref_scale=min(global_ref_scale,pt(pQCD(0,i)))
-          enddo
-       endif
   end subroutine get_global_ref_scale
 
   double precision function get_random_shower_dipole_scale()

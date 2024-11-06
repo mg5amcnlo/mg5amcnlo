@@ -1031,10 +1031,10 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       integer iterm,iterm_last_izero,iterm_last_mohdr,i,j
      &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
       double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
-     &     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
-     &     ,rewgt_exp_izero,rewgt_exp_mohdr,pthardness
-     &     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
-     &     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
+     $     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
+     $     ,rewgt_exp_izero,rewgt_exp_mohdr,pthardness
+     $     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
+     $     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
      &     ,momenta_equal,already_set
       external setclscales,rewgt,momenta_equal
@@ -1099,13 +1099,6 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
             need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
-! TODO: check that the correct shower scale does not need any updating anymore
-c$$$c Update shower starting scale to be the scale down to which the MINLO
-c$$$c Sudakov factors are included.
-c$$$            shower_S_scale(nFKSprocess*2-1)=
-c$$$     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-c$$$            shower_S_scale(nFKSprocess*2)=
-c$$$     $           shower_S_scale(nFKSprocess*2-1)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -1156,20 +1149,6 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
-! TODO: check that the correct shower scale does not need any updating anymore
-c$$$c Update shower starting scale
-c$$$            pthardness=ref_H_scale(nFKSprocess*2)-
-c$$$     $           shower_H_scale(nFKSprocess*2)
-c$$$            shower_H_scale(nFKSprocess*2)=
-c$$$     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-c$$$            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
-c$$$     $           +pthardness
-c$$$            pthardness=ref_H_scale(nFKSprocess*2-1)-
-c$$$     $           shower_H_scale(nFKSprocess*2-1)
-c$$$            shower_H_scale(nFKSprocess*2-1)= 
-c$$$     $           shower_H_scale(nFKSprocess*2)
-c$$$            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
-c$$$     $           +pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm

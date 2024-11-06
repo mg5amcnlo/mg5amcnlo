@@ -1,6 +1,6 @@
 module process_module
   implicit none
-  integer :: next_n,next_n1,nexternal_mod,nincoming_mod,max_flows_n,max_flows_n1
+  integer :: next_n,next_n1,nexternal_mod,nincoming_mod,max_flows_n,max_flows_n1,ickkw_mod
   double precision,allocatable,dimension(:) :: mass_n,mass_n1
   integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
   logical,allocatable,dimension(:,:) :: valid_dipole_n1
@@ -15,10 +15,10 @@ module process_module
 
 contains
 
-  subroutine init_process_module_global(shower_mc_in, abrv_in,nexternal_in,nincoming_in, &
-       mcatnlo_delta_in,collider_energy_in,max_flows_n_in,max_flows_n1_in)
+  subroutine init_process_module_global(shower_mc_in,abrv_in,nexternal_in,nincoming_in, &
+       mcatnlo_delta_in,collider_energy_in,max_flows_n_in,max_flows_n1_in,ickkw_in)
     implicit none
-    integer :: nexternal_in,nincoming_in,max_flows_n_in,max_flows_n1_in
+    integer :: nexternal_in,nincoming_in,max_flows_n_in,max_flows_n1_in,ickkw_in
     character*10 :: shower_mc_in
     character*4 :: abrv_in
     logical :: mcatnlo_delta_in
@@ -33,6 +33,7 @@ contains
     collider_energy=collider_energy_in
     max_flows_n=max_flows_n_in
     max_flows_n1=max_flows_n1_in
+    ickkw_mod=ickkw_in
     ! n-body:
     if (.not.allocated(mass_n)) allocate(mass_n(1:nexternal_mod-1))
     if (.not.allocated(colour_n)) allocate(colour_n(1:nexternal_mod-1))

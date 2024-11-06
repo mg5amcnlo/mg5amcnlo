@@ -171,11 +171,12 @@ c-----
 
       ! initialise the global, but process dependent, information in the process module.
       call init_process_module_global(shower_mc,abrv,nexternal,nincoming
-     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow)
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow,ickkw)
       ! Also put all the n-body process dependent stuff here. It does
       ! not depend on PS point or FKS config, so all global information.
       call init_process_module_nbody_wrapper()
-      call init_scale_module(nexternal,shower_scale_factor)
+      call init_scale_module(nexternal,shower_scale_factor,fks_configs
+     $     ,1)
 
       
       write (*,*) 'Give FKS configuration number ("0" loops over all)'
