@@ -3777,37 +3777,280 @@ RESTART = %(mint_mode)s
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
+        def get_total_size(files):
+            total_size = 0
+            for file_path in files:
+                if os.path.exists(file_path):
+                    total_size += os.path.getsize(file_path)
+            return total_size
+        
+        def get_memory_info():
+            if sys.platform == 'darwin':
+                # On macOS, use vm_stat command to calculate available memory
+                vm_stat = os.popen("vm_stat").read()
+                vm_stats = dict(
+                    line.split(":") for line in vm_stat.splitlines() if ":" in line
+                )
+                
+                page_size = int(vm_stats.get("page size", "4096").strip().replace(".", "").split()[0])
+                free_pages = int(vm_stats.get("Pages free", "").strip().replace(".", ""))
+                inactive_pages = int(vm_stats.get("Pages inactive", "").strip().replace(".", ""))
+                
+                total_memory = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+                available_memory = (free_pages + inactive_pages) * page_size
+            else:
+                with open("/proc/meminfo", "r") as f:
+                    lines = f.readlines()
+                # Parse memory info
+                mem_info = {}
+                for line in lines:
+                    parts = line.split()
+                    if parts[0] == "MemTotal:":
+                        mem_info["total"] = int(parts[1])  # In KB
+                    elif parts[0] == "MemFree:":
+                        mem_info["free"] = int(parts[1])  # In KB
+                    elif parts[0] == "Buffers:":
+                        mem_info["buffers"] = int(parts[1])  # In KB
+                    elif parts[0] == "Cached:":
+                        mem_info["cached"] = int(parts[1])  # In KB
+                # Available memory is free + buffers/cache (and convert to Bytes)
+                available_memory = (mem_info["free"] + mem_info["buffers"] + mem_info["cached"]) * 1024
+                total_memory = mem_info["total"] * 1024
+            return total_memory, available_memory
+
+        def read_events_from_file(file_path):
+            """Extracts <event> blocks from an LHEF file."""
+            events = []
+            with open(file_path, 'r') as f:
+                inside_event = False
+                event_lines = []
+                for line in f:
+                    if "<event" in line:
+                        inside_event = True
+                        event_lines = [line]
+                    elif "</event" in line:
+                        event_lines.append(line)
+                        events.append("".join(event_lines))
+                        inside_event = False
+                    elif inside_event:
+                        event_lines.append(line)
+            return events
+        
+        def replace_weight_in_event(event, main_weight,iproc):
+            """Replaces the main weight and rescales weights within <rwgt> tags in a single <event> block."""
+            lines = event.splitlines()
+            
+            # Replace main weight on the first line after <event>
+            parts = lines[1].split()
+            parts[1] = iproc
+            event_weight=float(parts[2])
+            if main_weight:
+                scale_factor=main_weight/abs(event_weight)
+            else:
+                scale_factor=1
+            parts[2] = f"{event_weight*scale_factor:.6e}"  # Update main weight
+            lines[1] = " ".join(parts)
+                    
+            # Rescale weights inside <rwgt> tags, if present
+            in_rwgt_section = False
+            for i, line in enumerate(lines):
+                if "<rwgt>" in line:
+                    in_rwgt_section = True
+                elif "</rwgt>" in line:
+                    in_rwgt_section = False
+                elif in_rwgt_section and "<wgt" in line:
+                    # Extract and rescale the weight YYY inside each <wgt id='XX'> YYY </wgt>
+                    lines[i] = re.sub(r"(<wgt id='\d+'>)(\s*-?\d*(\.\d*)?[eE][-+]?\d+)(\s*</wgt>)",
+                                      lambda match: f"{match.group(1)} {float(match.group(2)) * scale_factor:.4e}{match.group(4)}",
+                                      line)
+            
+            return "\n".join(lines) + "\n"
+        
+        def get_header_footer(file_path):
+            """Extracts the header and footer (file start and end) from an LHEF file."""
+            header = []
+            footer = []
+            inside_events_section = False
+            with open(file_path, 'r') as f:
+                for line in f:
+                    if "<event" in line:
+                        inside_events_section = True
+                        break
+                    header.append(line)
+            footer = "</LesHouchesEvents>"
+            return header, footer
+        
+        def write_randomized_events(output_file, events, header, footer):
+            """Writes header, randomized events, and footer to the output file."""
+            with open(output_file, 'w') as f:
+                f.writelines(header)
+                f.writelines(events)
+                f.writelines(footer)
+
+        def add_banner_to_header(header,tot_xsec,tot_xerrABS,main_weight,iprocs):
+            """Add the full banner to the header information"""
+            with open(pjoin(self.me_dir, 'Events', self.run_name, 
+                                    '%s_%s_banner.txt' % (self.run_name, self.run_tag)),'r') as f:
+                header_new=f.readlines()
+                header_new.pop() # remove </LesHouchesEvents>
+                header_new.pop() # remove </header>
+                # update the seed:
+                for i,line in enumerate(header_new):
+                    if '=' in line and 'iseed' in line:
+                        header_new[i]='    '+str(self.get_randinit_seed())+' = iseed \n'
+            header_new.extend(header[2:-9])
+            # append the montecarlomasses
+            header_new.append('  <MonteCarloMasses>\n')
+            shower=self.banner.get_detail('run_card', 'parton_shower').upper()
+            if shower=='HERWIG6':
+                filename='MCmasses_HERWIG6.inc'
+            elif  shower=='HERWIGPP':
+                filename='MCmasses_HERWIGPP.inc'
+            elif  shower=='PYTHIA6Q':
+                filename='MCmasses_PYTHIA6Q.inc'
+            elif  shower=='PYTHIA6PT':
+                filename='MCmasses_PYTIHA6PT.inc'
+            elif  shower=='PYTHIA8':
+                filename='MCmasses_PYTHIA8.inc'
+            pattern=re.compile(r"mcmass\((\d+)\)=(\d*\.\d*([eEdD][-+]?\d+))")
+            with open(pjoin(self.me_dir,'SubProcesses',filename),'r') as f:
+                for line in f:
+                    match=pattern.search(line)
+                    header_new.append('      '+match.group(1)+'  '+match.group(2).replace("d","e")+'\n')
+                
+            
+            header_new.append('  </MonteCarloMasses>\n')
+            # append the init block
+            header_new.append("  <init>\n")
+            parts=header[-3].split()
+            parts[9]=str(len(tot_xsec))
+            header_new.append("    "+" ".join(parts)+"\n")
+            for i in iprocs:
+                header_new.append("    "+f"{tot_xsec[i]:.8e}"+'  '+f"{math.sqrt(tot_xerrABS[i]):.8e}"+'  '+f"{main_weight:.8e}"+'  '+str(i)+'\n')
+            header_new.append("  </init>\n")
+            return header_new
+
+                
         scale_pdf_info=[]
         if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
            len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1\
            or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
-        misc.compile(['collect_events'], 
-                    cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
-        p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
-                stdin=subprocess.PIPE, 
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        if event_norm.lower() == 'sum':
-            out, err = p.communicate(input = '1\n'.encode())
-        elif event_norm.lower() == 'unity':
-            out, err = p.communicate(input = '3\n'.encode())
-        elif event_norm.lower() == 'bias':
-            out, err = p.communicate(input = '0\n'.encode())
+
+        with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'r') as f:
+            lhe_files=[]
+            factors=[]
+            for line in f:
+                lhe_files.append(pjoin(self.me_dir,'SubProcesses',line.split()[0]))
+                factors.append(float(line.split()[3]))
+        # Check if we can read all the events into memory in one go. If so,
+        # use simple python routines (found just above) to collect the
+        # events. If not, use the old-school fortran collect_events.f code to
+        # collect all the events.
+        
+        total_mem, available_mem = get_memory_info()
+        total_file_size = get_total_size(lhe_files)
+        
+        if False:
+#        if total_file_size < 0.8*available_mem :
+            res_1_files=[pjoin(os.path.dirname(evt_file),'res_1') for evt_file in lhe_files]
+            pattern=re.compile(r"SubProcesses/P(\d+)_")
+            float_pattern = re.compile(r"Final result \[ABS\]:\s*[-+]?\d*\.\d*([eE][-+]?\d+)?.*?[-+]?\d*\.\d*([eE][-+]?\d+)?[\s\S]*?Final result:\s*[-+]?\d*\.\d*([eE][-+]?\d+)?.*?[-+]?\d*\.\d*([eE][-+]?\d+)?.*?")
+
+            tot_xsecABS={}
+            tot_xerrABS={}
+            tot_xsec={}
+            tot_xerr={}
+
+            iprocs=[]
+            for i,file_path in enumerate(res_1_files):
+                match=pattern.search(file_path)
+                iproc=match.group(1)
+                iprocs.append(iproc)
+                with open(file_path,'r') as f:
+                    file_content = f.read()
+                    floats=re.findall(r"[-+]?\d*\.\d*(?:[eE][-+]?\d+)?|[-+]?\d+(?:[eE][-+]?\d+)?", file_content)
+                    xsecABS=float(floats[0])*factors[i]
+                    xerrABS=(float(floats[1]))**2*factors[i]
+                    xsec=float(floats[2])*factors[i]
+                    xerr=(float(floats[3]))**2*factors[i]
+                    if iproc in tot_xsecABS:
+                        tot_xsecABS[iproc]+=xsecABS
+                        tot_xerrABS[iproc]+=xerrABS
+                        tot_xsec[iproc]+=xsec
+                        tot_xerr[iproc]+=xerr
+                    else:
+                        tot_xsecABS[iproc]=xsecABS
+                        tot_xerrABS[iproc]=xerrABS
+                        tot_xsec[iproc]=xsec
+                        tot_xerr[iproc]=xerr
+
+            if (len(iprocs)==1 and iprocs[0]=='0'): iprocs[0]='66'
+
+            if event_norm.lower() == 'bias':
+                main_weight=None
+            elif event_norm.lower() == 'unity':
+                main_weight=1.0
+            elif event_norm.lower() == 'sum':
+                main_weight=sum(tot_xsecABS.values())/nevents
+            else:
+                main_weight=sum(tot_xsecABS.values())
+
+            # Read events from each file and add them to a single list
+            all_events = []
+            for i,lhe_file in enumerate(lhe_files):
+                events = read_events_from_file(lhe_file)
+                # Replace the main weight and rescale <rwgt> weights for each event before adding to the list
+                updated_events = [replace_weight_in_event(event, main_weight,iprocs[i]) for event in events]
+                all_events.extend(updated_events)
+                
+
+            # Shuffle the list of events for randomization
+            r=self.get_randinit_seed()
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(r)  
+                random.mg_seedset = r
+            random.shuffle(all_events)
+
+            # Get header and footer from one of the original files (using the first file)
+            header, footer = get_header_footer(lhe_files[0])
+
+            # Add the full banner
+            if not main_weight : main_weight=1.0
+            header = add_banner_to_header(header,tot_xsec,tot_xerrABS,main_weight,set(iprocs))
+            
+            # Write to output file
+            filename = pjoin(self.me_dir,"SubProcesses","combined_randomized.lhe")
+            write_randomized_events(filename, all_events, header, footer)
+            evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+            misc.gzip(filename, stdout=evt_file)
         else:
-            out, err = p.communicate(input = '2\n'.encode())
-        
-        out = out.decode(errors='ignore')
-        data = str(out)
-        #get filename from collect events
-        filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
-        
-        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
-            raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created: \n %s' % data)
-        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
-        misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
+            misc.compile(['collect_events'], 
+                        cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
+            p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
+                    stdin=subprocess.PIPE, 
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+            if event_norm.lower() == 'sum':
+                out, err = p.communicate(input = '1\n'.encode())
+            elif event_norm.lower() == 'unity':
+                out, err = p.communicate(input = '3\n'.encode())
+            elif event_norm.lower() == 'bias':
+                out, err = p.communicate(input = '0\n'.encode())
+            else:
+                out, err = p.communicate(input = '2\n'.encode())
+            
+            out = out.decode(errors='ignore')
+            data = str(out)
+            #get filename from collect events
+            filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
+            
+            if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
+                raise aMCatNLOError('An error occurred during event generation. ' + \
+                                    'The event file has not been created: \n %s' % data)
+            evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+            misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
             res_files = misc.glob('res*.txt', pjoin(self.me_dir, 'SubProcesses'))
@@ -4503,7 +4746,7 @@ RESTART = %(mint_mode)s
                 found = True
             elif found and not line.startswith('#'):
                 init += line
-            if "</init>" in line or "<event>" in line:
+            if "</init>" in line or "<event" in line:
                 break
         ev_file.close()
 
