@@ -1831,6 +1831,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.results.add_detail('run_mode', mode)
         self.update_status('Starting run', level=None, update_results=True)
 
+        self.banner.add(pjoin(self.me_dir,'Cards', 'param_card.dat'))
+        self.banner.add(pjoin(self.me_dir,'Cards', 'run_card.dat'))
+        self.banner.add(pjoin(self.me_dir,'Cards', 'proc_card_mg5.dat'))
+
         if '+' in mode:
             mode = mode.split('+')[0]
         self.compile(mode, options) 
@@ -1906,7 +1910,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
-
+        
         if not 'only_generation' in list(options.keys()):
             options['only_generation'] = False
 
@@ -3898,6 +3902,8 @@ RESTART = %(mint_mode)s
                 for i,line in enumerate(header_new):
                     if '=' in line and 'iseed' in line:
                         header_new[i]='    '+str(self.get_randinit_seed())+' = iseed \n'
+                while '<![CDATA[\n' in header_new : header_new.remove('<![CDATA[\n')
+                while ']]>\n' in header_new : header_new.remove(']]>\n')
             header_new.extend(header[2:-9])
             # append the montecarlomasses
             header_new.append('  <MonteCarloMasses>\n')
@@ -3952,8 +3958,7 @@ RESTART = %(mint_mode)s
         total_mem, available_mem = get_memory_info()
         total_file_size = get_total_size(lhe_files)
         
-        if False:
-#        if total_file_size < 0.8*available_mem :
+        if total_file_size < 0.8*available_mem :
             res_1_files=[pjoin(os.path.dirname(evt_file),'res_1') for evt_file in lhe_files]
             pattern=re.compile(r"SubProcesses/P(\d+)_")
             float_pattern = re.compile(r"Final result \[ABS\]:\s*[-+]?\d*\.\d*([eE][-+]?\d+)?.*?[-+]?\d*\.\d*([eE][-+]?\d+)?[\s\S]*?Final result:\s*[-+]?\d*\.\d*([eE][-+]?\d+)?.*?[-+]?\d*\.\d*([eE][-+]?\d+)?.*?")
