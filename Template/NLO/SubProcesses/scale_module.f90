@@ -104,12 +104,6 @@ contains
     integer i,j,ii,i_fks,j_fks
     double precision ref_scale,scalemin,scalemax
     call get_global_ref_scale(next_n1,p)
-    if (ickkw_mod.eq.3) then
-       ! For FxFx, the scale should be the smallest clustering scale as
-       ! returned by the clustering routine. This is the global_ref_scale
-       shower_scale_n1body=shower_scale_factor*global_ref_scale
-       return
-    endif
     do i=1,next_n1
        do j=1,next_n1
           if (valid_dipole_n1(i,j)) then
@@ -254,7 +248,6 @@ contains
             ,dummy2,nFxFx_ren_scales,FxFx_ren_scales(0) &
             ,fxfx_fac_scale(1),need_matching,for_mcatnlo_scale)
     global_ref_scale=minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-    return
   end subroutine get_global_ref_scale
 
   double precision function get_random_shower_dipole_scale()
