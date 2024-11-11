@@ -687,7 +687,7 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,born_flow_picked,partner_picked
+     $     ,iFKS,sum,partner_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -732,10 +732,6 @@ c
          pass_cuts_check=.false.
       endif
       sigintF=0d0
-      ! Set the born_flow_picked to 0, so that we can skip S-event
-      ! contributions and also that when we enter
-      ! init_process_module_n1body, we will pick a colour flow at random
-      ! instead of the one corresponding to the born_flow_picked.
       born_flow_picked=0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then

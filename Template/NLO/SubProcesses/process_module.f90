@@ -2,7 +2,7 @@ module process_module
   implicit none
   integer :: next_n,next_n1,nexternal_mod,nincoming_mod,max_flows_n,max_flows_n1,ickkw_mod
   double precision,allocatable,dimension(:) :: mass_n,mass_n1
-  integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB
+  integer,allocatable,dimension(:) :: colour_n,colour_n1,iRtoB,iBtoR
   logical,allocatable,dimension(:,:) :: valid_dipole_n1
   logical,allocatable,dimension(:,:,:) :: valid_dipole_n
   double precision :: collider_energy
@@ -43,6 +43,7 @@ contains
     if (.not.allocated(colour_n1)) allocate(colour_n1(1:nexternal_mod))
     if (.not.allocated(valid_dipole_n1)) allocate(valid_dipole_n1(1:nexternal_mod,1:nexternal_mod))
     if (.not.allocated(iRtoB)) allocate(iRtoB(1:nexternal_mod))
+    if (.not.allocated(iBtoR)) allocate(iBtoR(1:nexternal_mod-1))
   end subroutine init_process_module_global
   
   subroutine init_process_module_nbody(nexternal_in, mass_in, colour_in, &
@@ -92,10 +93,13 @@ contains
     do i=1,next_n1
        if(i.lt.i_fks)then
           iRtoB(i)=i
+          iBtoR(i)=i
        elseif(i.eq.i_fks)then
           iRtoB(i)=-1
+          if(i.lt.next_n1)iBtoR(i)=i+1
        elseif(i.gt.i_fks)then
           iRtoB(i)=i-1
+          if(i.lt.next_n1)iBtoR(i)=i+1
        endif
     enddo
   end subroutine RealToBornMapping

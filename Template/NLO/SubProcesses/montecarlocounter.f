@@ -720,7 +720,7 @@ c -- call to MC counterterm functions
       call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
-         if(any(lzone(1:ipartners(0)))) call complete_xmcsubt(p,lzone
+         if(any(lzone(1:ipartners(0)))) call compute_delta(p,lzone
      $        ,xmcxsec,xmcxsec2,MCsec,probne)
       else
 c$$$         if(any(lzone(1:ipartners(0)))) 
@@ -1428,8 +1428,9 @@ c
 
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
-      subroutine complete_xmcsubt(p,lzone,xmcxsec,xmcxsec2,MCsec
+      subroutine compute_delta(p,lzone,xmcxsec,xmcxsec2,MCsec
      $     ,probne)
+      use process_module
       use scale_module
       implicit none
       include "born_nhel.inc"
@@ -1469,12 +1470,6 @@ c     iHscale=1 for scale=dipole_mass
       double precision dipole_mass,fksscales(3)
       external dipole_mass
 
-c Maps real labels onto Born labels, by excluding i_fks
-c  1<=iRtoB(k)<=nexternal-1,  1<=k<=nexternal
-      integer iRtoB(nexternal)
-c Maps Born labels onto real labels, by excluding i_fks
-c  1<=iBtoR(k)<=nexternal,  1<=k<=nexternal-1
-      integer iBtoR(nexternal-1)
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -1503,7 +1498,6 @@ c For the boost to the lab frame
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       integer idup_s(nexternal-1)
-      integer mothup_s(2,nexternal-1)
       integer icolup_s(2,nexternal-1)
       integer idup_h(nexternal)
       integer mothup_h(2,nexternal)
@@ -1528,11 +1522,8 @@ C To allow retrieval of S-event from Pythia
 
       logical         Hevents
       common/SHevents/Hevents
-      integer nexternal_now
 c SCALUP_tmp_S = m_ij scales that determine S-event scales written onto LHE
-      double precision SCALUP_tmp_S(nexternal,nexternal)
-c SCALUP_tmp_S2 = m_ij starting scales for Delta
-      double precision SCALUP_tmp_S2(nexternal,nexternal)
+      double precision SCALUP_tmp_S(nexternal-1,nexternal-1)
 c SCALUP_tmp_H = t_ij scales that determine H-event scales written onto LHE
       double precision SCALUP_tmp_H(nexternal,nexternal)
 c SCALUP_tmp_H2 = t_ij target scales for Delta
@@ -1630,92 +1621,63 @@ c
       enddo
       pythia_cmd_file=''
       
-c Given xmcxec,etc., returns jflow, wgt and fills emsca in common block:
-      call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,MCsec
-     $     ,lzone,jflow,wgt)
+c$$$c Given xmcxec,etc., returns jflow, wgt and fills emsca in common block:
+c$$$      call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,MCsec
+c$$$  $     ,lzone,jflow,wgt)
+      if (born_flow_picked.le.0) then
+         write (*,*) 'born_flow_picked <= 0 in compute_delta'
+     $        ,born_flow_picked
+         stop 1
+      endif
+      
       
 c S-event information:
 c id's and mothers read from born_leshouche.inc;
-c colour configuration read from born_leshouche.inc and jflow 
+c colour configuration read from born_leshouche.inc and born_flow_picked 
       do i=1,nexternal-1
         IDUP_S(i)=IDUP(i,1)
-        MOTHUP_S(1,i)=MOTHUP(1,i,1)
-        MOTHUP_S(2,i)=MOTHUP(2,i,1)
-        ICOLUP_S(1,i)=ICOLUP(1,i,jflow)
-        ICOLUP_S(2,i)=ICOLUP(2,i,jflow)
+        ICOLUP_S(1,i)=ICOLUP(1,i,born_flow_picked)
+        ICOLUP_S(2,i)=ICOLUP(2,i,born_flow_picked)
       enddo
-      are_col_conn_S=.false.
-      do i=1,nexternal-1
-         do j=1,nexternal-1
-            if(i.ne.j)
-     &        are_col_conn_S(i,j)=
-     &      (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(1,j)).or.
-     &      (ICOLUP_S(1,i).ne.0.and.ICOLUP_S(1,i).eq.ICOLUP_S(2,j)).or.
-     &      (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(1,j)).or.
-     &      (ICOLUP_S(2,i).ne.0.and.ICOLUP_S(2,i).eq.ICOLUP_S(2,j))
-         enddo
-      enddo
-c SCALUP_tmp_S* are the m_ij scales, ie the starting scales (as determined
+
+c  SCALUP_tmp_S* are the m_ij scales, ie the starting scales (as determined
 c by the D(mu) function) for extra radiation; they are copies of the
 c emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
-c entries associated with a colour line that belongs to jflow have
+c entries associated with a colour line that belongs to born_flow_picked have
 c meaningful values; the others are set equal to -1.
-c SCALUP_tmp_S and SCALUP_tmp_S2 are chosen in exactly the same way, except
-c for the random numbers that enter their definitions. The former will
-c help determine the S-event shower scales written onto the LHE file, 
-c the latter is employed in the computation of Delta
-      SCALUP_tmp_S=-1d0
-c$$$      SCALUP_tmp_S2=-1d0
-      do i=1,nexternal-2
-         do j=i+1,nexternal-1
-            if(are_col_conn_S(i,j))then
-c$$$               SCALUP_tmp_S(i,j)=emscav_tmp_a(i,j)
-c$$$               SCALUP_tmp_S(j,i)=emscav_tmp_a(j,i)
-c$$$               SCALUP_tmp_S2(i,j)=emscav_tmp_a2(i,j)
-c$$$               SCALUP_tmp_S2(j,i)=emscav_tmp_a2(j,i)
-               SCALUP_tmp_S(i,j)=shower_scale_nbody(i,j)
-               SCALUP_tmp_S(j,i)=shower_scale_nbody(j,i)
-c$$$               SCALUP_tmp_S2(i,j)=shower_scale_nbody(i,j)
-c$$$               SCALUP_tmp_S2(j,i)=shower_scale_nbody(j,i)
-            endif
-         enddo
-      enddo
-c
-c force IF colour connection to have II scale
-c if a sensible II scale exists
+      SCALUP_tmp_S(1:nexternal-1,1:nexternal-1)=
+     &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
+
       if(force_II_connection)then
+c force IF colour connection to have II scale if a sensible II scale
+c exists. If no  available II colour connection, we keep the IF scale
+c rather than calculating some new kinematic variable e.g. pT
          do i=1,2
             do j=3,nexternal-1
-               if(are_col_conn_S(i,j))then
-                  if(are_col_conn_S(i,3-i))then
-                     SCALUP_tmp_S(i,j) =SCALUP_tmp_S(i,3-i)
-c$$$                     SCALUP_tmp_S2(i,j)=SCALUP_tmp_S2(i,3-i)
-                  else
-                     continue
-c if no other available colour connection, we keep the IF scale
-c rather than calculating some new kinematic variable e.g. pT
-                  endif
-               endif
+               if(.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+               if(valid_dipole_n(i,3-i,born_flow_picked)) 
+     &              SCALUP_tmp_S(i,j) =SCALUP_tmp_S(i,3-i)
             enddo
          enddo
       endif
 c
 c H-event information.
 c First write ids, mothers and all colours.
+! TODO: check the following comment
 cSF NOTE: reconsider how much H-event information is actually needed
 cSF by Pythia. For example, the colour flow is used only to reconstruct
 cSF the underlying S-event flow, which is already available here, and
 cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
-        firsttime1=.false.
-        call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
+         firsttime1=.false.
+         call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
 c Fake call for initialisation
-        deltanum(1,1)=pysudakov(1.d2,2.d2,1,1,mcmass)
-        if(cstlow.gt.smallptupp)then
-          write(*,*)'Error in xmcsubt: cstlow,smallptupp',
-     &               cstlow,smallptupp
-          stop
-        endif
+         deltanum(1,1)=pysudakov(1.d2,2.d2,1,1,mcmass)
+         if(cstlow.gt.smallptupp)then
+            write(*,*)'Error in xmcsubt: cstlow,smallptupp',
+     &           cstlow,smallptupp
+            stop
+         endif
       endif
       do i=1,nexternal
          IDUP_H(i)=IDUP_D(nFKSprocess,i,1)
@@ -1723,36 +1685,23 @@ c Fake call for initialisation
          MOTHUP_H(2,i)=MOTHUP_D(nFKSprocess,2,i,1)
       enddo
 c Fill selected color configuration into jpart array. 
-      call fill_icolor_H(jflow,jpart)
+      call fill_icolor_H(born_flow_picked,jpart)
       do i=1,nexternal
         ICOLUP_H(1,i)=jpart(4,i)
         ICOLUP_H(2,i)=jpart(5,i)
       enddo
-      are_col_conn_H=.false.
-      do i=1,nexternal
-         do j=1,nexternal
-            if(i.ne.j)
-     &        are_col_conn_H(i,j)=
-     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(1,j)).or.
-     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(2,j)).or.
-     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(1,j)).or.
-     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(2,j))
-         enddo
-      enddo
-      do i=1,nexternal
-        if(i.lt.i_fks)then
-          iRtoB(i)=i
-          iBtoR(i)=i
-        elseif(i.eq.i_fks)then
-          iRtoB(i)=-1
-          if(i.lt.nexternal)iBtoR(i)=i+1
-        elseif(i.gt.i_fks)then
-          iRtoB(i)=i-1
-          if(i.lt.nexternal)iBtoR(i)=i+1
-        endif
-      enddo
+c$$$      are_col_conn_H=.false.
+c$$$      do i=1,nexternal
+c$$$         do j=1,nexternal
+c$$$            if(i.ne.j)
+c$$$     &        are_col_conn_H(i,j)=
+c$$$     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(1,j)).or.
+c$$$     &      (ICOLUP_H(1,i).ne.0.and.ICOLUP_H(1,i).eq.ICOLUP_H(2,j)).or.
+c$$$     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(1,j)).or.
+c$$$     &      (ICOLUP_H(2,i).ne.0.and.ICOLUP_H(2,i).eq.ICOLUP_H(2,j))
+c$$$         enddo
+c$$$      enddo
 c
-      nexternal_now=nexternal
       call clear_HEPEUP_event()
       
 c Boost H-event momenta to lab frame before passing to pythia
@@ -1763,24 +1712,20 @@ c Boost H-event momenta to lab frame before passing to pythia
          call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
       enddo
 
-c Call fill_HEPEUP_event with S scale information.
-c If it is an H event, this information should not be
-c used by Pythia, hence a dummy -1d0 value is passed
-      if(Hevents)then
-         scales_for_HEPEUP = -1d0
-      else
-         scales_for_HEPEUP = SCALUP_tmp_S
-      endif
+c Pythia doesn't use any input scales to determine the starting scales.
+      scales_for_HEPEUP = -1d0
 c
-      call fill_HEPEUP_event(p_lab, wgt, nexternal_now, idup_h,
+! TODO: check that the wgt is not used.      
+      wgt=1d0
+      call fill_HEPEUP_event(p_lab, wgt, nexternal, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
      &       emsca, scales_for_HEPEUP)
       xscales=-1d0
       xmasses=-1d0
       dzones=.true.
-      xscales2=-1d0
-      xmasses2=-1d0
-      dzones2=.true.
+c$$$      xscales2=-1d0
+c$$$      xmasses2=-1d0
+c$$$      dzones2=.true.
       if (is_pythia_active.eq.0) then
 c Fill masses
          do i=7,20
@@ -1810,6 +1755,10 @@ c
       call pythia_get_dead_zones(dzones)
       call pythia_clear()
 
+      
+      ! WE ARE HERE
+
+      
 c     Check if the S-event state (as created from the H-event by Pythia)
 c     is consistent with the MG_aMC S-event state.
       if (NUP_in .ne. nexternal-1) then
@@ -1984,7 +1933,7 @@ c Store the corresponding Sudakov type in isudtype(*)
             if(xscales2(i,j).eq.-1d0)cycle
             if(dzones2(i,j))then
                i_dipole_dead_counter=i_dipole_dead_counter+1
-               if (isspecial(jflow) .and. idup_s(i).eq.21) then
+               if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
 c double colour connection, count twice
                   i_dipole_dead_counter=i_dipole_dead_counter+1
                endif
@@ -1993,10 +1942,10 @@ c double colour connection, count twice
             icount=icount+1
             if( (abs(idup_s(i)).le.6.and.icount.gt.1) .or.
      #          (idup_s(i).eq.21 .and.
-     #            (icount.gt.2.and.(.not.isspecial(jflow))) .or.
-     #            (icount.gt.1.and.isspecial(jflow)) ) )then
+     #            (icount.gt.2.and.(.not.isspecial(born_flow_picked))) .or.
+     #            (icount.gt.1.and.isspecial(born_flow_picked)) ) )then
               write(*,*)'Error #6 in complete_xmcsubt'
-              write(*,*)i,idup_s(i),icount,isspecial(jflow)
+              write(*,*)i,idup_s(i),icount,isspecial(born_flow_picked)
               stop
             endif
 c The following definition of startingScale is unprotected:
@@ -2033,7 +1982,7 @@ c For Pythia: IF is identical to II
             else
                i_dipole_counter=i_dipole_counter+1
             endif
-            if (isspecial(jflow) .and. idup_s(i).eq.21) then
+            if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
 c double colour connection, count twice
                if (idup_s(j).ne.21) then
                   write (*,*) 'SPECIAL and a gluon is not connected '/
@@ -2109,7 +2058,7 @@ c a double colour connection (eg in gg->H). The condition that the starting
 c scale is larger than the stopping scale has not been enforced
 c so far, so do it here
            if(stoppingScale(1).lt.startingScale(1))then
-             if (isspecial(jflow).and.idup_s(i).eq.21) then
+             if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
                deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
                deltaden(1)=deltaden(1)**2*pdffden(1)
              else

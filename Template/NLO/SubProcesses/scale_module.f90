@@ -9,6 +9,7 @@ module scale_module
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
   double precision,private,parameter :: scaleMClow=0d0,scaleMCdelta=3d0
   double precision,private,parameter :: scaleMCcut=3d0
+  integer,public :: born_flow_picked
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        get_born_flow,determine_partner
