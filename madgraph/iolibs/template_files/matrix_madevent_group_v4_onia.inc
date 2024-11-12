@@ -74,11 +74,11 @@ C MADONIA VARIABLES
 C
       INCLUDE 'onia.inc'
 
-      LOGICAL IS_PROJ_COMPUTED(NONIA,-1:1)
-      COMMON/%(proc_prefix)sIS_PROJ_COMPUTED/IS_PROJ_COMPUTED
+      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1)
+      COMMON/IS_PROJ_COMPUTED_%(proc_id)s/IS_PROJ_COMPUTED%(proc_id)s
 
-      LOGICAL IS_AMP_COMPUTED(4**NONIA,3**(NEXTERNAL-NONIA))
-      COMMON/%(proc_prefix)sIS_AMP_COMPUTED/IS_AMP_COMPUTED
+      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA))
+      COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
         
 c
 C This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
@@ -124,8 +124,8 @@ C ----------
 C BEGIN CODE
 C ----------
 
-      IS_PROJ_COMPUTED=.FALSE.
-      IS_AMP_COMPUTED=.FALSE.
+      IS_PROJ_COMPUTED%(proc_id)s=.FALSE.
+      IS_AMP_COMPUTED%(proc_id)s=.FALSE.
 
       NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
       DO I=1,NEXTERNAL
@@ -329,15 +329,15 @@ C
       DATA HELQ1/-1, 1/
       DATA HELQ2/-1, 1/
 
-      LOGICAL IS_PROJ_COMPUTED(NONIA,-1:1)
-      COMPLEX*16 PROJ_SAVED(NONIA,-1:1,-1:1,-1:1)
-      COMMON/IS_PROJ_COMPUTED%(proc_id)s/IS_PROJ_COMPUTED
-      COMMON/PROJ_SAVED%(proc_id)s/PROJ_SAVED
+      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1)
+      COMPLEX*16 PROJ_SAVED%(proc_id)s(NONIA,-1:1,-1:1,-1:1)
+      COMMON/IS_PROJ_COMPUTED_%(proc_id)s/IS_PROJ_COMPUTED%(proc_id)s
+      COMMON/PROJ_SAVED_%(proc_id)s/PROJ_SAVED%(proc_id)s
 
-      LOGICAL IS_AMP_COMPUTED(4**NONIA,3**(NEXTERNAL-NONIA))
-      COMPLEX*16 AMP_SAVED(NGRAPHS,4**NONIA,3**(NEXTERNAL-NONIA))
-      COMMON/IS_AMP_COMPUTED%(proc_id)s/IS_AMP_COMPUTED
-      COMMON/AMP_SAVED%(proc_id)s/AMP_SAVED
+      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA))
+      COMPLEX*16 AMP_SAVED%(proc_id)s(NGRAPHS,4**NONIA,3**(NEXTERNAL-NONIA))
+      COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
+      COMMON/AMP_SAVED_%(proc_id)s/AMP_SAVED%(proc_id)s
 C  
 C GLOBAL VARIABLES
 C
@@ -397,16 +397,16 @@ C ----------
         Q1 = FINDLOC(PAIRS, I, DIM=1)
         Q2 = FINDLOC(PAIRS,-I, DIM=1)
 C       Computing the projectors
-        IF (.NOT.IS_PROJ_COMPUTED(I,NHEL(QQ))) THEN
+        IF (.NOT.IS_PROJ_COMPUTED%(proc_id)s(I,NHEL(QQ))) THEN
           DO J = 1, SIZE(HELQ1)
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
               NHEL_ONIA(Q2) = HELQ2(K) 
               CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
-              PROJ_SAVED(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
+              PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
           ENDDO
-          IS_PROJ_COMPUTED(I,NHEL(QQ)) = .TRUE.
+          IS_PROJ_COMPUTED%(proc_id)s(I,NHEL(QQ)) = .TRUE.
         ENDIF
 C       Computing normalisation factor from color projector
         IF (C_ONIA(I).EQ.1) THEN
@@ -438,22 +438,22 @@ C     Computing the amplitudes
           Q2 = FINDLOC(PAIRS,-I, DIM=1)
           NHEL_ONIA(Q1) = HELQ1(IBITS(J-1,2*I-2,1)+1)
           NHEL_ONIA(Q2) = HELQ2(IBITS(J-1,2*I-1,1)+1)
-          PROJ(J) = PROJ(J) * PROJ_SAVED(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2))
+          PROJ(J) = PROJ(J) * PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2))
         ENDDO
         IF (PROJ(J).NE.(0D0,0D0)) THEN
-          IF (.NOT.IS_AMP_COMPUTED(J,K)) THEN
+          IF (.NOT.IS_AMP_COMPUTED%(proc_id)s(J,K)) THEN
             %(helas_calls)s
 
 C           Store amplitudes for reuse
-            AMP_SAVED(:,J,K) = AMP
-            IS_AMP_COMPUTED(J,K) = .TRUE.
+            AMP_SAVED%(proc_id)s(:,J,K) = AMP
+            IS_AMP_COMPUTED%(proc_id)s(J,K) = .TRUE.
           ENDIF
         ENDIF  
       ENDDO
 
       AMP = (0D0,0D0)
       DO I = 1, 4**NONIA
-        AMP = AMP + AMP_SAVED(:,I,K)*PROJ(I)
+        AMP = AMP + AMP_SAVED%(proc_id)s(:,I,K)*PROJ(I)
       ENDDO    
 
       JAMP = (0D0,0D0)
