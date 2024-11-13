@@ -771,6 +771,9 @@ c For boosts
      #                        sqrtshat,shat
       double precision chybst,shybst,chybstmo
       double precision xd(1:3)
+      
+      double precision one,two,ybst_new    !<<<<<<Variables for the shift to the LAB frame A.Safronov
+      
       data (xd(i),i=1,3)/0,0,1/
 c Momenta of the particles
       double precision plab(0:3, nexternal),pp(0:4, nexternal)
@@ -798,7 +801,6 @@ c Also make sure there's no INF or NAN
             endif
          enddo
       enddo
-
       rwgt=1d0
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
       chybst=cosh(ybst_til_tolab)
@@ -808,6 +810,20 @@ c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
          call boostwdir2(chybst,shybst,chybstmo,xd,
      &        p(0,i),plab(0,i))
       enddo
+!#########################Safronov.A
+c boost the momenta to the lab frame from Hadronic CM frame :
+      if (frame_change.eqv..True.) then
+        one=ebeam(2)+sqrt(max((ebeam(2)*ebeam(2))-(0.938*0.938),0d0))
+        two=ebeam(1)+sqrt(max((ebeam(1)*ebeam(1))-(0.938*0.938),0d0))
+        ybst_new = 0.5*log(one/two) ! boost function        
+        chybst=cosh(ybst_new)
+        shybst=sinh(ybst_new)
+        chybstmo=chybst-1.d0
+        do i=1,nexternal
+        call boostwdir2(chybst,shybst,chybstmo,xd,plab(0,i),plab(0,i))
+        enddo
+      endif
+!#########################Safronov.A
 c Fill the arrays (momenta, status and PDG):
       do i=1,nexternal
          if (i.le.nincoming) then

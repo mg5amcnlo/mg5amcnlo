@@ -66,24 +66,29 @@
  %(ebeam1)s   = ebeam1  ! beam 1 energy in GeV
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
-# Choice of the collision system in terms of PDFs:
-#    True/False = asymmetric / symmetric
+# Choice of the collision system in terms of the PDFs:
+#    True / False = asymm_choice,
+#       where:
+#    False = symmetric
+#    True  = asymmetric
+#      
 #
-# In "symmetric" case you're going to use the default MG5aMC_NLO calculation.
+# In the "symmetric" case the default MG5aMC_NLO calculation will be used.
 #
-# In "asymmetric" case, the first PDF in the list will be taken as a baseline. 
-# And for all the PDFs after, you're going to get cross-products of PDF1_X_PDF2.
-# As the final output, Nuclear Modification Factors are also going to be computed.
+# In the "asymmetric" case, the first PDF in the list of LHAIDs will be taken
+# as a baseline (hadron h1). The remaining PDFs (starting from the second
+# LHAID in the list) will be used as a PDF of hadron h2.
+# Cross-products of PDF1 x PDF2 (with different PDF2) will be computed.
+# The output will also include corresponding Nuclear Modification Factors.
+# For details see: arXiv:XXXX
 #  
-# Works only with: 
+# Works only with:
 #
-#		lhapdf = pdlabel
+#    lhapdf = pdlabel
 #
-#***********************************************************************
+#**********************************************************************
  %(asymm_choice)s = asymm_choice ! choice of the regime 
 #***********************************************************************
- %(frame_change)s = frame_change ! choice of the frame. 
-                                 ! False = hardron_cm, True = lab_frame 
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
