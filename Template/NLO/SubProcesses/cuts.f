@@ -812,7 +812,7 @@ c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
       enddo
 !#########################Safronov.A
 c boost the momenta to the lab frame from Hadronic CM frame :
-      if (frame_change.eqv..True.) then
+      if (cms_frame.eqv..False.) then
         one=ebeam(2)+sqrt(max((ebeam(2)*ebeam(2))-(0.938*0.938),0d0))
         two=ebeam(1)+sqrt(max((ebeam(1)*ebeam(1))-(0.938*0.938),0d0))
         ybst_new = 0.5*log(one/two) ! boost function        

@@ -501,7 +501,7 @@ c Boost the momenta to the lab frame:
       enddo
 !#########################Safronov.A
 c boost the momenta to the lab frame from Hadronic CM frame :
-      if (frame_change.eqv..True.) then
+      if (cms_frame.eqv..False.) then
         !ybst_til_tolab = 0.5*log((ebeam(2))/(ebeam(1))) ! boost function
         one=ebeam(2)+sqrt(max((ebeam(2)*ebeam(2))-(0.938*0.938),0d0))
         two=ebeam(1)+sqrt(max((ebeam(1)*ebeam(1))-(0.938*0.938),0d0))

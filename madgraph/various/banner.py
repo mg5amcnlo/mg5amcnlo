@@ -5297,7 +5297,7 @@ class RunCardNLO(RunCard):
         
 ##############Anton
         self.add_param('asymm_choice', False, fortran_name='asymm_choice',comment='Can be True/False. Works only with reweight_scale or/and reweight_PDF flags = True ')
-        self.add_param('frame_change', True, fortran_name='frame_change',comment='Can be True/False. False = hadron_cm, True = lab_frame', hidden=True)
+        self.add_param('cms_frame', False, fortran_name='cms_frame',comment='Can be True/False. True = hadron_cm, False = lab_frame', hidden=False)
 ##############Anton      
   
         self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
