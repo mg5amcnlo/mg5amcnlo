@@ -1,0 +1,26 @@
+##############
+# ONIUM FILE #
+##############
+#
+# Quarkonium Boundstates (S-waves only Nov24)
+#
+# Syntax: label = Fock states (separated by spaces)
+#
+# Charmonium
+etac =   (1|1S01) (1|1S08)
+etac(2s) = (2|1S01) (2|1S08)
+jpsi =   (1|3S11) (1|3S18)
+psi =    (2|3S11) (2|3S18)
+# Charmed  B mesons
+Bc+ =  (1|1S01) (1|1S08)
+B*c+ = (1|3S11) (1|3S18)
+Bc- =  (1|1S01) (1|1S08)
+B*c- = (1|3S11) (1|3S18)
+# Bottomonium
+etab =      (1|1S01) (1|1S08)
+etab(2s) =    (2|1S01) (2|1S08)
+upsilon =   (1|3S11) (1|3S18)
+upsilon(2s) = (2|3S11) (2|3S18)
+# Toponium
+etat =   (1|1S01) (1|1S08)
+etat(2s) = (2|1S01) (2|1S08)
