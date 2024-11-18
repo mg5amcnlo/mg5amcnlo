@@ -2914,7 +2914,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
                      'checks', 'parameters', 'options', 'coupling_order','variable',
-                     'modellist', 'quarkonia'] #Alice Nov24
+                     'modellist']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -3092,8 +3092,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Variables to store state information
         self._multiparticles = {}
-        self._quarkonia = {} #Alice Nov24
-        self._fockstates = {}  #Alice Nov24
         self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
@@ -3129,7 +3127,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                    'matrix', 'standalone_rw']
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8', 'standalone_gpu']
         self._nlo_modes_for_completion = ['all','virt','real']
-
 
     def do_quit(self, line):
         """Not in help: Do quit"""
@@ -3441,6 +3438,8 @@ This implies that with decay chains:
         
         
         
+        
+    
     # Define a multiparticle label
     def do_define(self, line, log=True):
         """Define a multiparticle"""
@@ -3479,36 +3478,6 @@ This implies that with decay chains:
         if log:
             logger.info("Defined multiparticle %s" % \
                                              self.multiparticle_string(label))
-                                             
-                                             
-#    def do_check_quarkonium(self, quarkonium_label, fock_states, log=True):     #Alice Nov24 
-#        """Check that every quarkonium fock state has an ID"""
-#
-#        # Avoid duplicate entries in history
-#        self.avoid_history_duplicate(f'define quarkonium {quarkonium_label}', ['define quarkonium'])
-#
-#        onium_id_list = []
-#        
-#        for fock_state in fock_states:
-#            try:
-#                onium_id = self.extract_fock_state_ids(quarkonium_label, fock_state)
-#                onium_id_list.append(onium_id)
-#
-#            except Exception as e:
-#                logger.warning(f"Cannot define default quarkonium {quarkonium_label} with Fock state {fock_state} due to: {e}")
-#                continue  # Skip this Fock state if an error occurs
-#                
-#        if not onium_id_list:
-#            logger.warning(f"Failed to define quarkonium {quarkonium_label}: no valid Fock states found")
-#            return
-#            
-#        print(onium_id_list)    
-#    
-#        # Log the new quarkonium definition
-#        if log:
-#            logger.info(f"Defined quarkonium {quarkonium_label} with Fock states {fock_states}")
-#            self.history.append(f"define {quarkonium_label} = {' '.join(fock_states)}")
-                                             
 
     # Display
     def do_display(self, line, output=sys.stdout):
@@ -3660,11 +3629,6 @@ This implies that with decay chains:
             print('Multiparticle labels:')
             for key in self._multiparticles:
                 print(self.multiparticle_string(key))
-
-        elif args[0] == 'quarkonia':    #Alice Nov24
-            print('Quarkonium labels:')
-            for key in self._quarkonia:
-                print(self.quarkonium_string(key))
 
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
@@ -3921,15 +3885,6 @@ This implies that with decay chains:
             return "%s = %s" % (key, " ".join([self._curr_model.\
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
-                                    
-    def quarkonium_string(self, key): #Alice Nov24
-        """Returns a nicely formatted string for the quarkonium bound state"""
-
-        if key in self._quarkonia:
-            return f"{key} = {' '.join(self._quarkonia[key])}"
-        else:
-            return f"{key} is not defined in quarkonia."                           
-                                    
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -4777,11 +4732,34 @@ This implies that with decay chains:
         self.clean_process()
         self._generate_info = line
 
-        # Call add process
-        args = self.split_arg(line)
-        args.insert(0, 'process')
-        self.do_add(" ".join(args))
+        onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_physical.txt'), comment="#", sep="\s+", engine='python', index_col = False)
+        for key in onia.keys():
+            try:
+                onia[key] = onia[key].str.lower()
+            except:
+                continue
 
+        fockstates = {}
+        for onium in onia['name'].values:
+            if (onium+' ' in line.lower()) or line.lower().endswith(onium):
+                fockstate = onia.loc[onia['name'] == onium]
+                fockstates[onium] = fockstate['states'].to_string(index=False).split(',')
+
+        if fockstates:
+            counter = 0
+            for key in fockstates.keys():
+                for fockstate in fockstates[key]:
+                    onium_line = line.lower().replace(key,key.replace('(2s)','')+fockstate)
+                    args = self.split_arg(onium_line)
+                    logger.info("LS:: generating "+" ".join(args))
+                    args.insert(0, 'process')
+                    self.do_add(" ".join(args),counter)
+                    counter += 1
+        else:
+            # Call add process
+            args = self.split_arg(line)
+            args.insert(0, 'process')
+            self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -5017,37 +4995,30 @@ This implies that with decay chains:
                 state = True
                 continue
 
-            #check if there are quarkonia (bound states or fock states) in the process line #Alice Nov24
-            is_onium = part_name in self._quarkonia
-            is_fockstate = part_name in self._fockstates
-#            expanded_processes = []
+            # check if particle is ONIA
+            is_onium = False
+            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_fockstates.txt'), comment="#", sep="\s+", engine='python', index_col = False)
+            for key in onia.keys():
+                try:
+                    onia[key] = onia[key].str.lower()
+                except:
+                    continue
 
-            if is_onium:        #Alice Nov24
-                fock_states = self._quarkonia[part_name]                               
-                for fock_state in fock_states:
-                    quarkonium = re.sub(r'\(.*?\)', '', part_name)
-                    fock_state = fock_state.lower()
-                    combined_label = f"{quarkonium}{fock_state}"
-                    
-                    # Retrieve the ID or name for substitution
-                    if combined_label in self._fockstates:
-                        onium_state_id = self._fockstates[combined_label]
-                        fockstate_process = f"process {line.replace(part_name, combined_label)}"
-                        # Add the process with the substituted quarkonium state
-#                        expanded_processes.append(fockstate_process)
-                        logger.info("ACS:: generating " + fockstate_process)
-                        self.do_add(fockstate_process)
-                    else:
-                        logger.warning(f"No Fock state ID found for {combined_label}")
-            
-                                
+            if part_name in onia['notation'].values:
+                is_onium = True
+                onium_info = onia.loc[onia['notation'] == part_name]
+            elif part_name in onia['name'].values:
+                is_onium = True
+                onium_info = onia.loc[onia['name'] == part_name]
+            elif part_name.isdigit(): 
+                if int(part_name) in onia['pid'].values:
+                    is_onium = True
+                    onium_info = onia.loc[onia['pid'] == int(part_name)]
+
             # check that only final-state particles are ONIA
-            if is_onium and not state or is_fockstate and not state:
-#            if is_onium and not state:
+            if is_onium and not state:
                 raise self.InvalidCmd("initial particles cannot be onia")
-#            if is_fockstate and not state:
-#                raise self.InvalidCmd("initial particles cannot be onia")    
-                
+
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
                 part_name = part_name[1:-1]
@@ -5150,7 +5121,6 @@ This implies that with decay chains:
                         raise self.InvalidCmd('Invalid Polarization')
 
             duplicate = 1
-            
             if part_name in self._multiparticles:
                 # multiparticles cannot be tagged
                 if is_tagged:
@@ -5160,31 +5130,35 @@ This implies that with decay chains:
                           " which can be used only for required s-channels")
                 mylegids.extend(self._multiparticles[part_name])
                 
-            elif is_fockstate: #Alice Nov24
-                fock_state_info = self.extract_fockstate_info(part_name)
-                logger.info(f"Quarkonium {part_name} detected")
-                if fock_state_info is None:
-                    logger.warning(f"No Fock state information found for {part_name}")
-                    continue
-                # Define the constituents list from fock_state_info
-                constituents = fock_state_info['constituents']
-    
-                # Loop over onium constituents and append to myleglist
-                for particle in constituents:
-                    mypart = self._curr_model['particles'].get_copy(particle)
-        
-                    # Append to myleglist with fock_state_info unpacked
-                    myleglist.append(base_objects.MultiLeg({
-                        'ids': [mypart.get_pdg_code()],
-                        'state': state,
-                        'polarization': polarization,
-                        'onium': {**fock_state_info, 'index': onium_index}
-                    }))    
-                onium_index += 1
-                              
+            elif is_onium:
+                onium_name = onium_info['name'].to_string(index=False)
+                onium_id = int(onium_info['pid'].to_string(index=False))
+                onium_pythiaid = int(onium_info['pythia'].to_string(index=False))
+                onium_principal = int(onium_info['N'].to_string(index=False))
+                onium_spin = int((int(onium_info['S'].to_string(index=False))-1)/2)
+                onium_orbit = int(onium_info['L'].to_string(index=False))
+                onium_jtot = int(onium_info['J'].to_string(index=False))
+                onium_color = int(onium_info['C'].to_string(index=False))
+                onium_charge = int(onium_info['charge'].to_string(index=False))
+                onium_mass = float(onium_info['mass'].to_string(index=False))
+                onium_width = float(onium_info['width'].to_string(index=False))
+                onium_notation = onium_info['notation'].to_string(index=False)
+                constituents = [onium_info['particle'].to_string(index=False),onium_info['anti-particle'].to_string(index=False)]
+                for i in range(2):
+                    mypart = self._curr_model['particles'].get_copy(constituents[i])
+                  
+                    myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
+                                                        'state':state,
+                                                        'polarization': polarization,
+                                                        'onium': {'id':onium_id, 'pythia_id':onium_pythiaid, 'name':onium_name,
+                                                                  'n':onium_principal, 'S':onium_spin, 'L':onium_orbit, 'J':onium_jtot,
+                                                                  'C':onium_color, 'charge':onium_charge, 'mass':onium_mass,
+                                                                  'width':onium_width, 'index':onium_index}
+                                                        	}))      
+                onium_index += 1                
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
                 if int(part_name) in self._curr_model.get('particle_dict'):
-                    mylegids.append(int(part_name))            
+                    mylegids.append(int(part_name))
                 else:
                     raise self.InvalidCmd("No pdg_code %s in model" % part_name)
             else:
@@ -5224,13 +5198,11 @@ This implies that with decay chains:
                                                           'polarization': polarization,
                                                           'onium': {},
                                                           'is_tagged':is_tagged}))
-            elif is_onium or is_fockstate:
+            elif is_onium:
                 pass
-    
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
-                
-                
+
         if any(['is_tagged' in l.keys()  and l['is_tagged'] for l in myleglist]):
             logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
 
@@ -5601,9 +5573,6 @@ This implies that with decay chains:
                 ids = []
             elif part_name.isdigit() or (part_name.startswith('-') and part_name[1:].isdigit()):
                 ids.append([int(part_name)])
-#            elif part_name in self._quarkonia or part_name in self._fockstates: #Alice Nov24
-#                logger.warning("Loading %s which is a quarkonium" % part_name)
-                pass    
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
         all_ids.append(ids)
@@ -5630,78 +5599,6 @@ This implies that with decay chains:
             res_lists = res_lists[0]
 
         return res_lists
-        
-        
-    def load_fockstates(self, quarkonium_label, fock_state):  #Alice Nov24
-        """Loads each Fock state and its id"""
-            
-        # Load quarkonium information from onium_fockstates.txt
-        fockstate_file = pjoin(MG5DIR, 'input', 'onium_fockstates.txt')
-        # Check if the file exists!
-        if not os.path.isfile(fockstate_file):
-            logger.warning(f"Fock states file {fockstate_file} not found.")
-            return        
-            
-        with open(fockstate_file) as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-                parts = line.strip().split()
-                
-                onium_id = int(parts[0])
-                quarkonium_label = parts[2]
-                fock_state = parts[3]
-                
-                quarkonium = re.sub(r'\(.*?\)', '', quarkonium_label)
-                # Combine quarkonium and the corresponding Fock state
-                fock_state = fock_state.lower()
-                onium_state = f"{quarkonium}{fock_state}"
-                
-                self._fockstates[onium_state] = onium_id  
-                
-        logger.info("Fock states loaded successfully!")
-    
-    def extract_fockstate_info(self, onium_state): #Alice Nov24
-        """Extracts all information related to a Fock state"""   
-        
-        fockstate_file = pjoin(MG5DIR, 'input', 'onium_fockstates.txt')
-        
-        onium_id = self._fockstates.get(onium_state)
-        
-        with open(fockstate_file) as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-                parts = line.strip().split()
-            
-                if len(parts) < 15:
-                    continue
-            
-                # Extract data from the line
-                line_id = int(parts[0])  # to match ID in the first column
-                if line_id == onium_id:
-                    fock_state_info = {
-                        "onium_id": line_id,
-                        "onium_pythiaid": int(parts[1]),
-                        "onium_name": parts[2],
-                        "onium_notation": parts[4],
-                        "constituents": [parts[5], parts[6]],
-                        "onium_principal": int(parts[7]),
-                        "onium_spin": (int(parts[8]) - 1) / 2,
-                        "onium_orbit": int(parts[9]),
-                        "onium_jtot": int(parts[10]),
-                        "onium_color": int(parts[11]),
-                        "onium_charge": int(parts[12]),
-                        "onium_mass": float(parts[13]),
-                        "onium_width": float(parts[14])
-                    }
-                    
-                    return fock_state_info  # Return details as a dictionary
-                
-        # If the onium ID was not found
-        logger.warning(f"No information found for ID {onium_id} in {fockstate_file}")
-        return None
- 
 
     def optimize_order(self, pdg_list):
         """Optimize the order of particles in a pdg list, so that
@@ -6029,7 +5926,7 @@ This implies that with decay chains:
                                         self._curr_model.get('interactions')], []))
 
         self.add_default_multiparticles()
-        self.add_default_quarkonia() #Alice Nov24
+
 
     def import_mg4_proc_card(self, filepath):
         """ read a V4 proc card, convert it and run it in mg5"""
@@ -6059,8 +5956,6 @@ This implies that with decay chains:
             self.exec_cmd(line, precmd=True)
 
         return
-
-        
 
     def add_default_multiparticles(self):
         """ add default particle from file interface.multiparticles_default.txt
@@ -6193,37 +6088,6 @@ This implies that with decay chains:
             line.append('%s %s' % (part.get('name'), part.get('antiname')))
         line = 'all =' + ' '.join(line)
         self.do_define(line)
-        
-
-    def add_default_quarkonia(self):    #Alice Nov24
-        """Add default quarkonia from file quarkonia_default.txt in the input folder"""
-
-#        defined_quarkonia = list(self._quarkonia.keys())
-
-        # Load default quarkonium bound states from quarkonia_default.txt
-        boundstates_file = pjoin(MG5DIR, 'input', 'quarkonia_default.txt')
-        # Check if the file exists!
-        if not os.path.isfile(boundstates_file):
-            logger.warning(f"Bound states file {boundstates_file} not found.")
-            return
-        
-        with open(boundstates_file) as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-                # The first item on the line is the quarkonium, the rest is the list of Fock states
-                quarkonium_label, bound_state = line.split("=", 1)
-                quarkonium_label = quarkonium_label.strip()
-                bound_state = bound_state.strip()
-                fock_states = bound_state.strip().split()
-
-                self._quarkonia[quarkonium_label] = fock_states
-
-                logger.info(f"Loaded quarkonium: {quarkonium_label} with Fock states {bound_state}")
-                
-        self.load_fockstates(quarkonium_label, fock_states)    
-#                self.do_check_quarkonium(quarkonium_label, fock_states)    
-
 
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
