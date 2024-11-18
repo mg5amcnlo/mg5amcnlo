@@ -6111,14 +6111,29 @@ This implies that with decay chains:
                 continue
             multi = self._multiparticles[qcd_container]
             b = self._curr_model.get_particle(5)
+            c = self._curr_model.get_particle(4)
             if not b:
                 break
+            if not c:
+                break
 
+            if 4 in multi:
+                if c['mass'] != 'ZERO':
+                    multi.remove(4)
+                    multi.remove(-4)
+                    scheme = 3
+            elif c['mass'] == 'ZERO':
+                multi.append(4)
+                multi.append(-4)
+                scheme = 4
             if 5 in multi:
                 if b['mass'] != 'ZERO':
                     multi.remove(5)
                     multi.remove(-5)
-                    scheme = 4
+                    if c['mass'] != 'ZERO':
+                        scheme = 3
+                    else:
+                        scheme = 4
             elif b['mass'] == 'ZERO':
                 multi.append(5)
                 multi.append(-5)
@@ -6134,7 +6149,7 @@ This implies that with decay chains:
                 multi.remove(22)
                 photon = False
                 
-        if scheme in [4,5] and not photon:
+        if scheme in [3,4,5] and not photon:
             self.optimize_order(multi)
             self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
