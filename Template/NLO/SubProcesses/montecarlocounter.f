@@ -1546,12 +1546,11 @@ c               cstlow <= smallptupp
       parameter (smallptupp=1.01d0)
 
       integer iii,jjj,LP
-      double precision xscales(0:99,0:99)
-      double precision xmasses(0:99,0:99)
-      double precision xscales2(0:99,0:99)
-      double precision xmasses2(0:99,0:99)
-      logical*1 dzones(0:99,0:99)
-      logical*1 dzones2(0:99,0:99)
+      double precision xscales_PY(0:99,0:99),xmasses_PY(0:99,0:99)
+      logical*1 dzones_PY(0:99,0:99)
+      double precision xscales_nbody(1:nexternal-1,1:nexternal-1)
+     $     ,xmasses_nbody(1:nexternal-1,1:nexternal-1)
+      logical*1 dzones_nbody(1:nexternal-1,1:nexternal-1)
 
       integer id,type,icount,jcount,kcount,jindex(2)
       integer iflip(2)
@@ -1720,9 +1719,9 @@ c
       call fill_HEPEUP_event(p_lab, wgt, nexternal, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
      &       emsca, scales_for_HEPEUP)
-      xscales=-1d0
-      xmasses=-1d0
-      dzones=.true.
+      xscales_PY=-1d0
+      xmasses_PY=-1d0
+      dzones_PY=.true.
 c$$$      xscales2=-1d0
 c$$$      xmasses2=-1d0
 c$$$      dzones2=.true.
@@ -1745,20 +1744,16 @@ c
          enddo
          idIn1 = idup_s(1)
          idIn2 = idup_s(2)
-         if ( abs(idIn1) < 10 .or. idIn1 .eq. 21) idIn1=2212
-         if ( abs(idIn2) < 10 .or. idIn2 .eq. 21) idIn2=2212
+         if ( abs(idIn1) .lt. 10 .or. idIn1 .eq. 21) idIn1=2212
+         if ( abs(idIn2) .lt. 10 .or. idIn2 .eq. 21) idIn2=2212
          call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
       endif
       call pythia_setevent()
       call pythia_next()
-      call pythia_get_stopping_info(xscales,xmasses)
-      call pythia_get_dead_zones(dzones)
+      call pythia_get_stopping_info(xscales_PY,xmasses_PY)
+      call pythia_get_dead_zones(dzones_PY)
       call pythia_clear()
 
-      
-      ! WE ARE HERE
-
-      
 c     Check if the S-event state (as created from the H-event by Pythia)
 c     is consistent with the MG_aMC S-event state.
       if (NUP_in .ne. nexternal-1) then
@@ -1797,80 +1792,81 @@ c went all the way through the 2nd do-loop without finding the corresponding par
       enddo
 
 c After the calls above, we have
-c   xscales(i,j)=t_ij
+c   xscales_PY(i,j)=t_ij
 c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
 c emitted equal to the FKS parton. Although both emitter and recoiler
 c are Born-level quantities, their labellings follow the real-process
-c conventions. Thus, in the matrix xscales(i,j) one has 1<=i,j<=nexternal, 
-c with xscales(i_fks,*)=xscales(*,i_fks)=-1.
-c The same labelling conventions apply to xmasses(i,j) (which is the
+c conventions. Thus, in the matrix xscales_PY(i,j) one has 1<=i,j<=nexternal, 
+c with xscales_PY(i_fks,*)=xscales_PY(*,i_fks)=-1.
+c The same labelling conventions apply to xmasses_PY(i,j) (which is the
 c dipole mass associated with the colour line that connects i and j)
-c and dzones(i,j) (which is the dead zone relevant to the emission
-c from parton i colour-connected with recoiler j).
+c and dzones_PY(i,j) (which is the dead zone relevant to the emission from
+c parton i colour-connected with recoiler j).
 c
-c Since any the pair of indices (i,j) associated with sensible
-c entries in the arrays returned by Pythia is in one-to-one correspondence
-c with Born-level quantities, it is convenient to define relabelled
-c copies of such arrays (which we call xscales2, xmasses2, and dzones2),
-c for which 1<=i,j<=nexternal-1
+c Since any the pair of indices (i,j) associated with sensible entries
+c in the arrays returned by Pythia is in one-to-one correspondence with
+c Born-level quantities, it is convenient to define relabelled copies of
+c such arrays (which we call xscales_nbody, xmasses_nbody, and
+c dzones_nbody), for which 1<=i,j<=nexternal-1
 c
-c By construction, t_ij are the target scales. For notational consistency
-c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
-c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
+c$$$c By construction, t_ij are the target scales. For notational consistency
+c$$$c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
+c$$$c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
+
+
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         do j=1,nexternal
+            if(j.eq.i_fks)cycle
+            xscales_nbody(iRtoB(i),iRtoB(j))=xscales_PY(i,j)
+c In pythia the dipole masses can be arbitary large since the clustering
+c does not know exactly all the phase-space boundaries. Use min() to put
+c a cap on this (i.e., equal to the largest allowed value in pysudakov()
+c tables).
+            xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses_PY(i,j),cxmupp)
+            dzones_nbody(iRtoB(i),iRtoB(j))=dzones_PY(i,j)
+c$$$            scalup_tmp_H2(iRtoB(i),iRtoB(j))=
+c$$$     &           xscales2(iRtoB(i),iRtoB(j))
+         enddo
+      enddo
+c Checks
+      if(any(xscales_nbody(1:nexternal-1,1:nexternal-1)*
+     &       xmasses_nbody(1:nexternal-1,1:nexternal-1).lt.0d0)) then
+         do i=1,nexternal-1
+            do j=1,nexternal-1
+               write(*,*)'Error in xmcsubt: xscales, xmasses',
+     &              i,j,xscales_nbody(i,j),xmasses_nbody(i,j)
+            enddo
+         enddo
+         stop
+      endif
 
 ! Since pythia simply does a one-branch cluster, it does not check if
-! the stopping scale (in xscales) is smaller than the starting scale (as
+! the stopping scale (in xscales_PY) is smaller than the starting scale (as
 ! determined by MG5_aMC in SCALUP_tmp_S). If this is the case, put the
 ! event in the dead-zone.
       do i=1,nexternal-1
          do j=1,nexternal-1
             if (i.eq.j) cycle
-            if (.not. dzones(iBtoR(i),iBtoR(j))) then
-               if (xscales(iBtoR(i),iBtoR(j)).gt.SCALUP_tmp_S(i,j)) then
-                  dzones(iBtoR(i),iBtoR(j))=.true.
+            if (.not. dzones_nbody(i,j)) then
+               if (xscales_nbody(i,j).gt.SCALUP_tmp_S(i,j)) then
+                   dzones_nbody(i,j)=.true.
                endif
             endif
          enddo
       enddo
       
-      SCALUP_tmp_H2=-1d0
-      do i=1,nexternal
-         if(i.eq.i_fks)cycle
-         do j=1,nexternal
-            if(j.eq.i_fks)cycle
-            xscales2(iRtoB(i),iRtoB(j))=xscales(i,j)
-c In pythia the dipole masses can be arbitary large since the clustering
-c does not know exactly all the phase-space boundaries. Use min() to put
-c a cap on this (i.e., equal to the largest allowed value in pysudakov()
-c tables).
-            xmasses2(iRtoB(i),iRtoB(j))=min(xmasses(i,j),cxmupp)
-            dzones2(iRtoB(i),iRtoB(j))=dzones(i,j)
-            scalup_tmp_H2(iRtoB(i),iRtoB(j))=
-     &           xscales2(iRtoB(i),iRtoB(j))
-         enddo
-      enddo
-c Checks
-      do i=1,nexternal-1
-         do j=1,nexternal-1
-            if((xscales2(i,j).ne.-1d0.and.xmasses2(i,j).eq.-1d0).or.
-     &         (xscales2(i,j).eq.-1d0.and.xmasses2(i,j).ne.-1d0))then
-               write(*,*)'Error in xmcsubt: xscales, xmasses',
-     &                   i,j,xscales2(i,j),xmasses2(i,j)
-               stop
-            endif
-         enddo
-      enddo
-
-      call set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR,iRtoB
-     $     ,xscales2,dzones2,p,SCALUP_tmp_H)
+c$$$      SCALUP_tmp_H2=-1d0
+c$$$
+      call set_SCALUP_tmp_H(xscales_nbody,dzones_nbody,p,SCALUP_tmp_H)
 c
 c force IF colour connection to have II scale
 c if a sensible II scale exists
       if(force_II_connection)then
          do i=1,2
             do j=3,nexternal
-               if(are_col_conn_H(i,j))then
-                  if(are_col_conn_H(i,3-i))then
+               if(valid_dipole_n1(i,j))then
+                  if(valid_dipole_n1(i,3-i))then
                      SCALUP_tmp_H(i,j) =SCALUP_tmp_H(i,3-i)
                   else
                      continue
@@ -1878,16 +1874,16 @@ c if no other available colour connection, we keep the IF scale
 c rather than calculating some new kinematic variable e.g. pT
                   endif
                endif
-               if (iRtoB(j).eq.-1) cycle ! prevent out-of-bounds
-               if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
-                  if(are_col_conn_S(iRtoB(i),iRtoB(3-i)))then
-                     SCALUP_tmp_H2(iRtoB(i),iRtoB(j))=SCALUP_tmp_H2(iRtoB(i),iRtoB(3-i))
-                  else
-                     continue
-c if no other available colour connection, we keep the IF scale
-c rather than calculating some new kinematic variable e.g. pT
-                  endif
-               endif
+c$$$               if (iRtoB(j).eq.-1) cycle ! prevent out-of-bounds
+c$$$               if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
+c$$$                  if(are_col_conn_S(iRtoB(i),iRtoB(3-i)))then
+c$$$                     SCALUP_tmp_H2(iRtoB(i),iRtoB(j))=SCALUP_tmp_H2(iRtoB(i),iRtoB(3-i))
+c$$$                  else
+c$$$                     continue
+c$$$c if no other available colour connection, we keep the IF scale
+c$$$c rather than calculating some new kinematic variable e.g. pT
+c$$$                  endif
+c$$$               endif
             enddo
          enddo
       endif
@@ -1900,17 +1896,21 @@ c     scale t_ij we give it and p_i.p_j/2.
 c     Should we implement this minimisation here as well?
 c     For S events no implementation is needed since we take
 c     scales directly from Pythia. For H event this implementation
-c     shuld be needed only for i_fks and j_fks, as only in that case
+c     should be needed only for i_fks and j_fks, as only in that case
 c     we (over)write their scales ourselves, but could be applied to
 c     all FI and FF connections.
 c
 ccccccccccccccccccccc
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
-c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).
+c starting scales (SCALUP_tmp_S) and target scales (SCALUP_tmp_H).
 c For initial-state legs, Delta contains a PDF ratio with S-event Bjorken
-c fraction and SCALUP_tmp_S2, SCALUP_tmp_H2 scales, see also formula (5.62)
+c fraction and SCALUP_tmp_S, SCALUP_tmp_H scales, see also formula (5.62)
 c in Ellis-Stirling-Webber
+
+
+      ! we are here
+      
       wgt_sudakov=1d0
       i_dipole_counter=0
       i_dipole_dead_counter=0
@@ -2203,8 +2203,8 @@ c
       return
       end
 
-      subroutine set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR
-     $     ,iRtoB,xscales2,dzones2,p,SCALUP_tmp_H)
+      subroutine set_SCALUP_tmp_H(xscales_nbody,dzones_nbody,p
+     $     ,SCALUP_tmp_H)
 ! Fills the SCALUP_tmp_H based on the S-event stopping scales. In the
 ! MC-picture, all scales for which i_fks and j_fks are emitter are set
 ! to a common scale 'pT'. In the ME-picture, a rather more strict
@@ -2215,14 +2215,13 @@ c
 ! (using H-event kinematics) instead.
 ! WARNING: this subroutine does NOT enforce the scales for the IF
 ! dipoles to be overwritten by the II dipoles.
+      use process_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
-      logical are_col_conn_H(nexternal,nexternal)
-     $     ,are_col_conn_S(nexternal-1,nexternal-1)
-      logical*1 dzones2(0:99,0:99)
-      double precision xscales2(0:99,0:99),SCALUP_tmp_H(nexternal
-     $     ,nexternal),p(0:3,nexternal)
-      integer iRtoB(nexternal),iBtoR(nexternal-1)
+      logical*1 dzones_nbody(nexternal-1,nexternal-1)
+      double precision xscales_nbody(nexternal-1,nexternal-1)
+     $     ,SCALUP_tmp_H(nexternal,nexternal),p(0:3,nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i1,i2,ip,imother,i1bar,i2bar
@@ -2241,9 +2240,9 @@ c
          ! the mother.
          pT=99d99
          do i2bar=1,nexternal-1
-            if (are_col_conn_S(imother,i2bar)) then
-               if (.not.dzones2(imother,i2bar))
-     &              pT=min(pT,xscales2(imother,i2bar))
+            if (valid_dipole_n(imother,i2bar,born_flow_picked)) then
+               if (.not.dzones_nbody(imother,i2bar))
+     &              pT=min(pT,xscales_nbody(imother,i2bar))
             endif
          enddo
          if (pT.eq.99d99) then
@@ -2256,14 +2255,14 @@ c
       endif
       do i1=1,nexternal
          do i2=1,nexternal
-            if (.not.are_col_conn_H(i1,i2)) cycle
+            if (.not.valid_dipole_n1(i1,i2)) cycle
             ! Find the (i1bar,i2bar) S-event dipole corresponding to
             ! the (i1,i2) H-event dipole.
             if (i1.eq.i_fks .and. i2.eq.j_fks) then
                if (MCpicture) then
                   i1bar=-99
                else
-                  i1bar=ipbar(are_col_conn_H,imother,iRtoB)
+                  i1bar=ipbar(imother)
                   i2bar=imother
                endif
             elseif (i1.eq.j_fks .and. i2.eq.i_fks) then
@@ -2271,7 +2270,7 @@ c
                   i1bar=-99
                else
                   i1bar=imother
-                  i2bar=ipbar(are_col_conn_H,imother,iRtoB)
+                  i2bar=ipbar(imother)
                endif
             elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
                if (MCpicture) then
@@ -2297,13 +2296,14 @@ c
                endif
                t(i1,i2)=pT
             else
-               if (.not.are_col_conn_S(i1bar,i2bar)) then
+               if (.not.valid_dipole_n(i1bar,i2bar,born_flow_picked))
+     $              then
                   write (*,*) 'Lines not color connected #2',
      $                 i1,i2,i1bar,i2bar
                   stop 1
                endif
-               if (.not. dzones2(i1bar,i2bar)) then
-                  t(i1,i2)=xscales2(i1bar,i2bar)
+               if (.not. dzones_nbody(i1bar,i2bar)) then
+                  t(i1,i2)=xscales_nbody(i1bar,i2bar)
                else
                   if (.not.ptparton_computed) then
                      ptparton=compute_pTparton(p)
@@ -2317,7 +2317,7 @@ c
       ! check that all have been set
       do i1=1,nexternal
          do i2=1,nexternal
-            if (.not.are_col_conn_H(i1,i2)) cycle
+            if (.not.valid_dipole_n1(i1,i2)) cycle
             if (t(i1,i2).eq.-1d0) then
                write (*,*) 'ERROR, scale still equal to -1',i1,i2
                stop 1
@@ -2366,22 +2366,23 @@ c
       end
 
       
-      integer function ipbar(are_col_conn_H,imother,iRtoB)
+      integer function ipbar(imother)
       ! ipbar is the colour connection of i_fks (if it exists and is not
       ! equal to the mother). Otherwise it is the colour connection of
       ! j_fks. The latter only happens when i_fks is a quark and j_fks
       ! is an (incoming gluon).
+      use process_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
-      logical are_col_conn_H(nexternal,nexternal)
-      integer imother,iRtoB(nexternal)
+      integer imother
       integer ip
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       ipbar=0
       do ip=1,nexternal
          if(ip.eq.i_fks)cycle
-         if (are_col_conn_H(ip,i_fks) .and. iRtoB(ip).ne.imother) then
+         if (valid_dipole_n1(ip,i_fks) .and. iRtoB(ip).ne.imother) then
             if (ipbar.ne.0) then
                write (*,*) 'Too many colour connections #1'
                stop 1
@@ -2392,7 +2393,7 @@ c
       if (ipbar.eq.0) then
          do ip=1,nexternal
             if(ip.eq.i_fks)cycle
-            if (are_col_conn_H(ip,j_fks) .and. iRtoB(ip).ne.imother)
+            if (valid_dipole_n1(ip,j_fks) .and. iRtoB(ip).ne.imother)
      $           then
                if (ipbar.ne.0) then
                   write (*,*) 'Too many colour connections #2'
