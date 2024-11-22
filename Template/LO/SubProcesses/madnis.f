@@ -398,11 +398,15 @@ C      write(*,*) "stored rans = ", Rstore
        integer subchannel, common_subchannel
        integer initsym, common_initsym
        integer flavor, common_flavor
+        INTEGER IPROC, IMIRROR
+        COMMON/TO_MIRROR/IMIRROR, IPROC
        common/external_flavor_pick/common_subchannel, common_initsym, common_flavor
 
        common_subchannel = subchannel
        common_initsym = initsym
        common_flavor = flavor
+       IPROC=flavor
+       IMIRROR=initsym
 
        return 
        end
