@@ -1522,13 +1522,13 @@ C To allow retrieval of S-event from Pythia
 
       logical         Hevents
       common/SHevents/Hevents
-c SCALUP_tmp_S = m_ij scales that determine S-event scales written onto LHE
-      double precision SCALUP_tmp_S(nexternal-1,nexternal-1)
-c SCALUP_tmp_H = t_ij scales that determine H-event scales written onto LHE
-      double precision SCALUP_tmp_H(nexternal,nexternal)
+c starting_scales = m_ij scales that determine S-event scales written onto LHE
+      double precision starting_scales(nexternal-1,nexternal-1)
+c stopping_scales = t_ij scales that determine H-event scales written onto LHE
+      double precision stopping_scales(nexternal,nexternal)
 c SCALUP_tmp_H2 = t_ij target scales for Delta
       double precision SCALUP_tmp_H2(nexternal,nexternal)
-      common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
+      common/c_SCALUP_tmp/starting_scales,stopping_scales
       double precision SCALUP_tmp_H3(nexternal,nexternal)
 
 c Lower and upper limits of fitted st and xm ranges.
@@ -1548,7 +1548,7 @@ c               cstlow <= smallptupp
       integer iii,jjj,LP
       double precision xscales_PY(0:99,0:99),xmasses_PY(0:99,0:99)
       logical*1 dzones_PY(0:99,0:99)
-      double precision xscales_nbody(1:nexternal-1,1:nexternal-1)
+      double precision stopping_scales_PY(1:nexternal-1,1:nexternal-1)
      $     ,xmasses_nbody(1:nexternal-1,1:nexternal-1)
       logical*1 dzones_nbody(1:nexternal-1,1:nexternal-1)
 
@@ -1557,7 +1557,7 @@ c               cstlow <= smallptupp
       data iflip/2,1/
 
       double precision emscav_a2_tmp,emscav_tmp_a2_tmp,ptresc_a_tmp
-      double precision sref,acll1,acll2,acllfct(2),dot,sumdot
+      double precision sref,acll1,acll2,dot,sumdot
       external dot,sumdot
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
@@ -1639,23 +1639,23 @@ c colour configuration read from born_leshouche.inc and born_flow_picked
         ICOLUP_S(2,i)=ICOLUP(2,i,born_flow_picked)
       enddo
 
-c  SCALUP_tmp_S* are the m_ij scales, ie the starting scales (as determined
+c  starting_scales* are the m_ij scales, ie the starting scales (as determined
 c by the D(mu) function) for extra radiation; they are copies of the
 c emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
 c entries associated with a colour line that belongs to born_flow_picked have
 c meaningful values; the others are set equal to -1.
-      SCALUP_tmp_S(1:nexternal-1,1:nexternal-1)=
+      starting_scales(1:nexternal-1,1:nexternal-1)=
      &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
 
       if(force_II_connection)then
 c force IF colour connection to have II scale if a sensible II scale
 c exists. If no  available II colour connection, we keep the IF scale
-c rather than calculating some new kinematic variable e.g. pT
+c rather than calcsulating some new kinematic variable e.g. pT
          do i=1,2
             do j=3,nexternal-1
                if(.not.valid_dipole_n(i,j,born_flow_picked)) cycle
                if(valid_dipole_n(i,3-i,born_flow_picked)) 
-     &              SCALUP_tmp_S(i,j) =SCALUP_tmp_S(i,3-i)
+     &              starting_scales(i,j) =starting_scales(i,3-i)
             enddo
          enddo
       endif
@@ -1806,7 +1806,7 @@ c
 c Since any the pair of indices (i,j) associated with sensible entries
 c in the arrays returned by Pythia is in one-to-one correspondence with
 c Born-level quantities, it is convenient to define relabelled copies of
-c such arrays (which we call xscales_nbody, xmasses_nbody, and
+c such arrays (which we call stopping_scales_PY, xmasses_nbody, and
 c dzones_nbody), for which 1<=i,j<=nexternal-1
 c
 c$$$c By construction, t_ij are the target scales. For notational consistency
@@ -1818,7 +1818,7 @@ c$$$c SCALUP_tmp_H2, meant to be used in the computation of Delta.
          if(i.eq.i_fks)cycle
          do j=1,nexternal
             if(j.eq.i_fks)cycle
-            xscales_nbody(iRtoB(i),iRtoB(j))=xscales_PY(i,j)
+            stopping_scales_PY(iRtoB(i),iRtoB(j))=xscales_PY(i,j)
 c In pythia the dipole masses can be arbitary large since the clustering
 c does not know exactly all the phase-space boundaries. Use min() to put
 c a cap on this (i.e., equal to the largest allowed value in pysudakov()
@@ -1830,26 +1830,26 @@ c$$$     &           xscales2(iRtoB(i),iRtoB(j))
          enddo
       enddo
 c Checks
-      if(any(xscales_nbody(1:nexternal-1,1:nexternal-1)*
+      if(any(stopping_scales_PY(1:nexternal-1,1:nexternal-1)*
      &       xmasses_nbody(1:nexternal-1,1:nexternal-1).lt.0d0)) then
          do i=1,nexternal-1
             do j=1,nexternal-1
                write(*,*)'Error in xmcsubt: xscales, xmasses',
-     &              i,j,xscales_nbody(i,j),xmasses_nbody(i,j)
+     &              i,j,stopping_scales_PY(i,j),xmasses_nbody(i,j)
             enddo
          enddo
          stop
       endif
 
 ! Since pythia simply does a one-branch cluster, it does not check if
-! the stopping scale (in xscales_PY) is smaller than the starting scale (as
-! determined by MG5_aMC in SCALUP_tmp_S). If this is the case, put the
-! event in the dead-zone.
+! the stopping scale (in stopping_scales_PY) is smaller than the
+! starting scale (as determined by MG5_aMC in starting_scales). If this
+! is the case, put the event in the dead-zone.
       do i=1,nexternal-1
          do j=1,nexternal-1
             if (i.eq.j) cycle
             if (.not. dzones_nbody(i,j)) then
-               if (xscales_nbody(i,j).gt.SCALUP_tmp_S(i,j)) then
+               if (stopping_scales_PY(i,j).gt.starting_scales(i,j)) then
                    dzones_nbody(i,j)=.true.
                endif
             endif
@@ -1858,7 +1858,8 @@ c Checks
       
 c$$$      SCALUP_tmp_H2=-1d0
 c$$$
-      call set_SCALUP_tmp_H(xscales_nbody,dzones_nbody,p,SCALUP_tmp_H)
+      call set_stopping_scales(stopping_scales_PY,dzones_nbody,p
+     $     ,stopping_scales)
 c
 c force IF colour connection to have II scale
 c if a sensible II scale exists
@@ -1867,7 +1868,7 @@ c if a sensible II scale exists
             do j=3,nexternal
                if(valid_dipole_n1(i,j))then
                   if(valid_dipole_n1(i,3-i))then
-                     SCALUP_tmp_H(i,j) =SCALUP_tmp_H(i,3-i)
+                     stopping_scales(i,j) =stopping_scales(i,3-i)
                   else
                      continue
 c if no other available colour connection, we keep the IF scale
@@ -1903,13 +1904,18 @@ c
 ccccccccccccccccccccc
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
-c starting scales (SCALUP_tmp_S) and target scales (SCALUP_tmp_H).
-c For initial-state legs, Delta contains a PDF ratio with S-event Bjorken
-c fraction and SCALUP_tmp_S, SCALUP_tmp_H scales, see also formula (5.62)
-c in Ellis-Stirling-Webber
+c starting_scales and stopping_scales.  For initial-state legs, Delta
+c contains a PDF ratio with S-event Bjorken fraction and
+c starting_scales, stopping_scales scales, see also formula (5.62) in
+c Ellis-Stirling-Webber
 
 
-      ! we are here
+! we are here
+! 
+!     1. loop over dipoles and find the (up to) 2 contributing. This sets
+!     also the types and everything. Including scales.
+!     2. loop over the (up to) 2 contributing, and compute the sudakovs.
+!
       
       wgt_sudakov=1d0
       i_dipole_counter=0
@@ -1929,9 +1935,10 @@ c (at most [because of dead zones] one for quarks, two for gluons).
 c For each of these colour lines, find the starting and stopping
 c scales and store them in startingScale(*) and stoppingScale(*).
 c Store the corresponding Sudakov type in isudtype(*)
-            if(j.eq.i)cycle
-            if(xscales2(i,j).eq.-1d0)cycle
-            if(dzones2(i,j))then
+            if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+c$$$            if(j.eq.i)cycle
+c$$$            if(xscales2(i,j).eq.-1d0)cycle
+            if(dzones_nbody(i,j))then
                i_dipole_dead_counter=i_dipole_dead_counter+1
                if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
 c double colour connection, count twice
@@ -1940,32 +1947,11 @@ c double colour connection, count twice
                cycle
             endif
             icount=icount+1
-            if( (abs(idup_s(i)).le.6.and.icount.gt.1) .or.
-     #          (idup_s(i).eq.21 .and.
-     #            (icount.gt.2.and.(.not.isspecial(born_flow_picked))) .or.
-     #            (icount.gt.1.and.isspecial(born_flow_picked)) ) )then
-              write(*,*)'Error #6 in complete_xmcsubt'
-              write(*,*)i,idup_s(i),icount,isspecial(born_flow_picked)
-              stop
-            endif
-c The following definition of startingScale is unprotected:
-c cstupp must be sufficiently large
-c$$$            startingScale0 = min(SCALUP_tmp_S2(i,j),cstupp)
-            startingScale0 = min(SCALUP_tmp_S(i,j),cstupp)
-c Same comment on cstupp as above. Inserted here as a safety
-c measure, since Pythia might give very large scales. In those
-c case, the computed Sudakovs are actually discarded later
-            stoppingScale0 = min(SCALUP_tmp_H2(i,j),cstupp)
-            acllfct(icount)=1.d0
-c Passing the following if clause must be exceedingly rare
-            if(startingScale0.le.smallptupp)then
-              write(*,*)'Warning in xmcsubt: startingScale0, smallptupp'
-              write(*,*)startingScale0,smallptupp
-c$$$              stop
-              startingScale0=smallptupp
-            endif
-            stoppingScale(icount)=stoppingScale0
-            startingScale(icount)=startingScale0
+c Overwrite the startingscale to be in the correct range
+            startingScale(icount) = max(min(starting_scales(i,j),cstupp)
+     $           ,smallptupp)
+            stoppingScale(icount) = min(stopping_scales(iBtoR(i)
+     $           ,iBtoR(j)),cstupp)
             jindex(icount)=j
             if(i.le.2.and.j.le.2)then
                isudtype(icount)=1
@@ -2057,49 +2043,48 @@ c corresponding to a live zone or a gluon with a single colour line but
 c a double colour connection (eg in gg->H). The condition that the starting
 c scale is larger than the stopping scale has not been enforced
 c so far, so do it here
-           if(stoppingScale(1).lt.startingScale(1))then
-             if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
-               deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
-               deltaden(1)=deltaden(1)**2*pdffden(1)
-             else
-               deltanum(1,1)=deltanum(1,1)*pdffnum(1)
-               deltaden(1)=deltaden(1)*pdffden(1)
-             endif
-             if(deltaden(1).eq.0.d0)then
-               deltarat(1,1)=1.d0
-             else
-               deltarat(1,1)=deltanum(1,1)/deltaden(1) * acllfct(1)
-             endif
-             if(deltarat(1,1).ge.1.d0)deltarat(1,1)=1.d0
-             if(deltarat(1,1).le.0.d0)deltarat(1,1)=0.d0
-             wgt_sudakov=wgt_sudakov*deltarat(1,1)
-           endif
-         else
+            if(stoppingScale(1).lt.startingScale(1))then
+               if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
+                  deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
+                  deltaden(1)=deltaden(1)**2*pdffden(1)
+               else
+                  deltanum(1,1)=deltanum(1,1)*pdffnum(1)
+                  deltaden(1)=deltaden(1)*pdffden(1)
+               endif
+               if(deltaden(1).eq.0.d0)then
+                  deltarat(1,1)=1.d0
+               else
+                  deltarat(1,1)=deltanum(1,1)/deltaden(1)
+               endif
+               deltarat(1,1)=min(max(deltarat(1,1),0d0),1d0)
+               wgt_sudakov=wgt_sudakov*deltarat(1,1)
+            endif
+         elseif(icount.eq.2) then
 c A gluon with two partners corresponding to a live zone
-           if(jindex(1).eq.-1.or.jindex(2).eq.-1)then
-             write(*,*)'Error #10 in complete_xmcsubt:',
-     #                 jindex(1),jindex(2),i,icount
-             stop
-           endif
-           do jcount=1,icount
+            if(any(jindex(1:2).eq.-1)) then
+               write(*,*)'Error #10 in complete_xmcsubt:', jindex(1)
+     $              ,jindex(2),i,icount
+               stop
+            endif
+            do jcount=1,icount
 c Start by computing deltanum(1,2) and deltanum(2,1)
-             if(stoppingScale(jcount).le.smallptlow)then
-               deltanum(jcount,iflip(jcount))=0.d0
-            elseif( stoppingScale(jcount).gt.smallptlow .and.
-     $              stoppingScale(jcount).le.smallptupp )then
-                deltanum(jcount,iflip(jcount))= pysudakov(smallptupp
-     $               ,xmasses2(i,jindex(iflip(jcount))), idup_s(i)
-     $               ,isudtype(iflip(jcount)),mcmass)
-               deltanum(jcount,iflip(jcount))=deltanum(jcount
-     $              ,iflip(jcount))*get_to_zero(stoppingScale(jcount)
-     $              ,smallptlow,smallptupp)
-             else
-                deltanum(jcount,iflip(jcount))=
-     $               pysudakov(stoppingScale(jcount),xmasses2(i
-     $               ,jindex(iflip(jcount))), idup_s(i)
-     $               ,isudtype(iflip(jcount)),mcmass)
-             endif
-           enddo
+               if(stoppingScale(jcount).le.smallptlow)then
+                  deltanum(jcount,iflip(jcount))=0.d0
+               elseif( stoppingScale(jcount).gt.smallptlow .and.
+     $                 stoppingScale(jcount).le.smallptupp )then
+                  deltanum(jcount,iflip(jcount))= pysudakov(smallptupp
+     $                 ,xmasses2(i,jindex(iflip(jcount))), idup_s(i)
+     $                 ,isudtype(iflip(jcount)),mcmass)
+                  deltanum(jcount,iflip(jcount))=deltanum(jcount
+     $                 ,iflip(jcount))*get_to_zero(stoppingScale(jcount)
+     $                 ,smallptlow,smallptupp)
+               else
+                  deltanum(jcount,iflip(jcount))=
+     $                 pysudakov(stoppingScale(jcount),xmasses2(i
+     $                 ,jindex(iflip(jcount))), idup_s(i)
+     $                 ,isudtype(iflip(jcount)),mcmass)
+               endif
+            enddo
 c Here, deltaden(*) and deltanum(*,*) must be filled with sensible values.
 c Proceed to compute the corresponding Sudakov; the effective colour factor 
 c is CA, with a single stopping scale and two possibly different starting scales
@@ -2121,7 +2106,7 @@ c (each of the latter is responsible for CA/2)
 c glfact(*) define the relative weights of the two no-emission probabilities.
 c In their computations, use the CA/2 Sudakov with starting and stopping
 c scales relevant to the same colour line
-             gltmp=deltarat(jcount,jcount)*acllfct(jcount)
+             gltmp=deltarat(jcount,jcount)
              if(gltmp.le.0.d0)then
                glfact(jcount)=1.d8
              elseif(gltmp.ge.1.d0)then
@@ -2150,7 +2135,7 @@ c
                if(stoppingScale(jcount).lt.startingScale(2))
      #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,2)
                if(xtmp(jcount).lt.1.d0)
-     #           xtmp(jcount)=xtmp(jcount)*acllfct(jcount)
+     #           xtmp(jcount)=xtmp(jcount)
                if(stoppingScale(jcount).lt.startingScale(jcount))
      #           xtmp(jcount)=xtmp(jcount)*pdffnum(jcount)/pdffden(jcount)
              endif
@@ -2158,6 +2143,9 @@ c
              if(xtmp(jcount).le.0.d0)xtmp(jcount)=0.d0
            enddo
            wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
+        else
+           write (*,*) 'icount should be 1 or 2',icount
+           stop 1
          endif
  111     continue
 c End of primary loop over i
@@ -2203,9 +2191,9 @@ c
       return
       end
 
-      subroutine set_SCALUP_tmp_H(xscales_nbody,dzones_nbody,p
-     $     ,SCALUP_tmp_H)
-! Fills the SCALUP_tmp_H based on the S-event stopping scales. In the
+      subroutine set_stopping_scales(stopping_scales_PY,dzones_nbody,p
+     $     ,stopping_scales)
+! Fills the stopping_scales based on the S-event stopping scales. In the
 ! MC-picture, all scales for which i_fks and j_fks are emitter are set
 ! to a common scale 'pT'. In the ME-picture, a rather more strict
 ! relation between the dipoles is followed, and each dipole for which
@@ -2220,8 +2208,8 @@ c
       implicit none
       include 'nexternal.inc'
       logical*1 dzones_nbody(nexternal-1,nexternal-1)
-      double precision xscales_nbody(nexternal-1,nexternal-1)
-     $     ,SCALUP_tmp_H(nexternal,nexternal),p(0:3,nexternal)
+      double precision stopping_scales_PY(nexternal-1,nexternal-1)
+     $     ,stopping_scales(nexternal,nexternal),p(0:3,nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i1,i2,ip,imother,i1bar,i2bar
@@ -2242,7 +2230,7 @@ c
          do i2bar=1,nexternal-1
             if (valid_dipole_n(imother,i2bar,born_flow_picked)) then
                if (.not.dzones_nbody(imother,i2bar))
-     &              pT=min(pT,xscales_nbody(imother,i2bar))
+     &              pT=min(pT,stopping_scales_PY(imother,i2bar))
             endif
          enddo
          if (pT.eq.99d99) then
@@ -2303,7 +2291,7 @@ c
                   stop 1
                endif
                if (.not. dzones_nbody(i1bar,i2bar)) then
-                  t(i1,i2)=xscales_nbody(i1bar,i2bar)
+                  t(i1,i2)=stopping_scales_PY(i1bar,i2bar)
                else
                   if (.not.ptparton_computed) then
                      ptparton=compute_pTparton(p)
@@ -2324,7 +2312,7 @@ c
             endif
          enddo
       enddo
-      SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
+      stopping_scales(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
       end
 
       double precision function compute_pTparton(p)
