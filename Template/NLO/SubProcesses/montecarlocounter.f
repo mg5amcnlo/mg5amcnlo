@@ -1916,7 +1916,15 @@ c Ellis-Stirling-Webber
 !     also the types and everything. Including scales.
 !     2. loop over the (up to) 2 contributing, and compute the sudakovs.
 !
-      
+! Paper: eq.3.14 (times the PDF factor in 3.32) defines what to compute
+!     for each QCD particle in the n-body process. This is updated to
+!     3.31 for quarks, and 3.34 for gluons. (Check the curly brackets in
+!     3.14 & 3.34).  First term in 3.34 is equal to
+!     glfact(1)*Deltarat(1,1)*Deltarat(1,2)*pdffactor(1) in the notation
+!     of the code below (and equivalently for the 2nd term). 3.37 is
+!     wgt_sudakov.
+!      
+
       wgt_sudakov=1d0
       i_dipole_counter=0
       i_dipole_dead_counter=0
