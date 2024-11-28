@@ -196,7 +196,7 @@ c --- prepare the buffer information
             write(*,*)doreweight,iwgtinfo
             stop
          endif
-         kwgtinfo= 9
+         kwgtinfo= -9
          write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &        ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &        ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)

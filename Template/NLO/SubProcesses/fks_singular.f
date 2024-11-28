@@ -433,10 +433,14 @@ c value to the list of weights using the add_wgt subroutine
      &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
-     $                 amp_split_wgtwnstmpmur(amp_split_size)
+     $                 amp_split_wgtwnstmpmur(amp_split_size),
+     $                 amp_split_tmp_coll(amp_split_size),
+     $                 amp_split_tmp_soft(amp_split_size)
       common /to_amp_split_bsv/amp_split_wgtnstmp,
      $                         amp_split_wgtwnstmpmuf,
-     $                         amp_split_wgtwnstmpmur
+     $                         amp_split_wgtwnstmpmur,
+     $                         amp_split_tmp_coll,
+     $                         amp_split_tmp_soft
 
       ! stuff for the 6->5 flav scheme
       double precision amp_split_6to5f(amp_split_size),
@@ -456,7 +460,7 @@ c value to the list of weights using the add_wgt subroutine
       double precision wgtal1,wgtal2,wgtal3
 
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
-     &     ,g22,wgt4
+     &     ,g22,wgt4,wgt5,wgt6
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -516,6 +520,8 @@ C to make sure that it cannot be incorrectly understood.
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
         wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb/g22
         wgt4=amp_split_avv(iamp)*f_nb/g22
+        wgt5=amp_split_tmp_coll(iamp)*f_nb/g22
+        wgt6=amp_split_tmp_soft(iamp)*f_nb/g22
         if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0
      &       .and. abrv.ne.'born') then
 ! This assumes a single Born order, which must always be the case for
@@ -531,6 +537,8 @@ C to make sure that it cannot be incorrectly understood.
         endif
         call add_wgt(3,orders,wgt1,wgt2,wgt3)
         call add_wgt(15,orders,wgt4,0d0,0d0)
+        call add_wgt(31,orders,wgt5,0d0,0d0)
+        call add_wgt(32,orders,wgt6,0d0,0d0)
       enddo
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -1766,7 +1774,7 @@ c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
 c     type=1 : real-emission
 c     type=2 : Born
-c     type=3 : integrated counter terms
+c     type=3 : integrated counter terms (only scale dependent terms)
 c     type=4 : soft counter-term
 c     type=5 : collinear counter-term
 c     type=6 : soft-collinear counter-term
@@ -1780,6 +1788,8 @@ c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
 c     type=15: virt-trick: average born contribution
 c     type=20+x: EW sudakov, x=sud_mod
+c     type=31: integrated collinear subtraction term
+c     type=32: integrated soft subtraction term
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -2026,7 +2036,8 @@ c subtr term
          need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14 .or. type.eq.15
-     $        .or. (type.ge.20 .and. type.le.22)) then
+     $        .or. (type.ge.20 .and. type.le.22)
+     $        .or. type.eq.31 .or. type.eq.32) then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
@@ -2761,7 +2772,8 @@ c     born
             appl_muR2(2)=scales2(2,i)
             appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
-     &           .or. itype(i).eq.15)then
+     $           .or. itype(i).eq.15 .or. itype(i).eq.31 .or.
+     $           itype(i).eq.32 )then
 c     virtual, soft-virtual or soft-counter
             appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)/bias_wgt(i)*
      &                     final_state_rescaling
@@ -2820,7 +2832,8 @@ c section
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14 .or.
-     &        itype(i).eq.7 .or. itype(i).eq.15) then
+     $        itype(i).eq.7 .or. itype(i).eq.15 .or. itype(i).eq.31 .or.
+     $        itype(i).eq.32) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -3378,7 +3391,8 @@ c configuration.
             ifl=ifold_cnt(ict)
             if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
      $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
-     $           itype(ict).ne.15) then
+     $           itype(ict).ne.15 .and. itype(ict).ne.31 .and.
+     $           itype(ict).ne.32) then
                   ! do not include the "born" or "nbody_noborn"
                wgt_fold_fks(nFKS(ict),ifl) = 
      $                 wgt_fold_fks(nFKS(ict),ifl)+wgts(1,ict)
@@ -3563,8 +3577,9 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do j=1,icontr_sum(0,i)
                ict=icontr_sum(j,i)
                if ( itype(ict).ne.2  .and. itype(ict).ne.3 .and.
-     $              itype(ict).ne.14 .and. itype(ict).ne.15)
-     $                              tmp_wgt=tmp_wgt+wgts(1,ict)
+     $              itype(ict).ne.14 .and. itype(ict).ne.15 .and.
+     $              itype(ict).ne.31 .and. itype(ict).ne.32) tmp_wgt
+     $              =tmp_wgt+wgts(1,ict)
             enddo
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
@@ -3762,13 +3777,13 @@ c momenta in the momenta_str() array.
       common/SHevents/Hevents
       if (.not.allocated(momenta_str)) allocate(momenta_str(0:3
      $     ,max_mext,max_mom_str))
-      wgtref=unwgt(iproc_picked,icontr_picked)
+c$$$      wgtref=unwgt(iproc_picked,icontr_picked)
       n_ctr_found=0
       n_mom_conf=0
 c Loop over all the contributions in the picked contribution (the latter
 c is chosen in the pick_unweight_contr() subroutine)
-      do i=1,icontr_sum(0,icontr_picked)
-         ict=icontr_sum(i,icontr_picked)
+      do i=1,icontr!_sum(0,icontr_picked)
+         ict=i!contr_sum(i,icontr_picked)
 c Check if the current set of momenta are already available in the
 c momenta_str array. If not, add it.
          found=.false.
@@ -3806,14 +3821,12 @@ c momenta_str array. If not, add it.
                momenta_conf(k)=n_mom_conf
             endif
          enddo
-         if (.not. Hevents) then
+         if (.not.H_event(ict)) then
 
              ! MZ write also orderstag!!
 c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
-            ipro=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
-            do ii=1,iproc_save(nFKS(ict))
-               if (eto(ii,nFKS(ict)).ne.ipro) cycle
+            do ii=1,niproc(ict)
                n_ctr_found=n_ctr_found+1
 
                if (.not.allocated(n_ctr_str))
@@ -3865,7 +3878,7 @@ c iproc_picked:
             enddo
          else
 c H-event
-            ipro=iproc_picked
+            do ipro=1,niproc(ict)
             n_ctr_found=n_ctr_found+1
 
             if (.not.allocated(n_ctr_str))
@@ -3915,7 +3928,7 @@ c H-event
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
 
-
+         enddo
          endif
       enddo
       return
@@ -6662,10 +6675,14 @@ C to keep track of the various split orders
      &                          amp_split_avv
       double precision amp_split_wgtnstmp(amp_split_size),
      $                 amp_split_wgtwnstmpmuf(amp_split_size),
-     $                 amp_split_wgtwnstmpmur(amp_split_size)
+     $                 amp_split_wgtwnstmpmur(amp_split_size),
+     $                 amp_split_tmp_coll(amp_split_size),
+     $                 amp_split_tmp_soft(amp_split_size)
       common /to_amp_split_bsv/amp_split_wgtnstmp,
      $                         amp_split_wgtwnstmpmuf,
-     $                         amp_split_wgtwnstmpmur
+     $                         amp_split_wgtwnstmpmur,
+     $                         amp_split_tmp_coll,
+     $                         amp_split_tmp_soft
       double precision coupl_wgtwnstmpmuf
 
       double precision amp_tot
@@ -6706,6 +6723,8 @@ C links
       aeo2pi=dble(gal(1))**2/(8*pi**2)
 
       amp_split_bsv(1:amp_split_size)=0d0
+      amp_split_tmp_coll(1:amp_split_size)=0d0
+      amp_split_tmp_soft(1:amp_split_size)=0d0
       amp_split_virt(1:amp_split_size)=0d0
       amp_split_avv(1:amp_split_size)=0d0
 
@@ -6820,14 +6839,20 @@ c 1+2+3+4
 C end of the external particle loop
          if (ipos_ord.eq.qcd_pos) then 
             bsv_wgt = bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
-            amp_split_bsv(1:amp_split_size)=
-     $           amp_split_bsv(1:amp_split_size)+aso2pi*Q
+c$$$            amp_split_bsv(1:amp_split_size)=
+c$$$     $           amp_split_bsv(1:amp_split_size)+aso2pi*Q
+c$$$     $           *dble(amp_split_cnt(1:amp_split_size,1,qcd_pos))
+            amp_split_tmp_coll(1:amp_split_size)=
+     $           amp_split_tmp_coll(1:amp_split_size)+aso2pi*Q
      $           *dble(amp_split_cnt(1:amp_split_size,1,qcd_pos))
          endif
          if (ipos_ord.eq.qed_pos) then
             bsv_wgt = bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
-            amp_split_bsv(1:amp_split_size)=
-     $           amp_split_bsv(1:amp_split_size)+aeo2pi*Q
+c$$$            amp_split_bsv(1:amp_split_size)=
+c$$$     $           amp_split_bsv(1:amp_split_size)+aeo2pi*Q
+c$$$     $           *dble(amp_split_cnt(1:amp_split_size,1,qed_pos))
+            amp_split_tmp_coll(1:amp_split_size)=
+     $           amp_split_tmp_coll(1:amp_split_size)+aeo2pi*Q
      $           *dble(amp_split_cnt(1:amp_split_size,1,qed_pos))
          endif
       enddo
@@ -6873,8 +6898,10 @@ C wgt includes the gs/w^2
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg
                      do k=1,amp_split_size
-                        amp_split_bsv(k) = amp_split_bsv(k) - 2d0 *
-     $                       eikIreg * oneo8pi2 * amp_split_soft(k)
+c$$$                        amp_split_bsv(k) = amp_split_bsv(k) - 2d0 *
+c$$$     $                       eikIreg * oneo8pi2 * amp_split_soft(k)
+                        amp_split_tmp_soft(k) = amp_split_tmp_soft(k) -
+     $                       2d0 *eikIreg * oneo8pi2 * amp_split_soft(k)
                      enddo
                   endif
                endif

@@ -16,8 +16,8 @@ c
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single
      $     ,born_wgt_recomputed,born_wgt_recomp_direct
-      double precision, allocatable :: virt_wgts(:,:)
-      double precision, allocatable :: virt_wgts_hel(:,:)
+      double precision, allocatable,save :: virt_wgts(:,:)
+      double precision, allocatable,save :: virt_wgts_hel(:,:)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       logical firsttime,firsttime_conversion
@@ -31,7 +31,7 @@ c
       integer ret_code
       double precision madfks_single, madfks_double
       double precision tolerance
-      double precision, allocatable :: accuracies(:)
+      double precision, allocatable,save :: accuracies(:)
       integer i,j,IOErr, IOErrCounter
       integer dt(8)
       integer nbad, nbadmax
@@ -40,7 +40,7 @@ c
       double precision hel_fact
 CCC      double precision wgt_hel(max_bhel)
 CCC      common/c_born_hel/wgt_hel
-      integer nsqso, MLResArrayDim
+      integer,save :: nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -183,7 +183,6 @@ C          different coupling combinations
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
-
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
             do i = 1, nsqso

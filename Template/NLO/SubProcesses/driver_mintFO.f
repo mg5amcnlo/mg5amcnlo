@@ -392,6 +392,7 @@ c PineAPPL
          write (*,*) 0 ,':',ini_fin_fks_map(0,:)
          write (*,*) 1 ,':',ini_fin_fks_map(1,:)
          write (*,*) 2 ,':',ini_fin_fks_map(2,:)
+         call find_iproc_map()
       endif
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
@@ -547,6 +548,11 @@ c Importance sampling for FKS configurations
       endif
 
 c Finalize PS point
+
+      if (doreweight) then
+         call fill_rwgt_lines
+      endif
+      
       call fill_plots
       call fill_mint_function(f)
       return

@@ -792,7 +792,7 @@ c
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
-     #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+     #wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
          if(jwgtinfo.eq.-5.or.jwgtinfo.eq.-9) then
             write(ifile,'(a)')'  <mgrwgt>'
             write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
