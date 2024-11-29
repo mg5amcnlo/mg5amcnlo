@@ -65,10 +65,10 @@ RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
 	add_write_info.o madfks_plot.o
 
 # Files for mintFO
-MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o pythia8_fortran_dummy.o
+MINTFO= $(RUN) driver_mintFO.o mint_FO_functions.o handling_lhe_events.o write_event.o BinothLHA.o pythia8_fortran_dummy.o
 
 # Files for mintMC
-MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
+MINTMC= $(RUN) driver_mintMC.o mint_MC_functions.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o

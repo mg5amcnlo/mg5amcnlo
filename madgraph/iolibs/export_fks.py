@@ -687,6 +687,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
+                     'mint_MC_functions.f',
+                     'mint_FO_functions.f',
                      'pineappl_interface.cc',
                      'pineappl_interface_dummy.f',
                      'pineappl_common.inc',
