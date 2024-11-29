@@ -501,7 +501,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'), 
                              p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
-                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             abs(p.get('color')),l.get('onshell'),l.get('onium').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
                            process.get('id')]
@@ -516,7 +516,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'), p.get('pdg_code'), 
                              p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
-                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             abs(p.get('color')),l.get('onshell'),l.get('onium').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
                            process.get('id')]

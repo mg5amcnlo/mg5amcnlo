@@ -6692,7 +6692,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                       "subproc_group object not SubProcessGroup"
         
 
-
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')

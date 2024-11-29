@@ -2914,7 +2914,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
                      'checks', 'parameters', 'options', 'coupling_order','variable',
-                     'modellist']
+                     'modellist', 'boundstates']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -3092,6 +3092,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Variables to store state information
         self._multiparticles = {}
+        self._boundstates = {}
         self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
@@ -3630,6 +3631,11 @@ This implies that with decay chains:
             for key in self._multiparticles:
                 print(self.multiparticle_string(key))
 
+        elif args[0] == 'boundstates':
+            print('Bound state lables:')
+            for key in self._boundstates:
+                print(self.boundstate_string(key))
+
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
             hierarchy.sort(key=operator.itemgetter(1))
@@ -3885,6 +3891,14 @@ This implies that with decay chains:
             return "%s = %s" % (key, " ".join([self._curr_model.\
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
+
+    def boundstate_string(self, key):
+        """Returns a nicely formatted string for the bound state"""
+
+        if key in self._boundstates:
+            return f"{key} = {' '.join(self._boundstates[key])}"
+        else:
+            return f"Boundstate {key} is not defined."
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -4732,34 +4746,10 @@ This implies that with decay chains:
         self.clean_process()
         self._generate_info = line
 
-        onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_physical.txt'), comment="#", sep="\s+", engine='python', index_col = False)
-        for key in onia.keys():
-            try:
-                onia[key] = onia[key].str.lower()
-            except:
-                continue
-
-        fockstates = {}
-        for onium in onia['name'].values:
-            if (onium+' ' in line.lower()) or line.lower().endswith(onium):
-                fockstate = onia.loc[onia['name'] == onium]
-                fockstates[onium] = fockstate['states'].to_string(index=False).split(',')
-
-        if fockstates:
-            counter = 0
-            for key in fockstates.keys():
-                for fockstate in fockstates[key]:
-                    onium_line = line.lower().replace(key,key.replace('(2s)','')+fockstate)
-                    args = self.split_arg(onium_line)
-                    logger.info("LS:: generating "+" ".join(args))
-                    args.insert(0, 'process')
-                    self.do_add(" ".join(args),counter)
-                    counter += 1
-        else:
-            # Call add process
-            args = self.split_arg(line)
-            args.insert(0, 'process')
-            self.do_add(" ".join(args))
+        # Call add process
+        args = self.split_arg(line)
+        args.insert(0, 'process')
+        self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -4983,10 +4973,32 @@ This implies that with decay chains:
 
         args = self.split_arg(line)
 
+        # Extract process
+        boundstates = {}
+        for index,part_name in enumerate(args):
+            if part_name in self._boundstates:
+                boundstates[index] = self._boundstates[part_name]
+        if boundstates:
+            for index,key in enumerate(boundstates.keys()):
+                if index==0:
+                    combined = [[(key,b)] for b in boundstates[key]]
+                else:
+                    for c in combined: print(c)
+                    combined = [c+[(key,b)] for c in combined for b in boundstates[key]]
+            last = len(combined)-1
+            for idx,fockstates in enumerate(combined):
+                copy_args = args 
+                for index,fockstate in fockstates:
+                    copy_args[index] = fockstate
+                process = f" ".join(["process"]+copy_args)
+                logger.info("INFO: Trying to generate "+process)
+                if not idx==last:
+                    self.do_add(process)
+                else:
+                    args = [arg.lower() for arg in copy_args]
+
         myleglist = base_objects.MultiLegList()
         state = False
-
-        # Extract process
         onium_index = 0
         for part_name in args:
             if part_name == '>':
@@ -5926,6 +5938,7 @@ This implies that with decay chains:
                                         self._curr_model.get('interactions')], []))
 
         self.add_default_multiparticles()
+        self.add_default_boundstates()
 
 
     def import_mg4_proc_card(self, filepath):
@@ -6088,6 +6101,29 @@ This implies that with decay chains:
             line.append('%s %s' % (part.get('name'), part.get('antiname')))
         line = 'all =' + ' '.join(line)
         self.do_define(line)
+
+    def add_default_boundstates(self):
+        """Add default bound states from file boundstates_default.txt in the input folder"""
+
+        # Load default bound states from boundstates_default.txt
+        boundstates_file = pjoin(MG5DIR, 'input', 'boundstates_default.txt')
+        # Check if the file exists!
+        if not os.path.isfile(boundstates_file):
+            logger.warning(f"Bound states file {boundstates_file} not found.")
+            return
+
+        with open(boundstates_file) as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+                # The first item on the line is the quarkonium, the rest is the list of Fock states
+                boundstate_label, bound_state = line.split("=", 1)
+                boundstate_label = boundstate_label.strip()
+                bound_state = bound_state.strip()
+                fock_states = bound_state.strip().split()
+                self._boundstates[boundstate_label] = fock_states
+
+                logger.info(f"Defined boundstate {boundstate_label} = {bound_state}")
 
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
