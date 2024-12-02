@@ -1,6 +1,49 @@
       subroutine madnis_nlo_initialise()
-      implicit none
 C     The initialisation routines, to be called at the beginning of the run
+      use extra_weights
+      use mint_module
+      use FKSParams
+      implicit none
+C
+C     LOCAL
+C
+      integer i,j,k,l,l1,l2,kchan
+      character*130 buf
+c timing statistics
+      include "timing_variables.inc"
+      include 'orders.inc'
+      include 'run.inc'
+      include 'nexternal.inc'
+
+c stats for granny_is_res
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+c PineAPPL
+      logical pineappl
+      common /for_pineappl/ pineappl
+c statistics for MadLoop      
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+c     Vegas stuff
+      integer         nndim
+      common/tosigint/nndim
+
+      character*4      abrv
+      common /to_abrv/ abrv
+      logical unwgt
+      double precision evtsgn
+      common /c_unwgt/evtsgn,unwgt
+      logical            flat_grid
+      common/to_readgrid/flat_grid                !Tells if grid read from file
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+      logical useitmax
+      common/cuseitmax/useitmax
+      character*10 dum
 
 C-----
 C  BEGIN CODE
@@ -120,8 +163,13 @@ c
 
 
       subroutine madnis_nlo_terminate()
-      implicit none
 C     The termination routines, to be called at the end of the run
+c timing statistics
+      use mint_module
+      implicit none
+      integer kchan
+      include "timing_variables.inc"
+      real*4 tOther, tTot
 
       call topout
       call deallocate_weight_lines
@@ -166,9 +214,15 @@ C     The termination routines, to be called at the end of the run
 
 
       subroutine madnis_nlo_evaluate()
-      implicit none
+      use extra_weights
+      use mint_module
 C     The evaluation of the integrand, essentially wrapping around
 C     sigint
+      implicit none
+      integer kchan
+      real*8 sigint
+      external sigint
+      include 'run.inc'
 
       if (imode.eq.-1.or.imode.eq.0) then
          if(imode.eq.0)then

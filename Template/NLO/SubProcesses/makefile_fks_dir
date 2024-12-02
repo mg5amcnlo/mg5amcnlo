@@ -165,6 +165,8 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	strip madevent_mintFO
 
 madnis_NLO_FO.so: $(MADNISFO) $(libmadloop) makefile $(LIBS)
+	# MZMZ this does not work, fix it!!!!
+	ar rcs madnis_NLO_FO.$(libext) $(MADNISFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 madnis_NLO_MC.so: $(MADNISMC) $(libmadloop) makefile $(LIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
