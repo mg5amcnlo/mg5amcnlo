@@ -140,10 +140,6 @@ class FileWriter(io.FileIO):
         else:
             raise self.FileWriterError("%s not string" % repr(input_lines))
         
-        # Setup the contextual environment
-        for contextual_variable, value in context.items():
-            exec('%s=%s'%(str(contextual_variable),repr(value)))
-        
         res = []
         # The variable below tracks the conditional statements structure
         if_stack = []
@@ -166,7 +162,7 @@ class FileWriter(io.FileIO):
             # Treat an if statement
             elif preproc_command.group('command')=='if':
                 try:
-                    if_stack.append(eval(preproc_command.group('body'))==True)
+                    if_stack.append(eval(preproc_command.group('body'), globals(), context)==True)
                 except Exception as e:
                     raise self.FilePreProcessingError('Could not evaluate'+\
                       "python expression '%s' given the context %s provided."%\

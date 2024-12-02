@@ -5,7 +5,9 @@ C     INCLUDE
 C
       include 'pdf.inc'
       include '../alfas.inc'
+## if(LO) {
       include '../vector.inc'
+## }
       include '../coupl.inc'
       real*8 zmass
       data zmass/91.188d0/
