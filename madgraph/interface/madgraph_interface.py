@@ -6131,7 +6131,6 @@ This implies that with decay chains:
             for line in f:
                 if (line.startswith('#') or line == '\n'):
                     continue
-                # The first item on the line is the quarkonium, the rest is the list of Fock states
                 fockstate = line.lower()
                 fockstate = fockstate.split()
                 if fockstate[0].isdigit():

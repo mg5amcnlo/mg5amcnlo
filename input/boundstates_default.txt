@@ -1,3 +1,4 @@
+################################################################################
 #
 # Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -10,7 +11,7 @@
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
-##################################################################################
+################################################################################
 #
 # Quarkonium Boundstates (S-waves only)
 #
