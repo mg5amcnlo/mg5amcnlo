@@ -1,0 +1,36 @@
+#
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+##################################################################################
+#
+# Quarkonium Boundstates (S-waves only)
+#
+# Syntax: label = Fock states (separated by spaces)
+#
+# Charmonium
+etac = c.c~(1|1S01) c.c~(1|1S08)
+etac(2s) = c.c~(2|1S01) c.c~(2|1S08)
+jpsi = c.c~(1|3S11) c.c~(1|3S18)
+psi(2s) = c.c~(2|3S11) c.c~(2|3S18)
+# Charmed  B mesons
+Bc+ = c.b~(1|1S01) c.b~(1|1S08)
+B*c+ = c.b~(1|3S11) c.b~(1|3S18)
+Bc- = b.c~(1|1S01) b.c~(1|1S08)
+B*c- = b.c~(1|3S11) b.c~(1|3S18)
+# Bottomonium
+etab = b.b~(1|1S01) b.b~(1|1S08)
+etab(2s) = b.b~(2|1S01) b.b~(2|1S08)
+upsilon = b.b~(1|3S11) b.b~(1|3S18)
+upsilon(2s) = b.b~(2|3S11) b.b~(2|3S18)
+# Toponium
+etat = t.t~(1|1S01) t.t~(1|1S08)
+etat(2s) = t.t~(2|1S01) t.t~(2|1S08)
