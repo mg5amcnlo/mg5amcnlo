@@ -125,7 +125,9 @@ C     Continue only if IMODE is 0, 4 or 5
       ! for no grouping update the scale here (done in main autodsig for grouping  
       call update_scale_coupling(PP, WGT)
 ## }	 
+%(start_profiling_pdf)s
 %(pdf_lines)s
+%(stop_profiling_pdf)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
             RETURN
@@ -158,7 +160,9 @@ C     Select a flavor combination (need to do here for right sign)
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
 	 
+%(start_profiling_rewgt)s
          DSIGUU=DSIGUU*REWGT(PP,1)
+%(stop_profiling_rewgt)s
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d,1)
@@ -319,7 +323,9 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+%(start_profiling_pdf_vec)s
 %(pdf_lines_vec)s
+%(stop_profiling_pdf_vec)s
 
 	 
          IF (IMODE.EQ.4)THEN
@@ -352,8 +358,9 @@ C     Select a flavor combination (need to do here for right sign)
        ENDDO
        %(get_channel_vec)s
 
-
+%(start_profiling_rewgt)s
        ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
+%(stop_profiling_rewgt)s
 
 	 if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
@@ -406,8 +413,10 @@ c           Set sign of dsig based on sign of PDF and matrix element
          ENDIF
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
+%(start_profiling_unwgt)s
 C       Call UNWGT to unweight and store events
            CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, selected_hel(IVEC), selected_col(IVEC), IVEC)
+%(stop_profiling_unwgt)s
         ENDIF
 	ENDDO
 %(passcuts_end)s
