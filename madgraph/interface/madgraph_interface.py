@@ -34,7 +34,6 @@ import subprocess
 import copy
 import sys
 import shutil
-import pandas
 
 import traceback
 import time
@@ -3093,6 +3092,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Variables to store state information
         self._multiparticles = {}
         self._boundstates = {}
+        self._fockstates = {}
         self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
@@ -5009,23 +5009,18 @@ This implies that with decay chains:
 
             # check if particle is ONIA
             is_onium = False
-            onia = pandas.read_csv(pjoin(MG5DIR,'madgraph/interface/onia_fockstates.txt'), comment="#", sep="\s+", engine='python', index_col = False)
-            for key in onia.keys():
-                try:
-                    onia[key] = onia[key].str.lower()
-                except:
-                    continue
+            onia = self._fockstates
 
-            if part_name in onia['notation'].values:
+            if part_name in onia['notation']:
                 is_onium = True
-                onium_info = onia.loc[onia['notation'] == part_name]
-            elif part_name in onia['name'].values:
+                onium_info = onia[onia[part_name]]
+            elif part_name in onia['name']:
                 is_onium = True
-                onium_info = onia.loc[onia['name'] == part_name]
-            elif part_name.isdigit(): 
-                if int(part_name) in onia['pid'].values:
+                onium_info = onia[part_name]
+            elif part_name.isdigit():
+                if int(part_name) in onia['pid']:
                     is_onium = True
-                    onium_info = onia.loc[onia['pid'] == int(part_name)]
+                    onium_info = onia[onia[int(part_name)]]
 
             # check that only final-state particles are ONIA
             if is_onium and not state:
@@ -5143,19 +5138,19 @@ This implies that with decay chains:
                 mylegids.extend(self._multiparticles[part_name])
                 
             elif is_onium:
-                onium_name = onium_info['name'].to_string(index=False)
-                onium_id = int(onium_info['pid'].to_string(index=False))
-                onium_pythiaid = int(onium_info['pythia'].to_string(index=False))
-                onium_principal = int(onium_info['N'].to_string(index=False))
-                onium_spin = int((int(onium_info['S'].to_string(index=False))-1)/2)
-                onium_orbit = int(onium_info['L'].to_string(index=False))
-                onium_jtot = int(onium_info['J'].to_string(index=False))
-                onium_color = int(onium_info['C'].to_string(index=False))
-                onium_charge = int(onium_info['charge'].to_string(index=False))
-                onium_mass = float(onium_info['mass'].to_string(index=False))
-                onium_width = float(onium_info['width'].to_string(index=False))
-                onium_notation = onium_info['notation'].to_string(index=False)
-                constituents = [onium_info['particle'].to_string(index=False),onium_info['anti-particle'].to_string(index=False)]
+                onium_name = onium_info['name']
+                onium_id = onium_info['pid']
+                onium_pythiaid = onium_info['pythia']
+                onium_principal = onium_info['N']
+                onium_spin = int((onium_info['S']-1)/2)
+                onium_orbit = onium_info['L']
+                onium_jtot = onium_info['J']
+                onium_color = onium_info['C']
+                onium_charge = onium_info['charge']
+                onium_mass = onium_info['mass']
+                onium_width = onium_info['width']
+                onium_notation = onium_info['notation']
+                constituents = [onium_info['particle'],onium_info['anti-particle']]
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
                   
@@ -5939,6 +5934,7 @@ This implies that with decay chains:
 
         self.add_default_multiparticles()
         self.add_default_boundstates()
+        self.add_default_fockstates()
 
 
     def import_mg4_proc_card(self, filepath):
@@ -6124,6 +6120,47 @@ This implies that with decay chains:
                 self._boundstates[boundstate_label] = fock_states
 
                 logger.info(f"Defined boundstate {boundstate_label} = {bound_state}")
+
+    def add_default_fockstates(self):
+        """Add default Fock states from file fockstates_default.txt in the input folder"""
+
+        name = []
+        notation = []
+        pid = []
+        with open(pjoin(MG5DIR,'input','fockstates_default.txt')) as f:
+            for line in f:
+                if (line.startswith('#') or line == '\n'):
+                    continue
+                # The first item on the line is the quarkonium, the rest is the list of Fock states
+                fockstate = line.lower()
+                fockstate = fockstate.split()
+                if fockstate[0].isdigit():
+                    name += [fockstate[2]]
+                    notation += [fockstate[3]]
+                    pid += [int(fockstate[0])]
+                    self._fockstates[fockstate[2]] = {
+                      'pid': int(fockstate[0]),
+                      'pythia': int(fockstate[1]),
+                      'name': fockstate[2],
+                      'notation': fockstate[3],
+                      'particle': fockstate[4],
+                      'anti-particle': fockstate[5],
+                      'N': int(fockstate[6]),
+                      'S': int(fockstate[7]),
+                      'L': int(fockstate[8]),
+                      'J': int(fockstate[9]),
+                      'C': int(fockstate[10]),
+                      'charge': int(fockstate[11]),
+                      'mass': float(fockstate[12]),
+                      'width': float(fockstate[13])
+                    }
+                    self._fockstates[fockstate[3]] = fockstate[2]
+                    self._fockstates[int(fockstate[0])] = fockstate[2]
+        self._fockstates['name'] = name
+        self._fockstates['notation'] = notation
+        self._fockstates['pid'] = pid
+
+        return self._fockstates
 
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
