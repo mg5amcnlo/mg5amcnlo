@@ -158,6 +158,30 @@ c
       unwgt=.false.
       call addfil(dum)
 
+      if (imode.eq.-1.or.imode.eq.0) then
+         if(imode.eq.0)then
+c Don't safe the reweight information when just setting up the grids.
+            doreweight=.false.
+            do_rwgt_scale=.false.
+            do_rwgt_pdf=.false.
+         else
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
+         endif
+c
+         write (*,*) 'imode is ',imode
+
+         if (ickkw.eq.-1) then
+            min_virt_fraction=1d0
+            do kchan=1,nchans
+               virtual_fraction(kchan)=1d0
+            enddo
+         endif
+c
+      else
+         write (*,*) 'Unknown imode',imode
+         stop
+      endif
+
       return
       end
 
@@ -213,44 +237,15 @@ c timing statistics
       end
 
 
-      subroutine madnis_nlo_evaluate()
-      use extra_weights
-      use mint_module
+      subroutine madnis_nlo_evaluate(xx,vegas_wgt,ifl,f)
 C     The evaluation of the integrand, essentially wrapping around
 C     sigint
+      use mint_module
       implicit none
-      integer kchan
-      real*8 sigint
-      external sigint
-      include 'run.inc'
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals)
+      integer ifl
 
-      if (imode.eq.-1.or.imode.eq.0) then
-         if(imode.eq.0)then
-c Don't safe the reweight information when just setting up the grids.
-            doreweight=.false.
-            do_rwgt_scale=.false.
-            do_rwgt_pdf=.false.
-         else
-            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
-         endif
-c
-         write (*,*) 'imode is ',imode
-
-         if (ickkw.eq.-1) then
-            min_virt_fraction=1d0
-            do kchan=1,nchans
-               virtual_fraction(kchan)=1d0
-            enddo
-         endif
-         call mint(sigint)
-         call topout
-         call deallocate_weight_lines
-c
-      else
-         write (*,*) 'Unknown imode',imode
-         stop
-      endif
-
+      call sigint(xx,vegas_wgt,ifl,f)
       return
       end
 

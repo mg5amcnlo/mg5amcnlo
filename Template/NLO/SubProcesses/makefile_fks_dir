@@ -70,6 +70,10 @@ MINTFO= $(RUN) driver_mintFO.o mint_FO_functions.o handling_lhe_events.o write_e
 # Files for mintMC
 MINTMC= $(RUN) driver_mintMC.o mint_MC_functions.o handling_lhe_events.o write_event.o BinothLHA.o
 
+COMMA=,
+FJLIBSNIS0=$(patsubst -Wl$(COMMA)-rpath$(COMMA)%,-rpath %, $(FJLIBS))
+FJLIBSNIS=$(patsubst -lm, , $(FJLIBSNIS0))
+#FJLIBSNIS= -lm $(FJLIBSNIS1)
 # Files for madnis FO
 MADNISFO= $(RUN) madnis_NLO_FO.o mint_FO_functions.o handling_lhe_events.o write_event.o BinothLHA.o pythia8_fortran_dummy.o
 
@@ -166,7 +170,7 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 
 madnis_NLO_FO.so: $(MADNISFO) $(libmadloop) makefile $(LIBS)
 	# MZMZ this does not work, fix it!!!!
-	ar rcs madnis_NLO_FO.$(libext) $(MADNISFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+	ld -o madnis_NLO_FO.so $(MADNISFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBSNIS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 madnis_NLO_MC.so: $(MADNISMC) $(libmadloop) makefile $(LIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
