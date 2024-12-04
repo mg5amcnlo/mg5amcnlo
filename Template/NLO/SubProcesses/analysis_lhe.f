@@ -103,6 +103,8 @@ c maximum weight ratio for the partial unweighting
       double precision            cross_section
       common /for_FixedOrder_lhe/ cross_section,npoints
       double precision,allocatable :: wwgts(:)
+      integer colH(2,nexternal),colS(2,nexternal)
+      common /FO_color/ colS,colH
 c --- do the partial unweighting (don't do it when to close to singular
 c --- region)
       if (.not. allocated(wwgts)) then
@@ -171,8 +173,13 @@ c --- prepare the event file info according to the LesHouches standard
         ISTUP(i)= istatus(i)
         MOTHUP(1,i)=0
         MOTHUP(2,i)=0
-        ICOLUP(1,i)=599
-        ICOLUP(2,i)=599
+        if (ibody.eq.1) then
+           ICOLUP(1,i)=colH(1,i)
+           ICOLUP(2,i)=colH(2,i)
+        else
+           ICOLUP(1,i)=colS(1,i)
+           ICOLUP(2,i)=colS(2,i)
+        endif
         PUP(1,i)=p(1,i)
         PUP(2,i)=p(2,i)
         PUP(3,i)=p(3,i)

@@ -2860,6 +2860,73 @@ c excluding the nbody contributions.
       return
       end
 
+      subroutine set_color()
+      use mint_module
+      implicit none
+      include "genps.inc"
+      include 'nexternal.inc'
+      include "born_nhel.inc"
+      include "born_coloramps.inc"
+      integer i,iBornGraph,iflow,jpart(7,-nexternal+3:2*nexternal-3)
+     $     ,colH(2,nexternal),colS(2,nexternal),idum
+      common /FO_color/ colS,colH
+      double precision sumborn,xtarget,jampsum,wgt_born
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
+      common/to_amps/  amp2,       jamp2
+      double precision ran2
+      external ran2
+      iBornGraph=iconfig
+      
+
+! colour not yet set: Get color flow that is consistent with
+! iconfig from Born
+      call sborn(p_born,wgt_born)
+      sumborn=0.d0
+      do i=1,max_bcol
+         if (icolamp(i,iBornGraph,1)) then
+            sumborn=sumborn+jamp2(i)
+         endif
+      enddo
+      if (sumborn.eq.0d0) then
+         write (*,*) 'Error #1 in add_write_info:'
+         write (*,*) 'in MadFKS, sumborn should always be larger'//
+     $        ' than zero, because always QCD partons around',sumborn
+     $        ,max_bcol
+         do i=1,max_bcol
+            write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
+         enddo
+         stop
+      endif
+      xtarget=ran2()*sumborn
+
+      iflow=1
+      if (icolamp(1,iBornGraph,1)) then
+         jampsum=jamp2(1)
+      else
+         jampsum=0d0
+      endif
+      do while (jampsum .lt. xtarget)
+         iflow=iflow+1
+         if (icolamp(iflow,iBornGraph,1)) then
+            jampsum=jampsum+jamp2(iflow)
+         endif
+      enddo
+      if (iflow.gt.max_bcol) then
+         write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol
+         stop
+      endif
+      
+      
+      call fill_icolor_H(iflow,jpart)
+      colH(1:2,1:nexternal)=jpart(4:5,1:nexternal)
+      call fill_icolor_S(iflow,jpart,idum)
+      colS(1:2,1:nexternal-1)=jpart(4:5,1:nexternal-1)
+      colS(1:2,nexternal)=0
+      end
+
+      
       subroutine fill_plots
 c Calls the analysis routine (which fill plots) for all the
 c contributions in the weight_lines module. Instead of really calling
@@ -2884,6 +2951,9 @@ c to greatly reduce the calls to the analysis routines.
       save max_weight
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+
+      call set_color()
+      
 c fill the plots_wgts. Check if we can sum weights together before
 c calling the analysis routines. This is the case if the PDG codes and
 c the momenta are identical.
