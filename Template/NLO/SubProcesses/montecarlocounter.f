@@ -1925,6 +1925,80 @@ c Ellis-Stirling-Webber
 !     wgt_sudakov.
 !      
 
+!     loop over particles ('a' in eq.3.14)
+      do i=1,nexternal-1
+!     for each particle, find the connections (beta in eq.3.14)
+         n_connect(i)=0
+         do j=1,nexternal-1
+            if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+!     found a connection; determine the starting and stopping scales of
+!     this connection (eq.3.31 & 3.34). Check that it is in the
+!     livezone, and overwrite it such that it gives a value that is not
+!     too large or too small (eq.3.33)
+            if (starting_scales(i,j).lt.stopping_scales(iBtoR(i)
+     $           ,iBtoR(j))) cycle
+            n_connect(i)=n_connect(i)+1
+            i_connect(n_connect(i),i)=j
+            mu_ij(n_connect(i),i)=max(min(starting_scales(i,j),cstupp)
+     $           ,smallptupp)
+            t_ij(n_connect(i),i)=min(stopping_scales(iBtoR(i),iBtoR(j))
+     $           ,cstupp)
+         enddo
+      enddo
+      
+      wgt_sudakov=1d0
+      ! loop over 'k' in eq.3.31 and 3.34
+      do i=1,nexternal-1
+         if (n_connect(i).eq.0) cycle
+         if (idup_s(i).ne.21) then ! eq.3.31
+            isudtype=setSudType(i,i_connect(1,i))
+!     compute the PDF factor numerator and denominator
+            if(i.le.nincoming)then
+               LP=SIGN(1,LPP(i))
+               if (idup_s(i).le.6) then ! (anti-)quark 
+                  id=LP*idup_s(i)
+               else
+                  write (*,*) 'only quarks here',idup_s(i)
+                  stop 1
+               endif
+               pdfnum=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+     $              t_ij(1,i)) ! n_connect(i) is always 1 here
+               pdfden=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+     $              mu_ij(1,i)) ! n_connect(i) is always 1 here
+            else
+               pdfnum=1d0
+               pdfden=1d0
+            endif
+
+
+
+!     compute sudakov numerator
+c$$$            if(t_ij(1,i).le.smallptlow)then
+            if(t_ij(1,i).le.smallptupp)then
+               deltanum=0.d0
+c$$$            elseif( t_ij(1,i).gt.smallptlow .and.
+c$$$     $              t_ij(1,i).le.smallptupp )then
+c$$$               deltanum = pysudakov(smallptupp,xmasses_nbody(i
+c$$$     $              ,i_connect(1,i)),idup_s(i),isudtype(icount),mcmass)
+c$$$     $              *get_to_zero(t_ij(1,i),smallptlow,smallptupp)
+            else
+               deltanum=pysudakov(t_ij(1,i),xmasses_nbody(i,i_connect(1
+     $              ,i)),idup_s(i),isudtype,mcmass)
+            endif
+ !     compute sudakov denominator
+            deltaden=pysudakov(mu_ij(1,i),xmasses_nbody(i
+     $           ,i_connect(1,i)),idup_s(i),isudtype,mcmass)
+
+
+            wgt_sudakov=wgt_sudakov * pdfnum/pdfden * deltanum/deltaden
+            
+         else ! eq.3.34
+
+         endif
+      enddo
+            
+
+      
       wgt_sudakov=1d0
       i_dipole_counter=0
       i_dipole_dead_counter=0
@@ -2052,7 +2126,7 @@ c a double colour connection (eg in gg->H). The condition that the starting
 c scale is larger than the stopping scale has not been enforced
 c so far, so do it here
             if(stoppingScale(1).lt.startingScale(1))then
-               if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
+                if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
                   deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
                   deltaden(1)=deltaden(1)**2*pdffden(1)
                else
@@ -2197,6 +2271,21 @@ c
       enddo
 
       return
+      end
+
+      integer function setSudType(i,j)
+      implicit none
+      integer i,j
+      if(i.le.2.and.j.le.2)then
+         setsudtype=1
+      elseif(i.gt.2.and.j.gt.2)then
+         setsudtype=2
+      elseif(i.le.2.and.j.gt.2)then
+c     For Pythia: IF is identical to II
+         setsudtype=1
+      elseif(i.gt.2.and.j.le.2)then
+         setsudtype=4
+      endif
       end
 
       subroutine set_stopping_scales(stopping_scales_PY,dzones_nbody,p
