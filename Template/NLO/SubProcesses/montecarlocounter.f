@@ -1671,7 +1671,7 @@ cSF thus can be directly passed rather than reconstructed
          firsttime1=.false.
          call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
 c Fake call for initialisation
-         deltanum(1,1)=pysudakov(1.d2,2.d2,1,1,mcmass)
+         deltanum(1,1)=pysudakov_safe(1.d2,2.d2,1,1,mcmass)
          if(cstlow.gt.smallptupp)then
             write(*,*)'Error in xmcsubt: cstlow,smallptupp',
      &           cstlow,smallptupp
@@ -1949,294 +1949,350 @@ c Ellis-Stirling-Webber
       wgt_sudakov=1d0
       ! loop over 'k' in eq.3.31 and 3.34
       do i=1,nexternal-1
-         if (n_connect(i).eq.0) cycle
-         if (idup_s(i).ne.21) then ! eq.3.31
-            isudtype=setSudType(i,i_connect(1,i))
-!     compute the PDF factor numerator and denominator
+         if (n_connect(i).eq.0) cycle ! no colour connection for particle 'i'
+c$$$         if (idup_s(i).ne.21) then ! eq.3.31
+c$$$            if(n_connect(i).ne.1) then
+c$$$               write (*,*) 'n_connect should be 1 for quarks'
+c$$$     $              ,n_connect(i),i
+c$$$               stop 1
+c$$$            endif
+c$$$            isudtype=setSudType(i,i_connect(1,i))
+c$$$!     compute the PDF factor numerator and denominator
+c$$$            if(i.le.nincoming)then
+c$$$               LP=SIGN(1,LPP(i))
+c$$$               if (idup_s(i).le.6) then ! (anti-)quark 
+c$$$                  id=LP*idup_s(i)
+c$$$               else
+c$$$                  write (*,*) 'only quarks here',idup_s(i)
+c$$$                  stop 1
+c$$$               endif
+c$$$               pdfnum=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+c$$$     $              t_ij(1,i)) ! n_connect(i) is always 1 here
+c$$$               pdfden=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+c$$$     $              mu_ij(1,i)) ! n_connect(i) is always 1 here
+c$$$            else
+c$$$               pdfnum=1d0
+c$$$               pdfden=1d0
+c$$$            endif
+c$$$
+c$$$
+c$$$
+c$$$!     compute sudakov numerator
+c$$$c$$$            if(t_ij(1,i).le.smallptlow)then
+c$$$            if(t_ij(1,i).le.smallptupp)then
+c$$$               deltanum=0.d0
+c$$$c$$$            elseif( t_ij(1,i).gt.smallptlow .and.
+c$$$c$$$     $              t_ij(1,i).le.smallptupp )then
+c$$$c$$$               deltanum = pysudakov(smallptupp,xmasses_nbody(i
+c$$$c$$$     $              ,i_connect(1,i)),idup_s(i),isudtype(icount),mcmass)
+c$$$c$$$     $              *get_to_zero(t_ij(1,i),smallptlow,smallptupp)
+c$$$            else
+c$$$               deltanum=pysudakov(t_ij(1,i),xmasses_nbody(i,i_connect(1
+c$$$     $              ,i)),idup_s(i),isudtype,mcmass)
+c$$$            endif
+c$$$ !     compute sudakov denominator
+c$$$            deltaden=pysudakov(mu_ij(1,i),xmasses_nbody(i
+c$$$     $           ,i_connect(1,i)),idup_s(i),isudtype,mcmass)
+c$$$
+c$$$! Multiply the total Sudakov weight by the one of the current dipole.
+c$$$            wgt_sudakov=wgt_sudakov * pdfnum/pdfden * deltanum/deltaden
+c$$$            
+c$$$         else                   ! eq.3.34
+         if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
+     &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
+            write (*,*) 'n_connect should be 1 for quarks and 2 '/
+     $           /'for gluons',n_connect(i),i,idup_s(i)
+            stop 1
+         endif
+!     TODO SPECIAL CASE
+         if (isspecial) then
+            write (*,*) 'TO DO: ISSPECIAL'
+            stop 1
+         endif
+
+         do out_con=1,n_connect(i) ! loop over two lines of 3.34
+!     compute g1 and g2 (FIX FOR SAFETY MEASURES)
+            isudtype=setSudType(i,i_connect(out_con,i))
+            deltanum=pysudakov_safe(t_ij(out_con,i),xmasses_nbody(i
+     $           ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
+            deltaden=pysudakov_safe(mu_ij(out_con,i),xmasses_nbody(i
+     $           ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
+            gl(out_con)=gl_safe(deltanum/deltaden)
+!     compute F_k
             if(i.le.nincoming)then
                LP=SIGN(1,LPP(i))
-               if (idup_s(i).le.6) then ! (anti-)quark 
-                  id=LP*idup_s(i)
-               else
-                  write (*,*) 'only quarks here',idup_s(i)
-                  stop 1
-               endif
-               pdfnum=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
-     $              t_ij(1,i)) ! n_connect(i) is always 1 here
-               pdfden=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
-     $              mu_ij(1,i)) ! n_connect(i) is always 1 here
+               id=get_parton_id(idup_s(i))
+               pdfnum=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
+     $              t_ij(out_con,i))
+               pdfden=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
+     $              mu_ij(out_con,i))
             else
                pdfnum=1d0
                pdfden=1d0
             endif
-
-
-
-!     compute sudakov numerator
-c$$$            if(t_ij(1,i).le.smallptlow)then
-            if(t_ij(1,i).le.smallptupp)then
-               deltanum=0.d0
-c$$$            elseif( t_ij(1,i).gt.smallptlow .and.
-c$$$     $              t_ij(1,i).le.smallptupp )then
-c$$$               deltanum = pysudakov(smallptupp,xmasses_nbody(i
-c$$$     $              ,i_connect(1,i)),idup_s(i),isudtype(icount),mcmass)
-c$$$     $              *get_to_zero(t_ij(1,i),smallptlow,smallptupp)
-            else
-               deltanum=pysudakov(t_ij(1,i),xmasses_nbody(i,i_connect(1
-     $              ,i)),idup_s(i),isudtype,mcmass)
-            endif
- !     compute sudakov denominator
-            deltaden=pysudakov(mu_ij(1,i),xmasses_nbody(i
-     $           ,i_connect(1,i)),idup_s(i),isudtype,mcmass)
-
-
-            wgt_sudakov=wgt_sudakov * pdfnum/pdfden * deltanum/deltaden
-            
-         else ! eq.3.34
-
-         endif
-      enddo
-            
-
-      
-      wgt_sudakov=1d0
-      i_dipole_counter=0
-      i_dipole_dead_counter=0
-      nG_S=0
-      nQ_S=0
-c
-      do i=1,nexternal-1
-         if(idup_s(i).eq.21)nG_S=nG_S+1
-         if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
-         icount=0
-         jindex(1)=-1
-         jindex(2)=-1
-         do j=1,nexternal-1
-c At fixed i, loop over j to find the colour lines that begin at i 
-c (at most [because of dead zones] one for quarks, two for gluons).
-c For each of these colour lines, find the starting and stopping
-c scales and store them in startingScale(*) and stoppingScale(*).
-c Store the corresponding Sudakov type in isudtype(*)
-            if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
-c$$$            if(j.eq.i)cycle
-c$$$            if(xscales2(i,j).eq.-1d0)cycle
-            if(dzones_nbody(i,j))then
-               i_dipole_dead_counter=i_dipole_dead_counter+1
-               if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
-c double colour connection, count twice
-                  i_dipole_dead_counter=i_dipole_dead_counter+1
-               endif
-               cycle
-            endif
-            icount=icount+1
-c Overwrite the startingscale to be in the correct range
-            startingScale(icount) = max(min(starting_scales(i,j),cstupp)
-     $           ,smallptupp)
-            stoppingScale(icount) = min(stopping_scales(iBtoR(i)
-     $           ,iBtoR(j)),cstupp)
-            jindex(icount)=j
-            if(i.le.2.and.j.le.2)then
-               isudtype(icount)=1
-            elseif(i.gt.2.and.j.gt.2)then
-               isudtype(icount)=2
-            elseif(i.le.2.and.j.gt.2)then
-c For Pythia: IF is identical to II
-               isudtype(icount)=1
-            elseif(i.gt.2.and.j.le.2)then
-               isudtype(icount)=4
-            endif
-            if(stoppingScale(icount).gt.startingScale(icount))then
-               i_dipole_dead_counter=i_dipole_dead_counter+1
-            else
-               i_dipole_counter=i_dipole_counter+1
-            endif
-            if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
-c double colour connection, count twice
-               if (idup_s(j).ne.21) then
-                  write (*,*) 'SPECIAL and a gluon is not connected '/
-     $                 /'to another gluon',i,j,idup_s(i),idup_s(j)
-                  stop 1
-               endif
-               if(stoppingScale(icount).gt.startingScale(icount))then
-                  i_dipole_dead_counter=i_dipole_dead_counter+1
-               else
-                  i_dipole_counter=i_dipole_counter+1
-               endif
-            endif
-c
-c Conventions:
-c   deltanum(i,j) <--> stoppingScale(i),isudtype(j)
-c   deltaden(j)   <--> startingScale(j)
-c Given our definitions, whenever a quantity is computed for
-c which both the stopping scale and the Sudakov type are relevant,
-c the arguments of stoppingScale(*) and isudtype(*) must be equal.
-c The ratio:
-c    deltarat(i,j) = deltanum(i,j)/deltaden(j)
-c is the Sudakov of type isudtype(j) (with CF for quarks, and CA/2 for gluons) 
-c between scales [stoppingScale(i),startingScale(j)]
-c
-            if(stoppingScale(icount).le.smallptlow)then
-c Still inside the j loop, but the information is sufficient to 
-c compute deltaden(*) and deltanum(*,*)
-               deltanum(icount,icount)=0.d0
-            elseif( stoppingScale(icount).gt.smallptlow .and.
-     $              stoppingScale(icount).le.smallptupp )then
-               deltanum(icount,icount)= pysudakov(smallptupp,xmasses2(i
-     $              ,j), idup_s(i),isudtype(icount),mcmass)
-               deltanum(icount,icount)=deltanum(icount,icount)*
-     $              get_to_zero(stoppingScale(icount),smallptlow
-     $              ,smallptupp)
-            else
-               deltanum(icount,icount)= pysudakov(stoppingScale(icount)
-     $              ,xmasses2(i,j), idup_s(i),isudtype(icount),mcmass)
-            endif
-            deltaden(icount)=pysudakov(startingScale(icount),xmasses2(i
-     $           ,j),idup_s(i),isudtype(icount),mcmass)
-c End of primary loop over j
-         enddo
-
-c No live colour connection starting from/ending in i has been found:
-c go to the next i
-         if(icount.eq.0)goto 111
-c
-         if(i.le.nincoming)then
-           LP=SIGN(1,LPP(i))
-           if (idup_s(i).le.6) then ! (anti-)quark 
-              id=LP*idup_s(i)
-           elseif (idup_s(i).eq.21) then ! gluon
-              id=0
-           elseif (idup_s(i).eq.22) then ! photon
-              id=7
-           endif
-           do jcount=1,icount
-             pdffnum(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
-     #                               stoppingScale(jcount))
-             pdffden(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
-     #                               startingScale(jcount))
-           enddo
-         else
-           pdffnum(1:2)=1.d0
-           pdffden(1:2)=1.d0
-         endif
-c
-         if(icount.eq.1)then
-c This is either a quark, or a gluon with either only one colour line 
-c corresponding to a live zone or a gluon with a single colour line but
-c a double colour connection (eg in gg->H). The condition that the starting
-c scale is larger than the stopping scale has not been enforced
-c so far, so do it here
-            if(stoppingScale(1).lt.startingScale(1))then
-                if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
-                  deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
-                  deltaden(1)=deltaden(1)**2*pdffden(1)
-               else
-                  deltanum(1,1)=deltanum(1,1)*pdffnum(1)
-                  deltaden(1)=deltaden(1)*pdffden(1)
-               endif
-               if(deltaden(1).eq.0.d0)then
-                  deltarat(1,1)=1.d0
-               else
-                  deltarat(1,1)=deltanum(1,1)/deltaden(1)
-               endif
-               deltarat(1,1)=min(max(deltarat(1,1),0d0),1d0)
-               wgt_sudakov=wgt_sudakov*deltarat(1,1)
-            endif
-         elseif(icount.eq.2) then
-c A gluon with two partners corresponding to a live zone
-            if(any(jindex(1:2).eq.-1)) then
-               write(*,*)'Error #10 in complete_xmcsubt:', jindex(1)
-     $              ,jindex(2),i,icount
-               stop
-            endif
-            do jcount=1,icount
-c Start by computing deltanum(1,2) and deltanum(2,1)
-               if(stoppingScale(jcount).le.smallptlow)then
-                  deltanum(jcount,iflip(jcount))=0.d0
-               elseif( stoppingScale(jcount).gt.smallptlow .and.
-     $                 stoppingScale(jcount).le.smallptupp )then
-                  deltanum(jcount,iflip(jcount))= pysudakov(smallptupp
-     $                 ,xmasses2(i,jindex(iflip(jcount))), idup_s(i)
-     $                 ,isudtype(iflip(jcount)),mcmass)
-                  deltanum(jcount,iflip(jcount))=deltanum(jcount
-     $                 ,iflip(jcount))*get_to_zero(stoppingScale(jcount)
-     $                 ,smallptlow,smallptupp)
-               else
-                  deltanum(jcount,iflip(jcount))=
-     $                 pysudakov(stoppingScale(jcount),xmasses2(i
-     $                 ,jindex(iflip(jcount))), idup_s(i)
-     $                 ,isudtype(iflip(jcount)),mcmass)
-               endif
+            Fk(out_con)=pdfnum/pdfden
+!     compute delta
+            do in_con=1,n_connect(i) ! loop over gamma in 3.34
+               isudtype=setSudType(i,i_connect(in_con,i))
+               deltanum=pysudakov_safe(t_ij(out_con,i)
+     $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
+     $              ,isudtype,mcmass)
+               deltaden=pysudakov_safe(mu_ij(in_con,i)
+     $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
+     $              ,isudtype,mcmass)
+               delta(out_con,in_con)=deltanum/deltaden
             enddo
-c Here, deltaden(*) and deltanum(*,*) must be filled with sensible values.
-c Proceed to compute the corresponding Sudakov; the effective colour factor 
-c is CA, with a single stopping scale and two possibly different starting scales
-c (each of the latter is responsible for CA/2)
-           do jcount=1,icount
-             if( deltaden(jcount).eq.0.d0 )then
-               deltarat(1,jcount)=1.d0
-               deltarat(2,jcount)=1.d0
-             else
-               do kcount=1,icount
-                 if(stoppingScale(kcount).lt.startingScale(jcount))then
-                    deltarat(kcount,jcount)=deltanum(kcount,jcount)/
-     $                   deltaden(jcount)
-                 else
-                   deltarat(kcount,jcount)=1.d0
-                 endif
-               enddo
-             endif
-c glfact(*) define the relative weights of the two no-emission probabilities.
-c In their computations, use the CA/2 Sudakov with starting and stopping
-c scales relevant to the same colour line
-             gltmp=deltarat(jcount,jcount)
-             if(gltmp.le.0.d0)then
-               glfact(jcount)=1.d8
-             elseif(gltmp.ge.1.d0)then
-               glfact(jcount)=0.d0
-             else
-               glfact(jcount)=-2*log(gltmp)
-             endif
-           enddo
-           glrat(1)=glfact(1)/(max(glfact(1)+glfact(2),1.d-8))
-           glrat(2)=glfact(2)/(max(glfact(1)+glfact(2),1.d-8))
-           if( glrat(1).lt.0.d0.or.glrat(1).gt.1.d0 .or.
-     #         glrat(2).lt.0.d0.or.glrat(2).gt.1.d0 )then
-             write(*,*)'Error #7 in complete_xmcsubt'
-             write(*,*)glrat(1),glrat(2)
-             stop
-          elseif (glrat(1).eq.0d0 .and. glrat(2).eq.0d0) then
-             glrat(1)=0.5d0
-             glrat(2)=0.5d0
-           endif
-c
-           do jcount=1,icount
-             xtmp(jcount)=1.d0
-             if( pdffden(jcount).gt.0.d0 )then
-               if(stoppingScale(jcount).lt.startingScale(1))
-     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,1)
-               if(stoppingScale(jcount).lt.startingScale(2))
-     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,2)
-               if(xtmp(jcount).lt.1.d0)
-     #           xtmp(jcount)=xtmp(jcount)
-               if(stoppingScale(jcount).lt.startingScale(jcount))
-     #           xtmp(jcount)=xtmp(jcount)*pdffnum(jcount)/pdffden(jcount)
-             endif
-             if(xtmp(jcount).ge.1.d0)xtmp(jcount)=1.d0
-             if(xtmp(jcount).le.0.d0)xtmp(jcount)=0.d0
-           enddo
-           wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
-        else
-           write (*,*) 'icount should be 1 or 2',icount
-           stop 1
-         endif
- 111     continue
-c End of primary loop over i
+         enddo
+!     multiply to get 3.34
+         PIk=0d0
+         do out_con=1,n_connect(i) ! loop over two lines of 3.34
+            PIk=PIk + gl(out_con)/sum(gl(1:n_connect(i)))*Fk(out_con)
+     $           *product(delta(out_con,1:n_connect(i)))
+         enddo
+         wgt_sudakov=wgt_sudakov * PIk
+c$$$  endif
       enddo
-      if(i_dipole_counter+i_dipole_dead_counter.ne.nQ_S+2*nG_S)then
-         write(*,*)'Mismatch in number of dipole ends and Delta factors'
-         write(*,*)i_dipole_counter+i_dipole_dead_counter,nQ_S,nG_S
-         stop
-      endif
+            
+c$$$
+c$$$      
+c$$$      wgt_sudakov=1d0
+c$$$      i_dipole_counter=0
+c$$$      i_dipole_dead_counter=0
+c$$$      nG_S=0
+c$$$      nQ_S=0
+c$$$c
+c$$$      do i=1,nexternal-1
+c$$$         if(idup_s(i).eq.21)nG_S=nG_S+1
+c$$$         if(abs(idup_s(i)).le.6)nQ_S=nQ_S+1
+c$$$         icount=0
+c$$$         jindex(1)=-1
+c$$$         jindex(2)=-1
+c$$$         do j=1,nexternal-1
+c$$$c At fixed i, loop over j to find the colour lines that begin at i 
+c$$$c (at most [because of dead zones] one for quarks, two for gluons).
+c$$$c For each of these colour lines, find the starting and stopping
+c$$$c scales and store them in startingScale(*) and stoppingScale(*).
+c$$$c Store the corresponding Sudakov type in isudtype(*)
+c$$$            if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+c$$$c$$$            if(j.eq.i)cycle
+c$$$c$$$            if(xscales2(i,j).eq.-1d0)cycle
+c$$$            if(dzones_nbody(i,j))then
+c$$$               i_dipole_dead_counter=i_dipole_dead_counter+1
+c$$$               if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
+c$$$c double colour connection, count twice
+c$$$                  i_dipole_dead_counter=i_dipole_dead_counter+1
+c$$$               endif
+c$$$               cycle
+c$$$            endif
+c$$$            icount=icount+1
+c$$$c Overwrite the startingscale to be in the correct range
+c$$$            startingScale(icount) = max(min(starting_scales(i,j),cstupp)
+c$$$     $           ,smallptupp)
+c$$$            stoppingScale(icount) = min(stopping_scales(iBtoR(i)
+c$$$     $           ,iBtoR(j)),cstupp)
+c$$$            jindex(icount)=j
+c$$$            if(i.le.2.and.j.le.2)then
+c$$$               isudtype(icount)=1
+c$$$            elseif(i.gt.2.and.j.gt.2)then
+c$$$               isudtype(icount)=2
+c$$$            elseif(i.le.2.and.j.gt.2)then
+c$$$c For Pythia: IF is identical to II
+c$$$               isudtype(icount)=1
+c$$$            elseif(i.gt.2.and.j.le.2)then
+c$$$               isudtype(icount)=4
+c$$$            endif
+c$$$            if(stoppingScale(icount).gt.startingScale(icount))then
+c$$$               i_dipole_dead_counter=i_dipole_dead_counter+1
+c$$$            else
+c$$$               i_dipole_counter=i_dipole_counter+1
+c$$$            endif
+c$$$            if (isspecial(born_flow_picked) .and. idup_s(i).eq.21) then
+c$$$c double colour connection, count twice
+c$$$               if (idup_s(j).ne.21) then
+c$$$                  write (*,*) 'SPECIAL and a gluon is not connected '/
+c$$$     $                 /'to another gluon',i,j,idup_s(i),idup_s(j)
+c$$$                  stop 1
+c$$$               endif
+c$$$               if(stoppingScale(icount).gt.startingScale(icount))then
+c$$$                  i_dipole_dead_counter=i_dipole_dead_counter+1
+c$$$               else
+c$$$                  i_dipole_counter=i_dipole_counter+1
+c$$$               endif
+c$$$            endif
+c$$$c
+c$$$c Conventions:
+c$$$c   deltanum(i,j) <--> stoppingScale(i),isudtype(j)
+c$$$c   deltaden(j)   <--> startingScale(j)
+c$$$c Given our definitions, whenever a quantity is computed for
+c$$$c which both the stopping scale and the Sudakov type are relevant,
+c$$$c the arguments of stoppingScale(*) and isudtype(*) must be equal.
+c$$$c The ratio:
+c$$$c    deltarat(i,j) = deltanum(i,j)/deltaden(j)
+c$$$c is the Sudakov of type isudtype(j) (with CF for quarks, and CA/2 for gluons) 
+c$$$c between scales [stoppingScale(i),startingScale(j)]
+c$$$c
+c$$$            if(stoppingScale(icount).le.smallptlow)then
+c$$$c Still inside the j loop, but the information is sufficient to 
+c$$$c compute deltaden(*) and deltanum(*,*)
+c$$$               deltanum(icount,icount)=0.d0
+c$$$            elseif( stoppingScale(icount).gt.smallptlow .and.
+c$$$     $              stoppingScale(icount).le.smallptupp )then
+c$$$               deltanum(icount,icount)= pysudakov(smallptupp,xmasses2(i
+c$$$     $              ,j), idup_s(i),isudtype(icount),mcmass)
+c$$$               deltanum(icount,icount)=deltanum(icount,icount)*
+c$$$     $              get_to_zero(stoppingScale(icount),smallptlow
+c$$$     $              ,smallptupp)
+c$$$            else
+c$$$               deltanum(icount,icount)= pysudakov(stoppingScale(icount)
+c$$$     $              ,xmasses2(i,j), idup_s(i),isudtype(icount),mcmass)
+c$$$            endif
+c$$$            deltaden(icount)=pysudakov(startingScale(icount),xmasses2(i
+c$$$     $           ,j),idup_s(i),isudtype(icount),mcmass)
+c$$$c End of primary loop over j
+c$$$         enddo
+c$$$
+c$$$c No live colour connection starting from/ending in i has been found:
+c$$$c go to the next i
+c$$$         if(icount.eq.0)goto 111
+c$$$c
+c$$$         if(i.le.nincoming)then
+c$$$           LP=SIGN(1,LPP(i))
+c$$$           if (idup_s(i).le.6) then ! (anti-)quark 
+c$$$              id=LP*idup_s(i)
+c$$$           elseif (idup_s(i).eq.21) then ! gluon
+c$$$              id=0
+c$$$           elseif (idup_s(i).eq.22) then ! photon
+c$$$              id=7
+c$$$           endif
+c$$$           do jcount=1,icount
+c$$$             pdffnum(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+c$$$     #                               stoppingScale(jcount))
+c$$$             pdffden(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
+c$$$     #                               startingScale(jcount))
+c$$$           enddo
+c$$$         else
+c$$$           pdffnum(1:2)=1.d0
+c$$$           pdffden(1:2)=1.d0
+c$$$         endif
+c$$$c
+c$$$         if(icount.eq.1)then
+c$$$c This is either a quark, or a gluon with either only one colour line 
+c$$$c corresponding to a live zone or a gluon with a single colour line but
+c$$$c a double colour connection (eg in gg->H). The condition that the starting
+c$$$c scale is larger than the stopping scale has not been enforced
+c$$$c so far, so do it here
+c$$$            if(stoppingScale(1).lt.startingScale(1))then
+c$$$                if (isspecial(born_flow_picked).and.idup_s(i).eq.21) then
+c$$$                  deltanum(1,1)=deltanum(1,1)**2*pdffnum(1)
+c$$$                  deltaden(1)=deltaden(1)**2*pdffden(1)
+c$$$               else
+c$$$                  deltanum(1,1)=deltanum(1,1)*pdffnum(1)
+c$$$                  deltaden(1)=deltaden(1)*pdffden(1)
+c$$$               endif
+c$$$               if(deltaden(1).eq.0.d0)then
+c$$$                  deltarat(1,1)=1.d0
+c$$$               else
+c$$$                  deltarat(1,1)=deltanum(1,1)/deltaden(1)
+c$$$               endif
+c$$$               deltarat(1,1)=min(max(deltarat(1,1),0d0),1d0)
+c$$$               wgt_sudakov=wgt_sudakov*deltarat(1,1)
+c$$$            endif
+c$$$         elseif(icount.eq.2) then
+c$$$c A gluon with two partners corresponding to a live zone
+c$$$            if(any(jindex(1:2).eq.-1)) then
+c$$$               write(*,*)'Error #10 in complete_xmcsubt:', jindex(1)
+c$$$     $              ,jindex(2),i,icount
+c$$$               stop
+c$$$            endif
+c$$$            do jcount=1,icount
+c$$$c Start by computing deltanum(1,2) and deltanum(2,1)
+c$$$               if(stoppingScale(jcount).le.smallptlow)then
+c$$$                  deltanum(jcount,iflip(jcount))=0.d0
+c$$$               elseif( stoppingScale(jcount).gt.smallptlow .and.
+c$$$     $                 stoppingScale(jcount).le.smallptupp )then
+c$$$                  deltanum(jcount,iflip(jcount))= pysudakov(smallptupp
+c$$$     $                 ,xmasses2(i,jindex(iflip(jcount))), idup_s(i)
+c$$$     $                 ,isudtype(iflip(jcount)),mcmass)
+c$$$                  deltanum(jcount,iflip(jcount))=deltanum(jcount
+c$$$     $                 ,iflip(jcount))*get_to_zero(stoppingScale(jcount)
+c$$$     $                 ,smallptlow,smallptupp)
+c$$$               else
+c$$$                  deltanum(jcount,iflip(jcount))=
+c$$$     $                 pysudakov(stoppingScale(jcount),xmasses2(i
+c$$$     $                 ,jindex(iflip(jcount))), idup_s(i)
+c$$$     $                 ,isudtype(iflip(jcount)),mcmass)
+c$$$               endif
+c$$$            enddo
+c$$$c Here, deltaden(*) and deltanum(*,*) must be filled with sensible values.
+c$$$c Proceed to compute the corresponding Sudakov; the effective colour factor 
+c$$$c is CA, with a single stopping scale and two possibly different starting scales
+c$$$c (each of the latter is responsible for CA/2)
+c$$$           do jcount=1,icount
+c$$$             if( deltaden(jcount).eq.0.d0 )then
+c$$$               deltarat(1,jcount)=1.d0
+c$$$               deltarat(2,jcount)=1.d0
+c$$$             else
+c$$$               do kcount=1,icount
+c$$$                 if(stoppingScale(kcount).lt.startingScale(jcount))then
+c$$$                    deltarat(kcount,jcount)=deltanum(kcount,jcount)/
+c$$$     $                   deltaden(jcount)
+c$$$                 else
+c$$$                   deltarat(kcount,jcount)=1.d0
+c$$$                 endif
+c$$$               enddo
+c$$$             endif
+c$$$c glfact(*) define the relative weights of the two no-emission probabilities.
+c$$$c In their computations, use the CA/2 Sudakov with starting and stopping
+c$$$c scales relevant to the same colour line
+c$$$             gltmp=deltarat(jcount,jcount)
+c$$$             if(gltmp.le.0.d0)then
+c$$$               glfact(jcount)=1.d8
+c$$$             elseif(gltmp.ge.1.d0)then
+c$$$               glfact(jcount)=0.d0
+c$$$             else
+c$$$                glfact(jcount)=-2*log(gltmp)
+c$$$             endif
+c$$$           enddo
+c$$$           glrat(1)=glfact(1)/(max(glfact(1)+glfact(2),1.d-8))
+c$$$           glrat(2)=glfact(2)/(max(glfact(1)+glfact(2),1.d-8))
+c$$$           if( glrat(1).lt.0.d0.or.glrat(1).gt.1.d0 .or.
+c$$$     #         glrat(2).lt.0.d0.or.glrat(2).gt.1.d0 )then
+c$$$             write(*,*)'Error #7 in complete_xmcsubt'
+c$$$             write(*,*)glrat(1),glrat(2)
+c$$$             stop
+c$$$          elseif (glrat(1).eq.0d0 .and. glrat(2).eq.0d0) then
+c$$$             glrat(1)=0.5d0
+c$$$             glrat(2)=0.5d0
+c$$$           endif
+c$$$c
+c$$$           do jcount=1,icount
+c$$$             xtmp(jcount)=1.d0
+c$$$             if( pdffden(jcount).gt.0.d0 )then
+c$$$               if(stoppingScale(jcount).lt.startingScale(1))
+c$$$     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,1)
+c$$$               if(stoppingScale(jcount).lt.startingScale(2))
+c$$$     #           xtmp(jcount)=xtmp(jcount)*deltarat(jcount,2)
+c$$$               if(xtmp(jcount).lt.1.d0)
+c$$$     #           xtmp(jcount)=xtmp(jcount)
+c$$$               if(stoppingScale(jcount).lt.startingScale(jcount))
+c$$$     #           xtmp(jcount)=xtmp(jcount)*pdffnum(jcount)/pdffden(jcount)
+c$$$             endif
+c$$$             if(xtmp(jcount).ge.1.d0)xtmp(jcount)=1.d0
+c$$$             if(xtmp(jcount).le.0.d0)xtmp(jcount)=0.d0
+c$$$           enddo
+c$$$           wgt_sudakov=wgt_sudakov*(glrat(1)*xtmp(1)+glrat(2)*xtmp(2))
+c$$$        else
+c$$$           write (*,*) 'icount should be 1 or 2',icount
+c$$$           stop 1
+c$$$         endif
+c$$$ 111     continue
+c$$$c End of primary loop over i
+c$$$      enddo
+c$$$      if(i_dipole_counter+i_dipole_dead_counter.ne.nQ_S+2*nG_S)then
+c$$$         write(*,*)'Mismatch in number of dipole ends and Delta factors'
+c$$$         write(*,*)i_dipole_counter+i_dipole_dead_counter,nQ_S,nG_S
+c$$$         stop
+c$$$      endif
 
 
       if (btest(MCcntcalled,3)) then
@@ -2271,6 +2327,54 @@ c
       enddo
 
       return
+      end
+
+      double precision function gl_safe(ratio)
+      implicit none
+      double precision ratio
+      if(ratio.le.1d-20)then
+         gl_safe=1.d8
+      elseif(ratio.ge.1.d0)then
+         gl_safe=0.d0
+      else
+         gl_safe=-2d0*log(ratio)
+      endif
+      end
+      
+      double precision function pysudakov_safe(scale,mass,id,type
+     $     ,mcmass)
+      implicit none
+      double precision scale,mass
+      double precision mcmass(21)
+      integer id,type
+      real*8 smallptlow,smallptupp,get_to_zero
+      parameter (smallptlow=0.5d0)
+      parameter (smallptupp=1.01d0)
+      if(scale.le.smallptlow)then
+         pysudakov_safe=0.d0
+      elseif( scale.gt.smallptlow .and.
+     $        scale.le.smallptupp )then
+         pysudakov_safe = pysudakov(smallptupp,mass,id,type,mcmass)
+     $        *get_to_zero(scale,smallptlow,smallptupp)
+      else
+         pysudakov_safe=pysudakov(scale,mass,id,type,mcmass)
+      endif
+      end
+      
+
+      integer function get_parton_id(ipdg)
+      implicit none
+      integer ipdg
+      if (ipdg.le.6) then       ! (anti-)quark 
+         id=LP*ipdg
+      elseif (ipdg.eq.21) then  ! gluon
+         id=0
+      elseif (ipdg.eq.22) then  ! photon
+         id=7
+      else
+         write (*,*) 'unknown PDG for PDF',ipdg
+         stop 1
+      endif
       end
 
       integer function setSudType(i,j)
