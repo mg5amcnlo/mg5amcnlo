@@ -4976,7 +4976,7 @@ This implies that with decay chains:
         # Extract process
         boundstates = {}
         boundstates_keys = [key for key in self._boundstates.keys()]
-        boundstates_keys_lower = [key.lower() for key in boundstates_keys.keys()]
+        boundstates_keys_lower = [key.lower() for key in boundstates_keys]
         for index,part_name in enumerate(args):
             if part_name in boundstates_keys_lower:
                 bound_name = boundstates_keys[boundstates_keys_lower.index(part_name)]
