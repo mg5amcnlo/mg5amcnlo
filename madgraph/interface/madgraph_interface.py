@@ -5161,7 +5161,7 @@ This implies that with decay chains:
                                                         'state':state,
                                                         'polarization': polarization,
                                                         'onium': {'id':onium_id, 'pythia_id':onium_pythiaid, 'name':onium_name,
-                                                                  'n':onium_principal, 'S':onium_spin, 'L':onium_orbit, 'J':onium_jtot,
+                                                                  'N':onium_principal, 'S':onium_spin, 'L':onium_orbit, 'J':onium_jtot,
                                                                   'C':onium_color, 'charge':onium_charge, 'mass':onium_mass,
                                                                   'width':onium_width, 'index':onium_index}
                                                         	}))      

@@ -508,16 +508,17 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         """Return a leg from a link"""
 
         if link.end_link:
-            if (link.links[0][1][0]==3) or (link.links[0][1][0]==4):
-                onium = {'name':'my_onium'}
-            else:
-                onium = {}
+            # LS::ONIUM PROPERTIES ARE MISSING IN link.links
+            # if (link.links[0][1][0]==3) or (link.links[0][1][0]==4):
+            #     onium = {'name':'my_onium'}
+            # else:
+            #     onium = {}
             # This is an external leg, info in links
             leg = base_objects.Leg({'number':link.links[0][1][0],
                                      'id':link.links[0][1][1],
                                      'state':link.links[0][1][2],
-                                     'onium':onium,
-                                     # 'onium':link.links[0][1][3],
+                                     # 'onium':onium,
+                                     'onium':link.links[0][1][3],
                                      'onshell':None})
             return leg
         # This shouldn't happen
@@ -853,7 +854,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       "%s is not a valid polarization" % str(value))
 
         elif name == 'onium':
-            print("LS:: check for validity of onium inputs!")
+            if value:
+                if value['N'] not in [1, 2]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
 
         return True
 

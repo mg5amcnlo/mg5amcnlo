@@ -2153,19 +2153,22 @@ class Leg(PhysicsObject):
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid dictionary" % str(value))
-            # if value[0] not in [0, 3, 99]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid spin" % str(value))
-            # if value[1] not in [0, 1, 99]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid orbital angular momentum" % str(value))
-            # if value[2] not in range((value[0]-1)/2-value[1],(value[0]-1)/2+value[1]):
-            #     print("madgraph/core/base_objects.py:2101:: The if condition has to be checked and generalised for the case when we sum over all angular momentum configurations 'j'!")
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid total angular momentum" % str(value))
-            # if value[3] not in [1, 8]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid color configuartion" % str(value))
+            if value:
+                if value['N'] not in [1, 2]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
                                                                     
         return True
 
@@ -2359,19 +2362,22 @@ class MultiLeg(PhysicsObject):
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
-            # if value[0] not in [0, 3, 99]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid spin" % str(value))
-            # if value[1] not in [0, 1, 99]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid orbital angular momentum" % str(value))
-            # if value[2] not in range((value[0]-1)/2-value[1],(value[0]-1)/2+value[1]):
-            #     print("madgraph/core/base_objects.py:2101:: The if condition has to be checked and generalised for the case when we sum over all angular momentum configurations 'j'!")
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid total angular momentum" % str(value))
-            # if value[3] not in [1, 8]:
-            #     raise self.PhysicsObjectError( \
-            #           "%s is not a valid color configuartion" % str(value))
+            if value:
+                if value['N'] not in [1, 2]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
 
         if name == 'state':
             if not isinstance(value, bool):
