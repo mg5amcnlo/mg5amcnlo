@@ -1567,9 +1567,9 @@ cSF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
       double precision noemProb, startingScale(2), stoppingScale(2), mDipole
       double precision mcmass(21)
-      double precision pysudakov,deltanum(2,2),deltaden(2),deltarat(2,2)
+      double precision pysudakov,deltanum,deltaden,delta(2,2)
       double precision gltmp,xtmp(2),glfact(2),glrat(2)
-      integer nG_S,nQ_S,i_dipole_counter,isudtype(2)
+      integer nG_S,nQ_S,i_dipole_counter,isudtype
       integer i_dipole_dead_counter
 c
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -1604,6 +1604,13 @@ c
       double precision scales_for_HEPEUP(nexternal,nexternal)
       logical force_II_connection
       parameter(force_II_connection=.true.)
+
+      double precision gl(2),pdfnum,pdfden,PIk,Fk(2)
+      double precision pysudakov_safe,gl_safe
+      double precision mu_ij(2,nexternal-1),t_ij(2,nexternal-1)
+      integer in_con,out_con,n_connect(nexternal-1)
+      integer i_connect(2,nexternal-1)
+      integer get_parton_id,setSudType
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1671,7 +1678,7 @@ cSF thus can be directly passed rather than reconstructed
          firsttime1=.false.
          call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
 c Fake call for initialisation
-         deltanum(1,1)=pysudakov_safe(1.d2,2.d2,1,1,mcmass)
+         deltanum=pysudakov_safe(1.d2,2.d2,1,1,mcmass)
          if(cstlow.gt.smallptupp)then
             write(*,*)'Error in xmcsubt: cstlow,smallptupp',
      &           cstlow,smallptupp
@@ -2005,7 +2012,7 @@ c$$$         else                   ! eq.3.34
             stop 1
          endif
 !     TODO SPECIAL CASE
-         if (isspecial) then
+         if (any(isspecial)) then
             write (*,*) 'TO DO: ISSPECIAL'
             stop 1
          endif
@@ -2021,7 +2028,7 @@ c$$$         else                   ! eq.3.34
 !     compute F_k
             if(i.le.nincoming)then
                LP=SIGN(1,LPP(i))
-               id=get_parton_id(idup_s(i))
+               id=get_parton_id(idup_s(i),lp)
                pdfnum=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
      $              t_ij(out_con,i))
                pdfden=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
@@ -2344,7 +2351,7 @@ c
       double precision function pysudakov_safe(scale,mass,id,type
      $     ,mcmass)
       implicit none
-      double precision scale,mass
+      double precision scale,mass,pysudakov
       double precision mcmass(21)
       integer id,type
       real*8 smallptlow,smallptupp,get_to_zero
@@ -2362,11 +2369,11 @@ c
       end
       
 
-      integer function get_parton_id(ipdg)
+      integer function get_parton_id(ipdg,lp)
       implicit none
-      integer ipdg
+      integer ipdg,id,lp
       if (ipdg.le.6) then       ! (anti-)quark 
-         id=LP*ipdg
+         id=lp*ipdg
       elseif (ipdg.eq.21) then  ! gluon
          id=0
       elseif (ipdg.eq.22) then  ! photon
