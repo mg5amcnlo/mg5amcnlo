@@ -252,7 +252,8 @@ class DiagramTag(object):
             return base_objects.Leg({'number':link.links[0][1],
                                      'id':link.links[0][0][0],
                                      'state':(link.links[0][0][1] == 0),
-                                     'onium':link.links[0][0][2],
+                                     # 'onium':link.links[0][0][2],
+                                     'onium': {},
                                      'onshell':False})
 
         # This shouldn't happen
