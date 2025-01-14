@@ -2446,13 +2446,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Configure the files/link of the process according to the model"""
 
         contains_onia = False
-        for matrix_element in matrix_elements:
-            for me in matrix_element.get('matrix_elements'):
-                if me.get_nonia() > 0:
-                    contains_onia = True
+        if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            for matrix_element in matrix_elements:
+                for me in matrix_element.get('matrix_elements'):
+                    if me.get_nonia() > 0:
+                        contains_onia = True
+                        break
+                if contains_onia:
                     break
-            if contains_onia:
-                break
 
         if contains_onia:
 
