@@ -9,7 +9,7 @@ DEFAULT_CPP_COMPILER = g++
 # Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
-  FFLAGS = -O -fno-automatic
+  FFLAGS = -O -fno-automatic -fPIC
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
@@ -27,7 +27,7 @@ endif
 
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
-  CXXFLAGS = -O $(STDLIB_FLAG) $(MACFLAG)
+  CXXFLAGS = -O $(STDLIB_FLAG) $(MACFLAG) -fPIC
 endif
 
 ifeq ($(origin CFLAGS),undefined)

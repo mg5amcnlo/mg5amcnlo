@@ -157,7 +157,7 @@ module mint_module
   common /c_fnlo_nlops/fixed_order,nlo_ps
 
 ! functions and subroutines:
-  public :: mint,gen,read_grids_from_file
+  public :: mint,gen,read_grids_from_file,get_channel_public
   private :: initialise_mint,setup_basic_mint &
        &,update_accumulated_results,prepare_next_iteration &
        &,check_desired_accuracy,update_integration_grids &
@@ -1426,6 +1426,15 @@ contains
        enddo
     enddo
   end subroutine double_ave_virt
+
+
+  subroutine get_channel_public(ichan_ret)
+! Wraps on get_channel, and returns che channel picked
+    implicit none
+    integer :: ichan_ret
+    call get_channel
+    ichan_ret = ichan
+  end subroutine get_channel_public
 
 
   subroutine get_channel

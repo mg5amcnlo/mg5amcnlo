@@ -186,6 +186,17 @@ c
       end
 
 
+      subroutine madnis_get_channel(ichan_out)
+      use mint_module
+! picks and integration channel and returns it.
+! Wraps functions inside mint_module
+      implicit none
+      integer ichan_out
+      call get_channel_public(ichan_out)
+      return
+      end
+
+
       subroutine madnis_nlo_terminate()
 C     The termination routines, to be called at the end of the run
 c timing statistics
