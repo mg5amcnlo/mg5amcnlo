@@ -8996,7 +8996,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                wanted_couplings)
 
             # exporting the files related to bound states
-            self._curr_exporter.export_onia_files(self._curr_matrix_elements)
+            if self._export_format in ['madevent', 'standalone']:
+                self._curr_exporter.export_onia_files(self._curr_matrix_elements)
         
         # move the old options to the flaglist system.
         if nojpeg:
