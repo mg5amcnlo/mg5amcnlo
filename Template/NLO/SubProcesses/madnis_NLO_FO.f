@@ -1,5 +1,8 @@
+************************************************************************
       subroutine madnis_nlo_initialise()
-C     The initialisation routines, to be called at the beginning of the run
+************************************************************************
+*     initialize phase-space etc, at the beginning of the run
+************************************************************************
       use extra_weights
       use mint_module
       use FKSParams
@@ -185,8 +188,13 @@ c
       return
       end
 
-
+************************************************************************
       subroutine madnis_get_channel(ichan_out)
+************************************************************************
+*     This is a subroutine that returns the the used channel integrat
+*
+*     OUTPUTS: ichan_out == used channel of integrtation
+************************************************************************
       use mint_module
 ! picks and integration channel and returns it.
 ! Wraps functions inside mint_module
@@ -196,9 +204,12 @@ c
       return
       end
 
-
+************************************************************************
       subroutine madnis_nlo_terminate()
-C     The termination routines, to be called at the end of the run
+************************************************************************
+*     The termination routines, to be called at the end of the run
+*     > probably not important for plain madnis
+************************************************************************
 c timing statistics
       use mint_module
       implicit none
@@ -247,10 +258,18 @@ c timing statistics
       return
       end
 
-
+************************************************************************
       subroutine madnis_nlo_evaluate(xx,vegas_wgt,ifl,f)
-C     The evaluation of the integrand, essentially wrapping around
-C     sigint
+************************************************************************
+*     The evaluation of the integrand, essentially wrapping around
+*     sigint
+*
+*     INPUTS:  xx        == random numbers
+*              vegas_wgt == vegas weight (or madnis)
+*              ifl       == choose channel config
+*     OUTPUTS: f         == weights of the integral -> relevant is f(2)
+*                           [check fks_singular.f for details]
+************************************************************************
       use mint_module
       implicit none
       double precision xx(ndimmax),vegas_wgt,f(nintegrals)
