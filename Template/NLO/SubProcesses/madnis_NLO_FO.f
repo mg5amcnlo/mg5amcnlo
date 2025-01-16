@@ -197,6 +197,29 @@ c
       end
 
 
+      subroutine madnis_get_nchans(nchan_out)
+      use mint_module
+! picks and integration channel and returns it.
+! Wraps functions inside mint_module
+      implicit none
+      integer nchan_out
+      call get_nchans(nchan_out)
+      return
+      end
+
+
+      subroutine madnis_set_channel(ichan_in, vol_in)
+      use mint_module
+! set ichan and the associated volume
+! Wraps functions inside mint_module
+      implicit none
+      integer ichan_in
+      double precision vol_in
+      call set_channel(ichan_in, vol_in)
+      return
+      end
+
+
       subroutine madnis_nlo_terminate()
 C     The termination routines, to be called at the end of the run
 c timing statistics

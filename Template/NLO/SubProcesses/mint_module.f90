@@ -157,7 +157,8 @@ module mint_module
   common /c_fnlo_nlops/fixed_order,nlo_ps
 
 ! functions and subroutines:
-  public :: mint,gen,read_grids_from_file,get_channel_public
+  public :: mint,gen,read_grids_from_file,get_channel_public &
+       &,set_channel,get_nchans
   private :: initialise_mint,setup_basic_mint &
        &,update_accumulated_results,prepare_next_iteration &
        &,check_desired_accuracy,update_integration_grids &
@@ -1435,6 +1436,27 @@ contains
     call get_channel
     ichan_ret = ichan
   end subroutine get_channel_public
+
+
+  subroutine get_nchans(nchans_out)
+! returns the number of integration channels
+  implicit none
+  integer :: nchans_out
+  nchans_out = nchans
+  return
+  end subroutine get_nchans
+
+
+  subroutine set_channel(ichan_in, vol_in)
+! sets iconfig and vol_chan based on the input variables
+  implicit none
+  integer :: ichan_in
+  double precision :: vol_in
+  ichan = ichan_in
+  iconfig = iconfigs(ichan_in)
+  vol_chan = vol_in
+  return
+  end subroutine set_channel
 
 
   subroutine get_channel
