@@ -8951,6 +8951,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+        print("LS:: madgraph 1")
 
         compiler_dict = {'fortran': self.options['fortran_compiler'],
                              'cpp': self.options['cpp_compiler'],
@@ -8996,7 +8997,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                wanted_couplings)
 
             # exporting the files related to bound states
-            if self._export_format in ['madevent', 'standalone', 'standalone_msF','standalone_msP', 'NLO', 'ewsudsa']:
+            if self._export_format in ['madevent', 'standalone', 'standalone_msF',
+                                                        'standalone_msP', 'NLO', 'ewsudsa']:
                 self._curr_exporter.export_onia_files(self._curr_matrix_elements)
         
         # move the old options to the flaglist system.

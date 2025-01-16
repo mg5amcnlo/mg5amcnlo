@@ -835,6 +835,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Finalize FKS directory by creating jpeg diagrams, html
                 pages,proc_card_mg5.dat and madevent.tar.gz and create the MA5 card if
         necessary."""
+        print("LS:: fks 1")
         
         devnull = os.open(os.devnull, os.O_RDWR)
         try:
@@ -4671,6 +4672,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     jamp_optim = True 
 
     def finalize(self, *args, **opts):
+        print("LS:: fks 2")
         ProcessExporterFortranFKS.finalize(self, *args, **opts)
         #export_v4.ProcessExporterFortranSA.finalize(self, *args, **opts)
 
@@ -5032,6 +5034,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         """do the usual finalize, then call the function that writes
         the python module with all the calls
         """
+        print("LS:: fks 3")
         super(ProcessExporterEWSudakovSA, self).finalize(*args, **opts)
         self.write_python_wrapper(os.path.join(self.dir_path, 'bin', 'internal', 'ewsud_pydispatcher.py'))
 

@@ -154,6 +154,7 @@ class VirtualExporter(object):
         return
     
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag, second_exporter=None):
+        print("LS:: v4 1")
         return
     
     
@@ -543,6 +544,7 @@ C
     #===========================================================================
     def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[], second_exporter=None):
         """Function to finalize v4 directory, for inheritance.""" 
+        print("LS:: v4 2")
 
         filename = pjoin(self.dir_path,'Source','makefile')
         if not second_exporter:
@@ -2454,6 +2456,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         break
                 if contains_onia:
                     break
+        else:
+            print("LS:: type of matrix_elements",type(matrix_elements))
 
         if contains_onia:
 
@@ -2956,19 +2960,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
            generation proc_card_mg5.dat
            generate a global makefile
            """
+        print("LS:: v4 3")
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
                      'f2py': mg5options['f2py_compiler']}
-
+     
         self.compiler_choice(compiler)
-        self.make()
+        self.make()      
 
         # Write command history as proc_card_mg5
         if history and os.path.isdir(pjoin(self.dir_path, 'Cards')):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
-        
         ProcessExporterFortran.finalize(self, matrix_elements, 
                                              history, mg5options, flaglist)
         open(pjoin(self.dir_path,'__init__.py'),'w')
@@ -3788,6 +3792,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         pass
 
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
+        print("LS:: v4 4")
         try:
             misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
         except OSError:
@@ -4073,6 +4078,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+        print("LS:: v4 5")
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
@@ -5085,6 +5091,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
+        print("LS:: v4 6")
         
 
         if second_exporter:
@@ -7522,6 +7529,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
     def finalize(self,*args, second_exporter=None, **opts):
+        print("LS:: v4 7")
 
         if second_exporter:
             self.has_second_exporter = second_exporter
