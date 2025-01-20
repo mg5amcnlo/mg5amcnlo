@@ -11,7 +11,7 @@ module process_module
   logical :: mcatnlo_delta_mod
 
   public :: init_process_module_global,init_process_module_nbody, &
-       init_process_module_n1body
+       init_process_module_n1body,RealToBornMapping
 
 contains
 

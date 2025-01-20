@@ -1938,6 +1938,7 @@ c Ellis-Stirling-Webber
          n_connect(i)=0
          do j=1,nexternal-1
             if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+            if (dzones_nbody(i,j)) cycle
 !     found a connection; determine the starting and stopping scales of
 !     this connection (eq.3.31 & 3.34). Check that it is in the
 !     livezone, and overwrite it such that it gives a value that is not
@@ -2024,7 +2025,7 @@ c$$$         else                   ! eq.3.34
      $           ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
             deltaden=pysudakov_safe(mu_ij(out_con,i),xmasses_nbody(i
      $           ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
-            gl(out_con)=gl_safe(deltanum/deltaden)
+            gl(out_con)=gl_safe(deltanum,deltaden)
 !     compute F_k
             if(i.le.nincoming)then
                LP=SIGN(1,LPP(i))
@@ -2037,6 +2038,11 @@ c$$$         else                   ! eq.3.34
                pdfnum=1d0
                pdfden=1d0
             endif
+            if (pdfden.eq.0d0) then
+               ! this should be extremely rare, but can happen if the
+               ! scale is just right
+               pdfden=1d-99
+            endif
             Fk(out_con)=pdfnum/pdfden
 !     compute delta
             do in_con=1,n_connect(i) ! loop over gamma in 3.34
@@ -2047,6 +2053,11 @@ c$$$         else                   ! eq.3.34
                deltaden=pysudakov_safe(mu_ij(in_con,i)
      $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
      $              ,isudtype,mcmass)
+               if (deltaden.eq.0d0) then
+                  write (*,*) 'Denominator is zero in Sudakov'
+     $                 ,mu_ij(in_con,i),in_con,i
+                  stop 1
+               endif
                delta(out_con,in_con)=deltanum/deltaden
             enddo
          enddo
@@ -2056,8 +2067,10 @@ c$$$         else                   ! eq.3.34
             PIk=PIk + gl(out_con)/sum(gl(1:n_connect(i)))*Fk(out_con)
      $           *product(delta(out_con,1:n_connect(i)))
          enddo
-         wgt_sudakov=wgt_sudakov * PIk
-c$$$  endif
+         ! take min(max()) since it can be set between zero and one at
+         ! the accuracy we are working, and interpret it as a
+         ! probability.
+         wgt_sudakov=wgt_sudakov * min(max(PIk,0d0),1d0)
       enddo
             
 c$$$
@@ -2336,9 +2349,15 @@ c
       return
       end
 
-      double precision function gl_safe(ratio)
+      double precision function gl_safe(num,den)
       implicit none
-      double precision ratio
+      double precision ratio,num,den
+      if (den.eq.0d0) then
+         gl_safe=0.d0
+         return
+      else
+         ratio=num/den
+      endif
       if(ratio.le.1d-20)then
          gl_safe=1.d8
       elseif(ratio.ge.1.d0)then
@@ -2420,7 +2439,7 @@ c     For Pythia: IF is identical to II
      $     ,stopping_scales(nexternal,nexternal),p(0:3,nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer i1,i2,ip,imother,i1bar,i2bar
+      integer i1,i2,ip,imother,i1bar,i2bar,i
       double precision t(nexternal,nexternal),pT,pTparton
       integer ipbar,ipbar2
       double precision compute_pTparton
@@ -2516,6 +2535,10 @@ c     For Pythia: IF is identical to II
             if (.not.valid_dipole_n1(i1,i2)) cycle
             if (t(i1,i2).eq.-1d0) then
                write (*,*) 'ERROR, scale still equal to -1',i1,i2
+     $              ,pTparton,i1bar,i2bar,pT
+               do i=1,nexternal-1
+                  write (*,*) stopping_scales_PY(i,1:nexternal-1)
+               enddo
                stop 1
             endif
          enddo

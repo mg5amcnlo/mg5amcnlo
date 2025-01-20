@@ -1344,16 +1344,20 @@ c     include all quarks (except top quark) and the gluon.
 
 
       subroutine update_fks_dir(nFKS)
+      use process_module
       implicit none
       include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       nFKSprocess=nFKS
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
+      call RealToBornMapping(i_fks)
       return
       end
 
