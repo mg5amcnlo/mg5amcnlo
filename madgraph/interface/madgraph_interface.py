@@ -161,6 +161,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "*                     W E L C O M E to                     *\n" + \
         "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
+        "*                 with asymmetric collisions               *\n" + \
         "*                                                          *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
@@ -170,6 +171,10 @@ class CmdExtended(cmd.Cmd):
         "*                 *                       *                *\n" + \
         "*                                                          *\n" + \
         "%s" + \
+        "*                                                          *\n" + \
+        "*                     based on default MG5                 *\n" + \
+        "*                                                          *\n" + \
+        "*         VERSION 3.5.3                 2023-12-23         *\n" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
