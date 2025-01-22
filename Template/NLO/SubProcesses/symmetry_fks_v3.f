@@ -395,8 +395,4 @@ c Dummy routines
 c
 c
 
-      subroutine write_lhef_event(ifile,
-     # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
-      end
       

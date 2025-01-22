@@ -32,7 +32,7 @@ c
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
-     . IS_A_ONIUM, do_cuts
+     & IS_A_ONIUM, do_cuts
 
       dummy_cuts=.true.
 
@@ -42,6 +42,7 @@ c
       subroutine get_dummy_x1(sjac, X1, R, pbeam1, pbeam2, stot, shat)
       implicit none
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 c      include 'genps.inc'
       double precision sjac ! jacobian. should be updated not reinit
@@ -66,6 +67,7 @@ c     global variable to set (or not)
       subroutine get_dummy_x1_x2(sjac, X, R, pbeam1, pbeam2, stot,shat)
       implicit none
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 c      include 'genps.inc'
       double precision sjac ! jacobian. should be updated not reinit
@@ -104,6 +106,7 @@ c     allow to define your own dynamical scale, need to set dynamical_scale_choi
       double precision P(0:3, nexternal)
 c     Commmon to have access to all variable defined in the run_card      
       include 'genps.inc'
+      include 'vector.inc'
       include 'run.inc'
       write(0,*) "dynamical scale set to 0"
       write(0,*) "need to be defined via user_hook method"
@@ -115,15 +118,16 @@ c     fixed scale
       
       
 C ************************************************************
-C default for the library implementing a dummt bias function
+C default for the library implementing a dummy bias function
 C ************************************************************
       subroutine bias_wgt_custom(p, original_weight, bias_weight)
-          implicit none
+      implicit none
 C
 C Parameters
 C
           include 'nexternal.inc'
-C
+
+C     
 C Arguments
 C
           double precision p(0:3, nexternal)
@@ -158,3 +162,4 @@ C --------------------
 
       return
       end subroutine bias_wgt_custom
+

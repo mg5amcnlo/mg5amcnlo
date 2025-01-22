@@ -159,6 +159,20 @@ except:
     pass
 import internal.amcatnlo_run_interface as cmd_interface
 
+#Source use this executable for compilation always allow it
+force_run = False
+if (args and args[0] == 'treatcards'):
+    force_run=True
+    
+# check that madgraph is not in PYTHONPATH which can be problematic
+try:
+    import madgraph
+except ImportError:
+    pass
+else:
+    logger.getLogger('madgraph').error('Looks like you do have madgraph in your PYTHONPATH (or you run this executable    from the main MG5aMC directory). This executable will likely not work in such case.')
+
+
 # Call the cmd interface main loop
 try:
     if (args and os.path.isfile(args[0])):
@@ -180,9 +194,9 @@ try:
     elif args:
         # a single command is provided
         if options.web:
-            cmd_line = cmd_interface.aMCatNLOCmd()
+            cmd_line = cmd_interface.aMCatNLOCmd(force_run=force_run)
         else:
-            cmd_line = cmd_interface.aMCatNLOCmdShell()
+            cmd_line = cmd_interface.aMCatNLOCmdShell(force_run=force_run)
         if not hasattr(cmd_line, 'do_%s' % args[0]):
             if parser_error:
                 print( parser_error)

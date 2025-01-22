@@ -136,7 +136,7 @@ c     other parameter
      #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
-      character*150 buffer,buffer_lc,buffer2
+      character*250 buffer,buffer_lc,buffer2
       integer event_id
       common /c_event_id/ event_id
       integer n_orderstags,oo,tag
@@ -466,6 +466,10 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
+      mg_rwgt_count=0
+        
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
@@ -588,6 +592,15 @@ c     find the start of a weightgroup
                  else
                     lpdfvar(lhaPDFid(0))=.false.
                  endif
+              elseif (index(string,"name='mg_reweighting").ne.0) then
+                      do
+                        read(ifile,'(a)')string
+                        if (index(string,'<weight id').ne.0) then
+                                 mg_rwgt_count=mg_rwgt_count+1
+                        endif
+                        if (index(string,'</weightgroup>').ne.0) exit
+                      enddo
+
               elseif (index(string,'</initrwgt').ne.0) then
                  exit
               endif
@@ -769,8 +782,11 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt .or.
-     &     jwgtinfo.lt.0)) then
+      !! TV: changed this line below to output commented line in events
+      !when no scale or pdf variation is performed
+      !if(buff(1:1).eq.'#' .and. (do_rwgt .or.
+!     &     jwgtinfo.lt.0)) then
+      if(buff(1:1).eq.'#') then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -929,6 +945,8 @@ c
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
 c
       read(ifile,'(a)')string
       nattr=0
@@ -956,7 +974,6 @@ c
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        
          if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
             read(ifile,'(a)')string
             read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
@@ -1030,13 +1047,36 @@ c
                      endif
                   enddo
                endif
-               read(ifile,'(a)')string
+               if(mg_rwgt_count.ne.0) then
+                   do i=1,mg_rwgt_count
+                      read(ifile,'(a)')string
+                   enddo
+                   read(ifile,'(a)')string
+               else
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
+            else
+               if(mg_rwgt_count.ne.0) then
+                  read(ifile,'(a)')string ! this is for beginning <rwgt>
+                  do i=1,mg_rwgt_count
+                     read(ifile,'(a)')string
+                  enddo
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
             endif
          endif
+
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
       else
+         if(mg_rwgt_count.ne.0) then
+             read(ifile,'(a)')string ! this is for beginning <rwgt>
+             do i=1,mg_rwgt_count
+                read(ifile,'(a)')string
+             enddo
+             read(ifile,'(a)')string ! this is for closing <\rwgt>
+         endif
          if (ickkw.eq.3) then
             ptclusstring=buff
             read(ifile,'(a)')buff

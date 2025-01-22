@@ -174,7 +174,7 @@ class Switcher(object):
         # [ loop_orders ] which implicitly select the 'all' option.
         loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
         # Make sure that the content of options following '--' are not considered.
-        res=loopRE.search(re.split('%s\-\-', line,1)[0])
+        res=loopRE.search(re.split(r'\s\-\-', line,1)[0])
         if res:
             orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:
@@ -262,7 +262,7 @@ class Switcher(object):
         argss = cmd.Cmd.split_arg(line)
         # Make sure to switch to the right interface.
         if len(argss)>=1:            
-            proc_line = ' '.join(argss[1:])
+            proc_line = ' '.join(argss)
             (type,nlo_mode,orders)=self.extract_process_type(proc_line)
             if type=='NLO':
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \

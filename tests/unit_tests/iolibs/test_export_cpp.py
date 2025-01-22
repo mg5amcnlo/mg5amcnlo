@@ -341,7 +341,7 @@ int id4Mass() const {return 4;}""")
 #ifndef Pythia8_Sigma_sm_qqx_qqx_H
 #define Pythia8_Sigma_sm_qqx_qqx_H
 
-#include <complex> 
+#include <complex>
 
 #include "Pythia8/SigmaProcess.h"
 #include "Parameters_sm.h"
@@ -417,7 +417,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
 }  // end namespace Pythia8
 
-#endif  // Pythia8_Sigma_sm_qqx_qqx_H
+#endif // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
 
         self.pythia8_exporter.write_process_h_file(\
@@ -457,7 +457,7 @@ void Sigma_sm_qqx_qqx::initProc()
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
+  pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr); 
   pars->setIndependentCouplings(); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
@@ -473,7 +473,7 @@ void Sigma_sm_qqx_qqx::initProc()
 void Sigma_sm_qqx_qqx::sigmaKin() 
 {
   // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
+  pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS); 
   pars->setDependentCouplings(); 
   // Reset color flows
   for(int i = 0; i < 2; i++ )
@@ -694,7 +694,6 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
 }
 double Sigma_sm_qqx_qqx::matrix_uux_uux() 
 {
-  int i, j; 
   // Local variables
   const int ngraphs = 4; 
   const int ncolor = 2; 
@@ -710,16 +709,16 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(j = 0; j < ncolor; j++ )
+    for(int j = 0; j < ncolor; j++ )
       ztemp = ztemp + cf[i][j] * jamp[j]; 
     matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
   }
 
   // Store the leading color flows for choice of color
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
     jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
 
   return matrix; 
@@ -735,7 +734,6 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         exporter.write_process_cc_file(\
         writers.CPPWriter(self.give_pos('test.cc')))
 
-        #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
     def test_write_process_cc_file_uu_six(self):
@@ -790,7 +788,7 @@ void Sigma_sm_qq_six::initProc()
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
+  pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr); 
   pars->setIndependentCouplings(); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
@@ -806,7 +804,7 @@ void Sigma_sm_qq_six::initProc()
 void Sigma_sm_qq_six::sigmaKin() 
 {
   // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
+  pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS); 
   pars->setDependentCouplings(); 
   // Reset color flows
   for(int i = 0; i < 1; i++ )
@@ -996,7 +994,6 @@ void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int hel[])
 }
 double Sigma_sm_qq_six::matrix_uu_six() 
 {
-  int i, j; 
   // Local variables
   const int ngraphs = 1; 
   const int ncolor = 1; 
@@ -1011,16 +1008,16 @@ double Sigma_sm_qq_six::matrix_uu_six()
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(j = 0; j < ncolor; j++ )
+    for(int j = 0; j < ncolor; j++ )
       ztemp = ztemp + cf[i][j] * jamp[j]; 
     matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
   }
 
   // Store the leading color flows for choice of color
-  for(i = 0; i < ncolor; i++ )
+  for(int i = 0; i < ncolor; i++ )
     jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
 
   return matrix; 

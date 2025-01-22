@@ -36,8 +36,8 @@ dico={'MGVersion':'old_version',
 
 class banner:
 
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     def __init__(self,pos):
 

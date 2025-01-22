@@ -108,8 +108,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -253,8 +253,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -598,8 +598,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -866,8 +866,8 @@ class ExportV4IOTest(unittest.TestCase,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -1565,8 +1565,8 @@ mirror  d~ d > d d~ g d d~ g"""
                       'color':1,
                       'mass':'MN1',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -2044,11 +2044,11 @@ C     Number of configs
 
 #        if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
         LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
-        self.assertTrue('F2PY=$(DEFAULT_F2PY_COMPILER)' in LO_text)
-        self.assertTrue('FC=$(DEFAULT_F_COMPILER)' in LO_text)
+        self.assertIn('F2PY=$(DEFAULT_F2PY_COMPILER)', LO_text)
+        self.assertIn('FC=$(DEFAULT_F_COMPILER)', LO_text)
         if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
 #            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
-            self.assertTrue('DEFAULT_F_COMPILER=gfortran' in LO_text)            
+            self.assertIn('DEFAULT_F_COMPILER=gfortran', LO_text)
 #            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
 #            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)
 #            self.assertTrue('FC=gfortran' in NLO_text)            
@@ -2463,7 +2463,7 @@ class FullHelasOutputIOTest(IOTests.IOTestManager,
 
     @IOTests.createIOTest(groupName='SquaredOrder_IOTest')
     def testIO_sqso_uux_uuxuuxx(self):
-        """ target: [matrix(.*)\.f]
+        r""" target: [matrix(.*)\.f]
         """
     
         myleglist = base_objects.LegList()
@@ -2857,11 +2857,11 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
 
 
         out, nb = exporter.get_JAMP_lines(matrix_element)    
-        self.assertEqual(nb,53)
+        self.assertEqual(nb,55)
 
         # Test JAMP (color amplitude) output
         if six.PY3:
-            self.assertEqual(out, [' TMP_JAMP(39) = AMP(39) +  AMP(40) ! used 3 times', ' TMP_JAMP(38) = AMP(37) +  AMP(38) ! used 3 times', ' TMP_JAMP(37) = AMP(35) +  AMP(36) ! used 3 times', ' TMP_JAMP(36) = AMP(29) +  AMP(37) ! used 3 times', ' TMP_JAMP(35) = AMP(29) +  AMP(30) ! used 3 times', ' TMP_JAMP(34) = AMP(28) +  AMP(36) ! used 3 times', ' TMP_JAMP(33) = AMP(27) +  AMP(35) ! used 3 times', ' TMP_JAMP(32) = AMP(27) +  AMP(28) ! used 3 times', ' TMP_JAMP(31) = AMP(25) +  AMP(35) ! used 3 times', ' TMP_JAMP(30) = AMP(25) +  AMP(27) ! used 3 times', ' TMP_JAMP(29) = AMP(24) +  AMP(25) ! used 3 times', ' TMP_JAMP(28) = AMP(21) +  AMP(22) ! used 3 times', ' TMP_JAMP(27) = AMP(20) +  AMP(34) ! used 3 times', ' TMP_JAMP(26) = AMP(14) +  AMP(22) ! used 3 times', ' TMP_JAMP(25) = AMP(14) +  AMP(15) ! used 3 times', ' TMP_JAMP(24) = AMP(11) +  AMP(34) ! used 3 times', ' TMP_JAMP(23) = AMP(11) +  AMP(20) ! used 3 times', ' TMP_JAMP(22) = AMP(5) +  AMP(8) ! used 3 times', ' TMP_JAMP(21) = AMP(1) +  AMP(2) ! used 3 times', ' TMP_JAMP(20) = AMP(41) +  AMP(42) ! used 3 times', ' TMP_JAMP(19) = AMP(30) +  AMP(32) ! used 3 times', ' TMP_JAMP(18) = AMP(24) +  AMP(41) ! used 3 times', ' TMP_JAMP(17) = AMP(21) +  AMP(32) ! used 3 times', ' TMP_JAMP(16) = AMP(19) +  AMP(20) ! used 3 times', ' TMP_JAMP(15) = AMP(18) +  AMP(38) ! used 3 times', ' TMP_JAMP(14) = AMP(15) +  AMP(18) ! used 3 times', ' TMP_JAMP(13) = AMP(14) +  AMP(17) ! used 3 times', ' TMP_JAMP(12) = AMP(12) +  AMP(25) ! used 3 times', ' TMP_JAMP(11) = AMP(11) +  AMP(12) ! used 3 times', ' TMP_JAMP(10) = AMP(7) +  AMP(8) ! used 3 times', ' TMP_JAMP(9) = AMP(2) +  AMP(9) ! used 3 times', ' TMP_JAMP(8) = AMP(22) +  AMP(31) ! used 3 times', ' TMP_JAMP(7) = AMP(12) +  AMP(33) ! used 3 times', ' TMP_JAMP(6) = AMP(4) +  AMP(5) ! used 3 times', ' TMP_JAMP(5) = AMP(1) +  AMP(10) ! used 3 times', ' TMP_JAMP(4) = AMP(19) +  AMP(33) ! used 3 times', ' TMP_JAMP(3) = AMP(17) +  AMP(31) ! used 3 times', ' TMP_JAMP(2) = AMP(9) +  AMP(10) ! used 3 times', ' TMP_JAMP(1) = AMP(4) +  AMP(7) ! used 3 times', ' TMP_JAMP(52) = TMP_JAMP(35) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(51) = TMP_JAMP(37) +  TMP_JAMP(32) ! used 2 times', ' TMP_JAMP(50) = TMP_JAMP(38) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(49) = TMP_JAMP(39) + (3.000000000000000d+00) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(48) = TMP_JAMP(17) + (3.333333333333333d-01) * TMP_JAMP(11) ! used 2 times', ' TMP_JAMP(47) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(14) ! used 2 times', ' TMP_JAMP(46) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(17) ! used 2 times', ' TMP_JAMP(45) = TMP_JAMP(4) + (3.000000000000000d+00) * TMP_JAMP(3) ! used 2 times', ' TMP_JAMP(44) = TMP_JAMP(27) + (3.000000000000000d+00) * TMP_JAMP(26) ! used 2 times', ' TMP_JAMP(43) = TMP_JAMP(39) +  TMP_JAMP(2) ! used 2 times', ' TMP_JAMP(42) = TMP_JAMP(3) + (3.333333333333333d-01) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(41) = TMP_JAMP(21) + (3.000000000000000d+00) * TMP_JAMP(4) ! used 2 times', ' TMP_JAMP(40) = TMP_JAMP(36) + (3.333333333333333d-01) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(53) = TMP_JAMP(42) +  TMP_JAMP(40) ! used 2 times', ' JAMP(1) = (-2.500000000000000d-01)*AMP(16)+(-2.500000000000000d-01)*AMP(23)+(2.777777777777778d-02)*TMP_JAMP(41)+(2.777777777777778d-02)*TMP_JAMP(43)+(8.333333333333333d-02)*TMP_JAMP(44)+(8.333333333333333d-02)*TMP_JAMP(51)+(2.500000000000000d-01)*TMP_JAMP(53)', ' JAMP(2) = (2.500000000000000d-01)*AMP(13)+(2.500000000000000d-01)*AMP(26)+(-8.333333333333333d-02)*TMP_JAMP(2)+(-2.500000000000000d-01)*TMP_JAMP(12)+(-8.333333333333333d-02)*TMP_JAMP(15)+(-8.333333333333333d-02)*TMP_JAMP(19)+(-2.777777777777778d-02)*TMP_JAMP(20)+(-2.500000000000000d-01)*TMP_JAMP(33)+(-8.333333333333333d-02)*TMP_JAMP(41)+(-8.333333333333333d-02)*TMP_JAMP(53)', ' JAMP(3) = (2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(1)+(-2.777777777777778d-02)*TMP_JAMP(11)+(-8.333333333333333d-02)*TMP_JAMP(14)+(-2.500000000000000d-01)*TMP_JAMP(34)+(-8.333333333333333d-02)*TMP_JAMP(43)+(-2.777777777777778d-02)*TMP_JAMP(44)+(-2.777777777777778d-02)*TMP_JAMP(45)+(-2.500000000000000d-01)*TMP_JAMP(46)', ' JAMP(4) = (2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(16)+(8.333333333333333d-02)*AMP(28)+(2.500000000000000d-01)*AMP(38)+(2.500000000000000d-01)*AMP(40)+(2.500000000000000d-01)*TMP_JAMP(5)+(8.333333333333333d-02)*TMP_JAMP(6)+(8.333333333333333d-02)*TMP_JAMP(7)+(2.777777777777778d-02)*TMP_JAMP(8)+(2.500000000000000d-01)*TMP_JAMP(14)+(8.333333333333333d-02)*TMP_JAMP(24)+(8.333333333333333d-02)*TMP_JAMP(30)+(8.333333333333333d-02)*TMP_JAMP(46)+(2.777777777777778d-02)*TMP_JAMP(52)', ' JAMP(5) = (-2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*AMP(30)+(8.333333333333333d-02)*AMP(36)+(2.500000000000000d-01)*AMP(39)+(2.500000000000000d-01)*TMP_JAMP(9)+(8.333333333333333d-02)*TMP_JAMP(10)+(2.777777777777778d-02)*TMP_JAMP(13)+(8.333333333333333d-02)*TMP_JAMP(16)+(8.333333333333333d-02)*TMP_JAMP(31)+(8.333333333333333d-02)*TMP_JAMP(47)+(2.500000000000000d-01)*TMP_JAMP(48)+(2.777777777777778d-02)*TMP_JAMP(50)', ' JAMP(6) = (-2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(13)+(-2.500000000000000d-01)*AMP(34)+(-8.333333333333333d-02)*TMP_JAMP(21)+(-2.500000000000000d-01)*TMP_JAMP(23)+(-8.333333333333333d-02)*TMP_JAMP(25)+(-8.333333333333333d-02)*TMP_JAMP(28)+(-2.777777777777778d-02)*TMP_JAMP(29)+(-8.333333333333333d-02)*TMP_JAMP(35)+(-8.333333333333333d-02)*TMP_JAMP(49)+(-8.333333333333333d-02)*TMP_JAMP(50)+(-2.777777777777778d-02)*TMP_JAMP(51)']            
+            self.assertEqual(out, [' TMP_JAMP(39) = AMP(39) +  AMP(40) ! used 3 times', ' TMP_JAMP(38) = AMP(37) +  AMP(38) ! used 3 times', ' TMP_JAMP(37) = AMP(35) +  AMP(36) ! used 3 times', ' TMP_JAMP(36) = AMP(29) +  AMP(37) ! used 3 times', ' TMP_JAMP(35) = AMP(29) +  AMP(30) ! used 3 times', ' TMP_JAMP(34) = AMP(28) +  AMP(36) ! used 3 times', ' TMP_JAMP(33) = AMP(27) +  AMP(35) ! used 3 times', ' TMP_JAMP(32) = AMP(27) +  AMP(28) ! used 3 times', ' TMP_JAMP(31) = AMP(25) +  AMP(35) ! used 3 times', ' TMP_JAMP(30) = AMP(25) +  AMP(27) ! used 3 times', ' TMP_JAMP(29) = AMP(24) +  AMP(25) ! used 3 times', ' TMP_JAMP(28) = AMP(21) +  AMP(22) ! used 3 times', ' TMP_JAMP(27) = AMP(20) +  AMP(34) ! used 3 times', ' TMP_JAMP(26) = AMP(14) +  AMP(22) ! used 3 times', ' TMP_JAMP(25) = AMP(14) +  AMP(15) ! used 3 times', ' TMP_JAMP(24) = AMP(11) +  AMP(34) ! used 3 times', ' TMP_JAMP(23) = AMP(11) +  AMP(20) ! used 3 times', ' TMP_JAMP(22) = AMP(5) +  AMP(8) ! used 3 times', ' TMP_JAMP(21) = AMP(1) +  AMP(2) ! used 3 times', ' TMP_JAMP(20) = AMP(41) +  AMP(42) ! used 3 times', ' TMP_JAMP(19) = AMP(30) +  AMP(32) ! used 3 times', ' TMP_JAMP(18) = AMP(24) +  AMP(41) ! used 3 times', ' TMP_JAMP(17) = AMP(21) +  AMP(32) ! used 3 times', ' TMP_JAMP(16) = AMP(19) +  AMP(20) ! used 3 times', ' TMP_JAMP(15) = AMP(18) +  AMP(38) ! used 3 times', ' TMP_JAMP(14) = AMP(15) +  AMP(18) ! used 3 times', ' TMP_JAMP(13) = AMP(14) +  AMP(17) ! used 3 times', ' TMP_JAMP(12) = AMP(12) +  AMP(25) ! used 3 times', ' TMP_JAMP(11) = AMP(11) +  AMP(12) ! used 3 times', ' TMP_JAMP(10) = AMP(7) +  AMP(8) ! used 3 times', ' TMP_JAMP(9) = AMP(2) +  AMP(9) ! used 3 times', ' TMP_JAMP(8) = AMP(22) +  AMP(31) ! used 3 times', ' TMP_JAMP(7) = AMP(12) +  AMP(33) ! used 3 times', ' TMP_JAMP(6) = AMP(4) +  AMP(5) ! used 3 times', ' TMP_JAMP(5) = AMP(1) +  AMP(10) ! used 3 times', ' TMP_JAMP(4) = AMP(19) +  AMP(33) ! used 3 times', ' TMP_JAMP(3) = AMP(17) +  AMP(31) ! used 3 times', ' TMP_JAMP(2) = AMP(9) +  AMP(10) ! used 3 times', ' TMP_JAMP(1) = AMP(4) +  AMP(7) ! used 3 times', ' TMP_JAMP(52) = TMP_JAMP(38) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(51) = TMP_JAMP(37) +  TMP_JAMP(32) ! used 2 times', ' TMP_JAMP(50) = TMP_JAMP(36) + (3.333333333333333d-01) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(49) = TMP_JAMP(35) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(48) = TMP_JAMP(27) + (3.000000000000000d+00) * TMP_JAMP(26) ! used 2 times', ' TMP_JAMP(47) = TMP_JAMP(22) + (3.333333333333333d-01) * TMP_JAMP(21) ! used 2 times', ' TMP_JAMP(46) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(14) ! used 2 times', ' TMP_JAMP(45) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(17) ! used 2 times', ' TMP_JAMP(44) = TMP_JAMP(17) + (3.333333333333333d-01) * TMP_JAMP(11) ! used 2 times', ' TMP_JAMP(43) = TMP_JAMP(4) + (3.000000000000000d+00) * TMP_JAMP(3) ! used 2 times', ' TMP_JAMP(42) = TMP_JAMP(4) + (3.333333333333333d-01) * TMP_JAMP(2) ! used 2 times', ' TMP_JAMP(41) = TMP_JAMP(3) + (3.333333333333333d-01) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(40) = TMP_JAMP(2) + (3.000000000000000d+00) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(55) = TMP_JAMP(48) +  TMP_JAMP(43) ! used 2 times', ' TMP_JAMP(54) = TMP_JAMP(47) + (3.333333333333333d-01) * TMP_JAMP(39) ! used 2 times', ' TMP_JAMP(53) = TMP_JAMP(40) +  TMP_JAMP(39) ! used 2 times', ' JAMP(1) = (-2.500000000000000d-01)*AMP(16)+(-2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*TMP_JAMP(36)+(8.333333333333333d-02)*TMP_JAMP(47)+(8.333333333333333d-02)*TMP_JAMP(51)+(2.777777777777778d-02)*TMP_JAMP(53)+(8.333333333333333d-02)*TMP_JAMP(55)', ' JAMP(2) = (2.500000000000000d-01)*AMP(13)+(2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(12)+(-8.333333333333333d-02)*TMP_JAMP(15)+(-8.333333333333333d-02)*TMP_JAMP(19)+(-2.777777777777778d-02)*TMP_JAMP(20)+(-8.333333333333333d-02)*TMP_JAMP(21)+(-2.500000000000000d-01)*TMP_JAMP(33)+(-8.333333333333333d-02)*TMP_JAMP(41)+(-2.500000000000000d-01)*TMP_JAMP(42)+(-8.333333333333333d-02)*TMP_JAMP(50)', ' JAMP(3) = (2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(34)+(-8.333333333333333d-02)*TMP_JAMP(44)+(-2.500000000000000d-01)*TMP_JAMP(46)+(-8.333333333333333d-02)*TMP_JAMP(53)+(-2.777777777777778d-02)*TMP_JAMP(55)', ' JAMP(4) = (2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(16)+(8.333333333333333d-02)*AMP(28)+(2.500000000000000d-01)*AMP(38)+(2.500000000000000d-01)*AMP(40)+(2.500000000000000d-01)*TMP_JAMP(5)+(8.333333333333333d-02)*TMP_JAMP(6)+(8.333333333333333d-02)*TMP_JAMP(7)+(2.777777777777778d-02)*TMP_JAMP(8)+(2.500000000000000d-01)*TMP_JAMP(14)+(8.333333333333333d-02)*TMP_JAMP(24)+(8.333333333333333d-02)*TMP_JAMP(30)+(8.333333333333333d-02)*TMP_JAMP(45)+(2.777777777777778d-02)*TMP_JAMP(49)', ' JAMP(5) = (-2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*AMP(30)+(8.333333333333333d-02)*AMP(36)+(2.500000000000000d-01)*AMP(39)+(2.500000000000000d-01)*TMP_JAMP(9)+(8.333333333333333d-02)*TMP_JAMP(10)+(2.777777777777778d-02)*TMP_JAMP(13)+(8.333333333333333d-02)*TMP_JAMP(16)+(8.333333333333333d-02)*TMP_JAMP(31)+(2.500000000000000d-01)*TMP_JAMP(44)+(8.333333333333333d-02)*TMP_JAMP(46)+(2.777777777777778d-02)*TMP_JAMP(52)', ' JAMP(6) = (-2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(13)+(-2.500000000000000d-01)*AMP(34)+(-2.500000000000000d-01)*TMP_JAMP(23)+(-8.333333333333333d-02)*TMP_JAMP(25)+(-8.333333333333333d-02)*TMP_JAMP(28)+(-2.777777777777778d-02)*TMP_JAMP(29)+(-8.333333333333333d-02)*TMP_JAMP(38)+(-8.333333333333333d-02)*TMP_JAMP(49)+(-2.777777777777778d-02)*TMP_JAMP(51)+(-2.500000000000000d-01)*TMP_JAMP(54)']
             )
             
 
@@ -4290,8 +4290,8 @@ CALL IOSXXX(W(1,6),W(1,3),W(1,9),GT1GOP,AMP(6))""".split('\n'))
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -4640,8 +4640,8 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -4785,8 +4785,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,5),MGVX5,AMP(5))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -4961,8 +4961,8 @@ CALL VVVXXX(W(1,5),W(1,2),W(1,3),MGVX5,AMP(3))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -6503,8 +6503,8 @@ CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\mu^+',
-                      'antitexname':'\mu^-',
+                      'texname':r'\mu^+',
+                      'antitexname':r'\mu^-',
                       'line':'straight',
                       'charge':-1.,
                       'pdg_code':13,
@@ -6522,8 +6522,8 @@ CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -7201,8 +7201,8 @@ CALL VVVXXX(W(1,2),W(1,17),W(1,14),GG,AMP(216))""".split('\n'))
                       'color':1,
                       'mass':'MN1',
                       'width':'WN1',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -7363,8 +7363,8 @@ CALL IOVXXX(W(1,3),W(1,5),W(1,2),GWX1N1,AMP(2))""")
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -7380,8 +7380,8 @@ CALL IOVXXX(W(1,3),W(1,5),W(1,2),GWX1N1,AMP(2))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -8216,8 +8216,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'mn1',
                       'width':'zero',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -8232,8 +8232,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'mn2',
                       'width':'wn2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -8249,8 +8249,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -8479,8 +8479,8 @@ CALL IOSXXX(W(1,4),W(1,2),W(1,8),GELN2P,AMP(9))""".split('\n')
                       'spin':3,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -8802,8 +8802,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'mn1',
                       'width':'zero',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -8818,8 +8818,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'mn2',
                       'width':'wn2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -8835,8 +8835,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -9035,8 +9035,8 @@ CALL FFS1C1_0(W(1,2),W(1,9),W(1,4),GELN1P,AMP(12))""".split('\n')
                       'spin':3,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -9554,8 +9554,8 @@ C     Number of configs
                       'spin':3,
                       'mass':'wmass',
                       'width':'wwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':1.,
                       'pdg_code':24,
@@ -9849,8 +9849,8 @@ C     Number of configs
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -10077,11 +10077,11 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # MG4 use G and not aS as it basic object for alphas related computation
         # G is out of any list!
-        self.assertFalse('G' in [p.name for p in mg4_model.params_dep])
-        self.assertFalse('G' in [p.name for p in mg4_model.params_indep])
+        self.assertNotIn('G', [p.name for p in mg4_model.params_dep])
+        self.assertNotIn('G', [p.name for p in mg4_model.params_indep])
         # check that sqrt__aS is correctly set
-        self.assertTrue('mdl_sqrt__aS' in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('mdl_sqrt__aS' not in [p.name for p in mg4_model.params_indep])
+        self.assertIn('mdl_sqrt__aS', [p.name for p in mg4_model.params_dep])
+        self.assertNotIn('mdl_sqrt__aS', [p.name for p in mg4_model.params_indep])
         
         
     def test_case_sensitive(self):

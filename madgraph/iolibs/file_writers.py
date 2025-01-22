@@ -36,10 +36,10 @@ class FileWriter(io.FileIO):
 
     supported_preprocessor_commands = ['if']
     preprocessor_command_re=re.compile(
-                          "\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
+                          r"\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
                                    %('|'.join(supported_preprocessor_commands)))
     preprocessor_endif_re=re.compile(\
-    "\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
+    r"\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
     
     class FileWriterError(IOError):
         """Exception raised if an error occurs in the definition
@@ -140,10 +140,6 @@ class FileWriter(io.FileIO):
         else:
             raise self.FileWriterError("%s not string" % repr(input_lines))
         
-        # Setup the contextual environment
-        for contextual_variable, value in context.items():
-            exec('%s=%s'%(str(contextual_variable),repr(value)))
-        
         res = []
         # The variable below tracks the conditional statements structure
         if_stack = []
@@ -166,7 +162,7 @@ class FileWriter(io.FileIO):
             # Treat an if statement
             elif preproc_command.group('command')=='if':
                 try:
-                    if_stack.append(eval(preproc_command.group('body'))==True)
+                    if_stack.append(eval(preproc_command.group('body'), globals(), context)==True)
                 except Exception as e:
                     raise self.FilePreProcessingError('Could not evaluate'+\
                       "python expression '%s' given the context %s provided."%\
@@ -191,15 +187,15 @@ class FortranWriter(FileWriter):
         pass
 
     # Parameters defining the output of the Fortran writer
-    keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
-                     '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
-                     '^subroutine': ('^end\s*$', 0),
-                     '^module': ('^end\s*$', 0),
-                     'function': ('^end\s*$', 0)}
-    single_indents = {'^else\s*$':-2,
-                      '^else\s*if.+then\s*$':-2}
-    number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
+    keyword_pairs = {r'^if.+then\s*$': ('^endif', 2),
+                     r'^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
+                     r'^do(?!\s+\d+)\s+': (r'^enddo\s*$', 2),
+                     '^subroutine': (r'^end\s*$', 0),
+                     '^module': (r'^end\s*$', 0),
+                     'function': (r'^end\s*$', 0)}
+    single_indents = {r'^else\s*$':-2,
+                      r'^else\s*if.+then\s*$':-2}
+    number_re = re.compile(r'^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
     uniformcase = True #force everyting to be lower/upper case 
@@ -212,7 +208,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c\$|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|\s*!|!\$)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):
@@ -232,7 +228,7 @@ class FortranWriter(FileWriter):
         # Check if this line is a comment
         if self.__comment_pattern.search(line):
             # This is a comment
-            res_lines = self.write_comment_line(line.lstrip()[1:])
+            res_lines = self.write_comment_line(line.lstrip()[1:], prefix=line.lstrip()[0])
             return res_lines
         elif self.__continuation_line.search(line):
             return line+'\n'
@@ -316,7 +312,7 @@ class FortranWriter(FileWriter):
 
         return res_lines
 
-    def write_comment_line(self, line):
+    def write_comment_line(self, line, prefix=''):
         """Write a comment line, with correct indent and line splits"""
         
         # write_comment_line must have a single line as argument
@@ -326,6 +322,10 @@ class FortranWriter(FileWriter):
             return ["C%s\n" % line.strip()]
         elif line.startswith(('C','c')):
             return ['%s\n' % line] 
+        elif line.startswith("$OMP"):
+            return ['!%s\n' % line] 
+        elif prefix == "#" and line.startswith(("ifdef","else","endif")):
+            return ['#%s\n' % line] 
 
         res_lines = []
 
@@ -420,26 +420,20 @@ class FortranWriter(FileWriter):
             i = i + 1
         return len(splitline)-1
 
-    def remove_routine(self, text, fct_names, formatting=True):
-        """write the incoming text but fully removing the associate routine/function
-           text can be a path to a file, an iterator, a string
-           fct_names should be a list of functions to remove
+    @staticmethod   
+    def get_routine(text, fct_names, call_back=None):
         """
-
+        get the fortran function from a fortran file
+        """
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
-        pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+        pattern = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                              % {'type':'|'.join(f77_type)}, re.I)
-        
+
+        if isinstance(text, str):
+            text = text.split('\n')
+
+        to_write=False
         removed = []
-        if isinstance(text, str):   
-            if '\n' in text:
-                text = text.split('\n')
-            else:
-                text = open(text)
-        if isinstance(fct_names, str):
-            fct_names = [fct_names]
-        
-        to_write=True     
         for line in text:
             fct = pattern.findall(line)
             if fct:
@@ -447,21 +441,37 @@ class FortranWriter(FileWriter):
                     to_write = False
                 else:
                     to_write = True
-
             if to_write:
-                if formatting:
-                    if line.endswith('\n'):
-                        line = line[:-1]
-                    self.writelines(line)
-                else:
-                    if not line.endswith('\n'):
-                        line = '%s\n' % line
-                    super(FileWriter,self).writelines(line)
+                if call_back:
+                    call_back(line)
             else:
                 removed.append(line)
-                
+
         return removed
+    
+    def remove_routine(self, text, fct_names, formatting=True):
+        """write the incoming text but fully removing the associate routine/function
+           text can be a path to a file, an iterator, a string
+           fct_names should be a list of functions to remove
+        """
+
+        def call_back(line):
+            if formatting:
+                if line.endswith('\n'):
+                    line = line[:-1]
+                self.writelines(line)
+            else:
+                if not line.endswith('\n'):
+                    line = '%s\n' % line
+                super(FileWriter,self).writelines(line) 
+     
+        return self.get_routine(text, fct_names, call_back)
         
+
+
+class FortranWriter90(FortranWriter):
+
+    comment_char = '        !'
 
 #===============================================================================
 # CPPWriter
@@ -493,48 +503,50 @@ class CPPWriter(FileWriter):
                             '^private': standard_indent,
                             '^protected': standard_indent}
     
-    spacing_patterns = [('\s*\"\s*}', '\"'),
-                        ('\s*,\s*', ', '),
-                        ('\s*-\s*', ' - '),
-                        ('([{(,=])\s*-\s*', '\g<1> -'),
-                        ('(return)\s*-\s*', '\g<1> -'),
-                        ('\s*\+\s*', ' + '),
-                        ('([{(,=])\s*\+\s*', '\g<1> +'),
-                        ('\(\s*', '('),
-                        ('\s*\)', ')'),
-                        ('\{\s*', '{'),
-                        ('\s*\}', '}'),
-                        ('\s*=\s*', ' = '),
-                        ('\s*>\s*', ' > '),
-                        ('\s*<\s*', ' < '),
-                        ('\s*!\s*', ' !'),
-                        ('\s*/\s*', '/'),
-                        ('\s*\*\s*', ' * '),
-                        ('\s*-\s+-\s*', '-- '),
-                        ('\s*\+\s+\+\s*', '++ '),
-                        ('\s*-\s+=\s*', ' -= '),
-                        ('\s*\+\s+=\s*', ' += '),
-                        ('\s*\*\s+=\s*', ' *= '),
-                        ('\s*/=\s*', ' /= '),
-                        ('\s*>\s+>\s*', ' >> '),
-                        ('<\s*double\s*>>\s*', '<double> > '),
-                        ('\s*<\s+<\s*', ' << '),
-                        ('\s*-\s+>\s*', '->'),
-                        ('\s*=\s+=\s*', ' == '),
-                        ('\s*!\s+=\s*', ' != '),
-                        ('\s*>\s+=\s*', ' >= '),
-                        ('\s*<\s+=\s*', ' <= '),
-                        ('\s*&&\s*', ' && '),
-                        ('\s*\|\|\s*', ' || '),
-                        ('\s*{\s*}', ' {}'),
-                        ('\s*;\s*', '; '),
-                        (';\s*\}', ';}'),
-                        (';\s*$}', ';'),
-                        ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
-                        ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
-                        ('(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
-                         '\g<1>e\g<2>\g<3>'),
-                        ('\s+',' ')]
+    spacing_patterns = [(r'\s*\"\s*}', '\"'),
+                        (r'\s*,\s*', ', '),
+                        (r'\s*-\s*', ' - '),
+                        (r'([{(,=])\s*-\s*', r'\g<1> -'),
+                        (r'(return)\s*-\s*', r'\g<1> -'),
+                        (r'\s*\+\s*', ' + '),
+                        (r'([{(,=])\s*\+\s*', r'\g<1> +'),
+                        (r'\(\s*', '('),
+                        (r'\s*\)', ')'),
+                        (r'\{\s*', '{'),
+                        (r'\s*\}', '}'),
+                        (r'\s*=\s*', ' = '),
+                        (r'\s*>\s*', ' > '),
+                        (r'\s*<\s*', ' < '),
+                        (r'\s*!\s*', ' !'),
+                        (r'\s*/\s*', '/'),
+                        (r'\s*\*\s*', ' * '),
+                        (r'\s*-\s+-\s*', '-- '),
+                        (r'\s*\+\s+\+\s*', '++ '),
+                        (r'\s*-\s+=\s*', ' -= '),
+                        (r'\s*\+\s+=\s*', ' += '),
+                        (r'\s*\*\s+=\s*', ' *= '),
+                        (r'\s*/=\s*', ' /= '),
+                        (r'\s*>\s+>\s*', ' >> '),
+                        (r'<\s*double\s*>>\s*', '<double> > '),
+                        (r'\s*<\s+<\s*', ' << '),
+                        (r'\s*-\s+>\s*', '->'),
+                        (r'\s*=\s+=\s*', ' == '),
+                        (r'\s*!\s+=\s*', ' != '),
+                        (r'\s*>\s+=\s*', ' >= '),
+                        (r'\s*<\s+=\s*', ' <= '),
+                        (r'\s*&&\s*', ' && '),
+                        (r'\s*\|\|\s*', ' || '),
+                        (r'\s*{\s*}', ' {}'),
+                        (r'\s*;\s*', '; '),
+                        (r';\s*\}', ';}'),
+                        (r';\s*$}', ';'),
+                        (r'\s*<\s*([a-zA-Z0-9]+?)\s*>', r'<\g<1>>'),
+                        (r'^#include\s*<\s*(.*?)\s*>', r'#include <\g<1>>'),
+                        (r'(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
+                         r'\g<1>e\g<2>\g<3>'),
+                        (r'\s+',' '),
+                        (r'^\s*#','#')]
+    
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
 
@@ -804,6 +816,11 @@ class CPPWriter(FileWriter):
                 # If anything is left of myline, write it recursively
                 res_lines.extend(self.write_line(myline))
             return res_lines
+        
+        if line.startswith("#"):
+            res_lines.append('%s\n' % line)
+            return res_lines
+            
 
         # Write line(s) to file
         res_lines.append("\n".join(self.split_line(myline, \
@@ -896,7 +913,7 @@ class CPPWriter(FileWriter):
         for i in range(len(line_quotes)):
             line += line_quotes[i]
             if len(line_no_quotes) > i + 1:
-                 line += line_no_quotes[i+1]
+                line += line_no_quotes[i+1]
 
         # Add indent
         res_lines = [" " * self.__indent + line]

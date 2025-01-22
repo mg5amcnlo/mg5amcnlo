@@ -26,6 +26,7 @@ class aMCatNLOError(MadGraph5Error):
 import os
 import logging
 import time
+pjoin = os.path.join
 
 #Look for basic file position MG5DIR and MG4DIR
 MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),

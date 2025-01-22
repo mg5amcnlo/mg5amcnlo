@@ -134,8 +134,8 @@ class HelasModelTestSetup(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -206,8 +206,8 @@ class HelasModelTestSetup(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -512,7 +512,7 @@ class HelasModelTest(HelasModelTestSetup):
                            wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
 
-        self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
+        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
 
         wf = helas_objects.HelasWavefunction()
         wf.set('particle', -2, self.mybasemodel)
@@ -784,8 +784,8 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

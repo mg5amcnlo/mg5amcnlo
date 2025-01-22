@@ -200,6 +200,7 @@ class External(MathsObject):
     # Could get this from dag but I'm worried about preserving order
     wavs_same_leg = {}
     good_wav_combs = []
+    max_wav_num = 0 
 
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
@@ -246,6 +247,7 @@ class External(MathsObject):
         else:
             cls.wavs_same_leg[ext_num] = new_wavfuncs
         
+        cls.max_wav_num = max( cls.max_wav_num, len(graph.external_wavs) + len(graph.internal_wavs))
         return new_wavfuncs
 
     @classmethod
@@ -381,7 +383,7 @@ class Amplitude(MathsObject):
 class HelicityRecycler():
     '''Class for recycling helicity'''
 
-    def __init__(self, good_elements, bad_amps=[], bad_amps_perhel=[]):
+    def __init__(self, good_elements, bad_amps=[], bad_amps_perhel=[], gauge='U'):
 
         External.good_hel = []
         External.nhel_lines = ''
@@ -425,6 +427,7 @@ class HelicityRecycler():
 
         self.all_hel = []
         self.hel_filt = True
+        self.gauge = gauge
 
     def set_input(self, file):
         if 'born_matrix' in file:
@@ -610,7 +613,7 @@ class HelicityRecycler():
 
     def apply_amps(self, line, new_objs):
         if self.amp_splt:
-            return split_amps(line, new_objs)  
+            return split_amps(line, new_objs, gauge=self.gauge)  
         else: 
 
             return apply_args(line, [i.args for i in new_objs])
@@ -636,12 +639,12 @@ class HelicityRecycler():
             self.nhel_started = False
             
             if self.hel_filt:
-                External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
+                External.good_hel = dict([ (self.all_hel[int(i)-1],int(i)) for i in self.good_elements ])
             else:
-                External.good_hel = self.all_hel
+                External.good_hel = dict([(v,i) for i,v in enumerate(self.all_hel)])
 
             External.map_hel=dict([(hel,i) for i,hel in  enumerate(External.good_hel)])
-            External.hel_ranges = [set() for hel in External.good_hel[0]]
+            External.hel_ranges = [set() for hel in next(iter(External.good_hel))]
             for comb in External.good_hel:
                 for i, hel in enumerate(comb):
                     External.hel_ranges[i].add(hel)
@@ -655,10 +658,11 @@ class HelicityRecycler():
             self.template_dict['ncomb'] = len(External.good_hel)
 
     def nhel_string(self, hel_comb):
+        old_id = External.good_hel[hel_comb]
         self.counter += 1
         formatted_hel = [f'{hel}' if hel < 0 else f' {hel}' for hel in hel_comb]
         nexternal = len(hel_comb)
-        return (f'      DATA (NHEL(I,{self.counter}),I=1,{nexternal}) /{",".join(formatted_hel)}/')
+        return (f'      DATA (NHEL(I,{self.counter}),I=0,{nexternal}) /{old_id},{",".join(formatted_hel)}/')
 
     def read_orig(self):
 
@@ -696,7 +700,7 @@ class HelicityRecycler():
                     self.template_dict['helas_calls'] += self.unfold_helicities(
                         line, call_type)
 
-        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num)
+        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num, External.max_wav_num)
         # filter out uselless call
         for i in range(len(self.template_dict['helas_calls'])-1,-1,-1):
             obj = self.template_dict['helas_calls'][i]
@@ -781,7 +785,7 @@ def apply_args(old_line, all_the_args):
     
     return ''.join(new_lines)
 
-def split_amps(line, new_amps):
+def split_amps(line, new_amps, gauge):
     if not new_amps:
         return ''
     fct = line.split('(',1)[0].split('_0')[0]
@@ -837,34 +841,31 @@ def split_amps(line, new_amps):
                 spin = fct.split(None,1)[1][to_remove]
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
 
-            hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel, iamp = re.findall(r'AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
-        if spin in "VF":
-            lines.append("""      call CombineAmp(%(nb)i,
+        if spin == "F" or ( spin == "V" and gauge !='FD'):
+            suffix = ''
+        elif spin == "S":
+            suffix = 'S'
+        elif spin == "V" and  gauge == "FD":
+            suffix = "FD"
+        else:
+            raise Exception("split amp not supported for spin2, 3/2")
+
+        lines.append("""      call CombineAmp%(suffix)s(%(nb)i,
      & (/%(hel_list)s/), 
      & (/%(w_list)s/),
-     & TMP, W, AMP(1,%(iamp)s))""" %
-                               {'nb': len(sub_amps),
-                                'hel_list': ','.join(hel_calculated),
-                                'w_list': ','.join(windices),
-                                'iamp': iamp
-                               })
-        elif spin == "S":
-            lines.append("""      call CombineAmpS(%(nb)i, 
-     &(/%(hel_list)s/), 
-     & (/%(w_list)s/), 
-     & TMP, W, AMP(1,%(iamp)s))""" %
-                               {'nb': len(sub_amps),
-                                'hel_list': ','.join(hel_calculated),
-                                'w_list': ','.join(windices),
-                                'iamp': iamp
-                               })            
-        else:
-            raise Exception("split amp are not supported for spin2 and 3/2")
+     & TMP, W, AMP(1,%(iamp)s))""" % {'suffix':suffix,
+                                      'nb': len(sub_amps),
+                                      'hel_list': ','.join(hel_calculated),
+                                      'w_list': ','.join(windices),
+                                      'iamp': iamp
+                                     })
+
             
     #lines.append('')
     return '\n'.join(lines)

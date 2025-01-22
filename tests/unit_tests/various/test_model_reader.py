@@ -51,18 +51,24 @@ class TestModelReader(unittest.TestCase):
         for param in sum([self.base_model.get('parameters')[key] for key \
                               in self.base_model.get('parameters')], []):
             value = param.value
-            self.assertTrue(isinstance(value, (complex, float, int)))
-            self.assertTrue(isinstance(self.model_reader.get('parameter_dict')[\
-                param.name], (complex, float, int)))
+            self.assertIsInstance(value, (complex, float, int))
+            self.assertIsInstance(
+                self.model_reader.get('parameter_dict')[\
+                param.name],
+                (complex, float, int)
+            )
 
             
         for coupl in sum([self.base_model.get('couplings')[key] for key \
                               in self.base_model.get('couplings')], []):
             value = coupl.value
-            self.assertTrue(isinstance(value, complex))     
+            self.assertIsInstance(value, complex)
 
-            self.assertTrue(isinstance(self.model_reader.get('coupling_dict')[\
-                coupl.name], complex))
+            self.assertIsInstance(
+                self.model_reader.get('coupling_dict')[\
+                coupl.name],
+                complex
+            )
 
 
 if __name__ == '__main__':

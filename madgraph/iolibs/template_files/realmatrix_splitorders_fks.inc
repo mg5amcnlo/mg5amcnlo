@@ -236,6 +236,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      jamp(:,:) = (0d0,0d0)
 %(helas_calls)s
 %(jamp_lines)s
 

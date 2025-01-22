@@ -95,7 +95,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         # Check non-zero final state momenta
         for mom in p[2:]:
             for i in range(4):
-                self.assertTrue(abs(mom[i]) > 0.)
+                self.assertGreater(abs(mom[i]), 0.)
 
     def test_comparison_for_process(self):
         """Test check process for e+ e- > a Z"""
@@ -117,7 +117,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         comparison = process_checks.check_processes(myproc)[0][0]
 
         self.assertEqual(len(comparison['values']), 8)
-        self.assertTrue(comparison['values'][0] > 0)
+        self.assertGreater(comparison['values'][0], 0)
         self.assertTrue(comparison['passed'])
 
         comparison = process_checks.check_gauge(myproc)
@@ -362,7 +362,7 @@ class TestLorentzInvariance(unittest.TestCase):
                 if abs(m12) < 1e-8:
                     m12=0
                 invariant_mass_result.append(m12)
-                self.assertTrue(m12 >= 0)
+                self.assertGreaterEqual(m12, 0)
         
         # Compute invariant mass on a x direction boost
         invariant_mass_boost=[]

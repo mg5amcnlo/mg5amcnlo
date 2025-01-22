@@ -54,7 +54,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
         ufo_to_fortran = ufo_expression_parsers.UFOExpressionParserFortran(TestUFOExpressionParsers.model)
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_fortran.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, 'sqrt(dcmplx(2.000000d+00))')
         
         expr = 'cmath.sqrt(2.)'
@@ -85,29 +85,34 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 
         '(ee**2*imag/(2.000000d+00*sw**2)*(sin(sqrt(dcmplx(2.000000d+00))*ee)**2/3.000000d+00))')
-    
+
+        expr = '-((mdl_complexi*mdl_yc)/mdl_sqrt__2)'
+        converted = ufo_to_fortran.parse(expr)
+        self.assertEqual(converted, 
+        '-((mdl_complexi*mdl_yc)/mdl_sqrt__2)')
+        
     def test_convert_number_to_fortran(self):
         """ test it can convert number in fortran string"""
         
         py2f77 = ufo_expression_parsers.UFOExpressionParserFortran(TestUFOExpressionParsers.model)
         expr = str(2)
         converted = py2f77.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.000000d+00')  
         
         expr = str(0.23)
         converted = py2f77.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.300000d-01')  
         
         expr = str(2.5e6)
         converted = py2f77.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.500000d+06')
         
         expr = str(0.0000116639)  
         converted = py2f77.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '1.166390d-05')        
         
     def test_parse_to_cpp(self):
@@ -116,7 +121,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
         ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserCPP()
         expr = 'cmath.sqrt(2)'
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, 'sqrt(2.)')
         
         expr = 'randomfunction(2.)'
@@ -146,37 +151,37 @@ class TestUFOExpressionParsers(unittest.TestCase):
         ufo_to_pythia8 = ufo_expression_parsers.UFOExpressionParserCPP()
         expr = str(2)
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.')  
         
         expr = str(2.00000)
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.')  
         
         expr = str(0.23)
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '0.23')  
         
         expr = '2.5e6'
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.5e6')
         
         expr = '2.5e+6'
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '2.5e+6')
         
         expr = '.5e-6'
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '.5e-6')
         
         expr = str(1.5)  
         converted = ufo_to_pythia8.parse(expr)
-        self.assertTrue(isinstance(converted, str))
+        self.assertIsInstance(converted, str)
         self.assertEqual(converted, '1.5')        
         
 class TestImportUFO(unittest.TestCase):

@@ -266,7 +266,7 @@ c
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write+t_coupl)
+     $     +t_write+t_ewsud+t_coupl)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -285,6 +285,7 @@ c
       write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in EW_sudakov : ',t_ewsud
       write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
@@ -376,6 +377,7 @@ c PineAPPL
       common /cfl/fold,ifold_counter
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
+      include 'has_ewsudakov.inc'
 
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
@@ -441,8 +443,9 @@ c The nbody contributions
          call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
             call compute_born
+            if(abrv.ne.'born'.and.abrv.ne.'bovi') call compute_ewsudakov
          endif
-         if (abrv.ne.'born') then
+         if (abrv.ne.'born'.and.abrv.ne.'bosk') then
             call compute_nbody_noborn
          endif
       endif
@@ -451,6 +454,7 @@ c The nbody contributions
 c The n+1-body contributions (including counter terms)
       if ( abrv(1:4).eq.'born' .or.
      $     abrv(1:4).eq.'bovi' .or.
+     $     abrv(1:4).eq.'bosk' .or.
      $     abrv(1:2).eq.'vi' ) goto 12
       nbody=.false.
       if (sum) then
@@ -744,6 +748,8 @@ c
       logical nbody
       common/cnbody/nbody
 
+      include 'has_ewsudakov.inc'
+
 c
 c To convert diagram number to configuration
 c
@@ -903,8 +909,10 @@ c-----
 C Two cases can occur
 C   1) the process has been generated with the LOonly flav
 C   2) the process has only virtual corrections, e.g. z > v v [QED]
-C the two cases can be distinguished by looking at the values
+C   3) the process has been generated in the sudakov Approximation
+C the different cases can be distinguished by looking at the values
 C  of AMP_SPLIT_SIZE, AMP_SPLIT_SIZE_BORN (if they are ==, it is 1))
+C  and with the flag has_ewsudakov
            if (amp_split_size.eq.amp_split_size_born) then
              write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
@@ -914,6 +922,10 @@ C  of AMP_SPLIT_SIZE, AMP_SPLIT_SIZE_BORN (if they are ==, it is 1))
      $              /' [LOonly=QCD] processes'
                stop 1
              endif
+           else if (has_ewsudakov) then
+             write (*,*) 'Process with sudakov approximation for EWcorr'/
+     $           /'Setting abrv to "bosk".'
+             abrv='bosk'
            else
              write (*,*) 'Process only with virtual corrections'/
      $           /'Setting abrv to "bovi".'

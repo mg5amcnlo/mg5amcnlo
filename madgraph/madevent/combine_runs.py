@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import absolute_import
 import math
 import os
+import shutil
 import re
 import logging
 from six.moves import range
@@ -117,6 +118,7 @@ class CombineRuns(object):
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
+        to_clean = []
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
         wgt = results.axsec / results.nunwgt
         tot_nevents, nb_file = 0, 0
@@ -129,8 +131,14 @@ class CombineRuns(object):
             nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
             tot_nevents += nw
             nb_file += 1
+            to_clean.append(path)
         logger.debug("Combined %s file generating %s events for %s " , nb_file, tot_nevents, channel)
-
+        for path in to_clean:
+            try:
+                shutil.rmtree(path)
+            except Exception as error:
+                pass
+            
     @staticmethod
     def get_fortran_str(nb):
         data = '%E' % nb
@@ -162,6 +170,7 @@ class CombineRuns(object):
             fsock.write(line)
             old_line = line
         return nb_evt
+    
     def get_channels(self, proc_path):
         """Opens file symfact.dat to determine all channels"""
         sympath = os.path.join(proc_path, 'symfact.dat')
