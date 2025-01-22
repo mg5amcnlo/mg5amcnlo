@@ -1,3 +1,28 @@
+Update notes for Asymmetric Collisions Mode (in reverse time order)
+
+0.0.1 (22/01/2025)
+      AS: Introduced the Asymmetric Collisions Mode: it allows to use two distinct LHAPDF_IDs for both incoming beams (for more information see arXiv:xxxx.xxxx).
+      AS: The Nuclear Modification Factors for every histogram in the analysis file is now the part of the gnuplot output if the Asymmetric Collisions Mode flag is active.  
+      AS: Included the calculation of the Cross Sections with or without the PDF- and scale- reweighting flags.
+      AS: Included the calculations of scale variation for all of the PDFs in the PDF list in the run_card.dat.
+      AS: Laboratory frame now default for computation. All of the cuts in the run_card.dat, by default, are now in this frame.
+   To use the cms frame use "True = cms_frame" command in the run_card.
+      AS: Fixed the sqrt(s) computation
+     
+      AS: List of the files that have been changed:
+          - fks_singular.f
+          - genps_fks.f
+          - setcuts.f
+          - cuts.f
+          - run.inc
+          - run_card.dat
+          - export_fks.py
+          - parton_lum_n_fks.inc
+          - banner.py
+          - histograms.py
+
+
+
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
