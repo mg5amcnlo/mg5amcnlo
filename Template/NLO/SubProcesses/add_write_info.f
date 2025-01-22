@@ -2,6 +2,7 @@
      &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use process_module
       use scale_module
       implicit none
       include "genps.inc"
@@ -227,18 +228,9 @@ c Copy the saved information to the arrays actually used
 c Set the shower scale
       if (Hevents) then
 c$$$         shower_scale=SCALUP(nFKSprocess*2)
-         do i=1,nexternal
-            do j=1,nexternal
-               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2,i,j)
-            enddo
-         enddo
+         shower_scale_a(1:ndelH,1:ndelH)=showerscaleH(1:ndelH,1:ndelH)
       else
-c$$$         shower_scale=SCALUP(nFKSprocess*2-1)
-         do i=1,nexternal
-            do j=1,nexternal
-               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2-1,i,j)
-            enddo
-         enddo
+         shower_scale_a(1:ndelS,1:ndelS)=showerscaleS(1:ndelS,1:ndelS)
       endif
 
 c This is an (n+1)-body process (see update_unwgt_table in
@@ -591,7 +583,7 @@ c     Remove non-resonant mothers, set position of particles
             ito(i)=i+nres       ! final state particle
          elseif(i.le.-1.and.jpart(6,i).eq.2) then
             ires=ires+1
-            ito(i)=2+ires       ! s-channel resonances
+            ito(i)=nincoming+ires ! s-channel resonances
          else 
             ito(i)=i
             if(i.eq.0) cycle

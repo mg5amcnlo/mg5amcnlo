@@ -508,13 +508,13 @@ c$$$      include 'madfks_mcatnlo.inc'
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
-      double precision emsca_a(nexternal,nexternal)
-     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-     $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$      double precision emsca_a(nexternal,nexternal)
+c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$     $     ,nexternal)
+c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
+c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision evnt_wgt
@@ -622,13 +622,13 @@ c$$$      include 'madfks_mcatnlo.inc'
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),damping,N_p
      $     ,MCsec(nexternal,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
-      double precision emsca_a(nexternal,nexternal)
-     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-     $     ,nexternal)
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$      double precision emsca_a(nexternal,nexternal)
+c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$     $     ,nexternal)
+c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
+c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              MCcntcalled
@@ -1444,18 +1444,18 @@ c$$$      include 'madfks_mcatnlo.inc'
       common/fks_indices/i_fks,j_fks
 
       double precision ptresc,ref_scale,emscainv
-      double precision emscav_a(nexternal,nexternal)
-      double precision emscav_a2(nexternal,nexternal)
+c$$$      double precision emscav_a(nexternal,nexternal)
+c$$$      double precision emscav_a2(nexternal,nexternal)
       integer cflows,jflow
       common/c_colour_flow/jflow
 
-      double precision emsca_a(nexternal,nexternal)
-     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-     $     ,nexternal),emsca
-      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$      double precision emsca_a(nexternal,nexternal)
+c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$     $     ,nexternal),emsca
+c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
+c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
 
@@ -1474,9 +1474,9 @@ c     iHscale=1 for scale=dipole_mass
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-      double precision emscav_tmp_a(nexternal,nexternal)
-      double precision emscav_tmp_a2(nexternal,nexternal)
-      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
+c$$$      double precision emscav_tmp_a(nexternal,nexternal)
+c$$$      double precision emscav_tmp_a2(nexternal,nexternal)
+c$$$      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt
       logical lzone(nexternal)
@@ -2028,6 +2028,8 @@ c$$$         else                   ! eq.3.34
             gl(out_con)=gl_safe(deltanum,deltaden)
 !     compute F_k
             if(i.le.nincoming)then
+! TODO: fix this--> one should consider all the flavour configurations contributing to this contribution.
+! For example: qq>ttbar, has only a single contribution here, but should be kept separate for all the quark flavours.               
                LP=SIGN(1,LPP(i))
                id=get_parton_id(idup_s(i),lp)
                pdfnum=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
@@ -2648,24 +2650,24 @@ c$$$      end
 
 
       
-      subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
-     $     ,MCsec,lzone,jflow,wgt)
+c$$$      subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
+c$$$     $     ,MCsec,lzone,jflow,wgt)
 c$$$      use kinematics_module
 c$$$      use scale_module
 c$$$      implicit none
-      include 'nexternal.inc'
+c$$$      include 'nexternal.inc'
 c$$$      include 'run.inc'
-      include "born_nhel.inc"
+c$$$      include "born_nhel.inc"
 c$$$c$$$      include 'madfks_mcatnlo.inc'
 c$$$      include "genps.inc"
 c$$$      include 'nFKSconfigs.inc'
 c$$$      double precision tiny
 c$$$      parameter       (tiny=1d-7)
-      integer npartner,cflows,i,jflow,jpartner,mpartner
-      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
-     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
-     $     ,dummy
-      logical lzone(nexternal)
+c$$$      integer npartner,cflows,i,jflow,jpartner,mpartner
+c$$$      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),wgt,wgt2,
+c$$$     $     sumMCsec(max_bcol),MCsec(nexternal,max_bcol),rrnd,wgt1
+c$$$     $     ,dummy
+c$$$      logical lzone(nexternal)
 c$$$      integer            i_fks,j_fks
 c$$$      common/fks_indices/i_fks,j_fks
 c$$$      integer          ipartners(0:nexternal-1)
@@ -2855,7 +2857,7 @@ c$$$         write(*,*)emsca,jpartner,lzone
 c$$$         stop
 c$$$      endif
 c$$$      return
-      end
+c$$$      end
 
 
 

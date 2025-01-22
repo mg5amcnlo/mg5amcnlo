@@ -3006,8 +3006,9 @@ c while for the S-events we can sum it to the 'i_soft' one.
 c H-event. If PDG codes, shower starting scale and momenta are equal, we
 c can sum them before taking ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
-               if ( emsca_H(nFKS(ii),ifold_cnt(ii)).ne.
-     &              emsca_H(nFKS( i),ifold_cnt( i))) cycle
+               if (any(emsca_H(nFKS(ii),ifold_cnt(ii),1:ndelH,1:ndelH)
+     $              .ne. emsca_H(nFKS(i),ifold_cnt(i),1:ndelH,1:ndelH))
+     $              cycle
                equal=.true.
                do j=1,niproc(ii)
                   if (.not.pdg_equal(parton_pdg(1,j,ii),
@@ -3064,36 +3065,29 @@ c include it here!
       end
 
       
-      subroutine update_shower_scale_Sevents(ifold_picked,SCALUP)
+      subroutine update_shower_scale_Sevents(ifold_picked)
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
 c necessarily the same for all of these summed FKS configurations and/or
 c folds).
       use weight_lines
+      use process_module
       use mint_module ! includes the ifold()
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       integer i,j,k,ifold_picked,icolour(2,nexternal),jj,ii
-      double precision showerscale,SCALUP
-      double precision showerscale_a(nexternal,nexternal)
       integer n_folds
       n_folds=product(ifold(1:ndim))
       if (icontr.eq.0) return
-      call update_shower_scale_Sevents_v2(n_folds,showerscale
-     $     ,showerscale_a,icolour,ifold_picked)
-      SCALUP=showerscale   ! S-event shower scale to be written in the event file
-c Overwrite the shower scale for the S-events for DELTA.
+      call update_shower_scale_Sevents_v2(n_folds
+     $     ,icolour,ifold_picked)
       do i=1,icontr
          if (H_event(i)) cycle
          if (icontr_sum(0,i).ne.0)then
             if (mcatnlo_delta) then
-               do j=1,nexternal
-                  do k=1,nexternal
-                     shower_scale_a(i,j,k)= showerscale_a(j,k)
-                  enddo
-               enddo
+               !TODO: check this
                icolour_con(1:2,1:nexternal,i)=icolour(1:2,1:nexternal)
             endif
          endif
@@ -3103,7 +3097,7 @@ c Overwrite the shower scale for the S-events for DELTA.
 
 
       subroutine update_shower_scale_Sevents_v2(n_folds
-     $     ,showerscale,showerscale_a,icolour,ifold_picked)
+     $     ,icolour,ifold_picked)
 c Improved way of assigning shower starting scales. It picks a fold
 c randomly, based on the weight of the fold to the sum over all
 c folds. Within a fold, pick an FKS configuration randomly, weighted by
@@ -3111,6 +3105,7 @@ c its contribution without including the born (and nbody_noborn)
 c contributions. (If there are only born (and nbody_noborn)
 c contributions to the picked fold, use the weights of those instead).
       use weight_lines
+      use process_module
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -3118,27 +3113,14 @@ c contributions to the picked fold, use the weights of those instead).
       include 'run.inc'
       integer i,j,k,l,ict,ifl,n_folds,iFKS,ifold_picked,icolour(2
      $     ,nexternal),ii,jj
-      double precision wgt_fold_fks(fks_configs,n_folds),ran2
-     $     ,target,tmp_scale(fks_configs,n_folds),showerscale
-     $     ,tmp_scale_a(fks_configs,n_folds,nexternal,nexternal)
-     $     ,wgt_fold_fks_born(fks_configs,n_folds)
-     $     ,wgt_fold(n_folds),wgt_sum,wgt_accum
-     $     ,showerscale_a(nexternal,nexternal)
+      double precision wgt_fold_fks(fks_configs,n_folds),ran2,target
+     $     ,wgt_fold_fks_born(fks_configs
+     $     ,n_folds),wgt_fold(n_folds),wgt_sum,wgt_accum
       external ran2
 c
-      do ifl=1,n_folds
-         do iFKS=1,fks_configs
-            wgt_fold_fks(iFKS,ifl)=0d0
-            wgt_fold_fks_born(iFKS,ifl)=0d0
-            tmp_scale(iFKS,ifl)=-1d0
-            do j=1,nexternal
-               do k=1,nexternal
-                  tmp_scale_a(iFKS,ifl,j,k)=-1d0
-               enddo
-            enddo
-         enddo
-         wgt_fold(ifl)=0d0
-      enddo
+      wgt_fold_fks(1:fks_configs,1:n_folds)=0d0
+      wgt_fold_fks_born(1:fks_configs,1:n_folds)=0d0
+      wgt_fold(1:n_folds)=0d0
 c Collect the weights that contribute to a given Fold and FKS
 c configuration.
       do i=1,icontr
@@ -3158,35 +3140,6 @@ c configuration.
      $                 wgt_fold_fks_born(nFKS(ict),ifl)+wgts(1,ict)
             endif
             wgt_fold(ifl)=wgt_fold(ifl)+wgts(1,ict)
-            if (tmp_scale(nFKS(ict),ifl).eq.-1d0) then
-               tmp_scale(nFKS(ict),ifl)=emsca_S(nFKS(ict),ifl)
-c check that all the shower starting scales are identical for all the
-c contribution to a given FKS configuration and fold.
-            elseif(abs((tmp_scale(nFKS(ict),ifl)-emsca_S(nFKS(ict),ifl))
-     $              /(tmp_scale(nFKS(ict),ifl)+emsca_S(nFKS(ict),ifl)))
-     $              .gt. 1d-6 ) then
-               write (*,*) 'ERROR in update_shower_scale_Sevents #2'
-     $              ,tmp_scale(nFKS(ict),ifl),emsca_S(nFKS(ict),ifl)
-               stop 1
-            endif
-            if (mcatnlo_delta) then
-               do l=1,nexternal
-                  do k=1,nexternal
-                     if (tmp_scale_a(nFKS(ict),ifl,l,k).eq.-1d0) then
-                        tmp_scale_a(nFKS(ict),ifl,l,k)=shower_scale_a(ict,l,k)
-c check that all the shower starting scales are identical for all the
-c contribution to a given FKS configuration and fold.
-                     elseif ( abs((tmp_scale_a(nFKS(ict),ifl,l,k)-shower_scale_a(ict,l,k))
-     $                       /(tmp_scale_a(nFKS(ict),ifl,l,k)+shower_scale_a(ict,l,k)))
-     $                       .gt. 1d-6 ) then
-                        write (*,*)
-     &                       'ERR 2 in update_shower_scale_Sevents2'
-     $                       ,tmp_scale_a(nFKS(ict),ifl,l,k),shower_scale_a(ict,l,k)
-                        stop 1
-                     endif
-                  enddo
-               enddo
-            endif
          enddo
       enddo
 c pick the fold at random, weighted by their relative contributions
@@ -3249,17 +3202,13 @@ c instead.
             stop 1
          endif
       endif
-      showerscale=tmp_scale(iFKS,ifl)
+      showerscaleS(1:ndelS,1:ndelS)=emsca_S(iFKS,ifl,1:ndelS,1:ndelS)
       do i=1,icontr
          if (H_event(i)) cycle
          if (iFKS.ne.nFKS(i) .or. ifl.ne.ifold_cnt(i)) cycle
          icolour(1:2,1:nexternal)=icolour_con(1:2,1:nexternal,i)
+         ! TODO: check this
          exit
-      enddo
-      do j=1,nexternal
-         do k=1,nexternal
-            showerscale_a(j,k)=tmp_scale_a(iFKS,ifl,j,k)
-         enddo
       enddo
       ifold_picked=ifl
       return
@@ -3371,6 +3320,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
       use weight_lines
+      use process_module
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -3393,8 +3343,6 @@ c PS point that should be written in the event file.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision     SCALUP_a(fks_configs*2,nexternal,nexternal)
-      common /cshowerscale_a/SCALUP_a
       integer colour_connections(2,nexternal)
       common /colour_connections_to_write/ colour_connections
       double precision tmp_wgt(fks_configs),sum_granny_wgt
@@ -3433,13 +3381,9 @@ c found the contribution that should be written:
          i_process_addwrite=iproc_picked
          iFKS_picked=nFKS(icontr_picked)
          ifold_picked=ifold_cnt(icontr_picked)
-         SCALUP=emsca_H(iFKS_picked,ifold_picked)
-         do k=1,nexternal
-            do l=1,nexternal
-               SCALUP_a(iFKS_picked*2,k,l)=shower_scale_a(icontr_picked
-     $              ,k,l)
-            enddo
-         enddo
+         showerscaleH(1:ndelH,1:ndelH)=emsca_H(iFKS_picked,ifold_picked
+     $        ,1:ndelH,1:ndelH)
+         ! TODO: check the following line
          colour_connections(1:2,1:nexternal)=icolour_con(1:2
      $        ,1:nexternal,icontr_picked)
       else
@@ -3448,7 +3392,7 @@ c found the contribution that should be written:
 
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents(ifold_picked,SCALUP)
+         call update_shower_scale_Sevents(ifold_picked)
          
          do k=1,icontr_sum(0,icontr_picked)
             ict=icontr_sum(k,icontr_picked)
@@ -3463,12 +3407,6 @@ c determined which contributions are identical.
             endif
          enddo
 
-         do k=1,nexternal
-            do l=1,nexternal
-               SCALUP_a(iFKS_picked*2-1,k,l)
-     $              =shower_scale_a(icontr_picked,k,l)
-            enddo
-         enddo
          colour_connections(1:2,1:nexternal)=icolour_con(1:2,1:nexternal
      $        ,icontr_picked)
 c Determine if we need to write the granny (based only on the special

@@ -83,7 +83,7 @@ c Put the Hevent info in a common block
 
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale_a,ickkw)
+     $     ,ickkw,shower_scale_a)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -154,8 +154,8 @@ c get info on beam and PDFs
       return
       end
 
-      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale_a
-     $     ,ickkw)
+      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe ,ickkw
+     $     ,shower_scale_a)
       use extra_weights
       use scale_module
       implicit none
@@ -171,13 +171,11 @@ c$$$      include "madfks_mcatnlo.inc"
       parameter (izero=0)
       double precision aqcd,aqed,scale
       character*1000 buff
-      double precision shower_scale,shower_scale_a(-nexternal+3:2
-     $     *nexternal-3,-nexternal+3:2*nexternal-3)
       INTEGER MAXNUP,i,j,k
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
-      DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
+      DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,SCALUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
      # SCALUP_a(MAXNUP,MAXNUP)
       include 'nFKSconfigs.inc'
@@ -195,10 +193,12 @@ c$$$      include "madfks_mcatnlo.inc"
      #                              muF22_current,QES2_current
       logical firsttime
       data firsttime/.true./
+      double precision shower_scale_a(-nexternal+3:2
+     $     *nexternal-3,-nexternal+3:2*nexternal-3)
 c
       scalup_a=-1d0
       if (ickkw.eq.4) then
-         scale = sqrt(muF12_current)
+         SCALUP = sqrt(muF12_current)
          do j=1,2*nexternal-3
             do k=1,2*nexternal-3
                if(j.eq.k)cycle
@@ -206,7 +206,7 @@ c
             enddo
          enddo
       elseif (ickkw.eq.-1) then
-         scale = mu_r
+         SCALUP = mu_r
          do j=1,2*nexternal-3
             do k=1,2*nexternal-3
                if(j.eq.k)cycle
@@ -214,13 +214,20 @@ c
             enddo
          enddo
       else
-         scale = SCALUP
-         do j=1,2*nexternal-3
-            do k=1,2*nexternal-3
-               if(j.eq.k)cycle
-               scalup_a(j,k)=shower_scale_a(j,k)
-            enddo
-         enddo
+         if (iSorH_lhe.eq.1) then ! S-event
+            SCALUP=showerscaleS(1,1)
+         else
+            SCALUP=showerscaleH(1,1)
+         endif
+         scalup_a(1:NUP,1:NUP)=shower_scale_a(1:NUP,1:NUP)
+            
+c$$$         scale = SCALUP
+c$$$         do j=1,2*nexternal-3
+c$$$            do k=1,2*nexternal-3
+c$$$               if(j.eq.k)cycle
+c$$$               scalup_a(j,k)=shower_scale_a(j,k)
+c$$$            enddo
+c$$$         enddo
       endif
 c
       aqcd=g**2/(4d0*pi)

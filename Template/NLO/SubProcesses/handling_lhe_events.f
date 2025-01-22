@@ -858,6 +858,7 @@ c Write the <scales> block only for scales related to valid colour lines
             do j=1,NUP
                if (abs(ISTUP(j)).ne.1) cycle
                if(i.eq.j)cycle
+! TODO: check if we should change this with the 'valid_dipole' stuff
                are_col_conn(i,j)=
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.

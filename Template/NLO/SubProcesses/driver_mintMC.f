@@ -816,7 +816,7 @@ c 1/proc_map(0,0)*vol1)
                call compute_born
                call get_born_flow(born_flow_picked)
                call Bornonly_shower_scale(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter)
+               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
@@ -824,7 +824,7 @@ c 1/proc_map(0,0)*vol1)
                call compute_nbody_noborn
                call get_born_flow(born_flow_picked)
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter)
+               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
             else
                ! Normal: all contributions included. Determine the
@@ -837,7 +837,7 @@ c 1/proc_map(0,0)*vol1)
                ! in the dead-zone, this will not be used (or
                ! overwritten).
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter)
+               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
             endif
          else
@@ -878,8 +878,13 @@ c for different nFKSprocess.
                call determine_partner(born_flow_picked,partner_picked)
 !     The shower scale to be used in the event file (if it's an S-event and
 !     fks_picked will be iFKS):
-               emsca_S(iFKS,ifold_counter)=shower_scale_nbody(fks_father
-     $              ,partner_picked)
+               if (.not.mcatnlo_delta) then
+                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
+     $                 =shower_scale_nbody(fks_father,partner_picked)
+               else
+                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
+     $                 =shower_scale_nbody(1:ndelS,1:ndelS)
+               endif
             endif
                
             jac=1d0/vol1
@@ -904,12 +909,26 @@ c counter-event momenta do not exist).
 ! divergence in the virtual" these configurations should have a shower
 ! scale related to the underlying S-event.
             if (born_flow_picked.gt.0) then
-               emsca_H(iFKS,ifold_counter)=max(
-     $              shower_scale_n1body(i_fks,j_fks),
-     $              shower_scale_nbody(fks_father,partner_picked))
-            else
-               emsca_H(iFKS,ifold_counter)=shower_scale_n1body(i_fks
-     $              ,j_fks)
+               if (.not.mcatnlo_delta) then
+                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)=max(
+     $                 shower_scale_n1body(i_fks,j_fks),
+     $                 shower_scale_nbody(fks_father,partner_picked))
+               else
+! in the case of MC@NLO-delta, an H-event contribution is by definition
+! 'hard', and we should use the corresponding dipole scale for
+! subsequent showering.
+                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $                 =shower_scale_n1body(1:ndelH,1:ndelH)
+               endif
+            else ! we have no Born, so take the n+1-body dipole(s) as
+                 ! starting scale.
+               if (.not.mcatnlo_delta) then
+                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $                 =shower_scale_n1body(i_fks,j_fks)
+               else
+                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $                 =shower_scale_n1body(1:ndelH,1:ndelH)
+               endif
             endif
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
