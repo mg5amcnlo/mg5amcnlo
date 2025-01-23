@@ -83,6 +83,10 @@ set style line  38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
 set style line  48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
 
 
+set style line  51 lt 1 lc rgb "blue" lw 2.0
+set style line  52 lt 1 lc rgb "red" lw 2.0
+set style line  522 lt 2 lc rgb "red" lw 2.0 dt (6,3)
+
 set style line 999 lt 1 lc rgb "gray" lw 1.3
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
