@@ -67,7 +67,7 @@ POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o ha
 TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for gensym
-SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o write_event.o
+SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\

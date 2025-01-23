@@ -299,6 +299,31 @@ class TestEvent(unittest.TestCase):
 
 
 
+class TestFourMomentum(unittest.TestCase):
+
+
+    def test_boost_to_restframe(self):
+        """check that we can correctly boost momenta to a restframe"""
+
+        from madgraph.various.lhe_parser import FourMomentum
+        plep = FourMomentum(38.249416771525524,24.8053721987,27.2397493528,-10.281412774874447)
+        ptop = FourMomentum(186.51892916393933,66.4591715464,-21.3845299376,10.463198859726106)
+        #Want to have the lepton momenta in the frame where the top is at rest
+
+        out = plep.boost_to_restframe(ptop) 
+
+        self.assertAlmostEqual(out.E, 35.77191285579485)
+        self.assertAlmostEqual(out.px,  11.108508511835302)
+        self.assertAlmostEqual(out.py, 31.646981413441754)
+        self.assertAlmostEqual(out.pz, -12.437819560808716)
+
+
+        out = ptop.boost_to_restframe(ptop)
+        self.assertAlmostEqual(out.E, ptop.mass) 
+        self.assertAlmostEqual(out.px,  0)
+        self.assertAlmostEqual(out.py, 0)
+        self.assertAlmostEqual(out.pz, 0)
+
 class TESTLHEParser(unittest.TestCase):
 
     def setUp(self):

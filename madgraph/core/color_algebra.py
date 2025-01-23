@@ -371,7 +371,7 @@ class Epsilon(ColorObject):
 
     @staticmethod
     def perm_parity(lst, order=None):
-        '''\                                                                                                                                                                                                 
+        r'''\                                                                                                                                                                                                 
         Given a permutation of the digits 0..N in order as a list,                                                                                                                                           
         returns its parity (or sign): +1 for even parity; -1 for odd.                                                                                                                                        
         '''

@@ -678,7 +678,7 @@ class AbstractALOHAModel(dict):
         # Option
         self.explicit_combine = explicit_combine
         # Extract the model name if combined with restriction
-        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_pattern = re.compile(r"^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
         if model_name_re:
             name = model_name_re.group('name')

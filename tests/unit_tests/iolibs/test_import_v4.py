@@ -316,8 +316,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
             try:
                 self.assertEqual(command,solution[i])
             except:
-                if re.match('QCD=\d+ QED=\d+', command):
-                    qcd, qed =re.findall('QCD=(\d+) QED=(\d+)')
+                if re.match(r'QCD=\d+ QED=\d+', command):
+                    qcd, qed =re.findall(r'QCD=(\d+) QED=(\d+)')
                     sol = solution[i].replace('QCD=%s QED=%s' % (qcd,qed), 
                                               'QED=%s QCD=%s' % (qed,qcd))
                     self.assertEqual(command,sol)

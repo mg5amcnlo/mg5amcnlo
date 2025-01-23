@@ -513,7 +513,7 @@ c final state gluon radiation:  X -> Xg
 c initial state gluon splitting (gluon is j_fks):  g -> XX
                pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
             else
-               write (*,*)
+               write(*,*)
      &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
                stop 1
             endif
@@ -524,6 +524,16 @@ c initial state gluon splitting (gluon is j_fks):  g -> XX
               pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
             elseif (split_type_d(iFKS,qed_pos)) then
               pdg_uborn(k,ict)=22  ! give the extra particle a photon PDG code
+            else
+                if (iFKS.eq.1) then ! this can be hit due to LOonly flag
+                    pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
+                    ! will always have momenta 0
+                else
+               write(*,*)
+     &          'set_pdg ERROR#4 in PDG assigment for underlying Born'
+               stop 1
+
+                endif
             endif
          elseif(k.ge.fks_i_d(iFKS)) then
             pdg_uborn(k,ict)=pdg(k+1,ict)

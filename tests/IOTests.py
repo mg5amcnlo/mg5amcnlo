@@ -96,14 +96,14 @@ class IOTest(object):
     what kind of IO test will be necessary later """
 
     # Handy definitions
-    proc_files = ['[^.+\.(f|dat|inc)$]','MadLoop5_resources/[^ML5_.*\.dat]']
+    proc_files = [r'[^.+\.(f|dat|inc)$]',r'MadLoop5_resources/[^ML5_.*\.dat]']
     # Some model files are veto because they are sourced by dictionaries whose 
     # order is random.
-    model_files = ['../../Source/MODEL/[^.+\.(f|inc)$]',
+    model_files = [r'../../Source/MODEL/[^.+\.(f|inc)$]',
                    '-../../Source/MODEL/lha_read.f',
                    '-../../Source/MODEL/param_read.inc',
                    '-../../Source/MODEL/param_write.inc']            
-    helas_files = ['../../Source/DHELAS/[^.+\.(f|inc)$]']
+    helas_files = [r'../../Source/DHELAS/[^.+\.(f|inc)$]']
     
     # We also exclude the helas_files because they are sourced from unordered
     # dictionaries.

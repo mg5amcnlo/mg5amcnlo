@@ -225,7 +225,7 @@ class ReweightInterface(extended_cmd.Cmd):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
-        process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        process, order, final = re.split(r'\[\s*(.*)\s*\]', proc)
         if process.strip().startswith(('generate', 'add process')):
             process = process.replace('generate', '')
             process = process.replace('add process','')
@@ -263,7 +263,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
+            result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
@@ -784,7 +784,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\\d+)|(?P<id2>[_\\w\\-\\.]+))(?P<rwgttype>\\s*|_\\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
@@ -1592,7 +1592,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
-        commandline = re.sub('@\s*\d+', '', commandline)
+        commandline = re.sub(r'@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem']:
@@ -1669,7 +1669,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -1702,7 +1702,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                  if line.startswith('generate')]
                 data['processes'] += [' '.join(line.split()[2:]) 
                                       for line in self.banner.proc_card
-                                      if re.search('^\s*add\s+process', line)]
+                                      if re.search(r'^\s*add\s+process', line)]
             #object_collector
             #self.id_to_path_second = {}   
             #data['id2path'] = self.id_to_path_second 

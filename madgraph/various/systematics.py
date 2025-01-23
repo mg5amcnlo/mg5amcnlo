@@ -582,7 +582,7 @@ class Systematics(object):
             else:
                 resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
 
-        dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
+        dyn_name = {1: r'\sum ET', 2:r'\sum\sqrt{m^2+pt^2}', 3:r'0.5 \sum\sqrt{m^2+pt^2}',4:r'\sqrt{\hat s}' }
         for key, curr in dyns.items():
             if key ==-1:
                 continue
@@ -789,7 +789,7 @@ class Systematics(object):
             return int(self.start_wgt_id)
         
         if 'initrwgt' in self.banner:
-            pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
+            pattern = re.compile('<weight id=(?:\'|\")([_\\w]+)(?:\'|\")', re.S+re.I+re.M)
             matches =  pattern.findall(self.banner['initrwgt'])
             matches.append('0') #ensure to have a valid entry for the max 
             return  max([int(wid) for wid in  matches if wid.isdigit()])+1

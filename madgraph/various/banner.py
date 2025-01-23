@@ -116,8 +116,8 @@ class Banner(dict):
     ############################################################################
     #  READ BANNER
     ############################################################################
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     tag_to_file={'slha':'param_card.dat',
       'mgruncard':'run_card.dat',
@@ -319,7 +319,7 @@ class Banner(dict):
     def get_lha_strategy(self):
         """get the lha_strategy: how the weight have to be handle by the shower"""
         
-        if not self["init"]:
+        if "init" not in self or not self["init"]:
             raise Exception("No init block define")
         
         data = self["init"].split('\n')[0].split()
@@ -1440,7 +1440,7 @@ class ConfigFile(dict):
                     value =int(value[:-1]) * convert[value[-1]] 
                 elif '/' in value or '*' in value:               
                     try:
-                        split = re.split('(\*|/)',value)
+                        split = re.split(r'(\*|/)',value)
                         v = float(split[0])
                         for i in range((len(split)//2)):
                             if split[2*i+1] == '*':
@@ -1478,7 +1478,7 @@ class ConfigFile(dict):
                         value = float(value)
                     except ValueError:
                         try:
-                            split = re.split('(\*|/)',value)
+                            split = re.split(r'(\*|/)',value)
                             v = float(split[0])
                             for i in range((len(split)//2)):
                                 if split[2*i+1] == '*':
@@ -1867,7 +1867,7 @@ class PY8Card(ConfigFile):
         
         # Visible parameters
         # ==================
-        self.add_param("Main:numberOfEvents", -1)
+        self.add_param("Main:numberOfEvents", 0)
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
@@ -3031,7 +3031,7 @@ class RunCard(ConfigFile):
                 # do not write hidden parameter not hidden for this template 
                 #
                 if python_template:
-                    written = written.union(set(re.findall('\%\((\w*)\)s', open(template,'r').read(), re.M)))
+                    written = written.union(set(re.findall(r'\%\((\w*)\)s', open(template,'r').read(), re.M)))
                 to_write = to_write.union(set(self.hidden_param))
                 to_write = to_write.difference(written)
 
@@ -3119,7 +3119,7 @@ class RunCard(ConfigFile):
                 text = open(path,'r').read()
                 #misc.sprint(text)
                 f77_type = ['real*8', 'integer', 'double precision', 'logical']
-                pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                pattern = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                                 % {'type':'|'.join(f77_type)}, re.I+re.M)
                 for fct in pattern.findall(text):
                     fsock = file_writers.FortranWriter(tmp,'w')
@@ -3206,7 +3206,7 @@ class RunCard(ConfigFile):
         #handle metadata
         opts = {}
         forced_opts = []
-        for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+        for key,val in re.findall(r"\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
             forced_opts.append(key)
             if val in ['True', 'False']:
                 opts[key] = eval(val)
@@ -3518,11 +3518,22 @@ class RunCard(ConfigFile):
                 out = ["%s\n" %l for l in out]
                 fsock.writelines(out)
 
-    @staticmethod
-    def get_idbmup(lpp):
+    def get_idbmup(self, lpp, beam=1):
         """return the particle colliding pdg code"""
         if lpp in (1,2, -1,-2):
-            return math.copysign(2212, lpp)
+             target = 2212
+             if 'nb_proton1' in self:
+                 nbp = self['nb_proton%s' % beam]
+                 nbn = self['nb_neutron%s' % beam]
+             if nbp == 1 and nbn ==0:
+                 target = 2212
+             elif nbp==0 and nbn ==1:
+                 target = 2112
+             else:
+                 target = 1000000000
+                 target += 10 * (nbp+nbn)
+                 target += 10000 * nbp
+             return math.copysign(target, lpp)            
         elif lpp in (3,-3):
             return math.copysign(11, lpp)
         elif lpp in (4,-4):
@@ -3538,8 +3549,8 @@ class RunCard(ConfigFile):
         the first line of the <init> block of the lhe file."""
         
         output = {}
-        output["idbmup1"] = self.get_idbmup(self['lpp1'])
-        output["idbmup2"] = self.get_idbmup(self['lpp2'])
+        output["idbmup1"] = self.get_idbmup(self['lpp1'], beam=1)
+        output["idbmup2"] = self.get_idbmup(self['lpp2'], beam=2)
         output["ebmup1"] = self["ebeam1"]
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
@@ -3989,6 +4000,9 @@ class RunCardLO(RunCard):
         self.add_param('frame_id', 6,  system=True)
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum', hidden=True)
+        self.add_param("keep_log", "normal", include=False, hidden=True,
+                       comment="none: all log send to /dev/null.\n minimal: keep only log for survey of the last run.\n normal: keep only log for survey of all run. \n debug: keep all log (survey and refine)",
+                       allowed=['none', 'minimal', 'normal', 'debug'])
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
@@ -4110,7 +4124,7 @@ class RunCardLO(RunCard):
         self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6], hidden=True)
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
-        self.add_param("use_syst", True)
+        self.add_param("use_syst", True, comment='Add in the lhef file information needed for the computation of systematic uncertainty (scale variation and pdf)')
         self.add_param('systematics_program', 'systematics', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
         self.add_param('systematics_arguments', ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset'], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
         
@@ -4672,22 +4686,32 @@ class RunCardLO(RunCard):
             #for pure lepton final state go back to sde_strategy=1
             pure_lepton=True
             proton_initial=True
+            no_qcd=True
             for proc in proc_def:
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                if 'QCD' not in proc[0].get('orders'):
+                    no_qcd = False
+                elif proc[0].get('orders')['QCD'] != 0:
+                    no_qcd = False 
+                #misc.sprint(proc.get_order())
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
             if pure_lepton and proton_initial:
                 self['sde_strategy'] = 1
-        else:
-            # check if  multi-jet j 
-            is_multijet = True
-            for proc in proc_def:
-                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
-                    is_multijet = False
-                    break
-            if is_multijet:
-                self['sde_strategy'] = 2
+            elif not no_qcd:
+                self['sde_strategy'] = 1 
+
+
+        #else:
+        #    # check if  multi-jet j 
+        #    is_multijet = True
+        #    for proc in proc_def:
+        #        if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
+        #            is_multijet = False
+        #            break
+        #    if is_multijet:
+        #        self['sde_strategy'] = 2
             
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles

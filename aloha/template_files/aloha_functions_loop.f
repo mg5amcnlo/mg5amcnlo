@@ -488,7 +488,7 @@ c     Convention for loop computations
 
          else
 
-            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
             omega(1) = dsqrt(p(0)+pp)
@@ -737,7 +737,7 @@ c     Convention for loop computations
 
          else
 
-            pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
+c            pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = real(1+nsf+(1-nsf)*nh,KIND=16)*rHalf
             sf(2) = real(1+nsf-(1-nsf)*nh,KIND=16)*rHalf
             omega(1) = sqrt(p(0)+pp)

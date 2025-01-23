@@ -136,7 +136,7 @@ c     other parameter
      #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
-      character*150 buffer,buffer_lc,buffer2
+      character*250 buffer,buffer_lc,buffer2
       integer event_id
       common /c_event_id/ event_id
       integer n_orderstags,oo,tag

@@ -164,7 +164,7 @@ c         write (*,*) 'lepton-photon recombination is turned off. '
 c     $        //'Do need it.'
 c         stop
 c      endif
-      call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
+      call recombine_momenta_notagph(rphreco, etaphreco, lepphreco, quarkphreco,
      $                       p, iPDG, p_reco, iPDG_reco)
 
 c Put all (light) QCD partons(+photon) in momentum array for jet clustering.

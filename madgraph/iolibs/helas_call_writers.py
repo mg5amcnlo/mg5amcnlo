@@ -288,7 +288,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
             return ""
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
-            call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
+            call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
             if n:
                 self.width_tchannel_set_tozero = True
         return call

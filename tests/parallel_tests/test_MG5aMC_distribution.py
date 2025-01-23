@@ -99,16 +99,3 @@ class TestMG5aMCDistribution(unittest.TestCase):
                             'Comparison of HEPToolsInstallers | %s vs %s | %s failed.\n'%('BZR_VERSION',comparison,file_name)+
                             "Consider updating MG servers and '%s'."%pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz'))
 
-        def test_short_OfflineToolsTarballs(self):
-            """ Test whether the current Offline Ninja+oneloop+collier tarball is up to date."""
-        
-            test_tarballs = [
-                    ('ninja','https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz',pjoin(MG5DIR,'vendor','ninja.tar.gz')),
-                    ('collier','http://collier.hepforge.org/collier-latest.tar.gz',pjoin(MG5DIR,'vendor','collier.tar.gz')),
-                    ('oneloop','http://helac-phegas.web.cern.ch/helac-phegas/tar-files/OneLOop-3.6.tgz',pjoin(MG5DIR,'vendor','oneloop.tar.gz'))]
-            with misc.TMP_directory() as tmp_path:
-                for (name, online_path, local_path)  in test_tarballs:
-                    diff = subprocess.Popen('diff %s %s'%(TestMG5aMCDistribution.get_data(online_path,tmp_path),local_path),
-                                cwd=tmp_path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    diff = diff.communicate()[0].decode()
-                    self.assertEqual(diff,'',"Comparison of the online and offline tarball '%s' failed. Consider updating it."%local_path)                

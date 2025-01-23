@@ -715,7 +715,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -799,8 +799,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
 
-        
-        misc.sprint(self.name, coup_name, cond="VVS11_14P1N" in self.name)
         if not self.offshell:
             if coup_name == 'COUP':
                 formatted = self.write_obj(numerator.get_rep([0]))
@@ -870,7 +868,32 @@ class ALOHAWriterForFortran(WriteALOHA):
             key.sort()
             for i in key:
                 out.write(to_order[i])
-        return out.getvalue()
+
+        txt = out.getvalue() 
+        # in rare case FCT/TMP might not be needed (multiply by zero)
+        # This is detected here and in such case we remove those FCT/TMP
+        # from the routine block are recall this routine
+        found=False
+        # detection for FCT
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            if txt.count(name) == 1:
+                del self.routine.fct[name]
+                found = True
+        #detection for TMP variable
+        all_keys = list(self.routine.contracted.keys())
+        all_keys.sort()
+        for name in all_keys:
+            if txt.count(name) == 1:
+                del self.routine.contracted[name]
+                self.declaration.discard(('complex', name))
+                found = True
+        if found:
+            # retry when removing the useless part.
+            return self.define_expression()
+
+        return txt
 
     def define_symmetry(self, new_nb, couplings=None):
         return ''
@@ -1281,7 +1304,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
+    p=re.compile(r'^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1405,7 +1428,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
             
     def get_fct_format(self, fct):
@@ -1638,7 +1661,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 coeff = 'denom'
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
+                        out.write('    denom = %(COUP)s/(%(denom)s);\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
                         out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
@@ -1665,7 +1688,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile(r'std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -1940,7 +1963,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
 

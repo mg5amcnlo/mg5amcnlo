@@ -503,7 +503,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
-        """ target: TEST/SubProcesses/P1_uux_uux/[.+\.(inc|f)]
+        r""" target: TEST/SubProcesses/P1_uux_uux/[.+\.(inc|f)]
             target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
         
         cmd = """
@@ -526,7 +526,7 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
 
     @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
     def testIO_TIR_output(self):
-        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
+        r""" target: [ggttx_IOTest/SubProcesses/(.*)\.f]
         """
         interface = MGCmd.MasterCmd()
         interface.no_notification()

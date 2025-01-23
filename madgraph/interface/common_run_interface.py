@@ -181,6 +181,23 @@ class HelpToCmd(object):
         logger.info('   threshold option allows to change the minimal value required to')
         logger.info('   a non zero value for the particle (default:1e-12s)')
 
+    def help_print_results(self):
+        logger.info("syntax: print_results [RUN_NAME] [OPTIONS]")
+        logger.info("-- print the results of the previous run on the screen")
+        logger.info("   If not RUN_NAME is provided, the information of all run")
+        logger.info("   are printed one after another.")
+        logger.info("")
+        logger.info("   supported options:")
+        logger.info("   ------------------")
+        logger.info("   --format=full|short # default is full")
+        logger.info("     full format contains banner/... ")
+        logger.info("     while short is a simple multi-column format (nice for plotting)")
+        logger.info("   --path=")
+        logger.info("     allow to write the information to a file.")
+        logger.info("   --mode=w|a  #default is w ")
+        logger.info("     when the information is printed to a file, you can choose ")
+        logger.info("     to either overwrite the file if already exists (w mode)")
+        logger.info("     to append the information at the end of the file (a mode)")
 
 
 class CheckValidForCmd(object):
@@ -727,7 +744,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not  self.proc_characteristics['ninitial']:
             # Get number of initial states
             nexternal = open(pjoin(self.me_dir,'Source','nexternal.inc')).read()
-            found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+            found = re.search(r"PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
             self.ninitial = int(found.group(1))
         else:
             self.ninitial = self.proc_characteristics['ninitial']
@@ -1166,17 +1183,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     'Begin Minpts',
                     'gridpack',
                     'ebeam1',
-                    'block\s+mw_run',
+                    r'block\s+mw_run',
                     'BLOCK',
                     'DECAY',
                     'launch',
                     'madspin',
-                    'transfer_card\.dat',
+                    r'transfer_card\.dat',
                     'set',
                     'main:numberofevents',   # pythia8,
                     '@MG5aMC skip_analysis',              #MA5 --both--
-                    '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
-                    '@MG5aMC\s*reconstruction_name', # MA5 hadronique
+                    r'@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
+                    r'@MG5aMC\s*reconstruction_name', # MA5 hadronique
                     '@MG5aMC', # MA5 hadronique
                     'run_rivet_later', # Rivet
                     ]
@@ -1235,7 +1252,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return 'madspin_card.dat'
             if 'decay' in text:
                 # need to check if this a line like "decay w+" or "set decay"
-                if re.search("(^|;)\s*decay", fulltext, re.M):
+                if re.search(r"(^|;)\s*decay", fulltext, re.M):
                     return 'madspin_card.dat'
                 else:
                     return 'reweight_card.dat'
@@ -1443,7 +1460,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             for plot in plot_files:
                 command = ['gnuplot',plot]
                 try:
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=subprocess.PIPE)
+                    fsock = open(os.devnull, 'w')
+                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
+                    fsock.close()
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
                             "merging plots with gnuplot failed. Try the"+\
@@ -2459,7 +2478,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     ############################################################################ 
     def do_print_results(self, line):
-        """Not in help:Print the cross-section/ number of events for a given run"""
+        """Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
         options={'path':None, 'mode':'w', 'format':'full'}
@@ -2940,10 +2959,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
         yoda_path = self.options['yoda_path']
+        fastjet_path = subprocess.Popen([self.options['fastjet'], '--prefix'],
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
+
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(yoda_path, 'bin'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(yoda_path, 'lib'), pjoin(yoda_path, 'lib64'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(self.options['hepmc_path'], 'lib'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:$LD_LIBRARY_PATH\n".format(pjoin(fastjet_path, 'lib'))
         major, minor = sys.version_info[0:2]
         set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
@@ -4311,8 +4335,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             completion = {}            
             completion['options'] = self.list_completion(text, 
-                            ['--path=', '--output=', '--min_br=0.\$', '--nlo',
-                             '--precision_channel=0.\$', '--body_decay='])            
+                            ['--path=', '--output=', r'--min_br=0.\$', '--nlo',
+                             r'--precision_channel=0.\$', '--body_decay='])            
         
         return self.deal_multiple_categories(completion, formatting)
         
@@ -4821,9 +4845,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     (return False to repeat the question)
     """
 
-    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
                      'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
-    to_init_card = ['param', 'run', 'madweight', 'madloop', 
+    to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
                     'shower', 'pythia8','delphes','madspin', 'rivet']
     special_shortcut = {}
     special_shortcut_help = {}
@@ -4853,6 +4877,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         self.has_delphes = False
         self.has_rivet = False
+        self.has_fo_card = False
         self.paths = {}
         self.update_block = []
 
@@ -5248,6 +5273,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_delphes = True
         return []
 
+    def init_fo_analysis(self, cards):
+        self.has_fo_card = False
+        if not self.get_path('FO_analyse', cards):
+            return []
+        self.has_fo_card = True
+        self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
+        self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
+        return list(self.fo_card.string_vars)
+
 
     def set_CM_velocity(self, line):
         """compute sqrts from the velocity in the center of mass frame"""
@@ -5508,6 +5542,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['delphes_card'] = ''
             if self.has_rivet:
                 allowed['rivet_card'] = ''
+            if self.has_fo_card:
+                allowed['fo_card'] = ''
         
         elif len(args) == 2:
             if args[1] == 'run_card':
@@ -5532,6 +5568,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'delphes_card':'default'}
             elif args[1] == 'rivet_card':
                 allowed = {'rivet_card':'default'}
+            elif args[1] == 'fo_card':
+                allowed = {'fo_card':'default'} 
             else:
                 allowed = {'value':''}
 
@@ -5539,6 +5577,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
+                            'fo_card',
                             'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
                 start = 2
 
@@ -5576,6 +5615,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('delphes_card')
             if self.has_rivet:
                 categories.append('rivet_card')
+            if self.has_fo_card:
+                categories.append('fo_card')
 
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -5630,7 +5671,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'delphes_card' in allowed:
             if allowed['delphes_card'] == 'default':
                 opts = ['default', 'atlas', 'cms']
-            possibilities['Delphes Card'] = self.list_completion(text, opts)              
+            possibilities['Delphes Card'] = self.list_completion(text, opts)
+
+        if 'fo_card' in allowed:
+            opts = self.fo_card.string_vars
+            if allowed['fo_card'] == 'default':
+                opts.append('default') 
+            possibilities['FO Card'] = self.list_completion(text, opts)               
 
         if 'value' in list(allowed.keys()):
             opts = ['default', 'scale']
@@ -5787,7 +5834,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if os.path.exists(pythia_path):
                 logger.info('add line QCUT = %s in pythia_card.dat' % args[1])
                 p_card = open(pythia_path,'r').read()
-                p_card, n = re.subn('''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''',
+                p_card, n = re.subn(r'''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''',
                                     ''' QCUT = %s ''' % args[1], \
                                     p_card, flags=(re.M+re.I))
                 if n==0:
@@ -5801,7 +5848,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if os.path.exists(pythia_path):
                 logger.info('add line SHOWERKT = %s in pythia_card.dat' % args[1].upper())
                 p_card = open(pythia_path,'r').read()
-                p_card, n = re.subn('''^\s*SHOWERKT\s*=\s*[default\de\+\-\.]*\s*$''',
+                p_card, n = re.subn(r'''^\s*SHOWERKT\s*=\s*[default\de\+\-\.]*\s*$''',
                                     ''' SHOWERKT = %s ''' % args[1].upper(), \
                                     p_card, flags=(re.M+re.I))
                 if n==0:
@@ -5856,7 +5903,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
 
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
 
             if args[1] == 'default':
@@ -6175,6 +6222,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 default = False
             self.setRivet(args[start], value, default=default)
             self.rivet_card.write(self.paths['rivet'], self.paths['rivet_default'])
+
+        elif self.has_fo_card and (card in ['', 'fo_card'])\
+             and args[start].lower() in [k.lower() for k in self.fo_card.string_vars]:
+            
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.fo_card_default[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False 
+            self.fo_card[args[start]] = value
+            self.modified_card.add('fo_card') 
 
         #INVALID --------------------------------------------------------------
         else:      
@@ -6633,7 +6696,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return ending_question
     
     
-    
+    def help_update(self):
+        logger.info(""" syntax: update dependent: Change the mass/width of particles which are not free parameter for the model.
+                    update missing:   add to the current param_card missing blocks/parameters.
+                    update to_slha1: pass SLHA2 card to SLHA1 convention. (beta)
+                    update to_slha2: pass SLHA1 card to SLHA2 convention. (beta)
+                    update to_full [run_card]
+                    update XXX [where XXX correspond to a hidden block of the run_card]:
+                    supported block are %s
+        """, ', '.join(self.update_block))
     
     
     def do_update(self, line, timer=0):
@@ -6648,6 +6719,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if len(args)==0:
             logger.warning('miss an argument (dependent or missing). Please retry')
             return
+        
+        args[0] = args[0].lower()
         
         if args[0] == 'dependent':
             if not self.mother_interface:
@@ -6698,8 +6771,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.modified_card.add('run') # delay writting of the run_card
             logger.info('add optional block %s to the run_card', args[0])
         else:
-            self.help_update()
+            self.do_help('update')
             logger.warning('unvalid options for update command. Please retry')
+
 
 
     def update_to_full(self, line):
@@ -6728,7 +6802,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ write the param_card """    
     
         self.param_card.write(self.paths['param'])
-        
+    
+    def write_card_fo_card(self):
+        """ write the fo_card"""
+        self.fo_card.write_card_from_template(self.paths['FO_analyse'], self.paths['FO_analyse_default'])
+
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0, run_card=None,
                     lhapdfconfig=None):
@@ -7072,7 +7150,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             #first find the particle
             particle = line.split('>')[0].strip()
             logger.info("change madspin_card to define the decay of %s: %s" %(particle, line.strip()), '$MG:BOLD')
-            particle = particle.replace('+','\+').replace('-','\-')
+            particle = particle.replace('+',r'\+').replace('-',r'\-')
             decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
             text= open(path).read()
             text = decay_pattern.sub('', text)
@@ -7189,7 +7267,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --clean remove all previously existing line in  the file')
         logger.info( '     --comment_line="<regular-expression>"  comment all lines matching the regular expression')
         logger.info('')
-        logger.info('    Note: all regular-expression will be prefixed by ^\s*')
+        logger.info(r'    Note: all regular-expression will be prefixed by ^\s*')
         logger.info('')
         logger.info( '   example: edit reweight --after_line="change mode\b" change model heft')
         logger.info( '            edit madspin  --after_line="banner" change model XXXX')
@@ -7310,7 +7388,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7340,7 +7418,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+                pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
                 nb_mod = 0
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
@@ -7362,7 +7440,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(path).read()
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
+                pattern = r'^\s*' + re.search(search_pattern, line).group()[13:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7379,7 +7457,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 text = open(path).read()
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
-                pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
+                pattern = r'^\s*' + re.search(search_pattern, line).group()[12:-1]
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7523,16 +7601,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-self.integer_bias]
-
+        path = ''
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:
             answer = self.paths['ML']
         elif 'pythia8_card' in answer:
             answer = self.paths['pythia8']
+        elif 'FO_analyse' in answer:
+            path = self.paths['FO_analyse']
+            answer = 'fo_card'
         if os.path.exists(answer):
             path = answer
-        else:
+        elif not os.path.exists(path):
             if not '.dat' in answer and not '.lhco' in answer:
                 if answer != 'trigger':
                     path = self.paths[answer]
@@ -7610,6 +7691,8 @@ You can also copy/paste, your event file here.''')
             except:
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
+        elif path == self.paths['FO_analyse']:
+            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
         else:
             logger.debug('not keep in sync: %s', path)
         return path

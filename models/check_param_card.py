@@ -649,7 +649,7 @@ class ParamCard(dict):
         #check if we need to write the value of scale for some block
         if os.path.exists(input_inc):
             text = open(input_inc).read()
-            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+            scales = list(set(re.findall(r'mdl__(\w*)__scale', text, re.I)))
         else: 
             scales = []
 
