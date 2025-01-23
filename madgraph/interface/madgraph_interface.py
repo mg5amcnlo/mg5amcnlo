@@ -172,11 +172,9 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "%s" + \
         "*                                                          *\n" + \
-        "*                     based on default MG5                 *\n" + \
+        "*                based on default MG5 (3.5.7              *\n" + \
         "*                                                          *\n" + \
-        "*         VERSION 3.5.3                 2023-12-23         *\n" + \
         "*                                                          *\n" + \
-        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \

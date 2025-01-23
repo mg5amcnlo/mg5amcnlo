@@ -1,6 +1,6 @@
 Update notes for Asymmetric Collisions Mode (in reverse time order)
 
-1.0.0 (22/01/2025)
+3.5.7.RPA.1.0.0 (22/01/2025)
       AS: Introduced the Asymmetric Collisions Mode: it allows to use two distinct LHAPDF_IDs for both incoming beams (for more information see arXiv:xxxx.xxxx).
       AS: The Nuclear Modification Factors for every histogram in the analysis file is now the part of the gnuplot output if the Asymmetric Collisions Mode flag is active.  
       AS: Included the calculation of the Cross Sections with or without the PDF- and scale- reweighting flags.
