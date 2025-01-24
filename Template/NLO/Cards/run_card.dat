@@ -75,7 +75,7 @@
 # In the "symmetric" case the default MG5aMC_NLO calculation will be used.
 # In the "asymmetric" case, the first PDF in the list of LHAIDs will be taken
 # as a baseline (hadron h1). The remaining PDFs (starting from the second
-# LHAID in the list) will be used as a PDF of the hadron h2.
+# LHAID in the list) will be used as a PDF for the hadron h2.
 #
 # For details see: arXiv:XXXX
 #  
