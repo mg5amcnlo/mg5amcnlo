@@ -2358,7 +2358,7 @@ c wgts() array to include the weights.
         
        do j=1,jmax
         
-        if (nn>1) then
+        if (nn>1) then ! first PDF in a list is already taken, so there is no need to call it. Plus, it fixes the problem with default run_card.dat. BUt in futer must be taken into account 
         call InitPDFm(nn,0)
         endif
         
