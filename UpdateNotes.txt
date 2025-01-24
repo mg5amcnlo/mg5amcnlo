@@ -4,6 +4,12 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+3.x.x
+      RF: Added python routines to collect the NLO events at the end of a generation: checks if there is
+          enough memory available, read all events in memory, randomize them and then write them out. This is
+	  significantly faster when generating large event files. If there is not enough memory use the old
+	  slow fortran code to collect the events. 
+
 3.6.1 (29/11/24):
       OM+MZ: Fix a bug for lhapdf at NLO where the code was incorectly changed like the LO version (and was crashing at compilation)
       OM: Fixing various compilation issue at LO
