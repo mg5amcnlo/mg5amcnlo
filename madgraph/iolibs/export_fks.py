@@ -3098,47 +3098,53 @@ Parameters              %(params)s\n\
         has contributions from LO1 and has a LO2, and the corresponding 
         position (iamp)
         """
-        # get the coupling combination of the born
-        squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
-        split_orders = \
-                matrix_element.born_me['processes'][0]['split_orders']
 
-        # compute the born orders
-        born_orders = []
-        split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
-        for ordd in split_orders:
-            born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
+        if matrix_element.ewsudakov:
+            # get the coupling combination of the born
+            squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+            split_orders = \
+                    matrix_element.born_me['processes'][0]['split_orders']
 
-        # check that there is at most one coupling combination
-        # that satisfies the born_orders constraints 
-        # (this is a limitation of the current implementation of the EW sudakov
-        nborn = 0
-        for orders in squared_orders_born:
-            if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
-                nborn += 1
+            # compute the born orders
+            born_orders = []
+            split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+            for ordd in split_orders:
+                born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
 
+            # check that there is at most one coupling combination
+            # that satisfies the born_orders constraints 
+            # (this is a limitation of the current implementation of the EW sudakov
+            nborn = 0
+            for orders in squared_orders_born:
+                if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
+                    nborn += 1
 
-        if nborn > 1:
-            raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
-                    " the Born has more than one coupling combination, found %d)" % nborn)
+            if nborn > 1:
+                raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+                        " the Born has more than one coupling combination, found %d)" % nborn)
 
-        # now we can see if the process has a LO1
-        has_lo1 = bool(nborn)
-        if has_lo1:
-            lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            # now we can see if the process has a LO1
+            has_lo1 = bool(nborn)
+            if has_lo1:
+                lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            else:
+                lo1_pos = -100
+
+            # now determine the LO2 orders
+            lo2_orders = born_orders
+            lo2_orders[split_orders.index('QCD')] += -2
+            lo2_orders[split_orders.index('QED')] += 2
+
+            has_lo2 = tuple(lo2_orders) in squared_orders_born
+
+            if has_lo2:
+                lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
+            else:
+                lo2_pos = -100
         else:
+            has_lo1 = False
+            has_lo2 = False
             lo1_pos = -100
-
-        # now determine the LO2 orders
-        lo2_orders = born_orders
-        lo2_orders[split_orders.index('QCD')] += -2
-        lo2_orders[split_orders.index('QED')] += 2
-
-        has_lo2 = tuple(lo2_orders) in squared_orders_born
-
-        if has_lo2:
-            lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
-        else:
             lo2_pos = -100
 
         bool_dict = {True: '.true.', False: '.false.'}

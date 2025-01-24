@@ -656,7 +656,9 @@ C
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
-        ff.writelines(template % changer)
+    
+        NLO = isinstance(self, madgraph.iolibs.export_fks.ProcessExporterFortranFKS)
+        ff.writelines(template % changer, {'LO': not NLO})
 
         # this is for eMELA
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
@@ -6042,6 +6044,10 @@ c           This is dummy particle used in multiparticle vertices
         else:
             replace_dict['secondparam']=''            
 
+        replace_dict['DRIVER_EXTRA_HEADER'] = ""
+        replace_dict['DRIVER_EXTRA_INITIALISE'] = ""
+        replace_dict['DRIVER_EXTRA_FINALISE'] = ""
+
         if writer:
             text = open(path).read() % replace_dict
             writer.write(text)
@@ -7020,7 +7026,6 @@ class UFO_model_to_mg4(object):
             misc.sprint(error)
             self.vector_size = 0
 
-        misc.sprint(self.vector_size)
         try:
             nb_warp = self.opt['output_options']['nb_warp']
         except KeyError:

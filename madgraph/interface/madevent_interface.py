@@ -1171,10 +1171,10 @@ class CheckValidForCmd(object):
                 for opt,value in self._survey_options.items():
                     if arg.startswith('--%s=' % opt):
                         exec('self.opts[\'%s\'] = %s(arg.split(\'=\')[-1])' % \
-                             (opt, value[0]))
+                                (opt, value[0]), globals(), {'self':self, 'arg':arg})
                         arg = ""
                 if arg != "": raise Exception
-            except Exception:
+            except Exception as error:
                 self.help_survey()
                 raise self.InvalidCmd('invalid %s argument'% arg)
 
@@ -2959,6 +2959,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         param_card_file.close()
 
         decay_lines = []
+        comment = collections.defaultdict(str)
         line_number = 0
         # Read and remove all decays from the param_card                     
         while line_number < len(param_card):
@@ -2968,6 +2969,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 # DECAY  6   1.455100e+00                                    
                 line = param_card.pop(line_number)
                 line = line.split()
+                comment[int(line[1])] = ' '.join(line).split('#',1)[1] if '#' in line else ''
                 particle = 0
                 if int(line[1]) not in decay_info:
                     try: # If formatting is wrong, don't want this particle
@@ -3013,7 +3015,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         for key in sorted(decay_info.keys()):
             width = sum([r for p,r in decay_info[key]])
             param_card.append("#\n#      PDG        Width")
-            param_card.append("DECAY  %i   %e" % (key, width.real))
+            param_card.append("DECAY  %i   %e # %s" % (key, width.real, comment[int(key)]))
             if not width:
                 continue
             if decay_info[key][0][0]:
@@ -6883,11 +6885,15 @@ class GridPackCmd(MadEventCmd):
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
-            self.options['nb_core']  = 1
-            self.exec_cmd('systematics %s --from_card' % 
-                          pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
-                                               postcmd=False,printcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                    self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+        else:
+            path = pjoin('Events', self.run_name, 'unweighted_events.lhe.gz')
+            if self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+                self.options['nb_core']  = 1
+                self.exec_cmd('systematics %s --from_card' % path, postcmd=False, printcmd=False)
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight %s --threshold=%s" % (path, self.run_card['time_of_flight']) ,postcmd=False)
             
 
     def refine4grid(self, nb_event):

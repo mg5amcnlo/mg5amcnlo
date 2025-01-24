@@ -1006,18 +1006,10 @@ class ConfigFile(dict):
         self.allowed_value = {}
         
         self.default_setup()
-        self.plugin_input(finput)
-        
 
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput, **opt)
-        
-
-
-
-    def plugin_input(self, finput=None):
-        pass
 
 
     def default_setup(self):
@@ -2654,26 +2646,6 @@ class RunCard(ConfigFile):
     donewarning = []
     include_as_parameter = []
 
-    def plugin_input(self, finput):
-
-        if not finput and not MADEVENT:
-            return
-        curr_dir = None
-        if isinstance(finput, file):
-            # expected path to be like "XXXX/Cards/run_card.dat"
-            curr_dir = os.path.dirname(os.path.dirname(finput.name))
-        elif isinstance(finput, str):
-            curr_dir = os.path.dirname(os.path.dirname(finput))
-        
-        if curr_dir:
-            if os.path.exists(pjoin(curr_dir, 'bin', 'internal', 'plugin_run_card')):
-                # expected format {} passing everything as optional argument
-                for line in open(pjoin(curr_dir, 'bin', 'internal', 'plugin_run_card')):
-                    if line.startswith('#'):
-                        continue
-                    opts = dict(eval(line))
-                    self.add_param(**opts)
-        
     @classmethod
     def fill_post_set_from_blocks(cls):
         """set the post_set function for any parameter defined in a run_block"""
@@ -3346,7 +3318,6 @@ class RunCard(ConfigFile):
             for i,line in enumerate(lines[:]):
                 if search and re.search(include_pat, line):
                     name = re.findall(include_pat, line)[0]
-                    misc.sprint('DETECTED INCLUDE', name)
                     if 'vector.inc' in name:
                         search = False
                     if 'run.inc' in name:
@@ -3354,7 +3325,6 @@ class RunCard(ConfigFile):
                         search = False
                 sol.append(line)
                 if re.search(function_pat, line):
-                    misc.sprint("DETECTED FCT")
                     search = True
         return sol
 

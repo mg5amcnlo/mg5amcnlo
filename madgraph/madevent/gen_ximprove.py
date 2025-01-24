@@ -304,6 +304,7 @@ class gensym(object):
                     logger.debug('(%s) nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', split_file[-1], len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                    files.cp(matrix_file.replace('.f','.o'), matrix_file.replace('orig','optim').replace('.f','.o'))
                     continue # avoid optimization if onlye one helicity
                 
                 gauge = self.cmd.proc_characteristics['gauge']
@@ -1949,6 +1950,11 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             if j['P_dir'] in done:
                 continue
             done.append(j['P_dir'])
+            # Give a little status. Sometimes these jobs run very long, and having hours without any
+            # console output can be a bit frightening and make users think we are looping.
+            if len(done)%5==0:
+                logger.info(f"Working on job {len(done)} of {len(jobs)}")
+
             # set the working directory path.
             pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
             exe = pjoin(pwd, 'ajob1')

@@ -609,7 +609,7 @@ cat <<EOF >> $ifile
 ! 10) Matrix-element corrections.
 EOF
 
-if [ $space_shower_me_corrections = ".TRUE." ]
+if [ $SPACE_SHOWER_ME_CORRECTIONS = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 SpaceShower:MEcorrections = on     ! MECs for ISR
@@ -620,7 +620,7 @@ SpaceShower:MEcorrections = off     ! no MECs for ISR
 EOF
 fi
 
-if [ $time_shower_me_corrections = ".TRUE." ]
+if [ $TIME_SHOWER_ME_CORRECTIONS = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEcorrections = on     ! MECs for FSR
@@ -631,7 +631,7 @@ TimeShower:MEcorrections = off     ! no MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_extended = ".TRUE." ]
+if [ $TIME_SHOWER_ME_EXTENDED = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEextended = on     ! Extended MECs for FSR
@@ -642,7 +642,7 @@ TimeShower:MEextended = off     ! no extended MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_after_first = ".TRUE." ]
+if [ $TIME_SHOWER_ME_AFTER_FIRST = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEafterFirst = on     ! MECs after frst FSR

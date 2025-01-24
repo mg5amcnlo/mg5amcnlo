@@ -2052,65 +2052,63 @@ class ReweightInterface(extended_cmd.Cmd):
                     mgcmd.exec_cmd("define %s = %s" % (name, content))
                 except madgraph.InvalidCmd:
                     pass
-                        
-            if  second and 'tree_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
-                if 'virtual_path' in self.dedicated_path:
-                    has_nlo=True
-                else:
-                    has_nlo=False
+        if  second and 'tree_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
+            if 'virtual_path' in self.dedicated_path:
+                has_nlo=True
             else:
-                has_nlo = self.create_standalone_tree_directory(data, second)
+                has_nlo=False
+        else:
+            has_nlo = self.create_standalone_tree_directory(data, second)
 
-            if has_nlo and not self.rwgt_mode:
-                self.rwgt_mode = ['NLO']
+        if has_nlo and not self.rwgt_mode:
+            self.rwgt_mode = ['NLO']
 
-            # 5. create the virtual for NLO reweighting  ---------------------------
-            if second and 'virtual_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
-            elif has_nlo and 'NLO' in self.rwgt_mode:
-                self.create_standalone_virt_directory(data, second)
+        # 5. create the virtual for NLO reweighting  ---------------------------
+        if second and 'virtual_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
+        elif has_nlo and 'NLO' in self.rwgt_mode:
+            self.create_standalone_virt_directory(data, second)
+            
+            if self.multicore == 'create':
+                try:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=self.mother.options['nb_core'])
+                except:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=1)
+        elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
+            # We do not have any virtual reweighting to do but we still have to
+            #combine the weights.
+            #Idea:create a fake directory.
+            start = time.time()
+            commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
+            # deactivate golem since it creates troubles
+            old_options = dict(mgcmd.options)
+            mgcmd.options['golem'] = None             
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+            mgcmd.exec_cmd(commandline, precmd=True)    
+            #put back golem to original value
+            mgcmd.options['golem'] = old_options['golem']
+            # update make_opts
+            if not mgcmd.options['lhapdf']:
+                raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
+            
+            # Download LHAPDF SET
+            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
+            
                 
-                if self.multicore == 'create':
-                    print("compile OLP", data['paths'][1])
-                    try:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=self.mother.options['nb_core'])
-                    except:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=1)
-            elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
-                # We do not have any virtual reweighting to do but we still have to
-                #combine the weights.
-                #Idea:create a fake directory.
-                start = time.time()
-                commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
-                # deactivate golem since it creates troubles
-                old_options = dict(mgcmd.options)
-                mgcmd.options['golem'] = None             
-                commandline = commandline.replace('add process', 'generate',1)
-                logger.info(commandline)
-                mgcmd.exec_cmd(commandline, precmd=True)
-                commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
-                mgcmd.exec_cmd(commandline, precmd=True)    
-                #put back golem to original value
-                mgcmd.options['golem'] = old_options['golem']
-                # update make_opts
-                if not mgcmd.options['lhapdf']:
-                    raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
-                
-                # Download LHAPDF SET
-                common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
-                    mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
-                
-                    
-                
-            # 6. If we need a new model/process-------------------------------------
-            if (self.second_model or self.second_process or self.dedicated_path) and not second :
-                self.create_standalone_directory(second=True)    
+            
+        # 6. If we need a new model/process-------------------------------------
+        if (self.second_model or self.second_process or self.dedicated_path) and not second :
+            self.create_standalone_directory(second=True)    
 
-            if not second:
-                self.has_nlo = has_nlo
+        if not second:
+            self.has_nlo = has_nlo
             
 
 

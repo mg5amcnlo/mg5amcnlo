@@ -117,11 +117,11 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       implicit none
       character*132 buff,buffer,curr_ref,curr_buff
-      character*20 blockname,val,par,temp,first_ref,first_line
+      character*40 blockname,val,par,temp,first_ref,first_line
       logical fopened
       integer ref_file
       logical islast,isnum,found
-      character*20 temp_val
+      character*40 temp_val
 
 
 c     *********************************************************************

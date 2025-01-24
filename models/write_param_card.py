@@ -260,7 +260,7 @@ class ParamCardWriter(object):
         # If write_special is on False, activate special handling of special parameter
         # like aS/MUR (fixed via run_card / lhapdf)
         if param.lhablock.lower() == 'sminputs' and tuple(param.lhacode) == (3,):
-            info = "%s (Note that Parameter not used if you use a PDF set)" % info
+            info = "%s (Note: this Parameter is not used if you use a PDF set)" % info
          
     
     

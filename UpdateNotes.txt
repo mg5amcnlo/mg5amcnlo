@@ -1,10 +1,17 @@
-Update notes for MadGraph5_aMC@NLO (in reverse time order)
+    Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 ANNOUNCEMENT: 
    2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.6.0 (30/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/2430/09/24):
+3.6.1 (29/11/24):
+      OM+MZ: Fix a bug for lhapdf at NLO where the code was incorectly changed like the LO version (and was crashing at compilation)
+      OM: Fixing various compilation issue at LO
+      ALL: Include fix from LTS 3.5.7 and 2.9.22
+           - including some rare but serious bug in scan
+           - including support for python 3.13 (but for f2py related feature)
+
+3.6.0 (30/09/24):
       PT+RF: fixed the Pythia8 script so that SCALUP in the LHE file is ignored only when using FxFx or MC@NLO-Delta
       OM: Allow the scan command within the run_card.
           Note that such command can NOT be used if the scan command is used in the param_card.
@@ -18,6 +25,9 @@ ANNOUNCEMENT:
             - SIMD support on cpu
           Those modes need to install the cudacpp plugin (can be done via the command "install cudacpp")
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
+
+3.5.7 (29/11/24)
+  OM: Include fix from LTS 2.9.22
 
 3.5.6 (26/9/24):
   OM: Include fix from LTS 2.9.21
@@ -214,6 +224,14 @@ ANNOUNCEMENT:
 
                         ** Long Term Stable Update **
 
+
+2.9.22 (29/11/24):
+    OM: Fix a (NLO) issue if the environment variable was setting FFLAGS
+    OM: set auto_update X, now automatically set the configuration file (as it should).
+    OM: Fix a bug in helicity recycling with scan for rare case where a matrix element is first correct, then zero, then has a single helicity.
+        In that third case, the code was not recompiled correctly and was picking the wrong amplitude.
+        Thanks to Matteo Maltoni for finding such bug
+    OM: Starting support for python3.13, as for python3.12 functionallity like reweighting will not work with 2.9.x LTS branch.
 
 2.9.21 (26/9/24):
     OM: Adding support for GCC14 (thanks to joequant)

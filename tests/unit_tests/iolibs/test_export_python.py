@@ -434,12 +434,15 @@ class IOExportPythonTest(unittest.TestCase):
         matrix_methods = exporter.get_python_matrix_methods()
 
         # Calculate parameters and couplings
+        context = {}
         full_model = model_reader.ModelReader(model)
+        context['full_model'] = full_model
         
         full_model.set_parameters_and_couplings()
 
+
         # Define a momentum
-        p = [[0.5000000e+03, 0.0000000e+00,  0.0000000e+00,  0.5000000e+03,  0.0000000e+00],
+        context['p'] = [[0.5000000e+03, 0.0000000e+00,  0.0000000e+00,  0.5000000e+03,  0.0000000e+00],
              [0.5000000e+03,  0.0000000e+00,  0.0000000e+00, -0.5000000e+03,  0.0000000e+00],
              [0.4585788e+03,  0.1694532e+03,  0.3796537e+03, -0.1935025e+03,  0.6607249e-05],
              [0.3640666e+03, -0.1832987e+02, -0.3477043e+03,  0.1063496e+03,  0.7979012e-05],
@@ -448,11 +451,12 @@ class IOExportPythonTest(unittest.TestCase):
         # Evaluate the matrix element for the given momenta
 
         answer = 1.39189717257175028e-007
+
         for process in matrix_methods.keys():
             # Define Python matrix element for process
-            exec(matrix_methods[process])
+            exec(matrix_methods[process], globals(), context)
             # Calculate the matrix element for the momentum p
-            value = eval("Matrix_0_epem_aaa().smatrix(p, full_model)")
+            value = eval("Matrix_0_epem_aaa().smatrix(p, full_model)", globals(), context)
             self.assertLess(
                 abs(value-answer)/answer,
                 1e-6,

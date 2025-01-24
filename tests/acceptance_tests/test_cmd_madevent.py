@@ -286,6 +286,8 @@ class TestMECmdShell(unittest.TestCase):
         text = open('%s/Events/run_01/param_card.dat' % self.run_dir).read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         data = data.split('\n')
+        if '#' in data[0]:
+            data[0] = data[0].split('#',1)[0]
         width = float(data[0])
         self.assertAlmostEqual(width, 1.492240e+00, delta=1e-4)
         values = {(3,-3): 2.493165e-01,
