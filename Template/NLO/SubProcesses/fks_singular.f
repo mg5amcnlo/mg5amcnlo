@@ -2358,7 +2358,9 @@ c wgts() array to include the weights.
         
        do j=1,jmax
         
+        if (nn>1) then
         call InitPDFm(nn,0)
+        endif
         
         if (nn.eq.1.and.asymm_choice.eqv..true.) then
             allocate(f1_p(nint(scalevarF(0)),icontr,MAXPROC))
