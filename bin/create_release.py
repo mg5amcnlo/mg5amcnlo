@@ -123,13 +123,14 @@ MG_branch = p.stdout.read().decode().strip()
 if MG_branch == 'LTS_2':
     print("no auto-update as long as not the main version")
     auto_update = False
+    rev_nb = None
 elif MG_branch not in  ['3.x', 'LTS']:
     print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
     auto_update = False
-
+    rev_nb = None
 
 #check if current version has already a version flag matching the VERSION information
 if auto_update:
@@ -153,6 +154,7 @@ if auto_update:
         answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
+        rev_nb = None
         auto_update = False
 else:
     max_revnb = 0 
