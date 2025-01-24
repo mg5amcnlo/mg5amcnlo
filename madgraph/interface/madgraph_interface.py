@@ -172,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "%s" + \
         "*                                                          *\n" + \
-        "*                based on default MG5 (3.5.7              *\n" + \
+        "*                based on default MG5 (3.5.7)              *\n" + \
         "*                                                          *\n" + \
         "*                                                          *\n" + \
         "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
