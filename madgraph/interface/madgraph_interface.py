@@ -4981,7 +4981,8 @@ This implies that with decay chains:
 
             # check that only final-state particles are tagged
             if is_tagged and not state:
-                raise self.InvalidCmd("initial particles cannot be tagged")
+                if part_name!='a' and part_name!='22':
+                    raise self.InvalidCmd("only initial photons can be tagged")
 
             mylegids = []
             polarization = []
