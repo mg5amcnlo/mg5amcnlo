@@ -1260,7 +1260,7 @@ c     (entry custom_fct of the run_card)
       common /c_particle_tag/particle_tag
       get_n_tagged_photons = 0
 
-      do i = nincoming+1, nexternal
+      do i = 1, nexternal
         if (particle_tag(i))
      $     get_n_tagged_photons = get_n_tagged_photons+1
       enddo

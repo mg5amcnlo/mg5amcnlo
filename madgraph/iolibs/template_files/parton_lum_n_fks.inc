@@ -23,6 +23,10 @@ C LOCAL VARIABLES
 C                                                                     
       INTEGER I, ICROSS,LP                                      
 %(pdf_vars)s
+C
+C     STUFF FOR UPC
+C
+      DOUBLE PRECISION PHOTONPDFSQUARE
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
 C                                                                     

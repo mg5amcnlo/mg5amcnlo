@@ -257,7 +257,11 @@ C
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars_vec)s
-      integer i_ee      
+      integer i_ee
+C
+C     STUFF FOR UPC
+C
+      DOUBLE PRECISION PHOTONPDFSQUARE
 C  
 C EXTERNAL FUNCTIONS
 C  

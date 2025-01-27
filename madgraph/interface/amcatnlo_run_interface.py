@@ -5457,6 +5457,11 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
 
+            elif self.run_card['lpp1'] == 2 == self.run_card['lpp2']:
+                if self.run_card['pdlabel'] in ['edff', 'chff']:
+                    logger.info('Using '+self.run_card['pdlabel'].upper()+' in gamma-UPC')
+                    self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
+
             self.make_opts_var['lhapdf'] = ""
 
         # create param_card.inc and run_card.inc

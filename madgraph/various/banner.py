@@ -1190,7 +1190,7 @@ class ConfigFile(dict):
                     
                 if not new_values:
 
-                    text= "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                    text= "value '%s' for entry '%s' is not valid.  1 Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
                     text += "allowed values are any list composed of the following entries: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                     return self.warn(text, 'warning', raiseerror)                    
@@ -1296,7 +1296,7 @@ class ConfigFile(dict):
                     
             if not valid:
                 # act if not valid:
-                text = "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                text = "value '%s' for entry '%s' is not valid.  2 Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
                 text += "allowed values are %s\n" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                 if lower_name in self.comments:
@@ -5517,8 +5517,16 @@ class RunCardNLO(RunCard):
         self.add_param('lpp1', 1, fortran_name='lpp(1)')        
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
-        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')  
+        self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
+                       comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
+                       comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
+        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(1)",
+                       comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(2)",
+                       comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')      
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21','edff','chff'] +\
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
@@ -5631,20 +5639,30 @@ class RunCardNLO(RunCard):
         
         super(RunCardNLO, self).check_validity()
 
+        # if heavy ion mode use for one beam, forbid lpp!=1
+        if self['lpp1'] not in [1,2]:
+            if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
+                raise InvalidRunCard( "Heavy ion mode is only supported for lpp1=1/2")
+        if self['lpp2'] not in [1,2]:
+            if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
+                raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")
+
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
 
-            if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
-                # for dressed lepton collisions, check that the lhaid is a valid one
-                if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
-                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
-            
-            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
-                self['pdlabel']='nn23nlo'
-                self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+            if not self['lpp1'] == self['lpp2'] == 2:
+
+                if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
+                    # for dressed lepton collisions, check that the lhaid is a valid one
+                    if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
+                        raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+                
+                elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                    self['pdlabel']='nn23nlo'
+                    self['reweight_pdf']=[False]
+                    logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
             if self['lpp1'] == 0  == self['lpp2']:
                 if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:

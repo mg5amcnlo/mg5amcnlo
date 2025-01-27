@@ -102,3 +102,9 @@ C stuff for alpha running in lepton collisions
       common /to_afromee/ photons_from_lepton
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       common /to_has_bs/ has_bstrahl
+
+C
+C     block for heavy ion beam
+C
+      integer nb_proton(2), nb_neutron(2)
+      common/to_heavyion_pdg/ nb_proton, nb_neutron
