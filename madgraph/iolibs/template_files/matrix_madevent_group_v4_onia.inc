@@ -416,6 +416,11 @@ C       Computing normalisation factor from color projector
         ENDIF 
 C       Computing normalisation factor for LDME convention
         LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
+        IF (C_ONIA(I).EQ.1) THEN
+          LDME = LDME/6D0/(2D0*J_ONIA(I)+1D0)
+        ELSE IF (C_ONIA(I).EQ.8) THEN
+          LDME = LDME/8D0/(2D0*J_ONIA(I)+1D0)
+        END IF
       ENDDO
 
 C     Computing product of LDMEs
