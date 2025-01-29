@@ -5014,10 +5014,7 @@ This implies that with decay chains:
             is_onium = False
             onia = self._fockstates
 
-            if part_name in onia['notation']:
-                is_onium = True
-                onium_info = onia[onia[part_name]]
-            elif part_name in onia['name']:
+            if part_name in onia['name']:
                 is_onium = True
                 onium_info = onia[part_name]
             elif part_name.isdigit():
@@ -5152,7 +5149,6 @@ This implies that with decay chains:
                 onium_charge = onium_info['charge']
                 onium_mass = onium_info['mass']
                 onium_width = onium_info['width']
-                onium_notation = onium_info['notation']
                 constituents = [onium_info['particle'],onium_info['anti-particle']]
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
@@ -6128,7 +6124,6 @@ This implies that with decay chains:
         """Add default Fock states from file fockstates_default.txt in the input folder"""
 
         name = []
-        notation = []
         pid = []
         with open(pjoin(MG5DIR,'input','fockstates_default.txt')) as f:
             for line in f:
@@ -6136,30 +6131,26 @@ This implies that with decay chains:
                     continue
                 fockstate = line.lower()
                 fockstate = fockstate.split()
-                if fockstate[0].isdigit():
+                if fockstate[0].lstrip('-').isdigit():
                     name += [fockstate[2]]
-                    notation += [fockstate[3]]
                     pid += [int(fockstate[0])]
                     self._fockstates[fockstate[2]] = {
                       'pid': int(fockstate[0]),
                       'pythia': int(fockstate[1]),
                       'name': fockstate[2],
-                      'notation': fockstate[3],
-                      'particle': fockstate[4],
-                      'anti-particle': fockstate[5],
-                      'N': int(fockstate[6]),
-                      'S': int(fockstate[7]),
-                      'L': int(fockstate[8]),
-                      'J': int(fockstate[9]),
-                      'C': int(fockstate[10]),
-                      'charge': int(fockstate[11]),
-                      'mass': float(fockstate[12]),
-                      'width': float(fockstate[13])
+                      'particle': fockstate[3],
+                      'anti-particle': fockstate[4],
+                      'N': int(fockstate[5]),
+                      'S': int(fockstate[6]),
+                      'L': int(fockstate[7]),
+                      'J': int(fockstate[8]),
+                      'C': int(fockstate[9]),
+                      'charge': int(fockstate[10]),
+                      'mass': float(fockstate[11]),
+                      'width': float(fockstate[12])
                     }
-                    self._fockstates[fockstate[3]] = fockstate[2]
                     self._fockstates[int(fockstate[0])] = fockstate[2]
         self._fockstates['name'] = name
-        self._fockstates['notation'] = notation
         self._fockstates['pid'] = pid
 
         return self._fockstates
