@@ -1,0 +1,96 @@
+#################################################################################
+##
+## Copyright (c) 2025 The MadGraph5_aMC@NLO Development team and Contributors
+##
+## This file is a part of the MadGraph5_aMC@NLO project, an application which 
+## automatically generates Feynman diagrams and matrix elements for arbitrary
+## high-energy processes in the Standard Model and beyond.
+##
+## It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+## distribution.
+##
+## For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+##
+#################################################################################
+#
+####################
+# Charmonia        #
+####################
+
+# etac
+44111001	0.3866666667
+44111008	3.0E-03
+44113018	1.5E-02
+44121001	0.2533333333
+44121008	4.0E-04
+44123018	2.0E-02
+
+# J/psi
+44313011	1.16
+44313018	9.0E-03
+44311008	1.5E-02
+44323011	0.76
+44323018	1.2E-03
+44321008	2.0E-02
+
+####################
+# Charmed B mesons #
+####################
+
+## Meson
+#54111001
+#54111008
+#54113018
+#
+#54313011
+#54311008
+#54313018
+#
+## Anti-meson
+#-54111001.
+#-54111008
+#-54113018
+#
+#-54313011
+#-54311008
+#-54313018
+#
+#####################
+## Bottomonia       #
+#####################
+#
+## etab
+#55111001
+#55111008
+#55113018
+#55121001
+#55121008
+#55123018
+#
+# Upsilon
+#55313011
+#55311008
+#55313018
+#55323011
+#55321008
+#55323018
+#
+#####################
+## Toponia          #
+#####################
+#
+## etat
+#66111001
+#66111008
+#66113018
+#66121001
+#66121008
+#66123018
+#
+## Thetat
+#66313011
+#66311008
+#66313018
+#66323011
+#66321008
+#66323018

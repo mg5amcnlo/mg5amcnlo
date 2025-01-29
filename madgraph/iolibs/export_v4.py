@@ -2506,6 +2506,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # create onia_card
         for card in ['onia_card']:
+            ldme_default = {}
+            with open(pjoin(self.mgme_dir, 'models', 'ldme.dat')) as f:
+                for line in f:
+                    if line.startswith('#'):
+                        continue
+                    if line.split():
+                        ldme_default[int(line.split()[0])] = float(line.split()[1])
+
             if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
                 try:
                     with open(pjoin(self.dir_path, 'Cards',card + '_default.dat'), 'w') as f:
@@ -2513,7 +2521,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             shutil.copyfileobj(source, f)
                         f.write('Block ldme\n')
                         for onium_info in onia_info:
-                            f.write('   {id}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=1.))
+                            try:
+                                default_value = ldme_default[onium_info[0]]
+                            except:
+                                default_value = 1.
+                            f.write('   {id}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=default_value))
                     shutil.copy(pjoin(self.dir_path, 'Cards',card + '_default.dat'),
                                    pjoin(self.dir_path, 'Cards', card + '.dat'))
                 except IOError:
