@@ -1,19 +1,17 @@
-#*********************************************************************
-#                       MadGraph5_aMC@NLO                            *
-#                                                                    *
-#                    onia_card.dat MadEvent                          *
-#                                                                    *
-#  This file is used to set the properties of the bound states.      *
-#                                                                    *
-#  Some notation/conventions:                                        *
-#                                                                    *
-#   Lines starting with a '# ' are info or comments                  *
-#                                                                    *
-#   mind the format:   value    = variable     ! comment             *
-#                                                                    *
-#   To display more options, you can type the command:               *
-#      update to_full                                                *
-#*********************************************************************
+#################################################################################
+##
+## Copyright (c) 2025 The MadGraph5_aMC@NLO Development team and Contributors
+##
+## This file is a part of the MadGraph5_aMC@NLO project, an application which 
+## automatically generates Feynman diagrams and matrix elements for arbitrary
+## high-energy processes in the Standard Model and beyond.
+##
+## It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+## distribution.
+##
+## For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+##
+#################################################################################
 #                                                                    
 #*********************************************************************
 # Long distance matrix elements (LDME)                               *

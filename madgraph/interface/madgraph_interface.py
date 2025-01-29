@@ -4986,7 +4986,6 @@ This implies that with decay chains:
                 if index==0:
                     combined = [[(key,b)] for b in boundstates[key]]
                 else:
-                    for c in combined: print(c)
                     combined = [c+[(key,b)] for c in combined for b in boundstates[key]]
             last = len(combined)-1
             for idx,fockstates in enumerate(combined):
