@@ -7253,7 +7253,12 @@ c 1+2+3+4
           arg2=arg1*betai
           arg3=Ej
           arg4=arg3*betaj
-          xi0=1/vij*log((1+vij)/(1-vij))
+          if(vij.lt.1d0)then
+             xi0=1/vij*log((1+vij)/(1-vij))
+          else
+             xi0=dlog(4d0*kikj**2/(xmi2*xmj2))
+          endif
+c          xi0=1/vij*log((1+vij)/(1-vij))
           xi1a=kikj**2*(1+vij)/xmi2*( xj1a(arg1,arg2,tHVv,tHVvl)-
      #                                xj1a(arg3,arg4,tHVv,tHVvl) )
 
