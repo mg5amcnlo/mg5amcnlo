@@ -1426,17 +1426,6 @@ CONTAINS
        ENDIF
        ALLOCATE(XD_1D(MX+1))
        IF(ALLOCATED(ZD))THEN
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1))
-             ! save the values that have been calculated before
-             MX_save=MX
-             DO I=1,MX+1
-                ZD_save(I)=ZD(I)
-             ENDDO
-          ENDIF
           DEALLOCATE(ZD)
        ENDIF
        ALLOCATE(ZD(MX+1))
@@ -1478,6 +1467,15 @@ CONTAINS
                 CALL progress(INT(I*50d0/(MX+1)),50)
              ENDIF
           ENDIF
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1))
+       ! save the values that have been calculated before
+       MX_save=MX
+       DO I=1,MX+1
+          ZD_save(I)=ZD(I)
        ENDDO
        init=1
     ENDIF
@@ -1858,7 +1856,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -1912,22 +1910,8 @@ CONTAINS
           DEALLOCATE(YD_1D)
        ENDIF
        ALLOCATE(YD_1D(MY+1))
-       WRITE(*,*)"INFO: in PhotonPhotonFlux_pp, the xmin of the grid has been updated to",xmin
        IF(ALLOCATED(ZD))THEN
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1,MY+1))
-             ! save the values that have been calculated before
-             MX_save=MX
-             MY_save=MY
-             DO I=1,MX+1
-                DO J=1,MY+1
-                   ZD_save(I,J)=ZD(I,J)
-                ENDDO
-             ENDDO
-          ENDIF
+          WRITE(*,*)"INFO: in PhotonPhotonFlux_pp, the xmin of the grid has been updated to",xmin
           ! then deallocate it
           DEALLOCATE(ZD)
        ENDIF
@@ -1967,6 +1951,18 @@ CONTAINS
                    CALL progress(INT(((I-1)*(MY+1)+J)*50d0/((MX+1)*(MY+1))),50)
                 ENDIF
              ENDIF
+          ENDDO
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1,MY+1))
+       ! save the values that have been calculated before
+       MX_save=MX
+       MY_save=MY
+       DO I=1,MX+1
+          DO J=1,MY+1
+             ZD_save(I,J)=ZD(I,J)
           ENDDO
        ENDDO
        init=1
@@ -2263,7 +2259,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2711,7 +2707,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2765,20 +2761,6 @@ CONTAINS
        ENDIF
        ALLOCATE(YD_1D(MY+1))
        IF(ALLOCATED(ZD))THEN
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1,MY+1))
-             ! save the values that have been calculated before
-             MX_save=MX
-             MY_save=MY
-             DO I=1,MX+1
-                DO J=1,MY+1
-                   ZD_save(I,J)=ZD(I,J)
-                ENDDO
-             ENDDO
-          ENDIF
           ! then deallocate it
           DEALLOCATE(ZD)
        ENDIF
@@ -2803,7 +2785,7 @@ CONTAINS
           DO J=1,MY+1
              IF(MX_save.GT.0.AND.MY_save.GT.0.AND.I.LE.MX_save+1&
                   .AND.J.LE.MY_save+1)THEN
-                ZD_save(I,J)=ZD(I,J)
+                ZD(I,J)=ZD_save(I,J)
                 CYCLE
              ENDIF
              xx2=10d0**(YD_1D(J))
@@ -2817,6 +2799,18 @@ CONTAINS
                    CALL progress(INT(((I-1)*(MY+1)+J)*50d0/((MX+1)*(MY+1))),50)
                 ENDIF
              ENDIF
+          ENDDO
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1,MY+1))
+       ! save the values that have been calculated before
+       MX_save=MX
+       MY_save=MY
+       DO I=1,MX+1
+          DO J=1,MY+1
+             ZD_save(I,J)=ZD(I,J)
           ENDDO
        ENDDO
        init=1
@@ -3127,7 +3121,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -3181,19 +3175,6 @@ CONTAINS
        ENDIF
        ALLOCATE(YD_1D(MY+1))
        IF(ALLOCATED(ZD))THEN
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1,MY+1))
-             MX_save=MX
-             MY_save=MY
-             DO I=1,MX+1
-                DO J=1,MY+1
-                   ZD_save(I,J)=ZD(I,J)
-                ENDDO
-             ENDDO
-          ENDIF
           DEALLOCATE(ZD)
        ENDIF
        ALLOCATE(ZD(MX+1,MY+1))
@@ -3230,6 +3211,17 @@ CONTAINS
                    CALL progress(INT(((I-1)*(MY+1)+J)*50d0/((MX+1)*(MY+1))),50)
                 ENDIF
              ENDIF
+          ENDDO
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1,MY+1))
+       MX_save=MX
+       MY_save=MY
+       DO I=1,MX+1
+          DO J=1,MY+1
+             ZD_save(I,J)=ZD(I,J)
           ENDDO
        ENDDO
        init=1
@@ -3567,7 +3559,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4084,7 +4076,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4139,20 +4131,6 @@ CONTAINS
        ALLOCATE(YD_1D(MY+1))
        IF(ALLOCATED(ZD))THEN
           WRITE(*,*)"INFO: in PhotonPhotonFlux_AB_hardsphere, the xmin of the grid has been updated to ",xmin
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1,MY+1))
-             ! save the values that have been calculated before
-             MX_save=MX
-             MY_save=MY
-             DO I=1,MX+1
-                DO J=1,MY+1
-                   ZD_save(I,J)=ZD(I,J)
-                ENDDO
-             ENDDO
-          ENDIF
           DEALLOCATE(ZD)
        ENDIF
        ALLOCATE(ZD(MX+1,MY+1))
@@ -4190,6 +4168,18 @@ CONTAINS
                    CALL progress(INT(((I-1)*(MY+1)+J)*50d0/((MX+1)*(MY+1))),50)
                 ENDIF
              ENDIF
+          ENDDO
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1,MY+1))
+       ! save the values that have been calculated before
+       MX_save=MX
+       MY_save=MY
+       DO I=1,MX+1
+          DO J=1,MY+1
+             ZD_save(I,J)=ZD(I,J)
           ENDDO
        ENDDO
        init=1
@@ -4489,7 +4479,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4544,20 +4534,6 @@ CONTAINS
        ALLOCATE(YD_1D(MY+1))
        IF(ALLOCATED(ZD))THEN
           WRITE(*,*)"INFO: in PhotonPhotonFlux_AB_WoodsSaxon, the xmin of the grid has been updated to ",xmin
-          IF(init.EQ.1)THEN
-             IF(ALLOCATED(ZD_save))THEN
-                DEALLOCATE(ZD_save)
-             ENDIF
-             ALLOCATE(ZD_save(MX+1,MY+1))
-             ! save the values that have been calculated before
-             MX_save=MX
-             MY_save=MY
-             DO I=1,MX+1
-                DO J=1,MY+1
-                   ZD_save(I,J)=ZD(I,J)
-                ENDDO
-             ENDDO
-          ENDIF
           DEALLOCATE(ZD)
        ENDIF
        ALLOCATE(ZD(MX+1,MY+1))
@@ -4596,7 +4572,19 @@ CONTAINS
                    CALL progress(INT(((I-1)*(MY+1)+J)*50d0/((MX+1)*(MY+1))),50)
                 ENDIF
              ENDIF
-           ENDDO
+          ENDDO
+       ENDDO
+       IF(ALLOCATED(ZD_save))THEN
+          DEALLOCATE(ZD_save)
+       ENDIF
+       ALLOCATE(ZD_save(MX+1,MY+1))
+       ! save the values that have been calculated before
+       MX_save=MX
+       MY_save=MY
+       DO I=1,MX+1
+          DO J=1,MY+1
+             ZD_save(I,J)=ZD(I,J)
+          ENDDO
        ENDDO
        init=1
     ENDIF
@@ -4936,7 +4924,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5515,7 +5503,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5558,7 +5546,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.6)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
