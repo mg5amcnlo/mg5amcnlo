@@ -216,6 +216,7 @@ c Photon isolation
 
       logical alliso,isolated
       integer get_n_tagged_photons
+      integer get_n_tagged_photons_initial
       logical is_a_ph(nexternal)
 
       REAL*8 pt,eta
@@ -367,7 +368,8 @@ C now check that there are enough photons
          if (split_type_used(QED_pos)) then
          ! if the process has QED splittings, use the 
          ! get_n_tagged_photons function
-             n_needed_photons = get_n_tagged_photons()
+             n_needed_photons = get_n_tagged_photons() 
+     $                              - get_n_tagged_photons_initial()
          else
          ! otherwise, just use the number of photons
          ! that has been counted
@@ -1263,6 +1265,22 @@ c     (entry custom_fct of the run_card)
       do i = 1, nexternal
         if (particle_tag(i))
      $     get_n_tagged_photons = get_n_tagged_photons+1
+      enddo
+
+      return
+      end
+
+      integer function get_n_tagged_photons_initial()
+      implicit none
+      integer i
+      include "nexternal.inc"
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      get_n_tagged_photons_initial = 0
+
+      do i = 1, nincoming
+        if (particle_tag(i))
+     $     get_n_tagged_photons_initial = get_n_tagged_photons_initial+1
       enddo
 
       return
