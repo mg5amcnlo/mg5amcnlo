@@ -227,7 +227,6 @@ c Copy the saved information to the arrays actually used
       endif
 c Set the shower scale
       if (Hevents) then
-c$$$         shower_scale=SCALUP(nFKSprocess*2)
          shower_scale_a(1:ndelH,1:ndelH)=showerscaleH(1:ndelH,1:ndelH)
       else
          shower_scale_a(1:ndelS,1:ndelS)=showerscaleS(1:ndelS,1:ndelS)

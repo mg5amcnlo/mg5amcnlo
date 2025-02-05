@@ -852,7 +852,7 @@ c
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
          are_col_conn=.false.
-         scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+         scale_str="<scales muf='-.1E+01' mur='-.1E+01'"
          do i=1,NUP
             if (abs(ISTUP(i)).ne.1) cycle
             do j=1,NUP

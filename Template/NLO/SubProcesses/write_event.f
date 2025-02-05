@@ -1,5 +1,7 @@
       subroutine finalize_event(xx,weight,lunlhe,putonshell)
       use mint_module
+      use process_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
@@ -80,7 +82,7 @@ c Put the Hevent info in a common block
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
-
+      
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
      $     ,ickkw,shower_scale_a)
@@ -157,11 +159,11 @@ c get info on beam and PDFs
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe ,ickkw
      $     ,shower_scale_a)
       use extra_weights
+      use process_module
       use scale_module
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-c$$$      include "madfks_mcatnlo.inc"
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
       double precision pi,zero
@@ -214,20 +216,18 @@ c
             enddo
          enddo
       else
-         if (iSorH_lhe.eq.1) then ! S-event
-            SCALUP=showerscaleS(1,1)
+         if (.not.mcatnlo_delta_mod) then
+            if (iSorH_lhe.eq.1) then ! S-event
+               SCALUP=showerscaleS(1,1)
+            else
+               SCALUP=showerscaleH(1,1)
+            endif
+            scalup_a(1:npart,1:npart)=-1d0
          else
-            SCALUP=showerscaleH(1,1)
+            ! use array of scale for MC@NLO-Delta
+            SCALUP=-1d0
+            scalup_a(1:npart,1:npart)=shower_scale_a(1:npart,1:npart)
          endif
-         scalup_a(1:NUP,1:NUP)=shower_scale_a(1:NUP,1:NUP)
-            
-c$$$         scale = SCALUP
-c$$$         do j=1,2*nexternal-3
-c$$$            do k=1,2*nexternal-3
-c$$$               if(j.eq.k)cycle
-c$$$               scalup_a(j,k)=shower_scale_a(j,k)
-c$$$            enddo
-c$$$         enddo
       endif
 c
       aqcd=g**2/(4d0*pi)
@@ -292,6 +292,7 @@ c********************************************************************
          VTIMUP(i)=0.d0
          SPINUP(i)=dfloat(ic(7,i))
       enddo
+
       call write_lhef_event(lunlhe,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
