@@ -2690,7 +2690,6 @@ class ProcessExporterCPP(VirtualExporter):
     
     def finalize(self, *args, **opts):
         """ """
-        print("LS:: cpp 1")
         self.compile_model()
         pass
 
@@ -2830,7 +2829,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     def convert_model(self,*args,**opts):
         pass
     def finalize(self, *args, **opts):
-        print("LS:: cpp 2")
         pass
   
 def get_mg5_info_lines():

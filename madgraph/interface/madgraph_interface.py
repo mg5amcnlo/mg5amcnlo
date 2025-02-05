@@ -8941,7 +8941,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
-        print("LS:: madgraph 1")
 
         compiler_dict = {'fortran': self.options['fortran_compiler'],
                              'cpp': self.options['cpp_compiler'],

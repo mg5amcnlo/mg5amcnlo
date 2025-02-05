@@ -258,7 +258,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
         """create the global information for loops"""
-        print("LS:: loop 6")
         
         super(LoopProcessExporterFortranSA,self).finalize(matrix_element,
                                              cmdhistory, MG5options, outputflag)
@@ -2132,8 +2131,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
         """create the global information for loops"""
-
-        print("LS:: loop 1")
         
         super(LoopProcessOptimizedExporterFortranSA,self).finalize(matrix_element,
                                              cmdhistory, MG5options, outputflag)
@@ -3122,7 +3119,7 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
       
 
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
-        print("LS:: loop 2")
+
         out = super().finalize(matrix_element, cmdhistory, MG5options, outputflag)
         misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
         return out
@@ -3210,8 +3207,6 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Function to finalize v4 directory, for inheritance.
         """
-
-        print("LS:: loop 3")
         
         self.proc_characteristic['loop_induced'] = True
 
@@ -3369,7 +3364,6 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """
         # Call specifically what finalize_v4_directory must be used, so that the
         # MRO doesn't interfere.
-        print("LS:: loop 4")
 
         self.proc_characteristic['loop_induced'] = True
         
@@ -3540,7 +3534,6 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
     def finalize(self, *args, **opts):
         """Pick the right mother functions
         """
-        print("LS:: loop 5")
         
         self.proc_characteristic['loop_induced'] = True
         # Call specifically what finalize must be used, so that the

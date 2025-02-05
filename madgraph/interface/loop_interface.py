@@ -718,7 +718,6 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
 
-        print("LS:: export 'onia' in loop_interface.py")
         self._curr_exporter.export_onia_files(self._curr_matrix_elements)
 
         if self._export_format in self.supported_ML_format:

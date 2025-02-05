@@ -3094,7 +3094,6 @@ RESTART = %(mint_mode)s
     def finalise_run_FO(self,folder_name,jobs):
         """Combine the plots and put the res*.txt files in the Events/run.../ folder."""
         # Copy the res_*.txt files to the Events/run* folder
-        print("LS:: amatnlo 1")
         res_files = misc.glob('res_*.txt', pjoin(self.me_dir, 'SubProcesses'))
         for res_file in res_files:
             files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))

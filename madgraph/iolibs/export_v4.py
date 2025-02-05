@@ -154,7 +154,6 @@ class VirtualExporter(object):
         return
     
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag, second_exporter=None):
-        print("LS:: v4 1")
         return
     
     
@@ -544,7 +543,6 @@ C
     #===========================================================================
     def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[], second_exporter=None):
         """Function to finalize v4 directory, for inheritance.""" 
-        print("LS:: v4 2")
 
         filename = pjoin(self.dir_path,'Source','makefile')
         if not second_exporter:
@@ -2456,8 +2454,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         break
                 if contains_onia:
                     break
-        else:
-            print("LS:: type of matrix_elements",type(matrix_elements))
 
         if contains_onia:
 
@@ -2972,7 +2968,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
            generation proc_card_mg5.dat
            generate a global makefile
            """
-        print("LS:: v4 3")
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
@@ -3804,7 +3799,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         pass
 
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
-        print("LS:: v4 4")
+
         try:
             misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
         except OSError:
@@ -4090,7 +4085,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
-        print("LS:: v4 5")
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
@@ -5102,9 +5096,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
     def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize ME v4 directory by creating jpeg diagrams, html
-        pages,proc_card_mg5.dat and madevent.tar.gz."""
-        print("LS:: v4 6")
-        
+        pages,proc_card_mg5.dat and madevent.tar.gz."""        
 
         if second_exporter:
             self.has_second_exporter = second_exporter
@@ -6171,45 +6163,6 @@ c           This is dummy particle used in multiparticle vertices
                               (-i, nconfigs))
                 leg2 = leg2-1
                 leg1 = -i
-
-            # for verts in allchannels:
-            #     if verts in schannels:
-            #         vert = [v for v in verts if v][0]
-            #     else:
-            #         vert = verts
-            #     # print("LS::vert",vert)
-            #     daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
-            #     print("LS::daughters",daughters)
-            #     if onia_pairs:
-            #         for c1,c2 in onia_pairs:
-            #             if c1 in daughters:
-            #                 print("LS::c1",c1) 
-            #             if c2 in daughters:
-            #                 print("LS::c2",c2) 
-            #     last_leg = vert.get('legs')[-1]
-            #     print("LS::last_leg",last_leg.get('number'))
-            #     lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
-            #                  (last_leg.get('number'), nconfigs, len(daughters),
-            #                   ",".join([str(d) for d in daughters])))
-            #     if verts in schannels:
-            #         pdgs = []
-            #         for v in verts:
-            #             if v:
-            #                 pdgs.append(v.get('legs')[-1].get('id'))
-            #             else:
-            #                 pdgs.append(0)
-            #         lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
-            #                      (last_leg.get('number'), nconfigs, nsubprocs,
-            #                       ",".join([str(d) for d in pdgs])))
-            #         lines.append("data tprid(%d,%d)/0/" % \
-            #                      (last_leg.get('number'), nconfigs))
-            #     elif verts in tchannels:
-            #         lines.append("data tprid(%d,%d)/%d/" % \
-            #                      (last_leg.get('number'), nconfigs,
-            #                       abs(last_leg.get('id'))))
-            #         lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
-            #                      (last_leg.get('number'), nconfigs, nsubprocs,
-            #                       ",".join(['0'] * nsubprocs)))
 
         # Write out number of configs
         lines.append("# Number of configs")
@@ -7541,7 +7494,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
     def finalize(self,*args, second_exporter=None, **opts):
-        print("LS:: v4 7")
 
         if second_exporter:
             self.has_second_exporter = second_exporter

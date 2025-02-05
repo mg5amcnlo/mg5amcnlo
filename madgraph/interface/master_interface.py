@@ -692,7 +692,6 @@ class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
     
     def finalize(self, nojpeg, flaglist=[]):
         """Finalize web generation"""
-        print("LS:: master 1")
 
         if flaglist != []:
             raise Exception
@@ -700,7 +699,6 @@ class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
     
     def finalize(self, nojpeg, **opts):
         """Finalize web generation""" 
-        print("LS:: master 2")
         
         opts['online'] = True
         self.cmd.finalize(self, nojpeg, opts)
