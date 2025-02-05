@@ -618,6 +618,8 @@ c
 
 ! write the ptclusstring that knows about which partons should be
 ! considered in the MLM-like matching
+
+! TO DO : FIX THIS
       if (ickkw.eq.3) then
          if (nincoming.ne.2) then
             write (*,*) 'Need to incoming particles with ickkw=3 '/
@@ -630,14 +632,22 @@ c
             integfour=''
             float=''
             if (need_matching(i).ne.-1) then
-               ptclus=SCALUP
+               if (iSorH_lhe.eq.1) then ! S-event
+                  ptclus=showerscaleS(1,1)
+               else
+                  ptclus=showerscaleH(1,1)
+               endif
             else
                if (nincoming.ne.2) then
                   write (*,*) 'need two incoming particles '/
      $                 /'in add_write_info.f'
                   stop 1
                endif
-               ptclus=SCALUP-0.001d0
+               if (iSorH_lhe.eq.1) then ! S-event
+                  ptclus=showerscaleS(1,1)-0.001d0
+               else
+                  ptclus=showerscaleH(1,1)-0.001d0
+               endif
             endif
             Write(float,'(f16.5)') ptclus
             write(integfour,'(i4)') ito(i)

@@ -293,14 +293,14 @@ c********************************************************************
          SPINUP(i)=dfloat(ic(7,i))
       enddo
       call write_lhef_event(lunlhe,
-     #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
+     #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
       end
 
       subroutine fill_HEPEUP_event(p, wgt, npart, id, status, mothers,
-     &           cols, spin, scalup, scales_a)
+     &           cols, spin)
       implicit none
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -329,7 +329,7 @@ c********************************************************************
       data firsttime/.true./
 
 c
-      scalup_out = scalup
+      scalup_out = -1d0
 
 c     Read the particle masses.
       include "pmass.inc"
@@ -401,7 +401,7 @@ c scale information relevant to S-event configuration
         do j=i+1,NUP_out
            if(scales_a(i,j).gt.0d0)then
               iscale(i)=iscale(i)+1
-              SCALES_out(iscale(i),i)=scales_a(i,j)
+              SCALES_out(iscale(i),i)=-1d0
            endif
         enddo
       enddo

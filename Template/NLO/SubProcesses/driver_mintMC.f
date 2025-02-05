@@ -677,6 +677,7 @@ c
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
       use mint_module
+      use process_module
       use scale_module
       implicit none
       include 'nexternal.inc'

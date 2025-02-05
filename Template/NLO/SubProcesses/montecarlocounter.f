@@ -1718,14 +1718,11 @@ c Boost H-event momenta to lab frame before passing to pythia
          call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
       enddo
 
-c Pythia doesn't use any input scales to determine the starting scales.
-      scales_for_HEPEUP = -1d0
 c
 ! TODO: check that the wgt is not used.      
       wgt=1d0
       call fill_HEPEUP_event(p_lab, wgt, nexternal, idup_h,
-     &       istup_local, mothup_h, icolup_h, spinup_local,
-     &       emsca, scales_for_HEPEUP)
+     &       istup_local, mothup_h, icolup_h, spinup_local)
       xscales_PY=-1d0
       xmasses_PY=-1d0
       dzones_PY=.true.

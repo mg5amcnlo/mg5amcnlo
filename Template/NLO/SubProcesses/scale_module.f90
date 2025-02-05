@@ -7,7 +7,7 @@ module scale_module
        &,shower_scale_n1body,showerscaleS,showerscaleH
   double precision,public,allocatable,dimension(:,:,:,:) :: emsca_S&
        &,emsca_H
-  double precision,public :: SCALUP
+!  double precision,public :: SCALUP
   double precision,private :: global_ref_scale,shower_scale_factor
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
   double precision,private,parameter :: scaleMClow=0d0,scaleMCdelta=3d0

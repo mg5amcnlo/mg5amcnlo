@@ -2951,6 +2951,7 @@ c configuration, while for the S-events also contributions from the
 c various FKS configurations can be summed together.
       use weight_lines
       use mint_module
+      use process_module
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -3007,7 +3008,7 @@ c H-event. If PDG codes, shower starting scale and momenta are equal, we
 c can sum them before taking ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
                if (any(emsca_H(nFKS(ii),ifold_cnt(ii),1:ndelH,1:ndelH)
-     $              .ne. emsca_H(nFKS(i),ifold_cnt(i),1:ndelH,1:ndelH))
+     $              .ne. emsca_H(nFKS(i),ifold_cnt(i),1:ndelH,1:ndelH)))
      $              cycle
                equal=.true.
                do j=1,niproc(ii)
