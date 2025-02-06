@@ -50,7 +50,7 @@ C
       common/fks_indices/i_fks,j_fks
 cc
       include 'run.inc'
-      include 'coupl.inc'
+    !   include 'coupl.inc'
       include 'q_es.inc'
       integer nsqso,MLResArrayDim
       double precision pmass(nexternal), pmass_rambo(100)
@@ -120,7 +120,7 @@ c     not equal to it so as to be sensitive to all logs in the check.
           IRPoleCheckThreshold = tolerance
       endif
 
-      mu_r = ren_scale
+      mu_r(:) = ren_scale
       qes2 = ren_scale**2
 
       do i = nincoming+1, nexternal-1

@@ -465,6 +465,7 @@ c PineAPPL
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
+         ! call set_alphaS(p_local(0,1,index),index)
 !         ! real emission
          calculatedBorn(index)=.false.
          if(need_color_links.or.need_charge_links) call sborn(p_local(0,1,index), wgtdum(index),index)
@@ -481,6 +482,7 @@ c PineAPPL
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
+         ! call set_alphaS(p1_cnt(0,1,0,index),index)
          ! the born
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)

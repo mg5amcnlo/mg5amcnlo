@@ -1040,6 +1040,22 @@ module c_born_cnt
   end subroutine deallocate_c_born_cnt
 end module c_born_cnt
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module strong
+  implicit none
+  complex*16, allocatable :: gstrong(:)
+  contains
+  subroutine allocate_strong(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(gstrong(vector_size))
+  end subroutine allocate_strong
+  subroutine reset_strong
+    gstrong(:) = 0.d0
+  end subroutine reset_strong
+  subroutine deallocate_strong
+    if (allocated(gstrong)) deallocate(gstrong)
+  end subroutine deallocate_strong
+end module strong
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module vectorize
   use factor_nbody
   use factor_n1body
@@ -1094,9 +1110,9 @@ module vectorize
   use c_wgt_ME_tree
   use c_born_cnt
   use ntry_real
-!  use strong
-!  use rscale
-!  use couplings
+  use strong
+  ! use rscale
+  ! use couplings
   implicit none
   integer vec_size_store
     contains
@@ -1157,9 +1173,9 @@ module vectorize
        call allocate_cBorn(vector_size)
        call allocate_c_wgt_ME_tree(vector_size)
        call allocate_c_born_cnt(vector_size)
-!       call allocate_strong(vector_size)
-!       call allocate_rscale(vector_size)
-!       call allocate_couplings(vector_size)
+       call allocate_strong(vector_size)
+      !  call allocate_rscale(vector_size)
+      !  call allocate_couplings(vector_size)
     end subroutine allocate_storage
 
     subroutine event_reset(vector_size)
@@ -1273,9 +1289,9 @@ module vectorize
        call deallocate_cBorn
        call deallocate_c_wgt_ME_tree
        call deallocate_c_born_cnt
-!       call deallocate_strong
-!       call deallocate_rscale
-!       call deallocate_couplings
+       call deallocate_strong
+      !  call deallocate_rscale
+      !  call deallocate_couplings
     end subroutine deallocate_storage
 end module vectorize
          

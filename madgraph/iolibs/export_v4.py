@@ -6989,7 +6989,7 @@ class UFO_model_to_mg4(object):
     def create_mod_coupl(self):
         """ write coupling.f90 """
         
-        fsock = self.open('coupl.f90', format='fortran')
+        fsock = self.open('coupl.f90', comment='!', format='fortran')
         if self.opt['mp']:
             mp_fsock = self.open('mp_coupl.inc', format='fortran')
             mp_fsock_same_name = self.open('mp_coupl_same_name.inc',\
@@ -7015,6 +7015,25 @@ class UFO_model_to_mg4(object):
                 end subroutine deallocate_strong
             end module strong
             
+            module weak
+                implicit none
+                complex*16, allocatable :: GAL(:,:)
+            contains
+                subroutine allocate_weak(vector_size)
+                    implicit none
+                    integer, intent(in) :: vector_size
+                    allocate(GAL(2,vector_size))
+                end subroutine allocate_weak
+                subroutine reset_weak()
+                    implicit none
+                    GAL(:,:) = (0.d0,0.d0)
+                end subroutine reset_weak
+                subroutine deallocate_weak()
+                    implicit none
+                    if(allocated(GAL)) deallocate(GAL)
+                end subroutine deallocate_weak
+            end module weak
+
             module rscale
                 implicit none
                 double precision, allocatable :: MU_R(:)
@@ -9157,7 +9176,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o coupl.o couplings.mod rscale.mod strong.mod'
         text += ' model_functions.o '
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '
