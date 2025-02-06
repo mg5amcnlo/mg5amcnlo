@@ -733,7 +733,6 @@ c
          pass_cuts_check=.false.
       endif
       sigintF=0d0
-      born_flow_picked=0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -765,6 +764,7 @@ c "npNLO".
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
+            born_flow_picked=0
          endif
          MCcntcalled=0
          wgt_me_real=0d0
@@ -815,7 +815,7 @@ c 1/proc_map(0,0)*vol1)
 !TODO: with folding, we should pick the same flow for all folds (use 'save' attribute...)!
                ! Doing only the Born contribution.
                call compute_born
-               call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked)
                call Bornonly_shower_scale(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
@@ -823,7 +823,7 @@ c 1/proc_map(0,0)*vol1)
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
-               call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked)
                call compute_shower_scale_nbody(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
@@ -832,7 +832,7 @@ c 1/proc_map(0,0)*vol1)
                ! shower scale when looping over FKS configurations.
                call compute_born
                call compute_nbody_noborn
-               call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked)
                ! We need to fill emsca_S(iFKS_born) with a value that
                ! will be used if we are in the dead-zone. If we are not
                ! in the dead-zone, this will not be used (or
@@ -841,7 +841,7 @@ c 1/proc_map(0,0)*vol1)
                emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
             endif
-         else
+         elseif (ifl.eq.0) then
             call sborn(p_born,wgt1)
             call get_born_flow(born_flow_picked)
 ! give it a negative value so that we can keep track of the fact that
