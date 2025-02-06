@@ -44,7 +44,7 @@ contains
     
   subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked,fks_father
+    integer :: i,j,flow_picked,iflow_min,iflow_max
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -60,50 +60,32 @@ contains
        shower_scale_nbody_max=shower_scale_factor*global_ref_scale+scaleMCdelta
        return
     endif
-    if (flow_picked .lt. 0) then
-       fks_father=-flow_picked
-       do i=1,next_n
-          if (i.eq.fks_father) cycle
-          if (.not. any(valid_dipole_n(i,fks_father,1:max_flows_n))) cycle
-          ref_scale=get_ref_scale_dipole(next_n,p,i,fks_father)
+    if (flow_picked.gt.0) then
+       iflow_min=flow_picked
+       iflow_max=flow_picked
+    else
+       ! check valid_dipole for any possible flow
+       iflow_min=1
+       iflow_max=max_flows_n
+    endif
+    do i=1,next_n-1
+       do j=i+1,next_n
+          if (.not. any(valid_dipole_n(i,j,iflow_min:iflow_max))) cycle
+          ref_scale=get_ref_scale_dipole(next_n,p,i,j)
           call get_scaleminmax(ref_scale,scalemin,scalemax)
           rrnd=ran2()
           rrnd=damping_inv(rrnd,1d0)
           scalemin=max(scalemin,scaleMCcut)
           scalemax=max(scalemax,scalemin+scaleMCdelta)
-          shower_scale_nbody(i,fks_father)=scalemin+rrnd*(scalemax-scalemin)
-          shower_scale_nbody_min(i,fks_father)=scalemin
-          shower_scale_nbody_max(i,fks_father)=scalemax
+          shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
+          shower_scale_nbody_min(i,j)=scalemin
+          shower_scale_nbody_max(i,j)=scalemax
           ! symmetrize the matrix:
-          shower_scale_nbody(fks_father,i)=shower_scale_nbody(i,fks_father)
-          shower_scale_nbody_min(fks_father,i)=shower_scale_nbody_min(i,fks_father)
-          shower_scale_nbody_max(fks_father,i)=shower_scale_nbody_max(i,fks_father)
+          shower_scale_nbody(j,i)=shower_scale_nbody(i,j)
+          shower_scale_nbody_min(j,i)=shower_scale_nbody_min(i,j)
+          shower_scale_nbody_max(j,i)=shower_scale_nbody_max(i,j)
        enddo
-    elseif (flow_picked.gt.0) then
-       do i=1,next_n
-          do j=1,next_n
-             if (valid_dipole_n(i,j,flow_picked)) then
-                ref_scale=get_ref_scale_dipole(next_n,p,i,j)
-                call get_scaleminmax(ref_scale,scalemin,scalemax)
-                ! this breaks backward compatibility. In earlier versions, the
-                ! shower_scale_nbody was constrained by the ptresc (which
-                ! depended on the n+1-body and was used to decide if in life or
-                ! dead zone). Also, now we randomize for each dipole separately
-                ! also for non-delta.
-                rrnd=ran2()
-                rrnd=damping_inv(rrnd,1d0)
-                scalemin=max(scalemin,scaleMCcut)
-                scalemax=max(scalemax,scalemin+scaleMCdelta)
-                shower_scale_nbody(i,j)=scalemin+rrnd*(scalemax-scalemin)
-                shower_scale_nbody_min(i,j)=scalemin
-                shower_scale_nbody_max(i,j)=scalemax
-             endif
-          enddo
-       enddo
-    else
-       write (*,*) 'flow_picked is zero in compute_shower_scale_nbody',flow_picked
-       stop 1
-    endif
+    enddo
   end subroutine compute_shower_scale_nbody
 
   subroutine compute_shower_scale_n1body(p,i_fks,j_fks)
