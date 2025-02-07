@@ -5765,6 +5765,10 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'dynamical_scale_choice' has two or more identical entries. They have to be all different for the code to work correctly.")
             
         # Check that lenght of lists are consistent
+        if self['lpp1'] == self['lpp2'] == 2:
+            if not self['rw_fscale'] == [1.0]:
+                self['rw_fscale'] = [1.0]
+                logger.warning("Factorisation scale cannot be varied for elastic photon collisions.")
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard("'reweight_pdf' and 'lhaid' lists should have the same length")
         if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):
