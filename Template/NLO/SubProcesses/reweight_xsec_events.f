@@ -531,7 +531,7 @@ c alpha_s
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c call the PDFs
                if (lpp(1).eq.2 .and. lpp(2).eq.2) then
-                  xlum(kf)=photonpdfsquare(bjx(1,i),bjx(2,i))
+                  xlum=photonpdfsquare(bjx(1,i),bjx(2,i))
                else
                   xlum=1d0
                   LP=SIGN(1,LPP(1))
