@@ -61,6 +61,7 @@ contains
        return
     endif
     if (flow_picked.gt.0) then
+       ! check valid_dipole only for the flow picked
        iflow_min=flow_picked
        iflow_max=flow_picked
     else

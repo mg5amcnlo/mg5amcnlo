@@ -1097,7 +1097,7 @@ c Sum the contributions that can be summed before taking the ABS value
 
       if (bornflow.ne.0) then
          ! take ABS because bornflow is negative if n-body did not pass the cuts
-         call fill_icolor_H(abs(bornflow),jpart)
+         call fill_icolor_H(abs(bornflow),jpart,.true.)
       else
          write (*,*) 'Born-flow not set in n1body_wrapper'
          stop 1

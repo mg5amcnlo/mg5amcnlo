@@ -853,7 +853,7 @@ c
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs
 
-      call fill_icolor_H(bornflow,jpart)
+      call fill_icolor_H(bornflow,jpart,.true.)
       do i=1,nexternal
         ICOLUP(1,i)=jpart(4,i)
         ICOLUP(2,i)=jpart(5,i)

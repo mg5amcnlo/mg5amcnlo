@@ -316,7 +316,7 @@ c$$$         endif
       endif
       iflow=abs(born_flow_picked)
       if (Hevents) then
-         call fill_icolor_H(iflow,jpart)
+         call fill_icolor_H(iflow,jpart,.false.)
       else
          call fill_icolor_S(iflow,jpart,idum)
       endif
@@ -859,7 +859,7 @@ c                  whichever is closer to mass shell
       end
 
 
-      subroutine fill_icolor_H(iflow,jpart)
+      subroutine fill_icolor_H(iflow,jpart,pick_new_rnd)
       implicit none
       include "nexternal.inc"
 c      include 'fks.inc'
@@ -869,11 +869,13 @@ c      include 'fks.inc'
       integer i
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision xtarget,ran2
+      double precision xtarget,ran2,rrnd
+      save rrnd
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
       integer i_part,j_part,imother,lc
       include 'orders.inc'
+      logical pick_new_rnd
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
 c
@@ -984,7 +986,8 @@ c The following works only if i_fks is always greater than j_fks.
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            if (ran2().gt.0.5d0) then 
+            if (pick_new_rnd) rrnd=ran2()
+            if (rrnd.gt.0.5d0) then 
                jpart(4,i_fks)=lc+1
                jpart(5,i_fks)=jpart(5,imother)
                jpart(4,j_fks)=jpart(4,imother)
@@ -1113,7 +1116,8 @@ c The following works only if i_fks is always greater than j_fks.
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            if (ran2().gt.0.5d0) then 
+            if (pick_new_rnd) rrnd=ran2()
+            if (rrnd.gt.0.5d0) then 
                jpart(4,i_fks)=lc+1
                jpart(5,i_fks)=jpart(4,imother)
                jpart(4,j_fks)=lc+1
