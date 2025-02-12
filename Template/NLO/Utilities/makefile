@@ -54,6 +54,9 @@ sum_plots : sum_plots.o
 uncertainties : uncertainties.o
 	$(FF) $^ -o $@
 
+plot_events_FO : extra_weights.o weight_lines.o plot_events_FO.o handling_lhe_events.o HwU.o analysis_HwU_template.o fill_MC_mshell.o open_output_files_dummy_HwU.o pineappl_interface_dummy.o  open_output_files_dummy_HwU.o 
+	$(FF) $^ -o $@
+
 clean:
 	@rm -f *.o
 	@rm -f check_events combine_plots compare_events merge_events plot_events \

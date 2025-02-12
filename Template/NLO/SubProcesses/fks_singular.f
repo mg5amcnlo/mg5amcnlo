@@ -600,7 +600,8 @@ C wrt the hard matrix element. Relevant for lepton collisions.
       return
       end
 
-      subroutine compute_real_emission(p,sudakov_damp)
+      subroutine compute_real_emission(p,sudakov_damp,passcuts_n1body
+     $     ,passcuts_nbody)
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -611,6 +612,7 @@ c its value to the list of weights using the add_wgt subroutine
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
+      logical passcuts_n1body,passcuts_nbody
       double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
      $     ,sudakov_damp
       external fks_Sij
@@ -622,7 +624,16 @@ c its value to the list of weights using the add_wgt subroutine
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
+      double precision sudakov_damp_c
+      common /c_sudakov_damp/sudakov_damp_c
+
       call cpu_time(tBefore)
+
+      sudakov_damp=0.2d0*(log(1d0/xi_i_fks_ev)+max(0d0,log(1d0/(1d0-y_ij_fks_ev))))
+c$$$      write (*,*) xi_i_fks_ev,y_ij_fks_ev,sudakov_damp,exp(-sudakov_damp)
+      sudakov_damp=exp(-sudakov_damp)
+      sudakov_damp_c=sudakov_damp
+      
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
@@ -636,10 +647,10 @@ c its value to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
-        if (sudakov_damp.gt.0d0) then
+        if (sudakov_damp.gt.0d0 .and. passcuts_n1body) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
         endif
-        if (sudakov_damp.lt.1d0) then
+        if (sudakov_damp.lt.1d0 .and. passcuts_nbody) then
           call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
         endif
       enddo
@@ -1890,6 +1901,13 @@ c        contribution
       integer get_n_tagged_photons
       double precision get_rescale_alpha_factor
       external get_n_tagged_photons get_rescale_alpha_factor
+      double precision    xi_i_fks_ev,y_ij_fks_ev
+      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      double precision sudakov_damp_c
+      common /c_sudakov_damp/sudakov_damp_c
 
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
@@ -2040,6 +2058,16 @@ c and MC subtraction terms.
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
       endif
+      if (type.eq.1 .or. type.eq.11) then
+         xi_i(icontr)=xi_i_fks_ev
+         y_ij(icontr)=y_ij_fks_ev
+         damp(icontr)=sudakov_damp_c
+      else
+         xi_i(icontr)=-10d0
+         y_ij(icontr)=-10d0
+         damp(icontr)=1d0
+      endif
+      
       return
       end
 
@@ -3106,96 +3134,21 @@ c various FKS configurations can be summed together.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       call cpu_time(tBefore)
       if (icontr.eq.0) return
-c Find the contribution to sum all the S-event ones. This should be one
-c that has a soft singularity. We set it to 'i_soft'.
-      i_soft=0
-      found_S=.false.
-      do i=1,icontr
-         if (H_event(i)) then
-            cycle
-         else
-            found_S=.true.
-         endif
-         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21
-     &     .or.abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.22) then
-            i_soft=i
-            exit
-         endif
-      enddo
-      if (found_S .and. i_soft.eq.0) then
-         write (*,*) 'ERROR: S-event contribution found, '/
-     $        /'but no FKS configuration with soft singularity'
-         do j=1,icontr
-            write (*,*) j,H_event(j),itype(j)
-         enddo
-         stop 1
-      endif
-c Main loop over contributions. For H-events we have to check explicitly
-c to which contribution we can sum the current contribution (if any),
-c while for the S-events we can sum it to the 'i_soft' one.
       do i=1,icontr
          do j=1,niproc(i)
             unwgt(j,i)=0d0
          enddo
       enddo
       icontr_sum(0,1:icontr)=0
+      ! just put everything together
       do i=1,icontr
-         if (H_event(i)) then
-            do ii=1,i
-               if (.not.H_event(ii)) cycle
-c H-event. If PDG codes, shower starting scale and momenta are equal, we
-c can sum them before taking ABS value.
-               if (niproc(ii).ne.niproc(i)) cycle
-               if (shower_scale(ii).ne.shower_scale(i)) cycle
-               equal=.true.
-               do j=1,niproc(ii)
-                  if (.not.pdg_equal(parton_pdg(1,j,ii),
-     &                               parton_pdg(1,j,i))) then
-                     equal=.false.
-                     exit
-                  endif
-               enddo
-               if (.not. equal) cycle
-               if (.not. momenta_equal(momenta(0,1,ii),
-     &                                 momenta(0,1,i))) cycle
-c     Identical contributions found: sum the contribution "i" to "ii"
-               icontr_sum(0,ii)=icontr_sum(0,ii)+1
-               icontr_sum(icontr_sum(0,ii),ii)=i
-               do j=1,niproc(ii)
-                  unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
-               enddo
-               if (.not. colour_con_equal(nexternal,icolour_con(1,1,ii)
-     $              ,icolour_con(1,1,i))) then
-                  write (*,*) 'ERROR in sum_identical_contributions: '/
-     $                 /'colour connections in identical H-event '/
-     $                 /'contributions should be equal'
-                  write (*,*) 'ii: ',icolour_con(1,1:nexternal,ii)
-                  write (*,*) '    ',icolour_con(2,1:nexternal,ii)
-                  write (*,*) 'i:  ',icolour_con(1,1:nexternal,i)
-                  write (*,*) '    ',icolour_con(2,1:nexternal,i)
-                  stop 1
-               endif
-               exit
-            enddo
-         else
-c S-event: we can sum everything to 'i_soft': all the contributions to
-c the S-events can be summed together. Ignore the shower_scale: this
-c will be updated later
-            icontr_sum(0,i_soft)=icontr_sum(0,i_soft)+1
-            icontr_sum(icontr_sum(0,i_soft),i_soft)=i
-            do j=1,niproc(i_soft)
-               do jj=1,iproc_save(nFKS(i))
-                  if (eto(jj,nFKS(i)).eq.j) then
-c When computing upper bounding envelope (imode.eq.1) do not include the
-c virtual corrections. Exception: when computing only the virtual, do
-c include it here!
-                     if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
-     $                    only_virt) exit
-                     unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
-                  endif
-               enddo
-            enddo
-         endif
+         if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
+     $        only_virt) cycle
+         icontr_sum(0,1)=icontr_sum(0,1)+1
+         icontr_sum(icontr_sum(0,1),1)=i
+         do j=1,niproc(i)
+            unwgt(1,1)=unwgt(1,1)+parton_iproc(j,i)
+         enddo
       enddo
       call cpu_time(tAfter)
       t_isum=t_isum+(tAfter-tBefore)
@@ -3813,7 +3766,7 @@ c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
             ipro=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
             do ii=1,iproc_save(nFKS(ict))
-               if (eto(ii,nFKS(ict)).ne.ipro) cycle
+c$$$               if (eto(ii,nFKS(ict)).ne.ipro) cycle
                n_ctr_found=n_ctr_found+1
 
                if (.not.allocated(n_ctr_str))
@@ -3858,7 +3811,10 @@ c iproc_picked:
      &              fks_j_d(nFKS(ict)),
      &              parton_pdg_uborn(fks_j_d(nFKS(ict)),ii,ict),
      &              parton_iproc(ii,ict),
-     &              bias_wgt(ict)
+     &              bias_wgt(ict),
+     &              xi_i(ict),
+     &              y_ij(ict),
+     &              damp(ict)
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(str_temp))
@@ -3910,7 +3866,10 @@ c H-event
      &           fks_j_d(nFKS(ict)),
      &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipro,ict),
      &           parton_iproc(ipro,ict),
-     &           bias_wgt(ict)
+     &           bias_wgt(ict),
+     &           xi_i(ict),
+     &           y_ij(ict),
+     &           damp(ict)
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
@@ -3919,7 +3878,8 @@ c H-event
          endif
       enddo
       return
- 30   format(i15,1x,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,1x,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12,1x
+     $     ,d18.12,1x,d18.12,1x,d18.12)
       end
       
       

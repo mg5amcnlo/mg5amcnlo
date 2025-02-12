@@ -405,9 +405,10 @@ c do the same as above for the counterevents
       call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
-     &        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i),(bjx(j,i),j=1
-     &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
-     &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i)
+     $        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i)
+     $        ,(bjx(j,i),j=1 ,2),(scales2(j,i),j=1,3),g_strong(i)
+     $        ,(momenta_conf(j),j=1 ,2),itype(i),nFKS(i),idum,idum,idum
+     $        ,wgts(1,i),bias_wgt(i),xi_i(i),y_ij(i),damp(i)
          do ii=1,2
             do j=1,nexternal
                do k=0,3

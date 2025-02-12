@@ -226,7 +226,7 @@ c*************************************************************
       elseif(imode.eq.2) then
 c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
-         putonshell=.true.
+         putonshell=.false.
          if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
@@ -782,7 +782,7 @@ c 1/proc_map(0,0)*vol1)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
-         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+c$$$         call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
@@ -800,9 +800,9 @@ c 1/proc_map(0,0)*vol1)
          endif
 c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
-         call include_shape_in_shower_scale(p,nFKS_picked_nbody
-     $        ,ifold_counter)
-         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
+c$$$         call include_shape_in_shower_scale(p,nFKS_picked_nbody
+c$$$     $        ,ifold_counter)
+c$$$         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
             
          
  11      continue
@@ -833,12 +833,12 @@ c Set the shower scales
                call set_FxFx_scale(0,p) ! reset the FxFx scales
             endif
             call set_cms_stuff(izero)
-            call set_shower_scale_noshape(p,iFKS*2-1)
+c$$$            call set_shower_scale_noshape(p,iFKS*2-1)
             if (ickkw.eq.3) then
                call set_FxFx_scale(2,p1_cnt(0,1,0))
             endif
             call set_cms_stuff(mohdr)
-            call set_shower_scale_noshape(p,iFKS*2)
+c$$$            call set_shower_scale_noshape(p,iFKS*2)
             if (ickkw.eq.3) then
                if (p(0,1).gt.0d0) then
                   call set_FxFx_scale(3,p)
@@ -854,28 +854,29 @@ c check if event or counter-event passes cuts
             if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             passcuts_n1body=passcuts(p,rwgt)
             if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
-            if (passcuts_nbody .and. abrv.ne.'real') then
-               pass_cuts_check=.true.
-c Include the MonteCarlo subtraction terms
-               if (ickkw.ne.4) then
-                  call set_cms_stuff(mohdr)
-                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
-                  call set_alphaS(p)
-                  call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
-     $                 ,gfactcl,probne)
-               else
-c For UNLOPS all real-emission contributions need to be added to the
-c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
-c events are called, so this will remain 0.
-                  probne=0d0
-               endif
-            endif
+c$$$            if (passcuts_nbody .and. abrv.ne.'real') then
+c$$$               pass_cuts_check=.true.
+c$$$c Include the MonteCarlo subtraction terms
+c$$$               if (ickkw.ne.4) then
+c$$$                  call set_cms_stuff(mohdr)
+c$$$                  if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+c$$$                  call set_alphaS(p)
+c$$$                  call include_multichannel_enhance(4)
+c$$$                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+c$$$     $                 ,gfactcl,probne)
+c$$$               else
+c$$$c For UNLOPS all real-emission contributions need to be added to the
+c$$$c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
+c$$$c events are called, so this will remain 0.
+c$$$                  probne=0d0
+c$$$               endif
+c$$$            endif
             if (passcuts_nbody .and. abrv.ne.'real') then
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
+               probne=0d0
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
@@ -890,19 +891,20 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call compute_soft_collinear_counter_term(replace_MC_subt)
             endif
 c Include the real-emission contribution.
-            if (passcuts_n1body) then
+            if (passcuts_n1body .or. passcuts_nbody) then
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
                call include_multichannel_enhance(2)
-               sudakov_damp=probne
-               call compute_real_emission(p,sudakov_damp)
+c$$$               sudakov_damp=probne
+               call compute_real_emission(p,sudakov_damp,passcuts_n1body
+     $              ,passcuts_nbody)
             endif
-c Update the shower starting scale with the shape from the MC
-c subtraction terms.
-            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
-            call set_colour_connections(iFKS,ifold_counter)
+c$$$c Update the shower starting scale with the shape from the MC
+c$$$c subtraction terms.
+c$$$            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+c$$$            call set_colour_connections(iFKS,ifold_counter)
          enddo
  12      continue
       elseif(ifl.eq.2) then
@@ -929,7 +931,7 @@ c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+c$$$         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       endif
