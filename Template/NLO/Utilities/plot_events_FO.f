@@ -81,7 +81,7 @@ c$$$            write (*,*) i,j,xwgt_up(j)
       use weight_lines
       implicit none
       include 'nexternal.inc'
-      integer i
+      integer i,j
       double precision xwgt(1:3),p_up(0:3,nexternal,1:3)
       integer id(1:nexternal)
       p_up(0,1,1:3)=-1d0
@@ -89,29 +89,51 @@ c$$$            write (*,*) i,j,xwgt_up(j)
       do i=1,icontr
          if (itype(i).eq.1) then
 ! real emission (n+1)-body kinematics
-            xwgt(1)=xwgt(1)+wgts(1,i)/damp(i)
-            if (p_up(0,1,1).eq.-1d0) p_up(0:3,1:nexternal,1)=
-     $           momenta_m(0:3,1:nexternal,2,i)
+            xwgt(1)=xwgt(1)+wgts(1,i)!/damp(i)
+            if (p_up(0,1,1).eq.-1d0) then
+               do j=1,nexternal
+                  call boostz(momenta_m(0,j,2,i),y_bst(i),p_up(0,j,1))
+               enddo
+            endif
          elseif (itype(i).eq.11) then
 ! real emission n-body kinematics
-c$$$            xwgt(2)=xwgt(2)+wgts(1,i)
-            if (p_up(0,1,2).eq.-1d0) p_up(0:3,1:nexternal,2)=
-     $           momenta_m(0:3,1:nexternal,1,i)
+            xwgt(2)=xwgt(2)+wgts(1,i)
+            if (p_up(0,1,2).eq.-1d0) then
+               do j=1,nexternal
+                  call boostz(momenta_m(0,j,1,i),y_bst(i),p_up(0,j,2))
+               enddo
+            endif
          elseif (itype(i).eq.2) then
 ! Born
             xwgt(3)=xwgt(3)+wgts(1,i)
-            if (p_up(0,1,3).eq.-1d0) p_up(0:3,1:nexternal,3)=
-     $           momenta_m(0:3,1:nexternal,1,i)
+            if (p_up(0,1,3).eq.-1d0) then
+               do j=1,nexternal
+                  call boostz(momenta_m(0,j,3,i),y_bst(i),p_up(0,j,3))
+               enddo
+            endif
+               
          else
 ! anything else
             xwgt(2)=xwgt(2)+wgts(1,i)
-            if (p_up(0,1,2).eq.-1d0) p_up(0:3,1:nexternal,2)=
-     $           momenta_m(0:3,1:nexternal,1,i)
+            if (p_up(0,1,2).eq.-1d0) then
+               do j=1,nexternal
+                  call boostz(momenta_m(0,j,1,i),y_bst(i),p_up(0,j,2))
+               enddo
+            endif
          endif
       enddo
       id(1:nexternal)=pdg(1:nexternal,1)
       end
 
+      subroutine boostz(p,yb,pb)
+! boost in the z-direction with rapidity yb
+      implicit none
+      double precision p(0:3),pb(0:3)
+      double precision yb
+      pb(0)=p(0)*cosh(yb)-p(3)*sinh(yb)
+      pb(1:2)=p(1:2)
+      pb(3)=p(3)*cosh(yb)-p(0)*sinh(yb)
+      end
       
       subroutine plot_event(NUP,XWGTUP,IDUP,ISTUP,PUP,SCALUP,scalup_a
      $     ,ibody)
@@ -160,7 +182,7 @@ c$$$            xwgt(2)=xwgt(2)+wgts(1,i)
      $        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i)
      $        ,(bjx(j,i),j=1 ,2),(scales2(j,i),j=1,3),g_strong(i)
      $        ,(momenta_conf(j),j=1 ,2),itype(i),nFKS(i),idum,idum,idum
-     $        ,wgts(1,i),bias_wgt(i),xi_i(i),y_ij(i),damp(i)
+     $        ,wgts(1,i),bias_wgt(i),y_bst(i),xi_i(i),y_ij(i),damp(i)
          do ii=1,2
             do j=1,nexternal
                do k=0,3

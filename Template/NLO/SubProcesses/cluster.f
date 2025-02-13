@@ -1,5 +1,6 @@
       subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
+     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
+     $     ,for_mcatnlo_scale)
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C renormalisation scale setting (to be used to somewhere else to
 C reweight alphaS). Should be called with iproc=0 for n-body
@@ -40,7 +41,7 @@ C given by the to_mconfigs common block.
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
-      logical firsttime(0:fks_configs),skip_first
+      logical firsttime(0:fks_configs),skip_first,for_mcatnlo_scale
       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
       save ipdg,cluster_list,cluster_pdg,cluster_type,firsttime
       if (iproc.eq.0) then      ! n-body contribution
@@ -99,7 +100,7 @@ c cluster_ij) with scales (in cluster_scales)
      $     ,iproc))
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
-      if (iproc.eq.0) then
+      if (iproc.eq.0 .or. for_mcatnlo_scale) then
          skip_first=.false.
       else
          skip_first=.true. ! for real-emission: skip the first clustering
@@ -109,7 +110,7 @@ c form factor and renormalisation and factorisation scales.
       call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
      $     ,cluster_pdg(il_pdg),cluster_scales,iord,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
-     $     ,need_matching(1))
+     $     ,need_matching(1),for_mcatnlo_scale)
       return
       end
       
@@ -459,7 +460,8 @@ c     splitting). In case there is no valid QCD-vertex, its set equal to
 c     the renormalisation scale.
       subroutine Reweighting(next,p,nbr,skip_first,cluster_ij,ipdg
      $     ,cluster_pdg,cluster_scales,iord,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
+     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
+     $     ,for_mcatnlo_scale)
       implicit none
       integer next,i,j,nbr,cluster_ij(nbr),iord(0:nbr),cluster_pdg(0:2
      $     ,0:2*nbr),type(0:next),nqcdrenscale,nqcdrenscalecentral
@@ -470,6 +472,7 @@ c     the renormalisation scale.
      $     ,p(0:3,next),qcd_fac_scale,expanded_exponent_sudakov
      $     ,exponent_sudakov
       logical QCDvertex,QCDchangeline,skip_first,startQCDvertex
+     $     ,for_mcatnlo_scale
       external QCDvertex,QCDchangeline,startQCDvertex
 
 c Determine which particles need clustering and which do not
@@ -525,7 +528,7 @@ c down to the scale of the previous QCD vertex.
                if (hard_qcd_scale.gt.prev_qcd_scale) then
                   call QCDsudakov(lowest_qcd_scale,hard_qcd_scale
      $                 ,prev_qcd_scale,next,type,mass,exponent_sudakov
-     $                 ,expanded_exponent_sudakov)
+     $                 ,expanded_exponent_sudakov,for_mcatnlo_scale)
                   prev_qcd_scale=hard_qcd_scale
                endif
             endif
@@ -550,7 +553,7 @@ c prev_qcd_scale, since all Sudakovs up to that scale have been applied.
      &           hard_qcd_scale.gt.prev_qcd_scale) then
                call QCDsudakov(lowest_qcd_scale,hard_qcd_scale
      $              ,prev_qcd_scale,next,type,mass,exponent_sudakov
-     $              ,expanded_exponent_sudakov)
+     $              ,expanded_exponent_sudakov,for_mcatnlo_scale)
                prev_qcd_scale=hard_qcd_scale
             endif
          endif
@@ -573,7 +576,7 @@ c since its scale is equal to the hardest scale by construction.
             if (hard_qcd_scale.gt.prev_qcd_scale) then
                call QCDsudakov(lowest_qcd_scale,hard_qcd_scale
      $              ,prev_qcd_scale,next,type,mass,exponent_sudakov
-     $              ,expanded_exponent_sudakov)
+     $              ,expanded_exponent_sudakov,for_mcatnlo_scale)
             endif
          endif
       elseif(QCDchangeline(0,nbr,cluster_pdg,iord)) then
@@ -592,7 +595,7 @@ c since its scale is equal to the hardest scale by construction.
             if (hard_qcd_scale.gt.prev_qcd_scale) then
                call QCDsudakov(lowest_qcd_scale,hard_qcd_scale
      $              ,prev_qcd_scale,next,type,mass,exponent_sudakov
-     $              ,expanded_exponent_sudakov)
+     $              ,expanded_exponent_sudakov,for_mcatnlo_scale)
             endif
          endif
       endif
@@ -797,7 +800,7 @@ c anything else) cluster).
       implicit none
       integer next,imap(next),iwin,jwin,id_ij,win_id,nbr,nconf
      $     ,cluster_list(2*nbr,nconf),i,j,iBWlist(2,0:nbr)
-     $     ,cluster_type(maskr(next)),particle_type(next),cl(0:2)
+     $     ,cluster_type(*),particle_type(next),cl(0:2)
       double precision p(0:4,next),cluster_scale,min_scale,scale
       logical in_list,valid_conf(nconf),is_bw
       external in_list,cluster_scale
@@ -1738,7 +1741,7 @@ c      enddo
 CCCCCCCCCCCCCCC -- SUDAKOV FUNCTIONS -- CCCCCCCCCCCCCCCC
 
       subroutine QCDsudakov(q0,q2,q1,next,type,mass,QCDsudakov_exp
-     $     ,expanded_QCDsudakov_exp)
+     $     ,expanded_QCDsudakov_exp,for_mcatnlo_scale)
 c Wrapper function for computing the sudakov for the particles listed in
 c itype(). It checks for identical type and mass, and makes sure to use
 c cached ones if already computed. It adds the results to the
@@ -1750,8 +1753,9 @@ c counting with NLO corrections to the main process).
       double precision q0,q2,q1,mass(next),tmp1(next),tmp2(next)
      $     ,expanded_QCDsudakov_exp,QCDsudakov_exp,expanded_sudakov_exp
      $     ,sudakov_exp,q1tmp
-      logical found
+      logical found,for_mcatnlo_scale
       external sudakov_exp,expanded_sudakov_exp
+      if (for_mcatnlo_scale) return
       do i=1,type(0)
          found=.false.
          ! use cached one if already computed:

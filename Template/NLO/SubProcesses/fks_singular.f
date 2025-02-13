@@ -600,7 +600,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
       return
       end
 
-      subroutine compute_real_emission(p,sudakov_damp,passcuts_n1body
+      subroutine compute_real_emission(p,sudakov_damp_in,passcuts_n1body
      $     ,passcuts_nbody)
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
@@ -614,7 +614,7 @@ c its value to the list of weights using the add_wgt subroutine
       integer iamp
       logical passcuts_n1body,passcuts_nbody
       double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
-     $     ,sudakov_damp
+     $     ,sudakov_damp,sudakov_damp_in
       external fks_Sij
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -624,20 +624,17 @@ c its value to the list of weights using the add_wgt subroutine
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
-      double precision sudakov_damp_c
-      common /c_sudakov_damp/sudakov_damp_c
-
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
+      if (improveFO.eq.0 .and. (.not.passcuts_n1body)) return
       call cpu_time(tBefore)
-
-      sudakov_damp=0.2d0*(log(1d0/xi_i_fks_ev)+max(0d0,log(1d0/(1d0-y_ij_fks_ev))))
-c$$$      write (*,*) xi_i_fks_ev,y_ij_fks_ev,sudakov_damp,exp(-sudakov_damp)
-      sudakov_damp=exp(-sudakov_damp)
-      sudakov_damp_c=sudakov_damp
-      
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
+      sudakov_damp=sudakov_damp_in
+      if (improveFO.eq.2) sudakov_damp=sudakov_damp*sud
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -659,7 +656,8 @@ c$$$      write (*,*) xi_i_fks_ev,y_ij_fks_ev,sudakov_damp,exp(-sudakov_damp)
       return
       end
 
-      subroutine compute_soft_counter_term(replace_MC_subt)
+      subroutine compute_soft_counter_term(replace_MC_subt
+     $     ,passcuts_n1body,passcuts_nbody)
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
@@ -668,6 +666,7 @@ c the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      logical passcuts_n1body,passcuts_nbody
       integer orders(nsplitorders)
       integer iamp
       double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt,g22
@@ -694,6 +693,10 @@ c the list of weights using the add_wgt subroutine
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer get_orders_tag
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
+      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
@@ -721,7 +724,14 @@ c the list of weights using the add_wgt subroutine
         if (xi_i_fks_ev.le.xiScut_used) then
           wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
         endif
-        if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0)
+        if (wgt1.ne.0d0) then
+           if (improveFO.eq.1 .and. sud.ne.1d0) then
+              if (passcuts_nbody) call add_wgt(4,orders,wgt1*sud,0d0,0d0)
+              if (passcuts_n1body) call add_wgt(8,orders,wgt1*(1d0-sud),0d0,0d0)
+           else
+              call add_wgt(4,orders,wgt1,0d0,0d0)
+           endif
+        endif
       enddo
 
       call cpu_time(tAfter)
@@ -729,7 +739,8 @@ c the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_collinear_counter_term(replace_MC_subt)
+      subroutine compute_collinear_counter_term(replace_MC_subt
+     $     ,passcuts_n1body,passcuts_nbody)
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -739,6 +750,7 @@ c to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      logical passcuts_n1body,passcuts_nbody
       integer orders(nsplitorders)
       integer iamp
       double precision amp_split_wgtdegrem_xi(amp_split_size),
@@ -776,6 +788,10 @@ c to the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       double precision pmass(nexternal)
       integer get_orders_tag
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
+      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       include 'pmass.inc'
       if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
@@ -822,7 +838,14 @@ c to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,orders,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) then
+           if (improveFO.eq.1 .and. sud.ne.1d0) then
+              if (passcuts_nbody) call add_wgt(5,orders,wgt1*sud,0d0,wgt3*sud)
+              if (passcuts_n1body) call add_wgt(9,orders,wgt1*(1d0-sud),0d0,wgt3*(1d0-sud))
+           else
+              call add_wgt(5,orders,wgt1,0d0,wgt3)
+           endif
+        endif
       enddo
 
       call cpu_time(tAfter)
@@ -830,7 +853,8 @@ c to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_soft_collinear_counter_term(replace_MC_subt)
+      subroutine compute_soft_collinear_counter_term(replace_MC_subt
+     $     ,passcuts_n1body,passcuts_nbody)
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -840,6 +864,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      logical passcuts_n1body,passcuts_nbody
       integer orders(nsplitorders)
       integer iamp
       double precision amp_split_wgtdegrem_xi(amp_split_size),
@@ -886,7 +911,11 @@ c value to the list of weights using the add_wgt subroutine
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       double precision pmass(nexternal)
       integer get_orders_tag
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
       include 'pmass.inc'
+      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
@@ -938,7 +967,14 @@ c value to the list of weights using the add_wgt subroutine
         else
           wgt3=0d0
         endif
-        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,orders,wgt1,0d0,wgt3)
+        if (wgt1.ne.0d0 .or. wgt3.ne.0d0) then
+           if (improveFO.eq.1 .and. sud.ne.1d0) then
+              if (passcuts_nbody) call add_wgt(6,orders,wgt1*sud,0d0,wgt3*sud)
+              if (passcuts_n1body) call add_wgt(10,orders,wgt1*(1d0-sud),0d0,wgt3*(1d0-sud))
+           else
+              call add_wgt(6,orders,wgt1,0d0,wgt3)
+           endif
+        endif
       enddo
 
       call cpu_time(tAfter)
@@ -1218,7 +1254,7 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
          if (.not.already_set) then
             call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
      $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1),need_matching)
+     $           ,fxfx_fac_scale(1),need_matching,.false.)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
@@ -1276,7 +1312,7 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
          if (.not. already_set) then
             call cluster_and_reweight(nFKSprocess,rewgt_mohdr
      $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
-     $           ,fxfx_fac_scale(1),need_matching)
+     $           ,fxfx_fac_scale(1),need_matching,.false.)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
@@ -1906,8 +1942,9 @@ c        contribution
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
-      double precision sudakov_damp_c
-      common /c_sudakov_damp/sudakov_damp_c
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
 
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
@@ -2058,10 +2095,11 @@ c and MC subtraction terms.
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
       endif
-      if (type.eq.1 .or. type.eq.11) then
+      if ((improveFO.eq.2) .and. type.eq.1 .or. type.eq.11) then
          xi_i(icontr)=xi_i_fks_ev
          y_ij(icontr)=y_ij_fks_ev
-         damp(icontr)=sudakov_damp_c
+         damp(icontr)=sud
+      elseif ((improveFO.eq.1) .and. (type.ge.4 .and. type.le.10)) then
       else
          xi_i(icontr)=-10d0
          y_ij(icontr)=-10d0
@@ -3812,6 +3850,7 @@ c$$$               if (eto(ii,nFKS(ict)).ne.ipro) cycle
      &              parton_pdg_uborn(fks_j_d(nFKS(ict)),ii,ict),
      &              parton_iproc(ii,ict),
      &              bias_wgt(ict),
+     &              y_bst(ict),
      &              xi_i(ict),
      &              y_ij(ict),
      &              damp(ict)
@@ -3867,6 +3906,7 @@ c H-event
      &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipro,ict),
      &           parton_iproc(ipro,ict),
      &           bias_wgt(ict),
+     &           y_bst(ict),
      &           xi_i(ict),
      &           y_ij(ict),
      &           damp(ict)
@@ -3879,7 +3919,7 @@ c H-event
       enddo
       return
  30   format(i15,1x,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12,1x
-     $     ,d18.12,1x,d18.12,1x,d18.12)
+     $     ,d18.12,1x,d18.12,1x,d18.12,1x,d18.12)
       end
       
       
@@ -8288,4 +8328,101 @@ c     reset the default dynamical_scale_choice
       enddo
       mapconfig_in(0)=mapconfig(0)
       return
+      end
+
+
+      block data improving_fixed_order_fluctuations
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
+      data improveFO/2/
+      data sud/1d0/
+      end
+
+      subroutine compute_sudakov_factor_for_improveFO(passcuts_nbody
+     $     ,passcuts_n1body,nFKS_born)
+      implicit none
+      include 'nexternal.inc'
+      logical passcuts_nbody,passcuts_n1body
+      integer nFKS_born
+      integer improveFO
+      double precision sud
+      common /c_improve_FO/sud,improveFO
+      include 'fks_info.inc'
+      double precision scale_soft, scale_hard,q0,q1,q2,mass_particle
+     $     ,compute_pTparton,qcdsudakov_exp,expanded_Qcdsudakov_exp
+     $     ,mass(1:nexternal)
+      integer i,next,type_particle,type(0:nexternal)
+      double precision get_global_ref_scale
+      external get_global_ref_scale
+      if (improveFO.eq.0) then
+         sud=1d0
+         return
+      endif
+c$$$      if ((.not.passcuts_nbody) .or. (.not.passcuts_n1body)) then
+c$$$         sud=1d0
+c$$$         return
+c$$$      endif
+
+! hard scale (from S-event):
+      scale_hard=get_global_ref_scale(nexternal-1)
+! soft scale (from H-event):
+      scale_soft=get_global_ref_scale(nexternal)
+
+      if (scale_hard.gt.scale_soft) then
+!     setup Sudakov input
+         next=nexternal-1
+         type(0)=0
+         do i=1,nexternal-1
+            call get_type(pdg_type_d(nFKS_born,i),type_particle
+     $           ,mass_particle)
+            if (type_particle.ne.0) then
+               type(0)=type(0)+1
+               type(type(0))=type_particle
+               mass(type(0))=mass_particle
+            endif
+         enddo
+
+         q0=scale_soft
+         q2=scale_hard
+         q1=scale_soft
+
+! compute Sudakov      
+         QCDsudakov_exp=0d0
+         expanded_QCDsudakov_exp=0d0
+         call QCDsudakov(q0,q2,q1,next,type,mass,QCDsudakov_exp
+     $        ,expanded_QCDsudakov_exp,.false.)
+
+         sud=min(exp(QCDsudakov_exp),1d0)
+
+      else
+         sud=1d0
+      endif
+
+      
+      end
+      
+
+
+      double precision function get_global_ref_scale(n)
+!     this is the global reference shower scale (i.e., without damping),
+!     i.e. the smallest scale returned by the clustering routine.
+      implicit none
+      include 'nexternal.inc'
+      integer  n,iproc,nFxFx_ren_scales
+      double precision p(0:3,n),FxFx_ren_scales(0:nexternal)
+     $     ,FxFx_fac_scale(2)
+      integer need_matching(nexternal)
+      double precision  dummy1,dummy2
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      if (n.eq.nexternal) then
+         iproc=nFKSprocess
+      else
+         iproc=0
+      endif
+      call cluster_and_reweight(iproc,dummy1,dummy2,nFxFx_ren_scales
+     $     ,FxFx_ren_scales(0) ,fxfx_fac_scale(1),need_matching
+     $     ,.true.)
+      get_global_ref_scale=minval(FxFx_ren_scales(0:nFxFx_ren_scales))
       end

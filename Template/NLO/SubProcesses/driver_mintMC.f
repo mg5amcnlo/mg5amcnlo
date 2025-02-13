@@ -871,36 +871,40 @@ c$$$c events are called, so this will remain 0.
 c$$$                  probne=0d0
 c$$$               endif
 c$$$            endif
-            if (passcuts_nbody .and. abrv.ne.'real') then
+
+            call compute_sudakov_factor_for_improveFO(passcuts_nbody
+     $           ,passcuts_n1body,nFKS_picked_nbody)
+            if ( abrv.ne.'real') then
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
-               probne=0d0
+               probne=1d0 ; gfactsf=0d0; gfactcl=0d0
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
                call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
-               call compute_soft_counter_term(replace_MC_subt)
+               call compute_soft_counter_term(replace_MC_subt
+     $              ,passcuts_n1body,passcuts_nbody)
                call set_cms_stuff(ione)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call compute_collinear_counter_term(replace_MC_subt)
+               call compute_collinear_counter_term(replace_MC_subt
+     $              ,passcuts_n1body,passcuts_nbody)
                call set_cms_stuff(itwo)
                replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-               call compute_soft_collinear_counter_term(replace_MC_subt)
+               call compute_soft_collinear_counter_term(replace_MC_subt
+     $              ,passcuts_n1body,passcuts_nbody)
             endif
 c Include the real-emission contribution.
-            if (passcuts_n1body .or. passcuts_nbody) then
                pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
                call include_multichannel_enhance(2)
-c$$$               sudakov_damp=probne
+               sudakov_damp=1d0
                call compute_real_emission(p,sudakov_damp,passcuts_n1body
      $              ,passcuts_nbody)
-            endif
 c$$$c Update the shower starting scale with the shape from the MC
 c$$$c subtraction terms.
 c$$$            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
