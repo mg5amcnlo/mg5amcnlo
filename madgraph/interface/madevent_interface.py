@@ -1115,6 +1115,7 @@ class CheckValidForCmd(object):
         opt = {'output_dir':pjoin(self.me_dir,'Source'),
                'param_card':pjoin(self.me_dir,'Cards','param_card.dat'),
                'run_card':pjoin(self.me_dir,'Cards','run_card.dat'),
+               'onia_card':pjoin(self.me_dir,'Cards','onia_card.dat'),
                'forbid_MadLoopInit': False}
         mode = 'all'
         for arg in args:
@@ -6532,6 +6533,11 @@ tar -czf split_$1.tar.gz split_$1
         #exists (copy default if needed)
     
         cards = ['param_card.dat', 'run_card.dat']
+        if os.path.isfile(self.me_dir+'/Cards/onia_card.dat'):
+            with open(self.me_dir+'/Cards/onia_card.dat') as f:
+                if 'Block' in f.read():
+                    cards.append('onia_card.dat')
+
         if switch['shower'] == 'Pythia6':
             cards.append('pythia_card.dat')
         if switch['shower'] == 'Pythia8':
