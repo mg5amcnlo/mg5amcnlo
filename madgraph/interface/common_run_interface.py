@@ -6175,7 +6175,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             try:
                 key = tuple([int(i) for i in args[start+1:-1]])
             except ValueError:
-                logger.warning('invalid set command %s, onia card can not be updated' % line)
+                logger.warning('invalid set command %s, onia_card can not be updated' % line)
                 return
 
             if key in self.onia_card[args[start]].param_dict:
