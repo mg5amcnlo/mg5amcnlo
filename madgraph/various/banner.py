@@ -5470,6 +5470,25 @@ class MadAnalysis5Card(dict):
 
         return cmds_list
 
+# HEAVY ION ------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Heavy ion PDF / rescaling of PDF                                   *
+# Note that ebeam1 and ebeam2 are energies of the ion beams          *
+# instead of energies per nucleon in nuclei                          *
+# For instance, the LHC beam energy of 2510 GeV/nucleon in Pb208     *
+# should set 2510*208=522080 GeV for ebeam                           *
+#*********************************************************************
+  %(nb_proton1)s    = nb_proton1 # number of proton for the first beam
+  %(nb_neutron1)s    = nb_neutron1 # number of neutron for the first beam
+# Note that seting differently the two beams only work if you use 
+# group_subprocess=False when generating your matrix-element
+  %(nb_proton2)s    = nb_proton2 # number of proton for the second beam
+  %(nb_neutron2)s    = nb_neutron2 # number of neutron for the second beam"""
+template_off = "# To see heavy ion options: type \"update ion_pdf\""
+
+heavy_ion_block_nlo = RunBlock('ion_pdf', template_on=template_on, template_off=template_off)
+
 # Running -----------------------------------------------------------------------------------------
 template_on = \
 """#***********************************************************************
@@ -5485,7 +5504,7 @@ class RunCardNLO(RunCard):
      
     LO = False
     
-    blocks = [running_block_nlo]
+    blocks = [heavy_ion_block_nlo, running_block_nlo]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
