@@ -528,6 +528,15 @@ class L_Spinor(aloha_lib.LorentzObject):
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},         
                                     [],self.spin_ind)
+        
+    def to_spenso(self):
+        dico = {'i': self.particle}
+        index = ['i%(i)s=Slot("bis", 4, %(i)s)' % dico]
+        obj = ['F%(i)s = TensorIndices(S("F%(i)s"), i%(i)s)' % dico]
+        return index, obj,"F%(i)s.to_expression()" % dico
+
+
+
 
 class Spinor(aloha_lib.FactoryLorentz):
     """ Helas Object for a Spinor"""
@@ -561,6 +570,12 @@ class L_Vector(aloha_lib.LorentzObject):
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},  
                                     self.lorentz_ind, [])
+        
+    def to_spenso(self):
+        dico = {'i': self.particle}
+        index = ['nu%(i)s=Slot("mink", 4, %(i)s)' % dico]
+        obj = ['V%(i)s = TensorIndices(S("V%(i)s"), nu%(i)s)' % dico]
+        return index, obj,"V%(i)s.to_expression()" % dico
 
 class Vector(aloha_lib.FactoryLorentz):
     
@@ -714,8 +729,24 @@ class L_Gamma(aloha_lib.LorentzObject):
                 
         self.representation = aloha_lib.LorentzObjectRepresentation(self.gamma,
                                 self.lorentz_ind,self.spin_ind)
+    
+    def to_spenso(self):
+
+        dico = {'lor': self.lorentz_ind[0], 'spin1': self.spin_ind[0], 'spin2': self.spin_ind[1]}
+        index = ['nu%(lor)s=Slot("mink", 4, %(lor)s)' % dico,
+                 'i%(spin1)s=Slot("bis", 4, %(spin1)s)' % dico,
+                 'i%(spin2)s=Slot("bis", 4, %(spin2)s)' % dico]
+        obj = ['gamma_%(lor)s%(spin1)s%(spin2)s = TensorIndices(S("γ"), nu%(lor)s, i%(spin1)s, i%(spin2)s)' 
+               % dico]
+
+        return index, obj, 'gamma_%(lor)s%(spin1)s%(spin2)s.to_expression()' % dico 
+
+
+        return 'Gamma(lor(4,%s),bis(4,%s),bis(4,%s))' % (self.lorentz_ind[0], self.spin_ind[0], self.spin_ind[1])
+
 
 class Gamma(aloha_lib.FactoryLorentz):
+
     
     object_class = L_Gamma
     

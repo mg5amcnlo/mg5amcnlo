@@ -404,7 +404,13 @@ in presence of majorana particle/flow violation"""
         if not outgoing:
             lorentz *= complex(0,-1)
             # Propagator are taken care separately
-        
+
+        misc.sprint(str(lorentz))
+        try:
+            index, obj, expr = lorentz.to_spenso()
+            misc.sprint( '\n'.join(index)+'\n'+'\n'.join(obj)+'\nexpr='+expr)
+        except:
+            misc.sprint( 'no spenso')
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini
