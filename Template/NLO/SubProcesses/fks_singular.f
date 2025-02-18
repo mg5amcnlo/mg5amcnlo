@@ -627,7 +627,7 @@ c its value to the list of weights using the add_wgt subroutine
       integer improveFO
       double precision sud
       common /c_improve_FO/sud,improveFO
-      if (improveFO.eq.0 .and. (.not.passcuts_n1body)) return
+      if (improveFO.ne.2 .and. (.not.passcuts_n1body)) return
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
@@ -696,7 +696,7 @@ c the list of weights using the add_wgt subroutine
       integer improveFO
       double precision sud
       common /c_improve_FO/sud,improveFO
-      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
+      if (improveFO.ne.1 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
@@ -791,7 +791,7 @@ c to the list of weights using the add_wgt subroutine
       integer improveFO
       double precision sud
       common /c_improve_FO/sud,improveFO
-      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
+      if (improveFO.ne.1 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       include 'pmass.inc'
       if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
@@ -915,7 +915,7 @@ c value to the list of weights using the add_wgt subroutine
       double precision sud
       common /c_improve_FO/sud,improveFO
       include 'pmass.inc'
-      if (improveFO.eq.0 .and. (.not.passcuts_nbody)) return
+      if (improveFO.ne.1 .and. (.not.passcuts_nbody)) return
       call cpu_time(tBefore)
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
@@ -8368,7 +8368,6 @@ c$$$      endif
       scale_hard=get_global_ref_scale(nexternal-1)
 ! soft scale (from H-event):
       scale_soft=get_global_ref_scale(nexternal)
-
       if (scale_hard.gt.scale_soft) then
 !     setup Sudakov input
          next=nexternal-1
@@ -8398,8 +8397,6 @@ c$$$      endif
       else
          sud=1d0
       endif
-
-      
       end
       
 

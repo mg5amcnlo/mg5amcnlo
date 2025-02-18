@@ -879,7 +879,7 @@ c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
-               probne=1d0 ; gfactsf=0d0; gfactcl=0d0
+               probne=0d0 ; gfactsf=0d0; gfactcl=0d0
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
@@ -1306,6 +1306,8 @@ c     if there are no soft singularities at all, just do something trivial
       include 'fks_info.inc'
       integer i_soft,isoft,i
       logical found_S
+      include 'orders.inc'
+      integer orders(nsplitorders)
       i_soft=0
       found_S=.false.
       do i=1,icontr
