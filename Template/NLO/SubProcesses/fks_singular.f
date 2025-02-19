@@ -1845,7 +1845,6 @@ C schemes; it is needed when there are tagged photons around
       y_bst(icontr)=ybst_til_tolab
       shower_scale(icontr)=-99d9
       ifold_cnt(icontr)=ifold_counter
-      icolour_con(1,1,icontr)=-1
       qcdpower(icontr)=QCD_power
       cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
@@ -2851,48 +2850,48 @@ c Fills the function that is returned to the MINT integrator
       return
       end
       
-      subroutine set_colour_connections(iFKS,ifold_counter)
-c If the 'complete_xmcsubt' subroutine has been called, update the
-c icolour_con() information with the colour flow picked in that
-c subroutine. Do this for all contributions that have the FKS
-c configuration equal to iFKS and fold equal to ifold_counter, i.e., the
-c FKS config and fold for which 'complete_xmcsubt' has been called. In
-c case this subroutine was not called, simply set the (first element of)
-c icolour_con() information for that contribution equal to -1 (i.e., some
-c bogus value). We can check if complete_xmcsubt has been called by
-c checking if the first element of icolup_s is positive.
-      use weight_lines
-      implicit none
-      include 'nexternal.inc'
-      integer i,iFKS,ifold_counter,ii,jj
-      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
-      common /colour_connections/ icolup_s,icolup_h
-      do i=1,icontr
-         if (ifold_cnt(i).ne.ifold_counter) cycle
-         if (nFKS(i).ne.iFKS) cycle
-         if (H_event(i)) then
-            if (icolup_s(1,1).ge.0) then
-               icolour_con(1:2,1:nexternal,i)=icolup_h(1:2,1:nexternal)
-            else
-               icolour_con(1,1,i)=-1
-            endif
-         else
-            if (icolup_s(1,1).ge.0) then
-               do ii=1,nexternal-1
-                  do jj=1,2
-                     icolour_con(jj,ii,i)=icolup_s(jj,ii)
-                  enddo
-               enddo
-               do jj=1,2
-                  icolour_con(jj,nexternal,i)=-1
-               enddo
-            else
-               icolour_con(1,1,i)=-1
-            endif
-         endif
-      enddo
-      return
-      end
+c$$$      subroutine set_colour_connections(iFKS,ifold_counter)
+c$$$c If the 'complete_xmcsubt' subroutine has been called, update the
+c$$$c icolour_con() information with the colour flow picked in that
+c$$$c subroutine. Do this for all contributions that have the FKS
+c$$$c configuration equal to iFKS and fold equal to ifold_counter, i.e., the
+c$$$c FKS config and fold for which 'complete_xmcsubt' has been called. In
+c$$$c case this subroutine was not called, simply set the (first element of)
+c$$$c icolour_con() information for that contribution equal to -1 (i.e., some
+c$$$c bogus value). We can check if complete_xmcsubt has been called by
+c$$$c checking if the first element of icolup_s is positive.
+c$$$      use weight_lines
+c$$$      implicit none
+c$$$      include 'nexternal.inc'
+c$$$      integer i,iFKS,ifold_counter,ii,jj
+c$$$      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+c$$$      common /colour_connections/ icolup_s,icolup_h
+c$$$      do i=1,icontr
+c$$$         if (ifold_cnt(i).ne.ifold_counter) cycle
+c$$$         if (nFKS(i).ne.iFKS) cycle
+c$$$         if (H_event(i)) then
+c$$$            if (icolup_s(1,1).ge.0) then
+c$$$               icolour_con(1:2,1:nexternal,i)=icolup_h(1:2,1:nexternal)
+c$$$            else
+c$$$               icolour_con(1,1,i)=-1
+c$$$            endif
+c$$$         else
+c$$$            if (icolup_s(1,1).ge.0) then
+c$$$               do ii=1,nexternal-1
+c$$$                  do jj=1,2
+c$$$                     icolour_con(jj,ii,i)=icolup_s(jj,ii)
+c$$$                  enddo
+c$$$               enddo
+c$$$               do jj=1,2
+c$$$                  icolour_con(jj,nexternal,i)=-1
+c$$$               enddo
+c$$$            else
+c$$$               icolour_con(1,1,i)=-1
+c$$$            endif
+c$$$         endif
+c$$$      enddo
+c$$$      return
+c$$$      end
 
 c$$$      subroutine include_shape_in_shower_scale(p,iFKS,ifold_counter)
 c$$$c Includes the shape function from the MC counter terms in the shower
@@ -3027,17 +3026,6 @@ c     Identical contributions found: sum the contribution "i" to "ii"
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
                enddo
-               if (.not. colour_con_equal(nexternal,icolour_con(1,1,ii)
-     $              ,icolour_con(1,1,i))) then
-                  write (*,*) 'ERROR in sum_identical_contributions: '/
-     $                 /'colour connections in identical H-event '/
-     $                 /'contributions should be equal'
-                  write (*,*) 'ii: ',icolour_con(1,1:nexternal,ii)
-                  write (*,*) '    ',icolour_con(2,1:nexternal,ii)
-                  write (*,*) 'i:  ',icolour_con(1,1:nexternal,i)
-                  write (*,*) '    ',icolour_con(2,1:nexternal,i)
-                  stop 1
-               endif
                exit
             enddo
          else
@@ -3078,27 +3066,18 @@ c folds).
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      integer i,j,k,ifold_picked,icolour(2,nexternal),jj,ii
+      integer i,j,k,ifold_picked,jj,ii
       integer n_folds
       n_folds=product(ifold(1:ndim))
       if (icontr.eq.0) return
       call update_shower_scale_Sevents_v2(n_folds
-     $     ,icolour,ifold_picked)
-      do i=1,icontr
-         if (H_event(i)) cycle
-         if (icontr_sum(0,i).ne.0)then
-            if (mcatnlo_delta) then
-               !TODO: check this
-               icolour_con(1:2,1:nexternal,i)=icolour(1:2,1:nexternal)
-            endif
-         endif
-      enddo
+     $     ,ifold_picked)
       return
       end
 
 
       subroutine update_shower_scale_Sevents_v2(n_folds
-     $     ,icolour,ifold_picked)
+     $     ,ifold_picked)
 c Improved way of assigning shower starting scales. It picks a fold
 c randomly, based on the weight of the fold to the sum over all
 c folds. Within a fold, pick an FKS configuration randomly, weighted by
@@ -3112,8 +3091,7 @@ c contributions to the picked fold, use the weights of those instead).
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
-      integer i,j,k,l,ict,ifl,n_folds,iFKS,ifold_picked,icolour(2
-     $     ,nexternal),ii,jj
+      integer i,j,k,l,ict,ifl,n_folds,iFKS,ifold_picked,ii,jj
       double precision wgt_fold_fks(fks_configs,n_folds),ran2,target
      $     ,wgt_fold_fks_born(fks_configs
      $     ,n_folds),wgt_fold(n_folds),wgt_sum,wgt_accum
@@ -3204,13 +3182,6 @@ c instead.
          endif
       endif
       showerscaleS(1:ndelS,1:ndelS)=emsca_S(iFKS,ifl,1:ndelS,1:ndelS)
-      do i=1,icontr
-         if (H_event(i)) cycle
-         if (iFKS.ne.nFKS(i) .or. ifl.ne.ifold_cnt(i)) cycle
-         icolour(1:2,1:nexternal)=icolour_con(1:2,1:nexternal,i)
-         ! TODO: check this
-         exit
-      enddo
       ifold_picked=ifl
       return
       end
@@ -3384,9 +3355,6 @@ c found the contribution that should be written:
          ifold_picked=ifold_cnt(icontr_picked)
          showerscaleH(1:ndelH,1:ndelH)=emsca_H(iFKS_picked,ifold_picked
      $        ,1:ndelH,1:ndelH)
-         ! TODO: check the following line
-         colour_connections(1:2,1:nexternal)=icolour_con(1:2
-     $        ,1:nexternal,icontr_picked)
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))
@@ -3408,8 +3376,6 @@ c determined which contributions are identical.
             endif
          enddo
 
-         colour_connections(1:2,1:nexternal)=icolour_con(1:2,1:nexternal
-     $        ,icontr_picked)
 c Determine if we need to write the granny (based only on the special
 c mapping in genps_fks) randomly, weighted by the seperate contributions
 c that are summed together in a single S-event.

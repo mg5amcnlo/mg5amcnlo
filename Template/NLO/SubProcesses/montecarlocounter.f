@@ -1457,7 +1457,8 @@ c$$$      double precision emscav_tmp_a(nexternal,nexternal)
 c$$$      double precision emscav_tmp_a2(nexternal,nexternal)
 c$$$      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
-      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt
+      double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne
+     $     ,dummy_wgt
       logical lzone(nexternal)
 
       integer i,j,k,i1,i2
@@ -1648,11 +1649,6 @@ c rather than calcsulating some new kinematic variable e.g. pT
 c
 c H-event information.
 c First write ids, mothers and all colours.
-! TODO: check the following comment
-cSF NOTE: reconsider how much H-event information is actually needed
-cSF by Pythia. For example, the colour flow is used only to reconstruct
-cSF the underlying S-event flow, which is already available here, and
-cSF thus can be directly passed rather than reconstructed
       if (firsttime1)then
          firsttime1=.false.
          call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
@@ -1685,11 +1681,9 @@ c Boost H-event momenta to lab frame before passing to pythia
       do i=1,nexternal
          call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
       enddo
-
 c
-! TODO: check that the wgt is not used.      
-      wgt=1d0
-      call fill_HEPEUP_event(p_lab, wgt, nexternal, idup_h,
+      dummy_wgt=1d0
+      call fill_HEPEUP_event(p_lab, dummy_wgt, nexternal, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local)
       xscales_PY=-1d0
       xmasses_PY=-1d0
@@ -1905,6 +1899,19 @@ c Ellis-Stirling-Webber
             t_ij(n_connect(i),i)=min(Sevent_stopping_scales(i,j)
      $           ,cstupp)
          enddo
+         if (n_connect(i).eq.1 .and. idup_s(i).eq.21) then
+            if (isspecial(born_flow_picked) then
+!     This is the ISSPECIAL case. Add one more (identical) connection.
+               n_connect(i)=n_connect(i)+1
+               i_connect(n_connect(i),i)=i_connect(n_connect(i)-1,i)
+               mu_ij(n_connect(i),i)=mu_ij(n_connect(i)-1,i)
+               t_ij(n_connect(i),i)=t_ij(n_connect(i)-1,i)
+            else
+               write (*,*) 'A gluon with only one connection, but '/
+     $              /'the born_flow_picked is not special.'
+               stop 1
+            endif
+         endif
       enddo
       
       wgt_sudakov=1d0
@@ -1915,11 +1922,6 @@ c Ellis-Stirling-Webber
      &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
             write (*,*) 'n_connect should be 1 for quarks and 2 '/
      $           /'for gluons',n_connect(i),i,idup_s(i)
-            stop 1
-         endif
-!     TODO SPECIAL CASE
-         if (any(isspecial)) then
-            write (*,*) 'TO DO: ISSPECIAL'
             stop 1
          endif
 

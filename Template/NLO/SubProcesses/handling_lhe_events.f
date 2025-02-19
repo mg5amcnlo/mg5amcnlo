@@ -680,6 +680,7 @@ c
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
+      use scale_module
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -703,9 +704,8 @@ c
       common /c_ptclusstring/ ptclusstring
       include './run.inc'
       include 'unlops.inc'
-c$$$      include 'madfks_mcatnlo.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-      logical are_col_conn(MAXNUP,MAXNUP)
+      logical are_col_conn
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
@@ -851,29 +851,25 @@ c
       endif
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
-         are_col_conn=.false.
          scale_str="<scales muf='-.1E+01' mur='-.1E+01'"
          do i=1,NUP
             if (abs(ISTUP(i)).ne.1) cycle
             do j=1,NUP
                if (abs(ISTUP(j)).ne.1) cycle
                if(i.eq.j)cycle
-! TODO: check if we should change this with the 'valid_dipole' stuff
-               are_col_conn(i,j)=
+               are_col_conn=
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
-     &              (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
-! TODO : reinstate the check below.
-c$$$               if(are_col_conn(i,j) .and. SCALUP_a(i,j)
-c$$$     $              .lt.scaleMCcut)then
-c$$$                  write(*,*)'Colour error in write_lhef_event',i,j
-c$$$                  do ii=1,NUP
-c$$$                     write (*,*) scalup_a(ii,1:NUP)
-c$$$                  enddo
-c$$$                  stop
-c$$$               endif
-               if(are_col_conn(i,j))then
+     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
+               if(are_col_conn .and. SCALUP_a(i,j).lt.scaleMCcut)then
+                  write(*,*)'Colour error in write_lhef_event',i,j
+                  do ii=1,NUP
+                     write (*,*) scalup_a(ii,1:NUP)
+                  enddo
+                  stop
+               endif
+               if(are_col_conn)then
                   write(str_tmp,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
                   scale_str=trim(scale_str)//trim(str_tmp)

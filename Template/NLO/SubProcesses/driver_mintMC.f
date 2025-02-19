@@ -848,8 +848,6 @@ c 1/proc_map(0,0)*vol1)
 ! this was obtained with momenta that do not pass the cuts.
             born_flow_picked=-born_flow_picked
          endif
-! TODO: fix set_colour_con.
-         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
          
  11      continue
 c The n+1-body contributions (including counter terms)
@@ -1001,9 +999,6 @@ c Include the real-emission contribution.
                sudakov_damp=probne
                call compute_real_emission(p,sudakov_damp)
             endif
-c Update the shower starting scale with the shape from the MC
-c subtraction terms.
-            call set_colour_connections(iFKS,ifold_counter)
          enddo
  12      continue
       elseif(ifl.eq.2) then
