@@ -5,6 +5,7 @@ c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
       use FKSParams
+      use couplings
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -91,13 +92,13 @@ c masses
       IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
-      mu_r = sqrt(QES2)
+      mu_r(1) = sqrt(QES2)
       ! force to update also loop-related parameters
       updateloop=.true.
-      call update_as_param()
+      call update_as_param(1)
       updateloop=.false.
 
-      alpha_S=g**2/(4d0*PI)
+      alpha_S=g(1)**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
       virt_wgt= 0d0
       single  = 0d0

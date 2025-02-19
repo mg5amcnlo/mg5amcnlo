@@ -7,6 +7,7 @@ c 2. Collider parameters
 c 3. cuts
 c---------------------------------------------------------------------- 
       use extra_weights
+      use COUPLINGS
       implicit none
       include 'PDF/pdf.inc'
       include 'run.inc'
@@ -99,13 +100,13 @@ c Set alphaS(mZ)
          write(*,*) 'A PDF is used, so alpha_s(MZ)'/
      &        /' is going to be modified'
           call setpara('param_card.dat')
-          asmz=G**2/(16d0*atan(1d0))
+          asmz=G(1)**2/(16d0*atan(1d0))
           write(*,*) 'Old value of alpha_s from param_card: ',asmz
           call pdfwrap
           write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
       else
           call setpara('param_card.dat')
-          asmz=G**2/(16d0*atan(1d0))
+          asmz=G(1)**2/(16d0*atan(1d0))
           nloop=2
           pdlabel='none'
           write(*,*)

@@ -933,6 +933,7 @@ c over colour partners
       use cgenps_fks
       use pborn
       use parton_cms_stuff
+      use couplings
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -1237,8 +1238,8 @@ c g->gg, go->gog (icode=1)
                if(ileg.le.2)then
                   N_p=2
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                     xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                     xkern(1)=(g(amp_index)**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                     xkernazi(1)=-(g(amp_index)**2/N_p)*16*vca*(1-x)**2/(s*x**2)
                      xkern(2)=0d0
                      xkernazi(2)=0d0
                   elseif(non_limit)then
@@ -1271,10 +1272,10 @@ c
                elseif(ileg.eq.4)then
                   N_p=2
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*( 8*vca*
+                     xkern(1)=(g(amp_index)**2/N_p)*( 8*vca*
      &                    (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                    ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                     xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                     xkernazi(1)=-(g(amp_index)**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
                      xkern(2)=0d0
                      xkernazi(2)=0d0
                   elseif(non_limit)then
@@ -1299,8 +1300,8 @@ c g->qq, a->qq, a->ee (icode=2)
                if(ileg.le.2)then
                   N_p=1
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                     xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
+                     xkern(1)=(g(amp_index)**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                     xkern(2)=xkern(1) * dble(gal(1))**2 / g(amp_index)**2 * 
      &                                    ch_i**2 * abs(i_type) / vtf
                   elseif(non_limit)then
                      xfact=(1-yi)*(1-x)/x
@@ -1313,13 +1314,13 @@ c
                elseif(ileg.eq.4)then
                   N_p=2
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
+                     xkern(1)=(g(amp_index)**2/N_p)*( 4*vtf*(1-x)*
      &                     (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                     ( (s-xm12)**2*(s*x-xm12) )
-                     xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
+                     xkern(2)=xkern(1) * dble(gal(1))**2 / g(amp_index)**2 *
      &                     ch_i**2 * abs(i_type) / vtf
-                     xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
-                     xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
+                     xkernazi(1)=(g(amp_index)**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                     xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g(amp_index)**2 *
      &                     ch_i**2 * abs(i_type) / vtf
                   elseif(non_limit)then
                      xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
@@ -1344,11 +1345,11 @@ c q->gq, q->aq, e->ae (icode=3)
                if(ileg.le.2)then
                   N_p=2
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+                     xkern(1)=(g(amp_index)**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g(amp_index)**2) * 
      &                                   (ch_i**2 / vcf)
-                     xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
-                     xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
+                     xkernazi(1)=-(g(amp_index)**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                     xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g(amp_index)**2) *
      &                                   (ch_i**2 / vcf)
                   elseif(non_limit)then
                      xfact=(1-yi)*(1-x)/x
@@ -1374,10 +1375,10 @@ c
                elseif(ileg.eq.4)then
                   N_p=1
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*
+                     xkern(1)=(g(amp_index)**2/N_p)*
      &                    ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                    ( (s-xm12)*(s*x-xm12)**2 )
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g(amp_index)**2) * 
      &                                   (ch_i**2 / vcf)
                   elseif(non_limit)then
                      xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)
@@ -1392,8 +1393,8 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
                if(ileg.le.2)then
                   N_p=1
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+                     xkern(1)=(g(amp_index)**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g(amp_index)**2) * 
      &                                  (ch_m**2 / vcf)
                   elseif(non_limit)then
                      xfact=(1-yi)*(1-x)/x
@@ -1424,10 +1425,10 @@ c
                elseif(ileg.eq.4)then
                   N_p=1
                   if(limit)then
-                     xkern(1)=(g**2/N_p)*4*vcf*
+                     xkern(1)=(g(amp_index)**2/N_p)*4*vcf*
      &                     ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                     ( s*(s-xm12)*(s*x-xm12) )
-                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+                     xkern(2)=xkern(1) * (dble(gal(1))**2 / g(amp_index)**2) * 
      &                                   (ch_j**2 / vcf)
                   elseif(non_limit)then
                      xfact=(2-(1-x)*(1-yj))/xij*(1-xm12/s)*(1-x)*(1-yj)

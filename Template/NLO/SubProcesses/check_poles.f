@@ -220,7 +220,7 @@ c initialization
             enddo
           enddo
 
-          CALL UPDATE_AS_PARAM()
+          CALL UPDATE_AS_PARAM(amp_index)
           call sborn(p_born(:,:,amp_index), born)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization

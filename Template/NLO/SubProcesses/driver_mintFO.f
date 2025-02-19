@@ -138,6 +138,7 @@ c
         n1(i)=0
       enddo
       
+      call allocate_storage(vec_size)
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -149,7 +150,6 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call allocate_storage(vec_size)
       call get_user_params(ncalls0,itmax,imode)
       if(imode.eq.0)then
         flat_grid=.true.

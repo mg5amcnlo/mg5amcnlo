@@ -28,11 +28,11 @@ c************************************************************************
       ! also loop parameters should be initialised here
       if (updateloop) then
          include 'param_read.inc'
-         call coup()         
+         call coup(1)         
       else   
          updateloop=.true.
          include 'param_read.inc'
-         call coup()
+         call coup(1)
          updateloop=.false.
       endif
       return

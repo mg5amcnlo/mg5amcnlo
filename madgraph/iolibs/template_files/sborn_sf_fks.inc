@@ -2,6 +2,7 @@ subroutine sborn_sf(p_born,m,n,wgt,amp_index)
           use to_amp_split_soft
           use camp_split_store
           use c_born_cnt
+          use couplings
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
@@ -48,9 +49,9 @@ C the charge-linked if it is a color singlet
 C check if need color or charge links, and include the gs/w**2 term here
       if (need_color_links) then
 %(iflines_col)s
-      wgt = wgt_col * g**2
+      wgt = wgt_col * g(amp_index)**2
 C update the amp_split_soft, which is summed in sbornsoft
-      amp_split_soft(1:amp_split_size,amp_index) = AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,AMP_INDEX) * g**2
+      amp_split_soft(1:amp_split_size,amp_index) = AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,AMP_INDEX) * g(amp_index)**2
 
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)

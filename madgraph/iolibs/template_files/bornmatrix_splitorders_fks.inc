@@ -214,6 +214,7 @@ C MODULES
       use to_saveamp
       use to_savemom
       use cBorn
+      use couplings
 C
       IMPLICIT NONE
 C  
@@ -379,7 +380,7 @@ C MODULES
       use cBorn
 !      use strong
 !      use rscale
-!      use couplings
+      use couplings
 C
       IMPLICIT NONE
 C  

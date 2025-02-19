@@ -70,6 +70,7 @@ C MODULES
       use c_goodhel
       use to_savemom
       use ccalculatedBorn
+      use couplings
 C
       IMPLICIT NONE
 C  
@@ -158,6 +159,7 @@ C
 C MODULES
       use to_saveamp
       use ccalculatedBorn
+      use couplings
 C
       IMPLICIT NONE
 C  

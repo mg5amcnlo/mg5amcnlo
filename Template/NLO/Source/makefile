@@ -21,10 +21,19 @@ endif
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 .f90.o: ; $(FC) $(FFLAGS) -c $*.f90
 
-all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
-    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS)
+all: $(LIBDIR)libdhelas.a $(LIBDIR)libmodel.a $(LIBDIR)libgeneric.a 	\
+    $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS)
 	rm -f PDF/*.o
 
+
+$(LIBDIR)libmodel.a: MODEL param_card.inc
+	rm -f $(LIBDIR)libmodel.a
+	cd MODEL; make	
+
+couplmod:
+	ln -sf MODEL/couplings.mod .
+
+.PHONY: couplmod
 
 $(LIBDIR)librunning.$(libext): RUNNING
 	rm -f $(LIBDIR)librunning.a
@@ -42,7 +51,7 @@ $(LIBDIR)libgeneric.a: $(GENERIC)
 	cp -f extra_weights.mod $(LIBDIR)
 	rm -f $(alfas_functions).o 
 
-setrun.o: run_card.inc extra_weights.o
+setrun.o: couplmod run_card.inc extra_weights.o
 	$(FC) $(FFLAGS) -c -o setrun.o setrun.f
 
 $(LIBDIR)libpdf.a: PDF
@@ -52,10 +61,6 @@ $(LIBDIR)libpdf.a: PDF
 $(LIBDIR)libcernlib.a: CERNLIB
 	rm -f $(LIBDIR)libcernlib.a
 	cd CERNLIB; make	
-
-$(LIBDIR)libmodel.a: MODEL param_card.inc
-	rm -f $(LIBDIR)libmodel.a
-	cd MODEL; make	
 
 run_card.inc: ../Cards/run_card.dat
 	../bin/aMCatNLO treatcards run

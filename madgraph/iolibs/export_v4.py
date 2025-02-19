@@ -6864,16 +6864,20 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """double precision G
-                common/strong/ G
-          !omp threadprivate (/strong/)
+        # header = """double precision G
+        #         common/strong/ G
+        #   !omp threadprivate (/strong/)
                  
-                double complex gal(2)
-                common/weak/ gal
+        #         double complex gal(2)
+        #         common/weak/ gal
                 
-                double precision MU_R
-                common/rscale/ MU_R
-          !omp threadprivate (/rscale/)
+        #         double precision MU_R
+        #         common/rscale/ MU_R
+        #   !omp threadprivate (/rscale/)
+
+        #         """        
+        header = """double complex gal(2)
+                common/weak/ gal
 
                 """        
         # Nf is the number of light quark flavours
@@ -6958,9 +6962,9 @@ class UFO_model_to_mg4(object):
         
         # Write the Couplings
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
-        fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
-        fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
-        fsock.writelines('!OMP THREADPRIVATE (/COUPLINGS/)\n')
+        # fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
+        # fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        # fsock.writelines('!OMP THREADPRIVATE (/COUPLINGS/)\n')
         if self.opt['mp']:
             mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                    ','.join(coupling_list)+'\n')
@@ -6996,88 +7000,71 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """module strong
+        header = """module couplings
                 implicit none
                 double precision, allocatable :: G(:)
-            contains
-                subroutine allocate_strong(vector_size)
-                    implicit none
-                    integer, intent(in) :: vector_size
-                    allocate(G(vector_size))
-                end subroutine allocate_strong
-                subroutine reset_strong()
-                    implicit none
-                    G(:) = 0.d0
-                end subroutine reset_strong
-                subroutine deallocate_strong()
-                    implicit none
-                    if(allocated(G)) deallocate(G)
-                end subroutine deallocate_strong
-            end module strong
-            
-            module weak
-                implicit none
-                complex*16, allocatable :: GAL(:,:)
-            contains
-                subroutine allocate_weak(vector_size)
-                    implicit none
-                    integer, intent(in) :: vector_size
-                    allocate(GAL(2,vector_size))
-                end subroutine allocate_weak
-                subroutine reset_weak()
-                    implicit none
-                    GAL(:,:) = (0.d0,0.d0)
-                end subroutine reset_weak
-                subroutine deallocate_weak()
-                    implicit none
-                    if(allocated(GAL)) deallocate(GAL)
-                end subroutine deallocate_weak
-            end module weak
-
-            module rscale
-                implicit none
                 double precision, allocatable :: MU_R(:)
-            contains
-                subroutine allocate_rscale(vector_size)
-                    implicit none
-                    integer, intent(in) :: vector_size
-                    allocate(MU_R(vector_size))
-                end subroutine allocate_rscale
-                subroutine reset_rscale()
-                    implicit none
-                    MU_R(:) = 0.d0
-                end subroutine reset_rscale
-                subroutine deallocate_rscale()
-                    implicit none
-                    if(allocated(MU_R)) deallocate(MU_R)
-                end subroutine deallocate_rscale
-            end module rscale
-            
-                """        
+                """
+            # contains
+            #     subroutine allocate_couplings(vector_size)
+            #         implicit none
+            #         integer, intent(in) :: vector_size
+            #         allocate(G(vector_size))
+            #         allocate(MU_R(vector_size))
+            #     """
+            #     end subroutine allocate_couplings
+            #     subroutine reset_strong()
+            #         implicit none
+            #         G(:) = 0.d0
+            #     end subroutine reset_strong
+            #     subroutine deallocate_strong()
+            #         implicit none
+            #         if(allocated(G)) deallocate(G)
+            #     end subroutine deallocate_strong
+            # contains
+            #     subroutine allocate_rscale(vector_size)
+            #         implicit none
+            #         integer, intent(in) :: vector_size
+            #     end subroutine allocate_rscale
+            #     subroutine reset_rscale()
+            #         implicit none
+            #         MU_R(:) = 0.d0
+            #     end subroutine reset_rscale
+            #     subroutine deallocate_rscale()
+            #         implicit none
+            #         if(allocated(MU_R)) deallocate(MU_R)
+            #     end subroutine deallocate_rscale
+            #     """        
         fsock.writelines(header)
         
         # Write the Couplings
         coupling_list1 = [coupl.name+'(:)' for coupl in self.coups_dep + self.coups_indep]
         coupling_list2 = [coupl.name for coupl in self.coups_dep + self.coups_indep]    
-        fsock.writelines('module couplings')
-        fsock.writelines('use strong')
-        fsock.writelines('use rscale')
-        fsock.writelines('implicit none')   
+        # fsock.writelines('module couplings')
+        # fsock.writelines('use strong')
+        # fsock.writelines('use rscale')
+        # fsock.writelines('implicit none')   
         fsock.writelines('double complex, allocatable :: '+', '.join(coupling_list1)+'')
         fsock.writelines('contains')
         fsock.writelines('subroutine allocate_couplings(vector_size)')
         fsock.writelines('implicit none')
         fsock.writelines('integer, intent(in) :: vector_size')
+        fsock.writelines('allocate(G(vector_size))')
+        fsock.writelines('allocate(MU_R(vector_size))')
         for coupl in coupling_list2:
             fsock.writelines('allocate(%s(vector_size))' % coupl)
         fsock.writelines('end subroutine allocate_couplings')
         fsock.writelines('subroutine reset_couplings()')
         fsock.writelines('implicit none')
+        fsock.writelines('G(:) = 0.d0')
+        fsock.writelines('MU_R(:) = 0.d0')
         for coupl in coupling_list1:
             fsock.writelines('%s = (0.d0,0.d0)' % coupl)
         fsock.writelines('end subroutine reset_couplings')
         fsock.writelines('subroutine deallocate_couplings()')
         fsock.writelines('implicit none')
+        fsock.writelines('if(allocated(G)) deallocate(G)')
+        fsock.writelines('if(allocated(MU_R)) deallocate(MU_R)')
         for coupl in coupling_list2:
             fsock.writelines('if(allocated(%s)) deallocate(%s)' % (coupl, coupl))
         fsock.writelines('end subroutine deallocate_couplings')
@@ -7101,7 +7088,7 @@ class UFO_model_to_mg4(object):
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""" % self.model_name)
         def format(coupl):
-            return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
+            return 'write(*,2) \'%(name)s = \', %(name)s(1)' % {'name': coupl.name}
         
         # Write the Couplings
         lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
@@ -7279,8 +7266,8 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        if dp:        
-            fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
+        # if dp:        
+        #     fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
         if mp:
             fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
             
@@ -7302,7 +7289,7 @@ class UFO_model_to_mg4(object):
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
         if dp:        
-            fsock.writelines("aS = G**2/4/pi\n")
+            fsock.writelines("aS = G(amp_index)**2/4/pi\n")
         if mp:
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
 
@@ -7311,6 +7298,7 @@ class UFO_model_to_mg4(object):
             ct_params = [param for param in self.params_dep \
                 if self.check_needed_param(param.name) and \
                    param.name.lower() in self.allCTparameters]
+            # misc.sprint(ct_params)
         else:
             ct_params = []
         
@@ -7319,8 +7307,17 @@ class UFO_model_to_mg4(object):
             if not self.check_needed_param(param.name) or param in ct_params:
                 continue
             if dp:
-                fsock.writelines("%s = %s\n" % (param.name,
-                                            self.p_to_f.parse(param.expr)))
+                express = self.p_to_f.parse(param.expr)
+                # misc.sprint(express)
+                pattern = r'(?<![a-zA-Z0-9])[gG](?![a-zA-Z0-9])'  # Match both "g" and "G"
+                express = re.sub(pattern, "g(1)", express, flags=re.IGNORECASE)
+                express = express.lower()
+                if ("mu_r" in express):
+                    express = express.replace("mu_r", "mu_r(1)")
+                # misc.sprint(express)
+                fsock.writelines("%s = %s\n" % (param.name, express))
+                # fsock.writelines("%s = %s\n" % (param.name,
+                #                             self.p_to_f.parse(param.expr)))
             elif mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))
@@ -7426,9 +7423,10 @@ class UFO_model_to_mg4(object):
 
         fsock = self.open('couplings.f', format='fortran')
         
-        fsock.writelines("""subroutine coup()
-
+        fsock.writelines("""subroutine coup(amp_index)
+                            use couplings
                             implicit none
+                            integer amp_index
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)
@@ -7454,12 +7452,12 @@ class UFO_model_to_mg4(object):
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+                    ['call coup%s(amp_index)' %  (i + 1) for i in range(nb_coup_indep)]))
         
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                    ['call coup%s(amp_index)' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
         if self.opt['mp']:
             fsock.writelines('\n'.join(\
@@ -7467,9 +7465,10 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        fsock.writelines("""subroutine update_as_param()
-
+        fsock.writelines("""subroutine update_as_param(amp_index)
+                            use couplings
                             implicit none
+                            integer amp_index
                             double precision PI, ZERO
                             logical READLHA, FIRST
                             data first /.true./
@@ -7544,13 +7543,14 @@ class UFO_model_to_mg4(object):
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                    ['call coup%s(amp_index)' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        fsock.writelines("""subroutine update_as_param2(mu_r2,as2)
-
+        fsock.writelines("""subroutine update_as_param2(mu_r2,as2,amp_index)
+                            use couplings
                             implicit none
+                            integer amp_index
                             double precision PI
                             parameter  (PI=3.141592653589793d0)
                             double precision mu_r2, as2
@@ -7561,12 +7561,12 @@ class UFO_model_to_mg4(object):
                             common /model_scale/model_scale
                             """)
         fsock.writelines("""
-                            if (mu_r2.gt.0d0) MU_R = DSQRT(mu_r2)
+                            if (mu_r2.gt.0d0) MU_R(amp_index) = DSQRT(mu_r2)
                             model_scale = DSQRT(mu_r2)
-                            G = SQRT(4.0d0*PI*AS2) 
+                            G(amp_index) = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
-                            CALL UPDATE_AS_PARAM()
+                            CALL UPDATE_AS_PARAM(amp_index)
                          """)
         fsock.writelines('''\n return \n end\n''')
 
@@ -7987,9 +7987,10 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')
-        fsock.writelines("""subroutine %scoup%s()
-          
+        fsock.writelines("""subroutine %scoup%s(amp_index)
+          use couplings
           implicit none
+          integer amp_index
           include \'model_functions.inc\'"""%('mp_' if mp and not dp else '',nb_file))
         if dp:
             fsock.writelines("""
@@ -8008,8 +8009,15 @@ class UFO_model_to_mg4(object):
 
         for coupling in data:
             if dp:            
-                fsock.writelines('%s = %s' % (coupling.name,
-                                          self.p_to_f.parse(coupling.expr)))
+                express = self.p_to_f.parse(coupling.expr)
+                # misc.sprint(express)
+                pattern = r'(?<![a-zA-Z0-9])[gG](?![a-zA-Z0-9])'  # Match both "g" and "G"
+                express = re.sub(pattern, "g(amp_index)", express, flags=re.IGNORECASE)
+                express = express.lower()
+                if ("mu_r" in express):
+                    express = express.replace("mu_r", "mu_r(amp_index)")
+                # misc.sprint(express)
+                fsock.writelines('%s(amp_index) = %s' % (coupling.name, express))
             if mp:
                 fsock.writelines('%s%s = %s' % (self.mp_prefix,coupling.name,
                                           self.mp_p_to_f.parse(coupling.expr)))
@@ -9176,7 +9184,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o coupl.o couplings.mod rscale.mod strong.mod'
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o coupl.o couplings.mod'
         text += ' model_functions.o '
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '

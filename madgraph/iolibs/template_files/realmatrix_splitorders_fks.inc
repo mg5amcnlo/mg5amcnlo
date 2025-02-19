@@ -114,6 +114,7 @@ C
 %(process_lines)s
 C  
       use ntry_real
+      use couplings
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -155,7 +156,7 @@ C ----------
           IF (NTRY(NFKSPROCESS,AMP_INDEX).LT.2) THEN
 C for the first ps-point, check for helicities that give
 C identical matrix elements
-            call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
+            call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T,AMP_INDEX)            
             DO I=0,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
@@ -177,7 +178,7 @@ C if two helicity states are identical, dont recompute
               T_SAVE(IHEL,I)=T(I)
             ENDDO
             ELSE
-              CALL MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
+              CALL MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T,AMP_INDEX)            
               DO I=0,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
               ENDDO
@@ -199,7 +200,7 @@ C add to the sum of helicities
       END
        
 
-      SUBROUTINE MATRIX_%(proc_prefix)s(P,NHEL,RES)
+      SUBROUTINE MATRIX_%(proc_prefix)s(P,NHEL,RES,AMP_INDEX)
 C  
 %(info_lines)s
 C
@@ -208,6 +209,7 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+      use couplings
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -230,6 +232,7 @@ C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL)
       REAL*8 RES(0:NSQAMPSO)
+      INTEGER AMP_INDEX
 C  
 C LOCAL VARIABLES 
 C  

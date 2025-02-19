@@ -1568,6 +1568,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
+            coup = coup + "(amp_index)"
             # We do not include the - sign in front of the coupling of loop
             # wavefunctions (only the loop ones, the tree ones are treated normally)
             # in the non optimized output because this sign was already applied to
@@ -1697,7 +1698,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             res.append(self.get('conjugate_indices'))
             
-
         
 
         return (tuple(res), tuple(self.get('lorentz')))
@@ -3183,6 +3183,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):
+            coup + coup + "(amp_index)"
             output['coup%d'%i] = str(coup)
 
         output['out'] = self.get('number') - flip

@@ -7,6 +7,7 @@ c
 C************************************************************************
 c
       use FKSParams
+      use couplings
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -43,9 +44,9 @@ c
       virt_wgt=0d0
 c update the ren_scale for the OLP and in the couplings (should be the
 c Ellis-Sexton scale)
-      mu_r = sqrt(QES2)
-      call update_as_param()
-      alpha_S=g**2/(4d0*PI)
+      mu_r(1) = sqrt(QES2)
+      call update_as_param(1)
+      alpha_S=g(1)**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
 c get the momenta in the BLHA format
       do i=1,nexternal-1

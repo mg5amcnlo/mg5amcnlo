@@ -291,6 +291,9 @@ class HelasCallWriter(base_objects.PhysicsObject):
             call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
             if n:
                 self.width_tchannel_set_tozero = True
+                
+        # misc.sprint(str(call))
+                
         return call
         
 
@@ -303,6 +306,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
         except KeyError as error:
             return ""
         else:
+            # misc.sprint(type(amplitude))
+            coups = [x + "(amp_index)" for x in amplitude.get('coupling')]
+            amplitude.set('coupling', coups)
+            # misc.sprint(str(call(amplitude)))
             return call(amplitude)
 
     def add_wavefunction(self, key, function):
@@ -1046,6 +1053,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             for lwf in amplitude.get('wavefunctions'):
                 lwf.set_octet_majorana_coupling_sign()
             amplitude.set('coupling',amplitude.get_couplings())
+        # misc.sprint(amplitude.get('coupling'))
         
         return super(FortranUFOHelasCallWriter, self).get_amplitude_call(
                                                                amplitude,**opts)        
@@ -1179,6 +1187,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))                                            
                }
+        # misc.sprint(argument.get('coupling'))
 
         # select how to write a single wf
         if (isinstance(argument,helas_objects.HelasWavefunction) \

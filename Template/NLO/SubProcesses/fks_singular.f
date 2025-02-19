@@ -9,6 +9,7 @@ c to the list of weights using the add_wgt subroutine
       use camp_split_store
       use mod_orders
       use factor_nbody
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -43,7 +44,7 @@ c to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split(iamp)*f_b(amp_index)/g**(qcd_power)
+        wgt1=amp_split(iamp)*f_b(amp_index)/g(amp_index)**(qcd_power)
         call add_wgt(2,orders,wgt1,0d0,0d0,amp_index)
       enddo
 
@@ -58,6 +59,7 @@ c to the list of weights using the add_wgt subroutine
       use pborn
       use camp_split_store
       use mod_orders
+      use couplings
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
 C It is called in this function such that if is included
@@ -129,7 +131,7 @@ C      gluon in the initial state
       amp_split(1:AMP_SPLIT_SIZE) = amp_split_store_b(1:AMP_SPLIT_SIZE,amp_index)
       amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = amp_split_store_cnt(1:AMP_SPLIT_SIZE,1:2,1:nsplitorders,amp_index)
       !MZ
-      alphas = g**2/4d0/pi
+      alphas = g(amp_index)**2/4d0/pi
       do iamp = 1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -326,6 +328,7 @@ c value to the list of weights using the add_wgt subroutine
       use cxiimaxcnt
       use cxi_i_hat
       use factor_nbody
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -415,7 +418,7 @@ C to make sure that it cannot be incorrectly understood.
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb(amp_index)/g22
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb(amp_index)/g22
         wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb(amp_index)/g22
@@ -430,7 +433,7 @@ C to make sure that it cannot be incorrectly understood.
      $             /" Born order for FxFx"
               stop 1
            endif
-           g2=g**(QCD_power-2)
+           g2=g(amp_index)**(QCD_power-2)
            wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb(amp_index)/g2/(4d0*pi)
         endif
         call add_wgt(3,orders,wgt1,wgt2,wgt3,amp_index)
@@ -454,7 +457,7 @@ c and not be part of the plots nor computation of the cross section.
      $       +wgt1
         born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $       +amp_split_born_for_virt(iamp)*f_nb(amp_index)
-        wgt1=wgt1/g**(QCD_power)
+        wgt1=wgt1/g(amp_index)**(QCD_power)
         call add_wgt(14,orders,wgt1,0d0,0d0,amp_index)
       enddo
 
@@ -467,14 +470,14 @@ C of parton distributions (e.g. NNPDF2.3).
      $      amp_split_6to5f_muf(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt6f1=amp_split_6to5f(iamp)*f_nb(amp_index)/g**(qcd_power)
-        wgt6f2=amp_split_6to5f_mur(iamp)*f_nb(amp_index)/g**(qcd_power)
-        wgt6f3=amp_split_6to5f_muf(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgt6f1=amp_split_6to5f(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
+        wgt6f2=amp_split_6to5f_mur(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
+        wgt6f3=amp_split_6to5f_muf(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
         call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3,amp_index)
       enddo
 
@@ -488,14 +491,14 @@ C wrt the hard matrix element. Relevant for lepton collisions.
      $      amp_split_alpha_muf(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgtal1=amp_split_alpha(iamp)*f_nb(amp_index)/g**(qcd_power)
-        wgtal2=amp_split_alpha_mur(iamp)*f_nb(amp_index)/g**(qcd_power)
-        wgtal3=amp_split_alpha_muf(iamp)*f_nb(amp_index)/g**(qcd_power)
+        wgtal1=amp_split_alpha(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
+        wgtal2=amp_split_alpha_mur(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
+        wgtal3=amp_split_alpha_muf(iamp)*f_nb(amp_index)/g(amp_index)**(qcd_power)
         call add_wgt(3,orders,wgtal1,wgtal2,wgtal3,amp_index)
       enddo
 
@@ -513,6 +516,7 @@ c its value to the list of weights using the add_wgt subroutine
       use mod_orders
       use camp_split_store
       use factor_n1body
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -550,7 +554,7 @@ c its value to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split(iamp)*s_ev*f_r(amp_index)/g**(qcd_power)
+        wgt1=amp_split(iamp)*s_ev*f_r(amp_index)/g(amp_index)**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0,amp_index)
         endif
@@ -576,6 +580,7 @@ c the list of weights using the add_wgt subroutine
       use fksvariables
       use factor_n1body
       use factor_n1body_nlops
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -614,7 +619,7 @@ c the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
           call add_wgt(8,orders,-wgt1*f_s_MC_H(amp_index),0d0,0d0,amp_index)
@@ -645,6 +650,7 @@ c to the list of weights using the add_wgt subroutine
       use camp_split_store
       use factor_n1body
       use factor_n1body_nlops
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -712,7 +718,7 @@ c to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
           call add_wgt(9,orders,-wgt1*f_c_MC_H(amp_index),0d0,0d0,amp_index)
@@ -753,6 +759,7 @@ c value to the list of weights using the add_wgt subroutine
       use camp_split_store
       use factor_n1body
       use factor_n1body_nlops
+      use couplings
 
       implicit none
       include 'nexternal.inc'
@@ -826,7 +833,7 @@ c value to the list of weights using the add_wgt subroutine
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        g22=g**(QCD_power)
+        g22=g(amp_index)**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
           call add_wgt(10,orders,-wgt1*f_sc_MC_H(amp_index),0d0,0d0,amp_index)
@@ -864,6 +871,7 @@ c value to the list of weights using the add_wgt subroutine
       use fksvariables
       use mod_orders
       use factor_n1body_nlops
+      use couplings
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
 c their values to the list of weights using the add_wgt subroutine. It
@@ -922,7 +930,7 @@ c respectively.
                 if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 orders_tag=get_orders_tag(orders)
                 amp_pos=iamp
-                g22=g**(QCD_power)
+                g22=g(amp_index)**(QCD_power)
                 wgt1=sevmc*f_MC_S(amp_index)*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
                 call add_wgt(12,orders,wgt1,0d0,0d0,amp_index)
@@ -1751,6 +1759,7 @@ c        contribution
       use parton_cms_stuff
       use counterevnts
       use mod_orders
+      use couplings
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1866,7 +1875,7 @@ C schemes; it is needed when there are tagged photons around
       scales2(1,icontr)=QES2
       scales2(2,icontr)=scale**2
       scales2(3,icontr)=q2fact(1)
-      g_strong(icontr)=g
+      g_strong(icontr)=g(amp_index)
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab(amp_index)
       shower_scale(icontr)=-99d9
@@ -2517,6 +2526,7 @@ c wgts() array to include the weights.
       use weight_lines
       use extra_weights
       use FKSParams
+      ! use couplings
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -4864,6 +4874,7 @@ c the MS --> DIS (or any other) scheme change in the factorization scheme.
 C It also includes regular terms, multiplied by (1-x).
 c There's NO multiplicative (1-x) factor like in the previous functions.
 C the first entry in xkk is for QCD splittings, the second QED
+      use couplings
       implicit none
       integer PDFscheme, col1, col2
       double precision ch1, ch2
@@ -4949,7 +4960,7 @@ c
         write(6,*)'Error in xkplus: wrong PDF scheme', PDFscheme
         stop
       endif
-      xkk(1) = xkk(1)*g**2
+      xkk(1) = xkk(1)*g(1)**2
       xkk(2) = xkk(2)*dble(gal(1))**2
       return
       end
@@ -4960,6 +4971,7 @@ c This function returns the quantity K^{(l)}_{ab}(x), relevant for
 c the MS --> DIS (or any other) scheme change in the factorization scheme.
 c There's NO multiplicative (1-x) factor like in the previous functions.
 C the first entry in xkk is for QCD splittings, the second QED
+      use couplings
       implicit none
       integer PDFscheme, col1, col2
       double precision ch1, ch2
@@ -5047,7 +5059,7 @@ c
         write(6,*)'Error in xklog: wrong PDF scheme', PDFscheme
         stop
       endif
-      xkk(1) = xkk(1)*g**2
+      xkk(1) = xkk(1)*g(1)**2
       xkk(2) = xkk(2)*dble(gal(1))**2
       return
       end
@@ -5057,6 +5069,7 @@ c
 c This function returns the quantity K^{(d)}_{ab}, relevant for
 c the MS --> DIS (or any other) scheme change in the factorization scheme.
 C The first entry in xkk is for QCD splittings, the second QED
+      use couplings
       implicit none
       integer PDFscheme, col1, col2
       double precision ch1, ch2
@@ -5144,7 +5157,7 @@ c
         write(6,*)'Error in xkdelta: wrong PDF scheme', PDFscheme
         stop
       endif
-      xkk(1) = xkk(1)*g**2
+      xkk(1) = xkk(1)*g(1)**2
       xkk(2) = xkk(2)*dble(gal(1))**2
       return
       end
@@ -5159,6 +5172,7 @@ c Therefore, the labeling conventions for particle IDs are not as in FKS:
 c part1 and part2 are the two particles emerging from the branching.
 c part1 and part2 can be either gluon (8) or (anti-)quark (+-3). z is the
 c fraction of the energy of part1 and t is the invariant mass of the mother.
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5205,7 +5219,7 @@ c q->gq splitting
          stop
       endif
 
-      ap(1) = ap(1)*g**2/t
+      ap(1) = ap(1)*g(1)**2/t
       ap(2) = ap(2)*dble(gal(1))**2/t
       return
       end
@@ -5214,6 +5228,7 @@ c q->gq splitting
       subroutine AP_reduced_prime(col1,col2,ch1,ch2,t,z,apprime)
 c Returns (1-z)*P^\prime * gS^2/t, with the same conventions as AP_reduced
 C the first entry in APprime is QCD, the second QED
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5252,7 +5267,7 @@ c q->g/a q splitting
          stop
       endif
 
-      apprime(1) = apprime(1)*g**2/t
+      apprime(1) = apprime(1)*g(1)**2/t
       apprime(2) = apprime(2)*dble(gal(1))**2/t
       return
       end
@@ -5262,6 +5277,7 @@ c q->g/a q splitting
 c Eq's B.31 to B.34 of FKS paper, times (1-z)*g^2/t. The labeling
 c conventions for particle IDs are the same as those in AP_reduced
 C the first entry in Qterms is QCD, the second QED
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5300,7 +5316,7 @@ c q->g/a q splitting
          stop
       endif
 
-      Qterms(1) = Qterms(1)*g**2/t
+      Qterms(1) = Qterms(1)*g(1)**2/t
       Qterms(2) = Qterms(2)*dble(gal(1))**2/t
       return
       end
@@ -5312,6 +5328,7 @@ c conventions for particle IDs are the same as those in AP_reduced.
 C the first entry in Qterms is QCD, the second QED
 c Thus, part1 has momentum fraction z, and it is the one off-shell
 c (see (FKS.B.41))
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5350,7 +5367,7 @@ c q->g/a q splitting
          stop
       endif
 
-      Qterms(1) = Qterms(1)*g**2/t
+      Qterms(1) = Qterms(1)*g(1)**2/t
       Qterms(2) = Qterms(2)*dble(gal(1))**2/t
       return
       end
@@ -5362,6 +5379,7 @@ c   go -> go g
 c   sq -> sq g
 c splittings in SUSY. We assume this function to be called with 
 c part2==colour(i_fks)
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5394,7 +5412,7 @@ c sq->sqg splitting
          stop
       endif
 
-      ap(1) = ap(1)*g**2/t
+      ap(1) = ap(1)*g(1)**2/t
       ap(2) = ap(2)*dble(gal(1))**2/t
 
       return
@@ -5409,6 +5427,7 @@ c Therefore, the labeling conventions for particle IDs are not as in FKS:
 c part1 and part2 are the two particles emerging from the branching.
 c part1 and part2 can be either gluon (8) or (anti-)quark (+-3). z is the
 c fraction of the energy of part1 and t is the invariant mass of the mother.
+      use couplings
       implicit none
 
       integer col1, col2
@@ -5447,7 +5466,7 @@ c q->gq splitting
          stop
       endif
 
-      ap(1) = ap(1)*g**2/t
+      ap(1) = ap(1)*g(1)**2/t
       ap(2) = ap(2)*dble(gal(1))**2/t
 
       return
@@ -6504,6 +6523,7 @@ c
       use to_amp_split_soft
       use mod_orders
       use c_born_cnt
+      use couplings
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -6668,7 +6688,7 @@ C links
       endif
          
 
-      aso2pi=g**2/(8*pi**2)
+      aso2pi=g(amp_index)**2/(8*pi**2)
       aeo2pi=dble(gal(1))**2/(8*pi**2)
 
       amp_split_bsv(1:amp_split_size)=0d0
@@ -7364,6 +7384,7 @@ c
       use mod_orders
       use camp_split_store
       use c_born_cnt
+      use couplings
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -7443,7 +7464,7 @@ C links
         amp_split_poles_FKS(i,1)=0d0
         amp_split_poles_FKS(i,2)=0d0
       enddo
-      aso2pi=g**2/(8d0*pi**2)
+      aso2pi=g(amp_index)**2/(8d0*pi**2)
       aeo2pi=dble(gal(1))**2/(8d0*pi**2)
       !!!call sborn(p_born,wgt1)
 

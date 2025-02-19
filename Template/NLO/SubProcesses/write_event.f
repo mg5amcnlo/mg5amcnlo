@@ -163,6 +163,7 @@ c get info on beam and PDFs
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
      $     ,shower_scale_a,ickkw)
       use extra_weights
+      use couplings
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -211,11 +212,11 @@ c
             enddo
          enddo
       elseif (ickkw.eq.-1) then
-         scale = mu_r
+         scale = mu_r(1)
          do j=1,2*nexternal-3
             do k=1,2*nexternal-3
                if(j.eq.k)cycle
-               scalup_a(j,k)=mu_r
+               scalup_a(j,k)=mu_r(1)
             enddo
          enddo
       else
@@ -228,7 +229,7 @@ c
          enddo
       endif
 c
-      aqcd=g**2/(4d0*pi)
+      aqcd=g(1)**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 c
 c 'write_header_init' should be called after 'aqcd' has been set,
@@ -303,6 +304,7 @@ c********************************************************************
 
       subroutine fill_HEPEUP_event(p, wgt, npart, id, status, mothers,
      &           cols, spin, scalup, scales_a)
+      use couplings
       implicit none
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -336,7 +338,7 @@ c
 c     Read the particle masses.
       include "pmass.inc"
 
-      aqcd=g**2/(4d0*pi)
+      aqcd=g(1)**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 c
 c 'fill_HEPrup_block' should be called after 'aqcd' has been set,

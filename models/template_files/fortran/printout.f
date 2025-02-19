@@ -7,6 +7,7 @@ c**                                                                    **
 c************************************************************************
 
       subroutine printout
+      use couplings
       implicit none
 
       include 'coupl.inc'

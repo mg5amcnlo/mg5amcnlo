@@ -51,6 +51,7 @@ c and Ellis-Sexton scales, and computes the value of alpha_S through the
 c call to set_ren_scale (for backward compatibility).
 c The scale and couplings values are updated in the relevant common blocks
 c (mostly in run.inc, and one  in coupl.inc)
+      use couplings
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -58,6 +59,7 @@ c (mostly in run.inc, and one  in coupl.inc)
       include "coupl.inc"
       include "timing_variables.inc"
       integer amp_index
+      integer index
       
       double precision xp(0:3,nexternal)
       double precision dummy,dummyQES,dummies(2)
@@ -78,26 +80,28 @@ c put momenta in common block for couplings.f
 c
       if (firsttime) then
         firsttime=.false.
+        do index=1,vec_size
 c Set scales and check that everything is all right
 c Renormalization
-        call set_ren_scale(xp,dummy,amp_index)
+        call set_ren_scale(xp,dummy,index)
         if(dummy.lt.0.2d0)then
           write(*,*)'Error in set_alphaS: muR too soft',dummy
           stop
         endif
 c Factorization
-        call set_fac_scale(xp,dummies,amp_index)
+        call set_fac_scale(xp,dummies,index)
         if(dummies(1).lt.0.2d0.or.dummies(2).lt.0.2d0)then
           write(*,*)'Error in set_alphaS: muF too soft',
      #              dummies(1),dummies(2)
           stop
         endif
 c Ellis-Sexton
-        call set_QES_scale(xp,dummyQES,amp_index)
+        call set_QES_scale(xp,dummyQES,index)
         if(scale.lt.0.2d0)then
           write(*,*)'Error in set_alphaS: QES too soft',dummyQES
           stop
         endif
+        enddo
 c
         write(*,*)'Scale values (may change event by event):'
         write(*,200)'muR,  muR_reference: ',dummy,
@@ -118,7 +122,7 @@ c
         write(*,*)'QES_reference [functional form]: '
         write(*,*)'   ',QES_id_str(1:len_trim(QES_id_str))
         write(*,*)' '
-        write(*,*) 'alpha_s=',g**2/(16d0*atan(1d0))
+        write(*,*) 'alpha_s=',g(1)**2/(16d0*atan(1d0))
 c
 cc        if(fixed_ren_scale) then
 cc          call setpara('param_card.dat')
@@ -167,6 +171,7 @@ c For backward compatibility, computes the value of alpha_S, and sets
 c the value of variable scale in common block /to_scale/
       ! use vectorize
       use ccalculatedborn 
+      use couplings
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -202,11 +207,11 @@ c
       muR=muR_over_ref*mur_temp
       muR2_current=muR**2
       muR_id_str=temp_scale_id
-      mu_r = muR
+      mu_r(amp_index) = muR
 c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
-      g=sqrt(4d0*pi*alphas(scale))
-      call update_as_param()
+      g(amp_index)=sqrt(4d0*pi*alphas(scale))
+      call update_as_param(amp_index)
 c Reset calculatedBorn(amp_index), because the couplings might have been changed.
 c This is needed in particular for the MC events, because there the
 c coupling should be set according to the real-emission kinematics,
@@ -223,6 +228,7 @@ c a scale to be used as a reference for renormalization scale
       use extra_weights
       !use vectorize
       use c_fxfx_scales
+      use couplings
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -368,6 +374,7 @@ c Sets the values of the factorization scales, returned as muF().
 c For backward compatibility, sets the values of variables q2fact()
 c in common block /to_collider/
 c Note: the old version returned the factorization scales squared
+      use couplings
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'

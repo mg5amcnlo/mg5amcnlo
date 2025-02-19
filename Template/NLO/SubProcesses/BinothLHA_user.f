@@ -6,6 +6,7 @@ c also the born_wgt is passed to this subroutine.
 c
 C************************************************************************
 c
+      use couplings
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -47,9 +48,9 @@ C corresponding to different coupling combinations
       enddo
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
-      mu_r = sqrt(QES2)
-      call update_as_param()
-      alpha_S=g**2/(4d0*PI)
+      mu_r(1) = sqrt(QES2)
+      call update_as_param(1)
+      alpha_S=g(1)**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
 
 c======================================================================
