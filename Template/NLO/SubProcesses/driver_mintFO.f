@@ -138,8 +138,9 @@ c
         n1(i)=0
       enddo
       
-      call allocate_storage(vec_size)
       call setrun                !Sets up run parameters
+      call allocate_storage(vec_size)
+      call set_alphas_firsttime 
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
