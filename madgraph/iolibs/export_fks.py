@@ -1183,7 +1183,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         """
 
         # get the model parameters
-        print("hahahahahahhhahah",startfroma0)
         params = sum([v for v in self.model.get('parameters').values()], [])
         parnames = [p.name.lower() for p in params]
 
