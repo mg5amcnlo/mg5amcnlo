@@ -409,8 +409,10 @@ in presence of majorana particle/flow violation"""
         try:
             index, obj, expr = lorentz.to_spenso()
             misc.sprint( '\n'.join(index)+'\n'+'\n'.join(obj)+'\nexpr='+expr)
-        except:
+        except Exception as error:
+            misc.sprint( str(error))
             misc.sprint( 'no spenso')
+            raise
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini

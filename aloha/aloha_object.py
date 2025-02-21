@@ -1043,7 +1043,19 @@ class L_Metric(aloha_lib.LorentzObject):
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.metric,
-                                             self.lorentz_ind,self.spin_ind)     
+                                             self.lorentz_ind,self.spin_ind)   
+
+
+    def to_spenso(self):
+        
+        dico = {'lor1': self.lorentz_ind[0], 'lor2': self.lorentz_ind[1]}
+        index = ['nu%(lor1)s=Slot("mink", 4, %(lor1)s)' % dico,
+                 'nu%(lor2)s=Slot("mink", 4, %(lor2)s)' % dico,
+                 ]
+        obj = ['metricl_%(lor1)s%(lor2)s = TensorIndices(S("eta"), nu%(lor1)s, nu%(lor2)s)' 
+               % dico]
+
+        return index, obj, 'metricl_%(lor1)s%(lor2)s.to_expression()' % dico 
 
 class Metric(aloha_lib.FactoryLorentz):
          
@@ -1056,6 +1068,8 @@ class Metric(aloha_lib.FactoryLorentz):
             return '_ETA_%s_%s' % (l1,l2)
         else:
             return '_ETA_%s_%s' % (l2,l1)
+    
+
 #===============================================================================
 # Identity
 #===============================================================================
@@ -1103,6 +1117,18 @@ class L_IdentityL(aloha_lib.LorentzObject):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.identity,
                                              self.lorentz_ind,self.spin_ind)
+
+    def to_spenso(self):
+        
+        dico = {'lor1': self.lorentz_ind[0], 'lor2': self.lorentz_ind[1]}
+        index = ['nu%(lor1)s=Slot("mink", 4, %(lor1)s)' % dico,
+                 'nu%(lor2)s=Slot("mink", 4, %(lor2)s)' % dico,
+                 ]
+        obj = ['identityl_%(lor1)s%(lor2)s = TensorIndices(S("identityl"), nu%(lor1)s, nu%(lor2)s)' 
+               % dico]
+
+        return index, obj, 'identityl_%(lor1)s%(lor2)s.to_expression()' % dico
+
 
 class IdentityL(aloha_lib.FactoryLorentz):
     

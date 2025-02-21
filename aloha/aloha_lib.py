@@ -480,7 +480,24 @@ class AddVariable(list):
         text += ' + '.join([str(item) for item in self])
         text += ' )'
         return text
-    
+
+    def to_spenso(self):
+        """ String representation in the spenso convention"""
+        t = [KERNEL.objs[n].to_spenso() for n in self]
+        index = set(sum([n[0] for n in t],[]))
+        obj_def = set(sum([n[1] for n in t],[]))
+        t = ['%s' % n[2] for n in t] 
+        if self.prefactor != 1:
+            str_pref = '%s' % self.prefactor
+            if 'j' in str_pref:
+                str_pref = str_pref.replace('j','*Expression.I')
+            text = '(%s *( %s))' % (str_pref,' + '.join(t))
+        else:
+            text = '(%s)' % (' + '.join(t))
+
+        return index, obj_def, text 
+
+
     def __repr__(self):
         text = ''
         if self.prefactor != 1:
