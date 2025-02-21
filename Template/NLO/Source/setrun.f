@@ -7,12 +7,9 @@ c 2. Collider parameters
 c 3. cuts
 c---------------------------------------------------------------------- 
       use extra_weights
-      use COUPLINGS
       implicit none
       include 'PDF/pdf.inc'
       include 'run.inc'
-      include 'alfas.inc'
-      include 'MODEL/coupl.inc'
       integer k,i
       character*132 buff
       include 'cuts.inc'
@@ -95,26 +92,6 @@ c Check parameters for FxFx/UNLOPS/NNLL-veto
       xqcut=0d0
       xmtc=0d0
       D=1d0
-c Set alphaS(mZ)      
-      if(lpp(1).ne.0.or.lpp(2).ne.0) then
-         write(*,*) 'A PDF is used, so alpha_s(MZ)'/
-     &        /' is going to be modified'
-          call setpara('param_card.dat')
-          asmz=G(1)**2/(16d0*atan(1d0))
-          write(*,*) 'Old value of alpha_s from param_card: ',asmz
-          call pdfwrap
-          write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
-      else
-          call setpara('param_card.dat')
-          asmz=G(1)**2/(16d0*atan(1d0))
-          nloop=2
-          pdlabel='none'
-          write(*,*)
-     &         'No PDF is used, alpha_s(MZ) from param_card is used'
-          write(*,*) 'Value of alpha_s from param_card: ',asmz
-          write(*,*) 'The default order of alpha_s running is fixed to '
-     &         ,nloop
-      endif
       if (nlo_ps.or.pineappl) then
 C Fill common block for Les Houches init info
          do i=1,2
@@ -157,6 +134,37 @@ c get from LHAPDF.
  100  write(*,*) '"initial_states_map.dat" not found (or incorrect'/
      $     /' format) by "Source/setrun"'
       stop 1
+      end
+
+
+      subroutine set_alphas_firsttime()
+      use COUPLINGS
+      implicit none
+      include 'run.inc'
+      include 'pdf.inc'
+      include 'MODEL/coupl.inc'
+
+c Set alphaS(mZ)      
+      if(lpp(1).ne.0.or.lpp(2).ne.0) then
+         write(*,*) 'A PDF is used, so alpha_s(MZ)'/
+     &        /' is going to be modified'
+          call setpara('param_card.dat')
+          asmz=G(1)**2/(16d0*atan(1d0))
+          write(*,*) 'Old value of alpha_s from param_card: ',asmz
+          call pdfwrap
+          write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
+      else
+          call setpara('param_card.dat')
+          asmz=G(1)**2/(16d0*atan(1d0))
+          nloop=2
+          pdlabel='none'
+          write(*,*)
+     &         'No PDF is used, alpha_s(MZ) from param_card is used'
+          write(*,*) 'Value of alpha_s from param_card: ',asmz
+          write(*,*) 'The default order of alpha_s running is fixed to '
+     &         ,nloop
+      endif
+      return
       end
 
       subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhaid)
