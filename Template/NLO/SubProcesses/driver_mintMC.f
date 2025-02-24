@@ -688,7 +688,8 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,partner_picked
+     $     ,iFKS,sum,partner_picked(fks_configs)
+      save partner_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -790,7 +791,6 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
-         icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
             jac=1d0
          else
@@ -812,7 +812,6 @@ c 1/proc_map(0,0)*vol1)
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv.eq.'born') then
-!TODO: with folding, we should pick the same flow for all folds (use 'save' attribute...)!
                ! Doing only the Born contribution.
                call compute_born
                if (ifl.eq.0) call get_born_flow(born_flow_picked)
@@ -832,6 +831,7 @@ c 1/proc_map(0,0)*vol1)
                ! shower scale when looping over FKS configurations.
                call compute_born
                call compute_nbody_noborn
+               ! only for ifl==0, since we want the same flow for each fold.
                if (ifl.eq.0) call get_born_flow(born_flow_picked)
                ! We need to fill emsca_S(iFKS_born) with a value that
                ! will be used if we are in the dead-zone. If we are not
@@ -872,14 +872,15 @@ c for different nFKSprocess.
 !     father. Therefore the partner is fixed (except when father is a gluon
 !     (then there is a two-fold ambiguity)). Determine the partner:
 
-!     TODO: Check if we need the same partner for each fold
-!     Determine the partner of the father
-               call determine_partner(born_flow_picked,partner_picked)
+!     Determine the partner of the father (keep it the same for each fold)
+               if (ifl.eq.0) call determine_partner(born_flow_picked
+     $              ,partner_picked(iFKS))
 !     The shower scale to be used in the event file (if it's an S-event and
 !     fks_picked will be iFKS):
                if (.not.mcatnlo_delta) then
                   emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
-     $                 =shower_scale_nbody(fks_father,partner_picked)
+     $                 =shower_scale_nbody(fks_father
+     $                 ,partner_picked(iFKS))
                else
                   emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
      $                 =shower_scale_nbody(1:ndelS,1:ndelS)
@@ -909,9 +910,10 @@ c counter-event momenta do not exist).
 ! scale related to the underlying S-event.
             if (born_flow_picked.gt.0) then
                if (.not.mcatnlo_delta) then
-                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)=max(
-     $                 shower_scale_n1body(i_fks,j_fks),
-     $                 shower_scale_nbody(fks_father,partner_picked))
+                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $                 =max(shower_scale_n1body(i_fks,j_fks),
+     $                 shower_scale_nbody(fks_father
+     $                 ,partner_picked(iFKS)))
                else
 ! in the case of MC@NLO-delta, an H-event contribution is by definition
 ! 'hard', and we should use the corresponding dipole scale for

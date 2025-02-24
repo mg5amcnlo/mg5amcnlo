@@ -1441,6 +1441,8 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
 
+      integer ip
+
 c Controls assignments of scales in H events in LHE file.
 c Set iHscale=0 for scale=target_scale
 c     iHscale=1 for scale=dipole_mass
@@ -1939,14 +1941,30 @@ c Ellis-Stirling-Webber
             endif
 !     compute F_k
             if(i.le.nincoming)then
-! TODO: fix this--> one should consider all the flavour configurations contributing to this contribution.
-! For example: qq>ttbar, has only a single contribution here, but should be kept separate for all the quark flavours.               
+! The correct thing to do here (if we follow the paper) would be to have
+! a separate wgt_sudakov for each flavour configuration, since the PDF
+! ratio would be different for each of them. This is very tricky in the
+! current code setup, since at this point all flavour configurations are
+! always summed together. Therefore, we use an approximation, where we
+! take a (weighted) average of PDF ratios. We take as weights the PDF
+! used in the Born, which is (roughly) equal to the PDF computed at the
+! starting scales, which is pdfden. We can write this weighted average
+! as
+! Fk(out_con) = weighted_average(ratio_1+..+ratio_n)
+!             = average(ratio_1*pdfden_1+..+ratio_n*pdfden_n)
+!             = sum(pdfnum_1..n)/sum(pdfden_1..n)
+!               
                LP=SIGN(1,LPP(i))
-               id=get_parton_id(idup_s(i),lp)
-               pdfnum=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
-     $              t_ij(out_con,i))
-               pdfden=pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0),
-     $              mu_ij(out_con,i))
+               pdfnum=0d0
+               pdfden=0d0
+               do ip=1,niproc
+                  ! TODO: determine niproc. Maybe call dlum() from here???
+                  id=get_parton_id(idup(i,ip),lp)
+                  pdfnum=pdfnum+pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0)
+     $                 ,t_ij(out_con,i))
+                  pdfden=pdfden+pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0)
+     $                 ,mu_ij(out_con,i))
+               enddo
             else
                pdfnum=1d0
                pdfden=1d0

@@ -263,48 +263,6 @@ c Assume helicity summed
 c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
-
-! TODO: we should never(?) pick colour flows only compatible with
-! iconfig. But then we should not write the resonances if they are not
-! compatible with the colour flow picked.
-c$$$      if (colour_connections(1,1).lt.0) then
-c$$$         ! colour not yet set: Get color flow that is consistent with
-c$$$         ! iconfig from Born
-c$$$         call sborn(p_born,wgt1)
-c$$$         sumborn=0.d0
-c$$$         do i=1,max_bcol
-c$$$            if (icolamp(i,iBornGraph,1)) then
-c$$$               sumborn=sumborn+jamp2(i)
-c$$$            endif
-c$$$         enddo
-c$$$         if (sumborn.eq.0d0) then
-c$$$            write (*,*) 'Error #1 in add_write_info:'
-c$$$            write (*,*) 'in MadFKS, sumborn should always be larger'//
-c$$$     $           ' than zero, because always QCD partons around',sumborn
-c$$$     $           ,max_bcol
-c$$$            do i=1,max_bcol
-c$$$               write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
-c$$$            enddo
-c$$$            stop
-c$$$         endif
-c$$$         xtarget=ran2()*sumborn
-c$$$
-c$$$         iflow=1
-c$$$         if (icolamp(1,iBornGraph,1)) then
-c$$$            jampsum=jamp2(1)
-c$$$         else
-c$$$            jampsum=0d0
-c$$$         endif
-c$$$         do while (jampsum .lt. xtarget)
-c$$$            iflow=iflow+1
-c$$$            if (icolamp(iflow,iBornGraph,1)) then
-c$$$               jampsum=jampsum+jamp2(iflow)
-c$$$            endif
-c$$$         enddo
-c$$$         if (iflow.gt.max_bcol) then
-c$$$            write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol
-c$$$            stop
-c$$$         endif
       
       if ( (Hevents .and. (abs(born_flow_picked).eq.0 .or.
      &                     abs(born_flow_picked).gt.max_bcol)) .or.
@@ -324,12 +282,6 @@ c$$$         endif
          icolalt(1,i)=jpart(4,i)
          icolalt(2,i)=jpart(5,i)
       enddo
-c$$$      else ! colour already determined through a call to complete_xmcsubt
-c$$$         do i=1,nexpart
-c$$$            icolalt(1,i)=colour_connections(1,i)
-c$$$            icolalt(2,i)=colour_connections(2,i)
-c$$$         enddo
-c$$$      endif
 c
 c Shift particle momenta to put them on the mass shell as given in the
 c subroutine fill_MC_mshell().
@@ -628,8 +580,12 @@ c
 ! write the ptclusstring that knows about which partons should be
 ! considered in the MLM-like matching
 
-! TO DO : FIX THIS
       if (ickkw.eq.3) then
+         if (ndelS.ne.1 .or. ndelH.ne.1) then
+            ! TODO : IMPLEMENT FXFX-DELTA.
+            write (*,*) 'FxFx only implemented for non-Delta matching.'
+            stop 1
+         endif
          if (nincoming.ne.2) then
             write (*,*) 'Need to incoming particles with ickkw=3 '/
      $           /'(add_write_info.f)'
