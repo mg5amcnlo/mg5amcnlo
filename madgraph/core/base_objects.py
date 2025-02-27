@@ -3211,6 +3211,7 @@ class Process(PhysicsObject):
         else:
             mystr = ""
         prevleg = None
+        onia = []
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
@@ -3226,19 +3227,24 @@ class Process(PhysicsObject):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + ' > '
 
-            mystr = mystr + mypart.get_name()
-            if leg.get('polarization'):
-                if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
-                elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
-                elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
-                else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+            if leg.get('onium'):
+                if leg.get('onium').get('index') not in onia:
+                    mystr = mystr + leg.get('onium').get('name') + ' '
+                    onia += [leg.get('onium').get('index')]
             else:
-                mystr = mystr + ' '
-            #mystr = mystr + '(%i) ' % leg['number']
+                mystr = mystr + mypart.get_name()
+                if leg.get('polarization'):
+                    if leg.get('polarization') in [[-1,1],[1,-1]]:
+                        mystr = mystr + '{T} '
+                    elif leg.get('polarization') == [-1]:
+                        mystr = mystr + '{L} '
+                    elif leg.get('polarization') == [1]:
+                        mystr = mystr + '{R} '
+                    else:
+                        mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+                else:
+                    mystr = mystr + ' '
+                #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
         # Add orders
