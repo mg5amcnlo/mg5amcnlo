@@ -15,7 +15,7 @@ module scale_module
   integer,public :: born_flow_picked
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
-       get_born_flow,determine_partner
+       determine_partner
   private
 contains
   
@@ -287,38 +287,4 @@ contains
     endif
   end subroutine determine_partner
 
-  subroutine get_born_flow(flow_picked)
-    ! This assumes that the Born matrix elements are called. This is
-    ! always the case if either the compute_born or the virtual
-    ! (through bornsoftvirtual) are evaluated.
-    implicit none
-    include 'genps.inc'
-    include "born_nhel.inc"
-    integer :: flow_picked,i
-    double precision :: sumborn,target,sum
-    double precision,external :: ran2
-    double Precision :: amp2(ngraphs),jamp2(0:ncolor)
-    common/to_amps/  amp2         ,jamp2
-    logical :: is_leading_cflow(max_bcol)
-    integer :: num_leading_cflows
-    common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-    ! sumborn is the sum of the leading colour flow contributions to the Born.
-    sumborn=0.d0
-    do i=1,max_bcol
-       if(is_leading_cflow(i)) sumborn=sumborn+jamp2(i)
-    enddo
-    target=ran2()*sumborn
-    sum=0d0
-    do i=1,max_bcol
-       if (.not.is_leading_cflow(i)) cycle
-       sum=sum+jamp2(i)
-       if(sum.gt.target) then
-          flow_picked=i
-          return
-       endif
-    enddo
-    write (*,*) 'Error #1 in get_born_flow',sum,target,i
-    stop 1
-  end subroutine get_born_flow
-  
 end module scale_module

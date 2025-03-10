@@ -3224,6 +3224,8 @@ Parameters              %(params)s\n\
                                   ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
                                             for l in legs])))
 
+        lines.append("INTEGER IPROC_BORN")
+        lines.append("PARAMETER (IPROC_BORN=%d)"%(iproc+1))
         # Write the file
         writer.writelines(lines)
     

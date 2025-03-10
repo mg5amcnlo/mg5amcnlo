@@ -1902,7 +1902,7 @@ c Ellis-Stirling-Webber
      $           ,cstupp)
          enddo
          if (n_connect(i).eq.1 .and. idup_s(i).eq.21) then
-            if (isspecial(born_flow_picked) then
+            if (isspecial(born_flow_picked)) then
 !     This is the ISSPECIAL case. Add one more (identical) connection.
                n_connect(i)=n_connect(i)+1
                i_connect(n_connect(i),i)=i_connect(n_connect(i)-1,i)
@@ -1950,15 +1950,14 @@ c Ellis-Stirling-Webber
 ! used in the Born, which is (roughly) equal to the PDF computed at the
 ! starting scales, which is pdfden. We can write this weighted average
 ! as
-! Fk(out_con) = weighted_average(ratio_1+..+ratio_n)
-!             = average(ratio_1*pdfden_1+..+ratio_n*pdfden_n)
-!             = sum(pdfnum_1..n)/sum(pdfden_1..n)
+! Fk(out_con) = weighted_average(ratio_1, ..., ratio_n)
+!             = (ratio_1*pdfden_1+...+ratio_n*pdfden_n)/sum(pdfden_1, ..., pdf_den_n)
+!             = sum(pdfnum_1, ..., pdfnum_n)/sum(pdfden_1, ..., pdfden_n)
 !               
                LP=SIGN(1,LPP(i))
                pdfnum=0d0
                pdfden=0d0
-               do ip=1,niproc
-                  ! TODO: determine niproc. Maybe call dlum() from here???
+               do ip=1,iproc_born
                   id=get_parton_id(idup(i,ip),lp)
                   pdfnum=pdfnum+pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0)
      $                 ,t_ij(out_con,i))

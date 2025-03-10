@@ -680,7 +680,6 @@ c
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
-      use scale_module
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -862,13 +861,6 @@ c Write the <scales> block only for scales related to valid colour lines
      &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
-               if(are_col_conn .and. SCALUP_a(i,j).lt.scaleMCcut)then
-                  write(*,*)'Colour error in write_lhef_event',i,j
-                  do ii=1,NUP
-                     write (*,*) scalup_a(ii,1:NUP)
-                  enddo
-                  stop
-               endif
                if(are_col_conn)then
                   write(str_tmp,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
