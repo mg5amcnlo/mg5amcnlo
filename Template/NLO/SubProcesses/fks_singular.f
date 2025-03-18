@@ -5958,7 +5958,7 @@ c       y(k)_lab = y(k)_tilde - ybst_til_tolab
 c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
 c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
 c c.m. frame respectively
-      ybst_til_tolab=-ycm_cnt(0)
+      ybst_til_tolab=-ycm_cnt(0)-0.5d0*log(ebeam(1)/ebeam(2))
       if(icountevts.eq.-100)then
 c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
         xbk(1)=xbjrk_ev(1)
