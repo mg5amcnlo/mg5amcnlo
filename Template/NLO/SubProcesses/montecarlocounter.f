@@ -1991,13 +1991,18 @@ c Ellis-Stirling-Webber
      $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
      $              ,isudtype,mcmass)
                if (deltaden.eq.0d0) then
-                  write (*,*) 'Denominator is zero in Sudakov'
-     $                 ,mu_ij(in_con,i),in_con,i,i_connect(in_con,i)
-     $                 ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
-     $                 ,isudtype
-                  stop 1
+                  if (deltanum.ne.0d0) then
+                     write (*,*) 'Denominator is zero in Sudakov'
+                     write (*,*) deltanum,deltaden
+                     write (*,*) t_ij(out_con,i),mu_ij(in_con,i),in_con
+     $                    ,i,i_connect(in_con,i),xmasses_nbody(i
+     $                    ,i_connect(in_con,i)),idup_s(i),isudtype
+                     stop 1
+                  endif
+                  delta(out_con,in_con)=0d0
+               else
+                  delta(out_con,in_con)=deltanum/deltaden
                endif
-               delta(out_con,in_con)=deltanum/deltaden
             enddo
          enddo
 !     multiply to get 3.34
