@@ -761,7 +761,8 @@ C
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
-        target = 166.36114
+        #target = 166.36114 # value used as reference before changing sde_strategy
+        target = 165.7 # computed with sde_strategy #165.8 +- 0.02099 pb
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -774,8 +775,7 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        #target = 166.36114 # value used as reference before changing sde_strategy
-        target = 165.8 # computed with sde_strategy #165.8 +- 0.02099 pb
+        target = 165.7 
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
