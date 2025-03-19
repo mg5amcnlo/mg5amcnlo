@@ -8394,6 +8394,8 @@ c$$$      endif
 
          sud=min(exp(QCDsudakov_exp),1d0)
 
+         if (sud.lt.1d-10) sud=0d0
+         
       else
          sud=1d0
       endif
