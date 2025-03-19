@@ -237,10 +237,11 @@ c for 'geometric mean'
       double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
      &     ,tmp1,tmp2,xm2
 c FxFx
+      double precision FxFx_ren_scales(0:nexternal),
+     $                 FxFx_fac_scale(2)
       integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
-     $     ,FxFx_fac_scale
+      common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales
+     $                    ,nFxFx_ren_scales
       integer bpower
 c
       tmp=0
@@ -416,10 +417,11 @@ c a scale to be used as a reference for factorizations scales
       integer i,imuftype
       parameter (imuftype=1)
 c FxFx
+      double precision FxFx_ren_scales(0:nexternal),
+     $                 FxFx_fac_scale(2)
       integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
-     $     ,FxFx_fac_scale
+      common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales
+     $                    ,nFxFx_ren_scales
 c
       tmp=0
       if(ickkw.eq.3)then

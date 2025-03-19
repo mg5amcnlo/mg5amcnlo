@@ -450,11 +450,11 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
       integer NJET,JET(nexternal)
       double precision rfj,sycut,palg,amcatnlo_fastjetdmerge,etaj_max
       double precision PJET(0:3,nexternal)
-      integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal),
      $                 FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
-     $                     FxFx_fac_scale
+      integer nFxFx_ren_scales
+      common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales
+     $                    ,nFxFx_ren_scales
       passcuts_fxfx=.true.
 c First apply a numerical stability cut
 c Define jet clustering parameters with a pTmin=1 GeV

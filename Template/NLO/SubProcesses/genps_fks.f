@@ -331,8 +331,8 @@ c     debug stuff
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
       integer ntot_granny,derntot,ncase(0:6)
-      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
-     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      common /c_granny_counters/ deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max,ntot_granny,derntot,ncase
       logical nocntevents
       common/cnocntevents/nocntevents
       double precision xi_i_fks_ev,y_ij_fks_ev

@@ -598,11 +598,11 @@ c For the bound, we have to square and divide by stot.
             tau_lower_bound_resonance=taumin_s(iFKS,ichan)**2/stot
 c
             if (j_fks.gt.nincoming) then
-               write (*,'(a7,x,i3,x,i5,x,a1,3(e12.5,x)))') 'tau_min'
+               write (*,'(a7,x,i3,x,i5,x,a1,3(e12.5,x))') 'tau_min'
      $              ,iFKS,ichan,':',taumin(iFKS,ichan),taumin_j(iFKS
      $              ,ichan),taumin_s(iFKS,ichan)
             else
-               write (*,'(a7,x,i3,x,i5,x,a1,e12.5,x,a13,e12.5,x))')
+               write (*,'(a7,x,i3,x,i5,x,a1,e12.5,x,a13,e12.5,x)')
      $              'tau_min',iFKS,ichan,':',taumin(iFKS,ichan)
      $              ,'     --      ',taumin_s(iFKS,ichan)
             endif

@@ -46,9 +46,9 @@ c Vegas stuff
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
-      integer i_momcmp_count
       double precision xratmax
-      common/ccheckcnt/i_momcmp_count,xratmax
+      integer i_momcmp_count
+      common/ccheckcnt/xratmax,i_momcmp_count
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
@@ -88,8 +88,8 @@ c general MadFKS parameters
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
       integer ntot_granny,derntot,ncase(0:6)
-      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
-     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      common /c_granny_counters/ deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max,ntot_granny,derntot,ncase
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
       include 'leshouche_decl.inc'

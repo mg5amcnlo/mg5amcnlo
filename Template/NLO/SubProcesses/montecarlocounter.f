@@ -799,9 +799,10 @@ c     positivity check
       common/fks_indices/i_fks,j_fks
 
 c Particle types (=colour) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
 
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
@@ -897,9 +898,10 @@ c over colour partners
       common/cgfunazi/alazi,beazi
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       double precision p_born(0:3,nexternal-1)
@@ -1010,9 +1012,10 @@ c Main loop over colour partners used to end here
       parameter (tiny=1d-6)
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       xkern(1:2)    = 0d0
       xkernazi(1:2) = 0d0
       if( (ileg.ge.3 .and.
@@ -1116,9 +1119,10 @@ c one can remove any reference to xi_i_fks
       parameter (vca=3d0)
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1199,9 +1203,10 @@ c
       parameter (vtf=1d0/2d0)
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1254,9 +1259,10 @@ c
       parameter (vcf=4d0/3d0)
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1320,9 +1326,10 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -1985,7 +1992,9 @@ c Ellis-Stirling-Webber
      $              ,isudtype,mcmass)
                if (deltaden.eq.0d0) then
                   write (*,*) 'Denominator is zero in Sudakov'
-     $                 ,mu_ij(in_con,i),in_con,i
+     $                 ,mu_ij(in_con,i),in_con,i,i_connect(in_con,i)
+     $                 ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
+     $                 ,isudtype
                   stop 1
                endif
                delta(out_con,in_con)=deltanum/deltaden
@@ -2450,10 +2459,10 @@ c the same method
       common /c_iden_comp/iden_comp
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
-
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       double precision born(nsplitorders)
       double complex borntilde(nsplitorders)
       logical split_type(nsplitorders) 

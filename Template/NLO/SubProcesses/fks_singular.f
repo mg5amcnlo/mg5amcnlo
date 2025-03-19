@@ -1051,11 +1051,11 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       common /factor_nbody/ f_b,f_nb
       double precision         fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
-      integer                              nFxFx_ren_scales
-      double precision     FxFx_ren_scales(0:nexternal),
-     $                     FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
-     $                     FxFx_fac_scale
+      double precision FxFx_ren_scales(0:nexternal),
+     $                 FxFx_fac_scale(2)
+      integer nFxFx_ren_scales
+      common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales
+     $                    ,nFxFx_ren_scales
       INTEGER              NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
@@ -3961,9 +3961,10 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double complex azifact
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
 
       double precision zero,vtiny
       parameter (zero=0d0)
@@ -4122,9 +4123,10 @@ C
       common/ccalculatedBorn/calculatedBorn
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
 
       integer i, j, iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
@@ -5069,9 +5071,10 @@ c Calculate the eikonal factor
       external dot
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i, ch_j, ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
@@ -5416,9 +5419,9 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       parameter (itwo=2)
       parameter (iunit=6)
       parameter (verbose=.false.)
-      integer i_momcmp_count
       double precision xratmax
-      common/ccheckcnt/i_momcmp_count,xratmax
+      integer i_momcmp_count
+      common/ccheckcnt/xratmax,i_momcmp_count
 c
       isum=0
       if(jac_cnt(0).gt.0.d0)isum=isum+1
@@ -5496,9 +5499,9 @@ c
       parameter (vtiny=1.d-10)
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
-      integer i_momcmp_count
       double precision xratmax
-      common/ccheckcnt/i_momcmp_count,xratmax
+      integer i_momcmp_count
+      common/ccheckcnt/xratmax,i_momcmp_count
       include "pmass.inc"
 c
       pass0=.true.
@@ -7032,9 +7035,10 @@ c
       common/cnbody/nbody
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
-      integer i_type,j_type,m_type
-      double precision ch_i,ch_j,ch_m
-      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born

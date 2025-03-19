@@ -439,7 +439,7 @@ C               But empirically, I observed that retaining the original complex 
 
         logical LOOP_ID_DONE(NLOOPGROUPS)
 	    %(complex_dp_format)s TIR_COEFS_DIRECT_MODE(0:LOOPMAXCOEFS-1,3,NLOOPGROUPS)
-	    %(complex_dp_format)s TIR_COEFS_ERROR(0:MAXRANK,NLOOPGROUPS)
+	    %(real_dp_format)s TIR_COEFS_ERROR(0:MAXRANK,NLOOPGROUPS)
 	    common/%(proc_prefix)sCOLLIER_TIR_COEFS/TIR_COEFS_DIRECT_MODE,TIR_COEFS_ERROR,LOOP_ID_DONE
 
         INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE(4), NCOLLIERCALLS(4)
