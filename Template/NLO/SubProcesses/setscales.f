@@ -537,6 +537,8 @@ c a scale to be used as a reference for renormalization scale
       integer i,j
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
+      double precision user_dynamical_scale
+      external user_dynamical_scale
 c
       tmp=0
       if(ickkw.eq.-1)then
@@ -578,14 +580,7 @@ cc      to use this code you must set                                           
 cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c         write(*,*) "User-defined scale not set"
-c         stop 1
-
-!!!! with Sudakov s partonic is the natural scale !!!!
-
-         temp_scale_id='User-defined dynamical scale' ! use a meaningful string
-         tmp = 0d0
-         tmp=dsqrt((pp(0,1)+pp(0,2))**2-(pp(1,1)+pp(1,2))**2-(pp(2,1)+pp(2,2))**2-(pp(3,1)+pp(3,2))**2)
+         tmp = user_dynamical_scale(PP)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

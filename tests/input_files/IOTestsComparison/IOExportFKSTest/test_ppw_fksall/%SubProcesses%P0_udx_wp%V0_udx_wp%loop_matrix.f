@@ -214,6 +214,7 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'process_info.inc'
       INCLUDE 'unique_id.inc'
+
       INCLUDE 'coupl.inc'
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
@@ -245,7 +246,7 @@ C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(NLOOPLIB)
       DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.TRUE.,.TRUE./
+     $ ,.FALSE.,.FALSE./
       COMMON/LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
@@ -834,8 +835,6 @@ C     Make sure we start with empty caches
         CALL CLEAR_CACHES()
       ENDIF
 
-C     Now make sure to turn on the global COLLIER cache if applicable
-      CALL SET_COLLIER_GLOBAL_CACHE(.TRUE.)
 
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and
@@ -1665,8 +1664,6 @@ C     Make sure that we finish by emptying caches
         CALL CLEAR_CACHES()
       ENDIF
 
-C     Now make sure to turn off the global COLLIER cache if applicable
-      CALL SET_COLLIER_GLOBAL_CACHE(.FALSE.)
 
       END
 
@@ -1678,8 +1675,6 @@ C      after
 C     ech event
 C     
       CALL CLEAR_TIR_CACHE()
-      CALL NINJA_CLEAR_INTEGRAL_CACHE()
-      CALL CLEAR_COLLIER_CACHE()
       END
 
 C     --=========================================--

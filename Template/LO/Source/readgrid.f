@@ -6,6 +6,7 @@ c...global variables
       include 'sudgrid.inc'
       include 'PDF/pdf.inc'
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 
 c...arguments

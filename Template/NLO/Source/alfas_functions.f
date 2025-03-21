@@ -71,8 +71,8 @@ ccc
 
       DOUBLE PRECISION FUNCTION ALPHAS(Q)
 
-      DOUBLE PRECISION Q,ALPHAS_not_timed
-      external ALPHAS_not_timed
+      DOUBLE PRECISION Q,ALPHAS_from_grids,alphas_not_timed
+      external ALPHAS_from_grids,alphas_not_timed
 
 c     timing statistics
       include "timing_variables.inc"
@@ -80,14 +80,97 @@ c     timing statistics
 c     This function takes roughly 0.6 micro-seconds and the function
 c     cpu_time takes 0.3 so it does not make much sense to always leave
 c     the timing profile. But it can be uncommented for dedicated study.
-c      call cpu_time(tbefore)
-      ALPHAS=ALPHAS_not_timed(Q)
-c      call cpu_time(tAfter)
+c     call cpu_time(tbefore)
+!     interpolate grids
+      ALPHAS=ALPHAS_FROM_GRIDS(Q)
+c$$$      ALPHAS=alphas_not_timed(Q)
+c$$$      if (abs(ALPHAS/alphas_not_timed(Q)-1d0).gt.1d-4) then
+c$$$         write (*,*) Q,ALPHAS,alphas_not_timed(Q),ALPHAS/alphas_not_timed(Q)-1d0
+c$$$      endif
+      
+c     call cpu_time(tAfter)
       
 c      tPDF = tPDF + (tAfter-tBefore)
       RETURN
       end
 
+      real*8 function alphas_from_grids(scale)
+      implicit none
+      include 'alfas.inc'
+      real*8 scale,CMASS,BMASS,Q,lscale
+      integer i,ii,jj,gridsize_low,gridsize_mid,gridsize_high
+      real*8 cut_off_low,cut_off_high
+      parameter (gridsize_low=255)
+      parameter (gridsize_mid=255)
+      parameter (gridsize_high=255)
+      parameter (cut_off_low=log(0.5d0))
+      parameter (cut_off_high=log(100000d0)) ! 100 TeV
+      real*8 grid_low(0:gridsize_low),grid_mid(0:gridsize_mid)
+     $     ,grid_high(0:gridsize_high),grid_low_Q(0:gridsize_low)
+     $     ,grid_mid_Q(0:gridsize_mid),grid_high_Q(0:gridsize_high)
+     $     ,grid_low_sf(0:gridsize_low),grid_mid_sf(0:gridsize_mid)
+     $     ,grid_high_sf(0:gridsize_high)
+      logical firsttime
+      data firsttime/.true./
+      save CMASS,BMASS,grid_low,grid_mid,grid_high,grid_low_Q,grid_mid_Q
+     $     ,grid_high_Q,firsttime,grid_low_sf,grid_mid_sf,grid_high_sf
+      real*8 alphas_not_timed
+      external alphas_not_timed
+      if (firsttime) then
+         write (*,*) 'Filling grid for alpha_S computation ... '
+         CMASS=log(1.42D0)
+         BMASS=log(4.7D0)
+!     scales below the charm mass
+         do i=0,gridsize_low
+            Q=cut_off_low+(CMASS-cut_off_low)*dble(i)/dble(gridsize_low)
+            grid_low_Q(i)=Q
+            grid_low(i)=ALPHAS_not_timed(exp(Q))
+            if (i.ne.0) grid_low_sf(i-1)=(grid_low(i)-grid_low(i-1))
+     $           /(grid_low_Q(i)-grid_low_Q(i-1))
+         enddo
+!     scales between charm and bottom mass
+         do i=0,gridsize_mid
+            Q=CMASS+(BMASS-CMASS)*dble(i)/dble(gridsize_mid)
+            grid_mid_Q(i)=Q
+            grid_mid(i)=ALPHAS_not_timed(exp(Q))
+            if (i.ne.0) grid_mid_sf(i-1)=(grid_mid(i)-grid_mid(i-1))
+     $           /(grid_mid_Q(i)-grid_mid_Q(i-1))
+         enddo
+!     scales above the bottom mass
+         do i=0,gridsize_high
+            Q=BMASS+(cut_off_high-BMASS)*dble(i)/dble(gridsize_high)
+            grid_high_Q(i)=Q
+            grid_high(i)=ALPHAS_not_timed(exp(Q))
+            if (i.ne.0) grid_high_sf(i-1)=(grid_high(i)-grid_high(i-1))
+     $           /(grid_high_Q(i)-grid_high_Q(i-1))
+         enddo
+         firsttime=.false.
+         write (*,*) 'done... '
+      endif
+
+      lscale=log(scale)
+!     use linear interpolation to compute alpha_s
+      if (lscale.lt.cut_off_low) then
+         ! scale too low: cannot use grids
+         alphas_from_grids=ALPHAS_not_timed(scale)
+      elseif (lscale.lt.CMASS) then
+         ii=int((lscale-cut_off_low)/(CMASS-cut_off_low)*gridsize_low)
+         alphas_from_grids=grid_low(ii)+
+     &        (lscale-grid_low_Q(ii))*grid_low_sf(ii)
+      elseif (lscale.lt.BMASS) then
+         ii=int((lscale-CMASS)/(BMASS-CMASS)*gridsize_mid)
+         alphas_from_grids=grid_mid(ii)+
+     &        (lscale-grid_mid_Q(ii))*grid_mid_sf(ii)
+      elseif (lscale.lt.cut_off_high) then
+         ii=int((lscale-BMASS)/(cut_off_high-BMASS)*gridsize_high)
+         alphas_from_grids=grid_high(ii)+
+     &        (lscale-grid_high_Q(ii))*grid_high_sf(ii)
+      else
+         ! scale too high: cannot use grids
+         alphas_from_grids=ALPHAS_not_timed(scale)
+      endif
+      end
+      
 C-----------------------------------------------------------------------------
 C
       DOUBLE PRECISION FUNCTION ALPHAS_not_timed(Q)

@@ -116,6 +116,7 @@
 # cluster_type = condor
 # cluster_queue = madgraph
 # cluster_size = 150 
+# cluster_walltime =  # time in minute for slurm and second for condor (not supported for other scheduller)
 
 #! Path to a node directory to avoid direct writing on the central disk
 #!  Note that condor clusters avoid direct writing by default (therefore this

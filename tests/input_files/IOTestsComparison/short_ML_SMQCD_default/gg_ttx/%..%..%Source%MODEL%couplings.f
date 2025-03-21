@@ -19,17 +19,42 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       LOGICAL UPDATELOOP
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'input.inc'
+
+
       INCLUDE 'coupl.inc'
       READLHA = .TRUE.
       INCLUDE 'intparam_definition.inc'
-      INCLUDE 'mp_intparam_definition.inc'
+      IF (UPDATELOOP) THEN
+
+        INCLUDE 'mp_intparam_definition.inc'
+
+      ENDIF
 
       CALL COUP1()
+      IF (UPDATELOOP) THEN
+
+        CALL COUP2()
+
+      ENDIF
+
 C     
 couplings needed to be evaluated points by points
 C     
-      CALL COUP2()
-      CALL MP_COUP2()
+      CALL COUP3()
+C     
+couplings in multiple precision
+C     
+      IF (UPDATELOOP) THEN
+
+        CALL MP_COUP1()
+        CALL MP_COUP2()
+C       
+couplings needed to be evaluated points by points
+C       
+        CALL MP_COUP3()
+
+      ENDIF
+
 
       RETURN
       END
@@ -37,6 +62,7 @@ C
       SUBROUTINE UPDATE_AS_PARAM()
 
       IMPLICIT NONE
+
       DOUBLE PRECISION PI, ZERO
       LOGICAL READLHA, FIRST
       DATA FIRST /.TRUE./
@@ -71,19 +97,22 @@ C
 C     
 couplings needed to be evaluated points by points
 C     
-      CALL COUP2()
+      CALL COUP3()
 
       RETURN
       END
 
-      SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2)
+      SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2 )
 
       IMPLICIT NONE
+
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
       DOUBLE PRECISION MU_R2, AS2
+
       INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
+
       INCLUDE 'coupl.inc'
       DOUBLE PRECISION MODEL_SCALE
       COMMON /MODEL_SCALE/MODEL_SCALE
@@ -121,7 +150,7 @@ C
 C     
 couplings needed to be evaluated points by points
 C     
-      CALL MP_COUP2()
+      CALL MP_COUP3()
 
       RETURN
       END

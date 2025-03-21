@@ -30,7 +30,6 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-from distutils.version import LooseVersion, StrictVersion
 import six
 from six.moves import zip_longest
 from six.moves import range
@@ -68,7 +67,7 @@ def parse_info_str(fsock):
     """
 
     info_dict = {}
-    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+    pattern = re.compile(r"(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
     for entry in fsock:
         entry = entry.strip()
@@ -85,7 +84,7 @@ def parse_info_str(fsock):
 def glob(name, path=''):
     """call to glob.glob with automatic security on path"""
     import glob as glob_module
-    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    path = re.sub(r'(?P<name>\?|\*|\[|\])', r'[\g<name>]', path)
     return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
@@ -176,6 +175,42 @@ def get_time_info():
 def is_MA5_compatible_with_this_MG5(ma5path):
     """ Returns None if compatible or, it not compatible, a string explaining 
     why it is so."""
+
+    class version:
+        def __init__(input):
+            self.info = input.split('.')
+
+        def __lt__(input):
+            if isinstance(input, str):
+                input = version(input)
+            
+            for a,b in zip(self.info, input.info):
+                both_int = True
+                try:
+                    a = int(a)
+                except Exception:
+                     both_int = False
+                try:
+                    b = int(b)
+                except Exception:
+                    both_int = False
+                if both_int:
+                    if a !=b:
+                        return a<b
+                    continue
+                elif isinstance(a, int):
+                    return False
+                elif isinstance(a, False):
+                    return False
+                elif a == b:
+                    continue
+                else:
+                    return a < b
+            else:
+                return len(self.info) < len(input.info)                   
+
+    def LooseVersion(input):
+        return version(input)
 
     ma5_version = None
     try:
@@ -347,7 +382,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     if dependency=='ninja':
         if cmd.options['ninja'] in ['None',None,''] or\
          (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
-         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'lib','libninja.a')) is None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
@@ -579,10 +614,10 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
     #search file
     file_to_change=find_makefile_in_dir(directory)
     if compiler_type == 'gfortran':
-        comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
         var = 'FC'
     elif compiler_type == 'cpp':
-        comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)CXX\s*=\s*(.+)\s*$')
         var = 'CXX'
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
@@ -826,9 +861,9 @@ def detect_current_compiler(path, compiler_type='fortran'):
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
     if compiler_type == 'fortran':
-        comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*FC\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     elif compiler_type == 'cpp':
-        comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*CXX\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
@@ -966,7 +1001,19 @@ def call_stdout(arg, *args, **opt):
 def copytree(src, dst, symlinks = False, ignore = None):
   if not os.path.exists(dst):
     os.makedirs(dst)
-    shutil.copystat(src, dst)
+    try:
+      shutil.copystat(src, dst)
+    except PermissionError:
+        if os.path.realpath(src).startswith('/cvmfs') and os.path.realpath(dst).startswith('/afs'):
+           # allowing missmatch from cvmfs to afs since sounds to not create issue --at least in general-- 
+           logger.critical(f'Ignoring that we could not copy permissions from {src} to {dst}')
+        else:
+           logger.critical(f'Permission error detected from {src} to {dst}.\n'+\
+                          'If you are using WSL with windows partition, please try using python3.12\n'+\
+                          'or avoid moving your data from the WSL partition to the UNIX one')
+           # we do not have enough experience in WSL to allow it to get trough.
+           raise
+      
   lst = os.listdir(src)
   if ignore:
     excl = ignore(src, lst)
@@ -1235,7 +1282,8 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read().encode())
+        with ziplib.open(stdout, 'wb') as f:
+            f.write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
@@ -1859,12 +1907,12 @@ class EasterEgg(object):
     May4_banner = "*                           _____                          *\n" + \
         "*                       ,-~\"     \"~-.                      *\n" + \
         "*        *            ,^ ___         ^.             *      *\n" + \
-        "*          *         / .^   ^.         \         *         *\n" + \
+        "*          *         / .^   ^.         \\         *         *\n" + \
         "*            *      Y  l  o  !          Y      *           *\n" + \
         "*              *   l_  `.___.'         _,[   *             *\n" + \
         "*                * |^~\"--------------~\"\"^| *               *\n" + \
         "*              *   !     May the 4th     !   *             *\n" + \
-        "*            *       \                 /       *           *\n" + \
+        "*            *       \\                 /       *           *\n" + \
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
@@ -1873,13 +1921,13 @@ class EasterEgg(object):
         "* M::::::::::M       M::::::::::M                          *\n" + \
         "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
         "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
-        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \\__ \\                *\n" + \
         "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
         "* M::::::M   M:::::::M   M::::::M                          *\n" + \
         "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
-        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \\| '__|       *\n" + \
         "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
-        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M   |_/\\/\\___/|_|          *\n" + \
         "* M::::::M               M::::::M                          *\n" + \
         "* MMMMMMMM               MMMMMMMM                          *\n" + \
         "*                                                          *\n" + \
@@ -2006,20 +2054,22 @@ class EasterEgg(object):
 
 
 def get_older_version(v1, v2):
-    """ return v2  if v1>v2
+    """ return v2 if v1>v2
         return v1 if v1<v2
         return v1 if v1=v2 
-        return v1 if v2 is not in 1.2.3.4.5 format
-        return v2 if v1 is not in 1.2.3.4.5 format
+        return v1 if v2 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
+        return v2 if v1 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
     """
     
     for a1, a2 in zip_longest(v1, v2, fillvalue=0):
+        if '_' in str(a1) : a1 = str(a1)[:str(a1).index('_')]
+        if '_' in str(a2) : a2 = str(a2)[:str(a2).index('_')]
         try:
-            a1= int(a1)
+            a1 = int(a1)
         except:
             return v2
         try:
-            a2= int(a2)
+            a2 = int(a2)
         except:
             return v1        
         if a1 > a2:
@@ -2053,13 +2103,14 @@ def is_plugin_supported(obj):
         plugin_support[name] = False
         return
     
+    logger.debug("Validating plugin against this version: %s." % '.'.join(str(i) for i in mg5_ver) )
     if get_older_version(min_ver, mg5_ver) == min_ver and \
        get_older_version(mg5_ver, max_ver) == mg5_ver:
         plugin_support[name] = True
         if get_older_version(mg5_ver, val_ver) == val_ver:
-            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+            logger.warning("""Plugin %s has marked as NOT being validated with this version: %s. 
 It has been validated for the last time with version: %s""",
-                                        name, '.'.join(str(i) for i in val_ver))
+			   name, '.'.join(str(i) for i in mg5_ver), '.'.join(str(i) for i in val_ver) )
     else:
         if __debug__:
             logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
@@ -2194,39 +2245,51 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir,candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as  error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
     if not use_lhapdf:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib64')):
+            candidates += [pjoin(os.pardir,'local', 'lib64', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib64', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
         if not use_lhapdf:
             try:
                 import lhapdf
@@ -2242,7 +2305,10 @@ def import_python_lhapdf(lhapdfconfig):
         
     if use_lhapdf:
         python_lhapdf = lhapdf
-        python_lhapdf.setVerbosity(0)
+        try:
+            python_lhapdf.setVerbosity(0)
+        except Exception:
+            pass
     else:
         python_lhapdf = None
     return python_lhapdf
@@ -2276,6 +2342,7 @@ def make_unique(input, keepordering=None):
             keepordering = False
         else:
             keepordering = madgraph.ordering
+
     if not keepordering:
         return list(set(input))
     else:

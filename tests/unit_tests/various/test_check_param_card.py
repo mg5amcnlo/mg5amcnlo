@@ -129,7 +129,7 @@ class TestParamCard(unittest.TestCase):
         self.assertFalse(card.has_param('new', [23]))
         self.assertTrue(card.has_param('mass', [23]))
         
-        self.assertFalse('new' in list(card.keys()))
+        self.assertNotIn('new', list(card.keys()))
         
         card.mod_param('mass', [23], 'new', [25], 43)
         card.mod_param('decay', [23], 'new', [26], 43)
@@ -144,7 +144,7 @@ class TestParamCard(unittest.TestCase):
         card.mod_param('new', [25], 'mass', [23])
         card.mod_param('new', [26], 'decay', [23])       
                 
-        self.assertFalse('new' in list(card.keys()))       
+        self.assertNotIn('new', list(card.keys()))
         
                 
 
@@ -158,10 +158,10 @@ class TestParamCard(unittest.TestCase):
         # Rename the blocks
         mass = card['mass']
         card.rename_blocks({'mass':'polemass','decay':'width'})
-        self.assertTrue('polemass' in card)
-        self.assertTrue('width' in card)
-        self.assertFalse('mass' in card)
-        self.assertFalse('decay' in card)        
+        self.assertIn('polemass', card)
+        self.assertIn('width', card)
+        self.assertNotIn('mass', card)
+        self.assertNotIn('decay', card)
         self.assertEqual(mass, card['polemass'])
         self.assertEqual(mass.name, 'polemass')
     
@@ -185,7 +185,7 @@ class TestParamCard(unittest.TestCase):
         # change the block of a parameter and lhacode
         card.mod_param('mass', [32], block='polemass', lhacode=[35])
         
-        self.assertFalse('mass' in card)
+        self.assertNotIn('mass', card)
         self.assertRaises(KeyError, card['polemass'].get, [32])
         self.assertRaises(KeyError, card['width'].get, [32])
         self.assertEqual(param, card['polemass'].get([35]))

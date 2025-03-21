@@ -7,6 +7,7 @@ import operator
 import numbers
 import math
 import time
+import copy
 import os
 import shutil
 import sys
@@ -342,7 +343,12 @@ class EventFile(object):
                 text.append(line)
                 
             if '</event>' in line:
-                if self.parsing:
+                if self.parsing == "wgt_only":
+                    out = Event(text, parse_momenta=False)
+                    #if len(out) == 0  and not self.allow_empty_event:
+                    #    raise Exception
+                    return out
+                elif self.parsing:
                     out = Event(text)
                     if len(out) == 0  and not self.allow_empty_event:
                         raise Exception
@@ -448,6 +454,8 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
+        self.parsing = 'wgt_only'
+
         if not get_wgt:
             def weight(event):
                 return event.wgt
@@ -914,6 +922,8 @@ class MultiEventFile(EventFile):
        The number of events in each file need to be provide in advance 
        (if not provide the file is first read to find that number"""
     
+    parsing = True # check if/when we need to parse the event.
+
     def __new__(cls, start_list=[],parse=True):
         return object.__new__(MultiEventFile)
     
@@ -986,6 +996,7 @@ class MultiEventFile(EventFile):
         nb_event = random.randint(1, remaining_event)
         sum_nb=0
         for i, obj in enumerate(self.files):
+            obj.parsing = "wgt_only"
             sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
@@ -1056,6 +1067,8 @@ class MultiEventFile(EventFile):
             #special case for 1>N
             init_information = run_card.get_banner_init_information()
             event = next(self)
+            if not len(event): #if parse-momenta was false we have to parse the first event
+                event = Event(str(event))
             init_information["idbmup1"] = event[0].pdg
             init_information["ebmup1"] = event[0].mass
             init_information["idbmup2"] = 0 
@@ -1065,6 +1078,8 @@ class MultiEventFile(EventFile):
             # check special case without PDF for one (or both) beam
             if init_information["idbmup1"] in [0,9]:
                 event = next(self)
+                if len(event) == 0:
+                    event = Event(str(event))
                 init_information["idbmup1"]= event[0].pdg
                 if init_information["idbmup2"] == 0:
                     init_information["idbmup2"]= event[1].pdg
@@ -1115,6 +1130,7 @@ class MultiEventFile(EventFile):
         total_event = 0
         sum_cross = collections.defaultdict(int)
         for i,f in enumerate(self.files):
+            f.parsing = 'wgt_only'
             nb_event = 0 
             # We need to loop over the event file to get some information about the 
             # new cross-section/ wgt of event.
@@ -1136,6 +1152,7 @@ class MultiEventFile(EventFile):
                     nb_keep = max(20, int(nb_event*trunc_error*15))
                     new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
+                misc.sprint(i,f)
                 raise Exception
             # store the information
             self.initial_nb_events[i] = nb_event
@@ -1189,7 +1206,6 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-
 
         if isinstance(get_wgt, (str,six.text_type)):
             unwgt_name =get_wgt 
@@ -1302,7 +1318,7 @@ class Event(list):
 
     warning_order = True # raise a warning if the order of the particle are not in accordance of child/mother
 
-    def __init__(self, text=None):
+    def __init__(self, text=None, parse_momenta=True):
         """The initialization of an empty Event (or one associate to a text file)"""
         list.__init__(self)
         
@@ -1322,15 +1338,15 @@ class Event(list):
         self.matched_scale_data = None
         self.syscalc_data = {}
         if text:
-            self.parse(text)
+            self.parse(text, parse_momenta=parse_momenta)
 
 
-            
-    def parse(self, text):
+    event_flag_pattern = re.compile(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""")   
+    def parse(self, text, parse_momenta=True):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-
+        tags = []
         if not isinstance(text, list):
             text = text.split('\n')
 
@@ -1354,24 +1370,28 @@ class Event(list):
                 if '<rwgt>' in line:
                     status = 'tag'
                 else:
-                    self.assign_scale_line(line)
+                    self.assign_scale_line(line, convert=parse_momenta)
                     status = 'part' 
                     continue
             if '<' in line:
                 status = 'tag'
                 
             if 'part' == status:
-                part = Particle(line, event=self)
-                if part.E != 0 or part.status==-1:
-                    self.append(part)
-                elif self.nexternal:
-                    self.nexternal-=1
+                if parse_momenta:
+                    part = Particle(line, event=self)
+                    if part.E != 0 or part.status==-1:
+                        self.append(part)
+                    elif self.nexternal:
+                        self.nexternal-=1
+                else:
+                    tags.append(line)
             else:
-                if '</event>' in line:
+                if line.endswith('</event>'):
                     line = line.replace('</event>','',1)
-                self.tag += '%s\n' % line
-                
-        self.assign_mother()
+                tags.append(line) 
+        self.tag += "\n".join(tags)
+        if parse_momenta:     
+            self.assign_mother()
     
     
     def assign_mother(self):
@@ -1572,11 +1592,11 @@ class Event(list):
             return self.loweight
         
         if not hasattr(Event, 'loweight_pattern'):
-            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
+                                    <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb1>1|2)["']?\\>\\s*(?P<beam1>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb2>1|2)["']?\\>\\s*(?P<beam2>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <totfact>\\s*(?P<totfact>[\\d.e+-]*)\\s*</totfact>
             ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
@@ -1629,7 +1649,7 @@ class Event(list):
         self.matched_scale_data = []
         
 
-        pattern  = re.compile("<scales\s|</scales>")
+        pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1637,7 +1657,7 @@ class Event(list):
             tmp = {}
             start,content, end = data
             self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
             for i in range(1, len(self)+1):
@@ -1661,7 +1681,7 @@ class Event(list):
             return self.syscalc_data
         
         pattern  = re.compile("<mgrwt>|</mgrwt>")
-        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        pattern2 = re.compile("<(?P<tag>[\\w]*)(?:\\s*(\\w*)=[\"'](.*)[\"']\\s*|\\s*)>(.*)</(?P=tag)>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
@@ -1864,6 +1884,240 @@ class Event(list):
         
         return new_event
 
+
+    def set_initial_mass_to_zero(self):
+        """set the masses of the initial particles to zero, by reshuffling the respective momenta
+        Works only in the **partonic** com frame, so the event must be boosted to such frame
+        before calling the function
+        """
+
+        if  not misc.equal(self[0].px, 0) or not misc.equal(self[1].px, 0) or \
+            not misc.equal(self[0].py, 0) or not misc.equal(self[1].py, 0) or \
+            not misc.equal(self[0].pz, - self[1].pz, zero_limit=False):
+            misc.sprint(self[0])
+            misc.sprint(self[1])
+            raise Exception('momenta should be in the partonic center of mass frame') 
+
+        self[0].mass = 0.
+        self[1].mass = 0.
+        tot_E=0.
+        for ip,part in enumerate(self):
+            if part.status == 1 :
+                tot_E += part.E
+        if (self[0].pz > 0. and self[1].pz < 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., 0., 0., tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., 0., 0., -tot_E/2.]))
+        elif (self[0].pz < 0. and self[1].pz > 0):
+            self[0].set_momentum(FourMomentum([tot_E/2., 0., 0., -tot_E/2.]))
+            self[1].set_momentum(FourMomentum([tot_E/2., 0., 0., tot_E/2.]))
+        else:
+            logger.critical('ERROR: two incoming partons not back.-to-back')
+
+    def set_final_jet_mass_to_zero(self):
+        """set the final light particle masses to zero
+        """
+
+        for ip,part in enumerate(self):
+            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (part.status == 1):
+                part.mass = 0.
+                E_1_new = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                part.set_momentum(FourMomentum([E_1_new, part.px, part.py, part.pz]))
+
+
+
+    def merge_particles_kinematics(self, i,j, moth):
+        """Map to an underlying n-body kinematics for two given 
+           particles i,j to be merged and a resulting moth"""
+        """ note! kinematics (and id) mapping only! """
+
+        recoil = True
+        fks_type = False
+
+        if recoil and not fks_type:
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            
+            merge_i = self[fks_i]
+            merge_j = self[fks_j]
+        
+            i_4mom = FourMomentum(merge_i)
+            j_4mom = FourMomentum(merge_j)
+            if (fks_i <= 1):
+                sign1 = -1.0
+            else:
+                sign1 = 1.0
+            mother_4mom = i_4mom + sign1*j_4mom
+        
+            new_event = copy.deepcopy(self)
+
+            self[fks_i].pid = moth[0]['id']
+            self[fks_i].set_momentum(mother_4mom)
+
+            if fks_i <= 1: # initial-state recoil
+                new_p = FourMomentum()
+                for ip,part in enumerate(self):
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        new_p += part
+                
+                if fks_i == 0:
+                    self[1].set_momentum(new_p - FourMomentum(self[0]))
+                elif fks_i == 1:
+                    self[0].set_momentum(new_p - FourMomentum(self[1]))
+                
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+                
+            if fks_i > 1: # final-state recoil
+
+                # Re-scale the energy of fks_i to make it on-shell
+                for ip,part in enumerate(self):
+                    if (ip == fks_i):
+                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                        new_p.E = part.E
+
+                # Find the overall energy in the final state
+                new_p.E = 0.0
+                for ip,part in enumerate(self):
+                    if (ip != fks_j and ip >= 2):
+                        new_p.E +=  part.E
+                
+                # Use one of the initial states to absorb the energy change in the final state
+                self[1].set_momentum(FourMomentum([new_p.E-self[0].E,self[1].px,self[1].py,self[1].pz]))
+                
+                # Change the initial state pz and E
+                pz_1_new = self.recoil_eq(self[0],self[1])
+                pz_2_new = self[0].pz + self[1].pz - pz_1_new
+                E_1_new = math.sqrt(self[0].mass**2 + self[0].px**2 + self[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(self[1].mass**2 + self[1].px**2 + self[1].py**2 + pz_2_new **2)
+                self[0].set_momentum(FourMomentum([E_1_new,self[0].px,self[0].py,pz_1_new]))
+                self[1].set_momentum(FourMomentum([E_2_new,self[1].px,self[1].py,pz_2_new]))
+                self.pop(to_remove)
+            
+        elif fks_type and not recoil:        
+            ## Do it in a more FKS-style
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            new_event = copy.copy(event)
+
+            if fks_i <= 1: # initial-state recoil
+
+                # First boost to partonic CM frame
+                q = FourMomentum(self[0])+FourMomentum(self[1])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum(part)
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+
+                k_tot = FourMomentum([self[0].E+self[1].E-self[fks_j].E,self[0].px+self[1].px-self[fks_j].px,\
+                            self[0].py+self[1].py-self[fks_j].py,self[0].pz+self[1].pz-self[fks_j].pz])
+
+                final = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        final = final + vec
+                        
+                s = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])**2
+                ksi = self[fks_j].E/(math.sqrt(s)/2.0)
+                y = self[fks_j].pz/self[fks_j].E
+
+                self[0].pz = self[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
+                self[0].E = math.sqrt(self[0].mass**2 + self[0].pz**2)
+                self[1].pz = self[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
+                self[1].E = math.sqrt(self[1].mass**2 + self[1].pz**2)
+
+                final = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k_tot_1 = k_tot.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                k_tot_2 = k_tot_1.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                k_tot_3 = k_tot_2.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+
+                for ip,part in enumerate(self):
+                    if (ip >= 2):
+                        vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                        vec2 = vec.zboost(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        vec3 = vec2.pt_boost(pboost=FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                        vec_new = vec3.zboost_inv(pboost=FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        self[ip].set_momentum(FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
+                
+                self.pop(to_remove)
+
+            else: # final-state recoil
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                for ip,part in enumerate(self):
+                    vec = FourMomentum([part.E,part.px,part.py,part.pz])
+                    self[ip].set_momentum(vec.zboost(pboost=q))
+            
+                q = FourMomentum([self[0].E+self[1].E,self[0].px+self[1].px,\
+                            self[0].py+self[1].py,self[0].pz+self[1].pz])
+
+                k = FourMomentum([self[fks_i].E+self[fks_j].E,self[fks_i].px+self[fks_j].px,\
+                            self[fks_i].py+self[fks_j].py,self[fks_i].pz+self[fks_j].pz])
+
+                k_rec = FourMomentum([0,0,0,0])
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
+                        k_rec = k_rec + FourMomentum([part.E,part.px,part.py,part.pz])
+
+                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
+                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
+                for ip,part in enumerate(self):
+                    if ip >= 2 and ip != fks_i and ip != fks_j:
+                        vec = FourMomentum([self[ip].E,self[ip].px,self[ip].py,self[ip].pz])
+                        self[ip].set_momentum(vec.boost_beta(beta,k_rec))
+                    if ip == fks_i:
+                        self[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
+                self.pop(to_remove)
+        else:
+            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
+
+    def recoil_eq(self,part1, part2):
+        """ In general, solves the equation
+        E1 + E2 = K 
+        p1 + p2 = c
+        E1^2 - p1^2 = a
+        E2^2 - p2^2 = b
+        and returns p1
+        """
+        thresh = 1e-6
+        import random
+        a = part1.mass**2 + part1.px**2 + part1.py**2
+        b = part2.mass**2 + part2.px**2 + part2.py**2
+        c = part1.pz + part2.pz
+        K = part1.E + part2.E
+        K2 = K**2
+        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
+            logger.critical('Error in recoil_eq solver 1')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
+            logger.critical('Error in recoil_eq solver 2')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(K)
+        return sol1
+
+
     def boost(self, filter=None):
         """modify the current event to boost it according to the current filter"""
         if filter is None:
@@ -1979,19 +2233,27 @@ class Event(list):
             raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
                  
          
-    def assign_scale_line(self, line):
+    def assign_scale_line(self, line, convert=True):
         """read the line corresponding to global event line
         format of the line is:
         Nexternal IEVENT WEIGHT SCALE AEW AS
         """
         inputs = line.split()
         assert len(inputs) == 6
-        self.nexternal=int(inputs[0])
-        self.ievent=int(inputs[1])
-        self.wgt=float(inputs[2])
-        self.scale=float(inputs[3])
-        self.aqed=float(inputs[4])
-        self.aqcd=float(inputs[5])
+        if convert:
+            self.nexternal=int(inputs[0])
+            self.ievent=int(inputs[1])
+            self.wgt=float(inputs[2])
+            self.scale=float(inputs[3])
+            self.aqed=float(inputs[4])
+            self.aqcd=float(inputs[5])
+        else:
+            self.nexternal=inputs[0]
+            self.ievent=inputs[1]
+            self.wgt=float(inputs[2])
+            self.scale=inputs[3]
+            self.aqed=inputs[4]
+            self.aqcd=inputs[5]
         
     def get_tag_and_order(self):
         """Return the unique tag identifying the SubProcesses for the generation.
@@ -2343,7 +2605,11 @@ class Event(list):
         else:
             event_flag = ''
 
-        scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+        try:
+            scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+            (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
+        except:
+            scale_str = "%s %s %+13.7e %s %s %s" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
 
             
@@ -2687,8 +2953,8 @@ class FourMomentum(object):
     
     @property
     def pseudorapidity(self):
-        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
-        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
+        norm = math.sqrt(self.px**2 + self.py**2 + self.pz**2)
+        return  0.5* math.log((norm + self.pz) / (norm - self.pz))
     
     @property
     def rapidity(self):
@@ -2902,23 +3168,19 @@ class FourMomentum(object):
             return out
         
         
-        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
-        # rotation such that it become (E, 0 , 0 , p ) is
-        #  cosT sinF  ,  -sinT  , cosT sinF
-        #  sinT cosF  ,  cosT   , sinT sinF
-        # -sinT       ,   0     , cosF
-        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
-        cosF = pboost.pz / p
-        sinF = math.sqrt(1-cosF**2)
-        sinT = pboost.py/p/sinF
-        cosT = pboost.px/p/sinF
-        
-        out=FourMomentum([self.E,
-                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
-                          -self.px*sinT+      self.py*cosT,
-                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
-                          ])
-        out = out.zboost(E=pboost.E,pz=p)
+        # see here https://physics.stackexchange.com/questions/749036/general-lorentz-boost-of-four-momentum-in-cm-frame-particle-physics
+        vx = pboost.px/pboost.E 
+        vy = pboost.py/pboost.E 
+        vz = pboost.pz/pboost.E 
+        v = pboost.norm/pboost.E
+        v2 = pboost.norm_sq/pboost.E**2
+        gamma = 1./math.sqrt(1.-v**2)
+        gammo = gamma-1.
+        out = FourMomentum(E = gamma*(self.E - vx*self.px - vy*self.py - vz*self.pz),
+                           px= -gamma*vx*self.E + (1+gammo*vx**2/v2)*self.px + gammo*vx*vy/v2*self.py + gammo*vx*vz/v2*self.pz,
+                           py= -gamma*vy*self.E + gammo*vy*vx/v2*self.px + (1+gammo*vy**2/v2)*self.py + gammo*vy*vz/v2*self.pz,
+                           pz= -gamma*vz*self.E + gammo*vz*vx/v2*self.px + gammo*vz*vy/v2*self.py + (1+gammo*vz**2/v2)*self.pz)
+
         return out
         
     def rotate_to_z(self,prot):
@@ -3350,6 +3612,19 @@ class NLO_PARTIALWEIGHT(object):
             self.parse(input)
         
             
+    def ispureqcd(self):
+        """return True if the born does not correspond to a unique power of alphas
+           This allows to prevent to use re-weighting in mode where it is known to be 
+           failing to scale correctly.
+        """
+        for cevt in self.cevents:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
+                return False
+                nb_wgt_check += len(cevt.wgts)
+
+        return True
+
+       
         
     def parse(self, text):
         """create the object from the string information (see example below)"""

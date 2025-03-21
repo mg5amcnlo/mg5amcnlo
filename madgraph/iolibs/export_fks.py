@@ -45,6 +45,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.various.banner as banner_mod
+import madgraph.various.shower_card as shower_mod
 
 import aloha.create_aloha as create_aloha
 
@@ -168,8 +169,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         calls = self.write_make_opts(writers.MakefileWriter(filename),
                                                         link_tir_libs,tir_libs)
         
-        # Duplicate run_card and FO_analyse_card
-        for card in ['FO_analyse_card', 'shower_card']:
+
+        # Duplicate FO_analyse_card
+        for card in ['FO_analyse_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -622,7 +624,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'orders.inc'
         amp_split_orders, amp_split_size, amp_split_size_born = \
 			   self.write_orders_file(
-                            writers.FortranWriter(filename),
+                            writers.FortranWriter90(filename),
                             matrix_element)
 
         filename = 'a0Gmuconv.inc'
@@ -666,7 +668,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_poles.f',
                      'check_sudakov.f',
                      'check_sudakov_angle2.f',
-                     'ewsudakov_functions.f',
                      'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
@@ -755,6 +756,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstags_glob.dat',
                      'polfit.f']
 
+        if matrix_element.ewsudakov:
+            linkfiles.append('ewsudakov_functions.f')
+        else:
+            linkfiles.append('ewsudakov_functions_dummy.f')
+
         for file in linkfiles:
             ln('../' + file , '.')
         os.system("ln -s ../../Cards/param_card.dat .")
@@ -796,6 +802,22 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
+
+    #===========================================================================
+    #  create the run_card 
+    #===========================================================================
+    def create_shower_card(self, processes, history):
+        """ """
+ 
+        shower_card = shower_mod.ShowerCard()
+        shower_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card_default.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
 
 
     def pass_information_from_cmd(self, cmd):
@@ -847,7 +869,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
-        order = re.findall("\[(.*)\]", firstprocess)
+        order = re.findall(r"\[(.*)\]", firstprocess)
         if 'QED' in order[0]:
             perturbation_order.append('QED')
         if 'QCD' in order[0]:
@@ -860,6 +882,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_orderstag_base_file(writers.FortranWriter(filename))
 
         self.create_run_card(matrix_elements.get_processes(), history)
+        self.create_shower_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -3075,47 +3098,53 @@ Parameters              %(params)s\n\
         has contributions from LO1 and has a LO2, and the corresponding 
         position (iamp)
         """
-        # get the coupling combination of the born
-        squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
-        split_orders = \
-                matrix_element.born_me['processes'][0]['split_orders']
 
-        # compute the born orders
-        born_orders = []
-        split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
-        for ordd in split_orders:
-            born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
+        if matrix_element.ewsudakov:
+            # get the coupling combination of the born
+            squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+            split_orders = \
+                    matrix_element.born_me['processes'][0]['split_orders']
 
-        # check that there is at most one coupling combination
-        # that satisfies the born_orders constraints 
-        # (this is a limitation of the current implementation of the EW sudakov
-        nborn = 0
-        for orders in squared_orders_born:
-            if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
-                nborn += 1
+            # compute the born orders
+            born_orders = []
+            split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+            for ordd in split_orders:
+                born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
 
+            # check that there is at most one coupling combination
+            # that satisfies the born_orders constraints 
+            # (this is a limitation of the current implementation of the EW sudakov
+            nborn = 0
+            for orders in squared_orders_born:
+                if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
+                    nborn += 1
 
-        if nborn > 1:
-            raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
-                    " the Born has more than one coupling combination, found %d)" % nborn)
+            if nborn > 1:
+                raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+                        " the Born has more than one coupling combination, found %d)" % nborn)
 
-        # now we can see if the process has a LO1
-        has_lo1 = bool(nborn)
-        if has_lo1:
-            lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            # now we can see if the process has a LO1
+            has_lo1 = bool(nborn)
+            if has_lo1:
+                lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            else:
+                lo1_pos = -100
+
+            # now determine the LO2 orders
+            lo2_orders = born_orders
+            lo2_orders[split_orders.index('QCD')] += -2
+            lo2_orders[split_orders.index('QED')] += 2
+
+            has_lo2 = tuple(lo2_orders) in squared_orders_born
+
+            if has_lo2:
+                lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
+            else:
+                lo2_pos = -100
         else:
+            has_lo1 = False
+            has_lo2 = False
             lo1_pos = -100
-
-        # now determine the LO2 orders
-        lo2_orders = born_orders
-        lo2_orders[split_orders.index('QCD')] += -2
-        lo2_orders[split_orders.index('QED')] += 2
-
-        has_lo2 = tuple(lo2_orders) in squared_orders_born
-
-        if has_lo2:
-            lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
-        else:
             lo2_pos = -100
 
         bool_dict = {True: '.true.', False: '.false.'}
@@ -4433,14 +4462,15 @@ Parameters              %(params)s\n\
         else:
             ret_list = []
             my_cs = color.ColorString()
-            for index, denominator in \
-                enumerate(color_matrix.get_line_denominators()):
-                # Then write the numerators for the matrix elements
+            denominator = min(color_matrix.get_line_denominators())
+            ret_list.append("DATA Denom/%i/" % denominator)
+            
+            for index in range(len(color_matrix._col_basis1)):
                 num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                                     ','.join(["%u" % int(i) for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================

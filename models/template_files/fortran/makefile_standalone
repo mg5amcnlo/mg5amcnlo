@@ -35,7 +35,7 @@ $(LIBDIR)$(LIBRARY): $(MODEL)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 
-couplings.f: ../maxparticles.inc ../run.inc ../cuts.inc
+couplings.o: ../maxparticles.inc ../run.inc ../cuts.inc
 
 ../maxparticles.inc:
 	touch ../maxparticles.inc

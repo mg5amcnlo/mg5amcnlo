@@ -690,6 +690,7 @@ class ColorMatrix(dict):
             den_list.append(self.lcmm(*[\
                         self.col_matrix_fixed_Nc[(i1, i2)][0].denominator for \
                                         i2 in range(len(self._col_basis2))]))
+            
         return den_list
 
     def get_line_numerators(self, line_index, den):
@@ -744,6 +745,7 @@ class ColorMatrix(dict):
             return a * b // fractions.gcd(a, b)
         else:
             return a * b // math.gcd(a, b)
+        
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""

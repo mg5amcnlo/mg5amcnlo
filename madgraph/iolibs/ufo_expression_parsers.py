@@ -162,7 +162,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'
@@ -825,6 +825,11 @@ class UFOExpressionParserCPP(UFOExpressionParser):
             p1 = p[1][1:-1]
         if p[3][0] == '(' and p[3][-1] == ')':
             p3 = p[3][1:-1]
+        try:
+            float(p3)
+        except ValueError:
+            p3 = str(eval(p3))
+
         if float(p3) == 2:
             p[0] = '((' + p1 + ')*(' + p1 + '))'
         elif float(p3) == 3:

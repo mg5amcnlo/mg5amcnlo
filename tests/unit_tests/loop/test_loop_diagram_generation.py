@@ -126,8 +126,8 @@ def loadLoopModel():
                   'color':1,
                   'mass':'zero',
                   'width':'zero',
-                  'texname':'\gamma',
-                  'antitexname':'\gamma',
+                  'texname':r'\gamma',
+                  'antitexname':r'\gamma',
                   'line':'wavy',
                   'charge':0.,
                   'pdg_code':22,
@@ -881,10 +881,10 @@ class LoopDiagramGenerationTest(unittest.TestCase):
 
         # Test the __new__ constructor of NLOAmplitude
         for ampdefault in ampdefaultlist:
-            self.assertTrue(isinstance(ampdefault,diagram_generation.Amplitude))
-            self.assertFalse(isinstance(ampdefault,loop_diagram_generation.LoopAmplitude))            
+            self.assertIsInstance(ampdefault, diagram_generation.Amplitude)
+            self.assertNotIsInstance(ampdefault, loop_diagram_generation.LoopAmplitude)
         for ampNLO in ampNLOlist:
-            self.assertTrue(isinstance(ampNLO,loop_diagram_generation.LoopAmplitude))
+            self.assertIsInstance(ampNLO, loop_diagram_generation.LoopAmplitude)
 
         # Now test for the usage of getter/setter of diagrams.
         ampNLO=loop_diagram_generation.LoopAmplitude(dummyproc)

@@ -117,7 +117,7 @@ class AmplitudeTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_amplitude.set(test['prop'], x))
+                self.assertTrue(temp_amplitude.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_amplitude.set(test['prop'], x))
 
@@ -208,8 +208,8 @@ class DiagramGenerationTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2011,8 +2011,8 @@ class MultiparticleTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2195,8 +2195,8 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2440,7 +2440,7 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                                                    my_process_definition)
         # Check that all decays are quarks, no gluons
         for dc_amp in decay_chain.get('decay_chains')[0].get('amplitudes'):
-            self.assertTrue(dc_amp.get('process').get('legs')[0].get('id') in q)
+            self.assertIn(dc_amp.get('process').get('legs')[0].get('id'), q)
 
     def test_forbidden_s_channel_decay_chain(self):
         """Test decay chains with forbidden s-channel particles.
@@ -2582,8 +2582,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -3132,8 +3132,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

@@ -632,34 +632,34 @@ class HwU(Histogram):
     # than necessary because the HwU standard allows for spaces from within
     # the name of a weight
     weight_header_re = re.compile(
-                       '&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
+                       r'&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
     
     # ================================
     #  Histo weight specification RE's
     # ================================
     # The start of a plot
-    histo_start_re = re.compile('^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
-                                   '(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
+    histo_start_re = re.compile(r'^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
+                                   r'(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
     # A given weight specifier
-    a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
-    histo_bin_weight_re = re.compile('(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
-    a_int_re = '[\+|-]?\d+'
+    a_float_re = r'[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+    histo_bin_weight_re = re.compile(r'(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
+    a_int_re = r'[\+|-]?\d+'
     
     # The end of a plot
     histo_end_re = re.compile(r'^\s*<\\histogram>\s*$')
     # A scale type of weight
-    weight_label_scale = re.compile('^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                   '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_PDF_XML = re.compile('^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_TMS = re.compile('^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
-    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
+    weight_label_scale = re.compile(r'^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                   r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_PDF_XML = re.compile(r'^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_TMS = re.compile(r'^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
+    weight_label_alpsfact = re.compile(r'^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
                                                                   re.IGNORECASE)
 
-    weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
-                                        '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
+    weight_label_scale_adv = re.compile(r'^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
+                                        r'\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                                        r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF_adv = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
     
     class ParseError(MadGraph5Error):
@@ -926,7 +926,7 @@ class HwU(Histogram):
                 res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)))
             res[-1] += ' '.join('%+16.7e'%bin.wgts[key] for key in 
                 self.bins.weight_labels if key not in ['central','stat_error'])
-        res.append('<\histogram>')
+        res.append(r'<\histogram>')
         return res
     
     def output(self, path=None, format='HwU', print_header=True):
@@ -1805,7 +1805,7 @@ class HwUList(histograms_PhysicsObjectList):
             # Filter empty weights coming from the split
             weight_label_list = [wgt.strip() for wgt in 
                 str(selected_run_node.getAttribute('header')).split(';') if
-                                                      not re.match('^\s*$',wgt)]
+                                                      not re.match(r'^\s*$',wgt)]
             ordered_weight_label_list = [w for w in weight_label_list if w not\
                                                              in ['xmin','xmax']]
             # Remove potential repetition of identical weight labels
@@ -1829,7 +1829,7 @@ class HwUList(histograms_PhysicsObjectList):
         all_weights = []
         for wgt_position, wgt_label in \
             enumerate(str(selected_run_node.getAttribute('header')).split(';')):
-            if not re.match('^\s*$',wgt_label) is None:
+            if not re.match(r'^\s*$',wgt_label) is None:
                 continue
             all_weights.append({'POSITION':wgt_position})
             for wgt_item in wgt_label.strip().split('_'):
@@ -1848,9 +1848,9 @@ class HwUList(histograms_PhysicsObjectList):
         # Also cast them in the proper type
         for wgt_label in all_weights:
             for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT']:
-                if mandatory_attribute not in wgt_label:
+                if mandatory_attribute not in wgt_label or wgt_label[mandatory_attribute] is None:
                     wgt_label[mandatory_attribute] = '-1'
-                if mandatory_attribute=='PDF':
+                elif mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
                 elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
@@ -2480,14 +2480,14 @@ set key invert
             # return [template_no_stat%rep_dic]+\
             #               ([template%rep_dic] if show_mc_uncertainties else [])
             
-            # The use of sqrt(-1) is just a trick to prevent the line to display
+            # The use of 1/0 is just a trick to prevent the line to display
             res = []
-            rep_dic['data'] = '($3 < 0 ? sqrt(-1) : $3)'
+            rep_dic['data'] = '($3 < 0 ? 1/0 : $3)'
             res.append(template_no_stat%rep_dic)
             rep_dic['title'] = " title ''"
             if show_mc_uncertainties:
                 res.append(template%rep_dic)                
-            rep_dic['data'] = '($3 >= 0 ? sqrt(-1) : abs($3))'
+            rep_dic['data'] = '($3 >= 0 ? 1/0 : abs($3))'
             rep_dic['ls']  = ' ls %d'%(100+color_index)            
             res.append(template_no_stat%rep_dic)
             if show_mc_uncertainties:
@@ -2716,7 +2716,7 @@ set key invert
 
         # First the global gnuplot header for this histogram group
         global_header =\
-"""
+r"""
 ################################################################################
 ### Rendering of the plot titled '%(title)s'
 ################################################################################
@@ -2739,13 +2739,13 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 """#-- rendering subhistograms '%(subhistogram_type)s'
 %(unset label)s
 %(set_format_y)s
+%(set_yscale)s
 set yrange [%(ymin).4e:%(ymax).4e]
 set origin %(origin_x).4e, %(origin_y).4e
 set size %(size_x).4e, %(size_y).4e
 set mytics %(mytics)d
 %(set_ytics)s
 %(set_format_x)s
-%(set_yscale)s
 %(set_ylabel)s
 %(set_histo_label)s
 plot \\"""
@@ -2864,9 +2864,9 @@ plot \\"""
                 major_title = ', '.join(major_title)                    
             
             if not mu[0] in ['none',None]:
-                major_title += ', dynamical\_scale\_choice=%s'%mu[0]
+                major_title += r', dynamical\_scale\_choice=%s'%mu[0]
             if not pdf[0] in ['none',None]:
-                major_title += ', PDF=%s'%pdf[0].replace('_','\_')
+                major_title += ', PDF=%s'%pdf[0].replace('_',r'\_')
 
             # Do not show uncertainties for individual jet samples (unless first
             # or specified explicitely and uniquely)
@@ -2878,7 +2878,7 @@ plot \\"""
                 
                 # We decide to show uncertainties in the main plot only if they
                 # are part of a monocolor band. Otherwise, they will only be 
-                # shown in the first subplot. Notice that plotting 'sqrt(-1)' 
+                # shown in the first subplot. Notice that plotting '1/0'
                 # is just a trick so as to have only the key printed with no
                 # line
                 
@@ -2890,7 +2890,7 @@ plot \\"""
                         '%s, scale variation'%title, band='scale' in use_band)
                     else:
                       uncertainty_plot_lines[-1]['scale'] = \
-      ["sqrt(-1) ls %d title '%s'"%(color_index+10,'%s, scale variation'%title)]
+      ["1/0 ls %d title '%s'"%(color_index+10,'%s, scale variation'%title)]
                 # And now PDF_variation if available
                 if not PDF_var_pos is None and len(PDF_var_pos)>0:
                     if 'pdf' in use_band:
@@ -2899,7 +2899,7 @@ plot \\"""
                              '%s, PDF variation'%title, band='pdf' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['pdf'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
+        ["1/0 ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
                 # And now merging variation if available
                 if not merging_var_pos is None and len(merging_var_pos)>0:
                     if 'merging_scale' in use_band:
@@ -2908,7 +2908,7 @@ plot \\"""
                 '%s, merging scale variation'%title, band='merging_scale' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['merging_scale'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+30,'%s, merging scale variation'%title)]                        
+        ["1/0 ls %d title '%s'"%(color_index+30,'%s, merging scale variation'%title)]
                 # And now alpsfact variation if available
                 if not alpsfact_var_pos is None and len(alpsfact_var_pos)>0:
                     if 'alpsfact' in use_band:
@@ -2917,7 +2917,7 @@ plot \\"""
                     '%s, alpsfact variation'%title, band='alpsfact' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['alpsfact'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
+        ["1/0 ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
 
 #            plot_lines.append(
 # "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
@@ -2939,7 +2939,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var+3,color_index,\
-'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
+r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
@@ -2949,7 +2949,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
-'%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
+'%s PDF=%s' % (title,pdf[j].replace('_',r'\_'))))
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines

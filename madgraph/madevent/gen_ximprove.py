@@ -30,6 +30,7 @@ import shutil
 import stat
 import sys
 import six
+import time
 from six.moves import range
 from six.moves import zip
 
@@ -157,12 +158,19 @@ class gensym(object):
             
             (stdout, _) = p.communicate(''.encode())
             stdout = stdout.decode('ascii',errors='ignore')
-            try:
-                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
-            except Exception as error:
-                misc.sprint(stdout, 'no channel or error for %s' % Pdir)
-                continue
-
+            if stdout:
+                lines = stdout.strip().split('\n')
+                nb_channel = max([math.floor(float(d)) for d in lines[-1].split()])
+            else:
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
+                for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                    files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                P_zero_result.append(Pdir)
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
+                continue # bypass bad process
+            
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
                 raise Exception('Error make madevent_forhel not successful')  
@@ -183,11 +191,13 @@ class gensym(object):
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(" ".encode())
             stdout = stdout.decode('ascii',errors='ignore')
-            if os.path.exists(pjoin(self.me_dir,'error')):
+            if os.path.exists(pjoin(self.me_dir, 'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
                 # note a continue is not enough here, we have in top to link
                 # the matrixX_optim.f to matrixX_orig.f to let the code to work
                 # after this error.
+                #                for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                #    files.cp(matrix_file, matrix_file.replace('orig','optim'))
 
             if 'no events passed cuts' in stdout:
                 raise Exception
@@ -291,12 +301,15 @@ class gensym(object):
                     bad_amps_perhel = []
                 if __debug__:
                     mtext = open(matrix_file).read()
-                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
-                    logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
+                    nb_amp = int(re.findall(r'PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    logger.debug('(%s) nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', split_file[-1], len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                    files.cp(matrix_file.replace('.f','.o'), matrix_file.replace('orig','optim').replace('.f','.o'))
                     continue # avoid optimization if onlye one helicity
-                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel)
+                
+                gauge = self.cmd.proc_characteristics['gauge']
+                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel, gauge=gauge)
                 # In case of bugs you can play around with these:
                 recycler.hel_filt = self.run_card['hel_filtering']
                 recycler.amp_splt = self.run_card['hel_splitamp']
@@ -1048,6 +1061,7 @@ class gen_ximprove(object):
         # parameter for the gridpack run
         self.nreq = 2000
         self.iseed = 4321
+        self.maxevts = 2500 
         
         # placeholder for information
         self.results = 0 #updated in launch/update_html
@@ -1189,6 +1203,10 @@ class gen_ximprove_v4(gen_ximprove):
     def write_multijob(self, Channel, nb_split):
         """ """
         if nb_split <=1:
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', Channel.get('name'), 'multijob.dat'))
+            except OSError:
+                pass
             return
         f = open(pjoin(self.me_dir, 'SubProcesses', Channel.get('name'), 'multijob.dat'), 'w')
         f.write('%i\n' % nb_split)
@@ -1293,7 +1311,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name), # needed for RO gridpack
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
@@ -1381,7 +1399,7 @@ class gen_ximprove_v4(gen_ximprove):
                     break
                 info = jobs[j]
                 info['script_name'] = 'ajob%i' % script_number
-                info['keeplog'] = 'false'
+                info['keeplog'] = 'false' if self.run_card['keep_log'] != 'debug' else 'true'
                 if "base_directory" not in info:
                     info["base_directory"] = "./"
                 fsock.write(template_text % info)
@@ -1450,7 +1468,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name), # used for RO gridpack
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
@@ -1817,17 +1835,17 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
     max_event_in_iter = 4000
     min_event_in_iter = 500
-    combining_job = sys.maxsize
     gen_events_security = 1.00
 
-    def __new__(cls, *args, **opts):
+    def __new__(cls, cmd, opts):
 
         cls.force_class = 'gridpack'
-        return super(gen_ximprove_gridpack, cls).__new__(cls, *args, **opts)
+        return super(gen_ximprove_gridpack, cls).__new__(cls, cmd, opts)
 
-    def __init__(self, *args, **opts):
+    def __init__(self, cmd, opts):
         
         self.ngran = -1
+        self.nprocs = 1
         self.gscalefact = {}
         self.readonly = False
         if 'ngran' in opts:
@@ -1835,9 +1853,18 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 #            del opts['ngran']
         if 'readonly' in opts:
             self.readonly = opts['readonly']
-        super(gen_ximprove_gridpack,self).__init__(*args, **opts)
+        if 'nprocs' in opts:
+            self.nprocs = int(opts['nprocs'])
+        if 'maxevts' in opts and self.nprocs > 1:
+            self.max_request_event = int(opts['maxevts'])
+        super(gen_ximprove_gridpack,self).__init__(cmd, opts)
         if self.ngran == -1:
             self.ngran = 1 
+
+        if self.nprocs > 1:
+            self.combining_job = 0
+        else:
+            self.combining_job = sys.maxsize
      
     def find_job_for_event(self):
         """return the list of channel that need to be improved"""
@@ -1865,8 +1892,8 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                 continue # no event to generate events
             self.gscalefact[tag] = max(1, 1/(goal_lum * C.get('axsec')/ self.ngran))
             #need to generate events
-            logger.debug('request events for ', C.get('name'), 'cross=',
-                  C.get('axsec'), 'needed events = ', goal_lum * C.get('axsec'))
+            logger.debug('request events for %s cross=%d needed events = %d',
+                         C.get('name'), C.get('axsec'), goal_lum * C.get('axsec'))
             to_refine.append(C) 
          
         logger.info('need to improve %s channels' % len(to_refine))    
@@ -1886,8 +1913,13 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         for C in to_refine:
             #1. Compute the number of points are needed to reach target
             needed_event = max(goal_lum*C.get('axsec'), self.ngran)
-            nb_split = 1
-            
+            nb_split = int(max(1,((needed_event-1)// self.max_request_event) +1))
+            if not self.split_channels:
+                nb_split = 1
+            if nb_split > self.max_splitting:
+                nb_split = self.max_splitting
+            nb_split=max(1, nb_split)
+           
             #2. estimate how many points we need in each iteration
             if C.get('nunwgt') > 0:
                 nevents =  needed_event / nb_split * (C.get('nevents') / C.get('nunwgt'))
@@ -1897,24 +1929,27 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                 nevents = self.max_event_in_iter
 
             if nevents < self.min_event_in_iter:
+                nb_split = int(nb_split * nevents / self.min_event_in_iter) + 1 # sr dangerous?
                 nevents = self.min_event_in_iter
             #
             # forbid too low/too large value
             nevents = max(self.min_event_in_iter, min(self.max_event_in_iter, nevents))
             logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
             
-
+            # write the multi-job information
+            self.write_multijob(C, nb_split)
+            
             #create the  info dict  assume no splitting for the default
             info = {'name': self.cmd.results.current['run_name'],
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name), # use for RO gridpack
                     'nevents': nevents, #int(nevents*self.gen_events_security)+1,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
-                    'precision': -1*int(needed_event)/C.get('axsec'),
+                    'precision': -goal_lum/nb_split, # -1*int(needed_event)/C.get('axsec'),
                     'requested_event': needed_event,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
@@ -1927,27 +1962,59 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                 basedir = pjoin(os.path.dirname(__file__), '..','..','SubProcesses', info['P_dir'], info['directory'])
                 info['base_directory'] = basedir
 
-            jobs.append(info)
-          
+            if nb_split == 1:
+                jobs.append(info)
+            else:
+                for i in range(nb_split):
+                    new_info = dict(info)
+                    new_info['offset'] = i+1
+                    new_info['directory'] += self.alphabet[i % 26] + str((i+1)//26)
+                    new_info['base_directory'] = info['directory']
+                    jobs.append(new_info)          
 
         write_dir = '.' if self.readonly else None  
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir) 
         
+        if self.nprocs > 1:
+            nprocs_cluster = cluster.MultiCore(nb_core=self.nprocs)
+            gridpack_start = time.time()
+            def gridpack_wait_monitoring(Idle, Running, Done):
+                if Idle+Running+Done == 0:
+                    return
+                logger.info("Gridpack event generation: %s Idle, %s Running, %s Done [%s]" 
+                            % (Idle, Running, Done, misc.format_time(time.time()-gridpack_start)))
+
         done = []
         for j in jobs:
-            if j['P_dir'] in done:
-                continue
-            done.append(j['P_dir'])
+            if self.nprocs == 1:
+                if j['P_dir'] in done:
+                    continue
+                done.append(j['P_dir'])
+                # Give a little status. Sometimes these jobs run very long, and having hours without any
+                # console output can be a bit frightening and make users think we are looping.
+                if len(done)%5==0:
+                    logger.info(f"Working on job {len(done)} of {len(jobs)}")
+
             # set the working directory path.
             pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
-            exe = pjoin(pwd, 'ajob1')
+            exe = pjoin(pwd, j['script_name'])
             st = os.stat(exe)
             os.chmod(exe, st.st_mode | stat.S_IEXEC)
 
             # run the code\
-            cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+            if self.nprocs == 1:
+                cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+            else:
+                nprocs_cluster.cluster_submit(exe, cwd=pwd, packet_member=j['packet'])
         write_dir = '.' if self.readonly else pjoin(self.me_dir, 'SubProcesses')
 
+        if self.nprocs > 1:
+            nprocs_cluster.wait(self.me_dir, gridpack_wait_monitoring)
+
+        if self.readonly:
+            combine_runs.CombineRuns(write_dir)
+        else:
+            combine_runs.CombineRuns(self.me_dir)
         self.check_events(goal_lum, to_refine, jobs, write_dir)
     
     def check_events(self, goal_lum, to_refine, jobs, Sdir):

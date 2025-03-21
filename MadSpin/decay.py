@@ -1052,7 +1052,7 @@ class AllMatrixElement(dict):
                 continue
             pid =  leg.get('id')
             nb = leg.get('number')
-            if pid in to_decay:
+            if pid in to_decay and leg.get('state'):
                 i, proc = to_decay[pid].pop()
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
@@ -2765,7 +2765,7 @@ class decay_all_events(object):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -4214,7 +4214,7 @@ class decay_all_events_onshell(decay_all_events):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')

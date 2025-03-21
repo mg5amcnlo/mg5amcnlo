@@ -189,7 +189,7 @@ class HelpToCmd(object):
         logger.info('  combine the results of the jobs launched on the cluster.')
         logger.info('  This creates three type of output files:')
         logger.info('    - weights.out [weight for event/card]')
-        logger.info('    - unnormalize-likelihood.out [-\sum ln(Weight)]')
+        logger.info(r'    - unnormalize-likelihood.out [-\sum ln(Weight)]')
         logger.info('    - output.xml [additional information]')
         logger.info('')
         logger.info('  The option \'-refine\' is to be added if this is not the first')

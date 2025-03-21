@@ -515,7 +515,7 @@ def uu_Dg(P, color_rep, full_model):
                  (C_F*4/(sin\theta)^2 - C_D)
        lambda^2=|GC_24|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
        (for antitriplet diquark, N_D=3, C_D=4/3) 
-       \tau=m_D^2/shat, \cos\theta=p1p4/|p1||p4|"""
+       \tau=m_D^2/shat, \\cos\theta=p1p4/|p1||p4|"""
 
     if color_rep == 6:
         N_D = 6.
@@ -549,11 +549,11 @@ def gu_uxD(P, color_rep, full_model):
        From 0909.2666, Eq. (B.23)
        |Mqq|^2 = 8 lambda^2 g_s^2 N_D (C_F(4/(1-cos\theta)*(1/(1-\tau) - 2\tau)
                                        -(3+cos\theta)(1-\tau)) +
-                 2C_D(1-4\tau/((1+\tau)(1+\beta\cos\theta)) + 
-                      8\tau^2/((1+\tau)^2(1+\beta\cos\theta)^2)))
+                 2C_D(1-4\tau/((1+\tau)(1+\beta\\cos\theta)) + 
+                      8\tau^2/((1+\tau)^2(1+\beta\\cos\theta)^2)))
        lambda^2=|GC_24|^2, g_s^2=GC_4^2, N_D=6, N_C=3, C_F=4/3, C_D=10/3, 
        (for antitriplet diquark, N_D=3, C_D=4/3) 
-       \tau=m_D^2/shat, \cos\theta=p1p3/|p1||p3|, \beta = (1-\tau)/(1+\tau)"""
+       \tau=m_D^2/shat, \\cos\theta=p1p3/|p1||p3|, \beta = (1-\tau)/(1+\tau)"""
 
     if color_rep == 6:
         N_D = 6.

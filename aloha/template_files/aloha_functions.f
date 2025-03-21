@@ -351,7 +351,7 @@ c#endif
             fo(6) = ip     * sqm(abs(im))
          else
 
-            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
             omega(1) = dsqrt(p(0)+pp)
@@ -1201,7 +1201,7 @@ c       real    prot(0:3)      : four-momentum p in the rotated frame
 c
       implicit none
       double precision p(0:3),q(0:3),prot(0:3),qt2,qt,psgn,qq,p1
-
+      volatile qt, p1, qq ! prevent optimizations with -O3 (workaround for SIGFPE crashes in rotxxx: madgraph5/madgraph4gpu#855)
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 
@@ -2054,7 +2054,7 @@ c     local variable
       enddo
       return
       end
-      
+     
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors

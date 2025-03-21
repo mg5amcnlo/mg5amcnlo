@@ -17,6 +17,7 @@ from __future__ import division
 from __future__ import absolute_import
 import difflib
 import logging
+import copy
 import math
 import os
 import re
@@ -72,6 +73,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
     prompt = 'Reweight>'
     debug_output = 'Reweight_debug'
+    sa_class = 'standalone_rw'
 
     @misc.mute_logger()
     def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
@@ -226,7 +228,7 @@ class ReweightInterface(extended_cmd.Cmd):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
-        process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        process, order, final = re.split(r'\[\s*(.*)\s*\]', proc)
         if process.strip().startswith(('generate', 'add process')):
             process = process.replace('generate', '')
             process = process.replace('add process','')
@@ -264,7 +266,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
+            result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
@@ -500,32 +502,10 @@ class ReweightInterface(extended_cmd.Cmd):
         model = self.banner.get('proc_card', 'model')
         self.load_model( model, True, False)
 
-        if not self.has_standalone_dir:     
-            if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
-                self.load_from_pickle()
-                if opts['rwgt_name']:
-                    self.options['rwgt_name'] = opts['rwgt_name']
-                if not self.rwgt_dir:
-                    self.me_dir = self.rwgt_dir
-                self.load_module()       # load the fortran information from the f2py module
-            elif self.multicore == 'wait':
-                i=0
-                while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
-                    time.sleep(10+i)
-                    i+=5
-                if not self.rwgt_dir:
-                    self.rwgt_dir = self.me_dir
-                self.load_from_pickle(keep_name=True)
-                self.load_module()
-            else:
-                self.create_standalone_directory()
-                self.compile()
-                self.load_module()  
-                if self.multicore == 'create':
-                    self.load_module()
-                    if not self.rwgt_dir:
-                        self.rwgt_dir = self.me_dir
-                    self.save_to_pickle()      
+        if not self.has_standalone_dir:
+            out = self.setup_f2py_interface()
+            if out:
+                return
 
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
@@ -543,34 +523,51 @@ class ReweightInterface(extended_cmd.Cmd):
                     scale_rwgt_info.append(i[start+11:start+15])
                     
         if self.inc_sudakov:
+            type_rwgt=[]
+            for tag in scale_rwgt_info:
+                tag_strip=tag[1:]
+                type_rwgt.append('2'+tag_strip)
+
+
+            
+        # get iterator over param_card and the name associated to the current reweighting.
+        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
+
+        return self.launch_actual_reweighting(param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me)
+
+
+
+    def launch_actual_reweighting(self, param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me):
+       
+        if self.inc_sudakov:
+            tag_name = ''
             import importlib
             import numpy as np
             rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
             for onedir in rwgt_dir_possibility:
                 if not os.path.exists(pjoin(path_me,onedir)):
                     continue 
+
+                sys.path.insert(0, path_me)
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
 
-            type_rwgt=[]
-            for tag in scale_rwgt_info:
-                tag_strip=tag[1:]
-                type_rwgt.append('2'+tag_strip)
-
         if type_rwgt==[]:
             type_rwgt=['2001']
-            
-        # get iterator over param_card and the name associated to the current reweighting.
-        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
-        
-        if self.inc_sudakov:
-            tag_name = ''
 
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-                
+
+
+         
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -660,7 +657,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
-        logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
+        if self.inc_sudakov:
+            logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
         
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -760,234 +758,38 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
-    def set_initial_mass_to_zero(self, event):
-
-        event[0].mass = 0.
-        event[1].mass = 0.
-        tot_E=0.
-        for ip,part in enumerate(event):
-            if ip >=2 :
-                tot_E += part.E
-        if (event[0].pz > 0.and event[1].pz < 0):
-            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-        elif (event[0].pz < 0.and event[1].pz > 0):
-            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
-            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
-        else:
-            logger.critical('ERROR: two incoming partons not back.-to-back')
-
-    def set_final_jet_mass_to_zero(self, event):
-
-        for ip,part in enumerate(event):
-            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (ip > 1):
-                event[ip].mass = 0.
-                E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + event[ip].pz**2)
-                event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, event[ip].pz]))
-
-    def merge_particles_kinematics(self, event, i,j, moth):
-        """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
-        """ note!! kinematics (and id) mapping only! """
-
-        import copy
-        recoil = True
-        fks_type = False
-
-        if recoil and not fks_type:
-            if (i == moth[0].get('number')-1):
-                fks_i = i
-                fks_j = j
-            elif (j == moth[0].get('number')-1):
-                fks_i = j
-                fks_j = i
-            to_remove = fks_j
-            
-            merge_i = event[fks_i]
-            merge_j = event[fks_j]
-        
-            i_4mom = lhe_parser.FourMomentum(merge_i)
-            j_4mom = lhe_parser.FourMomentum(merge_j)
-            if (fks_i <= 1):
-                sign1 = -1.0
-            else:
-                sign1 = 1.0
-            mother_4mom = i_4mom + sign1*j_4mom
-        
-            new_event = copy.deepcopy(event)
-
-            new_event[fks_i].pid = moth[0]['id']
-            new_event[fks_i].set_momentum(mother_4mom)
-
-            if fks_i <= 1: # initial-state recoil
-                new_E = 0.0
-                new_x = 0.0
-                new_y = 0.0
-                new_z = 0.0
-                for ip,part in enumerate(new_event):
-                    if (ip != fks_i and ip != fks_j and ip >= 2):
-                        new_E = new_E + part.E
-                        new_x = new_x + part.px
-                        new_y = new_y + part.py
-                        new_z = new_z + part.pz
-                
-                if fks_i == 0:
-                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E - new_event[0].E, new_x - new_event[0].px,\
-                                                                    new_y - new_event[0].py, new_z - new_event[0].pz]))
-                elif fks_i == 1:
-                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E - new_event[1].E, new_x - new_event[1].px, \
-                                                                    new_y - new_event[1].py, new_z - new_event[1].pz]))
-                
-                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
-                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
-                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
-                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
-                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
-                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
-                new_event.pop(to_remove)
-                
-            if fks_i > 1: # final-state recoil
-
-                # Re-scale the energy of fks_i to make it on-shell
-                for ip,part in enumerate(new_event):
-                    if (ip == fks_i):
-                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
-                        new_E = part.E
-
-                # Find the overall energy in the final state
-                new_E = 0.0
-                for ip,part in enumerate(new_event):
-                    if (ip != fks_j and ip >= 2):
-                        new_E = new_E + part.E
-                
-                # Use one of the initial states to absorb the energy change in the final state
-                new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
-                
-                # Change the initial state pz and E
-                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
-                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
-                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
-                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
-                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
-                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
-                new_event.pop(to_remove)
-            
-        elif fks_type and not recoil:        
-            ## Do it in a more FKS-style
-            if (i == moth[0].get('number')-1):
-                fks_i = i
-                fks_j = j
-            elif (j == moth[0].get('number')-1):
-                fks_i = j
-                fks_j = i
-            to_remove = fks_j
-            new_event = copy.copy(event)
-
-            if fks_i <= 1: # initial-state recoil
-
-                # First boost to partonic CM frame
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                    new_event[ip].set_momentum(vec.zboost(pboost=q))
-
-                k_tot = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E-new_event[fks_j].E,new_event[0].px+new_event[1].px-new_event[fks_j].px,\
-                            new_event[0].py+new_event[1].py-new_event[fks_j].py,new_event[0].pz+new_event[1].pz-new_event[fks_j].pz])
-
-                final = lhe_parser.FourMomentum([0,0,0,0])
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                    if (ip != fks_i and ip != fks_j and ip >= 2):
-                        final = final + vec
-                        
-                s = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])**2
-                ksi = new_event[fks_j].E/(math.sqrt(s)/2.0)
-                y = new_event[fks_j].pz/new_event[fks_j].E
-
-                new_event[0].pz = new_event[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
-                new_event[0].E = math.sqrt(new_event[0].mass**2 + new_event[0].pz**2)
-                new_event[1].pz = new_event[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
-                new_event[1].E = math.sqrt(new_event[1].mass**2 + new_event[1].pz**2)
-
-                final = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                k_tot_1 = k_tot.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                k_tot_2 = k_tot_1.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
-                k_tot_3 = k_tot_2.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-
-                for ip,part in enumerate(new_event):
-                    if (ip >= 2):
-                        vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                        vec2 = vec.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                        vec3 = vec2.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
-                        vec_new = vec3.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
-                        new_event[ip].set_momentum(lhe_parser.FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
-                
-                new_event.pop(to_remove)
-
-            else: # final-state recoil
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                for ip,part in enumerate(new_event):
-                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-                    new_event[ip].set_momentum(vec.zboost(pboost=q))
-            
-                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
-                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
-
-                k = lhe_parser.FourMomentum([new_event[fks_i].E+new_event[fks_j].E,new_event[fks_i].px+new_event[fks_j].px,\
-                            new_event[fks_i].py+new_event[fks_j].py,new_event[fks_i].pz+new_event[fks_j].pz])
-
-                k_rec = lhe_parser.FourMomentum([0,0,0,0])
-                for ip,part in enumerate(new_event):
-                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
-                        k_rec = k_rec + lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
-
-                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
-                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
-                for ip,part in enumerate(new_event):
-                    if ip >= 2 and ip != fks_i and ip != fks_j:
-                        vec = lhe_parser.FourMomentum([new_event[ip].E,new_event[ip].px,new_event[ip].py,new_event[ip].pz])
-                        new_event[ip].set_momentum(vec.boost_beta(beta,k_rec))
-                    if ip == fks_i:
-                        new_event[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
-                new_event.pop(to_remove)
-        else:
-            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
-
-
-        return new_event
-
-    def recoil_eq(self,part1, part2):
-        """ In general, solves the equation
-        E1 + E2 = K 
-        p1 + p2 = c
-        E1^2 - p1^2 = a
-        E2^2 - p2^2 = b
-        and returns p1
+    def setup_f2py_interface(self):
+        """ ensure that all f2py interface are ready/loaded/compiled
+            if this function does not return None then nothing is executed after this
+            usefull for some plugin
         """
-        thresh = 1e-6
-        import random
-        a = part1.mass**2 + part1.px**2 + part1.py**2
-        b = part2.mass**2 + part2.px**2 + part2.py**2
-        c = part1.pz + part2.pz
-        K = part1.E + part2.E
-        K2 = K**2
-        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
-        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
-        
-        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
-            logger.critical('Error in recoil_eq solver 1')
-            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
-            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
-        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
-            logger.critical('Error in recoil_eq solver 2')
-            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
-            logger.critical(K)
-        return sol1
+
+        if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
+            self.load_from_pickle()
+            if opts['rwgt_name']:
+                self.options['rwgt_name'] = opts['rwgt_name']
+            if not self.rwgt_dir:
+                self.me_dir = self.rwgt_dir
+            self.load_module()       # load the fortran information from the f2py module
+        elif self.multicore == 'wait':
+            i=0
+            while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
+                time.sleep(10+i)
+                i+=5
+            if not self.rwgt_dir:
+                self.rwgt_dir = self.me_dir
+            self.load_from_pickle(keep_name=True)
+            self.load_module()
+        else:
+            self.create_standalone_directory()
+            self.compile()
+            self.load_module()  
+            if self.multicore == 'create':
+                self.load_module()
+                if not self.rwgt_dir:
+                    self.rwgt_dir = self.me_dir
+                self.save_to_pickle()  
+
 
 
     def handle_param_card(self, model_line, args, type_rwgt):
@@ -1005,7 +807,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-            logger.info(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
                 fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
@@ -1065,7 +866,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\\d+)|(?P<id2>[_\\w\\-\\.]+))(?P<rwgttype>\\s*|_\\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
@@ -1361,7 +1162,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
             return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
         else:
-            import copy
             buff_event=copy.deepcopy(event)
             orig_wgt = event.wgt
             w_orig= event.wgt
@@ -1372,15 +1172,16 @@ class ReweightInterface(extended_cmd.Cmd):
             import importlib
             import numpy as np
 
-            for proc in [line[9:].strip() for line in self.banner.proc_card
-                                if line.startswith('generate')]:
-                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                n_init = len(re.split('\s+',re.split('>', process)[0])) -1
-                n_final = len(re.split('\s+',re.split('>', process)[1])) -2
-            nexternal = n_init + n_final
+            # identify the process
+            try:
+                process = self.banner.get_detail('proc_card', 'generate')
+            except KeyError:
+                process = self.banner.get_detail('proc_card', 'add process')
+            process, opts = mg_interface.MadGraphCmd.split_process_line(process)
+            nexternal = len([p for p in process.split() if p != '>'])
 
             # Remove all propagator particles from the event to be passed to Sud module
-            for ip,part in enumerate(buff_event):
+            for ip,part in enumerate(list(buff_event)):
                 if (abs(part.status) != 1):
                     buff_event.pop(ip)
 
@@ -1446,8 +1247,8 @@ class ReweightInterface(extended_cmd.Cmd):
                         #### H1 type
                         type = 1
                     else:
-                        event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
-                        event_to_sud = event_for_sud
+                        buff_event.merge_particles_kinematics(min_i,min_j,ij_comb)
+                        event_to_sud = buff_event
                         n_part = nexternal 
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
                         # map to n+1 body if recoil does not exist at Born level among processes
@@ -1469,15 +1270,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 sys.exit(2)
                 
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
-            E, px, py, pz = 0.,0.,0.,0.
+            p = lhe_parser.FourMomentum()
             for i,particle in enumerate(event_to_sud):
                     if particle.status == -1:
-                        E += particle.E
-                        px += particle.px
-                        py += particle.py
-                        pz += particle.pz
-            in_part_mom = lhe_parser.FourMomentum([E, px, py, pz])
-            if not ((abs(px) < 1e-6 * E) and (abs(py) < 1e-6 * E) and (abs(pz) < 1e-6 * E)):
+                        p += particle
+            in_part_mom = p
+            if not ((abs(p.px) < 1e-6 * p.E) and (abs(p.py) < 1e-6 * p.E) and (abs(p.pz) < 1e-6 * p.E)):
                 event_to_sud.boost(in_part_mom)
 
             # Rotate system to a partonic CM along z-axis
@@ -1487,9 +1285,10 @@ class ReweightInterface(extended_cmd.Cmd):
                     p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
             
             # Set all light quarks and lepton masses to zero in event file
-            self.set_final_jet_mass_to_zero(event_to_sud)
+            #self.set_final_jet_mass_to_zero(event_to_sud)
+            event_to_sud.set_final_jet_mass_to_zero()
             # Set finally all initial masses to zero rather than the masses in the event files
-            self.set_initial_mass_to_zero(event_to_sud)
+            event_to_sud.set_initial_mass_to_zero()
             event_to_sud.check_kinematics_only()
 
             gstr=event.aqcd*2.*pi
@@ -1570,6 +1369,9 @@ class ReweightInterface(extended_cmd.Cmd):
             
         event.parse_reweight()
         event.parse_nlo_weight(threshold=self.soft_threshold) 
+        if not event.nloweight.ispureqcd():
+            raise Exception('NLO reweighting does not support mixed expansion mode. Only LO accurate mode is allowed.')
+        
         if self.output_type != 'default':
             event.nloweight.modified = True # the internal info will be changed
                                             # so set this flage to True to change
@@ -1673,7 +1475,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if '_lo' in type_nlo:
             w_orig = self.calculate_matrix_element(event, 0)
             w_new =  self.calculate_matrix_element(event, 1)      
-            misc.sprint('editing weight in LO')      
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
             
@@ -1745,7 +1546,6 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.keep_ordering:
             old_tag = tuple(tag)
             tag = (tag[0], tuple(order[1])) 
-        tag = (tag[0], tuple(order[1])) 
         
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
@@ -1795,7 +1595,6 @@ class ReweightInterface(extended_cmd.Cmd):
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
         if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
-            import copy
             new_event = copy.deepcopy(event)
             pboost = FourMomenta()
             to_inc = bin(self.banner.run_card['frame_id'])[2:]
@@ -1815,7 +1614,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
         elif (hypp_id == 1 and self.boost_event):
             if self.boost_event is not True:
-                import copy
                 new_event = copy.deepcopy(event)
                 new_event.boost(self.boost_event)
                 if self.keep_ordering:
@@ -1989,7 +1787,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(type(error))
             raise
         
-        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
+        commandline = 'output %s %s --prefix=int' % (self.sa_class, pjoin(path_me,data['paths'][0]))
         if self.inc_sudakov:
             # in this case, the sudakov output format has to be changed
             commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
@@ -2086,7 +1884,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
-        commandline = re.sub('@\s*\d+', '', commandline)
+        commandline = re.sub(r'@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem']:
@@ -2163,7 +1961,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                     if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                    if re.search('^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -2195,8 +1993,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                                 if line.startswith('generate')]
                 data['processes'] += [' '.join(line.split()[2:]) 
-                                    for line in self.banner.proc_card
-                                    if re.search('^\s*add\s+process', line)]
+                                      for line in self.banner.proc_card
+                                      if re.search(r'^\s*add\s+process', line)]
             #object_collector
             #self.id_to_path_second = {}   
             #data['id2path'] = self.id_to_path_second 
@@ -2206,8 +2004,6 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir
-            ## TV: skip all output and generation of folder is rw_me exists already
-            return
         data['path'] = path_me
 
         for i in range(2):
@@ -2252,69 +2048,67 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
-                    try:
-                        mgcmd.exec_cmd("define %s = %s" % (name, content))
-                    except madgraph.InvalidCmd:
-                        pass
-                        
-            if  second and 'tree_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
-                if 'virtual_path' in self.dedicated_path:
-                    has_nlo=True
-                else:
-                    has_nlo=False
+                try:
+                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                except madgraph.InvalidCmd:
+                    pass
+        if  second and 'tree_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
+            if 'virtual_path' in self.dedicated_path:
+                has_nlo=True
             else:
-                has_nlo = self.create_standalone_tree_directory(data, second)
+                has_nlo=False
+        else:
+            has_nlo = self.create_standalone_tree_directory(data, second)
 
-            if has_nlo and not self.rwgt_mode:
-                self.rwgt_mode = ['NLO']
+        if has_nlo and not self.rwgt_mode:
+            self.rwgt_mode = ['NLO']
 
-            # 5. create the virtual for NLO reweighting  ---------------------------
-            if second and 'virtual_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
-            elif has_nlo and 'NLO' in self.rwgt_mode:
-                self.create_standalone_virt_directory(data, second)
+        # 5. create the virtual for NLO reweighting  ---------------------------
+        if second and 'virtual_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
+        elif has_nlo and 'NLO' in self.rwgt_mode:
+            self.create_standalone_virt_directory(data, second)
+            
+            if self.multicore == 'create':
+                try:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=self.mother.options['nb_core'])
+                except:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=1)
+        elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
+            # We do not have any virtual reweighting to do but we still have to
+            #combine the weights.
+            #Idea:create a fake directory.
+            start = time.time()
+            commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
+            # deactivate golem since it creates troubles
+            old_options = dict(mgcmd.options)
+            mgcmd.options['golem'] = None             
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+            mgcmd.exec_cmd(commandline, precmd=True)    
+            #put back golem to original value
+            mgcmd.options['golem'] = old_options['golem']
+            # update make_opts
+            if not mgcmd.options['lhapdf']:
+                raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
+            
+            # Download LHAPDF SET
+            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
+            
                 
-                if self.multicore == 'create':
-                    print("compile OLP", data['paths'][1])
-                    try:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=self.mother.options['nb_core'])
-                    except:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=1)
-            elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
-                # We do not have any virtual reweighting to do but we still have to
-                #combine the weights.
-                #Idea:create a fake directory.
-                start = time.time()
-                commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
-                # deactivate golem since it creates troubles
-                old_options = dict(mgcmd.options)
-                mgcmd.options['golem'] = None             
-                commandline = commandline.replace('add process', 'generate',1)
-                logger.info(commandline)
-                mgcmd.exec_cmd(commandline, precmd=True)
-                commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
-                mgcmd.exec_cmd(commandline, precmd=True)    
-                #put back golem to original value
-                mgcmd.options['golem'] = old_options['golem']
-                # update make_opts
-                if not mgcmd.options['lhapdf']:
-                    raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
-                
-                # Download LHAPDF SET
-                common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
-                    mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
-                
-                    
-                
-            # 6. If we need a new model/process-------------------------------------
-            if (self.second_model or self.second_process or self.dedicated_path) and not second :
-                self.create_standalone_directory(second=True)    
+            
+        # 6. If we need a new model/process-------------------------------------
+        if (self.second_model or self.second_process or self.dedicated_path) and not second :
+            self.create_standalone_directory(second=True)    
 
-            if not second:
-                self.has_nlo = has_nlo
+        if not second:
+            self.has_nlo = has_nlo
             
 
 
@@ -2341,7 +2135,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # set the environmental variable ewsudsa in make_opts
             common_run_interface.CommonRunCmd.update_make_opts_full(pjoin(sourcedir, 'make_opts'), {'ewsudsa': 'True'})
             misc.compile(cwd=sourcedir)
-            logger.info('Compiling reweight P*dirs')
+            logger.info('Compiling reweight P* dirs')
             p_dirs = [d for d in \
                 open(pjoin(sarw_path, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
             # determine the number of core to use for compilation
@@ -2354,7 +2148,6 @@ class ReweightInterface(extended_cmd.Cmd):
             except ImportError: 
                 nb_core = 1
 
-            import copy
             compile_options = copy.copy(self.options)
             compile_options['nb_core'] = nb_core
             compile_cluster = cluster.MultiCore(**compile_options)
@@ -2380,15 +2173,21 @@ class ReweightInterface(extended_cmd.Cmd):
                 if not os.path.isdir(pjoin(path_me,onedir)):
                     continue
                 pdir = pjoin(path_me, onedir, 'SubProcesses')
-                if self.mother:
-                    nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
-                else:
-                    nb_core = 1
-                os.environ['MENUM'] = '2'
-                misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-                if not (self.second_model or self.second_process or self.dedicated_path):
-                    os.environ['MENUM'] = '3'
-                    misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+                self.compile_SubProcess_dir(pdir)
+
+
+    def compile_SubProcess_dir(self, Sdir):
+        """compile a full Subprocess directory"""
+
+        if self.mother:
+            nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+        else:
+            nb_core = 1
+        os.environ['MENUM'] = '2'
+        misc.compile(['allmatrix2py.so'], cwd=Sdir, nb_core=nb_core)
+        if not (self.second_model or self.second_process or self.dedicated_path):
+            os.environ['MENUM'] = '3'
+            misc.compile(['allmatrix3py.so'], cwd=Sdir, nb_core=nb_core)
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""

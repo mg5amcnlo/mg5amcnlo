@@ -242,7 +242,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'], ['ewsudakov'], 
+        keys += ['real_matrix_elements', 'has_isr', 'has_fsr', 'ewsudakov', 
                  'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
 
@@ -828,7 +828,6 @@ class FKSHelasProcess(object):
 
         return misc.make_unique(lorentz_list)
     
-    
     def get_used_couplings(self):
         """the get_used_couplings function references to born, reals
         and virtual matrix elements"""
@@ -861,8 +860,8 @@ class FKSHelasProcess(object):
         othertag = helas_objects.IdentifyMETag.\
                         create_tag(other.born_me.get('base_amplitude'))
 
-        # MZ temporary fix for sudakov; since they are not taken into account
-        # in the combination, return False for the moment
+        # MZ: if EW sudakov are included, do not combine. 
+        # This is not 100% ideal, as it is quite inefficient, but it is the safest option
         if self.ewsudakov:
             logger.warning('With --ewsudakov, matrix elements will not be combined')
             return False
@@ -871,7 +870,14 @@ class FKSHelasProcess(object):
             return False
 
         # now the virtuals
-        if self.virt_matrix_element != other.virt_matrix_element:
+        if self.virt_matrix_element and other.virt_matrix_element: 
+            virttag = helas_objects.IdentifyMETag.\
+                        create_tag(self.virt_matrix_element.get('base_amplitude'))
+            othertag = helas_objects.IdentifyMETag.\
+                        create_tag(other.virt_matrix_element.get('base_amplitude'))
+            if virttag != othertag: 
+                return False
+        elif self.virt_matrix_element !=  other.virt_matrix_element: 
             return False
 
         # now the reals

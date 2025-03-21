@@ -1,22 +1,24 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
-     $                      npart,numproc,flip)
+     $                      npart,numproc,flip, icol, ivec)
 
       implicit none
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
-      include 'coupl.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'message.inc'
       include 'run.inc'
 
+      integer ivec
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxflow)
       character*1000 buff
       character*20 cform
-      logical flip ! If .true., initial state is mirrored
+      logical flip              ! If .true., initial state is mirrored
+      integer icol ! color selected
 
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
@@ -44,9 +46,6 @@ c     Variables for combination of color indices (including multipart. vert)
       logical first_time,tchannel
       save prmass,prwidth,pow
       data first_time /.true./
-
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -106,74 +105,40 @@ c
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   
-c   ...unless the diagram is passed in igraphs(1); then use that diagram
-      lconfig=iconfig
+c     ...unless the diagram is passed in igraphs(1); then use that diagram
+      lconfig = iconfig
       if (ickkw.gt.0) then
          if (btest(mlevel,3)) then
             write(*,*)'unwgt.f: write out diagram ',igraphs(1)
          endif
-         lconfig=igraphs(1)
+         lconfig = vec_igraph1(ivec)
       endif
       
 c
 c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
-
-      nc = int(jamp2(0))
-      is_LC = .true.
-      maxcolor=0
-      if(nc.gt.0)then
-      if(icolamp(1,%(iconfig)s,iproc)) then
-        targetamp(1)=jamp2(1)
-c        print *,'Color flow 1 allowed for config ',lconfig
-      else
-        targetamp(1)=0d0
-      endif
-      do ic =2,nc
-        if(icolamp(ic,%(iconfig)s,iproc))then
-          targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',lconfig,targetamp(ic)
-        else
-          targetamp(ic)=targetamp(ic-1)
-        endif
-      enddo
-c     ensure that at least one leading color is different of zero if not allow
-c     all subleading color. 
-      if (targetamp(nc).eq.0)then
-       is_LC = .false.
-       targetamp(1)=jamp2(1)
-       do ic =2,nc
-           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-       enddo
-      endif
-
-
-      xtarget=ran1(iseed)*targetamp(nc)
-
-      ic = 1
-      do while (targetamp(ic) .lt. xtarget .and. ic .lt. nc)
-         ic=ic+1
-      enddo
-      if(targetamp(nc).eq.0) ic=0
-c      print *,'Chose color flow ',ic
+      if (icol.eq.0) then
       do i=1,nexternal
-         if(ic.gt.0) then
-            icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
-            icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
-c            write(*,*) i, icolalt(1,isym(i,jsym)), icolalt(2,isym(i,jsym))
-            if (abs(icolup(1,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
-            if (abs(icolup(2,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         endif
-      enddo
-      else ! nc.gt.0
-
-      do i=1,nexternal
-         icolalt(1,i)=0
+	 icolalt(1,i)=0
          icolalt(2,i)=0
       enddo
+      else
+         if(icol.lt.0)then
+         is_LC = .false.
+         icol = abs(icol)
+      endif
+      do i=1,nexternal
+         icolalt(1,isym(i,jsym))=icolup(1,i,icol,numproc)
+         icolalt(2,isym(i,jsym))=icolup(2,i,icol,numproc)
+c     write(*,*) i, icolalt(1,isym(i,jsym)), icolalt(2,isym(i,jsym))
+         if (abs(icolup(1,i,icol, numproc)).gt.maxcolor) maxcolor=icolup(1,i,icol, numproc)
+         if (abs(icolup(2,i,icol, numproc)).gt.maxcolor) maxcolor=icolup(2,i,icol, numproc)
+      enddo
+      endif
 
-      endif ! nc.gt.0
+
+
 
 c     Store original maxcolor to know if we have epsilon vertices
         maxorg=maxcolor
@@ -407,27 +372,27 @@ c
 c
 c     Set correct mother number for clustering info
 c
-        if (icluster(1,1).ne.0) then
+        if (icluster(1,1,ivec).ne.0) then
            do i=1,nexternal-2
-              if(icluster(4,i).gt.0)then
-                 icluster(4,i)=ito(icluster(4,i))
+              if(icluster(4,i,ivec).gt.0)then
+                 icluster(4,i,ivec)=ito(icluster(4,i,ivec))
               else
-                 icluster(4,i)=-1
+                 icluster(4,i,ivec)=-1
               endif
-              if(icluster(3,i).eq.0)then
-                 icluster(3,i)=-1
+              if(icluster(3,i,ivec).eq.0)then
+                 icluster(3,i,ivec)=-1
               endif
-              if(ito(icluster(1,i)).gt.0)
-     $             icluster(1,i)=ito(icluster(1,i))
-              if(ito(icluster(2,i)).gt.0)
-     $             icluster(2,i)=ito(icluster(2,i))
+              if(ito(icluster(1,i,ivec)).gt.0)
+     $             icluster(1,i,ivec)=ito(icluster(1,i,ivec))
+              if(ito(icluster(2,i,ivec)).gt.0)
+     $             icluster(2,i,ivec)=ito(icluster(2,i,ivec))
               if(flip)then
-                 if(icluster(1,i).le.2)
-     $             icluster(1,i)=3-icluster(1,i)
-                 if(icluster(2,i).le.2)
-     $             icluster(2,i)=3-icluster(2,i)
-                 if(icluster(3,i).ge.1.and.icluster(3,i).le.2)
-     $             icluster(3,i)=3-icluster(3,i)
+                 if(icluster(1,i,ivec).le.2)
+     $             icluster(1,i,ivec)=3-icluster(1,i,ivec)
+                 if(icluster(2,i,ivec).le.2)
+     $             icluster(2,i,ivec)=3-icluster(2,i,ivec)
+                 if(icluster(3,i,ivec).ge.1.and.icluster(3,i,ivec).le.2)
+     $             icluster(3,i,ivec)=3-icluster(3,i,ivec)
               endif
            enddo
         endif

@@ -1,33 +1,49 @@
-      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs,VECSIZE_USED)
 c**************************************************************************
 c     Driver for sample which does complete integration
 c     This is done in double precision, and should be told the
 c     number of possible phasespace choices.
 c     Arguments:
-c     ndim       Number of dimensions for integral(number or random #'s/point)
-c     ncall      Number of times to evaluate the function/iteration
-c     itmax      Max number of iterations
-c     itmin      Min number of iterations
-c     ninvar     Number of invarients to keep grids on (s,t,u, s',t' etc)
-c     nconfigs   Number of different pole configurations 
-c     dsig       Function to be integrated
+c     ndim           Number of dimensions for integral(number or random #'s/point)
+c     ncall          Number of times to evaluate the function/iteration
+c     itmax          Max number of iterations
+c     itmin          Min number of iterations
+c     dsig           Function to be integrated
+c     ninvar         Number of invarients to keep grids on (s,t,u, s',t' etc)
+c     nconfigs       Number of different pole configurations 
+c     VECSIZE_USED   Number of events in parallel out of VECSIZE_MEMMAX
+c                    (NB this is the #events handled by the cudacpp bridge,
+c                    but the SIMD vector size and GPU warp size are smaller)
 c**************************************************************************
       implicit none
       include 'genps.inc'
-c
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+c     
 c Arguments
 c
       integer ndim,ncall,itmax,itmin,ninvar,nconfigs
+      integer VECSIZE_USED
       external         dsig
       double precision dsig
 c
 c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
+      double precision all_p(4*maxdim/3+14,VECSIZE_MEMMAX), all_wgt(VECSIZE_MEMMAX), all_x(maxinvar,VECSIZE_MEMMAX)
+      integer all_lastbin(maxdim, VECSIZE_MEMMAX)
+      double precision bckp(VECSIZE_MEMMAX)
       double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
       integer jmax,i,j,ipole
       integer itmax_adjust
+
+c      integer imirror, iproc, iconf
+      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP) 
+      integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+      integer ilock             !  position of the event in the current warp (max is WARP_SIZE)
+      integer iwarp               ! position of the current warp (max is NB_WARP)
+c     NOTE THAT IVEC = (IWARP-1)*NB_WARP + ILOCK      
+
 c
 c     External
 c
@@ -36,11 +52,13 @@ c
 c
 c Global
 c
+      integer            lastbin(maxdim)
+      common /to_lastbin/lastbin
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
       double precision fx
-      common /to_fx/   fx
+c      common /to_fx/   fx
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -55,6 +73,7 @@ c
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
 
+      
       integer nzoom
       double precision  tx(1:3,maxinvar)
       common/to_xpoints/tx, nzoom
@@ -79,11 +98,30 @@ c
       integer th_nunwgt
       double precision th_maxwgt
       common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+      
+      logical force_reset
+      common/dsample_reset/ force_reset
+      
+      integer                                      lpp(2)
+      double precision    ebeam(2), xbk(2),q2fact(2)
+      common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+
+C     data for vectorization      
+      double precision all_xbk(2, VECSIZE_MEMMAX), all_q2fact(2, VECSIZE_MEMMAX), all_cm_rap(VECSIZE_MEMMAX)
+      double precision all_fx(VECSIZE_MEMMAX)
+      
+      
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      
 c
 c     External
 c
-      logical pass_point
+      logical pass_point, passcuts
       integer NEXTUNOPEN
 c
 c     Data
@@ -112,7 +150,7 @@ c-----
 C     Fix for 2>1 process where ndim is 2 and not 1
       ninvar = max(2,ninvar)
 
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
+      call sample_init(ndim,ncall,itmax,ninvar,nconfigs,VECSIZE_USED)
       call graph_init
       do i=1,itmax
          xmean(i)=0d0
@@ -124,26 +162,113 @@ c      maxcfig=nconfigs
 c
 c     Main Integration Loop
 c
+      ievent = 0
       iter = 1
+      ivec = 0
+      ilock = 0
+      iwarp = 1
       do while(iter .le. itmax)
 c
 c     Get integration point
 c
          call sample_get_config(wgt,iter,ipole)
          if (iter .le. itmax) then
+c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
-            if (pass_point(p)) then
-               fx = dsig(p,wgt,0) !Evaluate function
-               wgt = wgt*fx
-               if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
+            CUTSDONE=.FALSE.
+            CUTSPASSED=.FALSE.
+            if (passcuts(p,VECSIZE_USED)) then
+               ivec=ivec+1
+               ilock = ilock+1
+               if (ilock.gt.WARP_SIZE)then
+                  ilock = 1
+                  iwarp = iwarp +1
+               endif
+c              write(*,*) 'pass_point ivec is ', ivec
+               all_p(:,ivec) = p(:)
+               all_wgt(ivec) = wgt
+               all_x(:,ivec) = x(:)
+               all_xbk(:, ivec) = xbk(:)
+               all_q2fact(:, ivec) = q2fact(:)
+               all_cm_rap(ivec) = cm_rap
+               all_lastbin(:, ivec) = lastbin(:)
+c               i = ivec
+c               fx = dsig(all_p(1,i),all_wgt(i),0)
+c               bckp(i) = fx
+c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
+c               all_wgt(i) = all_wgt(i)*fx
+               if (ilock.ne.WARP_SIZE)then
+                  cycle
+               endif
+
+               if (VECSIZE_USED.le.1) then
+                  all_fx(1) = dsig(all_p, all_wgt,0)
+                  ivec=0
+                  ilock=0
+                  iwarp=1 
+               else
+c                 Here "i" is the position in the full grid of the event                  
+                  do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
+                     
+c                 need to restore common block                  
+                  xbk(:) = all_xbk(:, i)
+                  cm_rap = all_cm_rap(i)
+                  q2fact(:) = all_q2fact(:,i)
+                  CUTSDONE=.TRUE.
+                  CUTSPASSED=.TRUE.
+                  call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
+               enddo
+               call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+               if (ivec.lt.VECSIZE_USED)then
+                  cycle
+               endif
+c              reset variable for the next grid               
+               ivec = 0
+               ilock = 0
+               iwarp =1
+               
+               call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
+     &                          iconf_vec, iproc, imirror_vec, all_fx,VECSIZE_USED)
+
+                do i=1, VECSIZE_USED
+c                 need to restore common block                  
+                  xbk(:) = all_xbk(:, i)
+                  cm_rap = all_cm_rap(i)
+                  q2fact(:) = all_q2fact(:,i)
+c                  all_fx(i) = dsig(all_p(1,i),all_wgt(i),0)
+c                  if (fx.ne.bckp(i))then
+c                     write(*,*) fx, "!=", bckp(i)
+c                     stop 1
+c                  endif
+c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
+               enddo
+               endif
+               do I=1, VECSIZE_USED
+                  all_wgt(i) = all_wgt(i)*all_fx(i)
+              enddo
+               do i =1, VECSIZE_USED
+c     if last paremeter is true -> allow grid update so only for a full page
+                  lastbin(:) = all_lastbin(:,i)
+                  if (all_wgt(i) .ne. 0d0) kevent=kevent+1
+c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_USED                   
+                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.VECSIZE_USED) !Store result
+               enddo
+               if (VECSIZE_USED.ne.1.and.force_reset)then
+                  call reset_cumulative_variable()
+                  force_reset=.false.
+               endif
+
+
+c     if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
             else
                fx =0d0
                wgt=0d0
+               call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
             endif
-            call sample_put_point(wgt,x(1),iter,ipole) !Store result
+
          endif
-         if (wgt .ne. 0d0) kevent=kevent+1    
+c         if (wgt .ne. 0d0) kevent=kevent+1    
 c
 c     Write out progress/histograms
 c
@@ -259,6 +384,7 @@ c     remove the grid, so we are clean
 c
       goto 200
       write(*,*) "Trying w/ fresh grid"
+      stop 1 
       open(unit=25,file='ftn25',status='unknown',err=102)
       write(25,*) ' '
  102  close(25)
@@ -277,7 +403,7 @@ c
       ncall = ncall*4 ! / 2**(itmax-2)
       write(*,*) "Starting w/ ncall = ", ncall
       itmax = 8
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
+      call sample_init(ndim,ncall,itmax,ninvar,nconfigs,VECSIZE_USED)
       do i=1,itmax
          xmean(i)=0d0
          xsigma(i)=0d0
@@ -319,7 +445,7 @@ c
             endif
             
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -555,7 +681,7 @@ c     $     ntot/1000,'</th><th align=right>',teff,'</th></tr>'
 
 
 
-      subroutine sample_init(p1, p2, p3, p4, p5)
+      subroutine sample_init(p1, p2, p3, p4, p5, VECSIZE_USED)
 c************************************************************************
 c     Initialize grid and random number generators
 c************************************************************************
@@ -565,12 +691,14 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'vector.inc'      ! defines VECSIZE_MEMMAX
       include 'run.inc'
+
 c
 c     Arguments
 c
       integer p1, p2, p3, p4, p5
-
+      integer VECSIZE_USED
 c
 c     Local
 c
@@ -611,7 +739,7 @@ c
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
-      
+
       integer              icor
       common/to_correlated/icor
 
@@ -623,7 +751,7 @@ c
       common/read_grid_file/read_grid_file
 
       data use_cut/2/            !Grid: 0=fixed , 1=standard, 2=non-zero
-      data ituple/1/             !1=htuple, 2=sobel 
+      data ituple/1/             !1=MC (htuple or ranmar or ...), 2=sobel (no clear support anymore-> do not try in production) 
       data Minvar(1,1)/-1/       !No special variable mapping
 
 c-----
@@ -796,9 +924,11 @@ c      write(*,*) 'Forwarding random number generator'
 
  103  write(*,*) 'Grid defined OK'
 
-C     sanity check that we have a minimal number of event      
-      if ( MC_GROUPED_SUBPROC )then
+C     sanity check that we have a minimal number of event
+      
+      if ( .not.MC_GROUPED_SUBPROC.or.VECSIZE_USED.gt.1)then
          events = max(events, maxtries)
+         MC_GROUPED_SUBPROC = .false.
       else 
          events = max(events, 2*maxtries*get_maxsproc())
       endif
@@ -1536,7 +1666,7 @@ C       Security in case of all helicity vanishing (G1 of gg > qq )
 
       end subroutine update_discrete_dimensions
 
-      subroutine sample_put_point(wgt, point, iteration,ipole)
+      subroutine sample_put_point(wgt, point, iteration,ipole, allow_update)
 c**************************************************************************
 c     Given point(maxinvar),wgt and iteration, updates the grid.
 c     If at the end of an iteration, reforms the grid as necessary
@@ -1554,6 +1684,7 @@ c     Arguments
 c
       integer iteration,ipole
       double precision wgt, point(maxinvar)
+      logical allow_update
 c
 c     Local
 c
@@ -1621,12 +1752,14 @@ c
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
+      double precision twgt_it
+      common/to_unwgt_it/twgt_it
 
       real*8             wmax                 !This is redundant
       common/to_unweight/wmax
 
-      double precision fx
-      common /to_fx/   fx
+c      double precision fx
+c      common /to_fx/   fx
       double precision   prb(maxconfigs,maxpoints,maxplace)
       double precision   fprb(maxinvar,maxpoints,maxplace)
       integer                      jpnt,jplace
@@ -1652,6 +1785,7 @@ c-----
 
       if (first_time) then
          first_time = .false.
+         twgt_it = 0d0
          twgt1 = 0d0       !
          iavg = 0         !Vars for averging to increase err estimate
          navg = 1      !
@@ -1787,7 +1921,9 @@ c
 c
 c     Now if done with an iteration, print out stats, rebin, reset
 c         
-c         if (kn .eq. events) then
+c     if (kn .eq. events) then
+c         write(*,*) 'allow_update', allow_update, 'nb_pass_cuts', nb_pass_cuts, 'non_zero', non_zero
+         if (allow_update)then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
@@ -1795,9 +1931,10 @@ c         if (kn .eq. events) then
            if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
               call none_pass(1000)
            endif
-         endif
-         if (non_zero .ge. events .or. (kn .gt. 200*events .and.
-     $        non_zero .gt. 5)) then
+        endif
+        endif
+         if (allow_update.and.(non_zero .ge. events .or. (kn .gt. 200*events .and.
+     $        non_zero .gt. 5))) then
 
 c          # special mode where we store information to combine them
            if(use_cut.eq.-2)then
@@ -1950,7 +2087,8 @@ c-----
             vol = 1d0/dble(events*itm)
             knt = events
             if (use_cut.ne.-2) then
-              twgt = mean / (dble(itm)*dble(events))
+               twgt = mean / (dble(itm)*dble(events))
+               twgt_it = 0d0 ! reset the automatic finding of the maximum
             endif
 c            write(*,*) 'New number of events',events,twgt
 
@@ -2593,11 +2731,15 @@ C       Due to the initialization of the helicity sum.
       common /sample_common/
      .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
+      logical force_reset
+      common/dsample_reset/force_reset
+      data force_reset /.false./
 
 C     LOCAL
       integer i,j
 
       write(*,*) "RESET CUMULATIVE VARIABLE"
+      force_reset=.true.
       non_zero = 0
       nb_pass_cuts = 0
       do j=1,maxinvar

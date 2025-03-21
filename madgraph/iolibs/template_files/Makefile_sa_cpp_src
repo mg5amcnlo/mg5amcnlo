@@ -1,6 +1,6 @@
 LIBDIR=../lib
 CXXFLAGS= -Ofast -I.
-
+CXX=%(cpp_compiler)s
 target=$(LIBDIR)/libmodel_%(model)s.a
 
 all: $(target)

@@ -171,7 +171,8 @@ c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-      
+
+      include 'vector.inc'
       include 'run.inc'
 
 
@@ -605,6 +606,7 @@ c**************************************************************************
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
+      include 'vector.inc'
       include 'run.inc'
 
 c     local
@@ -755,6 +757,7 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      include 'vector.inc'
       include 'run.inc'
 
 c-----
@@ -1750,11 +1753,34 @@ C     -----------------------------------------
 
       integer ids(nexternal)
       integer i,j
+      logical trivial_boost 
 
 c     uncompress
       call mapid(frame_id, ids)
       pboost(:) = 0d0
       p2(:,:) = 0d0
+c     avoid trivial boost (check only for  0 0 1 1 1... so sum of the
+c     final state. 1 1 0 0 0 .... should not go within this function   
+      trivial_boost=.true.
+      do i=1,nexternal
+        if (i.le.nincoming)then
+            if (ids(i).ne.0)then
+                trivial_boost=.false.
+                EXIT ! stop do loop
+            endif
+        else
+            if (ids(i).ne.1)then
+                  trivial_boost=.false.
+                  EXIT ! stop do loop
+              endif
+        endif
+        enddo
+
+        if (trivial_boost)then
+            p2(:,:) = p1(:,:)
+            return
+        endif
+
 c     find the boost momenta --sum of particles--
       do i=1,nexternal
        if (ids(i).eq.1)then
@@ -1779,7 +1805,8 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
-      include 'coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 c     include 'run.inc'
 
       double precision p(0:3, nexternal)
@@ -1873,12 +1900,12 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
          d1 = iforest(1, -i, config)
          d2 = iforest(2, -i, config)
          do j=0,3
-            if (d1.gt.0.and.d1.le.2) then
+            if (d1.gt.0.and.d1.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
             endif
-            if (d2.gt.0.and.d2.le.2) then
+            if (d2.gt.0.and.d2.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)
@@ -1888,7 +1915,7 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             if(sde_strat.eq.2)then
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
-               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass)+stot*1d-10)**2
+               get_channel_cut = get_channel_cut / (t-Mass**2+stot*1d-10)**2
             endif
 c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
             t = t/stot 
@@ -1903,9 +1930,9 @@ c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
                Width = prwidth(-i, config)
-               tmp = (t-Mass)*(t+Mass)
+               tmp = (t-Mass**2)
                tmp2 = Mass*Width
-               get_channel_cut = get_channel_cut* (tmp**2 - tmp2**2)/(tmp**2 + tmp2**2)**2 
+               get_channel_cut = get_channel_cut/(tmp**2 + tmp2**2) 
             endif
 c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
          endif

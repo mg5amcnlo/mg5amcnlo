@@ -129,7 +129,7 @@ $ecut
  %(etajmin)s  = etajmin ! min rap for the jets
  %(etabmin)s  = etabmin ! min rap for the b
  %(etaamin)s  = etaamin ! min rap for the photons
- %(etalmin)s  = etalmin ! main rap for the charged leptons
+ %(etalmin)s  = etalmin ! min rap for the charged leptons
  %(eta_min_pdg)s = eta_min_pdg ! rap cut for other particles (use pdg code). Applied on particle and anti-particle
  %(eta_max_pdg)s = eta_max_pdg ! rap cut for other particles (syntax e.g. {6: 2.5, 23: 5})
 #*********************************************************************

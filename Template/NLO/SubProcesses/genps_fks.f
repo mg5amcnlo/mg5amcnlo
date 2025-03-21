@@ -1502,16 +1502,21 @@ c
      &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
      &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
 
-      if (.not.pass) return
-
       ! here we should call generate_momenta_born
       call generate_momenta_born(x,srec,dsqrt(srec),totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt,xjac)
 
-      if (xjac.lt.0d0) then
-        pass = .false.
-        return
+      ! if anything goes wrong with the generation of this 
+      ! specific icountevts configuration, just set the corresponding 
+      ! Born momenta to -100 so that they will be filtered out
+      ! by setcuts. Do not return (this allows e.g. configurations
+      ! to have the Born/soft counterevents but not the real-emission)
+      if (.not.pass.or.xjac.lt.0d0) then
+          p_born(0,1) = -100d0
+          p_born_l(0,1) = -100d0
+          p_born_ev(0,1) = -100d0
+          goto 112
       endif
 
 C If we are not doing event projection, we need to boost the 
@@ -4282,6 +4287,7 @@ C dressed lepton stuff
 
       double precision get_ee_expo
       double precision tau_m, tau_w
+      double precision omtau_born
 
       ! these common blocks are never used
       ! we leave them here for the moment 
@@ -4379,10 +4385,12 @@ C dressed lepton stuff
         xjac0 = xjac0 * jac_ee
 
         tau_born = x1_ee * x2_ee
+        ! better numerical accuracy
+        omtau_born = omx_ee(1) + omx_ee(2) - omx_ee(1)*omx_ee(2)
         ! multiply the jacobian by a multichannel factor if the 
         ! generation with resonances is also possible
-        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
-     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+        if (bw_exists) xjac0 = xjac0 * (omtau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (omtau_born)**(1d0-2*get_ee_expo()))
       endif
 
       ! Check here if the bjorken x's are physical (may not be so

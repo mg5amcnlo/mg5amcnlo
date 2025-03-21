@@ -27,6 +27,8 @@ import os
 import madgraph.fks.fks_helas_objects as fks_helas
 import copy
 import madgraph.iolibs.save_load_object as save_load_object
+import tests.IOTests as IOTests
+import madgraph.iolibs.files as files
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -91,3 +93,44 @@ class TestSudakov(unittest.TestCase):
 
 
 
+class IOExportEWSudTest(IOTests.IOTestManager):
+
+    def generate(self, process, model, multiparticles=[],SA=False):
+        """Create a process; SA is for the Standalone Output"""
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = mgcmd.MasterCmd()
+        
+        if model.endswith('CMS'):
+            run_cmd('set complex_mass_scheme')
+            model = model[:-3]
+
+        run_cmd('import model %s' % model)
+        for multi in multiparticles:
+            run_cmd('define %s' % multi)
+        if isinstance(process, str):
+            run_cmd('generate %s' % process)
+        else:
+            for p in process:
+                run_cmd('add process %s' % p)
+
+        files.rm(self.IOpath)
+        if not SA:
+            run_cmd('output %s -f' % self.IOpath)
+        else:
+            run_cmd('output ewsudakovsa %s -f' % self.IOpath)
+
+
+
+    @IOTests.createIOTest()
+    def testIO_test_ppzz_ewsudakov(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > z z [LOonly=QCD] --ewsudakov'], 'loop_qcd_qed_sm_Gmu_forSudakov')
+
+    @IOTests.createIOTest()
+    def testIO_test_pptt_ewsudakovSA(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > t t~  [LOonly=QCD] --ewsudakov'], 'loop_qcd_qed_sm_Gmu_forSudakov', SA=True)

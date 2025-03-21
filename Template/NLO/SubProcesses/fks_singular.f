@@ -2145,6 +2145,8 @@ c overwrite the relevant information.]
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
+            if (flavour_bias(2).ne.1) 
+     $           call recompute_xlum_for_wgt_mint(i,xlum)
             virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
      &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
             born_wgt_mint(0)=born_wgt_mint(0)*xlum
@@ -2166,6 +2168,36 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
+      subroutine recompute_xlum_for_wgt_mint(i,xlum)
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      double precision xlum,conv
+      parameter (conv=389379660d0) ! conversion to picobarns
+      integer i,j,iproc
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      xlum=0d0
+      do j=1,iproc
+         if (any(abs(parton_pdg_uborn(1:nexternal-1,j
+     $        ,i)).eq.Flavour_Bias(1))) then
+            if (nincoming.eq.2) then
+               xlum=xlum+pd(j)*conv*dble(Flavour_Bias(2))
+            else
+               xlum=xlum+pd(j)*dble(Flavour_Bias(2))
+            endif
+         else
+            if (nincoming.eq.2) then
+               xlum=xlum+pd(j)*conv
+            else
+               xlum=xlum+pd(j)
+            endif
+         endif
+      enddo
+      end
+      
       subroutine include_bias_wgt
 c Include the weight from the bias_wgt_function to all the contributions
 c in icontr. This only changes the weight of the central value (after
@@ -2178,7 +2210,9 @@ c coefficients for PDF and scale computations.
       use weight_lines
       use mint_module
       implicit none
+      include 'nexternal.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer orders(nsplitorders)
       integer i,j,iamp
       logical virt_found
@@ -2208,12 +2242,27 @@ c loop over all contributions
          endif
          bias_wgt(i)=bias
 c Update the weights:
-         wgts(1,i)=wgts(1,i)*bias_wgt(i)
          do j=1,niproc(i)
             parton_iproc(j,i)=parton_iproc(j,i)*bias_wgt(i)
+            if (Flavour_bias(2).ne.1) then ! non-trivial flavour bias in the run_card.
+               if (H_event(i)) then
+                  if (any(abs(parton_pdg(1:nexternal,j
+     $                 ,i)).eq.Flavour_Bias(1))) parton_iproc(j,i)
+     $                 =parton_iproc(j,i)*dble(Flavour_Bias(2))
+               else
+                  if (any(abs(parton_pdg_uborn(1:nexternal-1,j
+     $                 ,i)).eq.Flavour_Bias(1))) parton_iproc(j,i)
+     $                 =parton_iproc(j,i)*dble(Flavour_Bias(2))
+               endif
+            endif
          enddo
+         wgts(1,i)=sum(parton_iproc(1:niproc(i),i))
          do j=1,3
             wgt(j,i)=wgt(j,i)*bias_wgt(i)
+            ! Do not update the wgt() with the Flavour_Bias here; only
+            ! do it once the iproc_picked has been set (i.e., only for
+            ! the events that are written out). In practice, we can do
+            ! it in the include_inverse_bias_wgt() subroutine.
          enddo
          if (itype(i).eq.14 .and. .not.virt_found) then
             virt_found=.true.
@@ -2235,9 +2284,11 @@ c the rwgt_lines is NOT updated.
       use weight_lines
       use extra_weights
       implicit none
+      include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      integer i,ict,ipro,ii
+      include 'run.inc'
+      integer i,ict,ipro,ii,flavour_bias_consistency
       double precision wgt_num,wgt_denom,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
@@ -2252,6 +2303,7 @@ c the rwgt_lines is NOT updated.
       endif
       wgt_num=0d0
       wgt_denom=0d0
+      flavour_bias_consistency=0
       do i=1,icontr_sum(0,icontr_picked)
          ict=icontr_sum(i,icontr_picked)
          if (bias_wgt(ict).eq.0d0) then
@@ -2268,13 +2320,50 @@ c keeps its contribution from the bias_wgt.
                if (eto(ii,nFKS(ict)).ne.ipro) cycle
                wgt_denom=wgt_denom+parton_iproc(ii,ict)
                wgt_num=wgt_num+parton_iproc(ii,ict)/bias_wgt(ict)
+               if (Flavour_Bias(2).ne.1) then ! non-trivial Flavour bias. Check consistency of flavour configuration
+                  if (any(abs(parton_pdg_uborn(1:nexternal-1,ii
+     $                 ,ict)).eq.Flavour_Bias(1))) then
+                     if (flavour_bias_consistency .ge. 0) then
+                        flavour_bias_consistency=1
+                     else
+                        write (*,*) 'Inconsistent Flavour Bias #1'
+                        stop 1
+                     endif
+                  else
+                     if (flavour_bias_consistency .le. 0) then
+                        flavour_bias_consistency=-1
+                     else
+                        write (*,*) 'Inconsistent Flavour Bias #2'
+                        stop 1
+                     endif
+                  endif
+               endif
             enddo
          else
             ipro=iproc_picked
             wgt_denom=wgt_denom+parton_iproc(ipro,ict)
             wgt_num=wgt_num+parton_iproc(ipro,ict)/bias_wgt(ict)
+            if (Flavour_Bias(2).ne.1) then ! non-trivial Flavour bias. Check consistency of flavour configuration
+               if (any(abs(parton_pdg(1:nexternal,ipro,ict)) .eq.
+     $              Flavour_Bias(1))) then
+                  if (flavour_bias_consistency .ge. 0) then
+                     flavour_bias_consistency=1
+                  else
+                     write (*,*) 'Inconsistent Flavour Bias #3'
+                     stop 1
+                  endif
+               else
+                  if (flavour_bias_consistency .le. 0) then
+                     flavour_bias_consistency=-1
+                  else
+                     write (*,*) 'Inconsistent Flavour Bias #4'
+                     stop 1
+                  endif
+               endif
+            endif
          endif
       enddo
+      wgtref=unwgt(iproc_picked,icontr_picked)
       if (abs((wgtref-wgt_denom)/(wgtref+wgt_denom)).gt.1d-10) then
          write (*,*) "ERROR in include_inverse_bias_wgt: "/
      $        /"reference weight not equal to recomputed weight",wgtref
@@ -2283,6 +2372,14 @@ c keeps its contribution from the bias_wgt.
       endif
 c update the event weight to be written in the file
       inv_bias=wgt_num/wgt_denom
+      if (flavour_bias_consistency.eq.1) then
+         inv_bias=inv_bias/dble(Flavour_Bias(2))
+         do i=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(i,icontr_picked)
+            wgt(1:3,ict)=wgt(1:3,ict)*dble(Flavour_Bias(2))
+            bias_wgt(ict)=bias_wgt(ict)*dble(Flavour_Bias(2))
+         enddo
+      endif
       return
       end
       
@@ -2980,8 +3077,8 @@ c Fills the function that is returned to the MINT integrator
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6
@@ -3580,8 +3677,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
             do i=1,amp_split_size
                f(3)=f(3)+virt_wgt_mint(i)
                f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
             enddo
+            f(5)=abs(f(3))!v3.5.4, this fixes a wrong behaviour
          else
             ithree=2*iamp+5
             isix=2*iamp+6
@@ -5010,7 +5107,7 @@ c
         elseif((abs(col1).eq.8.and.col2.eq.3) .or. 
      $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq / game
           xkk(1)=vcf*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
-          xkk(2)=ch1**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
+          xkk(2)=ch2**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
         else
           xkk(:) = 0d0
         endif
