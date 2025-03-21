@@ -1,5 +1,4 @@
 
-from __future__ import print_function
 invisible_list = [12,14,16,18]
 invisible_list += [1000012,1000014,1000016,1000022,1000023,1000024,1000025,1000035]
 

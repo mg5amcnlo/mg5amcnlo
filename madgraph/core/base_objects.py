@@ -876,7 +876,7 @@ class Interaction(PhysicsObject):
                           for key in self.get('orders')]))/ \
                max((len(self.get('particles'))-2), 1)
 
-    def __str__(self):
+    def __str__(self, couplings=None):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
         display PDG code of involved particles."""
@@ -892,6 +892,32 @@ class Interaction(PhysicsObject):
             elif isinstance(self[prop], ParticleList):
                 mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
                    ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            elif prop == 'color':
+                mystr += '    \'' + prop + '\': ['
+                tmp = []
+                for i, col in enumerate(self['color']):
+                   tmp.append("c%i = %s" % (i, col))
+                mystr += "%s],\n" % ','.join(tmp)
+
+            elif prop == 'couplings':
+                mystr += '    \'' + prop + '\': {' 
+                tmp = []
+                for (c,l) in self[prop]:
+                    lorname = self['lorentz'][l]
+                    coupling = self[prop][(c,l)]
+                    if couplings:
+                        for running in couplings:
+                            for onecoup in couplings[running]:
+                                if onecoup.name == coupling:
+                                    coupling = "%s=%s" %(coupling, onecoup.expr.replace('mdl_', ''))
+                                    break
+                                else:
+                                    continue
+                            else: 
+                                continue
+                            break    
+                    tmp.append('(c%s, %s): %s' %(c,lorname,coupling))
+                mystr += ',\n                  '.join(tmp) + '}\n'
             else:
                 mystr = mystr + '    \'' + prop + '\': ' + \
                         repr(self[prop]) + ',\n'
@@ -1574,7 +1600,7 @@ class Model(PhysicsObject):
         # recast all parameter in prefix_XX
         for key in keys:
             for param in self['parameters'][key]:
-                value = param.name.lower()
+                value = param.name.lower()   
                 if value in ['as','mu_r', 'zero','aewm1','g']:
                     continue
                 elif value.startswith(prefix):
@@ -1593,7 +1619,7 @@ class Model(PhysicsObject):
                                                   ('__%d'%(i+1) if i>0 else ''))
                 change[var.name] = new_name
                 var.name = new_name
-                to_change.append(var.name)
+                #to_change.append(var.name)
         assert 'zero' not in to_change
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
@@ -1612,13 +1638,12 @@ class Model(PhysicsObject):
             self.map_CTcoup_CTparam = dict( (coup_name, 
             [change[name] if (name in change) else name for name in params]) 
                   for coup_name, params in self.map_CTcoup_CTparam.items() )
-
+        
         i=0
         while i*1000 <= len(to_change): 
             one_change = to_change[i*1000: min((i+1)*1000,len(to_change))]
             i+=1
             rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(one_change))))
-            
             # change parameters
             for key in keys:
                 if key == ('external',):
@@ -1643,9 +1668,14 @@ class Model(PhysicsObject):
                 if str(part.get('width')) in one_change:
                     part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
                 if  hasattr(part, 'partial_widths'):
-                    for key, value in part.partial_widths.items():    
+                    for key, value in part.partial_widths.items():
                         part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
+            # change running
+            if self['running_elements']:
+                for el in self['running_elements']:
+                    el.value = rep_pattern.sub(replace, el.value)
+
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
         self.get('particle_dict') 
@@ -1692,7 +1722,7 @@ class Model(PhysicsObject):
         
         return default
 
-    def change_electroweak_mode(self, mode):
+    def change_electroweak_mode(self, mode, **opt):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
@@ -1774,8 +1804,9 @@ class Model(PhysicsObject):
                 return True
             else:
                 return False
+            
 
-    def change_mass_to_complex_scheme(self, toCMS=True):
+    def change_mass_to_complex_scheme(self, toCMS=True, bypass_check=False):
         """modify the expression changing the mass to complex mass scheme"""
         
         # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
@@ -1832,13 +1863,13 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):
                     status = self.change_electroweak_mode(
-                                                   set(['mz','mw','alpha']))
+                                                   set(['mz','mw','alpha']), bypass_check=bypass_check)
                     # Use the newly defined parameter for the W mass
                     mass = self.get_parameter(particle.get('mass'))
                     if not status:
                         logger.warning('The W mass is not an external '+
                         'parameter in this model and the automatic change of'+
-                        ' electroweak scheme changed. This is not advised for '+
+                        ' electroweak scheme failed. This is not advised for '+
                                             'applying the complex mass scheme.')
 
                 # Add A new parameter CMASS

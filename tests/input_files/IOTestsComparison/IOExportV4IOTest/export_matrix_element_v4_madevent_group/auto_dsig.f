@@ -54,6 +54,10 @@ C
 
       INTEGER I_EE
 C     
+C     STUFF FOR UPC
+C     
+      DOUBLE PRECISION PHOTONPDFSQUARE
+C     
 C     EXTERNAL FUNCTIONS
 C     
       LOGICAL PASSCUTS
@@ -77,10 +81,11 @@ C     Keep track of whether cuts already calculated for this event
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INCLUDE '../../Source/PDF/pdf.inc'
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+C     CHARACTER*7         PDLABEL,EPA_LABEL
+C     INTEGER       LHAID
+C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C     
 C     local
 C     

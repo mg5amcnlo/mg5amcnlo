@@ -38,6 +38,10 @@ C
       DOUBLE PRECISION a1,a2
       DOUBLE PRECISION XPQ(-7:7)
       DOUBLE PRECISION DSIGUU
+C
+C     STUFF FOR UPC
+C
+      double precision photonpdfsquare
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -51,6 +55,11 @@ C
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+      include '../../Source/PDF/pdf.inc'
+C     Common blocks
+C      CHARACTER*7         PDLABEL,EPA_LABEL
+C      INTEGER       LHAID
+C      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C  
 C DATA
 C  

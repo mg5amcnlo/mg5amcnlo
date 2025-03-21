@@ -17,7 +17,6 @@ the output of the Feynman Rules."""
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import math
 import os
 import time
@@ -511,7 +510,7 @@ class TestAddVariable(unittest.TestCase):
         #Should return p1*(p2(2*p4 + 1) + p3 + 2)
         self.assertEqual(sum.__class__,aloha_lib.MultContainer)
         self.assertEqual(len(sum),2)
-        self.assertEqual(str(sum), '(p1 * ( (p2 * 2 * ( 0.5 + (p4) )) + ( (p3) + 2 ) ))')
+        self.assertEqual(str(sum), '(p1 * ( (p2 * 2 * ( (p4) + 0.5 )) + ( (p3) + 2 ) ))')
 
     def test_short_factorization2(self):
         """test the factorization with power and constant"""
@@ -523,7 +522,7 @@ class TestAddVariable(unittest.TestCase):
         sum = ( -2 * p1 **2 + -2 * p2 + 2 * ( p3 * p2 ) )
         sum = sum.factorize()
         #Should return p2*(2*p3-2)-2*p1**2
-        self.assertEqual(str(sum), '( (p2 * 2 * ( -1.0 + (p3) )) + (-2 * p1 * p1) )')
+        self.assertEqual(str(sum), '( (p2 * 2 * ( (p3) + -1.0 )) + (-2 * p1 * p1) )')
 
     def test_short_factorization3(self):
         """test factorization with prefactor"""
@@ -572,6 +571,20 @@ class TestAddVariable(unittest.TestCase):
         self.assertEqual(eval(str(data2)), value)
         
 
+
+class TestDemo(unittest.TestCase):
+
+    def test_form_demo(self):
+        x1 = aloha_lib.Variable( 'x1')
+        x2 = aloha_lib.Variable( 'x2')
+        x3 = aloha_lib.Variable( 'x3')
+        expr = (1+x1+x2)*(1+x1+x2)*(1+2*x2+x3)*(1+2*x2+x3)*(1+2*x2+x3)
+        strexpr = str(expr).replace("x","")
+        old = eval(strexpr)
+        expr = expr.factorize()
+        strexpr = str(expr)
+        new = eval(strexpr.replace("x", ""))
+        self.assertEqual(new, old)
 
 
     

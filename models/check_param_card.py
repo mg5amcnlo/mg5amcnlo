@@ -1,8 +1,8 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import itertools
+import filecmp
 import xml.etree.ElementTree as ET
 import math
 
@@ -30,8 +30,13 @@ class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
 
+class InvalidParam(Exception):
+    """ a class for invalid parameter input """
+    pass
+
 class Parameter (object):
     """A class for a param_card parameter"""
+
     
     def __init__(self, param=None, block=None, lhacode=None, value=None, comment=None):
         """Init the parameter"""
@@ -72,11 +77,15 @@ class Parameter (object):
             data = data[:position] + [' '.join(data[position:])] 
         if not len(data):
             return
+        
         try:
             self.lhacode = tuple([int(d) for d in data[:-1]])
         except Exception:
             self.lhacode = tuple([int(d) for d in data[:-1] if d.isdigit()])
             self.value= ' '.join(data[len(self.lhacode):])
+            # check that lhacode are the first entry otherwise return invalid param.
+            if ' '.join([str(i) for i in self.lhacode]) != ' '.join(data[:len(self.lhacode)]):
+                raise InvalidParam("line was %s" % str(data))
         else:
             self.value = data[-1]
         
@@ -390,8 +399,12 @@ class ParamCard(dict):
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)
-                param.load_str(line)
-                cur_block.append(param)
+                try:
+                    param.load_str(line)
+                except InvalidParam:
+                    logger.warning("Block \"%s\" has line \"%s\" that is not in slha1 format: line is ignored" %(cur_block.name, line))
+                else:
+                    cur_block.append(param)
                   
         return self
     
@@ -641,7 +654,7 @@ class ParamCard(dict):
             scales = []
 
             
-        fout = file_writers.FortranWriter(outpath)
+        fout = file_writers.FortranWriter(outpath+'.tmp')
         defaultcard = ParamCard(default)
         for line in open(identpath):
             if line.startswith('c  ') or line.startswith('ccccc'):
@@ -691,6 +704,13 @@ class ParamCard(dict):
         for block in scales:
             value = self[block].scale
             fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
+
+        fout.close()
+        # compare if we need to update the file (allowing to skip some recompilation)
+        if not os.path.exists(outpath) or not filecmp.cmp(outpath+'.tmp', outpath):
+            shutil.move(outpath+'.tmp', outpath)
+        else:
+            os.remove(outpath+'.tmp')
       
     def convert_to_complex_mass_scheme(self):
         """ Convert this param_card to the convention used for the complex mass scheme:

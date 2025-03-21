@@ -5807,13 +5807,12 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         matrix_element_list.append(matrix_element)
                         if combine_matrix_elements:
                             amplitude_tags.append(amplitude_tag)
-                            identified_matrix_elements.append(matrix_element)
+                            identified_matrix_elements.append(matrix_element.get('processes'))
                             permutations.append(amplitude_tag[-1][0].\
                                                 get_external_numbers())
                     else: # try
                         # Identical matrix element found
-                        other_processes = identified_matrix_elements[me_index].\
-                                          get('processes')
+                        other_processes = identified_matrix_elements[me_index]
                         # Reorder each of the processes
                         # Since decay chain, only reorder legs_with_decays
                         for proc in matrix_element.get('processes'):
@@ -5853,15 +5852,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         # Keep track of amplitude tags
                         if combine_matrix_elements:
                             amplitude_tags.append(amplitude_tag)
-                            identified_matrix_elements.append(me)
+                            identified_matrix_elements.append(me.get('processes'))
                             permutations.append(amplitude_tag[-1][0].\
                                                 get_external_numbers())
                     else:
                         matrix_element_list = []
                 else:
                     # Identical matrix element found
-                    other_processes = identified_matrix_elements[me_index].\
-                                      get('processes')
+                    other_processes = identified_matrix_elements[me_index]
+                                      
                     
                     other_processes.append(cls.reorder_process(\
                         amplitude.get('process'),

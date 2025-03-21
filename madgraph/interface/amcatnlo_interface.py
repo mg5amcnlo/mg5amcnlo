@@ -17,7 +17,6 @@
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import os
 import logging
 import pydoc
@@ -143,7 +142,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
                   
-        if args[0] == 'ewsudakovsa':
+        if args and args[0] == 'ewsudakovsa':
             self._export_format = 'ewsudsa'
             args.pop(0)
         else:

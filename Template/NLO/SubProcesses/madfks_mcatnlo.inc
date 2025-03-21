@@ -12,6 +12,10 @@ c Other control switches on veto (see MC subtraction terms)
       parameter (scaleMClow=10.d0)
       parameter (scaleMCdelta=20.d0)
 
+c IR cutoff for shower scales
+      double precision scaleMCcut
+      parameter (scaleMCcut=3.d0)
+
 c If .true., writes more in LH event file
       logical AddInfoLHE
       parameter (AddInfoLHE=.true.)

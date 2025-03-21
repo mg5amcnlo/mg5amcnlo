@@ -12,7 +12,8 @@ c handling_lhe_events.f fill_MC_mshell.f
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
       character*80 event_file,fname1,executable,inputfile
       character*1000 buff
       character*10 MonteCarlo
@@ -94,11 +95,13 @@ c$$$      read (*,*) inputfile
          do j=1,jmax
             call read_lhef_event(ifile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &           buff,SCALUP_a)
 
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &           buff,SCALUP_a)
          enddo
          write(ofile,*)'</LesHouchesEvents>'
          close(ifile2)

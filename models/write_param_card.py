@@ -13,7 +13,6 @@
 #
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc

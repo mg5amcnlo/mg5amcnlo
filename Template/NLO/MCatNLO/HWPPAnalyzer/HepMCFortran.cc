@@ -54,6 +54,8 @@ void HepMCFortran::analyze(tEventPtr event, long ieve, int loop, int state) {
   //foranalysis_();
   hwanal_();
 
+  delete hepevtf;
+
   return;
   
 }

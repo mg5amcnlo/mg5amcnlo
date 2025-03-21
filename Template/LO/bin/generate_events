@@ -27,8 +27,8 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
 
-if sys.version_info[1] < 7:
-    sys.exit('MadEvent works with python 2.7/3.7 or higher.\n\
+if sys.version_info < (3, 7):
+    sys.exit('MadEvent works with python 3.7 or higher.\n\
                Please upgrade your version of python.')
 
 try:
@@ -73,11 +73,19 @@ else:
     else:
         readline.__doc__ = 'GNU'
         readline.parse_and_bind("tab: complete")
-        
+
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5', 'me5history')
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "me5history")
         readline.read_history_file(history_file)
+
     except:
         pass
 

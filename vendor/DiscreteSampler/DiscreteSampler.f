@@ -1927,6 +1927,8 @@
         type(SampledDimension)  :: conv_dim
         logical                 :: one_norm_is_zero
         real*8                  :: small_contrib_thres
+        real*8                  :: average_contrib
+        integer                 :: min_bin_index
 !
 !       Begin code
 !

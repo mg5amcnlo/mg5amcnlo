@@ -15,7 +15,6 @@
 """ Command interface for MadSpin """
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import logging
 import math
@@ -428,12 +427,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         #if self.model and not self.model['case_sensitive']:
         #    decaybranch = decaybranch.lower()
 
-        if self.options['spinmode'] != 'full' and '{' in decaybranch:
+        if self.options['spinmode'] not in  ['full','madspin'] and '{' in decaybranch:
             if self.options['spinmode'] == 'none':
                 logger.warning("polarization option used with spinmode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
             else:
                 logger.warning("polarization option used with spinmode=onshell. This combination is not validated and is by construction using sub-optimal method which can likely lead to bias in some situation. Use at your own risk.")
-
+        if "=" in decaybranch and self.options['spinmode'] in['full','madspin']:
+            logger.warning("Note that coupling order restriction are not associated to specific Branching Ratio. The total cross-section might therefore use the wrong branching ratio.")
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if init_part not in self.list_branches:
             self.list_branches[init_part] = []

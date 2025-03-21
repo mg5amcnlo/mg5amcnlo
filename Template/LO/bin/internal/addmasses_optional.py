@@ -6,7 +6,6 @@
 # Insert W/Z when missing
 
 from __future__ import absolute_import
-from __future__ import print_function
 import math,sys,re
 from xml.dom import minidom
 from six.moves import range

@@ -144,7 +144,25 @@ class gensym(object):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
+
+            #compile gensym
+            self.cmd.compile(['gensym'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'gensym')):
+                raise Exception('Error make gensym not successful')
+
+            # Launch gensym
+            p = misc.Popen(['./gensym'], stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, cwd=Pdir)
+            #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             
+            (stdout, _) = p.communicate(''.encode())
+            stdout = stdout.decode('ascii',errors='ignore')
+            try:
+                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
+            except Exception as error:
+                misc.sprint(stdout, 'no channel or error for %s' % Pdir)
+                continue
+
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
                 raise Exception('Error make madevent_forhel not successful')  
@@ -152,7 +170,7 @@ class gensym(object):
             if not os.path.exists(pjoin(Pdir, 'Hel')):
                 os.mkdir(pjoin(Pdir, 'Hel'))
                 ff = open(pjoin(Pdir, 'Hel', 'input_app.txt'),'w')
-                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n 1\n')
+                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n -%s\n' % nb_channel)
                 ff.close()
             else:
                 try:

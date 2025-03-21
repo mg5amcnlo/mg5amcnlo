@@ -85,9 +85,10 @@ class ModelReader(loop_base_objects.LoopModel):
                     raise MadGraph5Error("No such file %s" % param_card)
                 param_card_text = param_card
                 param_card = card_reader.ParamCard(param_card)
-                for param in param_card.get('decay'):
-                    if str(param.value).lower() == 'auto':
-                        param.value = auto_width(param_card, param.lhacode)
+                if 'decay' in param_card:
+                    for param in param_card.get('decay'):
+                        if str(param.value).lower() == 'auto':
+                            param.value = auto_width(param_card, param.lhacode)
             #misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
             #assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
             

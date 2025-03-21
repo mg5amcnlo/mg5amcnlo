@@ -8,11 +8,11 @@ C ************************************************************
 C
 C Parameters
 C
-          include '../../nexternal.inc'
+c          include '../../nexternal.inc'
 C
 C Arguments
 C
-          double precision p(0:3,nexternal)
+          double precision p(*)
           double precision original_weight, bias_weight
 C
 C local variables
@@ -38,7 +38,8 @@ C         information (color, resonances, helicities, etc..)
 C --------------------
 C BEGIN IMPLEMENTATION
 C --------------------
-
-          bias_weight = 1.0d0
+c         new default call the dunction          
+          call bias_wgt_custom(p, original_weight, bias_weight)
+c          bias_weight = 1.0d0
 
       end subroutine bias_wgt

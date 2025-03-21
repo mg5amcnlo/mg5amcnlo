@@ -43,7 +43,6 @@
 ## BEGIN INCLUDE
 ##
 from __future__ import absolute_import
-from __future__ import print_function
 from six.moves import range
 try:
     import madgraph.madweight.MW_info as MW_param

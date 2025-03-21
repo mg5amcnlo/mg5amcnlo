@@ -44,7 +44,6 @@
 
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 from array import array
 import collections
 from fractions import Fraction
@@ -550,10 +549,21 @@ class AddVariable(list):
                         newadd.append(term)
                     else: 
                         newadd.append(term.prefactor)
-        newadd = newadd.factorize()
+            # handle case like x * (1+1+1+1+1)
+            cst_value = 0
+            for v in newadd[:]:
+                if isinstance(v, numbers.Number):
+                    newadd.remove(v)
+                    cst_value += v
+            if newadd:
+                if cst_value:
+                    newadd.append(cst_value)
+                newadd = newadd.factorize()
+            else:
+                newadd = cst_value
         
         # optimize the prefactor 
-        if isinstance(newadd, AddVariable):        
+        if isinstance(newadd, AddVariable):     
             countprefact = defaultdict(int)
             nbplus, nbminus = 0,0
             for nb in [a.prefactor for a in newadd if hasattr(a, 'prefactor')]:
@@ -562,7 +572,7 @@ class AddVariable(list):
                     nbplus += 1
                 else:
                     nbminus += 1
-    
+
             newadd.prefactor = sorted(list(countprefact.items()), key=lambda x: x[1], reverse=True)[0][0]
             if nbplus < nbminus:
                 newadd.prefactor *= -1

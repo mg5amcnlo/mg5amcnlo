@@ -222,6 +222,7 @@ class TestCmdShell1(unittest.TestCase):
                      'contur_path': './HEPTools/contur',
                      'rivet_path': './HEPTools/rivet',
                      'yoda_path':'./HEPTools/yoda',
+                      'eMELA': 'eMELA-config',
                     }
 
         self.assertEqual(config, expected)

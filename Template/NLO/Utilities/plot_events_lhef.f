@@ -15,7 +15,8 @@ c  reweight0.inc dbook.inc
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
       double precision sum_wgt,sum_wgt_resc,rat,www
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -114,7 +115,8 @@ c events, but its upper bound
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,
+     &        buff,SCALUP_a)
 
          if(index(buff,'endoffile').ne.0)then
            keepevent=.false.

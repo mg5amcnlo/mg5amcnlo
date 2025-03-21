@@ -4,7 +4,7 @@ include ../make_opts
 
 LIBRARY	= libcernlib.a
 LIBDIR  = ../../lib/
-SOURCES = abend.o dlsqp2.o lenocc.o mtlprt.o mtlset.o radmul.o
+SOURCES = abend.o dlsqp2.o lenocc.o mtlprt.o mtlset.o radmul.o dfint.o kerset.o
 
 all: $(LIBDIR)$(LIBRARY)
 

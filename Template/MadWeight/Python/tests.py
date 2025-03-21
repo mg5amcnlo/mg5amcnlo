@@ -21,7 +21,6 @@
 #  TEST #################################################################################################
 #########################################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 from six.moves import input
 sys.path.append('./Source/MadWeight/Python')

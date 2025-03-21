@@ -32,7 +32,7 @@ c
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
-     . IS_A_ONIUM, do_cuts
+     & IS_A_ONIUM, do_cuts
 
       dummy_cuts=.true.
 
@@ -96,3 +96,67 @@ c
       return
       end
       
+
+      double precision function user_dynamical_scale(P)
+c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 (or 10) to use it
+      implicit none
+      include 'nexternal.inc'
+      double precision P(0:3, nexternal)
+c     Commmon to have access to all variable defined in the run_card      
+      include 'genps.inc'
+      include 'run.inc'
+      write(0,*) "dynamical scale set to 0"
+      write(0,*) "need to be defined via user_hook method"
+      stop 1
+c     fixed scale
+      return
+      end
+
+      
+      
+C ************************************************************
+C default for the library implementing a dummy bias function
+C ************************************************************
+      subroutine bias_wgt_custom(p, original_weight, bias_weight)
+      implicit none
+C
+C Parameters
+C
+          include 'nexternal.inc'
+
+C     
+C Arguments
+C
+          double precision p(0:3, nexternal)
+          double precision original_weight, bias_weight
+C
+C local variables
+C
+C
+C Global variables
+C
+C      common block with metadata for the bias
+C
+          double precision stored_bias_weight
+c          data stored_bias_weight/1.0d0/
+          logical impact_xsec, requires_full_event_info
+C         Impact_xsec 
+C         Not impacting the xsec since the bias is 1.0. Therefore
+C         bias_wgt will not be written in the lhe event file.
+C         Setting it to .True. makes sure that it will not be written.
+C         Default: True
+C         Requires_full_event_info          
+C         Of course this module does not require the full event
+C         information (color, resonances, helicities, etc..)
+c         Default: False          
+          common/bias/stored_bias_weight,impact_xsec,
+     &                requires_full_event_info
+
+C --------------------
+C BEGIN IMPLEMENTATION
+C --------------------
+          bias_weight = 1.0d0
+
+      return
+      end subroutine bias_wgt_custom
+

@@ -14,7 +14,7 @@ BIASLIBRARY=libbias.$(libext)
 # Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
 FFLAGS= -w -fPIC
-#FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
+#FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall -fimplicit-none
 endif
 
 FFLAGS += $(GLOBAL_FLAG)

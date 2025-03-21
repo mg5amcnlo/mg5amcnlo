@@ -8,12 +8,13 @@
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
      $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
-     $        ,icontr_sum(:,:),orderstag(:),amppos(:),need_match(:,:)
+     $        ,icontr_sum(:,:),ifold_cnt(:) ,icolour_con(:,:,:)
+     $        ,orderstag(:),amppos(:),need_match(:,:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
      $        ,cpower(:),plot_wgts(:,:),shower_scale(:),unwgt(:,:)
-     $        ,bias_wgt(:)
+     $        ,bias_wgt(:),shower_scale_a(:,:,:)
          save
       end module weight_lines
 
@@ -41,14 +42,14 @@ c parton_pdg
          allocate(itemp3(nexternal,n_proc,max_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdg
          call move_alloc(itemp3,parton_pdg)
-c parton_pdf
-         allocate(itemp3(nexternal,n_proc,max_contr))
-         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
-         call move_alloc(itemp3,parton_pdf)
 c parton_iproc
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=parton_iproc
          call move_alloc(temp2,parton_iproc)
+c parton_pdf
+         allocate(itemp3(nexternal,n_proc,max_contr))
+         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
+         call move_alloc(itemp3,parton_pdf)
 c unwgt
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
@@ -107,6 +108,10 @@ c plot_id
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=plot_id
          call move_alloc(itemp1,plot_id)
+c ifold_cnt
+         allocate(itemp1(n_contr))
+         itemp1(1:max_contr)=ifold_cnt
+         call move_alloc(itemp1,ifold_cnt)
 c niproc
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=niproc
@@ -131,6 +136,10 @@ c icontr_sum
          allocate(itemp2(0:n_contr,n_contr))
          itemp2(0:max_contr,1:max_contr)=icontr_sum
          call move_alloc(itemp2,icontr_sum)
+c icolour_con
+         allocate(itemp3(2,nexternal,n_contr))
+         itemp3(1:2,1:nexternal,1:max_contr)=icolour_con
+         call move_alloc(itemp3,icolour_con)
 c momemta
          allocate(temp3(0:3,nexternal,n_contr))
          temp3(0:3,1:nexternal,1:max_contr)=momenta
@@ -187,6 +196,10 @@ c shower_scale
          allocate(temp1(n_contr))
          temp1(1:max_contr)=shower_scale
          call move_alloc(temp1,shower_scale)
+c shower_scale_a
+         allocate(temp3(n_contr,nexternal,nexternal))
+         temp3(1:max_contr,1:nexternal,1:nexternal)=shower_scale_a
+         call move_alloc(temp3,shower_scale_a)
 c unwgt
          allocate(temp2(max_iproc,n_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
@@ -214,12 +227,14 @@ c update maximum
       allocate(parton_pdg_uborn(nexternal,1,1))
       allocate(parton_pdg(nexternal,1,1))
       allocate(plot_id(1))
+      allocate(ifold_cnt(1))
       allocate(niproc(1))
       allocate(ipr(1))
       allocate(orderstag(1))
       allocate(amppos(1))
       allocate(parton_pdf(nexternal,1,1))
       allocate(icontr_sum(0:1,1))
+      allocate(icolour_con(2,nexternal,1))
       allocate(momenta(0:3,nexternal,1))
       allocate(momenta_m(0:3,nexternal,2,1))
       allocate(wgt(3,1))
@@ -234,6 +249,7 @@ c update maximum
       allocate(bias_wgt(1))
       allocate(plot_wgts(1,1))
       allocate(shower_scale(1))
+      allocate(shower_scale_a(1,nexternal,nexternal))
       allocate(unwgt(1,1))
       allocate(need_match(nexternal,1))
       max_contr=1
@@ -257,12 +273,14 @@ c update maximum
       if (allocated(parton_pdg_uborn)) deallocate(parton_pdg_uborn)
       if (allocated(parton_pdg)) deallocate(parton_pdg)
       if (allocated(plot_id)) deallocate(plot_id)
+      if (allocated(ifold_cnt)) deallocate(ifold_cnt)
       if (allocated(niproc)) deallocate(niproc)
       if (allocated(ipr)) deallocate(ipr)
       if (allocated(orderstag)) deallocate(orderstag)
       if (allocated(amppos)) deallocate(amppos)
       if (allocated(parton_pdf)) deallocate(parton_pdf)
       if (allocated(icontr_sum)) deallocate(icontr_sum)
+      if (allocated(icolour_con)) deallocate(icolour_con)
       if (allocated(momenta)) deallocate(momenta)
       if (allocated(momenta_m)) deallocate(momenta_m)
       if (allocated(wgt)) deallocate(wgt)
@@ -277,6 +295,7 @@ c update maximum
       if (allocated(bias_wgt)) deallocate(bias_wgt)
       if (allocated(plot_wgts)) deallocate(plot_wgts)
       if (allocated(shower_scale)) deallocate(shower_scale)
+      if (allocated(shower_scale_a)) deallocate(shower_scale_a)
       if (allocated(unwgt)) deallocate(unwgt)
       if (allocated(need_match)) deallocate(need_match)
       return

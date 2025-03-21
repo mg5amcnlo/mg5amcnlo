@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import collections
 import cmath
@@ -173,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -318,7 +317,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
-        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use the global configuration')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
         logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
@@ -1208,6 +1207,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             lastmodel = max(models, key=os.path.getmtime)
             logger.info('last model found is %s', lastmodel)
             args.insert(1, lastmodel)
+            self.history.info['model'] = lastmodel
 
         if not args:
             self.help_import()
@@ -1466,10 +1466,18 @@ This will take effect only in a NEW terminal
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
                 elif arg == 'global':
-                    if 'HOME' in os.environ:
-                        args.remove('global')
-                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-                        has_path = True
+                    legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                    if os.path.exists(legacy_config_dir):
+                        config_dir = legacy_config_dir
+                    else:
+                        config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                    config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+                    args.remove('global')
+                    args.insert(1, config_file)
+
+                    has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -1546,17 +1554,6 @@ This will take effect only in a NEW terminal
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
-
-        if args[0] in ['low_mem_multicore_nlo_generation']:
-            if args[1]:
-                if sys.version_info[0] == 2:
-                    if  sys.version_info[1] == 6:
-                        raise Exception('python2.6 does not support such functionalities please use python2.7')
-                #else:
-                #    raise Exception('python3.x does not support such functionalities please use python2.7')
-        
-
-
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman', 'axial']:
@@ -2910,7 +2907,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
-                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur']
+                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -3334,8 +3331,15 @@ This implies that with decay chains:
         
         #Need to do the work!!!        
         import models.usermod as usermod
-        base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
-        
+        try:
+            base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
+        except Exception:
+            base_model_tmp = usermod.UFOModel(self._curr_model.get('modelpath'))
+            with misc.TMP_variable(base_model_tmp, 'model',None):
+                base_model = copy.deepcopy(base_model_tmp)
+            base_model.model = base_model_tmp.model
+            del base_model_tmp
+                    
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
@@ -3508,6 +3512,7 @@ This implies that with decay chains:
                     text += " "
                 text += " ".join(order + '=' + str(inter['orders'][order]) \
                                  for order in inter['orders'])
+                text += " " + (inter['type'] if 'type' in inter else '')
                 text += '\n'
             pydoc.pager(text)
 
@@ -3519,7 +3524,7 @@ This implies that with decay chains:
                     print('Special interactions which identify two particles')
                 else:
                     print("Interactions %s has the following property:" % arg)
-                    print(self._curr_model['interactions'][int(arg)-1])
+                    print(self._curr_model['interactions'][int(arg)-1].__str__(couplings=self._curr_model['couplings']))
 
         elif args[0] == 'interactions':
             request_part = args[1:]
@@ -3548,10 +3553,10 @@ This implies that with decay chains:
                         name += part['antiname']
                     name += " "
                 text += "\nInteractions %s has the following property:\n" % name
-                text += str(self._curr_model['interactions'][i])
+                text += self._curr_model['interactions'][i].__str__(couplings=self._curr_model['couplings'])
 
                 text += '\n'
-                print(name)
+                print("%s %s %s" % (name,  inter['orders'], inter['type'] if 'type' in inter else 'tree'))
             if text =='':
                 text += 'No matching for any interactions'
             pydoc.pager(text)
@@ -4820,7 +4825,7 @@ This implies that with decay chains:
                     type = "<="
                 squared_orders[basename] = (value,type)
             else:
-                if name not in model_orders:
+                if name not in model_orders and name!='WEIGHTED':
                     valid = list(model_orders) + list(coupling_alias.keys())
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
@@ -5581,7 +5586,7 @@ This implies that with decay chains:
 
 
     # Import files
-    def do_import(self, line, force=False):
+    def do_import(self, line, force=False, options={}):
         """Main commands: Import files with external formats"""
 
         args = self.split_arg(line)
@@ -5612,7 +5617,8 @@ This implies that with decay chains:
                 
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
-                        complex_mass_scheme=self.options['complex_mass_scheme'])
+                        complex_mass_scheme=self.options['complex_mass_scheme'],
+                        options=options)
                 except ufomodels.UFOError as err:
                     model_path, _,_ = import_ufo.get_path_restrict(args[1])
                     if six.PY3 and self.options['auto_convert_model']:
@@ -5893,6 +5899,8 @@ This implies that with decay chains:
                 photon = False
                 
         if scheme in [4,5] and not photon:
+            self.optimize_order(multi)
+            self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
@@ -6005,14 +6013,21 @@ This implies that with decay chains:
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(None))
-            
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
         if 'heptools_install_dir' in self.options:
             prefix = self.options['heptools_install_dir']
-            config_file = '~/.mg5/mg5_configuration.txt'
+            legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+            if os.path.exists(legacy_config_dir):
+                config_dir = legacy_config_dir
+            else:
+                config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+            config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
             prefix = pjoin(MG5DIR, 'HEPTools')
             config_file = ''
@@ -6302,7 +6317,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.physics.illinois.edu/package_info.dat']
+                         'http://madgraph.mi.infn.it/package_info.dat']
+
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
@@ -6495,6 +6511,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if returncode:
             raise MadGraph5Error('Fail to download correctly the File. Stop')
 
+        if name == "RunningCoupling":
+            name = "Template/Running"
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -7102,7 +7120,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
+                    path = "https://madgraph.mi.infn.it//binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -7164,8 +7182,15 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+                config_path = os.path.join(config_dir, "mg5_configuration.txt")
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',
@@ -7174,6 +7199,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         if not os.path.exists(config_path):
             files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'), config_path)
+        if not os.path.exists(pjoin(MG5DIR,'input','default_run_card_lo.dat')) and madgraph.ReadWrite:
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_lo.dat'), pjoin(MG5DIR,'input','default_run_card_lo.dat'))
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_nlo.dat'), pjoin(MG5DIR,'input','default_run_card_nlo.dat'))
+
         config_file = open(config_path)
 
         # read the file and extract information
@@ -7497,7 +7526,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
     def post_install_RunningCoupling(self):
 
-        shutil.move('RunningCoupling', pjoin('Template', 'Running'))
+        shutil.move(pjoin(MG5DIR,'RunningCoupling'), pjoin(MG5DIR,'Template', 'Running'))
 
     def do_customize_model(self, line):
         """create a restriction card in a interactive way"""
@@ -7746,7 +7775,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info('Desactivate complex mass scheme.')
             if not self._curr_model:
                 return
-            self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded
@@ -8129,7 +8158,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:
-                aloha_model.compute_all(save=False)
+                aloha_model.compute_all(save=False, custom_propa=True)
             aloha_model.write(output, format)
             return
 

@@ -1,0 +1,30 @@
+#*********************************************************************
+#                       MadGraph5_aMC@NLO                            *
+#                                                                    *
+#                     run_card.dat MadEvent (LO ONLY)                *
+#                                                                    *
+#  This file is used to set the parameters of the run.               *
+#                                                                    *
+#  Some notation/conventions:                                        *                                                  
+#   - Lines starting with a '# ' are info or comments                *
+#   - format :  value    = variable     ! comment                    *
+#                                                                    *
+#*********************************************************************
+#                                                                    *
+#  This file allows to overwritte the default value written in       *
+#  run_card.dat when generated for a dedicated LO process.           *
+#  It is used when the command "output" is used.                     *
+#  When you run the code, the value in the run_card is always used   *
+#                                                                    *
+#*********************************************************************
+#
+#  Example: (need to uncomment the line to apply)
+#
+#  3 = dynamical_scale_choice ! set default dynamical scale choice
+#
+#  lhapdf = pdlabel ! note that this is not safe if you do ee collider
+#  82400 = lhaid ! use LUXlep-NNPDF31_nlo_as_0118_luxqed as default pdf
+#
+#  You can also edit advanced parameter normally hidden in the run_card
+#  -O3 = matrix_flag ! fortran compilation flag for the matrix-element files
+#  -g -fbound-check = global_flag ! fortran compilation flag for the full code

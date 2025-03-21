@@ -15,7 +15,6 @@
 """Methods and classes to export matrix elements to fks format."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
 import glob
 import logging
@@ -186,6 +185,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
 
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
@@ -673,6 +676,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'add_write_info.f',
                      'coupl.inc',
                      'cuts.f',
+                     'dummy_fct.f',
                      'FKS_params.dat',
                      'initial_states_map.dat',
                      'OLE_order.olc',
@@ -738,6 +742,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
+                     'pythia8_fortran_dummy.cc',
+                     'pythia8_fortran.cc',
+                     'pythia8_wrapper.cc',
+                     'pythia8_control_setup.inc',
+                     'pythia8_control.inc',
+                     'dire_fortran.cc',
+                     'LHAFortran_aMCatNLO.h',
+                     'sudakov.f',
+                     'hep_event_streams.inc',
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f']
@@ -4770,7 +4783,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
