@@ -1398,9 +1398,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         if not matrix_element.get('color_matrix'):
             if matrix_element.get_nonia()>0:
-                return ["DATA (CF(i,1),i=1,1) /1/"]
+                return ["DATA (CF(i,1),i=1,1) /1D-99/"]
             else:
-                return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+                return ["DATA Denom(1)/1D-99/", "DATA (CF(i,1),i=1,1) /1D-99/"]
         else:
             ret_list = []
             my_cs = color.ColorString()
