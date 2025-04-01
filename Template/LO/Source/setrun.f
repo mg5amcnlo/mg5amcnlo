@@ -345,3 +345,35 @@ C-------------------------------------------------
         Y=-1-T
         S=-1
         A=LOG(-T)
+        A=-PI6+A*(A+LOG(1+1/T))
+       ELSE IF(T .LE. -HF) THEN
+        Y=-(1+T)/T
+        S=1
+        A=LOG(-T)
+        A=-PI6+A*(-HF*A+LOG(1+T))
+       ELSE IF(T .LT. 0) THEN
+        Y=-T/(1+T)
+        S=-1
+        A=HF*LOG(1+T)**2
+       ELSE IF(T .LE. 1) THEN
+        Y=T
+        S=1
+        A=0
+       ELSE
+        Y=1/T
+        S=-1
+        A=PI6+HF*LOG(T)**2
+       ENDIF
+       H=Y+Y-1
+       ALFA=H+H
+       B1=0
+       B2=0
+       DO 1 I = 19,0,-1
+       B0=C(I)+ALFA*B1-B2
+       B2=B1
+    1  B1=B0
+       H=-(S*(B0-H*B2)+A)
+      ENDIF
+      DDILOG=H
+      RETURN
+      END
