@@ -13,6 +13,7 @@ module scale_module
   double precision,private,parameter :: scaleMClow=0d0,scaleMCdelta=3d0
   double precision,public,parameter :: scaleMCcut=3d0
   integer,public :: born_flow_picked
+  logical,public,parameter :: force_II_connection=.true.
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        determine_partner
@@ -44,7 +45,7 @@ contains
     
   subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked,iflow_min,iflow_max
+    integer :: i,j,flow_picked,iflow_min,iflow_max,iflow
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -87,6 +88,18 @@ contains
           shower_scale_nbody_max(j,i)=shower_scale_nbody_max(i,j)
        enddo
     enddo
+    if (force_II_connection .and. mcatnlo_delta_mod) then
+       do i=1,2
+          do j=3,next_n
+             do iflow=iflow_min,iflow_max
+                if ((.not.valid_dipole_n(i,j,iflow)) .or. &
+                    (.not.valid_dipole_n(i,3-i,iflow))) cycle
+                shower_scale_nbody(i,j)=shower_scale_nbody(i,3-i)
+                exit
+            enddo
+         enddo
+      enddo
+    endif
   end subroutine compute_shower_scale_nbody
 
   subroutine compute_shower_scale_n1body(p,i_fks,j_fks)

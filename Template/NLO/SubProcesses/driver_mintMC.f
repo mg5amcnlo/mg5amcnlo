@@ -909,6 +909,7 @@ c counter-event momenta do not exist).
 ! divergence in the virtual" these configurations should have a shower
 ! scale related to the underlying S-event.
             if (born_flow_picked.gt.0) then
+               ! TODO: maybe we should also go here when the n-body does not pass the cuts. CHECK.
                if (.not.mcatnlo_delta) then
                   emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
      $                 =max(shower_scale_n1body(i_fks,j_fks),
@@ -1018,6 +1019,7 @@ c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
 c add a bogus contribution corresponding to an FKS configuration that
 c contains a soft singularity to make sure that the code continues
 c correctly.
+         ! TODO: HOW CAN THIS HAPPEN? delta can only be not equal to one if n-body passes the cuts...
          call special_check_SoftSing(proc_map(proc_map(0,1),1))
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas

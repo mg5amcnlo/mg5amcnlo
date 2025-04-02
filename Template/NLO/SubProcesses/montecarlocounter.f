@@ -1515,10 +1515,6 @@ c Sevent_starting_scales = m_ij scales that determine S-event scales written ont
       double precision Sevent_starting_scales(nexternal-1,nexternal-1)
 c Hevent_starting_scales = t_ij scales that determine H-event scales written onto LHE
       double precision Hevent_starting_scales(nexternal,nexternal)
-c SCALUP_tmp_H2 = t_ij target scales for Delta
-      double precision SCALUP_tmp_H2(nexternal,nexternal)
-      common/c_SCALUP_tmp/Sevent_starting_scales,Hevent_starting_scales
-      double precision SCALUP_tmp_H3(nexternal,nexternal)
 
 c Lower and upper limits of fitted st and xm ranges.
 c Require one prior call to pysudakov() to be set,
@@ -1591,8 +1587,6 @@ c
       double precision qMC_a2(nexternal-1,nexternal-1)
       common /to_complete/qMC_a2
       double precision scales_for_HEPEUP(nexternal,nexternal)
-      logical force_II_connection
-      parameter(force_II_connection=.true.)
 
       double precision gl(2),pdfnum,pdfden,PIk,Fk(2)
       double precision pysudakov_safe,gl_safe
@@ -1643,19 +1637,6 @@ c meaningful values; the others are set equal to -1.
       Sevent_starting_scales(1:nexternal-1,1:nexternal-1)=
      &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
 
-      if(force_II_connection)then
-c force IF colour connection to have II scale if a sensible II scale
-c exists. If no  available II colour connection, we keep the IF scale
-c rather than calcsulating some new kinematic variable e.g. pT
-         do i=1,2
-            do j=3,nexternal-1
-               if(.not.valid_dipole_n(i,j,born_flow_picked)) cycle
-               if(valid_dipole_n(i,3-i,born_flow_picked)) 
-     &              Sevent_starting_scales(i,j) =Sevent_starting_scales(i,3-i)
-            enddo
-         enddo
-      endif
-c
 c H-event information.
 c First write ids, mothers and all colours.
       if (firsttime1)then
@@ -1815,7 +1796,8 @@ c Checks
          do j=1,nexternal-1
             if (i.eq.j) cycle
             if (.not. dzones_nbody(i,j)) then
-               if (Sevent_stopping_scales(i,j).gt.Sevent_starting_scales(i,j)) then
+               if ( Sevent_stopping_scales(i,j).gt.
+     $              Sevent_starting_scales(i,j)) then
                    dzones_nbody(i,j)=.true.
                endif
             endif
@@ -1830,15 +1812,13 @@ c if a sensible II scale exists
       if(force_II_connection)then
          do i=1,2
             do j=3,nexternal
-               if(valid_dipole_n1(i,j))then
-                  if(valid_dipole_n1(i,3-i))then
-                     Hevent_starting_scales(i,j)
-     $                    =Hevent_starting_scales(i,3-i)
-                  else
-                     continue
+               if(valid_dipole_n1(i,j) .and. valid_dipole_n1(i,3-i))then
+                  Hevent_starting_scales(i,j) =
+     $                 Hevent_starting_scales(i,3-i)
+               else
+                  continue
 c if no other available colour connection, we keep the IF scale
 c rather than calculating some new kinematic variable e.g. pT
-                  endif
                endif
             enddo
          enddo
@@ -1916,9 +1896,13 @@ c Ellis-Stirling-Webber
                mu_ij(n_connect(i),i)=mu_ij(n_connect(i)-1,i)
                t_ij(n_connect(i),i)=t_ij(n_connect(i)-1,i)
             else
-               write (*,*) 'A gluon with only one connection, but '/
-     $              /'the born_flow_picked is not special.'
-               stop 1
+!     just continue, since one of the two gluon connections could be in the dead-zone.
+!     TODO : FIXTHIS --> what to do if this happens and isspecial is true???
+!     Also think about the check below in the next do-loop...
+               continue
+c$$$               write (*,*) 'A gluon with only one connection, but '/
+c$$$     $              /'the born_flow_picked is not special.',i
+c$$$               stop 1
             endif
          endif
       enddo
@@ -1927,12 +1911,12 @@ c Ellis-Stirling-Webber
       ! loop over 'k' in eq.3.31 and 3.34
       do i=1,nexternal-1
          if (n_connect(i).eq.0) cycle ! no colour connection for particle 'i'
-         if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
-     &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
-            write (*,*) 'n_connect should be 1 for quarks and 2 '/
-     $           /'for gluons',n_connect(i),i,idup_s(i)
-            stop 1
-         endif
+c$$$         if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
+c$$$     &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
+c$$$            write (*,*) 'n_connect should be 1 for quarks and 2 '/
+c$$$     $           /'for gluons',n_connect(i),i,idup_s(i)
+c$$$            stop 1
+c$$$         endif
 
          do out_con=1,n_connect(i) ! loop over two lines of 3.34
 !     compute g1 and g2 (FIX FOR SAFETY MEASURES)
