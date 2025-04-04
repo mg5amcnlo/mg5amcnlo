@@ -3741,13 +3741,15 @@ class RunCard(ConfigFile):
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
         output["pdfgup2"] = 0
-        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"])
-        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"])
+        output["pdfsup1"] = self.get_pdf_id(self["pdlabel1"], beam=1)
+        output["pdfsup2"] = self.get_pdf_id(self["pdlabel2"], beam=2)
         return output
     
-    def get_pdf_id(self, pdf):
+    def get_pdf_id(self, pdf, beam=1):
+        if beam not in [1,2]:
+            logger.error('beam=%i outside range [1,2] in get_pdf_id' % beam)
         if pdf == "lhapdf":
-            lhaid = self["lhaid"]
+            lhaid = self["lhaid"+str(beam)]
             if isinstance(lhaid, list):
                 return lhaid[0]
             else:
@@ -3762,6 +3764,7 @@ class RunCard(ConfigFile):
                 return 0   
     
     def get_lhapdf_id(self):
+        logger.warning('get_lhapdf_id calling "pdlabel," not "pdlabel1,2"')
         return self.get_pdf_id(self['pdlabel'])
 
     def remove_all_cut(self): 
@@ -4753,7 +4756,6 @@ class RunCardLO(RunCard):
                 self['fixed_fac_scale1'] = True
                 self['nhel']    = 1
                 for i in beam_id_split[1]:
-                    exit
                     if abs(i) == 11:
                         self['lpp1']    = -math.copysign(3,i)
                         self['lpp2']    =  math.copysign(3,i)
