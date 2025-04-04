@@ -171,7 +171,7 @@ c
           fixed_fac_scale2 = .true.
           ickkw = 0
       endif 
-      minvar(1,1) = 0              !This tells it to map things invarients
+      minvar(1,1) = 0              !This tells it to map things invariants
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
       if (mincfig.lt.0)then
          maxcfig = -1*mincfig
