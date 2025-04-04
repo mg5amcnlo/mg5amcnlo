@@ -51,23 +51,20 @@ c in other words, always call two PDF sets)
             nloop=nloop+1  
             asmz=alphasPDF(zmass)
          else
-            call GetOrderAsM(2,tmpnloop(1))
-            call GetOrderAsM(3,tmpnloop(2))
-            call GetOrderAs(nloop) 
+            call GetOrderAsM(1,tmpnloop(1))
+            call GetOrderAsM(2,tmpnloop(2))
+c            call GetOrderAs(nloop) 
 c           ! gen_ximprove.py cares about path. need to investigate
             tmpasmz(1) = alphasPDFM(1,zmass)
             tmpasmz(2) = alphasPDFM(2,zmass)
             nloop = maxval(tmpnloop)+1
             asmz  = minval(tmpasmz)
-            print*,'many things:',tmpnloop,tmpasmz
          endif
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
           stop 1
       endif
 
-      write(*,*) 'inside value(1) = ',value(1)
-c      stop -999
       return
       end
  

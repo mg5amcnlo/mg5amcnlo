@@ -151,14 +151,15 @@ c              q2max = xmu*xmu
       endif
 
       iporg=ipart
-c     Determine the iset used in lhapdf
-      call getnset(iset)
-      if (iset.ne.1) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
-         stop 1
-      endif
+c     determine the iset used in lhapdf (fixed to beamID)
+      iset = iabs(beamid)
+c      call getnset(iset)
+c      if (iset.ne.1) then
+c         write (*,*) 'PDF not supported for Bjorken x ', x
+c         open(unit=26,file='../../../error',status='unknown')
+c         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+c         stop 1
+c      endif
 
 c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
@@ -205,7 +206,7 @@ c     be saved
 c            write(*,*),'beamid = ',beamid
             call evolvepartm(beamid,ipart,x,xmu,pdg2pdf) 
 c            write(*,*),'pdg2pdf(subid) = ',pdg2pdf
-            call evolvepart(ipart,x,xmu,tmpPDF)
+c            call evolvepart(ipart,x,xmu,tmpPDF)
 c!  gen_ximprove.py cares about path. need to investigate            
 c            call evolvepart(ipart,x,xmu,pdg2pdf)
 c            write(*,*),'pdg2pdf(id) = ',pdg2pdf

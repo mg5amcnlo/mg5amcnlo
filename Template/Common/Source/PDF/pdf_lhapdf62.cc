@@ -718,6 +718,7 @@ extern "C" {
     nmem = ACTIVESETS[nset].currentmem;
     // Update current set focus
     CURRENTSET = nset;
+//    cout << "set name = " << ACTIVESETS[nset].setname << endl;
   }
 
   /// Set the current member number in slot nset
@@ -1176,9 +1177,9 @@ extern "C" {
     // for now, call three different PDFs)
     if (set_id.first != ACTIVESETS[1].setname || set_id.second != ACTIVESETS[1].currentmem) {
       if (LHAPDF::verbosity() > 0) cout << message << endl;
-      ACTIVESETS[1] = PDFSetHandler(id);
-      ACTIVESETS[2] = PDFSetHandler(subid[0]);
-      ACTIVESETS[3] = PDFSetHandler(subid[1]);
+//      ACTIVESETS[1] = PDFSetHandler(id);
+      ACTIVESETS[1] = PDFSetHandler(subid[0]);
+      ACTIVESETS[2] = PDFSetHandler(subid[1]);
 //      if (LHAPDF::verbosity() > 0) cout << "size of ACTIVESETS: " 
 //      << ACTIVESETS.size() 
 //      << endl << "id,subid[]: " 
