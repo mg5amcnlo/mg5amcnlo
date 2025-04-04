@@ -48,6 +48,8 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
+      double precision tmpPDF
+
       nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -200,7 +202,13 @@ c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       if(iabs(ih).eq.1) then
          if (nb_proton(iabs(beamid)).eq.1.and.nb_neutron(iabs(beamid)).eq.0) then
-            call evolvepart(ipart,x,xmu,pdg2pdf)
+c            write(*,*),'beamid = ',beamid
+            call evolvepartm(beamid,ipart,x,xmu,pdg2pdf) 
+c            write(*,*),'pdg2pdf(subid) = ',pdg2pdf
+            call evolvepart(ipart,x,xmu,tmpPDF)
+c!  gen_ximprove.py cares about path. need to investigate            
+c            call evolvepart(ipart,x,xmu,pdg2pdf)
+c            write(*,*),'pdg2pdf(id) = ',pdg2pdf
             if (abs(ipart).le.7)   pdflast(ipart, i_replace)=pdg2pdf
          else
             if (ipart.eq.1.or.ipart.eq.2) then

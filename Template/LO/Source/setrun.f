@@ -193,7 +193,7 @@ C       Fill common block for Les Houches init info
       enddo
       ebmup(1)=ebeam(1)
       ebmup(2)=ebeam(2)
-      call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+      call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid,lhasubid)
 
       return
  99   write(*,*) 'error in reading'
@@ -205,12 +205,12 @@ C   GET_PDFUP
 C   Convert MadEvent pdf name to LHAPDF number
 C-------------------------------------------------
 
-      subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhaid)
+      subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhaid,lhasubid)
       implicit none
 
       character*(*) pdfin
       integer mpdf
-      integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
+      integer npdfs,i,pdfgup(2),pdfsup(2),lhaid,lhasubid(2)
 
       parameter (npdfs=21)
       character*7 pdflabs(npdfs)
@@ -220,7 +220,7 @@ C-------------------------------------------------
      $   'iww',
      $   'edff',
      $   'chff',
-     $     'dressed', 
+     $   'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
      $   'cteq4_m',
@@ -265,7 +265,7 @@ C-------------------------------------------------
         write(*,*)'using LHAPDF'
         do i=1,2
            pdfgup(i)=0
-           pdfsup(i)=lhaid
+           pdfsup(i)=lhasubid(i)
         enddo
         return
       endif

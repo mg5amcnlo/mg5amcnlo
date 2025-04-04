@@ -150,6 +150,8 @@ namespace   { //< Unnamed namespace to restrict visibility to this file
 
   /// Collection of active sets
   static map<int, PDFSetHandler> ACTIVESETS;
+  // RR(2025_0401: ACTIVESETS is "simply" a container that 
+  // contains lhaid and PDF)
 
   /// The currently active set
   int CURRENTSET = 0;
@@ -646,6 +648,8 @@ extern "C" {
     CURRENTSET = nset;
   }
   /// Load a PDF set (non-multiset version)
+  // RR(2025_0401: this is a wraper assuming 1 PDF.
+  // need to call m_ function just above for multiple sets)
   void initpdfset_(const char* setpath, int setpathlength) {
     int nset1 = 1;
     initpdfsetm_(nset1, setpath, setpathlength);
@@ -1136,28 +1140,51 @@ extern "C" {
 
     string my_par(par), message;
     int id;
+    int subid[2] = {-1,-1};
+    // RR(2025_0401: moving "DEFAULT" forward because mg5 *always* calls 
+    // default. no need to ask 2-3 if statements to make jump.)
     // Identify the calling program (yuck!)
-    if (my_par.find("NPTYPE") != string::npos) {
-      message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
-      // Take PDF ID from value[2]
-      id = value[2]+1000*value[1];
+    if (my_par.find("DEFAULT") != string::npos) {
+      message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
+      // Take PDF ID from value[0]
+      id = value[0];
+      subid[0] = value[1];
+      subid[1] = value[2];
     } else if (my_par.find("HWLHAPDF") != string::npos) {
       message = "==== LHAPDF6 USING HERWIG-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[0]
       id = value[0];
-    } else if (my_par.find("DEFAULT") != string::npos) {
-      message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
-      // Take PDF ID from value[0]
-      id = value[0];
+      subid[0] = value[1];
+      subid[1] = value[2];
+    } else if (my_par.find("NPTYPE") != string::npos) {
+      message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
+      // Take PDF ID from value[2]
+      id = value[2]+1000*value[1];
     } else {
       message = "==== LHAPDF6 USING PDFLIB-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
       id = value[2]+1000*value[1];
     }
     pair<string, int> set_id = LHAPDF::lookupPDF(id);
+    pair<string, int> set_subid[2] = {
+      LHAPDF::lookupPDF(subid[0]),
+      LHAPDF::lookupPDF(subid[1])
+    }; // string = "" if subid[kk] = -1
+
+    // RR(2025_0401: decide on how to treat check 
+    // once known how to decide user interface.
+    // for now, call three different PDFs)
     if (set_id.first != ACTIVESETS[1].setname || set_id.second != ACTIVESETS[1].currentmem) {
       if (LHAPDF::verbosity() > 0) cout << message << endl;
       ACTIVESETS[1] = PDFSetHandler(id);
+      ACTIVESETS[2] = PDFSetHandler(subid[0]);
+      ACTIVESETS[3] = PDFSetHandler(subid[1]);
+//      if (LHAPDF::verbosity() > 0) cout << "size of ACTIVESETS: " 
+//      << ACTIVESETS.size() 
+//      << endl << "id,subid[]: " 
+//      << endl << id 
+//      << endl << subid[0] 
+//      << endl << subid[1] << endl;
     }
 
     CURRENTSET = 1;

@@ -13,10 +13,16 @@ C
       data zmass/91.188d0/
       Character*150 LHAPath
       character*20 parm(20)
+c RR(2025_0401: value is not used/known 
+c                 outside this scope/subroutine)
       double precision value(20)
-      real*8 alphasPDF
-      external alphasPDF
+      integer tmpnloop(2)
+      double precision tmpasmz(2)
+      real*8 alphasPDF,alphasPDFM
+      external alphasPDF,alphasPDFM
 
+c integer nloop
+c      double precision asmz
 
 c-------------------
 c     START THE CODE
@@ -25,18 +31,43 @@ c-------------------
 c     initialize the pdf set
       call FindPDFPath(LHAPath)
       CALL SetPDFPath(LHAPath)
+
+c RR(2025_0401: unsure about user interface since there 
+c are now three lhaids floating around.
+c consult with OM/others on "best" user strategy
+c for now, call/initialize three PDF set.
+c idea for runcard_check:
+c set subid(1:2) = -1 by default. 
+c if unchanged, then set subid(1:2) = lhaid
+c in other words, always call two PDF sets)
       value(1)=lhaid
+      value(2)=lhasubid(1)
+      value(3)=lhasubid(2)
       parm(1)='DEFAULT'
       if (pdlabel.eq.'lhapdf') then
          call pdfset(parm,value)
-         call GetOrderAs(nloop)
-         nloop=nloop+1  
-         asmz=alphasPDF(zmass)
+         if(lhasubid(1).lt.0) then
+            call GetOrderAs(nloop)
+            nloop=nloop+1  
+            asmz=alphasPDF(zmass)
+         else
+            call GetOrderAsM(2,tmpnloop(1))
+            call GetOrderAsM(3,tmpnloop(2))
+            call GetOrderAs(nloop) 
+c           ! gen_ximprove.py cares about path. need to investigate
+            tmpasmz(1) = alphasPDFM(1,zmass)
+            tmpasmz(2) = alphasPDFM(2,zmass)
+            nloop = maxval(tmpnloop)+1
+            asmz  = minval(tmpasmz)
+            print*,'many things:',tmpnloop,tmpasmz
+         endif
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
           stop 1
       endif
-      
+
+      write(*,*) 'inside value(1) = ',value(1)
+c      stop -999
       return
       end
  
