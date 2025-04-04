@@ -1,0 +1,34 @@
+# R. Ruiz
+# September 2024
+# nuDIS (vmu A -> mu+X)
+
+define vv = vt vt~
+define tt = ta- ta+
+define pp = u d 
+
+generate g g > t t~ QED=0 QCD=2 
+output NuDIS_LHAID_gg_ttx_XLO
+
+
+launch NuDIS_LHAID_gg_ttx_XLO
+analysis=off
+set pdlabel lhapdf
+set pdlabel1 lhapdf
+set pdlabel2 lhapdf
+set lhaid 10042
+set lhaid1 3210000
+set lhaid2 26000
+#set lhaid1 3210000
+#set lhaid2 3210000
+#set lhaid1 26000
+#set lhaid2 26000
+set ebeam 1000
+set nevents 100
+set fixed_ren_scale true
+set fixed_fac_scale true
+set scale 80.419002445756163
+set dsqrt_q2fact1 80.419002445756163
+set dsqrt_q2fact2 80.419002445756163
+set no_parton_cut
+set use_syst False
+done
