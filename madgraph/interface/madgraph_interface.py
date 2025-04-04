@@ -2930,7 +2930,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
                               'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA',
-                              'cudacpp']
+                              'cudacpp', 'DMTCP']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -6564,7 +6564,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 return self.do_install('%s --source=%s' % (' '.join(args), othersource), 
                                        paths, additional_options) 
             else:
-                if 'xxx' in advertisements[name][0]:
+                if name in advertisements and 'xxx' in advertisements[name][0]:
                     logger.warning("Program not yet released. Please try later")
                 else:
                     raise Exception("Online server are corrupted. No tarball available for %s" % name)
