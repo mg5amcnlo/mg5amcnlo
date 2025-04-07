@@ -191,7 +191,9 @@ c
 ************************************************************************
       subroutine madnis_get_channel(ichan_out)
 ************************************************************************
-*     This is a subroutine that returns the the used channel integrat
+*     This is a subroutine that picks an integration channel,
+*     i.e. throws a random number internally, and returns it.
+*     Wraps functions inside mint_module
 *
 *     OUTPUTS: ichan_out == used channel of integrtation
 ************************************************************************
@@ -204,19 +206,21 @@ c
       return
       end
 
-
+************************************************************************
       subroutine madnis_get_nchans(nchan_out)
+************************************************************************
       use mint_module
-! picks and integration channel and returns it.
-! Wraps functions inside mint_module
+! tells how many channels are wrapped together
+! and returns the number
       implicit none
       integer nchan_out
       call get_nchans(nchan_out)
       return
       end
 
-
+************************************************************************
       subroutine madnis_set_channel(ichan_in, vol_in)
+************************************************************************
       use mint_module
 ! set ichan and the associated volume
 ! Wraps functions inside mint_module

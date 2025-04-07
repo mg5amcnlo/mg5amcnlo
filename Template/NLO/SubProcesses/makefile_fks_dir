@@ -79,6 +79,7 @@ FJLIBSNIS=$(patsubst -lm, , $(FJLIBSNIS0))
 MADNISFO= $(RUN) madnis_NLO_FO.o mint_FO_functions.o handling_lhe_events.o write_event.o BinothLHA.o pythia8_fortran_dummy.o
 
 # Files for madnis MC
+# RW: for later
 MADNISMC= $(RUN) madnis_NLO_MC.o mint_MC_functions.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
@@ -170,8 +171,11 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	strip madevent_mintFO
 
 madnis_NLO_FO.so: $(MADNISFO) $(libmadloop) makefile $(LIBS)
-	# MZMZ this does not work, fix it!!!!
 	gfortran -shared -o madnis_NLO_FO.so -fPIC $(MADNISFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+
+libmadnis_nlo.so: $(MADNISFO) $(libmadloop) makefile $(LIBS)
+	g++ -std=c++14 -shared -o libmadnis_nlo.so madnis_NLO_FO.cpp -fPIC $(MADNISFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) -lgfortran -lquadmath -lgcc
+
 madnis_NLO_MC.so: $(MADNISMC) $(libmadloop) makefile $(LIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
