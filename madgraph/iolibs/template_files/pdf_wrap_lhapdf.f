@@ -32,7 +32,7 @@ c     initialize the pdf set
       call FindPDFPath(LHAPath)
       CALL SetPDFPath(LHAPath)
 
-c RR(2025_0401: unsure about user interface since there 
+c RR(2025_0401): unsure about user interface since there 
 c are now three lhaids floating around.
 c consult with OM/others on "best" user strategy
 c for now, call/initialize three PDF set.
@@ -40,29 +40,60 @@ c idea for runcard_check:
 c set subid(1:2) = -1 by default. 
 c if unchanged, then set subid(1:2) = lhaid
 c in other words, always call two PDF sets)
+c alternative idea:
+c run always run two lhaids
       value(1)=lhaid
-      value(2)=lhasubid(1)
-      value(3)=lhasubid(2)
+      value(2)=-1d0 ! lhasubid(1)
+      value(3)=-1d0 ! lhasubid(2)
       parm(1)='DEFAULT'
-      if (pdlabel.eq.'lhapdf') then
-         call pdfset(parm,value)
-         if(lhasubid(1).lt.0) then
-            call GetOrderAs(nloop)
-            nloop=nloop+1  
-            asmz=alphasPDF(zmass)
-         else
-            call GetOrderAsM(1,tmpnloop(1))
-            call GetOrderAsM(2,tmpnloop(2))
-c            call GetOrderAs(nloop) 
-c           ! gen_ximprove.py cares about path. need to investigate
-            tmpasmz(1) = alphasPDFM(1,zmass)
-            tmpasmz(2) = alphasPDFM(2,zmass)
-            nloop = maxval(tmpnloop)+1
-            asmz  = minval(tmpasmz)
-         endif
-      else
-          write(*,*) 'Unknown PDLABEL', pdlabel
-          stop 1
+
+      if((pdsublabel(1).eq.'lhapdf').and.(pdsublabel(2).eq.'lhapdf')) then
+         value(2)=lhasubid(1)
+         value(3)=lhasubid(2)
+         
+         call pdfset(parm,value)   !!! here PDFs are initialized in lhapdf62.cc!!!
+         call GetOrderAsM(1,tmpnloop(1))
+         call GetOrderAsM(2,tmpnloop(2))
+
+         tmpasmz(1) = alphasPDFM(1,zmass)
+         tmpasmz(2) = alphasPDFM(2,zmass)
+         nloop = maxval(tmpnloop)+1
+         asmz  = minval(tmpasmz)
+
+      else if(pdsublabel(1).eq.'lhapdf') then
+         value(2)=lhasubid(1)
+         call pdfset(parm,value) !!! here PDFs are initialized in lhapdf62.cc!!!
+         call GetOrderAsM(1,nloop)
+         asmz = alphasPDFM(1,zmass)
+
+      else if(pdsublabel(2).eq.'lhapdf') then
+         value(3)=lhasubid(2)
+         call pdfset(parm,value) !!! here PDFs are initialized in lhapdf62.cc!!!
+         call GetOrderAsM(2,nloop)
+         asmz = alphasPDFM(2,zmass)
+
+      else 
+c RR(2025_0407): inspect, check, and delete the following
+c     commented block
+c     if (pdlabel.eq.'lhapdf') then
+c     call pdfset(parm,value) !!! here PDFs are initialized in lhapdf62.cc!!!
+c     if(lhasubid(1).lt.0) then
+c     call GetOrderAs(nloop)
+c     nloop=nloop+1  
+c     asmz=alphasPDF(zmass)
+c     else
+c     call GetOrderAsM(1,tmpnloop(1))
+c     call GetOrderAsM(2,tmpnloop(2))
+c     call GetOrderAs(nloop) 
+c     ! gen_ximprove.py cares about path. need to investigate
+c     tmpasmz(1) = alphasPDFM(1,zmass)
+c     tmpasmz(2) = alphasPDFM(2,zmass)
+c     nloop = maxval(tmpnloop)+1
+c     asmz  = minval(tmpasmz)
+c     endif         
+c     else
+         write(*,*) 'Unknown PDLABEL', pdlabel
+         stop 1
       endif
 
       return

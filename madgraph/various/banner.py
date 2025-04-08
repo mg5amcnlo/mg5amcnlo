@@ -3983,9 +3983,9 @@ class PDLabelBlock(RunBlock):
                     if card['pdlabel'] != card['pdlabel1']:
                         dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
                 elif card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
-                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option") 
+                    raise InvalidRunCard("Asymetric beam pdf not supported for e e collision with ISR/bemstralung option") 
                 elif card['pdlabel2'] in sum(card.allowed_lep_densities.values(),[]):
-                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option")
+                    raise InvalidRunCard("Asymetric beam pdf not supported for e e collision with ISR/bemstralung option")
                 elif card['pdlabel1'] == 'none':
                     dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
                 elif card['pdlabel2'] == 'none':
@@ -3998,7 +3998,7 @@ class PDLabelBlock(RunBlock):
 
         if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
             abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
-            raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
+            raise InvalidRunCard("Asymetric beam pdf only supported for hadron-hadron collision when using LHAPDF") 
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""

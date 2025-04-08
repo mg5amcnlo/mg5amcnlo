@@ -1139,6 +1139,8 @@ extern "C" {
   /// PDFLIB initialisation function
   void pdfset_(const char* par, const double* value, int parlength) {
 
+    //cout << "value[1] = " << int(value[1]) << endl;
+    //cout << "value[2] = " << int(value[2]) << endl;
     string my_par(par), message;
     int id;
     int subid[2] = {-1,-1};
@@ -1148,23 +1150,23 @@ extern "C" {
     if (my_par.find("DEFAULT") != string::npos) {
       message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[0]
-      id = value[0];
-      subid[0] = value[1];
-      subid[1] = value[2];
+      id = int(value[0]);
+      subid[0] = int(value[1]);
+      subid[1] = int(value[2]);
     } else if (my_par.find("HWLHAPDF") != string::npos) {
       message = "==== LHAPDF6 USING HERWIG-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[0]
-      id = value[0];
-      subid[0] = value[1];
-      subid[1] = value[2];
+      id = int(value[0]);
+      subid[0] = int(value[1]);
+      subid[1] = int(value[2]);
     } else if (my_par.find("NPTYPE") != string::npos) {
       message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
-      id = value[2]+1000*value[1];
+      id = int(value[2]+1000*value[1]);
     } else {
       message = "==== LHAPDF6 USING PDFLIB-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
-      id = value[2]+1000*value[1];
+      id = int(value[2]+1000*value[1]);
     }
     pair<string, int> set_id = LHAPDF::lookupPDF(id);
     pair<string, int> set_subid[2] = {
@@ -1178,12 +1180,20 @@ extern "C" {
     if (set_id.first != ACTIVESETS[1].setname || set_id.second != ACTIVESETS[1].currentmem) {
       if (LHAPDF::verbosity() > 0) cout << message << endl;
 //      ACTIVESETS[1] = PDFSetHandler(id);
-      ACTIVESETS[1] = PDFSetHandler(subid[0]);
-      ACTIVESETS[2] = PDFSetHandler(subid[1]);
+      if(subid[0]>0) ACTIVESETS[1] = PDFSetHandler(subid[0]);
+      if(subid[1]>0) ACTIVESETS[2] = PDFSetHandler(subid[1]);
 //      if (LHAPDF::verbosity() > 0) cout << "size of ACTIVESETS: " 
 //      << ACTIVESETS.size() 
 //      << endl << "id,subid[]: " 
 //      << endl << id 
+      //cout << ACTIVESETS.size() << " active PDF sets" << endl;
+      //for(unsigned int kk=0; kk<ACTIVESETS.size(); kk++){
+      //  cout << "ACTIVESETS["<<kk<<"] = " << ACTIVESETS[kk].setname << endl;
+      //}
+      //cout << "LHAPDF::lookupPDF(id) = " << LHAPDF::lookupPDF(id).second << endl;
+      //cout << "PDF0 = " << set_id.first << " lhaid0 = " << set_id.second << endl;
+      //cout << "PDF1 = " << set_subid[0].first << " lhaid1 = " << set_subid[0].second << endl;
+      //cout << "PDF2 = " << set_subid[1].first << " lhaid2 = " << set_subid[1].second << endl;
 //      << endl << subid[0] 
 //      << endl << subid[1] << endl;
     }
