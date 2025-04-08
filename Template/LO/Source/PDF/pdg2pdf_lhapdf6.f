@@ -48,7 +48,9 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
-      double precision tmpPDF
+c     pdf multiplier (simple rescaling by multiWgt)
+      double precision multiWgt
+      multiWgt = pdfMultiplier(iabs(beamid))
 
       nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
@@ -137,6 +139,7 @@ c              q2max = xmu*xmu
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
             pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,xmu*xmu,ievo)
+            pdg2pdf  = multiWgt*pdg2pdf
             return
          endif
       else
@@ -192,6 +195,7 @@ c     Reuse previous result, if possible
       if (ireuse.gt.0.and.abs(ipart).le.7) then
          if (pdflast(ipart,ireuse).ne.-99d9) then
             pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))/x
+            pdg2pdf = multiWgt*pdg2pdf
             return 
          endif
       endif
@@ -204,19 +208,20 @@ c     be saved
       if(iabs(ih).eq.1) then
          if (nb_proton(iabs(beamid)).eq.1.and.nb_neutron(iabs(beamid)).eq.0) then
 c            write(*,*),'beamid = ',beamid
-            call evolvepartm(beamid,ipart,x,xmu,pdg2pdf) 
+            call evolvepartm(beamid,ipart,x,xmu,pdg2pdf)
 c            write(*,*),'pdg2pdf(subid) = ',pdg2pdf
 c            call evolvepart(ipart,x,xmu,tmpPDF)
 c!  gen_ximprove.py cares about path. need to investigate            
 c            call evolvepart(ipart,x,xmu,pdg2pdf)
 c            write(*,*),'pdg2pdf(id) = ',pdg2pdf
-            if (abs(ipart).le.7)   pdflast(ipart, i_replace)=pdg2pdf
+            if (abs(ipart).le.7) pdflast(ipart, i_replace)=pdg2pdf
          else
             if (ipart.eq.1.or.ipart.eq.2) then
                call evolvepart(1,x*nb_hadron
      &                         ,xmu,pdflast(1, i_replace))
                call evolvepart(2,x*nb_hadron
      &                         ,xmu,pdflast(2, i_replace))
+
             else if (ipart.eq.-1.or.ipart.eq.-2)then
                call evolvepart(-1,x*nb_hadron
      &                         ,xmu,pdflast(-1, i_replace))
@@ -228,9 +233,9 @@ c            write(*,*),'pdg2pdf(id) = ',pdg2pdf
             endif 
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))
          endif
-         pdg2pdf=pdg2pdf/x
+         pdg2pdf = pdg2pdf/x
       else if(iabs(ih).eq.3.or.iabs(ih).eq.4) then       !from the electron
-            pdg2pdf=epa_lepton(x,xmu*xmu, iabs(ih))
+            pdg2pdf = epa_lepton(x,xmu*xmu, iabs(ih))
       else if(iabs(ih).eq.2) then ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu, beamid)
 
@@ -243,6 +248,7 @@ c            write(*,*),'pdg2pdf(id) = ',pdg2pdf
       ihlast(i_replace)=ih
       imemlast(i_replace)=imem
 c
+      pdg2pdf = multiWgt*pdg2pdf
       return
       end
 

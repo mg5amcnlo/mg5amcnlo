@@ -61,6 +61,7 @@ c
       integer iseed,lhaid,lhasubid(2)
       character*7 pdlabel,pdsublabel(2)
       double precision sf1,sf2,pb1,pb2,d
+      double precision pdfMultiplier(2)
 c-----
 c  Begin Code
 c-----

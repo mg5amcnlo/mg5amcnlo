@@ -9,5 +9,6 @@ c***********************************************************************
       character*7 pdsublabel(2)
       integer lhaid, pdfscheme
       integer lhasubid(2)
-      common/to_pdf/lhaid,pdfscheme,pdlabel,epa_label,pdsublabel,lhasubid
+      double precision pdfMultiplier(2)
+      common/to_pdf/lhaid,pdfscheme,pdlabel,epa_label,pdsublabel,lhasubid,pdfMultiplier
  	

@@ -4159,6 +4159,8 @@ class RunCardLO(RunCard):
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("lhaid1", 230000, hidden=True, fortran_name="lhasubid(1)")
         self.add_param("lhaid2", 230000, hidden=True, fortran_name="lhasubid(2)")
+        self.add_param("pdf_multiplier1", 1.0, hidden=True, fortran_name="pdfMultiplier(1)")
+        self.add_param("pdf_multiplier2", 1.0, hidden=True, fortran_name="pdfMultiplier(2)")
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
         self.add_param("fixed_fac_scale1", False, hidden=True)

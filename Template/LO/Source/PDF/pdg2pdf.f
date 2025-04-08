@@ -66,14 +66,18 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
-
 c     collider configuration
       integer lpp(2)
       double precision ebeam(2),xbk(2),q2fact(2)
       common/to_collider/ebeam,xbk,q2fact,lpp
 
+c     pdf multiplier (simple rescaling by multiWgt)
+      double precision multiWgt
+      multiWgt = pdfMultiplier(iabs(beamid))
+
       if (iabs(ih).eq.9) then
          pdg2pdf = 1d0
+         pdg2pdf = multiWgt*pdg2pdf
          return
       endif
 
@@ -124,6 +128,7 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
           ee_components(i_ee) = compute_eepdf(x,omx_ee(iabs(beamid)),xmu,i_ee,ipart,ih_local)
         enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
+        pdg2pdf =  multiWgt*pdg2pdf
 c        write(*,*), x, beamid ,omx_ee(iabs(beamid)),xmu,1,ipart,ih_local,pdg2pdf
         return
       endif
@@ -183,6 +188,7 @@ c     Reuse previous result, if possible
          if (pdflast(iporg,ireuse).ne.-99d9) then
             pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(iabs(beamid)),
      $                         nb_neutron(iabs(beamid)))
+            pdg2pdf = multiWgt*pdg2pdf
             return 
          endif
       endif
@@ -252,6 +258,7 @@ c         write(*,*) 'running eva'
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
             pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo)
+            pdg2pdf  = multiWgt*pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility
@@ -263,6 +270,7 @@ c         write(*,*) 'running eva'
                pdg2pdf=epa_proton(x,q2max,beamid)
             endif 
             pdflast(iporg,ireuse)=pdg2pdf
+            pdg2pdf = multiWgt*pdg2pdf
             return
          endif         
       endif
@@ -297,6 +305,7 @@ C        Be carefull u and d are flipped inside cteq6
      $                         nb_neutron(iabs(beamid)))
       endif      
 
+      pdg2pdf  = multiWgt*pdg2pdf
       return
       end
 
