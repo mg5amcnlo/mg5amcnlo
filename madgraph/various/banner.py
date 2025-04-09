@@ -4127,9 +4127,9 @@ class RunCardLO(RunCard):
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
-        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,12,-2,-3,4,-4],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
-        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,12,-2,-3,4,-4],
                        comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
@@ -4794,27 +4794,31 @@ class RunCardLO(RunCard):
                 if any(id  in beam_id_split[0] for id in [12,14,16]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
-                    self['polbeam1'] = -100
                     if not all(id  in [12,14,16] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1]. %s')
+                    else:
+                        self['polbeam1'] = -100
                 elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
-                    self['polbeam1'] = 100
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[0]):
-                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
+                        logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].') 
+                    else:
+                        self['polbeam1'] = 100
                 if any(id  in beam_id_split[1] for id in [12,14,16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
-                    self['polbeam2'] = -100
                     if not all(id  in [12,14,16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+                    else:
+                        self['polbeam2'] = -100
                 elif any(id  in beam_id_split[1] for id in [-12,-14,-16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
-                    self['polbeam2'] = 100
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+                    else:
+                        self['polbeam2'] = 100
             
         # Check if need matching
         min_particle = 99

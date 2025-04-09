@@ -205,7 +205,7 @@ c Calculated a new value: replace the value computed longest ago
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      if(iabs(ih).eq.1) then
+      if((iabs(ih).eq.1).or.(iabs(ih).eq.12)) then
          if (nb_proton(iabs(beamid)).eq.1.and.nb_neutron(iabs(beamid)).eq.0) then
 c            write(*,*),'beamid = ',beamid
             call evolvepartm(beamid,ipart,x,xmu,pdg2pdf)
