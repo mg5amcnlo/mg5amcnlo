@@ -66,9 +66,10 @@ C
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
-    REAL*8 POL(2)
+    REAL*8 POL(2), ME2MULTIPLIER
     
     COMMON/TO_POLARIZATION/ POL
+    COMMON/TO_ME2/ ME2MULTIPLIER
        double precision tmin_for_channel
        integer sde_strat ! 1 means standard single diagram enhancement strategy,
 c      	      	      	   2 means approximation by the	denominator of the propagator
@@ -153,7 +154,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
 	        stop 1
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    ANS=ME2MULTIPLIER*ANS/DBLE(IDEN)
 
     call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 

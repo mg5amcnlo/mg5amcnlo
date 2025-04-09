@@ -91,8 +91,9 @@ c       integer sde_strat ! 1 means standard single diagram enhancement strategy
 c      	      	      	   2 means approximation by the	denominator of the propagator
 c       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
 
-    REAL*8 POL(2)
+    REAL*8 POL(2), ME2MULTIPLIER
     COMMON/TO_POLARIZATION/ POL
+    COMMON/TO_ME2/ ME2MULTIPLIER
 
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
@@ -236,7 +237,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
 	    endif
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    ANS=ME2MULTIPLIER*ANS/DBLE(IDEN)
 
     call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 

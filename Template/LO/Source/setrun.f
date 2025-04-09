@@ -42,9 +42,10 @@ C
 C
 C     BEAM POLARIZATION
 C
-      REAL*8 POL(2)
+      REAL*8 POL(2), me2Multiplier
       common/to_polarization/ POL
       data POL/1d0,1d0/
+      common/to_me2/ me2Multiplier
 c
 c     Les Houches init block (for the <init> info)
 c
