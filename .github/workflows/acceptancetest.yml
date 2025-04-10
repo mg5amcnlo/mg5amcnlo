@@ -1578,11 +1578,11 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
       
-      - name: Breakpoint
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
-          authorized-users: oliviermattelaer 
+      #- name: Breakpoint
+      #  uses: namespacelabs/breakpoint-action@v0
+      #  with:
+      #    duration: 30m
+      #    authorized-users: oliviermattelaer 
 
       - name: run the test test_check_singletopfastjet
         run: |
