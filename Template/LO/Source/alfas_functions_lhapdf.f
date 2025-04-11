@@ -77,10 +77,10 @@ C-----------------------------------------------------------------------------
       IMPLICIT NONE
 c
       include 'alfas.inc'
-      REAL*8 Q,alphasPDF
-      external alphasPDF
+      REAL*8 Q,alphasPDFM
+      external alphasPDFM
 
-      ALPHAS=alphasPDF(Q)
+      ALPHAS=alphasPDFM(nset,Q)
 
       RETURN
       END

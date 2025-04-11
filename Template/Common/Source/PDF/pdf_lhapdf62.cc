@@ -1201,7 +1201,14 @@ extern "C" {
     CURRENTSET = 1;
 
     // Extract parameters for common blocks (with sensible fallback values)
-    PDFPtr pdf = ACTIVESETS[1].activeMember();
+    PDFPtr pdf;
+    try {
+      pdf = ACTIVESETS[1].activeMember();
+    }
+    catch(...){
+      cout << "LHAPDF6: nset=1 not available; trying nset=2" << endl;
+      pdf = ACTIVESETS[2].activeMember();
+    }
     w50513_.xmin = pdf->info().get_entry_as<double>("XMin", 0.0);
     w50513_.xmax = pdf->info().get_entry_as<double>("XMax", 1.0);
     w50513_.q2min = LHAPDF::sqr(pdf->info().get_entry_as<double>("QMin", 1.0));
@@ -1226,7 +1233,14 @@ extern "C" {
                 double& str, double& chm, double& bot, double& top, double& glu) {
     CURRENTSET = 1;
     /// Fill (partial) parton return variables
-    PDFPtr pdf = ACTIVESETS[1].activeMember();
+    PDFPtr pdf;
+    try {
+      pdf = ACTIVESETS[1].activeMember();
+    }
+    catch(...){
+      cout << "LHAPDF6: nset=1 not available; trying nset=2" << endl;
+      pdf = ACTIVESETS[2].activeMember();
+    }
     dsea = pdf->xfxQ(-1, x, q);
     usea = pdf->xfxQ(-2, x, q);
     dnv = pdf->xfxQ(1, x, q) - dsea;

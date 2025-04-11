@@ -51,7 +51,7 @@ c run always run two lhaids
          value(2)=lhasubid(1)
          value(3)=lhasubid(2)
          
-         call pdfset(parm,value)   !!! here PDFs are initialized in lhapdf62.cc!!!
+         call pdfset(parm,value) ! <- initialize PDFs via lhapdf62.cc
          call GetOrderAsM(1,tmpnloop(1))
          call GetOrderAsM(2,tmpnloop(2))
 
@@ -59,18 +59,27 @@ c run always run two lhaids
          tmpasmz(2) = alphasPDFM(2,zmass)
          nloop = maxval(tmpnloop)+1
          asmz  = minval(tmpasmz)
+         if(lhasubid(1).eq.lhasubid(2)) then
+            nset = 1 ! guide calls to alphasPDFM
+         else if(tmpasmz(1).le.tmpasmz(2)) then
+            nset = 1 ! guide calls to alphasPDFM
+         else
+            nset = 2 ! guide calls to alphasPDFM
+         endif
 
       else if(pdsublabel(1).eq.'lhapdf') then
          value(2)=lhasubid(1)
-         call pdfset(parm,value) !!! here PDFs are initialized in lhapdf62.cc!!!
+         call pdfset(parm,value) ! <- initialize PDFs via lhapdf62.cc
          call GetOrderAsM(1,nloop)
          asmz = alphasPDFM(1,zmass)
+         nset = 1
 
       else if(pdsublabel(2).eq.'lhapdf') then
          value(3)=lhasubid(2)
-         call pdfset(parm,value) !!! here PDFs are initialized in lhapdf62.cc!!!
+         call pdfset(parm,value) ! <- initialize PDFs via lhapdf62.cc
          call GetOrderAsM(2,nloop)
          asmz = alphasPDFM(2,zmass)
+         nset = 2
 
       else 
 c RR(2025_0407): inspect, check, and delete the following

@@ -26,7 +26,7 @@ c
       ab(1) = '?'
       ab(2) = '?'
       do i=1,2
-         IF(LPP(i).EQ. 0) ab(i)='e'
+         IF(LPP(i).EQ. 0) ab(i)='l'
          IF(LPP(i).EQ. 1) ab(i)='P'
          IF(LPP(i).EQ.-1) ab(i)='Pb'
          IF(LPP(i).EQ.2) ab(i)='a'
@@ -40,7 +40,9 @@ c
 
       write(6,*)  
       write(6,*) 'Running at ',ab(1),ab(2),'  machine @ ', ene, ' GeV'
-      write(6,*) 'PDF set = ',pdlabel
+      write(6,*) 'PDF set(pdlabel) = ',pdlabel
+      write(6,*) 'PDF set(pdsublabel1) = ',pdsublabel(1)
+      write(6,*) 'PDF set(pdsublabel2) = ',pdsublabel(2)
       write(6,'(1x,a12,1x,f6.4,a12,i1,a7)') 
      &     'alpha_s(Mz)=', asmz ,' running at ', nloop , ' loops.'
       if(lpp(1).ne.0.or.lpp(2).ne.0) then    
