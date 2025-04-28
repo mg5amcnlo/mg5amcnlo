@@ -40,6 +40,12 @@ c jet-rate distance. To be set to 1 for FxFx
 c Include all the parameters set in the run_card.dat
 
       include 'run_card.inc'
+c Set UPC parameter
+      if(lpp(1).eq.2.and.lpp(2).eq.2) then
+        xiAI(1:2)=1d0 ! LS::add this as input to run_card.dat
+        call get_nucleus_RA(nb_proton(1),nb_neutron(1),RAI(1))
+        call get_nucleus_RA(nb_proton(2),nb_neutron(2),RAI(2))
+      endif
 c Change shower_MC string to upper case
       call to_upper(shower_MC)
 c Determine if there is a need to do scale and/or PDF reweighting

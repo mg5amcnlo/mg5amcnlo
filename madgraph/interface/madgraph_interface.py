@@ -4981,7 +4981,7 @@ This implies that with decay chains:
 
             # check that only final-state particles are tagged
             if is_tagged and not state:
-                if part_name!='a' and part_name!='22':
+                if part_name!='a' and part_name!='aa' and part_name!='22':
                     raise self.InvalidCmd("only initial photons can be tagged")
 
             mylegids = []
@@ -5072,8 +5072,8 @@ This implies that with decay chains:
 
             duplicate =1
             if part_name in self._multiparticles:
-                # multiparticles cannot be tagged
-                if is_tagged:
+                # final-state multiparticles cannot be tagged
+                if is_tagged and state:
                     raise self.InvalidCmd("Multiparticles cannot be tagged")
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \

@@ -6,3 +6,14 @@
        stop 1
        return
        end
+
+
+       subroutine Get_nucleus_RA(nb_p,nb_n,RAI)
+       implicit none
+       integer nb_p,nb_n
+       double precision RAI
+       write(*,*) "WRONG gamma UPC linked"
+       RAI = 1d0
+       stop 2
+       return
+       end

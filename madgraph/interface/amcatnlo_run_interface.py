@@ -126,6 +126,9 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
+            # skip check_poles for no virtual
+            if test == 'check_poles' and len(misc.glob(pjoin(this_dir, 'V*'))) == 0:
+                continue
             if test == 'test_ME' or test == 'test_MC':
                 test_exe='test_soft_col_limits'
             else:
@@ -5645,7 +5648,9 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
+        # we must ensure there is virtual. Otherwise, we skip the pole checks
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')) \
+          and len(misc.glob(pjoin(dir,'V*'))) > 0:
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 

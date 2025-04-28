@@ -1740,6 +1740,9 @@ class MultiProcess(base_objects.PhysicsObject):
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
             if any(istags):
+                if not all(istags):
+                    logger.error("Tagging only one initial-state particle is not allowed")
+                    exit()
                 islegs = [\
                         fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]

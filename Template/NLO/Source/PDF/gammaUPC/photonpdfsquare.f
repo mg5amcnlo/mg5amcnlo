@@ -284,4 +284,31 @@ c     write(*,*) 'running gamma-UPC'
       
       return
       end
-     
+      
+
+      subroutine Get_nucleus_RA(nb_p,nb_n,RAI)
+      USE ElasticPhotonPhotonFlux
+      implicit none
+      ! number of protons and neutrons in the nucleus
+      integer nb_p,nb_n
+      ! radius of the nucleus in unit of GeV-1
+      double precision RAI
+      integer nb_pn
+      double precision RRR, AAA, WWW, Aval, Zval
+      character*7 nucleus_name
+      ! the charge radius of proton (in fm)
+      double precision Rproto
+      parameter (Rproto=0.877d0)
+      ! convert from GeV-1 to fm
+      double precision GeVm12fm1
+      parameter (GeVm12fm1=0.1973d0)
+      if(nb_p.eq.1.and.nb_n.eq.0)then
+         RAI=Rproto/GeVm12fm1
+         return
+      endif
+      nb_pn=nb_p+nb_n
+      nucleus_name=GetASymbol(nb_pn,nb_p)
+      CALL GetNuclearInfo(nucleus_name,Aval,Zval,RRR,AAA,WWW)
+      RAI=RRR/GeVm12fm1
+      return
+      end
