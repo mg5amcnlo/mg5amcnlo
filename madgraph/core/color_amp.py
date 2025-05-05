@@ -2,18 +2,18 @@
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
-"""Classes, methods and functions required to write QCD color information 
+"""Classes, methods and functions required to write QCD color information
 for a diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
@@ -43,9 +43,9 @@ if madgraph.ordering:
 class ColorBasis(dict):
     """The ColorBasis object is a dictionary created from an amplitude. Keys
     are the different color structures present in the amplitude. Values have
-    the format (diag,(index c1, index c2,...), coeff, is_imaginary, Nc_power) 
-    where diag is the diagram index, (index c1, index c2,...) the list of 
-    indices corresponding to the chose color parts for each vertex in the 
+    the format (diag,(index c1, index c2,...), coeff, is_imaginary, Nc_power)
+    where diag is the diagram index, (index c1, index c2,...) the list of
+    indices corresponding to the chose color parts for each vertex in the
     diagram, coeff the corresponding coefficient (a fraction), is_imaginary
     if this contribution is real or complex, and Nc_power the Nc power."""
 
@@ -63,7 +63,7 @@ class ColorBasis(dict):
 
     def colorize(self, diagram, model):
         """Takes a diagram and a model and outputs a dictionary with keys being
-        color coefficient index tuples and values a color string (before 
+        color coefficient index tuples and values a color string (before
         simplification)."""
 
         # The smallest value used to create new summed indices
@@ -83,10 +83,10 @@ class ColorBasis(dict):
         if all(cs == empty_colorstring for cs in res_dict.values()):
             res_dict = dict((key, color_algebra.ColorString(
                                [color_algebra.ColorOne()])) for key in res_dict)
-                    
+
         return res_dict
 
-    
+
 
     def add_vertex(self, vertex, diagram, model,
                    repl_dict, res_dict, min_index, id0_rep=[]):
@@ -100,7 +100,7 @@ class ColorBasis(dict):
 
         color_num_pairs = []
         pdg_codes = []
-                
+
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
             curr_part = model.get('particle_dict')[leg.get('id')]
@@ -114,7 +114,7 @@ class ColorBasis(dict):
                     curr_num in id0_rep:
                     curr_num = id0_rep[id0_rep.index(curr_num) - 1]
 
-            # If this is the last leg and not the last vertex 
+            # If this is the last leg and not the last vertex
             # flip color. If it is not the last, AND not the next-to-last
             # before an id=0 vertex, replace last index by a new summed index.
             if index == len(vertex.get('legs')) - 1 and \
@@ -126,7 +126,7 @@ class ColorBasis(dict):
                     vertex == diagram.get('vertices')[-2]):
                         repl_dict[curr_num] = min_index
                         min_index = min_index - 1
-                    else:                  
+                    else:
                         repl_dict[curr_num] = \
                           max(l.get('number') for l in \
                                         diagram.get('vertices')[-1].get('legs'))
@@ -158,7 +158,7 @@ class ColorBasis(dict):
 
         sorted_color_num_pairs = []
         #print "interactions_pdg=",interaction_pdgs
-        #print "pdg_codes=",pdg_codes        
+        #print "pdg_codes=",pdg_codes
         for i, pdg in enumerate(interaction_pdgs):
             index = pdg_codes.index(pdg)
             pdg_codes.pop(index)
@@ -183,7 +183,7 @@ class ColorBasis(dict):
         inter_color = model.get_interaction(vertex['id'])['color']
         inter_indices = [i for (i,j) in \
                         model.get_interaction(vertex['id'])['couplings'].keys()]
-        
+
         # For colorless vertices, return a copy of res_dict
         # Where one 0 has been added to each color index chain key
         if not inter_color:
@@ -199,13 +199,13 @@ class ColorBasis(dict):
         new_res_dict = {}
         for i, col_str in \
                 enumerate(inter_color):
-            
+
             # Ignore color string if it doesn't correspond to any coupling
             if i not in inter_indices:
                 continue
-            
+
             # Build the new element
-            assert type(col_str) == color_algebra.ColorString 
+            assert type(col_str) == color_algebra.ColorString
             mod_col_str = col_str.create_copy()
 
             # Replace summed (negative) internal indices
@@ -240,7 +240,7 @@ class ColorBasis(dict):
 
 
     def update_color_basis(self, colorize_dict, index):
-        """Update the current color basis by adding information from 
+        """Update the current color basis by adding information from
         the colorize dictionary (produced by the colorize routine)
         associated to diagram with index index. Keep track of simplification
         results for maximal optimization."""
@@ -251,7 +251,7 @@ class ColorBasis(dict):
             canonical_rep, rep_dict = col_str.to_canonical()
             try:
                 # If this representation has already been considered,
-                # recycle the result.                               
+                # recycle the result.
                 col_fact = self._canonical_dict[canonical_rep].create_copy()
             except KeyError:
                 # If the representation is really new
@@ -275,7 +275,7 @@ class ColorBasis(dict):
                 # If this representation has already been considered,
                 # adapt the result
                 # Note that we have to replace back
-                # the indices to match the initial convention. 
+                # the indices to match the initial convention.
                 col_fact.replace_indices(self._invert_dict(rep_dict))
                 # Since the initial coeff of col_str is not taken into account
                 # for matching, we have to multiply col_fact by it.
@@ -286,7 +286,7 @@ class ColorBasis(dict):
                 # If it still causes issue, just do a full_simplify(), it would
                 # not bring any heavy additional computational load.
                 col_fact = col_fact.simplify().simplify()
-                
+
                 # Here we need to force a specific order for the summed indices
                 # in case we have K6 or K6bar Clebsch Gordan coefficients
                 for colstr in col_fact: colstr.order_summation()
@@ -311,7 +311,7 @@ class ColorBasis(dict):
         """Do the color projection for a given onium"""
         if len(pid_numbers) != 2 or len(pid_charges) != 2:
             raise ColorBasis.ColorBasisError("Only the projection of two particles is supported")
-        if pid_charges==(1,1):
+        if pid_charges==(1,-1):
             if charge != 1:
                 raise ColorBasis.ColorBasisError("Only color singlet is possible when charges=%d,%d"%pid_charges)
             projector_str = color_algebra.ColorString([color_algebra.ColorOne()])
@@ -378,7 +378,7 @@ class ColorBasis(dict):
 
     def build(self, amplitude=None):
         """Build the a color basis object using information contained in
-        amplitude (otherwise use info from _list_color_dict). 
+        amplitude (otherwise use info from _list_color_dict).
         Returns a list of color """
 
         if amplitude:
@@ -388,7 +388,7 @@ class ColorBasis(dict):
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
-        or 1 arguments). If one arguments is given, it's interpreted as 
+        or 1 arguments). If one arguments is given, it's interpreted as
         an amplitude."""
 
         assert len(args) < 2, "Object ColorBasis must be initialized with 0 or 1 arguments"
@@ -406,7 +406,7 @@ class ColorBasis(dict):
         if args:
             assert isinstance(args[0], diagram_generation.Amplitude), \
                         "%s is not a valid Amplitude object" % str(args[0])
-                        
+
             self.build(*args)
 
     def __str__(self):
@@ -434,9 +434,9 @@ class ColorBasis(dict):
 
     @staticmethod
     def get_color_flow_string(my_color_string, octet_indices):
-        """Return the color_flow_string (i.e., composed only of T's with 2 
+        """Return the color_flow_string (i.e., composed only of T's with 2
         indices) associated to my_color_string. Take a list of the external leg
-        color octet state indices as an input. Returns only the leading N 
+        color octet state indices as an input. Returns only the leading N
         contribution!"""
         # Create a new color factor to allow for simplification
         my_cf = color_algebra.ColorFactor([my_color_string])
@@ -468,7 +468,7 @@ class ColorBasis(dict):
         if not my_cf:
             return my_cf
 
-        # Return the string with the highest N coefficient 
+        # Return the string with the highest N coefficient
         # (leading N decomposition), and the value of this coeff
         max_coeff = max([cs.Nc_power for cs in my_cf])
 
@@ -495,11 +495,11 @@ class ColorBasis(dict):
         return res_cs
 
     def color_flow_decomposition(self, repr_dict, ninitial):
-        """Returns the color flow decomposition of the current basis, i.e. a 
+        """Returns the color flow decomposition of the current basis, i.e. a
         list of dictionaries (one per color basis entry) with keys corresponding
         to external leg numbers and values tuples containing two color indices
-        ( (0,0) for singlets, (X,0) for triplet, (0,X) for antitriplet and 
-        (X,Y) for octets). Other color representations are not yet supported 
+        ( (0,0) for singlets, (X,0) for triplet, (0,X) for antitriplet and
+        (X,Y) for octets). Other color representations are not yet supported
         here (an error is raised). Needs a dictionary with keys being external
         leg numbers, and value the corresponding color representation."""
 
@@ -604,20 +604,20 @@ class ColorMatrix(dict):
                  Nc=3, Nc_power_min=None, Nc_power_max=None):
         """Initialize a color matrix with one or two color basis objects. If
         only one color basis is given, the other one is assumed to be equal.
-        As options, any value of Nc and minimal/maximal power of Nc can also be 
+        As options, any value of Nc and minimal/maximal power of Nc can also be
         provided. Note that the min/max power constraint is applied
         only at the end, so that it does NOT speed up the calculation."""
 
         self.col_matrix_fixed_Nc = {}
         self.inverted_col_matrix = {}
-        
+
         self._col_basis1 = col_basis
         if col_basis2:
             self._col_basis2 = col_basis2
             self.build_matrix(Nc, Nc_power_min, Nc_power_max)
         else:
             self._col_basis2 = col_basis
-            # If the two color basis are equal, assumes the color matrix is 
+            # If the two color basis are equal, assumes the color matrix is
             # symmetric
             self.build_matrix(Nc, Nc_power_min, Nc_power_max, is_symmetric=True)
 
@@ -631,7 +631,7 @@ class ColorMatrix(dict):
         to be symmetric."""
 
         canonical_dict = {}
-        
+
         for i1, struct1 in \
                     enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
@@ -689,7 +689,7 @@ class ColorMatrix(dict):
         """ Create a new product result, and result with fixed Nc for two color
         basis entries. Implement Nc power limits."""
 
-        # Create color string objects corresponding to color basis 
+        # Create color string objects corresponding to color basis
         # keys
         col_str = color_algebra.ColorString()
         col_str.from_immutable(struct1)
@@ -755,19 +755,19 @@ class ColorMatrix(dict):
 
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
-        """Returns a copy of the immutable Color String representation struct2 
+        """Returns a copy of the immutable Color String representation struct2
         where summed indices are modified to avoid duplicates with those
         appearing in struct1. Assumes internal summed indices are negative."""
 
         # First, determines what is the smallest index appearing in struct1
         #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
         list2 = sum((list(elem[1]) for elem in struct1),[])
-        if not list2: 
+        if not list2:
             min_index = -1
         else:
            min_index = min(list2) - 1
 
-        # Second, determines the summed indices in struct2 and create a 
+        # Second, determines the summed indices in struct2 and create a
         # replacement dictionary
         repl_dict = {}
         #list2 = reduce(operator.add,
@@ -804,4 +804,3 @@ class ColorMatrix(dict):
             return reduce(ColorMatrix.lcm, args)
         else:
             return 1
-

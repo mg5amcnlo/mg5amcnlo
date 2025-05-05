@@ -6,15 +6,15 @@ C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NCOMB         
+      INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
-CF2PY INTENT(OUT) :: ANS                                                                                                                                                                                     
-CF2PY INTENT(IN) :: HEL                                                                                                                                                                                    
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)  
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER HEL
 C
@@ -32,43 +32,43 @@ C ----------
       END
 
       SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS)
-C  
+C
 %(info_lines)s
-C 
+C
 C MadGraph5_aMC@NLO StandAlone Version
-C 
+C
 C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C  
+C
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NINITIAL 
+      INTEGER    NINITIAL
       PARAMETER (NINITIAL=%(nincoming)d)
       INTEGER    NPOLENTRIES
       PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
-      INTEGER    NCOMB         
+      INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
       INTEGER    HELAVGFACTOR
       PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER NHEL(NEXTERNAL,NCOMB), NTRY
 C  put in common block to expose this variable to python interface
-      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL 
+      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 %(proc_prefix)sMATRIX
       INTEGER IHEL, IDEN, I, J
@@ -85,11 +85,11 @@ C GLOBAL VARIABLES
 C
       INTEGER USERHEL
       COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
-      DATA USERHEL/-1/    
+      DATA USERHEL/-1/
       LOGICAL HELRESET
       COMMON/%(proc_prefix)sHELRESET/HELRESET
       DATA HELRESET/.TRUE./
-      
+
       %(helicity_lines)s
       %(den_factor_line)s
 
@@ -126,7 +126,7 @@ c---------
 C ----------
 C BEGIN CODE
 C ----------
-      
+
       IS_PROJ_COMPUTED=.FALSE.
       IS_JAMP_COMPUTED=.FALSE.
 
@@ -147,7 +147,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
       ENDIF
       ANS = 0D0
         DO IHEL=1,NCOMB
-          IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN       
+          IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
             IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
               IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                 CYCLE
@@ -164,7 +164,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
         ENDDO
       ANS=ANS/DBLE(IDEN)
       IF(USERHEL.NE.-1) THEN
-        ANS=ANS*HELAVGFACTOR    
+        ANS=ANS*HELAVGFACTOR
       ELSE
         DO J=1,NINITIAL
           IF (POLARIZATIONS(J,0).ne.-1) THEN
@@ -174,39 +174,39 @@ C     For this reason, we simply remove the filterin when there is only three ex
         ENDDO
       ENDIF
       END
-       
-       
+
+
       REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
-C  
+C
 %(info_lines)s
 C
 C Returns amplitude squared -- no average over initial state/symmetry factor
 c for the point with external lines W(0:6,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C  
+C
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
+      PARAMETER (NGRAPHS=%(ngraphs)d)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER I, J, K, QQ, Q1, Q2
       REAL*8 FRAC
       COMPLEX*16 ZTEMP
@@ -237,7 +237,7 @@ C
       COMPLEX*16 JAMP_SAVED(NCOLOR,4**NONIA,3**(NEXTERNAL-NONIA))
       COMMON/%(proc_prefix)sIS_JAMP_COMPUTED/IS_JAMP_COMPUTED
       COMMON/%(proc_prefix)sJAMP_SAVED/JAMP_SAVED
-C  
+C
 C GLOBAL VARIABLES
 C
       REAL*8 PMASS(NEXTERNAL)
@@ -246,9 +246,9 @@ C
       INCLUDE 'pmass.inc'
       INCLUDE 'pmassonia.inc'
       %(global_variable)s
-C  
+C
 C COLOR DATA
-C  
+C
       %(color_data_lines)s
 C ----------
 C BEGIN CODE
@@ -275,7 +275,7 @@ C       Computing the projectors
           DO J = 1, SIZE(HELQ1)
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
-              NHEL_ONIA(Q2) = HELQ2(K)   
+              NHEL_ONIA(Q2) = HELQ2(K)
               CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
               PROJ_SAVED(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
@@ -287,7 +287,7 @@ C       Computing normalisation factor from color projector
           NORM = NORM/3D0
         ELSE IF (C_ONIA(I).EQ.8) THEN
           NORM = NORM*2D0
-        ENDIF 
+        ENDIF
 C       Computing normalisation factor for LDME convention
         LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
         IF (C_ONIA(I).EQ.1) THEN
@@ -297,6 +297,8 @@ C       Computing normalisation factor for LDME convention
         END IF
       ENDDO
 
+C     Computing perturbative LDMEs
+      %(ldme_perturbative)s
 C     Computing product of LDMEs
       LDME = LDME*%(ldme_product)s
 
@@ -310,9 +312,9 @@ C     Computing the amplitudes
         ENDIF
       ENDDO
       DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM*LDME)
+        PROJ(J) = SQRT(NORM*COMPLEX(LDME,0D0))
         DO I =1, NONIA
-          QQ = ONIA(I)  
+          QQ = ONIA(I)
           Q1 = FINDLOC(PAIRS, I, DIM=1)
           Q2 = FINDLOC(PAIRS,-I, DIM=1)
           NHEL_ONIA(Q1) = HELQ1(IBITS(J-1,2*I-2,1)+1)
@@ -334,9 +336,9 @@ C           Store amplitudes for reuse
       JAMP = (0D0,0D0)
       DO I = 1, 4**NONIA
         JAMP = JAMP + JAMP_SAVED(:,I,K)*PROJ(I)
-      ENDDO  
+      ENDDO
 
-      %(proc_prefix)sMATRIX = 0.D0 
+      %(proc_prefix)sMATRIX = 0.D0
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR
@@ -350,27 +352,27 @@ C           Store amplitudes for reuse
 
 
       SUBROUTINE %(proc_prefix)sGET_VALUE(P, ALPHAS, NHEL ,ANS)
-      IMPLICIT NONE   
+      IMPLICIT NONE
 C
 C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER NHEL
-      DOUBLE PRECISION ALPHAS 
-      real*8 pi     
-CF2PY INTENT(OUT) :: ANS  
-CF2PY INTENT(IN) :: NHEL   
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+      DOUBLE PRECISION ALPHAS
+      real*8 pi
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: ALPHAS
-C     ROUTINE FOR F2PY to read the benchmark point.    
-C     the include file with the values of the parameters and masses 
+C     ROUTINE FOR F2PY to read the benchmark point.
+C     the include file with the values of the parameters and masses
       include "coupl.inc"
-      
+
       pi = 3.141592653589793d0
       G = 2*DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
@@ -379,23 +381,23 @@ C     the include file with the values of the parameters and masses
       else
         CALL %(proc_prefix)sSMATRIX(P, ANS)
       endif
-      return 
+      return
       end
 
       SUBROUTINE %(proc_prefix)sINITIALISEMODEL(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.    
-      IMPLICIT NONE   
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
       CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH 
-      call setpara(PATH)  !first call to setup the paramaters    
-      return 
-      end      
+CF2PY INTENT(IN) :: PATH
+      call setpara(PATH)  !first call to setup the paramaters
+      return
+      end
 
       LOGICAL FUNCTION %(proc_prefix)sIS_BORN_HEL_SELECTED(HELID)
       IMPLICIT NONE
-C     
+C
 C     CONSTANTS
-C     
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NCOMB
@@ -420,7 +422,7 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      
+
       %(proc_prefix)sIS_BORN_HEL_SELECTED = .True.
       if (POLARIZATIONS(0,0).eq.-1) THEN
         RETURN

@@ -2,29 +2,29 @@
 #
 # Copyright (c) 2025 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 #
-# Quarkonium Boundstates (S-waves only)
+# Physical Boundstates (S-waves only)
 #
 # Syntax: label = Fock states (separated by spaces)
 #
 # Charmonium
 etac = etac(1|1S01) etac(1|1S08) etac(1|3S18)
 etac(2s) = etac(2|1S01) etac(2|1S08) etac(2|3S18)
-Jpsi = Jpsi(1|3S11) Jpsi(1|1S08) Jpsi(1|3S18)                                                                                                                                                                    
+Jpsi = Jpsi(1|3S11) Jpsi(1|1S08) Jpsi(1|3S18)
 psi(2s) = psi(2|3S11) psi(2|1S08) psi(2|3S18)
 # Charmed  B mesons
 Bc+ = Bc+(1|1S01) Bc+(1|1S08) Bc+(1|3S18)
-B*c+ = B*c+(1|3S11) B*c+(1|1S08) B*c+(1|3S18) 
+B*c+ = B*c+(1|3S11) B*c+(1|1S08) B*c+(1|3S18)
 Bc- = Bc-(1|1S01) Bc-(1|1S08) Bc-(1|3S18)
 B*c- = B*c-(1|3S11) B*c-(1|1S08) B*c-(1|3S18)
 # Bottomonium

@@ -1,38 +1,38 @@
 C MadOnia
       SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
-C 
+C
 %(info_lines)s
-C 
+C
 C MadGraph5_aMC@NLO for Madevent Version
-C 
+C
 C Returns amplitude squared -- no average over initial state/symmetry factor
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C 
+C
       use DiscreteSampler
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INCLUDE 'genps.inc'
       INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INCLUDE '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       INCLUDE 'run.inc'
-      INTEGER    NCOMB         
+      INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)s)
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
+      PARAMETER (NGRAPHS=%(ngraphs)d)
       INTEGER    NDIAGS
-      PARAMETER (NDIAGS=%(ndiags)d) 
+      PARAMETER (NDIAGS=%(ndiags)d)
       INTEGER    THEL
       PARAMETER (THEL=2*NCOMB)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
       REAL*8 RHEL ! random number for selecting helicity
       REAL*8 RCOL ! random number for selecting helicity
@@ -43,14 +43,14 @@ c   output argument
 c
     integer ihel, icol
 c
-c global (due to reading writting) 
+c global (due to reading writting)
 c
       LOGICAL GOODHEL(NCOMB, MAXSPROC)
       INTEGER NTRY(MAXSPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
 
-C  
-C LOCAL VARIABLES 
+C
+C LOCAL VARIABLES
 C
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
@@ -79,25 +79,25 @@ C
 
       LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA))
       COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
-        
+
 c
 C This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
       TYPE(SAMPLEDDIMENSION) REF_HELICITY_GRID
-C  
+C
 C GLOBAL VARIABLES
-C  
+C
       LOGICAL INIT_MODE
       COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE
       REAL*8 AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-  
+
       INTEGER NB_SPIN_STATE_IN(2)
       COMMON /NB_HEL_STATE/ NB_SPIN_STATE_IN
-      
+
       INTEGER IMIRROR, IPROC
       COMMON/TO_MIRROR/ IMIRROR,IPROC
 
-c       included vi run.inc    
-c       REAL*8 TMIN_FOR_CHANNEL 
+c       included vi run.inc
+c       REAL*8 TMIN_FOR_CHANNEL
 c       INTEGER SDE_STRAT ! 1 means standard single diagram enhancement strategy
 c                         2 means approximation by the denominator of the propagator
 c       COMMON/TO_CHANNEL_STRAT/TMIN_FOR_CHANNEL, SDE_STRAT
@@ -131,7 +131,7 @@ C ----------
       DO I=1,NEXTERNAL
         JC(I) = +1
       ENDDO
-       
+
       IF (multi_channel) THEN
         DO I=1,NDIAGS
           AMP2(I)=0D0
@@ -170,7 +170,7 @@ C ----------
           hel_jacobian   = 1.0d0
 !         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
           ref_helicity_grid = DS_get_dimension(ref_grid,'Helicity')
-          IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%%n_tot_entries.eq.0)) then 
+          IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%%n_tot_entries.eq.0)) then
 !           If we finished the initialization we can update the grid so as to start sampling over it.
 !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
@@ -194,7 +194,7 @@ C ----------
             ISHEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
         ENDIF
-      ELSE IF (.NOT.INIT_MODE) THEN            ! random helicity 
+      ELSE IF (.NOT.INIT_MODE) THEN            ! random helicity
 C       The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
         I = HEL_PICKED
 
@@ -222,7 +222,7 @@ c           Set right sign for ANS, based on sign of chosen helicity
             GOTO 10
           ENDIF
         ENDDO
-10 CONTINUE   
+10 CONTINUE
       ENDIF
       IF (MULTI_CHANNEL) THEN
         XTOT=0D0
@@ -235,15 +235,15 @@ c           Set right sign for ANS, based on sign of chosen helicity
             ELSE
               AMP2(J) = GET_CHANNEL_CUT(P, I)
               XTOT=XTOT+AMP2(J)
-            ENDIF       
-          ENDIF       
+            ENDIF
+          ENDIF
         ENDDO
         IF (XTOT.NE.0D0) THEN
           ANS=ANS*AMP2(CHANNEL)/XTOT
         ELSE IF(ANS.NE.0D0) THEN
           IF(NB_FAIL.GE.10)THEN
             WRITE(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
-                        
+
             STOP 1
           ELSE
             NB_FAIL = NB_FAIL +1
@@ -255,30 +255,30 @@ c           Set right sign for ANS, based on sign of chosen helicity
       CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG,%(proc_id)s,  ICOL)
 
       END
- 
- 
+
+
       REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
-C  
+C
 %(info_lines)s
 C
 C Returns amplitude squared summed/avg over colors
 c for the point with external lines W(0:6,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C  
+C
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INTEGER    NGRAPHS
       PARAMETER (NGRAPHS=%(ngraphs)d)
-      INTEGER                 NCOMB         
+      INTEGER                 NCOMB
       PARAMETER (             NCOMB=%(ncomb)s)
       INCLUDE 'genps.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INTEGER    NWAVEFUNCS,     NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -288,16 +288,16 @@ C
       LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
       DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
       SAVE CHOSEN_SO_CONFIGS
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       INTEGER IHEL
       INTEGER IVEC
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER I,J,K,M,N,QQ,Q1,Q2
       REAL*8 FRAC
       COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
@@ -338,10 +338,10 @@ C
       COMPLEX*16 AMP_SAVED%(proc_id)s(NGRAPHS,4**NONIA,3**(NEXTERNAL-NONIA))
       COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
       COMMON/AMP_SAVED_%(proc_id)s/AMP_SAVED%(proc_id)s
-C  
+C
 C GLOBAL VARIABLES
 C
-      INCLUDE '../../Source/vector.inc' ! defines VECSIZE_MEMMAX  
+      INCLUDE '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       REAL*8 AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       INCLUDE 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
@@ -362,10 +362,10 @@ c                          2 means approximation by the denominator of the propa
       REAL*8 PMASS(NEXTERNAL)
       REAL*8 PMASS_ONIA(NEXTERNAL+NONIA)
       INCLUDE 'pmass.inc'
-      INCLUDE 'pmassonia.inc'      
-C  
+      INCLUDE 'pmassonia.inc'
+C
 C COLOR DATA
-C  
+C
       %(color_data_lines)s
 C ----------
 C BEGIN CODE
@@ -376,7 +376,7 @@ C ----------
 
         IF(INIT_MODE) THEN
           ZEROAMP_%(proc_id)s(:,:) = .TRUE.
-        ENDIF   
+        ENDIF
       ENDIF
 
       DO I = 1, NEXTERNAL+NONIA
@@ -401,7 +401,7 @@ C       Computing the projectors
           DO J = 1, SIZE(HELQ1)
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
-              NHEL_ONIA(Q2) = HELQ2(K) 
+              NHEL_ONIA(Q2) = HELQ2(K)
               CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
               PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
@@ -413,16 +413,18 @@ C       Computing normalisation factor from color projector
           NORM = NORM/3D0
         ELSE IF (C_ONIA(I).EQ.8) THEN
           NORM = NORM*2D0
-        ENDIF 
+        ENDIF
 C       Computing normalisation factor for LDME convention
         LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
         IF (C_ONIA(I).EQ.1) THEN
           LDME = LDME/6D0/(2D0*J_ONIA(I)+1D0)
         ELSE IF (C_ONIA(I).EQ.8) THEN
           LDME = LDME/8D0/(2D0*J_ONIA(I)+1D0)
-        END IF
+        ENDIF
       ENDDO
 
+C     Computing perturbative LDMEs
+      %(ldme_perturbative)s
 C     Computing product of LDMEs
       LDME = LDME*%(ldme_product)s
 
@@ -436,9 +438,9 @@ C     Computing the amplitudes
         ENDIF
       ENDDO
       DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM*LDME)
+        PROJ(J) = SQRT(NORM*COMPLEX(LDME,0D0))
         DO I =1, NONIA
-          QQ = ONIA(I)  
+          QQ = ONIA(I)
           Q1 = FINDLOC(PAIRS, I, DIM=1)
           Q2 = FINDLOC(PAIRS,-I, DIM=1)
           NHEL_ONIA(Q1) = HELQ1(IBITS(J-1,2*I-2,1)+1)
@@ -453,26 +455,26 @@ C           Store amplitudes for reuse
             AMP_SAVED%(proc_id)s(:,J,K) = AMP
             IS_AMP_COMPUTED%(proc_id)s(J,K) = .TRUE.
           ENDIF
-        ENDIF  
+        ENDIF
       ENDDO
 
       AMP = (0D0,0D0)
       DO I = 1, 4**NONIA
         AMP = AMP + AMP_SAVED%(proc_id)s(:,I,K)*PROJ(I)
-      ENDDO    
+      ENDDO
 
       JAMP = (0D0,0D0)
 %(jamp_lines)s
 
       IF(INIT_MODE)THEN
-        DO I=1, NGRAPHS   
+        DO I=1, NGRAPHS
           IF (AMP(I).NE.0) THEN
             ZEROAMP_%(proc_id)s(IHEL,I) = .FALSE.
          ENDIF
         ENDDO
-      ENDIF       
+      ENDIF
 
-      MATRIX%(proc_id)s = 0.D0 
+      MATRIX%(proc_id)s = 0.D0
       DO M = 1, NAMPSO
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
@@ -489,10 +491,10 @@ C           Store amplitudes for reuse
 
       IF(SDE_STRAT.EQ.1)THEN
         %(amp2_lines)s
-      ENDIF 
+      ENDIF
 
       DO I = 1, NCOLOR
-        DO M = 1, NAMPSO      
+        DO M = 1, NAMPSO
           DO N = 1, NAMPSO
             %(select_configs_if)s
             JAMP2(I)=JAMP2(I)+DABS(DBLE(JAMP(I,M)*DCONJG(JAMP(I,N))))
@@ -525,17 +527,17 @@ C           Store amplitudes for reuse
             ALL_FALSE = .FALSE.
             EXIT
           ENDIF
-        ENDDO      
+        ENDDO
         IF (ALL_FALSE) THEN
           WRITE(*,*) 'AMPLITUDE/ZEROAMP:', %(proc_id)s, I
         ELSE
           DO J=1,NCOMB
             IF (ZEROAMP_%(proc_id)s(J, I)) THEN
               WRITE(*,*) 'HEL/ZEROAMP:', %(proc_id)s, J, I
-            ENDIF         
-          ENDDO        
+            ENDIF
+          ENDDO
         ENDIF
-      ENDDO   
+      ENDDO
 
       RETURN
       END
