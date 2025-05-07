@@ -4764,14 +4764,13 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     if tir in ['golem','samurai','ninja','collier']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
                         trg_path2 = pjoin(trg_path,tir)
+                        to_include = None
                         if os.path.isdir(trg_path):
                             to_include = misc.find_includes_path(trg_path,
                                                         self.include_names[tir])
-                        elif os.path.isdir(trg_path2):
+                        if to_include is None and os.path.isdir(trg_path2):
                             to_include = misc.find_includes_path(trg_path2,
                                                         self.include_names[tir])
-                        else:
-                            to_include = None
                         # Special possible location for collier
                         if to_include is None and tir=='collier':
                             to_include = misc.find_includes_path(
