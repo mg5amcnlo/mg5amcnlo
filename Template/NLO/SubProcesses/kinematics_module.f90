@@ -9,10 +9,33 @@ module kinematics_module
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
 
-  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT
+  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p
   private
 
 contains
+  double precision function get_xi_from_p(i_fks,j_fks,p)
+    implicit none
+    integer :: i_fks,j_fks
+    double precision,dimension(0:3,next_n1) :: p
+    get_xi_from_p=sqrt(2d0)*p(0,i_fks)/sqrt(dot(p(0,1),p(0,2)))
+  end function get_xi_from_p
+  double precision function get_yij_from_p(i_fks,j_fks,p)
+    implicit none
+    integer :: i_fks,j_fks
+    double precision,dimension(0:3,next_n1) :: p
+    get_yij_from_p=dot3(p(0,i_fks),p(0,j_fks))/(rho(p(0,i_fks))*rho(p(0,j_fks)))
+  end function get_yij_from_p
+  double precision function dot3(p1,p2)
+    implicit none
+    double precision,dimension(0:3) :: p1,p2
+    dot3=p1(1)*p2(1)+p1(2)*p2(2)+p1(3)*p2(3)
+  end function dot3
+  double precision function rho(p1)
+    implicit none
+    double precision,dimension(0:3) :: p1
+    rho=sqrt(dot3(p1,p1))
+  end function dot3
+  
   !TODO: modify qMC to be the shower variable???
   double precision function get_qMC(xi_i_fks,y_ij_fks)
     ! This is the (relative) pT of the splitting. For some showers this is

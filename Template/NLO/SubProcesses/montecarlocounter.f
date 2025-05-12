@@ -592,6 +592,67 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       return
       end
 
+
+! New structure:
+!
+!     0. Given Born flow (with a MC sum over flows):
+!      
+!     1. Outside loop over FKS configurations
+!      
+!     2. For each configuration, compute relevant kinematic variables
+!     (xi_fks, yij_fks, etc.)
+!      
+!     3. Compute value of MC subtraction, given those kinematic
+!     variables
+!      
+!     4. For H-event: take sum of all of them and use that to subtract
+!     from Real emission, so that it can be multiplied by an overall
+!     S-function relevant to the original i_fks and j_fks configuration
+!     (i.e., the same that multiplies the real emission).
+!     --> \sum_ij S_ij ( R - \sum_kl MC_kl )
+!      
+!     5. For S-event: Take only the one relevant for the original i_fks
+!     and j_fks configuration. (Same as original code).
+
+      subroutine computes_MCsubtraction_kl(iFKS,p,pborn)
+      use kinematics_module
+      implicit none
+      include 'nexternal.inc'
+      include 'fks_info.inc'
+      integer iFKS
+      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+      double precision :: veckn_ev,veckbarn_ev,xp0jfks
+      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+      i_fks=FKS_I_D(iFKS)
+      j_fks=FKS_J_D(iFKS)
+!     compute kinematic variables
+      xi=get_xi_from_p(i_fks,j_fks,p)
+      y=get_yij_from_p(i_fks,j_fks,p)
+      mass=pmass(j_fks)
+      veckn_ev=rho(p(0,j_fks))
+      veeckbarn_ev=rho(pborn(0,min(i_fks,j_fks)))
+      xp0jfks=p(0,j_fks)
+      call fill_kinematics_module(p,i_fks,j_fks,xi,y,mass)
+
+!     compute MC subtraction term for the 'kl' configuration
+
+      ! TODO : update xmcsubt to only use a single colour flow
+      ! configuration. Check which of the output variables we actually need.
+      call xmcsubt(p,xi,y  !<-- inputs to xmcsubt
+     $     ,gfactsf,gfactcl,probne  ! <-- rest all outputs
+     $     ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
+     $     ,bornbars,bornbarstilde,npartner)
+
+
+      ! use the above to fill a single MC_kl:
+      ! -> with damping, etc. (see compute_xmsubt_complete subroutine below). 
+      
+      end
+      
+
+      
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
      $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
