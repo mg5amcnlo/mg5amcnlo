@@ -1995,18 +1995,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
                 
-            sys_obj = systematics.call_systematics([input, None] + opts, 
+            # RR 2025 0515
+            # 'old_run_mode' only defined to bypass crash.
+            # if exists, no need to re-re-run print
+            if 'old_run_mode' in locals():
+                self.update_status('Skipping (re)run of call_systematics', level='parton', makehtml=False)
+                self.update_status('Skipping (re)run of print_cross_sections', level='parton', makehtml=False)
+                self.update_status('Skipping (re)concatenation', level='parton', makehtml=False)
+            else:
+                sys_obj = systematics.call_systematics([input, None] + opts,
                                          log=lambda x: logger.info(str(x)),
                                          result=result_file,
                                          running=False
-                                         )                    
-            sys_obj.print_cross_sections(all_cross, nb_event, result_file)
-            
-            #concatenate the output file
-            subprocess.call(['cat']+\
-                            ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
-                            stdout=open(output,'w'),
-                            cwd=os.path.dirname(output))
+                                         )
+
+                sys_obj.print_cross_sections(all_cross, nb_event, result_file)
+
+                #concatenate the output file
+                subprocess.call(['cat']+\
+                                ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
+                                stdout=open(output,'w'),
+                                cwd=os.path.dirname(output))
+                
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
