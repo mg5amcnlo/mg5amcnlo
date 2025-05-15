@@ -3766,6 +3766,13 @@ class RunCard(ConfigFile):
     def get_lhapdf_id(self):
         logger.warning('get_lhapdf_id calling "pdlabel," not "pdlabel1,2"')
         return self.get_pdf_id(self['pdlabel'])
+    
+    def get_lhapdf_id_multi(self):
+        logger.warning('get_lhapdf_id calling "pdlabel1,2" not "pdlabel"')
+        tmpIDs = []
+        tmpIDs.append(self.get_pdf_id(self['pdlabel1']))
+        tmpIDs.append(self.get_pdf_id(self['pdlabel2']))
+        return tmpIDs
 
     def remove_all_cut(self): 
         """remove all the cut"""
@@ -6369,7 +6376,9 @@ class RunCardIterator(object):
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
-
+        logger.info("checking for path")
+        print("checking for path (again)")
+        misc.sprint('trying to print')
         if path:
             ff = open(path, 'w')
             path_events = path.rsplit("/", 1)[0]
