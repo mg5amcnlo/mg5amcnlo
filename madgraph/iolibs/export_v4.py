@@ -6222,7 +6222,7 @@ c           This is dummy particle used in multiparticle vertices
                              (-i, nconfigs, 2,
                               ",".join([str(leg1),str(leg2)])))
                 lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
-                              (-i, nconfigs, nsubprocs,
+                              (-i, nconfigs, 1,
                               ",".join([str(d) for d in [21]])))
                 lines.append("data tprid(%d,%d)/0/" % \
                               (-i, nconfigs))
