@@ -2660,10 +2660,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 mass2 = 'MDL_MTA'
 
             # dileptonia
+            # The perturbative LDME is multiplied by a factor Nc*N[C]=3*6 to undo the color normalization
+            # of the color projetion of the quarkonium color-singelt projector.
             if ldme[3]=='1S0':
-                ldme_perturbative += 'LDME_{id} = 3D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
-            elif ldme[3]=='3S1':
                 ldme_perturbative += 'LDME_{id} = 9D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+            elif ldme[3]=='3S1':
+                ldme_perturbative += 'LDME_{id} = 27D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
 
             if ldme[4]>1:
                 ldme_perturbative += '/{n}D0\n'.format(n=ldme[4]**3)
