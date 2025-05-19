@@ -614,7 +614,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 !     5. For S-event: Take only the one relevant for the original i_fks
 !     and j_fks configuration. (Same as original code).
 
-      subroutine computes_MCsubtraction_kl(iFKS,p,pborn)
+      subroutine compute_MCsubtraction_kl(iFKS,p,pborn)
       use kinematics_module
       implicit none
       include 'nexternal.inc'
@@ -625,6 +625,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       common /to_mass/pmass
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+      integer n_connect,i_connect(2)
       i_fks=FKS_I_D(iFKS)
       j_fks=FKS_J_D(iFKS)
 !     compute kinematic variables
@@ -638,12 +639,27 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 
 !     compute MC subtraction term for the 'kl' configuration
 
-      ! TODO : update xmcsubt to only use a single colour flow
-      ! configuration. Check which of the output variables we actually need.
-      call xmcsubt(p,xi,y  !<-- inputs to xmcsubt
-     $     ,gfactsf,gfactcl,probne  ! <-- rest all outputs
-     $     ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
-     $     ,bornbars,bornbarstilde,npartner)
+! find to which particle(s) fksfather connects in the colour flow
+      call find_color_connectors(born_flow_picked,fksfather,n_connect
+     $     ,i_connect)
+
+      ! TODO: current way of dealing with the G-functions cannot
+      ! work. We could mulitply only the MC_kl for which kl=ij with the
+      ! Gfunction, since only those can go *very* close to the limit
+      ! (the others are damped by the S_ij). Hence, the computation of
+      ! those should go *outside* the loop over kl.  Note: also current
+      ! default code isn't correct, because GfunctionSoft depends on the
+      ! flavour of i_fks -- information that is lossed when the
+      ! replacement of MCsubt is evaluated.
+      
+!     given the flow, loop over the (up to two) partners of the
+!     fks-father.
+      do iconnect=1,n_connect
+         call xmcsubt_connection(p,xi,y,i_connect(iconnect),gfactsf
+     $        ,gfactcl,probne,lzone,z,xkern,xkernazi,bornbars
+     $        ,bornbarstilde)
+
+      enddo
 
 
       ! use the above to fill a single MC_kl:
@@ -651,7 +667,43 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       
       end
       
-
+      subroutine find_color_connectors(iflow,iparticle,n_connect
+     $     ,i_connect)
+      use process_module
+      implicit none
+      include "genps.inc"
+      integer idup(next_n,maxproc)
+      integer mothup(2,next_n,maxproc)
+      integer icolup(2,next_n,max_bcol)
+      include "born_leshouche.inc"
+      integer iflow,iparticle,n_connect,i_connect(2),i
+      n_connect=0
+      do i=1,next_n
+         if (valid_dipole_n(i,iparticle,iflow)) then
+            n_connect=n_connect+1
+            if (n_connect.gt.2) then
+               write (*,*) 'ERROR: too many connections.'
+               write (*,*) iflow,iparticle
+               write (*,*) valid_dipole_n(1:next_n,iparticle,iflow)
+               stop 1
+            endif
+            i_connect(n_connect)=i
+         endif
+      enddo
+      if (n_connect.eq.1 .and. idup_s(iparticle).eq.21) then
+         if (isspecial(iflow)) then
+!     This is the ISSPECIAL case. Add one more (identical) connection.
+            n_connect=n_connect+1
+            i_connect(n_connect)=i_connect(n_connect-1)
+         endif
+      endif
+      if (n_connect.eq.0) then
+         write (*,*) 'ERROR: no connections found.'
+         write (*,*) iflow,iparticle
+         write (*,*) valid_dipole_n(1:next_n,iparticle,iflow)
+         stop 1
+      endif
+      end
       
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
@@ -918,9 +970,136 @@ c
 
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
+      subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,i_connect
+     $     ,gfactsf,gfactcl,probne,lzone,z,xkern
+     $     ,xkernazi,bornbars,bornbarstilde)
+      use process_module
+      use kinematics_module
+      use scale_module
+      implicit none
+      include 'nexternal.inc'
+      include 'born_nhel.inc'
+      include 'orders.inc'
+      include 'fks_powers.inc'
+      include 'coupl.inc'
+!     arguments:
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
+     $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
+     $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
+      integer i_connect
+      logical lzone(nexternal)
+
+!     local
+      double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
+     $     ,PY6PTweight,pmass(nexternal),xi,xjac
+!     external
+      double precision bogus_probne_fun,gfunction,zHW6,xiHW6
+     $     ,xjacHW6
+      external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
+!     parameters      
+      double precision ymin,zero
+      parameter (ymin=0.9d0)
+      parameter(zero=0d0)
+!     common
+      double precision alsf,besf
+      common/cgfunsfp/alsf,besf
+      double precision alazi,beazi
+      common/cgfunazi/alazi,beazi
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &     i_type,j_type,m_type
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      save
+      include "pmass.inc"
+
+
+c     Initialise if first time
+      if (split_type(QED_pos)) then
+!     TODO set QED flows correctly (but not here, rather in
+!     compute_MCsubtraction_kl)
+         write (*,*) 'TODO set QED flows correctly'
+         stop 1
+         call set_QED_flows(pp)
+      endif
+      ztmp     = 0d0
+      xitmp    = 0d0
+      xjactmp  = 0d0
+      gfactazi = 0d0
+
+      qMC=get_qMC(xi_i_fks,y_ij_fks)
+
+c     New or standard MC@NLO formulation
+      probne=bogus_probne_fun(qMC)
+
+c     Call barred Born and assign shower scale
+      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
+
+c     Distinguish ISR and FSR
+      if(ileg.le.2)then
+         delta=min(1d0,deltaI)
+      elseif(ileg.ge.3)then
+         delta=min(1d0,deltaO)
+      endif
+
+c     G-function parameters 
+      gfactsf=gfunction(x,alsf,besf,2d0)
+      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
+      gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
+      if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
+
+      if (btest(MCcntcalled,2)) then
+         write (*,*) 'Third bit of MCcntcalled should not be set yet'
+     $        ,MCcntcalled
+         stop 1
+      endif
+
+      MCcntcalled=MCcntcalled+4
+      
+c     Shower variables
+      if(shower_mc_mod(1:7).eq.'HERWIG6')then
+         ! TODO: move inside get_shower_variables
+         E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
+         z=zHW6(E0sq)
+         xi=xiHW6(E0sq,z)
+         xjac=xjacHW6(E0sq,xi,z)
+      else
+         call get_shower_variables(z,xi,xjac)
+      endif
+      
+c     Compute dead zones
+      call get_dead_zone(z,xi,qMC,i_connect,lzone,PY6PTweight)
+
+c     Compute MC subtraction terms
+      if (lzone) then
+         call limits(xi_i_fks,y_ij_fks)
+         call compute_spitting_kernels(xkern,xkernazi,z,xi,xjac)
+      else
+         xkern(1:2)=0d0
+         xkernazi(1:2)=0d0
+      endif
+c     
+      xkern(1:2)=xkern(1:2)*gfactsf
+      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+      if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
+         xkern(1:2)=xkern(1:2)*PY6PTweight
+         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
+      endif
+
+      return
+      end
+
+c Main routine for MC counterterms. Now to be called inside a loop
+c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &     nofpartners,lzone,flagmc,z,xkern,xkernazi,
      &     bornbars,bornbarstilde,npartner)
+      ! TODO cleanup 'flagmc'
       use process_module
       use kinematics_module
       use scale_module
