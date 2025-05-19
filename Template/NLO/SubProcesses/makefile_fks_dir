@@ -57,7 +57,7 @@ FILESSUD= \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
          $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
 	 born.o born_hel.o momentum_reshuffling.o			\
- 	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o
+	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
@@ -69,6 +69,9 @@ MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o p
 
 # Files for mintMC
 MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
+
+# Files for mintRW
+MINTRW= $(RUN) driver_mintRW.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
@@ -153,6 +156,11 @@ madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
 	rm handling_lhe_events.o
 	strip madevent_mintMC
 
+madevent_mintRW: $(MINTRW) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
+	$(FC) -o madevent_mintRW $(MINTRW) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
+	rm handling_lhe_events.o
+	strip madevent_mintRW
+
 madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
@@ -172,6 +180,7 @@ BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o
 driver_mintMC.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
+driver_mintRW.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 pythia8_wrapper.o: pythia8_fortran.o LHAFortran_aMCatNLO.h
 chooser_functions.o: weight_lines.o
