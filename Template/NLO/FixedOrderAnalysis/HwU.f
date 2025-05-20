@@ -473,12 +473,12 @@ c output by 'xnorm'
      &     allocate(character(len=(nwgts+3)*17) :: buffer)
 c     column info: x_min, x_max, y (central value), dy, {extra
 c     weights}.
-      write (unit,'(a$)') '##& xmin'
-      write (unit,'(a$)') ' & xmax'
-      write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(1)))
-      write (unit,'(a$)') ' & dy'
+      write (unit,'(a,$)') '##& xmin'
+      write (unit,'(a,$)') ' & xmax'
+      write (unit,'(a,$)') ' & '//trim(adjustl(wgts_info(1)))
+      write (unit,'(a,$)') ' & dy'
       do j=2,nwgts
-         write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(j)))
+         write (unit,'(a,$)') ' & '//trim(adjustl(wgts_info(j)))
       enddo
       write (unit,'(a)') ''
       write (unit,'(a)') ''
