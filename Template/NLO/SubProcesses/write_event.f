@@ -83,7 +83,7 @@ c Put the Hevent info in a common block
 
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale,shower_scale_a,ickkw)
+     $     ,shower_scale,shower_scale_a,ickkw,x)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -155,7 +155,7 @@ c get info on beam and PDFs
       end
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
-     $     ,shower_scale_a,ickkw)
+     $     ,shower_scale_a,ickkw,x)
       use extra_weights
       implicit none
       include "nexternal.inc"
@@ -163,13 +163,13 @@ c get info on beam and PDFs
       include "madfks_mcatnlo.inc"
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
-      double precision pi,zero
+      double precision pi,zero,x(99)
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
       integer ievent,izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
-      character*1000 buff
+      character*1000 buff,buff2
       double precision shower_scale,shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
       INTEGER MAXNUP,i,j,k
@@ -254,10 +254,14 @@ c
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &         ,scale2_lhe(nFKSprocess),kwgtinfo,nexternal,iwgtnumpartn
      &         ,zero,zero,zero,zero,zero
+          
         endif
       else
         buff=' '
       endif
+! TODO: write the correct numbers of x's
+      write(buff2,*)'#vegasx',x(1:10)
+      buff2=TRIM(ADJUSTL(buff2))
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -290,7 +294,7 @@ c********************************************************************
       enddo
       call write_lhef_event(lunlhe,
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
       end

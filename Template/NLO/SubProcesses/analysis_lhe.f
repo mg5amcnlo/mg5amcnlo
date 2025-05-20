@@ -90,7 +90,7 @@ c
 c Auxiliary quantities used when writing events
       integer kwgtinfo
       integer i_wgt, kk, ii, jj, n, nn
-      character*1000 buff
+      character*1000 buff,buff2
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -204,10 +204,12 @@ c --- prepare the buffer information
      &        ,zero,zero,zero,zero,ibody*1d0
       endif
 
-c --- write the event
+c     --- write the event
+      buff2=''
       call write_lhef_event(41,
      &     npart,IDPRUP,wwgts(1),0d0,0d0,0d0,
-     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,
+     &     SCALUP_a)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       end

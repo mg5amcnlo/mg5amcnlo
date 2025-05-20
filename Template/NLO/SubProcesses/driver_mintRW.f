@@ -210,25 +210,16 @@ c     Prepare the MINT folding
 !     read the event:
          call read_lhef_event(99, NUP,IDPRUP,XWGTUP,SCALUP
      $        ,AQEDUP,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP
-     $        ,buff,SCALUP_a)
+     $        ,buff,buff2,SCALUP_a)
+         read(buff2(8:),*) (x(i),i=1,ndim)
          
 !     compute the NLOoverBorn ratio:
-         j=0
-         do i=1,NUP
-            if (abs(ISTUP(i)).eq.1) then
-               j=j+1
-               p_born(0,j)=PUP(4,i)
-               p_born(1,j)=PUP(1,i)
-               p_born(2,j)=PUP(2,i)
-               p_born(3,j)=PUP(3,i)
-            endif
-         enddo
-         call compute_Born2NLO_RW_factor(ratio,p_born)
+         call compute_Born2NLO_RW_factor(ratio,x)
          XWGTUP=XWGTUP*ratio
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
      $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
-     $        ,SCALUP_a)
+     $        ,buff2,SCALUP_a)
 
       enddo
 
@@ -267,14 +258,82 @@ c timing statistics
       data t_coupl/0.0/
       end
 
-      subroutine compute_Born2NLO_RW_factor(ratio,p_born)
+      subroutine compute_Born2NLO_RW_factor(ratio,x)
+      use mint_module
       implicit none
       include 'nexternal.inc'
-      double precision p_born(0:3,nexternal-1),ratio
-      call compute_born
+      double precision x(ndimmax),ratio
 
+      nndim=
+      iconfig=
+      call generate_momenta(nndim,iconfig,jac,x,p)
+
+! TODO: check that regenerated momenta are the same as the ones read from the event file.
+
+      call set_cms_stuff(izero)
+      call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+      call set_alphaS(p1_cnt(0,1,0))
+
+      
+      call compute_prefactors_nbody(vegas_wgt)
+      call compute_born
+      call compute_nbody_noborn
+
+!     loop over FKS configurations
+      do i=1,...
+
+         call generate_momenta(nndim,iconfig,jac,x,p)
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(p,iFKS*2-1)
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(p,iFKS*2)
+         call compute_prefactors_n1body(vegas_wgt,jac)
+         call set_cms_stuff(izero)
+         call set_cms_stuff(mohdr)
+         passcuts_n1body=passcuts(p,rwgt)
+         if (.not.passcuts_n1body) cycle
+         call set_cms_stuff(mohdr)
+         call set_alphaS(p)
+         call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+     $        ,gfactcl,probne)
+         call set_cms_stuff(izero)
+         call set_alphaS(p1_cnt(0,1,0))
+         replace_MC_subt=(1d0-gfactsf)*probne
+         call compute_soft_counter_term(replace_MC_subt)
+         call set_cms_stuff(ione)
+         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+         call compute_collinear_counter_term(replace_MC_subt)
+         call set_cms_stuff(itwo)
+         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+         call compute_soft_collinear_counter_term(replace_MC_subt)
+         call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+         call set_colour_connections(iFKS,ifold_counter)
+      enddo
+      call special_check_SoftSing(proc_map(proc_map(0,1),1))
+c Include PDFs and alpha_S and reweight to include the uncertainties
+      call include_PDF_and_alphas
+c Sum the contributions that can be summed before taking the ABS value
+      call sum_identical_contributions
+c Update the shower starting scale for the S-events after we have
+c determined which contributions are identical.
+      call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+      call fill_mint_function_NLOPS(f,n1body_wgt)
+      call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+
+      enddo
       end
 
+      subroutine set_to_defaults(vegas_wgt)
+      implicit none
+      double precision vegas_wgt
+      shat_cnt(0)=
+      vegas_wgt=1d0
+      xiimax_ev=
+      xinorm_ev=
+      jac_cnt(0)=
+      end
+
+      
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
       use mint_module

@@ -20,7 +20,7 @@ c Compile with makefile_rwgt
       character*10 MonteCarlo
       character*20 parm(20)
       character*80 event_file,fname1
-      character*1000 buff
+      character*1000 buff,buff2
 c Parameters
       integer    izero
       parameter (izero=0)
@@ -124,9 +124,9 @@ c start with central member of the first set
 
       do i=1,min(10,maxevt)
          SCALUP_a=-1d0
-         call read_lhef_event(ifile,
-     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+         call read_lhef_event(ifile, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
+     $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
+     $        ,buff2,SCALUP_a)
          if(buff(1:1).ne.'#')then
             write (*,*) 'This event file cannot be reweighted [1]',i
             stop
@@ -200,9 +200,9 @@ c Determine the flavor map between the NLO and Born
       call find_iproc_map()
       do i=1,maxevt
          SCALUP_a=-1d0
-         call read_lhef_event(ifile,
-     &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+         call read_lhef_event(ifile, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
+     $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
+     $        ,buff2,SCALUP_a)
          if(buff(1:1).ne.'#')then
             write(*,*)'This event file cannot be reweighted [3]',i
             stop
@@ -285,9 +285,9 @@ C  the entry inclusive on the various orderstag
             enddo
          endif
 c Write event to disk:
-         call write_lhef_event(ofile,
-     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+         call write_lhef_event(ofile, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
+     $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
+     $        ,buff2,SCALUP_a)
          
       enddo
       call deallocate_weight_lines

@@ -691,13 +691,13 @@ c
 
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      character*1000 buff
+      character*1000 buff,buff2
       integer ifile,i,kk,oo
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
@@ -819,6 +819,7 @@ c
             enddo
             write(ifile,'(a)')'  </unlops>'
          endif
+         write(ifile,'(a)') trim(adjustl(buff2))
          if(abs(jwgtinfo).eq.9)then
             if (do_rwgt_scale .or. do_rwgt_pdf) then
                write(ifile,'(a)') '  <rwgt>'
@@ -917,14 +918,14 @@ c
 
       subroutine read_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk,jj,oo
-      character*1000 buff
+      character*1000 buff,buff2
       character*500 string
       character*12 dummy12
       character*2 dummy2
@@ -1085,6 +1086,7 @@ c
          buff=' '
          backspace(ifile)
       endif
+      read(ifile,'(a)')buff2
       if (mcatnlo_delta) then
 c Read the <scales> block
          do i=1,NUP
@@ -1134,14 +1136,14 @@ c
 c Same as read_lhef_event, except for the end-of-file catch
       subroutine read_lhef_event_catch(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk,jj,oo
-      character*1000 buff
+      character*1000 buff,buff2
       character*500 string
       character*12 dummy12
       character*2 dummy2
@@ -1287,6 +1289,7 @@ c
          buff=' '
          backspace(ifile)
       endif
+      read(ifile,'(a)') buff2
       if (mcatnlo_delta) then
 c Read the <scales> block
          do i=1,NUP
