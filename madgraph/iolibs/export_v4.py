@@ -2541,7 +2541,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in me.get('processes'):
                     for leg in proc.get('legs'):
                         if leg.get('onium'):
-                            info += [[leg.get('onium').get('id'),leg.get('onium').get('name')]]
+                            info += [[abs(leg.get('onium').get('id')),leg.get('onium').get('name').replace('+','').replace('-','')]]
 
         info = sorted(info, key=lambda x: (x[0]))
         for i in reversed(range(1,len(info))):
