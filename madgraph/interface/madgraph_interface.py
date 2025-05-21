@@ -4986,13 +4986,24 @@ This implies that with decay chains:
                 bound_name = boundstates_keys[boundstates_keys_lower.index(part_name)]
                 boundstates[index] = self._boundstates[bound_name]
         if boundstates:
+            # find all combinations of Fock states
             for index,key in enumerate(boundstates.keys()):
                 if index==0:
-                    combined = [[(key,b)] for b in boundstates[key]]
+                    all_combinations = [[(key,b)] for b in boundstates[key]]
                 else:
-                    combined = [c+[(key,b)] for c in combined for b in boundstates[key]]
-            last = len(combined)-1
-            for idx,fockstates in enumerate(combined):
+                    all_combinations = [c+[(key,b)] for c in all_combinations for b in boundstates[key]]
+            # filter symmetric final states
+            new = []
+            unique_combinations = []
+            for fockstates in all_combinations:
+                state = sorted([fockstate[1] for fockstate in fockstates])
+                if state not in new:
+                    unique_combinations.append(fockstates)
+                    new.append(state)
+
+            # add processes
+            last = len(unique_combinations)-1
+            for idx,fockstates in enumerate(unique_combinations):
                 copy_args = args
                 for index,fockstate in fockstates:
                     copy_args[index] = fockstate
