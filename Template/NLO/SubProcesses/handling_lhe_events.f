@@ -819,7 +819,6 @@ c
             enddo
             write(ifile,'(a)')'  </unlops>'
          endif
-         write(ifile,'(a)') trim(adjustl(buff2))
          if(abs(jwgtinfo).eq.9)then
             if (do_rwgt_scale .or. do_rwgt_pdf) then
                write(ifile,'(a)') '  <rwgt>'
@@ -866,6 +865,7 @@ c
       if (ickkw.eq.3) then
          write(ifile,'(a)') trim(adjustl(ptclusstring))
       endif
+      write(ifile,'(a)') trim(adjustl(buff2))
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
          are_col_conn=.false.
@@ -949,6 +949,7 @@ c
       integer mg_rwgt_count
       common/rwgt_count/mg_rwgt_count
 c
+
       read(ifile,'(a)')string
       nattr=0
       npNLO=-1

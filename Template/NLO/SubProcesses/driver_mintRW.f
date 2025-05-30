@@ -62,7 +62,7 @@ c Vegas stuff
       double precision ran2,x(ndimmax)
       external ran2
       
-      integer ifile,ievents
+      integer ifile,ievents,ievent
       double precision inter,absint,uncer
       common /to_write_header_init/inter,absint,uncer,ifile,ievents
 
@@ -89,6 +89,28 @@ c general MadFKS parameters
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+
+
+      character*10 MonteCarlo
+      common/cMonteCarloType/MonteCarlo
+
+      integer maxpup
+      parameter(maxpup=100)
+      integer idbmup(2),pdfgup(2),pdfsup(2),idwtup,nprup,lprup(maxpup)
+      double precision ebmup(2),xsecup(maxpup),xerrup(maxpup)
+     $     ,xmaxup(maxpup)
+
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
+     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP),SCALUP
+      DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
+     # SCALUP_a(MAXNUP,MAXNUP)
+
+      character*1000 buff,buff2
+      double precision ratio
+      
 C-----
 C  BEGIN CODE
 C-----
@@ -162,12 +184,12 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-c$$$      call get_user_params(ncalls0,itmax,
-c$$$  &     ixi_i,iphi_i,iy_ij,SHsep)
+      call get_user_params(ncalls0,itmax,
+     &     ixi_i,iphi_i,iy_ij,SHsep)
       ! Set folding to one (instead of reading it in get_user_params)
-      ixi_i=1
-      iphi_i=1
-      iy_ij=1
+c$$$      ixi_i=1
+c$$$      iphi_i=1
+c$$$      iy_ij=1
 
       i_momcmp_count=0
       xratmax=0.d0
@@ -187,6 +209,11 @@ c     Prepare the MINT folding
       ifold(ifold_phi)=iphi_i
       ifold(ifold_yij)=iy_ij
 
+      
+      ndim = 3*(nexternal-nincoming)-4
+      if (abs(lpp(1)) .ge. 1) ndim=ndim+1
+      if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+
 
       open (unit=99,file='nevts',status='old',err=999)
       if (event_norm(1:4).ne.'bias') then
@@ -205,16 +232,18 @@ c     Prepare the MINT folding
       call read_lhef_header(99,nevts,MonteCarlo)
       call read_lhef_init(99,IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      $     XSECUP,XERRUP,XMAXUP,LPRUP)
-         
+
+      
       do ievent=1,nevts
 !     read the event:
          call read_lhef_event(99, NUP,IDPRUP,XWGTUP,SCALUP
      $        ,AQEDUP,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP
      $        ,buff,buff2,SCALUP_a)
-         read(buff2(8:),*) (x(i),i=1,ndim)
-         
+         !TODO: better way of skipping H events.
+         if (NUP.eq.5) cycle
+         read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
 !     compute the NLOoverBorn ratio:
-         call compute_Born2NLO_RW_factor(ratio,x)
+         call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
          XWGTUP=XWGTUP*ratio
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
@@ -226,8 +255,8 @@ c     Prepare the MINT folding
       write (98,'(a)') "</LesHouchesEvents>"
       close(98)
       close(99)
-      
 
+       
       return
  999  write (*,*) 'nevts file not found'
       stop
@@ -258,80 +287,96 @@ c timing statistics
       data t_coupl/0.0/
       end
 
-      subroutine compute_Born2NLO_RW_factor(ratio,x)
+      subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
       use mint_module
       implicit none
       include 'nexternal.inc'
-      double precision x(ndimmax),ratio
+      include 'run.inc'
+      double precision x(ndimmax),ratio,jac,p(0:3,nexternal)
+      integer nndim,i,iFKS_picked
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
 
-      nndim=
-      iconfig=
+      ndim = 3*(nexternal-nincoming)-4
+      if (abs(lpp(1)) .ge. 1) ndim=ndim+1
+      if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      nndim=ndim
+
+      call update_fks_dir(iFKS_picked)
+
       call generate_momenta(nndim,iconfig,jac,x,p)
-
-! TODO: check that regenerated momenta are the same as the ones read from the event file.
-
-      call set_cms_stuff(izero)
-      call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
-      call set_alphaS(p1_cnt(0,1,0))
-
       
-      call compute_prefactors_nbody(vegas_wgt)
-      call compute_born
-      call compute_nbody_noborn
-
-!     loop over FKS configurations
-      do i=1,...
-
-         call generate_momenta(nndim,iconfig,jac,x,p)
-         call set_cms_stuff(izero)
-         call set_shower_scale_noshape(p,iFKS*2-1)
-         call set_cms_stuff(mohdr)
-         call set_shower_scale_noshape(p,iFKS*2)
-         call compute_prefactors_n1body(vegas_wgt,jac)
-         call set_cms_stuff(izero)
-         call set_cms_stuff(mohdr)
-         passcuts_n1body=passcuts(p,rwgt)
-         if (.not.passcuts_n1body) cycle
-         call set_cms_stuff(mohdr)
-         call set_alphaS(p)
-         call compute_MC_subt_term(p,passcuts_nbody,gfactsf
-     $        ,gfactcl,probne)
-         call set_cms_stuff(izero)
-         call set_alphaS(p1_cnt(0,1,0))
-         replace_MC_subt=(1d0-gfactsf)*probne
-         call compute_soft_counter_term(replace_MC_subt)
-         call set_cms_stuff(ione)
-         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-         call compute_collinear_counter_term(replace_MC_subt)
-         call set_cms_stuff(itwo)
-         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-         call compute_soft_collinear_counter_term(replace_MC_subt)
-         call include_shape_in_shower_scale(p,iFKS,ifold_counter)
-         call set_colour_connections(iFKS,ifold_counter)
+      do i=1,nexternal-1
+         write (*,*) i, p_born(0:3,i)
       enddo
-      call special_check_SoftSing(proc_map(proc_map(0,1),1))
-c Include PDFs and alpha_S and reweight to include the uncertainties
-      call include_PDF_and_alphas
-c Sum the contributions that can be summed before taking the ABS value
-      call sum_identical_contributions
-c Update the shower starting scale for the S-events after we have
-c determined which contributions are identical.
-      call update_shower_scale_Sevents(ifold_counter,ifold_picked)
-      call fill_mint_function_NLOPS(f,n1body_wgt)
-      call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-
-      enddo
+      
+      stop 1
+      
+c$$$
+c$$$! TODO: check that regenerated momenta are the same as the ones read from the event file.
+c$$$
+c$$$      call set_cms_stuff(izero)
+c$$$      call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+c$$$      call set_alphaS(p1_cnt(0,1,0))
+c$$$
+c$$$      
+c$$$      call compute_prefactors_nbody(vegas_wgt)
+c$$$      call compute_born
+c$$$      call compute_nbody_noborn
+c$$$
+c$$$!     loop over FKS configurations
+c$$$      do i=1,...
+c$$$
+c$$$         call generate_momenta(nndim,iconfig,jac,x,p)
+c$$$         call set_cms_stuff(izero)
+c$$$         call set_shower_scale_noshape(p,iFKS*2-1)
+c$$$         call set_cms_stuff(mohdr)
+c$$$         call set_shower_scale_noshape(p,iFKS*2)
+c$$$         call compute_prefactors_n1body(vegas_wgt,jac)
+c$$$         call set_cms_stuff(izero)
+c$$$         call set_cms_stuff(mohdr)
+c$$$         passcuts_n1body=passcuts(p,rwgt)
+c$$$         if (.not.passcuts_n1body) cycle
+c$$$         call set_cms_stuff(mohdr)
+c$$$         call set_alphaS(p)
+c$$$         call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+c$$$     $        ,gfactcl,probne)
+c$$$         call set_cms_stuff(izero)
+c$$$         call set_alphaS(p1_cnt(0,1,0))
+c$$$         replace_MC_subt=(1d0-gfactsf)*probne
+c$$$         call compute_soft_counter_term(replace_MC_subt)
+c$$$         call set_cms_stuff(ione)
+c$$$         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+c$$$         call compute_collinear_counter_term(replace_MC_subt)
+c$$$         call set_cms_stuff(itwo)
+c$$$         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+c$$$         call compute_soft_collinear_counter_term(replace_MC_subt)
+c$$$         call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+c$$$         call set_colour_connections(iFKS,ifold_counter)
+c$$$      enddo
+c$$$      call special_check_SoftSing(proc_map(proc_map(0,1),1))
+c$$$c Include PDFs and alpha_S and reweight to include the uncertainties
+c$$$      call include_PDF_and_alphas
+c$$$c Sum the contributions that can be summed before taking the ABS value
+c$$$      call sum_identical_contributions
+c$$$c Update the shower starting scale for the S-events after we have
+c$$$c determined which contributions are identical.
+c$$$      call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+c$$$      call fill_mint_function_NLOPS(f,n1body_wgt)
+c$$$      call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+c$$$
+c$$$      enddo
       end
 
-      subroutine set_to_defaults(vegas_wgt)
-      implicit none
-      double precision vegas_wgt
-      shat_cnt(0)=
-      vegas_wgt=1d0
-      xiimax_ev=
-      xinorm_ev=
-      jac_cnt(0)=
-      end
+c$$$      subroutine set_to_defaults(vegas_wgt)
+c$$$      implicit none
+c$$$      double precision vegas_wgt
+c$$$      shat_cnt(0)=
+c$$$      vegas_wgt=1d0
+c$$$      xiimax_ev=
+c$$$      xinorm_ev=
+c$$$      jac_cnt(0)=
+c$$$      end
 
       
       function sigintF(xx,vegas_wgt,ifl,f)
@@ -995,3 +1040,225 @@ c     if there are no soft singularities at all, just do something trivial
       return
       end
 
+      subroutine get_user_params(ncall,nitmax,
+     &     ixi_i,iphi_i,iy_ij,SHsep)
+c**********************************************************************
+c     Routine to get user specified parameters for run
+c**********************************************************************
+      use mint_module
+      implicit none
+c
+c     Constants
+c
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
+c
+c     Arguments
+c
+      integer ncall,nitmax
+c
+c     Local
+c
+      integer i, j
+      double precision dconfig
+c
+c     Global
+c
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
+      integer           isum_hel
+      logical                   multi_channel
+      common/to_matrix/isum_hel, multi_channel
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
+      integer           use_cut
+      common /to_weight/use_cut
+
+      integer        lbw(0:nexternal)  !Use of B.W.
+      common /to_BW/ lbw
+
+      character*5 abrvinput
+      character*4 abrv
+      common /to_abrv/ abrv
+
+      logical nbody
+      common/cnbody/nbody
+c
+c To convert diagram number to configuration
+c
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+c
+c MC counterterm stuff
+c
+c alsf and besf are the parameters that control gfunsoft
+      double precision alsf,besf
+      common/cgfunsfp/alsf,besf
+c alazi and beazi are the parameters that control gfunazi
+      double precision alazi,beazi
+      common/cgfunazi/alazi,beazi
+      
+      logical SHsep
+      logical Hevents
+      common/SHevents/Hevents
+c
+c MINT stuff
+c
+      integer ixi_i,iphi_i,iy_ij
+
+c-----
+c  Begin Code
+c-----
+      write(*,'(a)') 'Enter number of events and iterations: '
+      read(*,*) ncall,nitmax
+      write(*,*) 'Number of events and iterations ',ncall,nitmax
+
+      write(*,'(a)') 'Enter desired fractional accuracy: '
+      read(*,*) accuracy
+      write(*,*) 'Desired fractional accuracy: ',accuracy
+
+      write(*,*)'Enter alpha, beta for G_soft'
+      write(*,*)'  Enter alpha<0 to set G_soft=1 (no ME soft)'
+      read(*,*)alsf,besf
+      write (*,*) 'for G_soft: alpha=',alsf,', beta=',besf 
+
+      write(*,*)'Enter alpha, beta for G_azi'
+      write(*,*)'  Enter alpha>0 to set G_azi=0 (no azi corr)'
+      read(*,*)alazi,beazi
+      write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
+      i=2
+      if (i.eq.0) then
+         Hevents=.true.
+         write (*,*) 'Doing the H-events'
+         SHsep=.true.
+      elseif (i.eq.1) then
+         Hevents=.false.
+         write (*,*) 'Doing the S-events'
+         SHsep=.true.
+      elseif (i.eq.2) then
+         Hevents=.true.
+         write (*,*) 'Doing the S and H events together'
+         SHsep=.false.
+      endif
+
+c These should be ignored (but kept for 'historical reasons')      
+      use_cut=2
+
+
+      write(*,*) 'Suppress amplitude (0 no, 1 yes)? '
+      read(*,*) i
+      if (i .eq. 1) then
+         multi_channel = .true.
+         write(*,*) 'Using suppressed amplitude.'
+      else
+         multi_channel = .false.
+         write(*,*) 'Using full amplitude.'
+      endif
+
+      write(*,*) 'Exact helicity sum (0 yes, n = number/event)? '
+      read(*,*) i
+      if (nincoming.eq.1) then
+         write (*,*) 'Sum over helicities in the virtuals'/
+     $        /' for decay process'
+         mc_hel=0
+      elseif (i.eq.0) then
+         mc_hel=0
+         write (*,*) 'Explicitly summing over helicities'/
+     $        /' for the virtuals'
+      else
+         mc_hel=1
+         write(*,*) 'Do MC over helicities for the virtuals'
+      endif
+      isum_hel = 0
+
+      write(*,'(a)') 'Enter Configuration Number: '
+      read(*,*) dconfig
+      iconfig = int(dconfig)
+      if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
+         ini_fin_fks=0
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
+         ini_fin_fks=1
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
+         ini_fin_fks=2
+      else
+         write (*,*) 'ERROR: invalid configuration number',dconfig
+         stop 1
+      endif
+      do i=1,mapconfig(0,0)
+         if (iconfig.eq.mapconfig(i,0)) then
+            iconfig=i
+            exit
+         endif
+      enddo
+      write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
+      nchans=1
+      iconfigs(1)=iconfig
+      wgt_mult=1d0
+
+      write (*,'(a)') 'Enter running mode for MINT:'
+      write (*,'(a)') '0 to set-up grids, 1 to integrate,'//
+     &     ' 2 to generate events'
+      read (*,*) imode
+      write (*,*) 'MINT running mode:',imode
+      if (imode.eq.2)then
+         write (*,*) 'Generating events, doing only one iteration'
+         nitmax=1
+      endif
+
+      write (*,'(a)') 'Set the three folding parameters for MINT'
+      write (*,'(a)') 'xi_i, y_ij, phi_i'
+      read (*,*) ixi_i,iy_ij,iphi_i
+      write (*,*)ixi_i,iy_ij,iphi_i
+
+
+      abrvinput='     '
+      write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
+      write (*,*) "Enter 'born0' or 'virt0' to perform"
+      write (*,*) " a pure n-body integration (no S functions)"
+      read(*,*) abrvinput
+      if(abrvinput(5:5).eq.'0')then
+         write (*,*) 'This option is no longer supported:',abrvinput
+         stop
+        nbody=.true.
+      else
+        nbody=.false.
+      endif
+      abrv=abrvinput(1:4)
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'Setting abrv to "born".'
+            abrv='born'
+c$$$            if (ickkw.eq.3) then
+c$$$               write (*,*) 'FxFx merging not possible with'/
+c$$$     $              /' [LOonly=QCD] processes'
+c$$$               stop 1
+c$$$            endif
+         endif
+      endif
+      if(nbody.and.abrv.ne.'born'.and.abrv.ne.'virt'
+     &     .and. abrv.ne.'grid')then
+        write(*,*)'Error in driver: inconsistent input',abrvinput
+        stop
+      endif
+
+      write (*,*) "doing the ",abrv," of this channel"
+      if(nbody)then
+        write (*,*) "integration Born/virtual with Sfunction=1"
+      else
+        write (*,*) "Normal integration (Sfunction != 1)"
+      endif
+c
+      lbw(0)=0
+      end

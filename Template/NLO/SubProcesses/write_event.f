@@ -157,6 +157,7 @@ c get info on beam and PDFs
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
      $     ,shower_scale_a,ickkw,x)
       use extra_weights
+      use mint_module
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -260,7 +261,7 @@ c
         buff=' '
       endif
 ! TODO: write the correct numbers of x's
-      write(buff2,*)'#vegasx',x(1:10)
+      write(buff2,*)'#vegasx',ichan,NFKSPROCESS,x(1:10)
       buff2=TRIM(ADJUSTL(buff2))
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
