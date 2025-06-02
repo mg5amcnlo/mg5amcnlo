@@ -291,92 +291,146 @@ c timing statistics
       use mint_module
       implicit none
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       include 'run.inc'
-      double precision x(ndimmax),ratio,jac,p(0:3,nexternal)
-      integer nndim,i,iFKS_picked
+      include "coupl.inc"
+      double precision x(ndimmax),ratio,jac,p(0:3,nexternal),vegas_wgt
+     $     ,probne,gfactsf,gfactcl,replace_MC_subt,sudakov_damp,rwgt
+      integer nndim,i,iFKS_picked,nFKS_picked_nbody,ifold_counter,sum
+     $     ,proc_map(0:fks_configs,0:fks_configs),iFKS
+      save proc_map,sum
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      integer izero,ione,itwo,mohdr
+      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
+      logical       nbody
+      common/cnbody/nbody
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common /colour_connections/ icolup_s,icolup_h
+      logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
+      data firsttime/.true./
 
-      ndim = 3*(nexternal-nincoming)-4
-      if (abs(lpp(1)) .ge. 1) ndim=ndim+1
-      if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-      nndim=ndim
+      jac=1d0
 
+      if (firsttime) then
+         firsttime=.false.
+         ndim = 3*(nexternal-nincoming)-4
+         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
+         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+         nndim=ndim
+         call setup_proc_map(sum,proc_map,ini_fin_fks)
+         call find_iproc_map()
+         call setup_event_attributes
+      endif
+
+      nbody=.true.
+      calculatedBorn=.false.
+
+      do i=1,proc_map(0,0)
+         if (any(proc_map(i,1:proc_map(i,0)).eq.iFKS_picked)) then
+            proc_map(0,1)=i
+            exit
+         endif
+      enddo
+      
       call update_fks_dir(iFKS_picked)
 
       call generate_momenta(nndim,iconfig,jac,x,p)
       
-      do i=1,nexternal-1
-         write (*,*) i, p_born(0:3,i)
+
+      call set_cms_stuff(izero)
+      nFKS_picked_nbody=iFKS_picked
+      call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+
+      call set_alphaS(p1_cnt(0,1,0))
+      
+      vegas_wgt=1d0
+      ifold_counter=1
+      call compute_prefactors_nbody(vegas_wgt)
+      call compute_born
+      call compute_nbody_noborn
+      call include_shape_in_shower_scale(p,nFKS_picked_nbody
+     $     ,ifold_counter)
+      call set_colour_connections(nFKS_picked_nbody,ifold_counter)
+
+      
+      nbody=.false.
+      do i=1,proc_map(proc_map(0,1),0)
+         wgt_me_real=0d0
+         wgt_me_born=0d0
+         iFKS=proc_map(proc_map(0,1),i)
+         call update_fks_dir(iFKS)
+         jac=1d0*proc_map(0,0)
+         probne=1d0
+         gfactsf=1.d0
+         gfactcl=1.d0
+         icolup_s(1,1)=-1       ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+         call generate_momenta(nndim,iconfig,jac,x,p)
+c     Every contribution has to have a viable set of Born momenta (even if
+c     counter-event momenta do not exist).
+         if (p_born(0,1).lt.0d0) cycle
+c     Set the shower scales            
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(p,iFKS*2-1)
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(p,iFKS*2)
+c     Compute the n1-body prefactors
+         call compute_prefactors_n1body(vegas_wgt,jac)
+c     check if event or counter-event passes cuts
+         call set_cms_stuff(izero)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         call set_cms_stuff(mohdr)
+         passcuts_n1body=passcuts(p,rwgt)
+         if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
+         if (passcuts_nbody) then
+            pass_cuts_check=.true.
+            call set_cms_stuff(mohdr)
+            call set_alphaS(p)
+            call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+     $           ,gfactcl,probne)
+         endif
+         if (passcuts_nbody) then
+c     Include the FKS counter terms. When close to the soft or collinear
+c     limits, the MC subtraction terms should be replaced by the FKS
+c     ones. This is set via the gfactsf, gfactcl and probne functions (set
+c     by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
+            call set_cms_stuff(izero)
+            call set_alphaS(p1_cnt(0,1,0))
+            replace_MC_subt=(1d0-gfactsf)*probne
+            call compute_soft_counter_term(replace_MC_subt)
+            call set_cms_stuff(ione)
+            replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+            call compute_collinear_counter_term(replace_MC_subt)
+            call set_cms_stuff(itwo)
+            replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+            call compute_soft_collinear_counter_term(replace_MC_subt)
+         endif
+c     Include the real-emission contribution.
+         if (passcuts_n1body) then
+            pass_cuts_check=.true.
+            call set_cms_stuff(mohdr)
+            call set_alphaS(p)
+            sudakov_damp=probne
+            call compute_real_emission(p,sudakov_damp)
+         endif
+c     Update the shower starting scale with the shape from the MC
+c     subtraction terms.
+         call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+         call set_colour_connections(iFKS,ifold_counter)
       enddo
       
       stop 1
-      
-c$$$
-c$$$! TODO: check that regenerated momenta are the same as the ones read from the event file.
-c$$$
-c$$$      call set_cms_stuff(izero)
-c$$$      call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
-c$$$      call set_alphaS(p1_cnt(0,1,0))
-c$$$
-c$$$      
-c$$$      call compute_prefactors_nbody(vegas_wgt)
-c$$$      call compute_born
-c$$$      call compute_nbody_noborn
-c$$$
-c$$$!     loop over FKS configurations
-c$$$      do i=1,...
-c$$$
-c$$$         call generate_momenta(nndim,iconfig,jac,x,p)
-c$$$         call set_cms_stuff(izero)
-c$$$         call set_shower_scale_noshape(p,iFKS*2-1)
-c$$$         call set_cms_stuff(mohdr)
-c$$$         call set_shower_scale_noshape(p,iFKS*2)
-c$$$         call compute_prefactors_n1body(vegas_wgt,jac)
-c$$$         call set_cms_stuff(izero)
-c$$$         call set_cms_stuff(mohdr)
-c$$$         passcuts_n1body=passcuts(p,rwgt)
-c$$$         if (.not.passcuts_n1body) cycle
-c$$$         call set_cms_stuff(mohdr)
-c$$$         call set_alphaS(p)
-c$$$         call compute_MC_subt_term(p,passcuts_nbody,gfactsf
-c$$$     $        ,gfactcl,probne)
-c$$$         call set_cms_stuff(izero)
-c$$$         call set_alphaS(p1_cnt(0,1,0))
-c$$$         replace_MC_subt=(1d0-gfactsf)*probne
-c$$$         call compute_soft_counter_term(replace_MC_subt)
-c$$$         call set_cms_stuff(ione)
-c$$$         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-c$$$         call compute_collinear_counter_term(replace_MC_subt)
-c$$$         call set_cms_stuff(itwo)
-c$$$         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-c$$$         call compute_soft_collinear_counter_term(replace_MC_subt)
-c$$$         call include_shape_in_shower_scale(p,iFKS,ifold_counter)
-c$$$         call set_colour_connections(iFKS,ifold_counter)
-c$$$      enddo
-c$$$      call special_check_SoftSing(proc_map(proc_map(0,1),1))
-c$$$c Include PDFs and alpha_S and reweight to include the uncertainties
-c$$$      call include_PDF_and_alphas
-c$$$c Sum the contributions that can be summed before taking the ABS value
-c$$$      call sum_identical_contributions
-c$$$c Update the shower starting scale for the S-events after we have
-c$$$c determined which contributions are identical.
-c$$$      call update_shower_scale_Sevents(ifold_counter,ifold_picked)
-c$$$      call fill_mint_function_NLOPS(f,n1body_wgt)
-c$$$      call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-c$$$
-c$$$      enddo
-      end
 
-c$$$      subroutine set_to_defaults(vegas_wgt)
-c$$$      implicit none
-c$$$      double precision vegas_wgt
-c$$$      shat_cnt(0)=
-c$$$      vegas_wgt=1d0
-c$$$      xiimax_ev=
-c$$$      xinorm_ev=
-c$$$      jac_cnt(0)=
-c$$$      end
+      end
 
       
       function sigintF(xx,vegas_wgt,ifl,f)
