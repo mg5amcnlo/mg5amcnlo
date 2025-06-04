@@ -614,30 +614,28 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 !     5. For S-event: Take only the one relevant for the original i_fks
 !     and j_fks configuration. (Same as original code).
 
-      subroutine compute_MCsubtraction_kl(iFKS,p,pborn)
+      
+      subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
+     $     ,MCsubt,z,n_connect)
       use kinematics_module
       implicit none
       include 'nexternal.inc'
       include 'fks_info.inc'
       include 'orders.inc'
-      integer iFKS
+      integer k_fks,l_fks
+      logical lzone(2)
       double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass
-     $     ,MCsubt(nsplitorders,2)
+     $     ,MCsubt(nsplitorders,2),z(2)
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       integer n_connect,i_connect(2)
-      i_fks=FKS_I_D(iFKS)
-      j_fks=FKS_J_D(iFKS)
-!     compute kinematic variables
-      xi=get_xi_from_p(i_fks,j_fks,p)
-      y=get_yij_from_p(i_fks,j_fks,p)
-      mass=pmass(j_fks)
-      veckn_ev=rho(p(0,j_fks))
-      veeckbarn_ev=rho(pborn(0,min(i_fks,j_fks)))
-      xp0jfks=p(0,j_fks)
-      call fill_kinematics_module(p,i_fks,j_fks,xi,y,mass)
+      mass=pmass(l_fks)
+      veckn_ev=rho(p(0,l_fks))
+      veeckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
+      xp0jfks=p(0,l_fks)
+      call fill_kinematics_module(p,k_fks,l_fks,xi,y,mass)
 
 !     compute MC subtraction term for the 'kl' configuration
 
@@ -661,7 +659,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
      $        ,born_flow_picked,lzone(iconnect),z(iconnect),MCsubt(1
      $        ,iconnect))
       enddo
-
+s
 ! TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then      
          if (mcatnlo_delta) then

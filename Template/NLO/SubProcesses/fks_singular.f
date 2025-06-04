@@ -863,42 +863,77 @@ c$$$      include 'madfks_mcatnlo.inc'
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
       if (p(0,1).le.0d0) return
-      if(UseSfun)then
-         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-      else
-         sevmc = fks_Hij(p,i_fks,j_fks)
-      endif
+c$$$      if(UseSfun)then
+         sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$      else
+         sevmc_Sev = fks_Hij(p,i_fks,j_fks)
+c$$$      endif
       if (sevmc.eq.0d0) return
-      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-     $     ,lzone,z_shower,nofpartners,xmcxsec)
-      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
-      if (passcuts .and. flagmc) then
-         do i=1,nofpartners
-            if(lzone(i))then
-              call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
-              do iamp=1, amp_split_size
-                if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
-                call amp_split_pos_to_orders(iamp, orders)
-                QCD_power=orders(qcd_pos)
-                wgtcpower=0d0
-                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-                orders_tag=get_orders_tag(orders)
-                amp_pos=iamp
-                g22=g**(QCD_power)
-                wgt1=sevmc*f_MC_S*xlum_mc_fact*
-     &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(12,orders,wgt1,0d0,0d0)
-                wgt1=sevmc*f_MC_H*xlum_mc_fact*
-     &               amp_split_xmcxsec(iamp,i)/g22
-                call add_wgt(13,orders,-wgt1,0d0,0d0)
-              enddo
-            endif
+      do iFKS=1,fks_configs
+         k_fks=FKS_I_D(iFKS)
+         l_fks=FKS_J_D(iFKS)
+!     compute kinematic variables
+         xi=get_xi_from_p(k_fks,l_fks,p)
+         y=get_yij_from_p(k_fks,l_fks,p)
+         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn,MCsubt,z
+     $        ,n_connect)
+         do iconnect=1,n_connect
+            call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
+            do iamp=1, amp_split_size
+! TODO: deal with the amp_split arrays correctly
+               if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
+               call amp_split_pos_to_orders(iamp, orders)
+               QCD_power=orders(qcd_pos)
+               wgtcpower=0d0
+               if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+               orders_tag=get_orders_tag(orders)
+               amp_pos=iamp
+               g22=g**(QCD_power)
+!     TODO: deal with the amp_split arrays correctly
+               if (iFKS.eq.nFKSprocess) then
+                  wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
+     &                 amp_split_xmcxsec(iamp,i)/g22
+                  call add_wgt(12,orders,wgt1,0d0,0d0)
+               endif
+! TODO: deal with the amp_split arrays correctly
+               wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
+     &              amp_split_xmcxsec(iamp,i)/g22
+               call add_wgt(13,orders,-wgt1,0d0,0d0)
+            enddo
          enddo
-      endif
-      if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
-     $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-         n_MC_subt_diverge=n_MC_subt_diverge+1
-      endif
+      enddo
+
+      
+c$$$      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
+c$$$     $     ,lzone,z_shower,nofpartners,xmcxsec)
+c$$$      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
+c$$$      if (passcuts .and. flagmc) then
+c$$$         do i=1,nofpartners
+c$$$            if(lzone(i))then
+c$$$              call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
+c$$$              do iamp=1, amp_split_size
+c$$$                if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
+c$$$                call amp_split_pos_to_orders(iamp, orders)
+c$$$                QCD_power=orders(qcd_pos)
+c$$$                wgtcpower=0d0
+c$$$                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+c$$$                orders_tag=get_orders_tag(orders)
+c$$$                amp_pos=iamp
+c$$$                g22=g**(QCD_power)
+c$$$                wgt1=sevmc*f_MC_S*xlum_mc_fact*
+c$$$     &               amp_split_xmcxsec(iamp,i)/g22
+c$$$                call add_wgt(12,orders,wgt1,0d0,0d0)
+c$$$                wgt1=sevmc*f_MC_H*xlum_mc_fact*
+c$$$     &               amp_split_xmcxsec(iamp,i)/g22
+c$$$                call add_wgt(13,orders,-wgt1,0d0,0d0)
+c$$$              enddo
+c$$$            endif
+c$$$         enddo
+c$$$      endif
+c$$$      if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
+c$$$     $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
+c$$$         n_MC_subt_diverge=n_MC_subt_diverge+1
+c$$$      endif
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
