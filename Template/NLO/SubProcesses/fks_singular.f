@@ -3588,6 +3588,38 @@ c instead.
       return
       end
 
+      subroutine fill_mint_function_RATIO(ratio)
+      use weight_lines
+      implicit none
+      double precision ratio, numerator,denominator
+      integer i
+      numerator=0d0
+      denominator=0d0
+      do i=1,icontr
+         if (itype(i).eq.2) then ! this is the Born
+            numerator=numerator+wgts(1,i)
+            denominator=denominator+wgts(1,i)
+         elseif ((itype(i).ge.3 .and. itype(i).le.6) .or. itype(i).eq.11
+     $           .or. itype(i).eq.12 .or. itype(i).eq.14 ) then
+            numerator=numerator+wgts(1,i)
+         elseif (itype(i).eq.15) then
+            write (*,*) 'We should not have the "virt-trick: '/
+     $           /'average born contribution"'
+         elseif (itype(i).ge.20 .or. itype(i).eq.7) then
+            write (*,*) 'EW Sudakov or NNLL+NLO not available'/
+     $           /' for reweighting',itype(i)
+            stop 1
+         endif
+      enddo
+      if (denominator.eq.0d0 .and. numerator.ne.0d0) then
+         write (*,*) 'denominator is zero: stopping the code',numerator
+     $        ,denominator
+         stop 1
+      endif
+      ratio=numerator
+      if (denominator.ne.0d0) ratio=ratio/denominator
+      end
+      
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)
 c Fills the function that is returned to the MINT integrator. Depending

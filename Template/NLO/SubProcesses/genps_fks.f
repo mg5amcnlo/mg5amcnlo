@@ -820,7 +820,7 @@ c     so the last states done are the final particle states.
 c
       call fill_born_momenta(nbranch,nt_channel,one_body,ionebody
      &     ,x,itree,m,s,pb,xjac0,xpswgt0,pass)
-      write (*,*) xjac0,pass
+
       if (.not.pass) then
          xjac0=-141
          return
@@ -1012,9 +1012,6 @@ c Trivial, but prevents loss of accuracy
         call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
-
-        write (*,*) 'genps_fks',xjac0
-        
         call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
      $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
      $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)

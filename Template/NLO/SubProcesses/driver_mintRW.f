@@ -289,6 +289,7 @@ c timing statistics
 
       subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
       use mint_module
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -296,7 +297,7 @@ c timing statistics
       include "coupl.inc"
       double precision x(ndimmax),ratio,jac,p(0:3,nexternal),vegas_wgt
      $     ,probne,gfactsf,gfactcl,replace_MC_subt,sudakov_damp,rwgt
-      integer nndim,i,iFKS_picked,nFKS_picked_nbody,ifold_counter,sum
+      integer nndim,i,iFKS_picked,nFKS_picked_nbody,sum
      $     ,proc_map(0:fks_configs,0:fks_configs),iFKS
       save proc_map,sum
       double precision p_born(0:3,nexternal-1)
@@ -318,8 +319,13 @@ c timing statistics
       common /colour_connections/ icolup_s,icolup_h
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       data firsttime/.true./
-
-      jac=1d0
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+      integer              MCcntcalled
+      common/c_MCcntcalled/MCcntcalled
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
 
       if (firsttime) then
          firsttime=.false.
@@ -332,8 +338,12 @@ c timing statistics
          call setup_event_attributes
       endif
 
+      icontr=0
+      MCcntcalled=0
       nbody=.true.
       calculatedBorn=.false.
+      vegas_wgt=1d0
+      ifold_counter=1
 
       do i=1,proc_map(0,0)
          if (any(proc_map(i,1:proc_map(i,0)).eq.iFKS_picked)) then
@@ -343,9 +353,16 @@ c timing statistics
       enddo
       
       call update_fks_dir(iFKS_picked)
-
+      icolup_s(1,1)=-1          ! set colour connection to -1: i.e., complete_xmcsubt has not been called
+      if (ini_fin_fks.eq.0) then
+         jac=1d0
+      else
+         jac=0.5d0
+      endif
+         
       call generate_momenta(nndim,iconfig,jac,x,p)
       
+      call compute_prefactors_nbody(vegas_wgt)
 
       call set_cms_stuff(izero)
       nFKS_picked_nbody=iFKS_picked
@@ -353,9 +370,6 @@ c timing statistics
 
       call set_alphaS(p1_cnt(0,1,0))
       
-      vegas_wgt=1d0
-      ifold_counter=1
-      call compute_prefactors_nbody(vegas_wgt)
       call compute_born
       call compute_nbody_noborn
       call include_shape_in_shower_scale(p,nFKS_picked_nbody
@@ -364,6 +378,7 @@ c timing statistics
 
       
       nbody=.false.
+      calculatedBorn=.false.
       do i=1,proc_map(proc_map(0,1),0)
          wgt_me_real=0d0
          wgt_me_born=0d0
@@ -373,6 +388,7 @@ c timing statistics
          probne=1d0
          gfactsf=1.d0
          gfactcl=1.d0
+         MCcntcalled=0
          icolup_s(1,1)=-1       ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          call generate_momenta(nndim,iconfig,jac,x,p)
 c     Every contribution has to have a viable set of Born momenta (even if
@@ -427,9 +443,28 @@ c     subtraction terms.
          call include_shape_in_shower_scale(p,iFKS,ifold_counter)
          call set_colour_connections(iFKS,ifold_counter)
       enddo
-      
-      stop 1
 
+c Special check: in rare cases there can be S-event contributions,
+c without a single FKS configuration that contains a soft singularity
+c passing cuts (this only happens if n-body configuration does not pass
+c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
+c add a bogus contribution corresponding to an FKS configuration that
+c contains a soft singularity to make sure that the code continues
+c correctly.
+      call special_check_SoftSing(proc_map(proc_map(0,1),1))
+c Include PDFs and alpha_S and reweight to include the uncertainties
+      call include_PDF_and_alphas
+c Include the weight from the bias_function
+      call include_bias_wgt
+c Sum the contributions that can be summed before taking the ABS value
+      call sum_identical_contributions
+c Update the shower starting scale for the S-events after we have
+c determined which contributions are identical.
+      call update_shower_scale_Sevents(ifold_counter,ifold_picked)
+
+      call fill_mint_function_RATIO(ratio)
+      write (*,*) 'AAAAAAAAAAAAAAAA RATIO:',ratio
+      
       end
 
       
