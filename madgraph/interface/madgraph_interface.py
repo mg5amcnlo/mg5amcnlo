@@ -4993,13 +4993,13 @@ This implies that with decay chains:
                 else:
                     all_combinations = [c+[(key,b)] for c in all_combinations for b in boundstates[key]]
             # filter symmetric final states
-            new = []
+            already_generated = []
             unique_combinations = []
             for fockstates in all_combinations:
                 state = sorted([fockstate[1] for fockstate in fockstates])
-                if state not in new:
+                if state not in already_generated:
                     unique_combinations.append(fockstates)
-                    new.append(state)
+                    already_generated.append(state)
 
             # add processes
             last = len(unique_combinations)-1

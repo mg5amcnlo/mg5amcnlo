@@ -2268,6 +2268,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         particle_dict = matrix_element.get('processes')[0].get('model').\
                         get('particle_dict')
 
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
+
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
@@ -2291,12 +2294,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                     pow_part = 1 + int(particle.is_boson())
 
-                lines.append("prmass(%d,%d)  = %s" % \
-                             (leg.get('number'), iconf + 1, mass))
-                lines.append("prwidth(%d,%d) = %s" % \
-                             (leg.get('number'), iconf + 1, width))
-                lines.append("pow(%d,%d) = %d" % \
-                             (leg.get('number'), iconf + 1, pow_part))
+                if (nonia == 0) or (-leg.get('number') <= nexternal):
+                    lines.append("prmass(%d,%d)  = %s" % \
+                                 (leg.get('number'), iconf + 1, mass))
+                    lines.append("prwidth(%d,%d) = %s" % \
+                                 (leg.get('number'), iconf + 1, width))
+                    lines.append("pow(%d,%d) = %d" % \
+                                 (leg.get('number'), iconf + 1, pow_part))
 
         # Write the file
         writer.writelines(lines)
@@ -6565,15 +6569,26 @@ c           This is dummy particle used in multiparticle vertices
 
         booldict = {None: "0", True: "1", False: "2"}
 
+        nexternal = 0
+        nonia = 0
+        for leg in self.proc_defs[0].get('legs'):
+            nexternal += 1
+            if leg.get('onium'):
+                nonia += 1
+        nonia /= 2
+        nonia = int(nonia)
+        nexternal -= nonia
+
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]
             for vertex in schannels:
                 # For the resulting leg, pick out whether it comes from
                 # decay or not, as given by the onshell flag
                 leg = vertex.get('legs')[-1]
-                lines.append("data gForceBW(%d,%d)/%s/" % \
-                             (leg.get('number'), iconf + 1,
-                              booldict[leg.get('onshell')]))
+                if (nonia == 0) or (-leg.get('number') < nexternal):
+                    lines.append("data gForceBW(%d,%d)/%s/" % \
+                                 (leg.get('number'), iconf + 1,
+                                  booldict[leg.get('onshell')]))
 
         # Write the file
         writer.writelines(lines)

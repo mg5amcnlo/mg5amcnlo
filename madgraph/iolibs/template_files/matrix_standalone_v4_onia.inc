@@ -294,7 +294,7 @@ C       Computing normalisation factor for LDME convention
           LDME = LDME/6D0/(2D0*J_ONIA(I)+1D0)
         ELSE IF (C_ONIA(I).EQ.8) THEN
           LDME = LDME/8D0/(2D0*J_ONIA(I)+1D0)
-        END IF
+        ENDIF
       ENDDO
 
 C     Computing perturbative LDMEs
