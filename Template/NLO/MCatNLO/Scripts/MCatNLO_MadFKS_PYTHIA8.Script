@@ -374,6 +374,16 @@ Next:numberShowEvent = $MAXPR_PY8     ! print event record n times
 Stat:showProcessLevel = on            ! Process statistics
 Stat:showErrors = on                  ! Error statistics
 Check:epTolErr = 0.001                ! Momentum-conservation tolerance
+EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+Check:event = off
+EOF
+fi
+
+cat <<EOF >> $ifile
 
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
