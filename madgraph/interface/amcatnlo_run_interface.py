@@ -151,6 +151,8 @@ def compile_dir(*arguments):
             misc.compile([exe], cwd=this_dir, job_specs = False)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
+        if mode in ['aMC@LO', 'noshowerLO']:
+            misc.compile(['madevent_mintRW'], cwd=this_dir, job_specs = False)
 
         logger.info('    %s done.' % p_dir) 
         return 0
@@ -3782,6 +3784,8 @@ RESTART = %(mint_mode)s
            len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1\
            or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
+        if mode in ['aMC@LO','noshowerLO']:
+            self.run_LONLO_RW()
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
@@ -4701,7 +4705,36 @@ RESTART = %(mint_mode)s
         output.close()
         return shower
 
+    def run_LONLO_RW(self):
+        """runs the LO to NLO reweighting"""
+        logger.info('    Doing LO -> NLO reweighting')
+        #read the nevents_unweighted file to get the list of event files
+        nev_unw = pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted')
+        file = open(nev_unw)
+        lines = file.read().split('\n')
+        file.close()
+        #  number of events is not 0
+        evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
+        #prepare the job_dict
+        job_dict = {}
+        exe = '../madevent_mintRW'
+        for i, evt_file in enumerate(evt_files):
+            path, evt = os.path.split(evt_file)
+            job_dict[path] = [exe]
+            
+        for Pdir, jobs in job_dict.items():
+            print(Pdir,jobs)
+            
+        self.run_all(job_dict, [['dummy']], 'Running reweight')
 
+        #update file name in nevents_unweighted
+        newfile = open(nev_unw, 'w')
+        for line in lines:
+            if line:
+                newfile.write(line.replace(line.split()[0], line.split()[0] + '.RW') + '\n')
+        newfile.close()
+        
+    
     def run_reweight(self, only):
         """runs the reweight_xsec_events executables on each sub-event file generated
         to compute on the fly scale and/or PDF uncertainities"""
@@ -4735,7 +4768,6 @@ RESTART = %(mint_mode)s
             files.ln(pjoin(self.me_dir, 'SubProcesses', exe), \
                      pjoin(self.me_dir, 'SubProcesses', path))
             job_dict[path] = [exe]
-
         self.run_all(job_dict, [[evt, '1']], 'Running reweight')
 
         #check that the new event files are complete

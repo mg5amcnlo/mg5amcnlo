@@ -233,14 +233,15 @@ c     Prepare the MINT folding
       call read_lhef_init(99,IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      $     XSECUP,XERRUP,XMAXUP,LPRUP)
 
+      call write_lhef_header(98,nevts,MonteCarlo)
+      call write_lhef_init(98,IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
+     $     XSECUP,XERRUP,XMAXUP,LPRUP)
       
       do ievent=1,nevts
 !     read the event:
          call read_lhef_event(99, NUP,IDPRUP,XWGTUP,SCALUP
      $        ,AQEDUP,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP
      $        ,buff,buff2,SCALUP_a)
-         !TODO: better way of skipping H events.
-         if (NUP.eq.5) cycle
          read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
 !     compute the NLOoverBorn ratio:
          call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
@@ -463,7 +464,6 @@ c determined which contributions are identical.
       call update_shower_scale_Sevents(ifold_counter,ifold_picked)
 
       call fill_mint_function_RATIO(ratio)
-      write (*,*) 'AAAAAAAAAAAAAAAA RATIO:',ratio
       
       end
 
@@ -1209,22 +1209,25 @@ c
 c-----
 c  Begin Code
 c-----
+      
+      open (unit=83,file='input_app.txt',status='old')
+      
       write(*,'(a)') 'Enter number of events and iterations: '
-      read(*,*) ncall,nitmax
+      read(83,*) ncall,nitmax
       write(*,*) 'Number of events and iterations ',ncall,nitmax
 
       write(*,'(a)') 'Enter desired fractional accuracy: '
-      read(*,*) accuracy
+      read(83,*) accuracy
       write(*,*) 'Desired fractional accuracy: ',accuracy
 
       write(*,*)'Enter alpha, beta for G_soft'
       write(*,*)'  Enter alpha<0 to set G_soft=1 (no ME soft)'
-      read(*,*)alsf,besf
+      read(83,*)alsf,besf
       write (*,*) 'for G_soft: alpha=',alsf,', beta=',besf 
 
       write(*,*)'Enter alpha, beta for G_azi'
       write(*,*)'  Enter alpha>0 to set G_azi=0 (no azi corr)'
-      read(*,*)alazi,beazi
+      read(83,*)alazi,beazi
       write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
       i=2
       if (i.eq.0) then
@@ -1246,7 +1249,7 @@ c These should be ignored (but kept for 'historical reasons')
 
 
       write(*,*) 'Suppress amplitude (0 no, 1 yes)? '
-      read(*,*) i
+      read(83,*) i
       if (i .eq. 1) then
          multi_channel = .true.
          write(*,*) 'Using suppressed amplitude.'
@@ -1256,7 +1259,7 @@ c These should be ignored (but kept for 'historical reasons')
       endif
 
       write(*,*) 'Exact helicity sum (0 yes, n = number/event)? '
-      read(*,*) i
+      read(83,*) i
       if (nincoming.eq.1) then
          write (*,*) 'Sum over helicities in the virtuals'/
      $        /' for decay process'
@@ -1272,7 +1275,7 @@ c These should be ignored (but kept for 'historical reasons')
       isum_hel = 0
 
       write(*,'(a)') 'Enter Configuration Number: '
-      read(*,*) dconfig
+      read(83,*) dconfig
       iconfig = int(dconfig)
       if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
          ini_fin_fks=0
@@ -1298,7 +1301,7 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,'(a)') 'Enter running mode for MINT:'
       write (*,'(a)') '0 to set-up grids, 1 to integrate,'//
      &     ' 2 to generate events'
-      read (*,*) imode
+      read (83,*) imode
       write (*,*) 'MINT running mode:',imode
       if (imode.eq.2)then
          write (*,*) 'Generating events, doing only one iteration'
@@ -1307,7 +1310,7 @@ c These should be ignored (but kept for 'historical reasons')
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
       write (*,'(a)') 'xi_i, y_ij, phi_i'
-      read (*,*) ixi_i,iy_ij,iphi_i
+      read (83,*) ixi_i,iy_ij,iphi_i
       write (*,*)ixi_i,iy_ij,iphi_i
 
 
@@ -1315,7 +1318,7 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
       write (*,*) "Enter 'born0' or 'virt0' to perform"
       write (*,*) " a pure n-body integration (no S functions)"
-      read(*,*) abrvinput
+      read(83,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
          write (*,*) 'This option is no longer supported:',abrvinput
          stop
@@ -1350,4 +1353,5 @@ c$$$            endif
       endif
 c
       lbw(0)=0
+      close(83)
       end
