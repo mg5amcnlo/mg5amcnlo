@@ -616,7 +616,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 
       
       subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
-     $     ,MCsubt,z,n_connect)
+     $     ,include_gfun,z,n_connect,amp_split_xmcxec)
       use kinematics_module
       implicit none
       include 'nexternal.inc'
@@ -625,12 +625,13 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer k_fks,l_fks
       logical lzone(2)
       double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass
-     $     ,MCsubt(nsplitorders,2),z(2)
+     $     ,z(2),amp_split_xmcxsec(2,1:amp_split_size)
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       integer n_connect,i_connect(2)
+      logical include_gfunw
       mass=pmass(l_fks)
       veckn_ev=rho(p(0,l_fks))
       veeckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
@@ -643,24 +644,24 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       call find_color_connectors(born_flow_picked,fksfather,n_connect
      $     ,i_connect)
 
-! TODO: current way of dealing with the G-functions cannot
-! work. We could mulitply only the MC_kl for which kl=ij with the
-! Gfunction, since only those can go *very* close to the limit
-! (the others are damped by the S_ij). Hence, the computation of
-! those should go *outside* the loop over kl.  Note: also current
-! default code isn't correct, because GfunctionSoft depends on the
-! flavour of i_fks -- information that is lossed when the
-! replacement of MCsubt is evaluated.
+!     TODO: current way of dealing with the G-functions cannot
+!     work. We could mulitply only the MC_kl for which kl=ij with the
+!     Gfunction, since only those can go *very* close to the limit
+!     (the others are damped by the S_ij). Hence, the computation of
+!     those should go *outside* the loop over kl.  Note: also current
+!     default code isn't correct, because GfunctionSoft depends on the
+!     flavour of i_fks -- information that is lossed when the
+!     replacement of amp_split_xmcxsec is evaluated.
       
 !     given the flow, loop over the (up to two) partners of the
 !     fks-father.
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,i_connect(iconnect)
-     $        ,born_flow_picked,lzone(iconnect),z(iconnect),MCsubt(1
-     $        ,iconnect))
+     $        ,born_flow_picked,include_gfun,lzone(iconnect),z(iconnect)
+     $        ,amp_split_xmcxsec(iconnect))
       enddo
-s
-! TODO: "check_positivity_MCxsec" at some point?
+
+!     TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then      
          if (mcatnlo_delta) then
 !     include Delta
@@ -669,10 +670,10 @@ s
 !     include bogus no-emission
             probne=bogus_probne_fun(get_qMC(xi,y))
          endif
-         MCsubt(1:nsplitorders,1:2)=MCsubt(1:nsplitorders,1:2)*probne
-!     TODO: also fill amp_split_xmcxec() with probne
+         amp_split_xmcxsec(1:2,1:amp_split_size)=amp_split_xmcxsec(1:2
+     $        ,1:amp_split_size)*probne
       else
-         MCsubt(1:nsplitorders,1:2)=0d0
+         amp_split_xmcxsec(1:2,1:amp_split_size)=0d0
       endif
       end
       
@@ -717,129 +718,129 @@ s
       end
       
       
-      subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
-     $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
-      use kinematics_module
-      use scale_module
-      implicit none
-      include 'nexternal.inc'
-c$$$  include 'madfks_mcatnlo.inc'
-      include 'born_nhel.inc'
-      include 'run.inc'
-      include 'orders.inc'
-      integer npartner,nofpartners,cflows,idum,ione,iord,iord_val
-      logical lzone(nexternal),flagmc
-      double precision bornbars(max_bcol,nsplitorders),
-     $     bornbarstilde(max_bcol,nsplitorders)
-      double precision p(0:3,nexternal),probne,z_shower(nexternal)
-     $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),damping,N_p
-     $     ,MCsec(nexternal,max_bcol),sumMCsec
-     $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
-      logical first_MCcnt_call
-      common/cMCcall/first_MCcnt_call
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $     ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-     $     amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-      common /to_amp_split_bornbars/amp_split_bornbars,
-     $     amp_split_bornbarstilde
-      double precision amp_split_xmcxsec(amp_split_size,nexternal)
-      common /to_amp_split_xmcxsec/amp_split_xmcxsec
-      double precision amp_split_mc(amp_split_size)
-      common /to_amp_split_mc/amp_split_mc
-      logical split_type(nsplitorders) 
-      common /c_split_type/split_type
-!     common block used to make the (scalar) reference scale partner
-!     dependent in case of delta
-      integer cur_part
-      common /to_ref_scale/cur_part
-      double precision smin,smax,ptresc,compute_damping_weight,qMC
-c     -- call to MC counterterm functions
-      first_MCcnt_call=.true.
-      xmcxsec(1:nexternal)=0d0
-      xmcxsec2(1:max_bcol)=0d0
-      MCsec(1:nexternal,1:max_bcol)=0d0
-      sumMCsec=0d0
-      amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
-      do npartner=1,ipartners(0)
-         cur_part=ipartners(npartner)
-         call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
-     $        ,bornbars,bornbarstilde,npartner)
-         if(.not. lzone(npartner)) cycle
-         damping=compute_damping_weight(cur_part,xi_i_fks_ev
-     $        ,y_ij_fks_ev)
-         do cflows=1,max_bcol
-            if (colorflow(npartner,cflows).eq.0) cycle
-            if (isspecial(cflows)) then
-               N_p=2d0
-            else
-               N_p=1d0
-            endif
-            ione=0
-            do iord = 1, nsplitorders
-               if (.not.split_type(iord) .or.
-     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-               if (iord.eq.qcd_pos) then
-                  iord_val=1
-               elseif(iord.eq.qed_pos) then
-                  iord_val=2
-               endif
-               ione=ione+1
-               MCsec(npartner,colorflow(npartner,cflows))=damping
-     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
-     $              ,cflows),iord)+xkernazi(iord_val)*N_p
-     $              *bornbarstilde(colorflow(npartner,cflows),iord))
-               amp_split_xmcxsec(1:amp_split_size,npartner) =
-     $              amp_split_xmcxsec(1:amp_split_size,npartner) +
-     $              damping *(xkern(iord_val)*N_p
-     $              *amp_split_bornbars(1:amp_split_size
-     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
-     $              *N_p*amp_split_bornbarstilde(1:amp_split_size
-     $              ,colorflow(npartner,cflows),iord))
-            enddo
-            if (ione.ne.1) then
-               write (*,*) 'Error: incompatible split orders in '/
-     $              /'compute_xmcsubt_complete',ione
-               stop 1
-            endif
-            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner
-     $           ,colorflow(npartner,cflows))
-            xmcxsec2(colorflow(npartner,cflows))=
-     $           xmcxsec2(colorflow(npartner,cflows))+MCsec(npartner
-     $           ,colorflow(npartner,cflows))
-            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
-     $           ,cflows))
-         enddo
-      enddo
-
-!     check the MC cross sections are positive:
-      call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
-      if (mcatnlo_delta) then
-!     compute and include the Delta Sudakov:
-         if(any(lzone(1:ipartners(0)))) call compute_delta(p
-     $        ,probne)
-      endif
-      xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
-      amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
-     $     amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))*probne
-      if (btest(Mccntcalled,4)) then
-         write (*,*) 'Fifth bit of MCcntcalled should not '/
-     $        /'have been set yet',MCcntcalled
-         stop 1
-      endif
-      if(any(lzone(1:ipartners(0)))) MCcntcalled=MCcntcalled+16
-      return
-      end
+c$$$      subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
+c$$$     $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
+c$$$      use kinematics_module
+c$$$      use scale_module
+c$$$      implicit none
+c$$$      include 'nexternal.inc'
+c$$$c$$$  include 'madfks_mcatnlo.inc'
+c$$$      include 'born_nhel.inc'
+c$$$      include 'run.inc'
+c$$$      include 'orders.inc'
+c$$$      integer npartner,nofpartners,cflows,idum,ione,iord,iord_val
+c$$$      logical lzone(nexternal),flagmc
+c$$$      double precision bornbars(max_bcol,nsplitorders),
+c$$$     $     bornbarstilde(max_bcol,nsplitorders)
+c$$$      double precision p(0:3,nexternal),probne,z_shower(nexternal)
+c$$$     $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),damping,N_p
+c$$$     $     ,MCsec(nexternal,max_bcol),sumMCsec
+c$$$     $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      integer              MCcntcalled
+c$$$      common/c_MCcntcalled/MCcntcalled
+c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+c$$$      common /MC_info/ ipartners,colorflow
+c$$$      logical isspecial(max_bcol)
+c$$$      common/cisspecial/isspecial
+c$$$      logical first_MCcnt_call
+c$$$      common/cMCcall/first_MCcnt_call
+c$$$      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+c$$$     $     ,p_i_fks_cnt(0:3,-2:2)
+c$$$      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+c$$$      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
+c$$$     $     amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
+c$$$      common /to_amp_split_bornbars/amp_split_bornbars,
+c$$$     $     amp_split_bornbarstilde
+c$$$      double precision amp_split_xmcxsec(amp_split_size,nexternal)
+c$$$      common /to_amp_split_xmcxsec/amp_split_xmcxsec
+c$$$      double precision amp_split_mc(amp_split_size)
+c$$$      common /to_amp_split_mc/amp_split_mc
+c$$$      logical split_type(nsplitorders) 
+c$$$      common /c_split_type/split_type
+c$$$!     common block used to make the (scalar) reference scale partner
+c$$$!     dependent in case of delta
+c$$$      integer cur_part
+c$$$      common /to_ref_scale/cur_part
+c$$$      double precision smin,smax,ptresc,compute_damping_weight,qMC
+c$$$c     -- call to MC counterterm functions
+c$$$      first_MCcnt_call=.true.
+c$$$      xmcxsec(1:nexternal)=0d0
+c$$$      xmcxsec2(1:max_bcol)=0d0
+c$$$      MCsec(1:nexternal,1:max_bcol)=0d0
+c$$$      sumMCsec=0d0
+c$$$      amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
+c$$$      do npartner=1,ipartners(0)
+c$$$         cur_part=ipartners(npartner)
+c$$$         call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
+c$$$     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
+c$$$     $        ,bornbars,bornbarstilde,npartner)
+c$$$         if(.not. lzone(npartner)) cycle
+c$$$         damping=compute_damping_weight(cur_part,xi_i_fks_ev
+c$$$     $        ,y_ij_fks_ev)
+c$$$         do cflows=1,max_bcol
+c$$$            if (colorflow(npartner,cflows).eq.0) cycle
+c$$$            if (isspecial(cflows)) then
+c$$$               N_p=2d0
+c$$$            else
+c$$$               N_p=1d0
+c$$$            endif
+c$$$            ione=0
+c$$$            do iord = 1, nsplitorders
+c$$$               if (.not.split_type(iord) .or.
+c$$$     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+c$$$               if (iord.eq.qcd_pos) then
+c$$$                  iord_val=1
+c$$$               elseif(iord.eq.qed_pos) then
+c$$$                  iord_val=2
+c$$$               endif
+c$$$               ione=ione+1
+c$$$               MCsec(npartner,colorflow(npartner,cflows))=damping
+c$$$     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
+c$$$     $              ,cflows),iord)+xkernazi(iord_val)*N_p
+c$$$     $              *bornbarstilde(colorflow(npartner,cflows),iord))
+c$$$               amp_split_xmcxsec(1:amp_split_size,npartner) =
+c$$$     $              amp_split_xmcxsec(1:amp_split_size,npartner) +
+c$$$     $              damping *(xkern(iord_val)*N_p
+c$$$     $              *amp_split_bornbars(1:amp_split_size
+c$$$     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
+c$$$     $              *N_p*amp_split_bornbarstilde(1:amp_split_size
+c$$$     $              ,colorflow(npartner,cflows),iord))
+c$$$            enddo
+c$$$            if (ione.ne.1) then
+c$$$               write (*,*) 'Error: incompatible split orders in '/
+c$$$     $              /'compute_xmcsubt_complete',ione
+c$$$               stop 1
+c$$$            endif
+c$$$            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner
+c$$$     $           ,colorflow(npartner,cflows))
+c$$$            xmcxsec2(colorflow(npartner,cflows))=
+c$$$     $           xmcxsec2(colorflow(npartner,cflows))+MCsec(npartner
+c$$$     $           ,colorflow(npartner,cflows))
+c$$$            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
+c$$$     $           ,cflows))
+c$$$         enddo
+c$$$      enddo
+c$$$
+c$$$!     check the MC cross sections are positive:
+c$$$      call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
+c$$$      if (mcatnlo_delta) then
+c$$$!     compute and include the Delta Sudakov:
+c$$$         if(any(lzone(1:ipartners(0)))) call compute_delta(p
+c$$$     $        ,probne)
+c$$$      endif
+c$$$      xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
+c$$$      amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
+c$$$     $     amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))*probne
+c$$$      if (btest(Mccntcalled,4)) then
+c$$$         write (*,*) 'Fifth bit of MCcntcalled should not '/
+c$$$     $        /'have been set yet',MCcntcalled
+c$$$         stop 1
+c$$$      endif
+c$$$      if(any(lzone(1:ipartners(0)))) MCcntcalled=MCcntcalled+16
+c$$$      return
+c$$$      end
 
       double precision function compute_damping_weight(cur_part
      $     ,xi_i_fks,y_ij_fks)
@@ -980,7 +981,7 @@ c
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,i_connect
-     $     ,born_flow_picked,lzone,z,MCsubt)
+     $     ,born_flow_picked,include_gfun,lzone,z,amp_split_xmcxsec)
       use process_module
       use kinematics_module
       use scale_module
@@ -994,10 +995,9 @@ c over colour partners
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
      $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
      $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
-     $     ,MCsubt(nsplitorders)
+     $     ,amp_split_xmcxsec(1:amp_split_size)
       integer i_connect
-      logical lzone(nexternal)
-
+      logical lzone(nexternal),include_gfun
 !     local
       double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
      $     ,PY6PTweight,pmass(nexternal),xi,xjac
@@ -1093,16 +1093,22 @@ c     Compute MC subtraction terms
          xkernazi(1:2)=0d0
       endif
 c     
-c$$$  xkern(1:2)=xkern(1:2)*gfactsf
-c$$$  xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
       if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
          xkern(1:2)=xkern(1:2)*PY6PTweight
          xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
       endif
 
-
+      if (include_gfun) then
+         call compute_gfun(gfactsf,gfactcl,gfactazi)
+         xkern(1:2)=xkern(1:2)*gfactsf
+         xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+      else
+         gfactsf=1d0
+         gfactcl=1d0
+      endif
+      
       ione=0
-      MCsubt(1:nsplitorders)=0d0
+      amp_split_xmcxsec(1:amp_split_size)=0d0
       do iord = 1, nsplitorders
          if (.not.split_type(iord) .or.
      $        (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
@@ -1112,22 +1118,50 @@ c$$$  xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
             iord_val=2
          endif
          ione=ione+1
-         MCsubt(iord)=(xkern(iord_val)*bornbars(born_flow_picked,iord)
-     $        +xkernazi(iord_val)*bornbarstilde(born_flow_picked,iord))
+         amp_split_xmcxsec(1:amp_split_size)=(xkern(iord_val)*
+     $        amp_split_bornbars(1:amp_split_size,born_flow_picked,iord)
+     $        +xkernazi(iord_val)*
+     $        amp_split_bornbarstilde(1:amp_split_size,born_flow_picked,iord))
      $        *compute_damping_weight(i_connect,xi_i_fks,y_ij_fks)
-
-! TODO: also fill the amp_split_xmcxsec() array
-         
       enddo
       if (ione.ne.1) then
          write (*,*) 'Error: incompatible split orders in '/
-     &        /'xmcsubt_connection: there should be exactly'/
-     &        /' one in MC@NLO',ione
+     $        /'xmcsubt_connection: there should be exactly'/
+     $        /' one in MC@NLO. You can either do QCD *or* '/
+     $        /'QED corrections',ione
          stop 1
       endif
       return
       end
 
+      subroutine compute_gfun(gfactsf,gfactcl,gfactazi)
+      use kinemtics_module
+      implicit none
+      include 'fks_powers.inc'
+      double precision gfactsf,gfactcl,gfactazi,ymin
+     $     ,delta,gfunction
+      double precision alsf,besf
+      common/cgfunsfp/alsf,besf
+      double precision alazi,beazi
+      common/cgfunazi/alazi,beazi
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type
+      parameter (ymin=0.9d0)
+      if(ileg.le.2)then
+         delta=min(1d0,deltaI)
+      elseif(ileg.ge.3)then
+         delta=min(1d0,deltaO)
+      endif
+      ! TODO: review gfactcl vs. gfactazi and how it approaches the limits.
+      gfactsf=gfunction(x,alsf,besf,2d0)
+      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
+      gfactcl=gfunction(yij,alsf,-(1d0-ymin),1d0)
+      if(alazi.lt.0d0)gfactazi=1-gfunction(yij,-alazi,beazi,delta)
+      end
+
+      
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
@@ -1211,7 +1245,6 @@ c Distinguish ISR and FSR
       elseif(ileg.ge.3)then
          delta=min(1d0,deltaO)
       endif
-
 c G-function parameters 
       gfactsf=gfunction(x,alsf,besf,2d0)
       if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
@@ -1358,7 +1391,7 @@ c one can remove any reference to xi_i_fks
       use kinematics_module
       implicit none
       integer N_p
-      xfact_ileg12=(1d0-yi)*(1d0-x)/x * 4d0/(shat_n1*N_p)
+      xfact_ileg12=(1d0-yij)*(1d0-x)/x * 4d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg3(N_p)
@@ -1366,8 +1399,8 @@ c one can remove any reference to xi_i_fks
       use kinematics_module
       implicit none
       integer N_p
-      xfact_ileg3=(2d0-(1d0-x)*(1d0-(kn0/kn)*yj))/
-     &     kn*knbar*(1d0-x)*(1d0-yj) * 2d0/(shat_n1*N_p)
+      xfact_ileg3=(2d0-(1d0-x)*(1d0-(kn0/kn)*yij))/
+     &     kn*knbar*(1d0-x)*(1d0-yij) * 2d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg4(N_p)
@@ -1375,8 +1408,8 @@ c one can remove any reference to xi_i_fks
       use kinematics_module
       implicit none
       integer N_p
-      xfact_ileg4=(2d0-(1d0-x)*(1d0-yj))/
-     &     xij*(1d0-xm12/shat_n1)*(1d0-x)*(1d0-yj) * 2d0/(shat_n1*N_p)
+      xfact_ileg4=(2d0-(1d0-x)*(1d0-yij))/
+     &     xij*(1d0-xm12/shat_n1)*(1d0-x)*(1d0-yij) * 2d0/(shat_n1*N_p)
       end
 
       subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
@@ -3025,9 +3058,9 @@ c     Shower energy variable
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*(shat_n1*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
-         elseif(1-yi.lt.tiny)then
-            zHW6=x-(1-yi)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
+            zHW6=1-(1-x)*(shat_n1*(1-yij)+4*e0sq*(1+yij))/(8*e0sq)
+         elseif(1-yij.lt.tiny)then
+            zHW6=x-(1-yij)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
          else
             ss=1-(1+xuk/shat_n1)/(e0sq/xtk)
             if(ss.lt.0d0)goto 999
@@ -3036,9 +3069,9 @@ c
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*(shat_n1*(1-yi)+4*e0sq*(1+yi))/(8*e0sq)
-         elseif(1-yi.lt.tiny)then
-            zHW6=x-(1-yi)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
+            zHW6=1-(1-x)*(shat_n1*(1-yij)+4*e0sq*(1+yij))/(8*e0sq)
+         elseif(1-yij.lt.tiny)then
+            zHW6=x-(1-yij)*(1-x)*(shat_n1*x**2-4*e0sq)/(8*e0sq)
          else
             ss=1-(1+xtk/shat_n1)/(e0sq/xuk)
             if(ss.lt.0d0)goto 999
@@ -3050,8 +3083,8 @@ c
          if(1-x.lt.tiny)then
             beta=1-xm12/shat_n1
             betae0=sqrt(1-xm12/e0sq)
-            zHW6=1+(1-x)*( shat_n1*(yj*betad-betas)/(4*e0sq*(1+betae0))-
-     $           betae0*(xm12-xm22+shat_n1*(1+(1+yj)*betad-betas))/
+            zHW6=1+(1-x)*( shat_n1*(yij*betad-betas)/(4*e0sq*(1+betae0))-
+     $           betae0*(xm12-xm22+shat_n1*(1+(1+yij)*betad-betas))/
      $           (betad*(xm12-xm22+shat_n1*(1+betad))) )
          else
             tbeta=sqrt(1-(w1+xm12)/e0sq)
@@ -3062,10 +3095,10 @@ c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            zHW6=1-(1-x)*( (shat_n1-xm12)*(1-yj)/(8*e0sq)+
-     &                     shat_n1*(1+yj)/(2*(shat_n1-xm12)) )
-         elseif(1-yj.lt.tiny)then
-            zHW6=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)*(shat_n1*x
+            zHW6=1-(1-x)*( (shat_n1-xm12)*(1-yij)/(8*e0sq)+
+     &                     shat_n1*(1+yij)/(2*(shat_n1-xm12)) )
+         elseif(1-yij.lt.tiny)then
+            zHW6=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*(shat_n1*x
      $           -xm12)*( (shat_n1-xm12)**2*(shat_n1*(1-2*x)+xm12)+4
      $           *e0sq*shat_n1*(shat_n1*x-xm12*(2-x)) )/( 8*e0sq
      $           *(shat_n1-xm12)**3 )
@@ -3102,18 +3135,18 @@ c Shower evolution variable
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            xiHW6=2*shat_n1*(1-yi)/(shat_n1*(1-yi)+4*e0sq*(1+yi))
-         elseif(1-yi.lt.tiny)then
-            xiHW6=(1-yi)*shat_n1*x**2/(4*e0sq)
+            xiHW6=2*shat_n1*(1-yij)/(shat_n1*(1-yij)+4*e0sq*(1+yij))
+         elseif(1-yij.lt.tiny)then
+            xiHW6=(1-yij)*shat_n1*x**2/(4*e0sq)
          else
             xiHW6=2*(1+xuk/(shat_n1*(1-z)))
          endif
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            xiHW6=2*shat_n1*(1-yi)/(shat_n1*(1-yi)+4*e0sq*(1+yi))
-         elseif(1-yi.lt.tiny)then
-            xiHW6=(1-yi)*shat_n1*x**2/(4*e0sq)
+            xiHW6=2*shat_n1*(1-yij)/(shat_n1*(1-yij)+4*e0sq*(1+yij))
+         elseif(1-yij.lt.tiny)then
+            xiHW6=(1-yij)*shat_n1*x**2/(4*e0sq)
          else
             xiHW6=2*(1+xtk/(shat_n1*(1-z)))
          endif
@@ -3124,9 +3157,9 @@ c
             beta=1-xm12/shat_n1
             betae0=sqrt(1-xm12/e0sq)
             xiHW6=( shat_n1*(1+betae0)*betad*(xm12-xm22+shat_n1*(1
-     $           +betad))*(yj*betad-betas) )/( -4*e0sq*betae0*(1+betae0)
-     $           *(xm12-xm22+shat_n1*(1+(1+yj)*betad-betas))+(shat_n1
-     $           *betad*(xm12-xm22+shat_n1*(1+betad))*(yj*betad-betas))
+     $           +betad))*(yij*betad-betas) )/( -4*e0sq*betae0*(1+betae0)
+     $           *(xm12-xm22+shat_n1*(1+(1+yij)*betad-betas))+(shat_n1
+     $           *betad*(xm12-xm22+shat_n1*(1+betad))*(yij*betad-betas))
      $           )
          else
             xiHW6=w1/(2*z*(1-z)*e0sq)
@@ -3135,10 +3168,10 @@ c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            xiHW6=2*(shat_n1-xm12)**2*(1-yj)/( (shat_n1-xm12)**2*(1-yj)
-     $           +4*e0sq*shat_n1*(1+yj) )
-         elseif(1-yj.lt.tiny)then
-            xiHW6=(shat_n1-xm12)**2*(1-yj)/(4*e0sq*shat_n1)
+            xiHW6=2*(shat_n1-xm12)**2*(1-yij)/( (shat_n1-xm12)**2*(1-yij)
+     $           +4*e0sq*shat_n1*(1+yij) )
+         elseif(1-yij.lt.tiny)then
+            xiHW6=(shat_n1-xm12)**2*(1-yij)/(4*e0sq*shat_n1)
          else
             xiHW6=w2/(2*z*(1-z)*e0sq)
          endif
@@ -3172,8 +3205,8 @@ c variables, and x and y are FKS variables
 c
       if(ileg.eq.1)then
          if(1-x.lt.tiny)then
-            tmp=-2*shat_n1/(shat_n1*(1-yi)+4*(1+yi)*e0sq)
-         elseif(1-yi.lt.tiny)then
+            tmp=-2*shat_n1/(shat_n1*(1-yij)+4*(1+yij)*e0sq)
+         elseif(1-yij.lt.tiny)then
             tmp=-shat_n1*x**2/(4*e0sq)
          else
             tmp=-shat_n1*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
@@ -3181,8 +3214,8 @@ c
 c
       elseif(ileg.eq.2)then
          if(1-x.lt.tiny)then
-            tmp=-2*shat_n1/(shat_n1*(1-yi)+4*(1+yi)*e0sq)
-         elseif(1-yi.lt.tiny)then
+            tmp=-2*shat_n1/(shat_n1*(1-yij)+4*(1+yij)*e0sq)
+         elseif(1-yij.lt.tiny)then
             tmp=-shat_n1*x**2/(4*e0sq)
          else
             tmp=-shat_n1*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
@@ -3195,8 +3228,8 @@ c
             betae0=sqrt(1-xm12/e0sq)
             tmp=( shat_n1*betae0*(1+betae0)*betad*(xm12-xm22+shat_n1*(1
      $           +betad)) )/( (-4*e0sq*(1+betae0)*(xm12-xm22+shat_n1*(1
-     $           +betad*(1+yj)-betas)))+(xm12-xm22+shat_n1*(1+betad))
-     $           *(xm12*(4+yj*betad-betas)-(xm22-shat_n1)*(yj*betad
+     $           +betad*(1+yij)-betas)))+(xm12-xm22+shat_n1*(1+betad))
+     $           *(xm12*(4+yij*betad-betas)-(xm22-shat_n1)*(yij*betad
      $           -betas)) )
          else
             eps=1-(xm12-xm22)/(shat_n1-w1)
@@ -3210,10 +3243,10 @@ c
       elseif(ileg.eq.4)then
          if(e0sq.le.w2)goto 999
          if(1-x.lt.tiny)then
-            zmo=(shat_n1-xm12)*(1-yj)/(8*e0sq)+shat_n1*(1+yj)/(2
+            zmo=(shat_n1-xm12)*(1-yij)/(8*e0sq)+shat_n1*(1+yij)/(2
      $           *(shat_n1-xm12))
             tmp=-shat_n1/(4*e0sq*zmo)
-         elseif(1-yj.lt.tiny)then
+         elseif(1-yij.lt.tiny)then
             tmp=-(shat_n1-xm12)/(4*e0sq)
          else
             eps=1+xm12/(shat_n1-w2)
@@ -3249,14 +3282,14 @@ c     Shower energy variable
       parameter (tiny=1d-5)
 c
       if(ileg.eq.1)then
-         zHWPP=1-(1-x)*(1+yi)/2d0
+         zHWPP=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.2)then
-         zHWPP=1-(1-x)*(1+yi)/2d0
+         zHWPP=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yj)/(betad+betas)
+            zHWPP=1-(1-x)*(1+yij)/(betad+betas)
          else
             zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
             zHWPP=1-zeta1
@@ -3264,9 +3297,9 @@ c
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yj)*shat_n1/(2*(shat_n1-xm12))
-         elseif(1-yj.lt.tiny)then
-            zHWPP=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)*shat_n1
+            zHWPP=1-(1-x)*(1+yij)*shat_n1/(2*(shat_n1-xm12))
+         elseif(1-yij.lt.tiny)then
+            zHWPP=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*shat_n1
      $           *(shat_n1*x+xm12*(x-2))*(shat_n1*x-xm12)/(2*(shat_n1
      $           -xm12)**3)
          else
@@ -3301,23 +3334,23 @@ c     Shower evolution variable
       if(z.lt.0d0)goto 999
 c 
       if(ileg.eq.1)then
-         xiHWPP=shat_n1*(1-yi)/(1+yi)
+         xiHWPP=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.2)then
-         xiHWPP=shat_n1*(1-yi)/(1+yi)
+         xiHWPP=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            xiHWPP=-shat_n1*(betad+betas)*(yj*betad-betas)/(2*(1+yj))
+            xiHWPP=-shat_n1*(betad+betas)*(yij*betad-betas)/(2*(1+yij))
          else
             xiHWPP=w1/(z*(1-z))
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiHWPP=(1-yj)*(shat_n1-xm12)**2/(shat_n1*(1+yj))
-         elseif(1-yj.lt.tiny)then
-            xiHWPP=(1-yj)*(shat_n1-xm12)**2/(2*shat_n1)
+            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(shat_n1*(1+yij))
+         elseif(1-yij.lt.tiny)then
+            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(2*shat_n1)
          else
             xiHWPP=w2/(z*(1-z))
          endif
@@ -3351,14 +3384,14 @@ c variables, and x and y are FKS variables
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then
-         tmp=-shat_n1/(1+yi)
+         tmp=-shat_n1/(1+yij)
 c
       elseif(ileg.eq.2)then
-         tmp=-shat_n1/(1+yi)
+         tmp=-shat_n1/(1+yij)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            tmp=-shat_n1*(betad+betas)/(2*(1+yj))
+            tmp=-shat_n1*(betad+betas)/(2*(1+yij))
          else
             eps=1-(xm12-xm22)/(shat_n1-w1)
             beta=sqrt(eps**2-4*shat_n1*xm22/(shat_n1-w1)**2)
@@ -3368,8 +3401,8 @@ c
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            tmp=-(shat_n1-xm12)/(1+yj)
-         elseif(1-yj.lt.tiny)then
+            tmp=-(shat_n1-xm12)/(1+yij)
+         elseif(1-yij.lt.tiny)then
             tmp=-(shat_n1-xm12)/2
          else
             eps=1+xm12/(shat_n1-w2)
@@ -3410,7 +3443,7 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            zPY6Q=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
+            zPY6Q=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
          else
             zPY6Q=1-shat_n1*(1-x)*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
 c This is equation (3.10) of hep-ph/1102.3795. In the partonic
@@ -3421,8 +3454,8 @@ c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
             zPY6Q=1-shat_n1*(1-x)/(shat_n1-xm12)
-         elseif(1-yj.lt.tiny)then
-            zPY6Q=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)**2
+         elseif(1-yij.lt.tiny)then
+            zPY6Q=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)**2
      $           *shat_n1*(shat_n1*x-xm12)/( 2*(shat_n1-xm12)**2 )
          else
             zPY6Q=1-shat_n1*(1-x)/(shat_n1+w2-xm12)
@@ -3452,23 +3485,23 @@ c     Shower evolution variable
       parameter(tiny=1d-5)
 c
       if(ileg.eq.1)then
-         xiPY6Q=shat_n1*(1-x)*(1-yi)/2
+         xiPY6Q=shat_n1*(1-x)*(1-yij)/2
 c
       elseif(ileg.eq.2)then
-         xiPY6Q=shat_n1*(1-x)*(1-yi)/2
+         xiPY6Q=shat_n1*(1-x)*(1-yij)/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            xiPY6Q=shat_n1*(1-x)*(betas-betad*yj)/2
+            xiPY6Q=shat_n1*(1-x)*(betas-betad*yij)/2
          else
             xiPY6Q=w1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiPY6Q=(1-yj)*(1-x)*(shat_n1-xm12)/2
-         elseif(1-yj.lt.tiny)then
-            xiPY6Q=(1-yj)*(1-x)*(shat_n1*x-xm12)/2
+            xiPY6Q=(1-yij)*(1-x)*(shat_n1-xm12)/2
+         elseif(1-yij.lt.tiny)then
+            xiPY6Q=(1-yij)*(1-x)*(shat_n1*x-xm12)/2
          else
             xiPY6Q=w2
          endif
@@ -3508,7 +3541,7 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            tmp=xm12*betad/betas/(betas-betad*yj)
+            tmp=xm12*betad/betas/(betas-betad*yij)
          else
             call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
             tmp=shat_n1*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)*dw1dy
@@ -3517,7 +3550,7 @@ c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
             tmp=shat_n1*(1-x)/2
-         elseif(1-yj.lt.tiny)then
+         elseif(1-yij.lt.tiny)then
             tmp=-shat_n1*(1-x)*(shat_n1*x-xm12)/( 2*(shat_n1-xm12) )
          else
             call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy) 
@@ -3580,10 +3613,10 @@ c Shower evolution variable
       implicit none
 
       if(ileg.eq.1)then
-         xiPY6PT=shat_n1*(1-x)**2*(1-yi)/2
+         xiPY6PT=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.2)then
-         xiPY6PT=shat_n1*(1-x)**2*(1-yi)/2
+         xiPY6PT=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.3)then
          write(*,*)'PYTHIA6PT not available for FSR'
@@ -3661,7 +3694,7 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            zPY8=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
+            zPY8=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
          else
             zPY8=1-shat_n1*(1-x)*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
 c This is equation (3.10) of hep-ph/1102.3795. In the partonic
@@ -3672,8 +3705,8 @@ c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
             zPY8=1-shat_n1*(1-x)/(shat_n1-xm12)
-         elseif(1-yj.lt.tiny)then
-            zPY8=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yj)*(1-x)**2*shat_n1
+         elseif(1-yij.lt.tiny)then
+            zPY8=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)**2*shat_n1
      $           *(shat_n1*x-xm12)/( 2*(shat_n1-xm12)**2 )
          else
             zPY8=1-shat_n1*(1-x)/(shat_n1+w2-xm12)
@@ -3706,24 +3739,24 @@ c Shower evolution variable
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then
-         xiPY8=shat_n1*(1-x)**2*(1-yi)/2
+         xiPY8=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.2)then
-         xiPY8=shat_n1*(1-x)**2*(1-yi)/2
+         xiPY8=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
-            xiPY8=shat_n1*(1-x)*(betas-betad*yj)*z0*(1-z0)/2
+            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
+            xiPY8=shat_n1*(1-x)*(betas-betad*yij)*z0*(1-z0)/2
          else
             xiPY8=z*(1-z)*w1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiPY8=shat_n1*(1-x)**2*(1-yj)/2
-         elseif(1-yj.lt.tiny)then
-            xiPY8=shat_n1*(1-x)**2*(1-yj)*(shat_n1*x-xm12)**2/(2
+            xiPY8=shat_n1*(1-x)**2*(1-yij)/2
+         elseif(1-yij.lt.tiny)then
+            xiPY8=shat_n1*(1-x)**2*(1-yij)*(shat_n1*x-xm12)**2/(2
      $           *(shat_n1-xm12)**2)
          else
             xiPY8=z*(1-z)*w2
@@ -3763,8 +3796,8 @@ c
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yj))
-            tmp=xm12*betad/betas/(betas-betad*yj)*z0*(1-z0)
+            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
+            tmp=xm12*betad/betas/(betas-betad*yij)*z0*(1-z0)
          else
             call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
             tmp=shat_n1*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)*dw1dy*z*(1-z)
@@ -3773,7 +3806,7 @@ c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
             tmp=shat_n1**2*(1-x)**2/( 2*(shat_n1-xm12) )
-         elseif(1-yj.le.tiny)then
+         elseif(1-yij.le.tiny)then
             tmp=4*shat_n1**2*(1-x)**2*(shat_n1*x-xm12)**2/( 2*(shat_n1
      $           -xm12) )**3
          else
@@ -3926,17 +3959,17 @@ c
 c
       elseif(ileg.eq.3)then
 c For ileg = 3, the mother 3-momentum is [afun +- sqrt(bfun) ] / cfun
-         afun=sqrt(s)*(1-x)*(xm12-xm22+s*x)*yj
+         afun=sqrt(s)*(1-x)*(xm12-xm22+s*x)*yij
          bfun=s*( (1+x)**2*(xm12**2+(xm22-s*x)**2-
-     &        xm12*(2*xm22+s*(1+x**2)))+xm12*s*(1-x**2)**2*yj**2 )
-         cfun=s*(-(1+x)**2+(1-x)**2*yj**2)
-         dadx=sqrt(s)*yj*(xm22-xm12+s*(1-2*x))
+     &        xm12*(2*xm22+s*(1+x**2)))+xm12*s*(1-x**2)**2*yij**2 )
+         cfun=s*(-(1+x)**2+(1-x)**2*yij**2)
+         dadx=sqrt(s)*yij*(xm22-xm12+s*(1-2*x))
          dady=sqrt(s)*(1-x)*(xm12-xm22+s*x)
          dbdx=2*s*(1+x)*( xm12**2+(xm22-s*x)*(xm22-s*(1+2*x))
-     &        -xm12*(2*xm22+s*(1+x+2*(x**2)+2*(1-x)*x*(yj**2))) )
-         dbdy=2*xm12*(s**2)*((1-x**2)**2)*yj
-         dcdx=-2*s*(1+x+(yj**2)*(1-x))
-         dcdy=2*s*((1-x)**2)*yj
+     &        -xm12*(2*xm22+s*(1+x+2*(x**2)+2*(1-x)*x*(yij**2))) )
+         dbdy=2*xm12*(s**2)*((1-x**2)**2)*yij
+         dcdx=-2*s*(1+x+(yij**2)*(1-x))
+         dcdy=2*s*((1-x)**2)*yij
 c Determine correct sign
          mom_fks_sister_p=(afun+sqrt(bfun))/cfun
          mom_fks_sister_m=(afun-sqrt(bfun))/cfun
@@ -3956,22 +3989,24 @@ c Determine correct sign
          en_fks_sister=sqrt(mom_fks_sister**2+xm12)
          dmomfkssisdx=(dadx+signfac*dbdx/(2*sqrt(bfun))-dcdx*mom_fks_sister)/cfun
          dmomfkssisdy=(dady+signfac*dbdy/(2*sqrt(bfun))-dcdy*mom_fks_sister)/cfun
-         dw1dx=sqrt(s)*( yj*mom_fks_sister-en_fks_sister+(1-x)*
-     &                   (mom_fks_sister/en_fks_sister-yj)*dmomfkssisdx )
+         dw1dx=sqrt(s)*( yij*mom_fks_sister-en_fks_sister+(1-x)*
+     &                   (mom_fks_sister/en_fks_sister-yij)*dmomfkssisdx )
          dw1dy=-sqrt(s)*(1-x)*( mom_fks_sister+
-     &                   (yj-mom_fks_sister/en_fks_sister)*dmomfkssisdy )
+     &                   (yij-mom_fks_sister/en_fks_sister)*dmomfkssisdy )
          dw2dx=-dw1dx-s
          dw2dy=-dw1dy
 c
       elseif(ileg.eq.4)then
-         dq1cdx=-(1-yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
-         dq2qdx=-(1+yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
-         dw2dx=(1-yj)*(s*(1+yj-x*(2*(1+yj)+x*(1-yj)))+2*xm12)/(1+yj+x*(1-yj))**2
-         dw1dx=dq1cdx+dq2qdx
-         dq1cdy=(1-x)*(1-yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
-         dq2qdy=(1-x)*(1+yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
-         dw2dy=-2*(1-x)*(s*x-xm12)/(1+yj+x*(1-yj))**2
-         dw1dy=dq1cdy+dq2qdy
+c$$$         dq1cdx=-(1-yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
+c$$$         dq2qdx=-(1+yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
+c$$$         dw1dx=dq1cdx+dq2qdx
+         dw1dx=-2*(s*(1+yij)+xm12*(1-yij))/(1+yij+x*(1-yij))**2
+         dw2dx=(1-yij)*(s*(1+yij-x*(2*(1+yij)+x*(1-yij)))+2*xm12)/(1+yij+x*(1-yij))**2
+c$$$         dq1cdy=(1-x)*(1-yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
+c$$$         dq2qdy=(1-x)*(1+yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
+c$$$         dw1dy=dq1cdy+dq2qdy
+         dw1dy=(1-x)*2*(s*x-xm12)/(1+yij+x*(1-yij))**2
+         dw2dy=-2*(1-x)*(s*x-xm12)/(1+yij+x*(1-yij))**2
 c
       else
          write(*,*)'Error in dinvariants_dFKS: unknown ileg',ileg
@@ -4089,8 +4124,8 @@ c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
 c
       elseif(shower_mc_mod(1:9).eq.'PYTHIA6PT')then
          ycc=1-parp67*x/(1-x)**2/2
-         if(mstp67.eq.1.and.yi.lt.ycc)lzone=.false.
-         if(mstp67.eq.2) PY6PTweight=min(1d0,(1-ycc)/(1-yi))
+         if(mstp67.eq.1.and.yij.lt.ycc)lzone=.false.
+         if(mstp67.eq.2) PY6PTweight=min(1d0,(1-ycc)/(1-yij))
 c
       elseif(shower_mc_mod(1:7).eq.'PYTHIA8')then
          if(ileg.le.2.and.z.gt.1-sqrt(xi/z/shat_n1)*

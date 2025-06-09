@@ -3,7 +3,7 @@ module kinematics_module
   use process_module
   implicit none
   integer,public :: ileg,fksfather
-  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yi,yj,x, &
+  double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yij,x, &
        xij,betad,betas,kn,knbar,kn0,shat_n1
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
@@ -178,20 +178,20 @@ contains
     ! ileg = 1
     ! xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
     ! xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
-    ! xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , yi )
+    ! xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
     ! xk1  =  irrelevant
     ! xk2  =  irrelevant
-    ! yi = y_ij_fks
+    ! yij = y_ij_fks
     ! x = 1 - xi_i_fks
     ! B = sqrt(s)/2*(1-x)
     !
     ! ileg = 2
     ! xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
     ! xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
-    ! xk3  =  B * ( 1 , 0 , sqrt(1-yi**2) , -yi )
+    ! xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , -yij )
     ! xk1  =  irrelevant
     ! xk2  =  irrelevant
-    ! yi = y_ij_fks
+    ! yij = y_ij_fks
     ! x = 1 - xi_i_fks
     ! B = sqrt(s)/2*(1-x)
     !
@@ -200,8 +200,8 @@ contains
     ! xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
     ! xk1  =  ( sqrt(veckn_ev**2+xm12) , 0 , 0 , veckn_ev )
     ! xk2  =  xp1 + xp2 - xk1 - xk3
-    ! xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
-    ! yj = y_ij_fks
+    ! xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
+    ! yij = y_ij_fks
     ! yi = irrelevant
     ! x = 1 - xi_i_fks
     ! veckn_ev is such that xk2**2 = xm22
@@ -213,11 +213,11 @@ contains
     ! xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
     ! xk1  =  xp1 + xp2 - xk2 - xk3
     ! xk2  =  A * ( 1 , 0 , 0 , 1 )
-    ! xk3  =  B * ( 1 , 0 , sqrt(1-yj**2) , yj )
-    ! yj = y_ij_fks
+    ! xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
+    ! yij = y_ij_fks
     ! yi = irrelevant
     ! x = 1 - xi_i_fks
-    ! A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yj)))
+    ! A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yij)))
     ! B = sqrt(s)/2*(1-x)
     ! azimuth = irrelevant (hence set = 0)
 
@@ -238,7 +238,7 @@ contains
        stop
     endif
     x=1d0-xi_i_fks
-    xij=2d0*(1d0-xm12/shat_n1-(1d0-x))/(2d0-(1d0-x)*(1d0-yj))
+    yij=y_ij_fks
     betad=sqrt((1d0-(xm12-xm22)/shat_n1)**2-(4d0*xm22/shat_n1))
     betas=1d0+(xm12-xm22)/shat_n1
   end subroutine fill_kinematics_module
@@ -309,8 +309,6 @@ contains
     double precision :: xi_i_fks,y_ij_fks
     xtk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
     xuk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
-    yj=0d0
-    yi=y_ij_fks
   end subroutine fill_invariants_ileg1
 
   subroutine fill_invariants_ileg2(xi_i_fks,y_ij_fks)
@@ -318,8 +316,6 @@ contains
     double precision :: xi_i_fks,y_ij_fks
     xtk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
     xuk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
-    yj=0d0
-    yi=y_ij_fks
   end subroutine fill_invariants_ileg2
 
   subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
@@ -333,13 +329,11 @@ contains
     xq2q=-2d0*dot(xp2,xk2)+xm22
     w1=-xq1q+xq2q-xtk
     w2=-xq2q+xq1q-xuk
-    yj=y_ij_fks
-    yi=0d0
   end subroutine fill_invariants_ileg3
 
   subroutine fill_invariants_ileg4(xi_i_fks,y_ij_fks)
     implicit none
-    double precision :: xi_i_fks,y_ij_fks,xij
+    double precision :: xi_i_fks,y_ij_fks
     xm12=dot(pp_rec,pp_rec)
     xm22=0d0
     xtk=-2d0*dot(xp1,xk3)
@@ -349,8 +343,6 @@ contains
     xq2q=-shat_n1*xij*(2d0-dot(xp1,xk2)*4d0/(shat_n1*xij))/2d0
     xq1q=xuk+xq2q+w2
     w1=-xq1q+xq2q-xtk
-    yj=y_ij_fks
-    yi=0d0
   end subroutine fill_invariants_ileg4
 
 

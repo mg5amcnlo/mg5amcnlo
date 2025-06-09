@@ -820,14 +820,14 @@ c value to the list of weights using the add_wgt subroutine
       subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne)
       use extra_weights
       implicit none
-c This subroutine computes the MonteCarlo subtraction terms and adds
-c their values to the list of weights using the add_wgt subroutine. It
-c returns the values for the gfactsf, gfactcl and probne to check if we
-c need to include the FKS subtraction terms as replacements in the soft
-c and collinear limits and the Sudakov damping for the real-emission,
-c respectively.
+c     This subroutine computes the MonteCarlo subtraction terms and adds
+c     their values to the list of weights using the add_wgt subroutine. It
+c     returns the values for the gfactsf, gfactcl and probne to check if we
+c     need to include the FKS subtraction terms as replacements in the soft
+c     and collinear limits and the Sudakov damping for the real-emission,
+c     respectively.
       include 'nexternal.inc'
-c$$$      include 'madfks_mcatnlo.inc'
+c$$$  include 'madfks_mcatnlo.inc'
       include 'timing_variables.inc'
       include 'coupl.inc'
       include 'orders.inc'
@@ -836,16 +836,17 @@ c$$$      include 'madfks_mcatnlo.inc'
       integer nofpartners,i
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
      $     ,sevmc,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
-     $     ,xlum_mc_fact,fks_Hij
+     $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(2
+     $     ,amp_split_size)
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
+     $     ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer           fks_j_from_i(nexternal,0:nexternal)
-     &                  ,particle_type(nexternal),pdg_type(nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
@@ -853,35 +854,38 @@ c$$$      include 'madfks_mcatnlo.inc'
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer iamp
       integer orders(nsplitorders)
-      double precision amp_split_xmcxsec(amp_split_size,nexternal)
-      common /to_amp_split_xmcxsec/amp_split_xmcxsec
       integer get_orders_tag
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
-! If .true., multiplies MC subtraction terms by S_ev
+!     If .true., multiplies MC subtraction terms by S_ev
       logical UseSfun
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
       if (p(0,1).le.0d0) return
-c$$$      if(UseSfun)then
-         sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-c$$$      else
-         sevmc_Sev = fks_Hij(p,i_fks,j_fks)
-c$$$      endif
+c$$$  if(UseSfun)then
+      sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$  else
+      sevmc_Sev = fks_Hij(p,i_fks,j_fks)
+c$$$  endif
       if (sevmc.eq.0d0) return
       do iFKS=1,fks_configs
+         if (iFKS.eq.nFKSprocess) then
+!     include G-function
+!TODO: include for both g->gg and g->qqbar splitting
+! i.e., k_fks==i_fks and j_fks==l_fks (TO CHECK)
+            call compute_gfun(gfactsf,gfactcl,gfactazi)
+         endif
          k_fks=FKS_I_D(iFKS)
          l_fks=FKS_J_D(iFKS)
 !     compute kinematic variables
          xi=get_xi_from_p(k_fks,l_fks,p)
          y=get_yij_from_p(k_fks,l_fks,p)
-         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn,MCsubt,z
-     $        ,n_connect)
+         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
+     $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
             call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
-! TODO: deal with the amp_split arrays correctly
-               if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
+               if (amp_split_xmcxsec(iconnect,iamp).eq.0d0) cycle
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
                wgtcpower=0d0
@@ -889,51 +893,48 @@ c$$$      endif
                orders_tag=get_orders_tag(orders)
                amp_pos=iamp
                g22=g**(QCD_power)
-!     TODO: deal with the amp_split arrays correctly
                if (iFKS.eq.nFKSprocess) then
                   wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
-     &                 amp_split_xmcxsec(iamp,i)/g22
+     &                 amp_split_xmcxsec(iconnect,iamp)/g22
                   call add_wgt(12,orders,wgt1,0d0,0d0)
                endif
-! TODO: deal with the amp_split arrays correctly
                wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
-     &              amp_split_xmcxsec(iamp,i)/g22
+     &              amp_split_xmcxsec(iconnect,iamp)/g22
                call add_wgt(13,orders,-wgt1,0d0,0d0)
             enddo
          enddo
       enddo
-
       
-c$$$      call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-c$$$     $     ,lzone,z_shower,nofpartners,xmcxsec)
-c$$$      if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
-c$$$      if (passcuts .and. flagmc) then
-c$$$         do i=1,nofpartners
-c$$$            if(lzone(i))then
-c$$$              call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
-c$$$              do iamp=1, amp_split_size
-c$$$                if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
-c$$$                call amp_split_pos_to_orders(iamp, orders)
-c$$$                QCD_power=orders(qcd_pos)
-c$$$                wgtcpower=0d0
-c$$$                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-c$$$                orders_tag=get_orders_tag(orders)
-c$$$                amp_pos=iamp
-c$$$                g22=g**(QCD_power)
-c$$$                wgt1=sevmc*f_MC_S*xlum_mc_fact*
-c$$$     &               amp_split_xmcxsec(iamp,i)/g22
-c$$$                call add_wgt(12,orders,wgt1,0d0,0d0)
-c$$$                wgt1=sevmc*f_MC_H*xlum_mc_fact*
-c$$$     &               amp_split_xmcxsec(iamp,i)/g22
-c$$$                call add_wgt(13,orders,-wgt1,0d0,0d0)
-c$$$              enddo
-c$$$            endif
-c$$$         enddo
-c$$$      endif
-c$$$      if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
-c$$$     $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-c$$$         n_MC_subt_diverge=n_MC_subt_diverge+1
-c$$$      endif
+c$$$  call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
+c$$$  $     ,lzone,z_shower,nofpartners,xmcxsec)
+c$$$  if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
+c$$$  if (passcuts .and. flagmc) then
+c$$$  do i=1,nofpartners
+c$$$  if(lzone(i))then
+c$$$  call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
+c$$$  do iamp=1, amp_split_size
+c$$$  if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
+c$$$  call amp_split_pos_to_orders(iamp, orders)
+c$$$  QCD_power=orders(qcd_pos)
+c$$$  wgtcpower=0d0
+c$$$  if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+c$$$  orders_tag=get_orders_tag(orders)
+c$$$  amp_pos=iamp
+c$$$  g22=g**(QCD_power)
+c$$$  wgt1=sevmc*f_MC_S*xlum_mc_fact*
+c$$$  &               amp_split_xmcxsec(iamp,i)/g22
+c$$$  call add_wgt(12,orders,wgt1,0d0,0d0)
+c$$$  wgt1=sevmc*f_MC_H*xlum_mc_fact*
+c$$$  &               amp_split_xmcxsec(iamp,i)/g22
+c$$$  call add_wgt(13,orders,-wgt1,0d0,0d0)
+c$$$  enddo
+c$$$  endif
+c$$$  enddo
+c$$$  endif
+c$$$  if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
+c$$$  $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
+c$$$  n_MC_subt_diverge=n_MC_subt_diverge+1
+c$$$  endif
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
