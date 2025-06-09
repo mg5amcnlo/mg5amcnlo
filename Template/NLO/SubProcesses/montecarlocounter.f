@@ -631,7 +631,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       integer n_connect,i_connect(2)
-      logical include_gfunw
+      logical include_gfun
       mass=pmass(l_fks)
       veckn_ev=rho(p(0,l_fks))
       veeckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
@@ -1103,8 +1103,10 @@ c
          xkern(1:2)=xkern(1:2)*gfactsf
          xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
       else
+         !TODO: pass these to driver_mintMC (or re-compute them?)
          gfactsf=1d0
          gfactcl=1d0
+         gfactazi=1d0
       endif
       
       ione=0
