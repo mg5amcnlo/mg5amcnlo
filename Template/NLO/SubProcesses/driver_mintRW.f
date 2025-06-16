@@ -110,7 +110,9 @@ c general MadFKS parameters
 
       character*1000 buff,buff2
       double precision ratio
-      
+
+      double precision :: total_weight, xsec_rw
+      integer :: accepted_events    
 C-----
 C  BEGIN CODE
 C-----
@@ -223,7 +225,9 @@ c     Prepare the MINT folding
       endif
       close(99)
       write(*,*) 'Reweighting ', nevts, 'events'
-
+      
+      total_weight = 0.d0
+      accepted_events = 0
 
 ! open the existing event file for reading:
       open(unit=99,file='events.lhe.rwgt',status='old',err=999)
@@ -246,6 +250,9 @@ c     Prepare the MINT folding
 !     compute the NLOoverBorn ratio:
          call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
          XWGTUP=XWGTUP*ratio
+         
+         total_weight = total_weight + XWGTUP
+         accepted_events = accepted_events + 1
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
      $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
@@ -257,8 +264,11 @@ c     Prepare the MINT folding
       close(98)
       close(99)
 
-       
+      xsec_rw = total_weight / dble(accepted_events)
+      write(*,*) 'Total number of events:', accepted_events
+      write(*,*) 'Reweighted cross section (LO → NLO):', xsec_rw, 'pb' 
       return
+
  999  write (*,*) 'nevts file not found'
       stop
       end
@@ -1354,4 +1364,5 @@ c$$$            endif
 c
       lbw(0)=0
       close(83)
+      
       end
