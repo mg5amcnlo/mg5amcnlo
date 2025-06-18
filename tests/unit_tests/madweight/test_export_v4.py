@@ -296,11 +296,11 @@ class TestMadWeight(IOTests.IOTestManager):
         text = strfile.getvalue()
         
         # first ensure that the file seems coherent
-        self.assertFalse(' call initcluster' in  text)
-        self.assertFalse('ickkw' in text )
-        self.assertFalse('genps.inc' in text )
-        self.assertTrue('logical function cut_bw' in text)
-        self.assertTrue('maxparticles.inc' in text )
+        self.assertNotIn(' call initcluster', text)
+        self.assertNotIn('ickkw', text)
+        self.assertNotIn('genps.inc', text)
+        self.assertIn('logical function cut_bw', text)
+        self.assertIn('maxparticles.inc', text)
         
         open(pjoin(self.IOpath, 'cuts.f'),'w').write(text)
         # But force manual inspection at each change of the file

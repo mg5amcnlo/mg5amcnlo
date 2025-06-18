@@ -144,6 +144,8 @@ genps_fks.o: mint_module.o FKSParams.o
 symmetry_fks_v3.o: mint_module.o
 test_soft_col_limits.o: mint_module.o
 madfks_plot.o: mint_module.o
+write_event.o: mint_module.o
+check_poles.o: mint_module.o
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym

@@ -34,7 +34,31 @@ def load_model(name, decay=False):
     if name.endswith('/'):
         name = name[:-1]
     
+    # sanity check that model name not yet in path
+    internal_files = ['function_library', 
+                      'parameters', 
+                      'particles', 
+                      'couplings', 
+                      'lorentz', 
+                      'object_library',
+                      'vertices',
+                      'build_restrict',
+                      'function_library', 
+                      'coupling_orders',
+                      'decays',
+                      'CT_couplings',
+                      'CT_parameters',
+                      'CT_vertices',
+                      'write_param_card'] 
 
+
+    for path in internal_files:
+        if path in sys.modules:
+            old =  sys.modules[path]
+            modelname = os.path.basename(os.path.dirname(old.__file__))
+            if modelname != name:
+                del sys.modules[path]
+ 
 
     path_split = name.split(os.sep)
     if len(path_split) == 1:

@@ -294,6 +294,10 @@ in presence of majorana particle/flow violation"""
             except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR('unknow type in Lorentz Evaluation: %s ' % str(error)) 
+            except Exception:
+                msg = 'unknow Exception in Lorentz Evaluation (%s):%s' %(str(lorentz), str(error))
+                logger.error(msg)
+                raise ALOHAERROR(msg)                 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):

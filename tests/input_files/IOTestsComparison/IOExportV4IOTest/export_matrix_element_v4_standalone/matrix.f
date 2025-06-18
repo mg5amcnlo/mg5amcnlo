@@ -279,7 +279,10 @@ C     Amplitude(s) for diagram number 5
       CALL IOVXXX(W(1,9),W(1,6),W(1,4),MGVX12,AMP(5))
 C     Amplitude(s) for diagram number 6
       CALL IOVXXX(W(1,7),W(1,6),W(1,3),MGVX12,AMP(6))
-      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
+      JAMP(1) = (-1.000000000000000D+00)*AMP(1)+(-1.000000000000000D
+     $ +00)*AMP(2)+(-1.000000000000000D+00)*AMP(3)+(
+     $ -1.000000000000000D+00)*AMP(4)+(-1.000000000000000D+00)*AMP(5)
+     $ +(-1.000000000000000D+00)*AMP(6)
 
       MATRIX = 0.D0
       DO I = 1, NCOLOR

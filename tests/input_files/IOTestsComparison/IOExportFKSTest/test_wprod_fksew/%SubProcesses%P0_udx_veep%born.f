@@ -436,6 +436,7 @@ C     1 T(2,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      JAMP(:,:) = (0D0,0D0)
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       DO I = 1, NSQAMPSO
         ANS(1,I)=0D0

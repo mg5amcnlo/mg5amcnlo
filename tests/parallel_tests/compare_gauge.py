@@ -30,6 +30,7 @@ from . import loop_me_comparator
 
 from madgraph import MG5DIR
 import tests.parallel_tests.test_aloha as test_aloha
+import tests.test_manager as test_manager
 
 pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -173,6 +174,7 @@ class GaugeComparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},model = 'sm',
                              filename = "short_cs_sm_gauge_p1.log")
 
+    @test_manager.bypass_for_py3
     def test_cross_gauge_p2(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically        

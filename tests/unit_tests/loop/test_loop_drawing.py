@@ -140,17 +140,23 @@ class TestLoopDrawer(unittest.TestCase):
         level_solution = [1, 0, 0, 2, 2]
         x_position = [1 / 2, 0, 0, 1, 1]
         y_position = [1 / 2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.vertexList), 5)
+        self.assertEqual(len(diagram.vertexList), 5)
         for i in range(0, 5):
-            self.assertEquals(diagram.vertexList[i].level, \
-                              level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
-                              x_position[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
-                              y_position[i])
+            self.assertEqual(
+                diagram.vertexList[i].level,
+                level_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_x,
+                x_position[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_y,
+                y_position[i]
+            )
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
         # test that LO is still fine when generate via NLO: S-channel
         diagram = self.store_diagram['g g > g g'][1]
@@ -166,7 +172,7 @@ class TestLoopDrawer(unittest.TestCase):
         level_solution = [1, 2, 0, 0, 3, 3]
         x_position = [1/3, 2/3, 0, 0, 1, 1]
         y_position = [1/2, 1/2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.vertexList), 6)
+        self.assertEqual(len(diagram.vertexList), 6)
 
 
     def test_NLO_draw(self):
@@ -210,18 +216,24 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
         y_solution = [1/6, 5/6, 3/4, 1/2, 0, 0, 1, 1]
         
-        self.assertEquals(len(diagram.vertexList), 8)
+        self.assertEqual(len(diagram.vertexList), 8)
         
         for i in range(0, 8):
-            self.assertEquals(diagram.vertexList[i].level, \
-                              level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
-                              x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
-                              y_solution[i])
+            self.assertEqual(
+                diagram.vertexList[i].level,
+                level_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_x,
+                x_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_y,
+                y_solution[i]
+            )
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
     def test_flipping(self):
         """ check if the flipping of loop-line work"""
@@ -281,17 +293,23 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
         y_solution = [1/6, 5/6, 3/4, 1/2, 0, 0, 1, 1]
         
-        self.assertEquals(len(diagram.vertexList), 8)
+        self.assertEqual(len(diagram.vertexList), 8)
         for i in range(0, 8):
-            self.assertEquals(diagram.vertexList[i].level, \
-                              level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
-                              x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
-                              y_solution[i])
+            self.assertEqual(
+                diagram.vertexList[i].level,
+                level_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_x,
+                x_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_y,
+                y_solution[i]
+            )
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
         
         
 
@@ -322,17 +340,23 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [2/3, 1/3, 1/3, 1, 1, 0, 0]
         y_solution = [1/2, 3/4, 1/4, 0, 1, 1, 0]
         
-        self.assertEquals(len(diagram.vertexList), 7)
+        self.assertEqual(len(diagram.vertexList), 7)
         for i in range(0, 7):
-            self.assertEquals(diagram.vertexList[i].level, \
-                              level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
-                              x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
-                              y_solution[i])
+            self.assertEqual(
+                diagram.vertexList[i].level,
+                level_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_x,
+                x_solution[i]
+            )
+            self.assertAlmostEqual(
+                diagram.vertexList[i].pos_y,
+                y_solution[i]
+            )
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
         # check the associate position
         
@@ -522,18 +546,18 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         # check that all link to line1 are ok
         self.assertEqual(line1.begin, vertex1)
         self.assertEqual(line1.end, vertex3)
-        self.assertTrue(line1 in vertex1.lines)
-        self.assertTrue(line1 in vertex3.lines)
+        self.assertIn(line1, vertex1.lines)
+        self.assertIn(line1, vertex3.lines)
         #self.assertTrue(vertex1 in self.box_drawing.vertexList)
         #self.assertTrue(vertex4 in self.box_drawing.vertexList)
 
         
         #check that all info to line2 are deleted
-        self.assertFalse(line2 in self.box_drawing.lineList)
-        self.assertFalse(line2 in vertex1.lines)
-        self.assertFalse(line2 in vertex3.lines)
-        self.assertFalse(vertex2 in self.box_drawing.vertexList)
-        self.assertFalse(vertex3 in self.box_drawing.vertexList)
+        self.assertNotIn(line2, self.box_drawing.lineList)
+        self.assertNotIn(line2, vertex1.lines)
+        self.assertNotIn(line2, vertex3.lines)
+        self.assertNotIn(vertex2, self.box_drawing.vertexList)
+        self.assertNotIn(vertex3, self.box_drawing.vertexList)
         
 
     def def_box(self):

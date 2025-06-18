@@ -1212,7 +1212,7 @@ class ConfigFile(dict):
                     for pair in value[1:-1].split(','):
                         if not pair.strip():
                             break
-                        x, y = pair.split(':')
+                        x, y = pair.rsplit(':',1)
                         x, y = x.strip(), y.strip()
                         if x.startswith(('"',"'")) and x.endswith(x[0]):
                             x = x[1:-1] 
@@ -3424,7 +3424,7 @@ class RunCard(ConfigFile):
         elif formatv == 'float':
             if isinstance(value, str):
                 value = value.replace('d','e')
-            return ('%.10e' % float(value)).replace('e','d')
+            return ('%.15e' % float(value)).replace('e','d')
         
         elif formatv == 'str':
             # Check if it is a list
@@ -4050,6 +4050,7 @@ class RunCardLO(RunCard):
                       "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
                       "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "bias_wgt_custom": pjoin("SubProcesses","dummy_fct.f"),
                       "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
     
@@ -4064,6 +4065,8 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
+        self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
+                       allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
@@ -4412,7 +4415,8 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff','iww']:
+                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
+
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
@@ -4849,6 +4853,9 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        if proc_characteristic['ninitial'] == 1:
+            self['SDE_strategy'] =1
 
         if 'MLM' in proc_characteristic['limitations']:
             if self['dynamical_scale_choice'] ==  -1:
@@ -5965,7 +5972,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-13)
+        self.add_param("OSThres", 1.0e-8)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

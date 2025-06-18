@@ -512,7 +512,7 @@ class HelasModelTest(HelasModelTestSetup):
                            wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
 
-        self.assert_(self.mymodel.set('wavefunctions', wavefunctions))
+        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
 
         wf = helas_objects.HelasWavefunction()
         wf.set('particle', -2, self.mybasemodel)

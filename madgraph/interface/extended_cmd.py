@@ -1108,9 +1108,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if alias:
             choices += list(alias.keys())
         
+
+
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
-        
+        if fct_timeout is None:
+            fct_timeout = lambda x: question_instance.postcmd(x, default) if x and default else False
         if first_cmd:
             if isinstance(first_cmd, str):
                 question_instance.onecmd(first_cmd)
@@ -2271,6 +2274,9 @@ class SmartQuestion(BasicCmd):
                 if n:
                     self.default(line)
                     return self.postcmd(stop, line)
+            elif self.value is None and line:
+                self.default(line)
+                return self.postcmd(stop, line) 
             if not self.casesensitive:
                 for ans in self.allow_arg:
                     if ans.lower() == self.value.lower():

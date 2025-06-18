@@ -378,6 +378,7 @@ class TestRestrictModel(unittest.TestCase):
                     #[('GC_53', 1), ('GC_52', -1)], #GC_52 is not assigned to a vertex to they are consider as different coupling order and not merged... not relevant anyway
                     [('GC_54', 1), ('GC_56', -1)],
                     [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_68', 1), ('GC_80', 1)],
                     [('GC_7', 1), ('GC_9', -1)],
                     [('GC_70', 1), ('GC_73', -1)],
                     [('GC_74', 1), ('GC_75', -1)],
@@ -422,7 +423,7 @@ class TestRestrictModel(unittest.TestCase):
         
         self.model.locate_coupling()
         for coup in target:
-            self.assertTrue(coup in self.model.coupling_pos)
+            self.assertIn(coup, self.model.coupling_pos)
             self.assertEqual(sol[coup], [v['id'] for v in self.model.coupling_pos[coup]])
 
   
@@ -432,7 +433,7 @@ class TestRestrictModel(unittest.TestCase):
         
         self.model.locate_coupling()
         zero, iden = self.model.detect_identical_couplings()
-        self.assertEqual(len(iden), 13)
+        self.assertEqual(len(iden), 14)
         
         # Check that All the code/model is the one intended for this test
         target = [i for i in iden if len(i)==7][0] 
@@ -463,7 +464,7 @@ class TestRestrictModel(unittest.TestCase):
         for id in vertex_id:
             has_GC = False
             for coup in self.model.get_interaction(id)['couplings'].values():
-                self.assertFalse(coup in target[1:])
+                self.assertNotIn(coup, target[1:])
                 if coup == GC:
                     has_GC = True
             self.assertTrue(has_GC, True)
@@ -496,7 +497,7 @@ class TestRestrictModel(unittest.TestCase):
         for id in vertex_id:
             has_GC = False
             for coup in self.model.get_interaction(id)['couplings'].values():
-                self.assertFalse(coup in target[1:])
+                self.assertNotIn(coup, target[1:])
                 if coup == '-%s' % GC:
                     has_GC = True
             self.assertTrue(has_GC, True)
@@ -520,15 +521,15 @@ class TestRestrictModel(unittest.TestCase):
             for param in data:
                 if param.name == coupling_bbh: found_bbh +=1
                 elif param.name == coupling_4g: found_4g +=1
-        self.assertTrue(found_bbh>0)
-        self.assertTrue(found_4g>0)
+        self.assertGreater(found_bbh, 0)
+        self.assertGreater(found_4g, 0)
         
         # make the real test
         result = self.model.remove_couplings([coupling_bbh,coupling_4g])
         
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  [coupling_bbh, coupling_4g])
+                self.assertNotIn(param.name, [coupling_bbh, coupling_4g])
 
              
     def test_remove_interactions(self):
@@ -557,14 +558,14 @@ class TestRestrictModel(unittest.TestCase):
             for param in data:
                 if param.name == coupling_4g: found_4g +=1
                 elif param.name == coupling_bbh: found_bbh +=1
-        self.assertTrue(found_bbh>0)
-        self.assertTrue(found_4g>0)
+        self.assertGreater(found_bbh, 0)
+        self.assertGreater(found_4g, 0)
         
         # make the real test
         self.model.locate_coupling()
         result = self.model.remove_interactions([coupling_bbh, coupling_4g])
-        self.assertFalse(input_bbh in self.model['interactions'])
-        self.assertFalse(input_4g in self.model['interactions'])
+        self.assertNotIn(input_bbh, self.model['interactions'])
+        self.assertNotIn(input_4g, self.model['interactions'])
         
     
         # Now test case where some of them are deleted and some not
@@ -573,10 +574,10 @@ class TestRestrictModel(unittest.TestCase):
         assert coupling_ddz_1 == coupling_eez_1
         
         result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
-        self.assertTrue(coupling_eez_2 in list(input_eez['couplings'].values()))
-        self.assertFalse(coupling_eez_1 in list(input_eez['couplings'].values()))
-        self.assertFalse(coupling_ddz_1 in list(input_ddz['couplings'].values()))
-        self.assertFalse(coupling_ddz_2 in list(input_ddz['couplings'].values()))
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        self.assertNotIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertNotIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertNotIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""
@@ -611,7 +612,7 @@ class TestRestrictModel(unittest.TestCase):
         self.model.fix_parameter_values(['ymb','yb'],[])
         for dep,data in self.model['parameters'].items():
             for param in data:
-                self.assertFalse(param.name in  ['ymb'])
+                self.assertNotIn(param.name, ['ymb'])
                 if param.name == 'yb':
                     param.expr == 'ZERO'
                     
@@ -678,17 +679,17 @@ class TestRestrictModel(unittest.TestCase):
         self.model.restrict_model(self.restrict_file)
 
         # check remove interactions
-        self.assertFalse(interaction in self.model['interactions'])
+        self.assertNotIn(interaction, self.model['interactions'])
         
         # check remove parameters
         for dep,data in self.model['parameters'].items():
             for param in data:
-                self.assertFalse(param.name in  ['yb','ymb','MB','WT'])
+                self.assertNotIn(param.name, ['yb','ymb','MB','WT'])
 
         # check remove couplings
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  [coupling])
+                self.assertNotIn(param.name, [coupling])
 
         # check masses
         part_b = self.model.get_particle(5)

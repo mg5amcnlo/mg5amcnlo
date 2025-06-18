@@ -2387,15 +2387,13 @@ c factorisation scale variation (require recomputation of the PDFs)
                    q2fact(1)=mu2_f(kf) 
                    q2fact(2)=mu2_f(kf)
                else
-                   if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
-                       q2fact(1)=muF12_current
-                       q2fact(2)=mu2_f(kf)
-                   elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-                       q2fact(1)=mu2_f(kf) 
-                       q2fact(2)=muF22_current
-                   elseif(fixed_fac_scale1.and. fixed_fac_scale2)then
+                   if (abs(lpp(1)).eq. 3 .or.abs(lpp(1)).eq. 4 .and. abs(lpp(2)).eq. 1)then
                        q2fact(1)=muF12_current 
-                       q2fact(2)=muF22_current
+                       q2fact(2)=mu2_f(kf)
+                   elseif (abs(lpp(2)).eq. 3 .or.abs(lpp(2)).eq. 4 .and.abs(lpp(1)).eq. 1)then 
+                        q2fact(2)=muF22_current 
+                        q2fact(1)=mu2_f(kf)                 
+c                       write(*,*) q2fact(1),q2fact(2)
                    endif
                endif
                xlum(kf) = dlum()
@@ -2428,7 +2426,6 @@ c add the weights to the array
       tr_s=tr_s+(tAfter-tBefore)
       return
       end
-
       subroutine reweight_scale_NNLL
 c Use the saved weight lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
@@ -3858,7 +3855,7 @@ c H-event
          endif
       enddo
       return
- 30   format(i15,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,1x,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
@@ -6338,7 +6335,7 @@ c analogous routine written for VBF
 c     same as checkres, but also limits are arrays.
       implicit none
       include 'nexternal.inc'
-      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(15,0:3,nexternal+1)
+      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(0:3,nexternal+1)
      &     ,xp(15,0:3,nexternal+1)
       real*8 ckc(15),rckc(15),rat
       integer iflag,imax,iev,i_fks,j_fks,iret,ithrs,istop,
@@ -6427,7 +6424,7 @@ c
             do l=0,3
               write(78,*)'comp:',l
               do i=1,imax
-                call xprintout(78,xp(i,l,k),lxp(i,l,k))
+                call xprintout(78,xp(i,l,k),lxp(l,k))
               enddo
             enddo
           enddo
@@ -6438,7 +6435,7 @@ c
               write(78,*)'comp:',l
               do i=1,imax
                 call xprintout(78,xp(i,l,nexternal+1),
-     #                            lxp(i,l,nexternal+1))
+     #                            lxp(l,nexternal+1))
               enddo
             enddo
             write(78,*)''
@@ -6457,7 +6454,7 @@ c
               write(78,*)'comp:',l
               do i=1,imax
                 call xprintout(78,xp(i,l,i_fks)+xp(i,l,j_fks),
-     #                            lxp(i,l,i_fks)+lxp(i,l,j_fks))
+     #                            lxp(l,i_fks)+lxp(l,j_fks))
               enddo
             enddo
           endif

@@ -520,7 +520,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # do not trigger the question for tests
         if 'test_manager.py' in sys.argv[0]:
             from unittest.case import SkipTest
-            raise SkipTest
+            return
+            #raise SkipTest
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:BOLD')
         to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 

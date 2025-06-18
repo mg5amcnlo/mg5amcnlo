@@ -196,8 +196,9 @@ class Cluster(object):
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
                 'arguments': ' '.join([str(a) for a in argument]),
-                'program': ' ' if '.py' in prog else 'bash'}
+                'program': sys.executable if '.py' in prog else 'bash'}
         
+        temp_file_name = temp_file_name.replace("/","_")
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
         open(new_prog, 'w').write(text % dico)
