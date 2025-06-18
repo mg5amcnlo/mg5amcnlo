@@ -600,6 +600,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = [] # check which type of dependencies for running for each coupling
         # The color index used in this wavefunction
         self['color_key'] = 0
         # Properties relating to the leg/vertex
@@ -892,6 +893,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
             model = arguments[2]
+            self.model = model
             if name == 'interaction_id':
                 self.set('interaction_id', value)
                 if value > 0:
@@ -908,6 +910,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        #self.set('coup_deps', [model.get('coupling_dep')[c[1:]] if c.startswith('-') else model.get('coupling_dep')[c] for c in self.get('coupling')])
+                        #misc.sprint(self.get('coupling'), self.get('coup_deps'))
+                        
+
                 return True
             elif name == 'particle':
                 self.set('particle', model.get('particle_dict')[value])
@@ -1567,6 +1573,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     output['WF%d'%i]=output['WF%d'%i]+')'
                     
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get_with_flow('coupling')):
             # We do not include the - sign in front of the coupling of loop
             # wavefunctions (only the loop ones, the tree ones are treated normally)
@@ -1576,6 +1583,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
             else:
                 output['coup%d'%i] = coup
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+            if c in coupling_dep and 'aS' in coupling_dep[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
               
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
@@ -2538,6 +2552,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = []
         # The Lorentz and color index used in this amplitude
         self['color_key'] = 0
         # Properties relating to the vertex
@@ -2759,6 +2774,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        self.model = arguments[2]
+                        
+                        
                 return True
             else:
                 six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
@@ -3182,8 +3200,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     output['WF%d' % i ] = '(1,WE(%d))'%nb                    
                 
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+
+            if coupling_dep and 'aS' in coupling_dep[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
+
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''
@@ -3788,7 +3816,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def reuse_outdated_wavefunctions(self, helas_diagrams):
         """change the wavefunctions id used in the writer to minimize the 
            memory used by the wavefunctions."""
-           
+        
+
         if not self.optimization:
             for diag in helas_diagrams:
                 for wf in diag['wavefunctions']:
@@ -5437,6 +5466,15 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     for index in fs_indices[fs_id]:
                         chains.append([me for me in decay_elements[index] if me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id])
+                elif (len(fs_legs) == len(decay_elements) and \
+                     all(len(d)==1 for d in decay_is_ids) and \
+                     sorted(fs_ids) == sorted([d[0] for d in decay_is_ids])):
+                    # this cover the out of order case where only one particle is decaying in each
+                    for index in range(len(decay_elements)):
+                        out = [me for me in decay_elements[index] if me.get('processes')[0].\
+                                             get_initial_ids()[0] == fs_id]
+                        if out:
+                            chains.append(out)
 
                 if len(fs_legs) != len(decay_elements) or not chains or not chains[0]:
                     # In second case, or no chains are found
@@ -5459,7 +5497,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         combine = False
 
                 red_decay_chains = []
-
                 for prod in itertools.product(*chains):
                     # Now, need to ensure that we don't append
                     # duplicate chain combinations, e.g. (a>bc, a>de) and

@@ -353,7 +353,7 @@ class make_info_html_nlo(make_info_html):
                                 if content.startswith('P') and 
                                 os.path.isdir(os.path.join(self.dir,'SubProcesses',content))
                                 and os.path.islink(os.path.join(self.dir,'SubProcesses',content,'fks_singular.f'))]
-        
+        subproc.sort()
         for proc in subproc:
             files_dict = {'born': ['born.f'], 
                           'virt': [os.path.join('V' + proc[1:], 'loop_matrix.f')],

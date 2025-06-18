@@ -63,7 +63,7 @@ class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
     
-    def __init__(self, expr, outgoing, spins, name, infostr, denom=None):
+    def __init__(self, expr, outgoing, spins, name, infostr, model, denom=None):
         """ store the information """
 
         self.spins = spins
@@ -76,7 +76,7 @@ class AbstractRoutine(object):
         self.combined = []
         self.tag = []
         self.contracted = {}
-        
+        self.model = model
 
         
     def add_symmetry(self, outgoing):
@@ -240,7 +240,7 @@ in presence of majorana particle/flow violation"""
         infostr = str(self.lorentz_expr)
 
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
-                                                    infostr, self.denominator)
+                                                    infostr, self.model, self.denominator)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
@@ -294,6 +294,10 @@ in presence of majorana particle/flow violation"""
             except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR('unknow type in Lorentz Evaluation: %s ' % str(error)) 
+            except Exception:
+                msg = 'unknow Exception in Lorentz Evaluation (%s):%s' %(str(lorentz), str(error))
+                logger.error(msg)
+                raise ALOHAERROR(msg)                 
             else:
                 self.kernel_tag = set(aloha_lib.KERNEL.use_tag)
         elif isinstance(self.routine_kernel,str):
@@ -338,7 +342,7 @@ in presence of majorana particle/flow violation"""
                     #    #propagator incoming
                         lorentz *= complex(0,1) * SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
-                    if massless or not aloha.unitary_gauge: 
+                    if massless or aloha.unitary_gauge in [0,3]: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
                     else:
                         lorentz *= VectorPropagator(id, 'I2', id)
@@ -674,7 +678,7 @@ class AbstractALOHAModel(dict):
         # Option
         self.explicit_combine = explicit_combine
         # Extract the model name if combined with restriction
-        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_pattern = re.compile(r"^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
         if model_name_re:
             name = model_name_re.group('name')
@@ -819,7 +823,7 @@ class AbstractALOHAModel(dict):
             elif not init:
                 # need to create the aloha object
                 lorentz = eval('self.model.lorentz.%s' % lorentzname)
-                abstract = AbstractRoutineBuilder(lorentz)
+                abstract = AbstractRoutineBuilder(lorentz, model=self.model)
                 routine = abstract.compute_routine(outgoing, tag, factorize=False)                
                 init = True
 
@@ -1035,7 +1039,7 @@ class AbstractALOHAModel(dict):
                 l_lorentz = []
                 for l_name in list_l_name: 
                     l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
-                builder = CombineRoutineBuilder(l_lorentz)
+                builder = CombineRoutineBuilder(l_lorentz, model=self.model)
                                
                 for conjg in request[list_l_name[0]]:
                     #ensure that routines are in rising order (for symetries)
@@ -1106,7 +1110,9 @@ class AbstractALOHAModel(dict):
 
     def write(self, output_dir, language):
         """ write the full set of Helicity Routine in output_dir"""
+
         for abstract_routine in self.values():
+            #misc.sprint(abstract_routine.name, abstract_routine.outgoing, abstract_routine.spins, abstract_routine.expr)
             abstract_routine.write(output_dir, language)
 
         for routine in self.external_routines:
@@ -1314,7 +1320,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
         aloha_files.append('additional_aloha_function.o')
     
     text="ALOHARoutine = "
-    text += ' '.join(aloha_files)
+    text += ' '.join(sorted(aloha_files))
     text +='\n'
     
 

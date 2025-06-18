@@ -631,13 +631,22 @@ class MadSpinInterface(extended_cmd.Cmd):
     
         args = self.split_arg(line)
         self.check_launch(args)
-        for part in self.list_branches.keys():
+        for part in list(self.list_branches.keys()):
             if part in self.mg5cmd._multiparticles:
-            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
             else:
-                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                try:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                except KeyError:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part.lower()]
+                    self.list_branches[part.lower()] = self.list_branches[part]
+                    del self.list_branches[part]
+                    particle = self.mg5cmd._curr_model.get_particle(pid)
+                    if particle.get('antiname').upper() in self.list_branches:
+                        self.list_branches[particle.get('antiname').lower()] = \
+                            self.list_branches[particle.get('antiname').upper()]
+                        del self.list_branches[particle.get('antiname').upper()]
                 if pid in self.final_state:
                     break
         else:
@@ -941,12 +950,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
-                    raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed. One workaround is to force the final cross-section manually.")
+                    #raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed. One workaround is to force the final cross-section manually.")
+                    if len(self.list_branches[name]) == 1:
+                        evt_decayfile[pdg] = self.generate_events(pdg, min(nb_event,100000), mg5)
+                    else:
+                        evt_decayfile[pdg] = self.generate_events(pdg, min(nb_needed,100000), mg5, cumul=True)
                     
                      
         # Compute the branching ratio.
         if not self.options['cross_section']:
             br = 1
+            multi_br = [ ]
+            multi_totevt = 0
             for (pdg, event_files) in evt_decayfile.items():
                 if not event_files:
                     continue
@@ -975,7 +990,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                             logger.critical("Branching ratio larger than one for %s " % pdg) 
                         br *= (pwidth / totwidth)**nb_mult
                 else:
-                    raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
+                    pwidth = sum([event_files[k].cross for k in event_files])        
+                    multi_br.append(pwidth / totwidth) 
+                    multi_totevt += to_decay[pdg] % nb_event
+            if multi_br and multi_totevt % nb_event == 0:
+                if all(misc.equal(br,multi_br[0], 2) for br in multi_br): 
+                    logger.warning("not all event are decaying the same particle, this is only supported if each event have ONE decaying particle (not checked) and that all particles have the same BR")        
+                else:
+                    raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed: [%s %s ] " %(multi_br, multi_totevt))
+            elif multi_br:
+                raise self.InvalidCmd("The bridge mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed. (%s %s)" % (multi_br, multi_totevt))
         else:
             br = 1
         self.branching_ratio = br
@@ -1771,7 +1795,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         # 2. compute the decay matrix-element
         decay_text = []
         processes_decay = []

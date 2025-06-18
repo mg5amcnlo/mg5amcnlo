@@ -498,7 +498,7 @@ from object_library import all_propagators, Propagator
         """Copy/merge the routines written in Fortran/C++/pyhton"""
         
         #1. Special case for the formfactor written in Fortran
-        re_fct = re.compile('''^\s{7,70}[\w\s]*function (\w*)\(''',re.M+re.I)
+        re_fct = re.compile(r'''^\s{7,70}[\w\s]*function (\w*)\(''',re.M+re.I)
         present_fct = set()
         for dirpath in self.all_path:
             if os.path.exists(pjoin(dirpath, 'Fortran', 'functions.f')):

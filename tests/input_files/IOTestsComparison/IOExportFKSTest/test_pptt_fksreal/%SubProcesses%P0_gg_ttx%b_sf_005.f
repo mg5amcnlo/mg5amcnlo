@@ -68,7 +68,8 @@ C     reset the amp_split_cnt array
 C           take into account the fact that this is for QCD
             IF (J.EQ.QCD_POS) AMP_ORDERS(J) = AMP_ORDERS(J) + 2
           ENDDO
-            !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+C         amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos)
+C          = ans(I)
           IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1
      $     ,QCD_POS) = ANS(I)
@@ -205,7 +206,7 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 CF(NCOLOR2,NCOLOR1)
+      INTEGER CF(NCOLOR2,NCOLOR1),DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO),
      $  JAMP2(NCOLOR2,NAMPSO)
       COMPLEX*16 TMP_JAMP(0)
@@ -223,10 +224,9 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00
-     $ ,2.000000000000000D+00/
-      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
-     $ ,2.000000000000000D+00/
+      DATA DENOM/3/
+      DATA (CF(I,  1),I=  1,  2) /16,6/
+      DATA (CF(I,  2),I=  1,  2) /-2,6/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -260,7 +260,7 @@ C     JAMPs contributing to orders QCD=2 QED=0
           ENDDO
           DO N = 1, NAMPSO
             ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))
+     $       *DCONJG(JAMP1(I,N))/DENOM
           ENDDO
         ENDDO
       ENDDO

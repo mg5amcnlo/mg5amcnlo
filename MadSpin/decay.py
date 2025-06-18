@@ -1052,7 +1052,7 @@ class AllMatrixElement(dict):
                 continue
             pid =  leg.get('id')
             nb = leg.get('number')
-            if pid in to_decay:
+            if pid in to_decay and leg.get('state'):
                 i, proc = to_decay[pid].pop()
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
@@ -1605,12 +1605,16 @@ class width_estimate(object):
         # since compute_width cannot be used for particle with pid<0
         
         particle_set = set()
-        for part in resonances:
+        for i, part in enumerate(resonances[:]):
             if part in mgcmd._multiparticles:
                 for pid in mgcmd._multiparticles[part]:
                     particle_set.add(abs(pid))
                 continue
-            pid_part = abs(label2pid[part]) 
+            try:
+                pid_part = abs(label2pid[part])
+            except KeyError:
+                pid_part = abs(label2pid[part.lower()]) 
+                resonances[i] = part.lower()
             particle_set.add(abs(pid_part))  
 
         particle_set = list(particle_set)
@@ -2765,7 +2769,7 @@ class decay_all_events(object):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -3165,9 +3169,13 @@ class decay_all_events(object):
         need_param_card_modif = False
         
         # now extract the width of the resonances:
-        for particle_label in resonances:
+        for i,particle_label in enumerate(copy.copy(resonances)):
             try:
-                part=abs(self.pid2label[particle_label])
+                try:
+                    part=abs(self.pid2label[particle_label])
+                except KeyError as error:
+                    part=abs(self.pid2label[particle_label.lower()])
+                    resonances[i] = particle_label.lower()
                 #mass = self.banner.get('param_card','mass', abs(part))
                 width = self.banner.get('param_card','decay', abs(part))
             except ValueError as error:
@@ -4214,7 +4222,7 @@ class decay_all_events_onshell(decay_all_events):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')

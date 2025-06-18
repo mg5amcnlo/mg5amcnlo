@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -19,6 +19,8 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+    include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)s)
     INTEGER    NGRAPHS
@@ -31,11 +33,19 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    double precision RHEL ! random number for selecting helicity
+    double precision RCOL ! random number for selecting helicity
+    integer channel ! channel to keep for the multi-channel
+    integer ivec ! for using the correct coupling
+c
+c   output argument
+c
+    integer ihel, icol
 c
 c global (due to reading writting) 
 c
-        LOGICAL GOODHEL(NCOMB,2)
-	INTEGER NTRY(2)
+        LOGICAL GOODHEL(NCOMB, MAXSPROC)
+	    INTEGER NTRY(MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 
 C  
@@ -44,19 +54,16 @@ C
         INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
         INCLUDE 'config_subproc_map.inc'
         INTEGER NHEL(NEXTERNAL,NCOMB)
-        INTEGER ISHEL(2)
+        INTEGER ISHEL
         REAL*8 T,MATRIX%(proc_id)s
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
         INTEGER JC(NEXTERNAL),II
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-        INTEGER NGOOD(2), IGOOD(NCOMB,2)
-        INTEGER JHEL(2), J, JJ
-        INTEGER THIS_NTRY(2)
-        SAVE THIS_NTRY
+        INTEGER NGOOD
+        INTEGER J, JJ
 	INTEGER NB_FAIL
 	SAVE NB_FAIL
-	DATA THIS_NTRY /0,0/
 	DATA NB_FAIL /0/
         double precision get_channel_cut
         external get_channel_cut
@@ -70,36 +77,31 @@ C
     logical init_mode
     common /to_determine_zero_hel/init_mode
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
    
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
 
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
-    INTEGER IMIRROR,IPROC
+    INTEGER IMIRROR, IPROC
     COMMON/TO_MIRROR/ IMIRROR,IPROC
 
-       double precision tmin_for_channel	
-       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c       included vi run.inc    
+c       double precision tmin_for_channel	
+c       integer sde_strat ! 1 means standard single diagram enhancement strategy,
 c      	      	      	   2 means approximation by the	denominator of the propagator
-       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+c       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
 
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
 
-	double precision small_width_treatment
-	common/narrow_width/small_width_treatment
-    
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
     DATA XTRY, XREJ /0,0/
-    DATA NGOOD /0,0/
-    DATA ISHEL/0,0/
-    SAVE YFRAC, IGOOD, JHEL
+    DATA NGOOD /0/
+    DATA ISHEL/0/
+    SAVE YFRAC
 %(helicity_lines)s
 %(den_factor_line)s
 
@@ -111,8 +113,7 @@ C ----------
 C BEGIN CODE
 C ----------
 
-    NTRY(IMIRROR)=NTRY(IMIRROR)+1
-    THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1 
+    NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
@@ -121,23 +122,22 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
+    ENDIF
         JAMP2(0)=%(ncolor)d
         DO I=1,INT(JAMP2(0))
             JAMP2(I)=0D0
         ENDDO
-    ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
 
 !   If the helicity grid status is 0, this means that it is not yet initialized.
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
-    IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
+    IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
             %(beam_polarization)s
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
 			  call DS_add_entry('Helicity',I,T)
@@ -146,7 +146,7 @@ C ----------
             TS(I)=T
          ENDIF
       ENDDO
-      IF(NTRY(IMIRROR).EQ.(MAXTRIES+1)) THEN
+      IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1).and.DS_get_dim_status('Helicity').ne.-1) THEN
          call reset_cumulative_variable() ! avoid biais of the initialization
       ENDIF
       IF (ISUM_HEL.NE.0) then
@@ -163,49 +163,46 @@ C ----------
 			CALL DS_SET_GRID_MODE('Helicity','init')
           endif
 	  ELSE
-        JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.10)THEN
+        IF(NTRY(%(proc_id)s).LE.MAXTRIES)THEN
            DO I=1,NCOMB
 	      IF(init_mode) THEN
                   IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
                      PRINT *, 'Matrix Element/Good Helicity: %(proc_id)s ', i, 'IMIRROR', IMIRROR
 	          ENDIF
-	      ELSE IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-                 GOODHEL(I,IMIRROR)=.TRUE.
-                 NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-                 IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
+	      ELSE IF (.NOT.GOODHEL(I,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,%(proc_id)s)=.TRUE.
+                 NGOOD = NGOOD +1
+                 PRINT *,'Added good helicity ',I, 'for process %(proc_id)s',TS(I)*NCOMB/ANS,' in event ',NTRY(%(proc_id)s) 
               ENDIF
            ENDDO
 		endif
-        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
-           ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
+           ISHEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
       ENDIF
     ELSE IF (.not.init_mode) then            ! random helicity 
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
 
             %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
-
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+	    IHEL = HEL_PICKED
     ELSE
 	ANS = 1D0
 	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
-    CALL RANMAR(R)
+c    CALL RANMAR(R) ! rhel passed as input
     SUMHEL=0d0
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS
-       IF(R.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+       IF(RHEL.LT.SUMHEL)THEN
+          IHEL = I
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
           GOTO 10
@@ -228,7 +225,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
             endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+		ANS=ANS*AMP2(channel)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
@@ -240,10 +237,13 @@ c         Set right sign for ANS, based on sign of chosen helicity
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+
     END
- 
- 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL)
+
+
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -280,12 +280,14 @@ C
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     INTEGER IHEL
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  
     INTEGER I,J,M,N
     COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
-    REAL*8 CF(NCOLOR,NCOLOR)
+    INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+    INTEGER DENOM, CF_INDEX
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
@@ -302,10 +304,10 @@ C
       INTEGER SQSOINDEX%(proc_id)s
 C  
 C GLOBAL VARIABLES
-C  
+C
+   include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
+    include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment
@@ -353,10 +355,12 @@ JAMP(:,:) = (0d0,0d0)
 
     MATRIX%(proc_id)s = 0.D0 
 	DO M = 1, NAMPSO
+      CF_INDEX = 0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX + 1
+          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
         ENDDO
 		DO N = 1, NAMPSO
 		  %(select_configs_if)s
@@ -365,7 +369,8 @@ JAMP(:,:) = (0d0,0d0)
 		ENDDO
       ENDDO
 	ENDDO
-
+    MATRIX%(proc_id)s = MATRIX%(proc_id)s/DENOM
+    
     if(sde_strat.eq.1)then
 %(amp2_lines)s
     endif 

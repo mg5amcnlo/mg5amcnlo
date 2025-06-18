@@ -274,13 +274,39 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
+    def nice_string(self):
+        """String representation of the object. Outputs valid Python 
+        with improved format."""
 
+        mystr = '{\n'
+        for prop in self.get_sorted_keys():
+            if prop == 'spin':
+               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               if self[prop] in spin_name:
+                   spin_name = spin_name[self[prop]]
+               else:
+                   spin_name = 'unknown'
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
+                (self[prop], spin_name)
+            elif isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -327,7 +353,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
@@ -946,6 +972,7 @@ class Interaction(PhysicsObject):
         '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
 
 
+
 #===============================================================================
 # InteractionList
 #===============================================================================
@@ -1192,29 +1219,36 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
-        if (name == 'got_majoranas') and self[name] == None:
+        elif (name == 'got_majoranas') and self[name] == None:
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
-        if (name == 'coupling_orders') and self[name] == None:
+        elif (name == 'coupling_orders') and self[name] == None:
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
-        if (name == 'order_hierarchy') and not self[name]:
+        elif (name == 'order_hierarchy') and not self[name]:
             if self['interactions']:
                 self['order_hierarchy'] = self.get_order_hierarchy()    
 
-        if (name == 'expansion_order') and self[name] == None:
+        elif (name == 'expansion_order') and self[name] == None:
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
                    
-        if (name == 'name2pdg') and 'name2pdg' not in self:
+        elif (name == 'name2pdg') and 'name2pdg' not in self:
             self['name2pdg'] = {}
             for p in self.get('particles'):
                 self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
                 self['name2pdg'][p.get('name')] =  p.get('pdg_code')
-                
+        
+        elif (name == 'coupling_dep' and 'coupling_dep' not in self):
+            self['coupling_dep'] = {}
+            if self.get('couplings'):
+                for key, couplings in self.get('couplings').items():
+                    for coup in couplings:
+                        self['coupling_dep'][coup.name] = key
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value, force = False):
@@ -1223,7 +1257,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Ensure no doublets in particle list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
@@ -1231,7 +1266,8 @@ class Model(PhysicsObject):
 
         if name == 'interactions':
             # Ensure no doublets in interaction list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -1483,7 +1519,28 @@ class Model(PhysicsObject):
         
         return correlated   
 
+    def get_all_running_coupling(self):
+        """ return the list of all coupling which are running for this model """
+
+        all_running_coupling = []
+        all_running_type = ['aS'] + self.get_running()
+        not_running_index = [] # to allow to add at the end of the list the non running one
+        for type_coup, coup_list in self.get('couplings').items():
+            if any([c in all_running_type for c in type_coup]):
+                all_running_coupling += coup_list
+        return all_running_coupling
+    
+    def is_running_coupling(self, name, reset_cache=False):
+        """check if a coupling runs or not"""
+
+        if reset_cache or not hasattr(self, 'cache_running_coupling'):
+            self.cache_running_coupling = self.get_all_running_coupling()
         
+        if name.startswith('-'):
+            name = name[1:]
+        return name in self.cache_running_coupling
+
+
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -4126,6 +4183,9 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
+    if not doubletlist:
+        return
+    
     assert isinstance(doubletlist, list), \
            "Argument to make_unique must be list"
     

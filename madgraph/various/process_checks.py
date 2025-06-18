@@ -5414,9 +5414,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             res_str += '| Widths computed %s'%('analytically' if has_FRdecay 
                                                              else 'numerically')
             if result['recompute_width'] == 'first_time':
-                res_str += ' for \lambda = 1'
+                res_str += r' for \lambda = 1'
             elif result['recompute_width'] == 'always':
-                res_str += ' for all \lambda values'
+                res_str += r' for all \lambda values'
         res_str += " using mode '--recompute_width=%s'.\n"%result['recompute_width']
         for particle_name, width in result['widths_computed']:
             res_str += '| %-10s = %-11.6gGeV\n'%('Width(%s)'%particle_name,width)
@@ -5764,9 +5764,9 @@ minimum value of lambda to be considered in the CMS check."""\
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:
-                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#','\#'), CMSData])
-                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#','\#'), NWAData])
-                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#','\#'), DiffData])
+                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#',r'\#'), CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#',r'\#'), NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#',r'\#'), DiffData])
                 
         process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
@@ -5779,7 +5779,7 @@ minimum value of lambda to be considered in the CMS check."""\
         res_str += \
 """\n-----------------------------------------------------------------------------------------------
 | In the plots, the Complex Mass Scheme check is successful if the normalized difference      |
-| between the CMS and NWA result (lower inset) tends to a constant when \lambda goes to zero. |
+| between the CMS and NWA result (lower inset) tends to a constant when \\lambda goes to zero. |
 -----------------------------------------------------------------------------------------------\n"""
 
         # output the figures

@@ -1337,7 +1337,7 @@ class GoSamRunner(me_comparator.MERunner):
         file.close()
 
         file = open(os.path.join(dir_name,'test.f90'), 'w')
-        file.write(re.sub("5.0E\+02","%i.0E+00"% int(energy), test))
+        file.write(re.sub(r"5.0E\+02","%i.0E+00"% int(energy), test))
         file.close()
 
     def fix_common_file(self, dir_name):

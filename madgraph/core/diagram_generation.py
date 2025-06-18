@@ -49,7 +49,7 @@ class NoDiagramException(InvalidCmd): pass
 #===============================================================================
 
 class DiagramTag(object):
-    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
+    r"""Class to tag diagrams based on objects with some __lt__ measure, e.g.
     PDG code/interaction id (for comparing diagrams from the same amplitude),
     or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
     Algorithm: Create chains starting from external particles:

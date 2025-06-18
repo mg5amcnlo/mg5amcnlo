@@ -34,8 +34,9 @@ C
       common/to_xpoints/tx, nzoom
       double precision xzoomfact
       common/to_zoom/  xzoomfact
+      include 'vector.inc'      ! defines VECSIZE_MEMMAX
       include 'run.inc'
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 c
 c     DATA
 c
@@ -183,7 +184,7 @@ c     apply the boost
       end
 
 
-      SUBROUTINE unwgt(px,wgt,numproc)
+      SUBROUTINE unwgt(px,wgt,numproc, ihel, icol, ivec)
 C**************************************************************************
 C     Determines if event should be written based on its weight
 C**************************************************************************
@@ -198,6 +199,8 @@ c     Arguments
 c
       double precision px(0:3,nexternal),wgt
       integer numproc
+      integer ihel, icol
+      integer ivec
 c
 c     Local
 c
@@ -210,6 +213,9 @@ C
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
+      
       double precision    matrix
       common/to_maxmatrix/matrix
 
@@ -230,27 +236,31 @@ c
 C-----
 C  BEGIN CODE
 C-----
-      if (twgt .ge. 0d0) then
+      local_twgt = max(twgt_it, twgt)
+c      write(*,*) "twgt", twgt, twgt_it, local_twgt
+      if (local_twgt .ge. 0d0) then
+         p(:,:) = px(:,:)
          do i=1,nexternal
             do j=0,3
                p(j,i)=px(j,i)
             enddo
          enddo
          xwgt = abs(wgt)
+         twgt_it = max(twgt_it, xwgt/100d0)
          if (zooming) call zoom_event(xwgt,P)
          if (xwgt .eq. 0d0) return
          yran = xran1(idum)
-         if (xwgt .gt. twgt*fudge*yran) then
-            uwgt = max(xwgt,twgt*fudge)
+         if (xwgt .gt. local_twgt*fudge*yran) then
+            uwgt = max(xwgt,local_twgt*fudge)
 c           Set sign of uwgt to sign of wgt
             uwgt = dsign(uwgt,wgt)
-            if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
+            if (local_twgt .gt. 0) uwgt=uwgt/twgt/fudge
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt,numproc,.True.)
+            call write_leshouche(p,uwgt,numproc,.True., ihel, icol, ivec)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.)
+            call write_leshouche(p,wgt/local_twgt*1d-6,numproc,.True., ihel, icol, ivec)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -450,7 +460,7 @@ c      endif
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events)
+      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events, ihel, icol, ivec)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -464,7 +474,8 @@ c
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'message.inc'
-      include 'cluster.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'run_config.inc'
 
@@ -476,6 +487,8 @@ c
       double precision p(0:3,nexternal),wgt
       integer numproc
       logical do_write_events
+      integer ivec
+      integer ihel,icol
 c
 c     Local
 c
@@ -484,6 +497,7 @@ c
       integer ip, np, ic, nc
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
+      double precision beam_mass
       double precision pboost(0:3)
       double precision beta, get_betaz
       double precision ebi(0:3), ebo(0:3)
@@ -493,7 +507,7 @@ c
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
-
+      double precision eta
       integer nsym
 
       integer ievent
@@ -516,11 +530,8 @@ C
       integer          IPSEL
       COMMON /SubProc/ IPSEL
 
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
-
-      character*101       hel_buf
-      common/to_helicity/hel_buf
+c      character*101       hel_buf
+c      common/to_helicity/hel_buf
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -539,18 +550,20 @@ c
 
       double precision pmass(nexternal), tmp
       common/to_mass/  pmass
-
+      double precision local_mass
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps)
 c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 c      data ncolflow/maxamps*0/
 c      data ncolalt/maxamps*0/
 
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       include 'lhe_event_infos.inc'
       data AlreadySetInBiasModule/.False./
 
       include 'symswap.inc'
+c     
+      integer nhel(nexternal)
 C-----
 C  BEGIN CODE
 C-----
@@ -589,9 +602,14 @@ c        Color info is filled in mothup
 
 c   Set helicities
 c      write(*,*) 'Getting helicity',hel_buf(1:50)
-      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
-c      write(*,*) 'ihel',jpart(7,1),jpart(7,2)
+c      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
+c     write(*,*) 'ihel',jpart(7,1),jpart(7,2)
+      call get_helicities(iproc, ihel, nhel)
+      do i=1, nexternal
+         jpart(7,isym(i, jsym)) = nhel(i)
+      enddo
 
+      
 c   Fix ordering of ptclus
       do i=1,nexternal
         ptcltmp(isym(i,jsym)) = ptclus(i)
@@ -621,27 +639,61 @@ c
       if (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
-            if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then
-               ! construct the beam momenta in each frame and compute the related (z)boost
+           if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then
+                if((abs(lpp(1)).gt.2.and.abs(lpp(1)).ne.9).or.xbk(1).eq.1d0)then
+                    beam_mass = pmass(1)
+                else
+                    beam_mass = m1
+                endif   
                ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = DSQRT(ebi(0)**2-m1**2)
+               ebi(3) = DSQRT(ebi(0)**2-beam_mass**2)
                ebo(0) = ebeam(1)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = DSQRT(ebo(0)**2-m1**2)
+               ebo(3) = DSQRT(ebo(0)**2-beam_mass**2)
                beta = get_betaz(ebi, ebo)
+               if (xbk(1).eq.1d0) then
+                pb(0,isym(1,jsym)) = ebo(0)
+                pb(1,isym(1,jsym)) = ebo(1)
+                pb(2,isym(1,jsym)) = ebo(2)
+                pb(3,isym(1,jsym)) = ebo(3)
+                pb(4,isym(1,jsym)) = pmass(1)
+                endif
+               do j=1,nexternal
+                  if (j.eq.1.and.xbk(1).eq.1d0) cycle
+                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  pb(4,isym(j,jsym))=pmass(j)
+               enddo
+
             else
+                if((abs(lpp(2)).gt.2.and.abs(lpp(2)).ne.9).or.xbk(2).eq.1d0)then
+                    beam_mass = pmass(2)
+                else
+                    beam_mass = m2
+                endif   
                ebi(0) = p(0,2)/xbk(2) ! this assumes that particle 2 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = -1d0*DSQRT(ebi(0)**2-m2**2)
+               ebi(3) = -1d0*DSQRT(ebi(0)**2-beam_mass**2)
                ebo(0) = ebeam(2)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = -1d0*DSQRT(ebo(0)**2-m2**2)
+               ebo(3) = -1d0*DSQRT(ebo(0)**2-beam_mass**2)
                beta = get_betaz(ebi, ebo)
+               if (xbk(2).eq.1d0) then
+                pb(0,isym(2,jsym)) = ebo(0)
+                pb(1,isym(2,jsym)) = ebo(1)
+                pb(2,isym(2,jsym)) = ebo(2)
+                pb(3,isym(2,jsym)) = ebo(3)
+                pb(4,isym(2,jsym)) = pmass(2)
+               endif
+               do j=1,nexternal
+                  if (j.eq.2.and.xbk(2).eq.1d0) cycle
+                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  pb(4,isym(j,jsym))=pmass(j)
+               enddo
                ! wrong boost if both parton are massive!
             endif
          else
@@ -652,6 +704,17 @@ c
             call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
             pb(4,isym(j,jsym))=pmass(j)
          enddo
+
+         ! check for numerical_accuracy
+         if (pb(0,1).gt.ebeam(1).or.pb(0,2).gt.ebeam(2))then
+            ! go back to old method --more accurate when boosting with xbk close  to one-- 
+            eta = sqrt(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+            pboost(0)=p(0,1)*(eta + 1d0/eta)
+            pboost(3)=p(0,1)*(eta - 1d0/eta)
+            do j=1,nexternal
+               call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
+            enddo
+          endif
       else
          do j=1,nexternal
             call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
@@ -659,6 +722,8 @@ c
             pb(4,isym(j,jsym))=pmass(j)
          enddo
       endif
+
+
 
       if (IMIRROR.eq.2.and.pmass(1).ne.pmass(2)) then
 c        Note that in this context isym(1,jsym) should never be "2" since the mass differ 
@@ -670,7 +735,7 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc,flip)
+     $                npart,numproc,flip, icol, ivec)
 
       if (nincoming.eq.1)then
         do i=-nexternal+3,2*nexternal-3
@@ -710,12 +775,12 @@ c         print *,'i_pdgpdf: ',((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          s_buff(1) = '<mgrwt>'
-         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd-n_alpsem,
-     $        s_scale,'</rscale>'
-         if(n_alpsem.gt.0) then
-            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem,'E15.8,a)'
-            write(s_buff(3), cfmt) '<asrwt>',n_alpsem,
-     $           (s_qalps(I),I=1,n_alpsem) ,'</asrwt>'
+         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd(ivec)-n_alpsem(ivec),
+     $        s_scale(ivec),'</rscale>'
+         if(n_alpsem(ivec).gt.0) then
+            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem(ivec),'E15.8,a)'
+            write(s_buff(3), cfmt) '<asrwt>',n_alpsem(ivec),
+     $           (s_qalps(I,ivec),I=1,n_alpsem(ivec)) ,'</asrwt>'
          else
             write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
          endif
@@ -724,19 +789,19 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
             beam_number =2
          endif
          
-         if(n_pdfrw(1).gt.0.and.abs(lpp(1)).ne.2)then
-            if(2*n_pdfrw(1).lt.10) then
+         if(n_pdfrw(1,ivec).gt.0.and.abs(lpp(1)).ne.2)then
+            if(2*n_pdfrw(1,ivec).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+     $              n_pdfrw(1,ivec),'I9,',2*n_pdfrw(1,ivec),'E15.8,a)'
             else
                write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+     $              n_pdfrw(1,ivec),'I9,',2*n_pdfrw(1,ivec),'E15.8,a)'
             endif
             
             write(s_buff(4), cfmt) '<pdfrwt beam="', beam_number, '">',
-     $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
-     $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
-     $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
+     $           n_pdfrw(1,ivec),(i_pdgpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
+     $           (s_xpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
+     $           (s_qpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
      $           '</pdfrwt>'
          else
             write(s_buff(4), '(a,I1,a)') '<pdfrwt beam="',
@@ -746,35 +811,35 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          if (flip) then
             beam_number	= 1
          endif
-         if(n_pdfrw(2).gt.0.and.abs(lpp(2)).ne.2)then
-            if(2*n_pdfrw(2).lt.10) then
+         if(n_pdfrw(2,ivec).gt.0.and.abs(lpp(2)).ne.2)then
+            if(2*n_pdfrw(2,ivec).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+     $              n_pdfrw(2,ivec),'I9,',2*n_pdfrw(2,ivec),'E15.8,a)'
             else
                write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+     $              n_pdfrw(2,ivec),'I9,',2*n_pdfrw(2,ivec),'E15.8,a)'
             endif
             write(s_buff(5), cfmt) '<pdfrwt beam="',beam_number,'">',
-     $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
-     $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
-     $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
+     $           n_pdfrw(2,ivec),(i_pdgpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
+     $           (s_xpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
+     $           (s_qpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
      $           '</pdfrwt>'
          else
             write(s_buff(5), '(a)') '<pdfrwt beam="2">0</pdfrwt>'
          endif
-         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact,
+         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact(ivec),
      $        '</totfact>'
          s_buff(7) = '</mgrwt>'
       endif
 
 c     Write out buffers for clustering info
       nclus=0
-      if(icluster(1,1).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
+      if(icluster(1,1,ivec).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
          nclus=nexternal
          write(buffclus(1),'(a)')'<clustering>'
          do i=1,nexternal-2
             write(buffclus(i+1),'(a13,f9.3,a2,4I3,a7)') '<clus scale="',
-     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i),j=1,4),'</clus>'
+     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i,ivec),j=1,4),'</clus>'
          enddo
          write(buffclus(nexternal),'(a)')'</clustering>'
       endif

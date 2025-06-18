@@ -14,6 +14,18 @@
 # USAGE : run [num_events] [iseed]                                         ##
 #############################################################################
 
+function usage() {
+    local retcode="${1:-1}"  # default return code is 1
+    echo "Usage:"
+    echo "  run.sh [options] [num events] [seed]"
+    echo "  run.sh [options] [num events] [seed] [granularity]"
+    echo "Options:"
+    echo "  -h, --help                  print this message and exit"
+    echo "  -p, --parallel [num procs]  number of processes to run in parallel"
+    echo "  -m, --maxevts [num events]  maximum number of unweighted events per job"
+    exit $retcode
+}
+
 if [[ -d ./madevent ]]; then
     DIR='./madevent'
 else
@@ -32,23 +44,46 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 # For Mac OS X
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
+pos_args=()
+nprocs=1
+maxevts=2500 
 
-if [[  ($1 != "") && ("$2" != "") && ("$3" == "") ]]; then
-   num_events=$1
-   seed=$2
-   gran=1
-elif [[  ($1 != "") && ("$2" != "") && ("$3" != "") ]]; then
-   num_events=$1
-   seed=$2
-   gran=$3
-else
-   echo "Warning: input is not correct. script requires two arguments: NB_EVENT SEED"
-fi
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      usage 0 ;;
+    -p|--parallel)
+      nprocs="$2" && shift && shift ;;
+    -m|--maxevts)
+      maxevts="$2" && shift && shift ;;
+    -*)
+      echo "Error: Unknown option $1" && usage ;;
+    *)
+      pos_args+=("$1") && shift ;;
+  esac
+done
 
-echo "Now generating $num_events events with random seed $seed and granularity $gran"
+case `echo "${pos_args[@]}" | wc -w | tr -d " "`  in
+    "2")
+      num_events=${pos_args[0]}
+      seed=${pos_args[1]}
+      gran=1
+      ;;
+    "3")
+      num_events=${pos_args[0]}
+      seed=${pos_args[1]}
+      gran=${pos_args[2]}
+      ;;
+    *)
+      echo "Error: number of arguments is not correct"
+      usage
+      ;;
+esac
+
+echo "Now generating $num_events events with random seed $seed and granularity $gran using $nprocs processes"
 
 ############    RUN THE PYTHON CODE #####################
-${DIR}/bin/gridrun $num_events $seed $gran
+${DIR}/bin/gridrun $num_events $seed $gran $nprocs $maxevts
 ########################################################
 
 ###########    POSTPROCESSING      #####################

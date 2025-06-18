@@ -21,13 +21,14 @@ c-----
 c      pass_point = passcuts(p)
       end
 C 
-      LOGICAL FUNCTION PASSCUTS(P)
+      LOGICAL FUNCTION PASSCUTS(P, VECSIZE_USED)
 C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,3)           MOMENTUM OF ...
 C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            VECSIZE_USED (used only on 1st call) #events in parallel
 C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED
@@ -42,6 +43,7 @@ C
 C     ARGUMENTS
 C
       REAL*8 P(0:3,nexternal)
+      INTEGER VECSIZE_USED
 
 C
 C     LOCAL
@@ -67,9 +69,11 @@ C
 C
 C     GLOBAL
 C
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'cuts.inc'
 
+      
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
       double precision ptlepton(nexternal)
@@ -180,7 +184,7 @@ C     Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (isway=0)
       parameter (izero=0)
 
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
 C
 C
@@ -255,11 +259,15 @@ c               fixed_ren_scale=.true.
 c               call set_ren_scale(P,scale)
 c            endif
 c         endif
-         
+
+c     If scale is fixed, update G-dependent couplings for VECSIZE_USED events
+c     This is called only once in the application (FIRSTTIME=.true.)
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call update_as_param()
+            do i =1, VECSIZE_USED
+               call update_as_param(i)
+            enddo
          endif
 
 c     Put momenta in the common block to zero to start
@@ -299,12 +307,18 @@ c     Also make sure there's no INF or NAN
 c
 c     Limit S_hat
 c
-      if (dsqrt_shat.ne.0d0)then
-         if (nincoming.eq.2.and.sumdot(p(0,1),p(0,2),1d0) .lt. dsqrt_shat**2) then
-            passcuts=.false.
-            return
-         endif
-      endif
+      if(nincoming.eq.2) then
+        if (dsqrt_shat.ne.0d0.or.dsqrt_shatmax.ne.-1d0)then
+            xvar = sumdot(p(0,1),p(0,2),1d0)
+            if (xvar .lt. dsqrt_shat**2)then
+                passcuts=.false.
+                return
+            else if  (dsqrt_shatmax.ne.-1d0 .and. xvar .gt. dsqrt_shatmax**2)then
+                passcuts = .false.
+                return
+            endif
+        endif
+      endif      
 C $B$ DESACTIVATE_CUT $E$ !This is a tag for MadWeight
 
       if(debug) write (*,*) '============================='
@@ -1230,12 +1244,6 @@ c
 c     Here we cluster event and reset factorization and renormalization
 c     scales on an event-by-event basis, as well as check xqcut for jets
 c
-c     Note the following condition is the first line of setclscales
-
-      IF (FIRSTTIME2) THEN
-        FIRSTTIME2=.FALSE.
-        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
-      ENDIF
 
       if(debug) write (*,*) '============================='
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '

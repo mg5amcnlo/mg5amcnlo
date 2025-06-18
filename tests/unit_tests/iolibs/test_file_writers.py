@@ -25,6 +25,9 @@ import tests.unit_tests as unittest
 import madgraph.iolibs.file_writers as writers
 from six.moves import zip
 import madgraph.various.misc as misc
+from madgraph import MG5DIR
+
+pjoin = os.path.join
 
 #===============================================================================
 # FortranWriterTest
@@ -59,7 +62,7 @@ class CheckFileCreate():
         #full match expected
         if not partial:
             for a, b in zip(list_sol, list_cur):
-                self.assertEqual(a,b)
+                self.assertEqual(a.strip(),b.strip())
             #for a, b in zip(current_value.split('\n'), solution.split('\n')):
             #    self.assertEqual(a,b)
             #self.assertEqual(current_value.split('\n'), solution.split('\n'))
@@ -124,6 +127,9 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         lines.append("bah=2")
         lines.append(" endif")
         lines.append("test")
+        lines.append("# this is a comment")
+        lines.append('#ifdef not a comment')
+        lines.append("c$$$C EXAMPLE: cut on top quark pT")
 
         goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHHHH
      $ +ASDASD, WSPEDFTEISPD)
@@ -139,7 +145,10 @@ C       Test
  20   ELSE
         BAH=2
       ENDIF
-      TEST\n"""
+      TEST\n
+C     this is a comment
+#ifdef not a comment
+C     $$$C EXAMPLE: cut on top quark pT\n"""
 
         writer = writers.FortranWriter(self.give_pos('fortran_test')).\
                  writelines(lines)
@@ -204,6 +213,31 @@ C       Test
       # Check that the output stays the same
       self.assertFileContains('fortran_test',
                                  goal_string)
+  
+    def test_dummy_fcts(self):
+        
+      input = pjoin(MG5DIR, 'Template', 'NLO', 'SubProcesses', 'dummy_fct.f')
+      text = open(input).read()
+
+      writer = writers.FortranWriter(self.give_pos('fortran_test'))
+      writer.write(text)
+      
+      for line in  open(self.give_pos('fortran_test')).readlines():
+          if line.startswith(' '):
+              self.assertFalse(line.strip().startswith(('c ','C ', 'c$', 'C$')))
+      
+      input = pjoin(MG5DIR, 'Template', 'LO', 'SubProcesses', 'dummy_fct.f')
+      text = open(input).read()
+
+      writer = writers.FortranWriter(self.give_pos('fortran_test'))
+      writer.write(text)
+      
+      for line in  open(self.give_pos('fortran_test')).readlines():
+          if line.startswith(' '):
+              self.assertFalse(line.strip().startswith(('c ','C ','c$', 'C$')))      
+
+
+      #self.assertFileContains('fortran_test', text)
 
 
 #===============================================================================

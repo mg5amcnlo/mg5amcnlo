@@ -230,9 +230,11 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -248,11 +250,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -268,22 +269,29 @@ C     Amplitude(s) for diagram number 1
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
-      JAMP(1,1)=+1D0/2D0*(+1D0/3D0*AMP(1)+AMP(2))
-      JAMP(2,1)=+1D0/2D0*(-AMP(1)-1D0/3D0*AMP(2))
-      LNJAMP(1,1)=+1D0/2D0*(+AMP(2))
-      LNJAMP(2,1)=+1D0/2D0*(-AMP(1))
+      JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
+     $ -01)*AMP(2)
+      JAMP(2,1) = (-5.000000000000000D-01)*AMP(1)+(-1.666666666666667D
+     $ -01)*AMP(2)
+      LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
+      LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
       RES = 0.D0
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N)) +
      $        ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
+        ENDDO
+        DO N = 1, NAMPSO
+          RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N))/DENOM
         ENDDO
       ENDDO
 
@@ -359,7 +367,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+C     REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
@@ -374,11 +382,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -399,10 +406,12 @@ C     Amplitude(s) for diagram number 1
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
-      JAMP(1,1)=+1D0/2D0*(+1D0/3D0*AMP(1)+AMP(2))
-      JAMP(2,1)=+1D0/2D0*(-AMP(1)-1D0/3D0*AMP(2))
-      LNJAMP(1,1)=+1D0/2D0*(+AMP(2))
-      LNJAMP(2,1)=+1D0/2D0*(-AMP(1))
+      JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
+     $ -01)*AMP(2)
+      JAMP(2,1) = (-5.000000000000000D-01)*AMP(1)+(-1.666666666666667D
+     $ -01)*AMP(2)
+      LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
+      LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
       END
 
@@ -494,6 +503,7 @@ C     JAMPs contributing to orders QCD=2
       NCOL = 2
       RETURN
       END
+
 
 
 

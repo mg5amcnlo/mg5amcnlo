@@ -271,7 +271,8 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8  CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
@@ -282,25 +283,19 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  4) /1.200000000000000D+01
-     $ ,4.000000000000000D+00,4.000000000000000D+00,0.000000000000000D
-     $ +00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  4) /12,8,8,0/
 C     1 T(1,2,4) T(3,5)
-      DATA (CF(I,  2),I=  1,  4) /4.000000000000000D+00
-     $ ,1.200000000000000D+01,0.000000000000000D+00,4.000000000000000D
-     $ +00/
+      DATA (CF(I),I=  5,  7) /12,0,8/
 C     1 T(1,2,5) T(3,4)
-      DATA (CF(I,  3),I=  1,  4) /4.000000000000000D+00
-     $ ,0.000000000000000D+00,1.200000000000000D+01,4.000000000000000D
-     $ +00/
+      DATA (CF(I),I=  8,  9) /12,8/
 C     1 T(1,3,4) T(2,5)
-      DATA (CF(I,  4),I=  1,  4) /0.000000000000000D+00
-     $ ,4.000000000000000D+00,4.000000000000000D+00,1.200000000000000D
-     $ +01/
+      DATA (CF(I),I= 10, 10) /12/
 C     1 T(1,3,5) T(2,4)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      JAMP(:,:) = (0D0,0D0)
       CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))
@@ -338,15 +333,21 @@ C     JAMPs contributing to orders QCD=3 QED=0
         RES(I)=0D0
       ENDDO
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX+1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX4(M,N)) = RES(SQSOINDEX4(M,N)) + ZTEMP
      $       *DCONJG(JAMP(I,N))
           ENDDO
+        ENDDO
+
+        DO N = 1, NAMPSO
+          RES(SQSOINDEX4(M,N)) = RES(SQSOINDEX4(M,N))/DENOM
         ENDDO
       ENDDO
 

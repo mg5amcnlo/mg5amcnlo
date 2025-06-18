@@ -14,6 +14,7 @@ c
       include 'maxamps.inc'
       include 'nexternal.inc'
       include 'cuts.inc'
+      include '../../Source/vector.inc'
       include '../../Source/run.inc'
       
       double precision ZERO
@@ -38,7 +39,7 @@ c
 c
 c     Global
 c
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       logical gridpack
       common/to_gridpack/gridpack
       double precision stot
@@ -231,7 +232,7 @@ c            do j=1,2**nbw
 c               write(*,*) 'mapping',ic,mapconfig(i),icode               
                if (icode .eq. 0) then
 c                 Create format string based on number of digits
-                  write(formstr,'(a,i1,a)') '(I',nconf,'$)'
+                  write(formstr,'(a,i1,a)') '(I',nconf,',$)'
                   write(*,formstr) mapconfig(i)
 c                 Write symmetry factors
                   write(formstr2,'(a,i2,a)') '(2i',nsym,')'
@@ -241,10 +242,10 @@ c                 Create format string based on number of digits
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   if(nconf+ncode+1.lt.10) then
                      write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   else
                      write(formstr,'(a,i2,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   endif
                   write(*,formstr) dconfig
 c                 Write symmetry factors
@@ -259,7 +260,7 @@ c                 Write symmetry factors
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   write(27,formstr2) dconfig,use_config(i)
                endif
-               write(*,'(a$)') ' '
+               write(*,'(a,$)') ' '
  100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
@@ -322,7 +323,8 @@ c
 c
 c     Global
 c
-      include 'coupl.inc'                     !Mass and width info
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
       double precision stot
       common/to_stot/stot
 
@@ -459,7 +461,8 @@ c
       common/to_bwcutoff/bwcutoff
       double precision stot
       common/to_stot/stot
-      include 'coupl.inc'                     !Mass and width info
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
 
 c-----
 c  Begin Code

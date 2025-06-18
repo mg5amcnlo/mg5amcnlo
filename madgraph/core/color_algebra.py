@@ -371,7 +371,7 @@ class Epsilon(ColorObject):
 
     @staticmethod
     def perm_parity(lst, order=None):
-        '''\                                                                                                                                                                                                 
+        r'''\                                                                                                                                                                                                 
         Given a permutation of the digits 0..N in order as a list,                                                                                                                                           
         returns its parity (or sign): +1 for even parity; -1 for odd.                                                                                                                                        
         '''
@@ -957,6 +957,8 @@ class ColorString(list):
     def __eq__(self, col_str):
         """Check if two color strings are equivalent by checking if their
         canonical representations and the coefficients are equal."""
+        #misc.sprint(self.coeff, self.Nc_power, self.is_imaginary, self.to_canonical())
+        #misc.sprint(col_str.coeff, col_str.Nc_power, col_str.is_imaginary, col_str.to_canonical())
 
         return self.coeff == col_str.coeff and \
                self.Nc_power == col_str.Nc_power and \
