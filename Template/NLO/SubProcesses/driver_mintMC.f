@@ -973,8 +973,6 @@ c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
-            endif
-            if (passcuts_nbody .and. abrv.ne.'real') then
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set

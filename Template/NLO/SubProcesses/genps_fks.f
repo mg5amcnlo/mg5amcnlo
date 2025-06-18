@@ -1850,8 +1850,6 @@ c Fill common blocks
             enddo
          enddo
          jac=xjac
-         if (nlo_ps) call fill_kinematics_module(p,i_fks,j_fks,xi_i_fks
-     $        ,y_ij_fks,m_j_fks)
       else
          tau_cnt(icountevts)=tau
 c Special fix in the case the soft counter-events are not generated but

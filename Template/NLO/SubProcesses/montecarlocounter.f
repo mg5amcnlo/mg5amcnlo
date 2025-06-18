@@ -636,7 +636,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       veckn_ev=rho(p(0,l_fks))
       veeckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
       xp0jfks=p(0,l_fks)
-      call fill_kinematics_module(p,k_fks,l_fks,xi,y,mass)
+      call fill_kinematics_module(p,k_fks,l_fks,xi,y,mass,include_gfun)
 
 !     compute MC subtraction term for the 'kl' configuration
 
@@ -644,15 +644,6 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       call find_color_connectors(born_flow_picked,fksfather,n_connect
      $     ,i_connect)
 
-!     TODO: current way of dealing with the G-functions cannot
-!     work. We could mulitply only the MC_kl for which kl=ij with the
-!     Gfunction, since only those can go *very* close to the limit
-!     (the others are damped by the S_ij). Hence, the computation of
-!     those should go *outside* the loop over kl.  Note: also current
-!     default code isn't correct, because GfunctionSoft depends on the
-!     flavour of i_fks -- information that is lossed when the
-!     replacement of amp_split_xmcxsec is evaluated.
-      
 !     given the flow, loop over the (up to two) partners of the
 !     fks-father.
       do iconnect=1,n_connect
@@ -1071,15 +1062,8 @@ c$$$  if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
       MCcntcalled=MCcntcalled+4
       
 c     Shower variables
-      if(shower_mc_mod(1:7).eq.'HERWIG6')then
-!     TODO: move inside get_shower_variables
-         E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
-         z=zHW6(E0sq)
-         xi=xiHW6(E0sq,z)
-         xjac=xjacHW6(E0sq,xi,z)
-      else
-         call get_shower_variables(z,xi,xjac)
-      endif
+      E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
+      call get_shower_variables(E0sq,z,xi,xjac)
       
 c     Compute dead zones
       call get_dead_zone(z,xi,qMC,i_connect,lzone,PY6PTweight)
@@ -1099,14 +1083,8 @@ c
       endif
 
       if (include_gfun) then
-         call compute_gfun(gfactsf,gfactcl,gfactazi)
          xkern(1:2)=xkern(1:2)*gfactsf
          xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
-      else
-         !TODO: pass these to driver_mintMC (or re-compute them?)
-         gfactsf=1d0
-         gfactcl=1d0
-         gfactazi=1d0
       endif
       
       ione=0
@@ -1134,33 +1112,6 @@ c
          stop 1
       endif
       return
-      end
-
-      subroutine compute_gfun(gfactsf,gfactcl,gfactazi)
-      use kinemtics_module
-      implicit none
-      include 'fks_powers.inc'
-      double precision gfactsf,gfactcl,gfactazi,ymin
-     $     ,delta,gfunction
-      double precision alsf,besf
-      common/cgfunsfp/alsf,besf
-      double precision alazi,beazi
-      common/cgfunazi/alazi,beazi
-      double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
-      common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
-      parameter (ymin=0.9d0)
-      if(ileg.le.2)then
-         delta=min(1d0,deltaI)
-      elseif(ileg.ge.3)then
-         delta=min(1d0,deltaO)
-      endif
-      ! TODO: review gfactcl vs. gfactazi and how it approaches the limits.
-      gfactsf=gfunction(x,alsf,besf,2d0)
-      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
-      gfactcl=gfunction(yij,alsf,-(1d0-ymin),1d0)
-      if(alazi.lt.0d0)gfactazi=1-gfunction(yij,-alazi,beazi,delta)
       end
 
       
@@ -1263,7 +1214,7 @@ c G-function parameters
       
 c Shower variables (all except HW6, since that one depends on the
 c partner)
-      call get_shower_variables(ztmp,xitmp,xjactmp)
+      call get_shower_variables(E0sq,ztmp,xitmp,xjactmp)
       
       first_MCcnt_call=.false.
  222  continue
@@ -1693,45 +1644,48 @@ c
 
 
       
-      subroutine get_shower_variables(ztmp,xitmp,xjactmp)
+      subroutine get_shower_variables(E0sq,z,xi,xjac)
       use process_module
       use kinematics_module
       implicit none
-      double precision ztmp,xitmp,xjactmp
-      double precision zHWPP,xiHWPP,xjacHWPP,zPY6Q,xiPY6Q,xjacPY6Q
-     $     ,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
-      external zHWPP,xiHWPP,xjacHWPP,zPY6Q,xiPY6Q,xjacPY6Q,zPY6PT
-     $     ,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
-      if(shower_mc_mod(1:8).eq.'HERWIGPP')then
-         ztmp=zHWPP()
-         xitmp=xiHWPP()
-         xjactmp=xjacHWPP()
+      double precision E0sq,z,xi,xjac
+      double precision zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q
+     $     ,xiPY6Q,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
+      external zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q,xiPY6Q
+     $     ,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
+      if(shower_mc_mod(1:7).eq.'HERWIG6')then
+         z=zHW6(E0sq)
+         xi=xiHW6(E0sq,z)
+         xjac=xjacHW6(E0sq,xi,z)
+      elseif(shower_mc_mod(1:8).eq.'HERWIGPP')then
+         z=zHWPP()
+         xi=xiHWPP(z)
+         xjac=xjacHWPP(z)
       elseif(shower_mc_mod(1:8).eq.'PYTHIA6Q')then
-         ztmp=zPY6Q()
-         xitmp=xiPY6Q()
-         xjactmp=xjacPY6Q()
+         z=zPY6Q()
+         xi=xiPY6Q()
+         xjac=xjacPY6Q(z)
       elseif(shower_mc_mod(1:9).eq.'PYTHIA6PT')then
-         ztmp=zPY6PT()
-         xitmp=xiPY6PT()
-         xjactmp=xjacPY6PT()
+         z=zPY6PT()
+         xi=xiPY6PT()
+         xjac=xjacPY6PT()
       elseif(shower_mc_mod(1:7).eq.'PYTHIA8')then
-         ztmp=zPY8()
-         xitmp=xiPY8()
-         xjactmp=xjacPY8()
+         z=zPY8()
+         xi=xiPY8(z)
+         xjac=xjacPY8(z)
       endif
       end
 
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
-      subroutine compute_delta(p
-     $     ,probne)
+      subroutine compute_delta(p,probne)
       use process_module
       use scale_module
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
       include 'nexternal.inc'
-c$$$      include 'madfks_mcatnlo.inc'
+c$$$  include 'madfks_mcatnlo.inc'
       include 'run.inc'
       include 'orders.inc'
 
@@ -1739,18 +1693,18 @@ c$$$      include 'madfks_mcatnlo.inc'
       common/fks_indices/i_fks,j_fks
 
       double precision ptresc,ref_scale,emscainv
-c$$$      double precision emscav_a(nexternal,nexternal)
-c$$$      double precision emscav_a2(nexternal,nexternal)
+c$$$  double precision emscav_a(nexternal,nexternal)
+c$$$  double precision emscav_a2(nexternal,nexternal)
       integer cflows,jflow
       common/c_colour_flow/jflow
 
-c$$$      double precision emsca_a(nexternal,nexternal)
-c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-c$$$     $     ,nexternal),emsca
-c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$  double precision emsca_a(nexternal,nexternal)
+c$$$  $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$  $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$  $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$  $     ,nexternal),emsca
+c$$$  common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
+c$$$  $     ,scalemin_a,scalemax_a,emscwgt_a
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
 
@@ -1759,8 +1713,8 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 
       integer ip
 
-c Controls assignments of scales in H events in LHE file.
-c Set iHscale=0 for scale=target_scale
+c     Controls assignments of scales in H events in LHE file.
+c     Set iHscale=0 for scale=target_scale
 c     iHscale=1 for scale=dipole_mass
       integer iHscale,jbar,ifksscl(2)
       parameter (iHscale=0)
@@ -1771,9 +1725,9 @@ c     iHscale=1 for scale=dipole_mass
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-c$$$      double precision emscav_tmp_a(nexternal,nexternal)
-c$$$      double precision emscav_tmp_a2(nexternal,nexternal)
-c$$$      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
+c$$$  double precision emscav_tmp_a(nexternal,nexternal)
+c$$$  double precision emscav_tmp_a2(nexternal,nexternal)
+c$$$  common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision probne
      $     ,dummy_wgt
@@ -1781,10 +1735,10 @@ c$$$      common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
       integer i,j,k,i1,i2
 
       double precision p(0:3,nexternal)
-c For the boost to the lab frame
+c     For the boost to the lab frame
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
+     #sqrtshat,shat
       double precision chy,shy,chymo,xdir(3),p_lab(0:3,nexternal)
       data (xdir(i),i=1,3) /0d0,0d0,1d0/
 
@@ -1804,7 +1758,7 @@ c For the boost to the lab frame
       double precision scales(0:99)
       common /colour_connections/ icolup_s,icolup_h
 
-c To access Pythia8 control variables
+c     To access Pythia8 control variables
       include 'pythia8_control.inc'
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
@@ -1813,26 +1767,26 @@ c To access Pythia8 control variables
       include 'leshouche_decl.inc'
       save idup_d, mothup_d, icolup_d, niprocs_d
 
-C To allow retrieval of S-event from Pythia
+C     To allow retrieval of S-event from Pythia
       include 'hep_event_streams.inc'
 
       logical         Hevents
       common/SHevents/Hevents
-c Sevent_starting_scales = m_ij scales that determine S-event scales written onto LHE
+c     Sevent_starting_scales = m_ij scales that determine S-event scales written onto LHE
       double precision Sevent_starting_scales(nexternal-1,nexternal-1)
-c Hevent_starting_scales = t_ij scales that determine H-event scales written onto LHE
+c     Hevent_starting_scales = t_ij scales that determine H-event scales written onto LHE
       double precision Hevent_starting_scales(nexternal,nexternal)
 
-c Lower and upper limits of fitted st and xm ranges.
-c Require one prior call to pysudakov() to be set,
-c here done in the firsttime1 clause
+c     Lower and upper limits of fitted st and xm ranges.
+c     Require one prior call to pysudakov() to be set,
+c     here done in the firsttime1 clause
       real*8 cstlow,cstupp,cxmlow,cxmupp
       common/cstxmbds/cstlow,cstupp,cxmlow,cxmupp
 
-c Set Delta(pt,..)=0 for pt<smallptlow, and interpolate
-c between 0 and Delta(smallptupp,..) for smallptlow<pt<smallptupp
-c For things to work properly, one must have:
-c               cstlow <= smallptupp
+c     Set Delta(pt,..)=0 for pt<smallptlow, and interpolate
+c     between 0 and Delta(smallptupp,..) for smallptlow<pt<smallptupp
+c     For things to work properly, one must have:
+c     cstlow <= smallptupp
       real*8 smallptlow,smallptupp,get_to_zero
       parameter (smallptlow=0.5d0)
       parameter (smallptupp=1.01d0)
@@ -1855,7 +1809,7 @@ c               cstlow <= smallptupp
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-cSF ARE noemProb AND mDipole USEFUL?
+c     SF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
       double precision noemProb, startingScale(2), stoppingScale(2), mDipole
       double precision mcmass(21)
@@ -1863,7 +1817,7 @@ cSF ARE noemProb AND mDipole USEFUL?
       double precision gltmp,xtmp(2),glfact(2),glrat(2)
       integer nG_S,nQ_S,i_dipole_counter,isudtype
       integer i_dipole_dead_counter
-c
+c     
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -1873,7 +1827,7 @@ c
 
       double precision pdg2pdf,pdffnum(2),pdffden(2)
       external pdg2pdf
-c
+c     
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
@@ -1903,19 +1857,19 @@ c
       common /cfl/fold,ifold_counter
       double precision tiny
       parameter       (tiny=1d-10)
-c
+c     
       mcmass=0d0
       masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
-c
+c     
       do i=1,2
-        istup_local(i) = -1
+         istup_local(i) = -1
       enddo
       do i=3,nexternal
-        istup_local(i) = 1
+         istup_local(i) = 1
       enddo
       do i=1,nexternal
-        spinup_local(i) = -9
+         spinup_local(i) = -9
       enddo
       pythia_cmd_file=''
       
@@ -1925,29 +1879,29 @@ c
          stop 1
       endif
       
-c S-event information:
-c id's and mothers read from born_leshouche.inc;
-c colour configuration read from born_leshouche.inc and born_flow_picked 
+c     S-event information:
+c     id's and mothers read from born_leshouche.inc;
+c     colour configuration read from born_leshouche.inc and born_flow_picked 
       do i=1,nexternal-1
-        IDUP_S(i)=IDUP(i,1)
-        ICOLUP_S(1,i)=ICOLUP(1,i,born_flow_picked)
-        ICOLUP_S(2,i)=ICOLUP(2,i,born_flow_picked)
+         IDUP_S(i)=IDUP(i,1)
+         ICOLUP_S(1,i)=ICOLUP(1,i,born_flow_picked)
+         ICOLUP_S(2,i)=ICOLUP(2,i,born_flow_picked)
       enddo
 
-c  Sevent_starting_scales* are the m_ij scales, ie the starting scales (as determined
-c by the D(mu) function) for extra radiation; they are copies of the
-c emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
-c entries associated with a colour line that belongs to born_flow_picked have
-c meaningful values; the others are set equal to -1.
+c     Sevent_starting_scales* are the m_ij scales, ie the starting scales (as determined
+c     by the D(mu) function) for extra radiation; they are copies of the
+c     emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
+c     entries associated with a colour line that belongs to born_flow_picked have
+c     meaningful values; the others are set equal to -1.
       Sevent_starting_scales(1:nexternal-1,1:nexternal-1)=
      &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
 
-c H-event information.
-c First write ids, mothers and all colours.
+c     H-event information.
+c     First write ids, mothers and all colours.
       if (firsttime1)then
          firsttime1=.false.
          call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
-c Fake call for initialisation
+c     Fake call for initialisation
          deltanum=pysudakov_safe(1.d2,2.d2,1,1,mcmass)
          if(cstlow.gt.smallptupp)then
             write(*,*)'Error in xmcsubt: cstlow,smallptupp',
@@ -1960,31 +1914,31 @@ c Fake call for initialisation
          MOTHUP_H(1,i)=MOTHUP_D(nFKSprocess,1,i,1)
          MOTHUP_H(2,i)=MOTHUP_D(nFKSprocess,2,i,1)
       enddo
-c Fill selected color configuration into jpart array. 
+c     Fill selected color configuration into jpart array. 
       call fill_icolor_H(born_flow_picked,jpart,.false.)
       do i=1,nexternal
-        ICOLUP_H(1,i)=jpart(4,i)
-        ICOLUP_H(2,i)=jpart(5,i)
+         ICOLUP_H(1,i)=jpart(4,i)
+         ICOLUP_H(2,i)=jpart(5,i)
       enddo
-c
+c     
       call clear_HEPEUP_event()
       
-c Boost H-event momenta to lab frame before passing to pythia
+c     Boost H-event momenta to lab frame before passing to pythia
       chy=cosh(ybst_til_tolab)
       shy=sinh(ybst_til_tolab)
       chymo=chy-1d0
       do i=1,nexternal
          call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
       enddo
-c
+c     
       dummy_wgt=1d0
       call fill_HEPEUP_event(p_lab, dummy_wgt, nexternal, idup_h,
-     &       istup_local, mothup_h, icolup_h, spinup_local)
+     &     istup_local, mothup_h, icolup_h, spinup_local)
       xscales_PY=-1d0
       xmasses_PY=-1d0
       dzones_PY=.true.
       if (is_pythia_active.eq.0) then
-c Fill masses
+c     Fill masses
          do i=7,20
             if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
          enddo
@@ -1994,7 +1948,7 @@ c Fill masses
          masses_to_MC(23)=get_mass_from_id(23)
          masses_to_MC(24)=get_mass_from_id(24)
          masses_to_MC(25)=get_mass_from_id(25)
-c
+c     
          idOut=0
          do i=3,nexternal-1
             idOut(i-3) = IDUP_S(i)
@@ -2022,20 +1976,20 @@ c     is consistent with the MG_aMC S-event state.
       do i=1,nup_in
          do j=1,nexternal-1
             if (i.le.nincoming) then
-c incoming momenta should always be particle 1 and 2.
+c     incoming momenta should always be particle 1 and 2.
                if (j.ne.i) cycle
             elseif (j.le.nincoming) then
                cycle
             endif
             if (idup_in(i).eq.idup_s(j)) then
-c found the same particle ID. Check that colour is okay. 
+c     found the same particle ID. Check that colour is okay. 
                if (all(icolup_in(1:2,i).eq.icolup_s(1:2,j))) then
-                  exit ! Agreement found.
+                  exit          ! Agreement found.
                endif
             endif
          enddo
          if (j.gt.nexternal-1) then
-c went all the way through the 2nd do-loop without finding the corresponding particle.
+c     went all the way through the 2nd do-loop without finding the corresponding particle.
             write (*,*) 'montecarlocounter.f: States not compatible #2'
             write (*,*) 'returned by Pythia:'
             write (*,*) idup_in(1:nup_in)
@@ -2049,41 +2003,41 @@ c went all the way through the 2nd do-loop without finding the corresponding par
          endif
       enddo
 
-c After the calls above, we have
-c   xscales_PY(i,j)=t_ij
-c with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
-c emitted equal to the FKS parton. Although both emitter and recoiler
-c are Born-level quantities, their labellings follow the real-process
-c conventions. Thus, in the matrix xscales_PY(i,j) one has 1<=i,j<=nexternal, 
-c with xscales_PY(i_fks,*)=xscales_PY(*,i_fks)=-1.
-c The same labelling conventions apply to xmasses_PY(i,j) (which is the
-c dipole mass associated with the colour line that connects i and j)
-c and dzones_PY(i,j) (which is the dead zone relevant to the emission from
-c parton i colour-connected with recoiler j).
-c
-c Since any the pair of indices (i,j) associated with sensible entries
-c in the arrays returned by Pythia is in one-to-one correspondence with
-c Born-level quantities, it is convenient to define relabelled copies of
-c such arrays (which we call Sevent_stopping_scales, xmasses_nbody, and
-c dzones_nbody), for which 1<=i,j<=nexternal-1
-c
+c     After the calls above, we have
+c     xscales_PY(i,j)=t_ij
+c     with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
+c     emitted equal to the FKS parton. Although both emitter and recoiler
+c     are Born-level quantities, their labellings follow the real-process
+c     conventions. Thus, in the matrix xscales_PY(i,j) one has 1<=i,j<=nexternal, 
+c     with xscales_PY(i_fks,*)=xscales_PY(*,i_fks)=-1.
+c     The same labelling conventions apply to xmasses_PY(i,j) (which is the
+c     dipole mass associated with the colour line that connects i and j)
+c     and dzones_PY(i,j) (which is the dead zone relevant to the emission from
+c     parton i colour-connected with recoiler j).
+c     
+c     Since any the pair of indices (i,j) associated with sensible entries
+c     in the arrays returned by Pythia is in one-to-one correspondence with
+c     Born-level quantities, it is convenient to define relabelled copies of
+c     such arrays (which we call Sevent_stopping_scales, xmasses_nbody, and
+c     dzones_nbody), for which 1<=i,j<=nexternal-1
+c     
 
       do i=1,nexternal
          if(i.eq.i_fks)cycle
          do j=1,nexternal
             if(j.eq.i_fks)cycle
             Sevent_stopping_scales(iRtoB(i),iRtoB(j))=xscales_PY(i,j)
-c In pythia the dipole masses can be arbitary large since the clustering
-c does not know exactly all the phase-space boundaries. Use min() to put
-c a cap on this (i.e., equal to the largest allowed value in pysudakov()
-c tables).
+c     In pythia the dipole masses can be arbitary large since the clustering
+c     does not know exactly all the phase-space boundaries. Use min() to put
+c     a cap on this (i.e., equal to the largest allowed value in pysudakov()
+c     tables).
             xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses_PY(i,j),cxmupp)
             dzones_nbody(iRtoB(i),iRtoB(j))=dzones_PY(i,j)
          enddo
       enddo
-c Checks
+c     Checks
       if(any(Sevent_stopping_scales(1:nexternal-1,1:nexternal-1)*
-     &       xmasses_nbody(1:nexternal-1,1:nexternal-1).lt.0d0)) then
+     &     xmasses_nbody(1:nexternal-1,1:nexternal-1).lt.0d0)) then
          do i=1,nexternal-1
             do j=1,nexternal-1
                write(*,*)'Error in xmcsubt: xscales, xmasses',
@@ -2093,17 +2047,17 @@ c Checks
          stop
       endif
 
-! Since pythia simply does a one-branch cluster, it does not check if
-! the stopping scale (in Sevent_stopping_scales) is smaller than the
-! starting scale (as determined by MG5_aMC in Sevent_starting_scales). If this
-! is the case, put the event in the dead-zone.
+!     Since pythia simply does a one-branch cluster, it does not check if
+!     the stopping scale (in Sevent_stopping_scales) is smaller than the
+!     starting scale (as determined by MG5_aMC in Sevent_starting_scales). If this
+!     is the case, put the event in the dead-zone.
       do i=1,nexternal-1
          do j=1,nexternal-1
             if (i.eq.j) cycle
             if (.not. dzones_nbody(i,j)) then
                if ( Sevent_stopping_scales(i,j).gt.
      $              Sevent_starting_scales(i,j)) then
-                   dzones_nbody(i,j)=.true.
+                  dzones_nbody(i,j)=.true.
                endif
             endif
          enddo
@@ -2111,9 +2065,9 @@ c Checks
       call get_Hevent_starting_scales(Sevent_stopping_scales
      $     ,dzones_nbody,p,Hevent_starting_scales)
       
-c
-c force IF colour connection to have II scale
-c if a sensible II scale exists
+c     
+c     force IF colour connection to have II scale
+c     if a sensible II scale exists
       if(force_II_connection)then
          do i=1,2
             do j=3,nexternal
@@ -2122,8 +2076,8 @@ c if a sensible II scale exists
      $                 Hevent_starting_scales(i,3-i)
                else
                   continue
-c if no other available colour connection, we keep the IF scale
-c rather than calculating some new kinematic variable e.g. pT
+c     if no other available colour connection, we keep the IF scale
+c     rather than calculating some new kinematic variable e.g. pT
                endif
             enddo
          enddo
@@ -2131,9 +2085,9 @@ c rather than calculating some new kinematic variable e.g. pT
 
       
 ccccccccccccccccccccc
-c
+c     
 c     *** WARNING ***
-c
+c     
 c     Pythia resets the scale for FI and FF to the min between the scale
 c     t_ij we give it and p_i.p_j/2.  Should we implement this
 c     minimisation here as well? (We do not do this at thee moment. For
@@ -2141,37 +2095,37 @@ c     H events this implementation should be needed only for i_fks and
 c     j_fks, as only in that case we (over)write their scales ourselves
 c     (in the set_Hevent_starting_scales() above), but could be applied to all
 c     FI and FF connections.
-c
+c     
 ccccccccccccccccccccc
-c
+c     
 
-! overwrite the emsca_H() (for this iFKS and ifold_counter) with the
-! actual stopping-scales defined here.
+!     overwrite the emsca_H() (for this iFKS and ifold_counter) with the
+!     actual stopping-scales defined here.
       emsca_H(nFKSprocess,ifold_counter,1:ndelH,1:ndelH)=
      &     Hevent_starting_scales(1:nexternal,1:nexternal)
 
       
-c Computation of Delta = wgt_sudakov as the product of Sudakovs between
-c Sevent_starting_scales and Sevent_stopping_scales.  For initial-state legs, Delta
-c contains a PDF ratio with S-event Bjorken fraction and
-c Sevent_starting_scales, Sevent_stopping_scales scales, see also formula (5.62) in
-c Ellis-Stirling-Webber
+c     Computation of Delta = wgt_sudakov as the product of Sudakovs between
+c     Sevent_starting_scales and Sevent_stopping_scales.  For initial-state legs, Delta
+c     contains a PDF ratio with S-event Bjorken fraction and
+c     Sevent_starting_scales, Sevent_stopping_scales scales, see also formula (5.62) in
+c     Ellis-Stirling-Webber
 
 
-! we are here
-! 
+!     we are here
+!     
 !     1. loop over dipoles and find the (up to) 2 contributing. This sets
 !     also the types and everything. Including scales.
 !     2. loop over the (up to) 2 contributing, and compute the sudakovs.
-!
-! Paper: eq.3.14 (times the PDF factor in 3.32) defines what to compute
+!     
+!     Paper: eq.3.14 (times the PDF factor in 3.32) defines what to compute
 !     for each QCD particle in the n-body process. This is updated to
 !     3.31 for quarks, and 3.34 for gluons. (Check the curly brackets in
 !     3.14 & 3.34).  First term in 3.34 is equal to
 !     glfact(1)*Deltarat(1,1)*Deltarat(1,2)*pdffactor(1) in the notation
 !     of the code below (and equivalently for the 2nd term). 3.37 is
 !     wgt_sudakov.
-!      
+!     
 
 !     loop over particles ('a' in eq.3.14)
       do i=1,nexternal-1
@@ -2205,23 +2159,23 @@ c Ellis-Stirling-Webber
 !     TODO : FIXTHIS --> what to do if this happens and isspecial is true???
 !     Also think about the check below in the next do-loop...
                continue
-c$$$               write (*,*) 'A gluon with only one connection, but '/
-c$$$     $              /'the born_flow_picked is not special.',i
-c$$$               stop 1
+c$$$  write (*,*) 'A gluon with only one connection, but '/
+c$$$  $              /'the born_flow_picked is not special.',i
+c$$$  stop 1
             endif
          endif
       enddo
       
       wgt_sudakov=1d0
-      ! loop over 'k' in eq.3.31 and 3.34
+! loop over 'k' in eq.3.31 and 3.34
       do i=1,nexternal-1
          if (n_connect(i).eq.0) cycle ! no colour connection for particle 'i'
-c$$$         if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
-c$$$     &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
-c$$$            write (*,*) 'n_connect should be 1 for quarks and 2 '/
-c$$$     $           /'for gluons',n_connect(i),i,idup_s(i)
-c$$$            stop 1
-c$$$         endif
+c$$$  if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
+c$$$  &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
+c$$$  write (*,*) 'n_connect should be 1 for quarks and 2 '/
+c$$$  $           /'for gluons',n_connect(i),i,idup_s(i)
+c$$$  stop 1
+c$$$  endif
 
          do out_con=1,n_connect(i) ! loop over two lines of 3.34
 !     compute g1 and g2 (FIX FOR SAFETY MEASURES)
@@ -2237,19 +2191,19 @@ c$$$         endif
             endif
 !     compute F_k
             if(i.le.nincoming)then
-! The correct thing to do here (if we follow the paper) would be to have
-! a separate wgt_sudakov for each flavour configuration, since the PDF
-! ratio would be different for each of them. This is very tricky in the
-! current code setup, since at this point all flavour configurations are
-! always summed together. Therefore, we use an approximation, where we
-! take a (weighted) average of PDF ratios. We take as weights the PDF
-! used in the Born, which is (roughly) equal to the PDF computed at the
-! starting scales, which is pdfden. We can write this weighted average
-! as
-! Fk(out_con) = weighted_average(ratio_1, ..., ratio_n)
-!             = (ratio_1*pdfden_1+...+ratio_n*pdfden_n)/sum(pdfden_1, ..., pdf_den_n)
-!             = sum(pdfnum_1, ..., pdfnum_n)/sum(pdfden_1, ..., pdfden_n)
-!               
+!     The correct thing to do here (if we follow the paper) would be to have
+!     a separate wgt_sudakov for each flavour configuration, since the PDF
+!     ratio would be different for each of them. This is very tricky in the
+!     current code setup, since at this point all flavour configurations are
+!     always summed together. Therefore, we use an approximation, where we
+!     take a (weighted) average of PDF ratios. We take as weights the PDF
+!     used in the Born, which is (roughly) equal to the PDF computed at the
+!     starting scales, which is pdfden. We can write this weighted average
+!     as
+!     Fk(out_con) = weighted_average(ratio_1, ..., ratio_n)
+!     = (ratio_1*pdfden_1+...+ratio_n*pdfden_n)/sum(pdfden_1, ..., pdf_den_n)
+!     = sum(pdfnum_1, ..., pdfnum_n)/sum(pdfden_1, ..., pdfden_n)
+!     
                LP=SIGN(1,LPP(i))
                pdfnum=0d0
                pdfden=0d0
@@ -2265,8 +2219,8 @@ c$$$         endif
                pdfden=1d0
             endif
             if (pdfden.eq.0d0) then
-               ! this should be extremely rare, but can happen if the
-               ! scale is just right
+! this should be extremely rare, but can happen if the
+! scale is just right
                pdfden=1d-99
             endif
             Fk(out_con)=pdfnum/pdfden
@@ -2300,9 +2254,9 @@ c$$$         endif
             PIk=PIk + gl(out_con)/sum(gl(1:n_connect(i)))*Fk(out_con)
      $           *product(delta(out_con,1:n_connect(i)))
          enddo
-         ! take min(max()) since it can be set between zero and one at
-         ! the accuracy we are working, and interpret it as a
-         ! probability.
+! take min(max()) since it can be set between zero and one at
+! the accuracy we are working, and interpret it as a
+! probability.
          wgt_sudakov=wgt_sudakov * min(max(PIk,0d0),1d0)
       enddo
 
@@ -2326,7 +2280,7 @@ c$$$         endif
          probne=1.d0
          stop 1
       endif
-c
+c     
 
       return
       end
@@ -2981,63 +2935,6 @@ c the same holds for bornbarstilde(i).
       return
       end
 
-      function gfunction(w,alpha,beta,delta)
-c Gets smoothly to 0 as w goes to 1.
-c Call with
-c   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
-c   0 < |beta| <= 1;
-c   0 < delta <= 2.
-      implicit none
-      double precision tiny
-      parameter (tiny=1.d-5)
-      double precision gfunction,alpha,beta,delta,w,wmin,wg,tt,tmp
-      logical firsttime
-      save firsttime
-      data firsttime /.true./
-      double precision cutoff,cutoff2
-      parameter(cutoff=1d0)
-      parameter(cutoff2=0.99d0)
-c
-c     set cutoff < 1 and cutoff2 = cutoff in the final version
-c
-      if(firsttime)then
-        firsttime=.false.
-        if(alpha.ge.0d0.and.alpha.lt.1d0)then
-          write(*,*)'Incorrect alpha in gfunction',alpha
-          stop
-        endif
-        if(abs(beta).gt.1d0)then
-          write(*,*)'Incorrect beta in gfunction',beta
-          stop
-        endif
-        if(delta.gt.2d0.or.delta.le.0d0)then
-          write(*,*)'Incorrect delta in gfunction',delta
-          stop
-        endif
-      endif
-c
-      tmp=1d0
-      if(alpha.gt.0d0)then
-        if(beta.lt.0d0)then
-          wmin=0d0
-        else
-          wmin=max(0d0,1d0-delta)
-        endif
-        wg=min(1d0-(1-wmin)*abs(beta),cutoff-tiny)
-        if(abs(w).gt.wg.and.abs(w).lt.cutoff2)then
-          tt=(abs(w)-wg)/(cutoff-wg)
-          if(tt.gt.1d0)then
-            write(*,*)'Fatal error in gfunction',tt
-            stop
-          endif
-          tmp=(1-tt)**(2*alpha)/(tt**(2*alpha)+(1-tt)**(2*alpha))
-        elseif(abs(w).ge.cutoff2)then
-          tmp=0d0
-        endif
-      endif
-      gfunction=tmp
-      return
-      end
 
 
 
@@ -3324,7 +3221,7 @@ c
 
 
 
-      double precision function xiHWPP()
+      double precision function xiHWPP(z)
 c     Shower evolution variable
       use process_module
       use kinematics_module
@@ -3332,7 +3229,6 @@ c     Shower evolution variable
       double precision z,zHWPP,tiny
       parameter (tiny=1d-5)
 
-      z=zHWPP()
       if(z.lt.0d0)goto 999
 c 
       if(ileg.eq.1)then
@@ -3372,7 +3268,7 @@ c
 
 
 
-      double precision function xjacHWPP()
+      double precision function xjacHWPP(z)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       use process_module
@@ -3382,7 +3278,6 @@ c variables, and x and y are FKS variables
       parameter (tiny=1d-5)
 
       tmp=0d0
-      z=zHWPP()
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then
@@ -3523,7 +3418,7 @@ c
 
 
 
-      double precision function xjacPY6Q()
+      double precision function xjacPY6Q(z)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c     variables, and x and y are FKS variables
       use process_module
@@ -3532,7 +3427,6 @@ c     variables, and x and y are FKS variables
       double precision tiny,zPY6Q,z,tmp,dw1dx,dw1dy,dw2dx,dw2dy
       parameter (tiny=1d-5)
 
-      z=zPY6Q()
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then
@@ -3729,7 +3623,7 @@ c
 
 
 
-      double precision function xiPY8()
+      double precision function xiPY8(z)
 c Shower evolution variable
       use process_module
       use kinematics_module
@@ -3737,7 +3631,6 @@ c Shower evolution variable
       double precision tiny,z,zPY8,z0
       parameter(tiny=1d-5)
 
-      z=zPY8()
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then
@@ -3779,7 +3672,7 @@ c
 
 
 
-      double precision function xjacPY8()
+      double precision function xjacPY8(z)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       use process_module
@@ -3787,7 +3680,6 @@ c variables, and x and y are FKS variables
       implicit none
       double precision tiny,z,z0,zPY8,dw1dx,dw1dy,dw2dx,dw2dy,tmp
 
-      z=zPY8()
       if(z.lt.0d0)goto 999
 c
       if(ileg.eq.1)then

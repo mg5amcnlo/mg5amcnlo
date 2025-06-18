@@ -819,6 +819,7 @@ c value to the list of weights using the add_wgt subroutine
 
       subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne)
       use extra_weights
+      use kinematics_module
       implicit none
 c     This subroutine computes the MonteCarlo subtraction terms and adds
 c     their values to the list of weights using the add_wgt subroutine. It
@@ -857,6 +858,7 @@ c$$$  include 'madfks_mcatnlo.inc'
       integer get_orders_tag
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+      logical include_gfun
 !     If .true., multiplies MC subtraction terms by S_ev
       logical UseSfun
       parameter (UseSfun=.false.)
@@ -869,14 +871,13 @@ c$$$  else
 c$$$  endif
       if (sevmc.eq.0d0) return
       do iFKS=1,fks_configs
-         if (iFKS.eq.nFKSprocess) then
-!     include G-function
-!TODO: include for both g->gg and g->qqbar splitting
-! i.e., k_fks==i_fks and j_fks==l_fks (TO CHECK)
-            call compute_gfun(gfactsf,gfactcl,gfactazi)
-         endif
          k_fks=FKS_I_D(iFKS)
          l_fks=FKS_J_D(iFKS)
+         if (k_fks.eq.i_fks .and. l_fks.eq.j_fks) then
+            include_gfun=.true.
+         else
+            include_gfun=.false.
+         endif
 !     compute kinematic variables
          xi=get_xi_from_p(k_fks,l_fks,p)
          y=get_yij_from_p(k_fks,l_fks,p)

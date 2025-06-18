@@ -4,7 +4,7 @@ module kinematics_module
   implicit none
   integer,public :: ileg,fksfather
   double precision,public :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yij,x, &
-       xij,betad,betas,kn,knbar,kn0,shat_n1
+       xij,betad,betas,kn,knbar,kn0,shat_n1,gfactsf,gfactcl,gfactazi
   double precision,dimension(0:3),private :: xp1,xp2,xk1,xk2,xk3,pp_rec
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
@@ -127,7 +127,7 @@ contains
     endif
   end function qMC_ileg4
 
-  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass)
+  subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,include_gfun)
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
     implicit none
@@ -241,6 +241,7 @@ contains
     yij=y_ij_fks
     betad=sqrt((1d0-(xm12-xm22)/shat_n1)**2-(4d0*xm22/shat_n1))
     betas=1d0+(xm12-xm22)/shat_n1
+    if (include_gfun) call compute_gfun()
   end subroutine fill_kinematics_module
   
   double precision function deltaR(p1,p2)
@@ -501,5 +502,56 @@ contains
     endif
   end subroutine check_invariants_ileg4
 
+  subroutine compute_gfun()
+    implicit none
+    include 'fks_powers.inc'
+    double precision :: gfactsf,gfactcl,gfactazi,delta
+    double precision,parameter :: ymin=0.9d0
+    double precision alsf,besf
+    common/cgfunsfp/alsf,besf
+    double precision alazi,beazi
+    common/cgfunazi/alazi,beazi
+    if(ileg.le.2)then
+       delta=min(1d0,deltaI)
+    elseif(ileg.ge.3)then
+       delta=min(1d0,deltaO)
+    endif
+    ! See for details on how the limits work out e.g. Paolo's PhD thesis
+    gfactsf=gfunction(x,alsf,besf,2d0) ! x=1-xi_i_fks, so gfactsf is zero in the soft limit
+    gfactcl=gfunction(yij,alsf,-(1d0-ymin),1d0) ! yij=y_ij_fks, so gfactcl is zero in the collinear limit
+    if(alazi.lt.0d0)gfactazi=1-gfunction(yij,-alazi,beazi,delta)
+  end subroutine compute_gfun
 
+
+  double precision function gfunction(w,alpha,beta,delta)
+! Gets smoothly to 0 as w goes to 1.
+! Call with
+!   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
+!   0 < |beta| <= 1;
+!   0 < delta <= 2.
+    implicit none
+    double precision,parameter :: tiny=1d-5,cutoff=1d0,cutoff2=0.99d0
+    double precision :: alpha,beta,delta,w,wmin,wg,tt,tmp
+    gfunction=1d0
+    if(alpha.gt.0d0)then
+       if(beta.lt.0d0)then
+          wmin=0d0
+       else
+          wmin=max(0d0,1d0-delta)
+       endif
+       wg=min(1d0-(1d0-wmin)*abs(beta),cutoff-tiny)
+       if(abs(w).gt.wg.and.abs(w).lt.cutoff2)then
+          tt=(abs(w)-wg)/(cutoff-wg)
+          if(tt.gt.1d0)then
+             write(*,*)'Fatal error in gfunction',tt
+             stop
+          endif
+          gfunction=(1d0-tt)**(2*alpha)/(tt**(2*alpha)+(1d0-tt)**(2*alpha))
+       elseif(abs(w).ge.cutoff2)then
+          gfunction=0d0
+       endif
+    endif
+  end function gfunction
+
+  
 end module kinematics_module
