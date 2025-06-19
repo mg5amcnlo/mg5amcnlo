@@ -33,7 +33,7 @@ c
 c     Properly initialize PY8 controls
 c
       include 'pythia8_control.inc'
-      include 'pythia8_control_setup.inc'
+       include 'pythia8_control_setup.inc'
 c Vegas stuff
       common/tosigint/nndim
 
@@ -110,7 +110,7 @@ c general MadFKS parameters
 
       character*1000 buff,buff2
       double precision ratio
-
+      double precision buff_XWGTUP
       double precision :: total_weight, xsec_rw
       integer :: accepted_events    
 C-----
@@ -232,7 +232,8 @@ c     Prepare the MINT folding
 ! open the existing event file for reading:
       open(unit=99,file='events.lhe.rwgt',status='old',err=999)
       open(unit=98,file='events.lhe.rwgt.RW',status='unknown',err=999)
-      
+      open(unit=97,file='rwgt_debug.log',status='unknown')
+
       call read_lhef_header(99,nevts,MonteCarlo)
       call read_lhef_init(99,IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      $     XSECUP,XERRUP,XMAXUP,LPRUP)
@@ -247,12 +248,26 @@ c     Prepare the MINT folding
      $        ,AQEDUP,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP
      $        ,buff,buff2,SCALUP_a)
          read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
+         buff_XWGTUP = XWGTUP
 !     compute the NLOoverBorn ratio:
          call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
          XWGTUP=XWGTUP*ratio
+
+        write(97,'(a)') '------------------------------'
+	write(97,'(a,i10)') ' Event            ', ievent
+	write(97,'(a,f20.8)') '   Born weight    = ', buff_XWGTUP ! store original XWGTUP before modification
+	write(97,'(a,f20.8)') '   Reweight ratio = ', ratio
+	write(97,'(a,f20.8)') '   Final XWGTUP   = ', XWGTUP
+	write(97,'(a,i10)') '   iFKS_picked    = ', iFKS_picked
+
+       if (abs(ratio - 1.d0) .lt. 1d-6) then
+            write(97,*) '   >> Warning: Event is unmodified (only Born)'
+         else if (ratio .le. 0.d0) then
+            write(97,*) '   >> Warning: Event has zero or negative weight!'
+         else
+            write(97,*) '   >> Info: Event reweighted successfully.'
+         endif
          
-         total_weight = total_weight + XWGTUP
-         accepted_events = accepted_events + 1
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
      $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
@@ -264,9 +279,9 @@ c     Prepare the MINT folding
       close(98)
       close(99)
 
-      xsec_rw = total_weight / dble(accepted_events)
-      write(*,*) 'Total number of events:', accepted_events
-      write(*,*) 'Reweighted cross section (LO → NLO):', xsec_rw, 'pb' 
+      !xsec_rw = total_weight / dble(accepted_events)
+      !write(*,*) 'Total number of events:', accepted_events
+      !write(*,*) 'Reweighted cross section (LO → NLO):', xsec_rw, 'pb' 
       return
 
  999  write (*,*) 'nevts file not found'
@@ -1328,7 +1343,8 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
       write (*,*) "Enter 'born0' or 'virt0' to perform"
       write (*,*) " a pure n-body integration (no S functions)"
-      read(83,*) abrvinput
+!      read(83,*) abrvinput
+      abrvinput(1:5)='all  '
       if(abrvinput(5:5).eq.'0')then
          write (*,*) 'This option is no longer supported:',abrvinput
          stop
@@ -1364,5 +1380,5 @@ c$$$            endif
 c
       lbw(0)=0
       close(83)
-      
+      close(97)
       end
