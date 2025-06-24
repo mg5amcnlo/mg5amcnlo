@@ -9,7 +9,8 @@ module kinematics_module
   double precision,private :: jmass
   double precision,private,parameter :: tiny=1d-5
 
-  public :: get_qMC, fill_kinematics_module,dot,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p
+  public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR&
+       &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p,fill_father_and_ileg
   private
 
 contains
@@ -34,7 +35,7 @@ contains
     implicit none
     double precision,dimension(0:3) :: p1
     rho=sqrt(dot3(p1,p1))
-  end function dot3
+  end function rho
   
   !TODO: modify qMC to be the shower variable???
   double precision function get_qMC(xi_i_fks,y_ij_fks)
@@ -127,6 +128,16 @@ contains
     endif
   end function qMC_ileg4
 
+  subroutine fill_father_and_ileg(i_fks,j_fks,mass)
+    implicit none
+    double precision :: mass
+    integer :: i_fks,j_fks
+    fksfather=min(i_fks,j_fks)
+    jmass=mass ! this is the mass of j_fks
+    ! Determine ileg
+    call fill_ileg()
+  end subroutine fill_father_and_ileg
+  
   subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,include_gfun)
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
@@ -134,14 +145,13 @@ contains
     double precision,dimension(0:3,next_n1) :: pp
     double precision :: xi_i_fks,y_ij_fks,mass
     double precision,external :: dot
+    logical :: include_gfun
     integer :: i_fks,j_fks
     double precision :: veckn_ev,veckbarn_ev,xp0jfks
     common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
 
+    call fill_father_and_ileg(i_fks,j_fks,mass)
     shat_n1=2d0*dot(pp(0,1),pp(0,2))
-    fksfather=min(i_fks,j_fks)
-    
-    jmass=mass ! this is the mass of j_fks
 
     xm12=0d0
     xm22=0d0
@@ -151,8 +161,6 @@ contains
     knbar=veckbarn_ev
     kn0=xp0jfks
 
-    ! Determine ileg
-    call fill_ileg()
 
     ! fill the momenta for the recoilers and emitters and emitted.
     call get_momenta_emitter_recoiler(pp,i_fks,j_fks)

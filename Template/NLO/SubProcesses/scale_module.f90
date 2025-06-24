@@ -296,6 +296,7 @@ contains
        endif
     else
        write (*,*) 'Inconsistent dipoles',ndip
+       write (*,*) fksfather,flow_picked
        stop 1
     endif
   end subroutine determine_partner

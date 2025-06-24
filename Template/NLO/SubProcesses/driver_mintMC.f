@@ -677,6 +677,7 @@ c
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
       use mint_module
+      use kinematics_module
       use process_module
       use scale_module
       implicit none
@@ -691,8 +692,8 @@ c
      $     ,iFKS,sum,partner_picked(fks_configs)
       save partner_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
-     $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+     $     ,nexternal),rwgt,vol,sig,x_local(99),MC_int_wgt,vol1,probne
+     $     ,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
       save vol1,proc_map
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
@@ -771,9 +772,9 @@ c "npNLO".
          wgt_me_real=0d0
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
-         call update_vegas_x(xx,x)
+         call update_vegas_x(xx,x_local)
          do i=1,nndim
-            x_save(i,ifold_counter)=x(i)
+            x_save(i,ifold_counter)=x_local(i)
          enddo
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
@@ -800,7 +801,7 @@ c Also the Born needs to be included in the Importance Sampling over the
 c FKS configurations (for the shower scale) (multiply by
 c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x_local,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
@@ -893,7 +894,7 @@ c for different nFKSprocess.
             gfactcl=1.d0
             MCcntcalled=0
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
-            call generate_momenta(nndim,iconfig,jac,x,p)
+            call generate_momenta(nndim,iconfig,jac,x_local,p)
 
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
@@ -965,8 +966,7 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
-     $                 ,gfactcl,probne)
+                  call compute_MC_subt_term(p,passcuts_nbody,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
@@ -1362,19 +1362,24 @@ c     include all quarks (except top quark) and the gluon.
 
       subroutine update_fks_dir(nFKS)
       use process_module
+      use kinematics_module
       implicit none
+      include 'nexternal.inc'
       include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
       nFKSprocess=nFKS
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
       call RealToBornMapping(i_fks)
+      call fill_father_and_ileg(i_fks,j_fks,pmass(j_fks))
       return
       end
 

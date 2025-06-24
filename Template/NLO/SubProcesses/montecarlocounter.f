@@ -469,129 +469,129 @@ c
       return
       end
 
-      subroutine compute_xmcsubt_for_checks(pp,xi_i_fks,y_ij_fks,wgt)
-      use process_module
-      use kinematics_module
-      use scale_module
-      implicit none
-      include "nexternal.inc"
-c$$$      include 'madfks_mcatnlo.inc'
-      include 'run.inc'
-      include 'born_nhel.inc'
-      double precision pp(0:3,nexternal),wgt
-      double precision xi_i_fks,y_ij_fks
-      double precision xmc,xrealme,gfactsf,gfactcl,probne,sumMCsec
-      double precision z(nexternal),ddum,dummy
-      integer nofpartners,idum,ione,iord
-      logical lzone(nexternal),flagmc
-
-      ! amp split stuff
-      include 'orders.inc'
-      integer iamp
-      double precision amp_split_mc(amp_split_size)
-      common /to_amp_split_mc/amp_split_mc
-      double precision amp_split_gfunc(amp_split_size)
-      common /to_amp_split_gfunc/amp_split_gfunc
-      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-      common /to_amp_split_bornbars/amp_split_bornbars,
-     $                              amp_split_bornbarstilde
-      logical split_type(nsplitorders) 
-      common /c_split_type/split_type
-
-      integer npartner,cflows
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      logical first_MCcnt_call
-      common/cMCcall/first_MCcnt_call
-
-      double precision xkern(2),xkernazi(2),factor,N_p
-      double precision bornbars(max_bcol,nsplitorders),
-     $     bornbarstilde(max_bcol,nsplitorders)
-c$$$      double precision emsca_a(nexternal,nexternal)
-c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-c$$$     $     ,nexternal)
-c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      double precision evnt_wgt
-      integer i, j,iord_val
-      double precision mu_r
-      double precision pb(0:4,-nexternal+3:2*nexternal-3)
-      double precision p_read(0:4,2*nexternal-3), wgt_read
-      integer npart
-      double precision MCsec(nexternal,max_bcol)
-      logical isspecial(max_bcol)
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      common/cisspecial/isspecial
-!     common block used to make the (scalar) reference scale partner
-!     dependent in case of delta
-      integer cur_part
-      common /to_ref_scale/cur_part
-      double precision smin,smax,ptresc,emscafun,qMC,damping
-     $     ,compute_damping_weight
-      first_MCcnt_call=.true.
-      MCsec(1:nexternal,1:max_bcol)=0d0
-      sumMCsec=0d0
-      amp_split_mc(1:amp_split_size)=0d0
-      do npartner=1,ipartners(0)
-         cur_part=ipartners(npartner)
-         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
-     $        ,bornbars,bornbarstilde,npartner)
-         if(.not.lzone(npartner)) cycle
-         damping=compute_damping_weight(cur_part,xi_i_fks
-     $        ,y_ij_fks)
-         do cflows=1,max_bcol
-            if (colorflow(npartner,cflows).eq.0) cycle
-            if (isspecial(cflows)) then
-               N_p=2d0
-            else
-               N_p=1d0
-            endif
-            ione=0
-            do iord = 1, nsplitorders
-               if (.not.split_type(iord) .or.
-     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-               if (iord.eq.qcd_pos) then
-                  iord_val=1
-               elseif(iord.eq.qed_pos) then
-                  iord_val=2
-               endif
-               ione=ione+1
-               MCsec(npartner,colorflow(npartner,cflows))=damping
-     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
-     $              ,cflows),iord)+xkernazi(iord_val)*N_p
-     $              *bornbarstilde(colorflow(npartner,cflows),iord))
-               amp_split_mc(1:amp_split_size) =
-     $              amp_split_mc(1:amp_split_size)+damping
-     $              *(xkern(iord_val)*N_p
-     $              *amp_split_bornbars(1:amp_split_size
-     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
-     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
-     $              ,colorflow(npartner,cflows),iord))
-            enddo
-            if (ione.ne.1) then
-               write (*,*) 'Error: incompatible split orders in '/
-     $              /'compute_xmcsubt_complete',ione
-               stop 1
-            endif
-            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
-     $           ,cflows))
-         enddo
-      enddo
-      call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
-      wgt=sumMCsec+xrealme
-      do iamp=1, amp_split_size
-        amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
-      enddo
-      return
-      end
-
+c$$$      subroutine compute_xmcsubt_for_checks(pp,xi_i_fks,y_ij_fks,wgt)
+c$$$      use process_module
+c$$$      use kinematics_module
+c$$$      use scale_module
+c$$$      implicit none
+c$$$      include "nexternal.inc"
+c$$$c$$$      include 'madfks_mcatnlo.inc'
+c$$$      include 'run.inc'
+c$$$      include 'born_nhel.inc'
+c$$$      double precision pp(0:3,nexternal),wgt
+c$$$      double precision xi_i_fks,y_ij_fks
+c$$$      double precision xmc,xrealme,probne,sumMCsec
+c$$$      double precision z(nexternal),ddum,dummy
+c$$$      integer nofpartners,idum,ione,iord
+c$$$      logical lzone(nexternal),flagmc
+c$$$
+c$$$      ! amp split stuff
+c$$$      include 'orders.inc'
+c$$$      integer iamp
+c$$$      double precision amp_split_mc(amp_split_size)
+c$$$      common /to_amp_split_mc/amp_split_mc
+c$$$      double precision amp_split_gfunc(amp_split_size)
+c$$$      common /to_amp_split_gfunc/amp_split_gfunc
+c$$$      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
+c$$$     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
+c$$$      common /to_amp_split_bornbars/amp_split_bornbars,
+c$$$     $                              amp_split_bornbarstilde
+c$$$      logical split_type(nsplitorders) 
+c$$$      common /c_split_type/split_type
+c$$$
+c$$$      integer npartner,cflows
+c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+c$$$      common /MC_info/ ipartners,colorflow
+c$$$      logical first_MCcnt_call
+c$$$      common/cMCcall/first_MCcnt_call
+c$$$
+c$$$      double precision xkern(2),xkernazi(2),factor,N_p
+c$$$      double precision bornbars(max_bcol,nsplitorders),
+c$$$     $     bornbarstilde(max_bcol,nsplitorders)
+c$$$c$$$      double precision emsca_a(nexternal,nexternal)
+c$$$c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
+c$$$c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
+c$$$c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
+c$$$c$$$     $     ,nexternal)
+c$$$c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
+c$$$c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$      double precision evnt_wgt
+c$$$      integer i, j,iord_val
+c$$$      double precision mu_r
+c$$$      double precision pb(0:4,-nexternal+3:2*nexternal-3)
+c$$$      double precision p_read(0:4,2*nexternal-3), wgt_read
+c$$$      integer npart
+c$$$      double precision MCsec(nexternal,max_bcol)
+c$$$      logical isspecial(max_bcol)
+c$$$      integer              MCcntcalled
+c$$$      common/c_MCcntcalled/MCcntcalled
+c$$$      common/cisspecial/isspecial
+c$$$!     common block used to make the (scalar) reference scale partner
+c$$$!     dependent in case of delta
+c$$$      integer cur_part
+c$$$      common /to_ref_scale/cur_part
+c$$$      double precision smin,smax,ptresc,emscafun,qMC,damping
+c$$$     $     ,compute_damping_weight
+c$$$      first_MCcnt_call=.true.
+c$$$      MCsec(1:nexternal,1:max_bcol)=0d0
+c$$$      sumMCsec=0d0
+c$$$      amp_split_mc(1:amp_split_size)=0d0
+c$$$      do npartner=1,ipartners(0)
+c$$$         cur_part=ipartners(npartner)
+c$$$         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
+c$$$     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
+c$$$     $        ,bornbars,bornbarstilde,npartner)
+c$$$         if(.not.lzone(npartner)) cycle
+c$$$         damping=compute_damping_weight(cur_part,xi_i_fks
+c$$$     $        ,y_ij_fks)
+c$$$         do cflows=1,max_bcol
+c$$$            if (colorflow(npartner,cflows).eq.0) cycle
+c$$$            if (isspecial(cflows)) then
+c$$$               N_p=2d0
+c$$$            else
+c$$$               N_p=1d0
+c$$$            endif
+c$$$            ione=0
+c$$$            do iord = 1, nsplitorders
+c$$$               if (.not.split_type(iord) .or.
+c$$$     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
+c$$$               if (iord.eq.qcd_pos) then
+c$$$                  iord_val=1
+c$$$               elseif(iord.eq.qed_pos) then
+c$$$                  iord_val=2
+c$$$               endif
+c$$$               ione=ione+1
+c$$$               MCsec(npartner,colorflow(npartner,cflows))=damping
+c$$$     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
+c$$$     $              ,cflows),iord)+xkernazi(iord_val)*N_p
+c$$$     $              *bornbarstilde(colorflow(npartner,cflows),iord))
+c$$$               amp_split_mc(1:amp_split_size) =
+c$$$     $              amp_split_mc(1:amp_split_size)+damping
+c$$$     $              *(xkern(iord_val)*N_p
+c$$$     $              *amp_split_bornbars(1:amp_split_size
+c$$$     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
+c$$$     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
+c$$$     $              ,colorflow(npartner,cflows),iord))
+c$$$            enddo
+c$$$            if (ione.ne.1) then
+c$$$               write (*,*) 'Error: incompatible split orders in '/
+c$$$     $              /'compute_xmcsubt_complete',ione
+c$$$               stop 1
+c$$$            endif
+c$$$            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
+c$$$     $           ,cflows))
+c$$$         enddo
+c$$$      enddo
+c$$$      call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
+c$$$      wgt=sumMCsec+xrealme
+c$$$      do iamp=1, amp_split_size
+c$$$        amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
+c$$$      enddo
+c$$$      return
+c$$$      end
+c$$$
 
 ! New structure:
 !
@@ -616,8 +616,10 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 
       
       subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
-     $     ,include_gfun,z,n_connect,amp_split_xmcxec)
+     $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
+      use process_module
       use kinematics_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'fks_info.inc'
@@ -625,16 +627,18 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
       integer k_fks,l_fks
       logical lzone(2)
       double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass
-     $     ,z(2),amp_split_xmcxsec(2,1:amp_split_size)
+     $     ,z(2),amp_split_xmcxsec(1:amp_split_size,2),probne
+     $     ,bogus_probne_fun
+      external bogus_probne_fun
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-      integer n_connect,i_connect(2)
+      integer n_connect,i_connect(2),iconnect
       logical include_gfun
       mass=pmass(l_fks)
       veckn_ev=rho(p(0,l_fks))
-      veeckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
+      veckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
       xp0jfks=p(0,l_fks)
       call fill_kinematics_module(p,k_fks,l_fks,xi,y,mass,include_gfun)
 
@@ -648,23 +652,23 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
 !     fks-father.
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,i_connect(iconnect)
-     $        ,born_flow_picked,include_gfun,lzone(iconnect),z(iconnect)
-     $        ,amp_split_xmcxsec(iconnect))
+     $        ,include_gfun,lzone(iconnect),z(iconnect)
+     $        ,amp_split_xmcxsec(1,iconnect))
       enddo
 
 !     TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then      
-         if (mcatnlo_delta) then
+         if (mcatnlo_delta_mod) then
 !     include Delta
             call compute_delta(p,probne)
          else
 !     include bogus no-emission
             probne=bogus_probne_fun(get_qMC(xi,y))
          endif
-         amp_split_xmcxsec(1:2,1:amp_split_size)=amp_split_xmcxsec(1:2
-     $        ,1:amp_split_size)*probne
+         amp_split_xmcxsec(1:amp_split_size,1:2)=amp_split_xmcxsec(
+     $        1:amp_split_size,1:2)*probne
       else
-         amp_split_xmcxsec(1:2,1:amp_split_size)=0d0
+         amp_split_xmcxsec(1:amp_split_size,1:2)=0d0
       endif
       end
       
@@ -672,12 +676,16 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
      $     ,i_connect)
       use process_module
       implicit none
+      include 'nexternal.inc'
       include "genps.inc"
-      integer idup(next_n,maxproc)
-      integer mothup(2,next_n,maxproc)
-      integer icolup(2,next_n,max_bcol)
+      include "born_nhel.inc"
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include "born_leshouche.inc"
       integer iflow,iparticle,n_connect,i_connect(2),i
+      logical isspecial(max_bcol)
+      common/cisspecial/isspecial
       n_connect=0
       do i=1,next_n
          if (valid_dipole_n(i,iparticle,iflow)) then
@@ -691,7 +699,7 @@ c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
             i_connect(n_connect)=i
          endif
       enddo
-      if (n_connect.eq.1 .and. idup_s(iparticle).eq.21) then
+      if (n_connect.eq.1 .and. idup(iparticle,1).eq.21) then
          if (isspecial(iflow)) then
 !     This is the ISSPECIAL case. Add one more (identical) connection.
             ! TODO: this can be optimised, since now we compute twice
@@ -972,7 +980,7 @@ c
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,i_connect
-     $     ,born_flow_picked,include_gfun,lzone,z,amp_split_xmcxsec)
+     $     ,include_gfun,lzone,z,amp_split_xmcxsec)
       use process_module
       use kinematics_module
       use scale_module
@@ -983,19 +991,20 @@ c over colour partners
       include 'fks_powers.inc'
       include 'coupl.inc'
 !     arguments:
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
-     $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
-     $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks ,probne ,z
+     $     ,xkern(2),xkernazi(2),bornbars(max_bcol ,nsplitorders)
+     $     ,bornbarstilde(max_bcol,nsplitorders)
      $     ,amp_split_xmcxsec(1:amp_split_size)
-      integer i_connect
-      logical lzone(nexternal),include_gfun
+      integer i_connect,ione,iord,iord_val
+      logical lzone,include_gfun
 !     local
-      double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
+      double precision ztmp,xitmp,xjactmp,qMC,delta,E0sq
      $     ,PY6PTweight,pmass(nexternal),xi,xjac
 !     external
       double precision bogus_probne_fun,gfunction,zHW6,xiHW6
-     $     ,xjacHW6
+     $     ,xjacHW6,compute_damping_weight
       external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
+     $     ,compute_damping_weight
 !     parameters      
       double precision ymin,zero
       parameter (ymin=0.9d0)
@@ -1015,7 +1024,10 @@ c over colour partners
       common /c_split_type/split_type
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      save
+      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
+     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
+      common /to_amp_split_bornbars/amp_split_bornbars,
+     $                              amp_split_bornbarstilde
       include "pmass.inc"
 
 
@@ -1053,13 +1065,13 @@ c$$$  if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is fi
 c$$$  gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
 c$$$  if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
 
-      if (btest(MCcntcalled,2)) then
-         write (*,*) 'Third bit of MCcntcalled should not be set yet'
-     $        ,MCcntcalled
-         stop 1
-      endif
-
-      MCcntcalled=MCcntcalled+4
+c$$$      if (btest(MCcntcalled,2)) then
+c$$$         write (*,*) 'Third bit of MCcntcalled should not be set yet'
+c$$$     $        ,MCcntcalled
+c$$$         stop 1
+c$$$      endif
+c$$$
+c$$$      MCcntcalled=MCcntcalled+4
       
 c     Shower variables
       E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
@@ -1115,151 +1127,151 @@ c
       end
 
       
-c Main routine for MC counterterms. Now to be called inside a loop
-c over colour partners
-      subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,
-     &     bornbars,bornbarstilde,npartner)
-      ! TODO cleanup 'flagmc'
-      use process_module
-      use kinematics_module
-      use scale_module
-      implicit none
-      include 'nexternal.inc'
-      include 'born_nhel.inc'
-      include 'orders.inc'
-      include 'fks_powers.inc'
-      include 'coupl.inc'
-! arguments:
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
-     $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
-     $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
-      integer nofpartners,npartner
-      logical lzone(nexternal),flagmc
-
-! local
-      double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
-     $     ,PY6PTweight,pmass(nexternal),xi,xjac
-! external
-      double precision bogus_probne_fun,gfunction,zHW6,xiHW6
-     $     ,xjacHW6
-      external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
-! parameters      
-      double precision ymin,zero
-      parameter (ymin=0.9d0)
-      parameter(zero=0d0)
-! common
-      logical first_MCcnt_call
-      common/cMCcall/first_MCcnt_call
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      double precision alsf,besf
-      common/cgfunsfp/alsf,besf
-      double precision alazi,beazi
-      common/cgfunazi/alazi,beazi
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
-      common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
-      logical split_type(nsplitorders) 
-      common /c_split_type/split_type
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-      save
-
-      include "pmass.inc"
-
-c Initialise if first time
-      if(.not.first_MCcnt_call)goto 222
-      if (split_type(QED_pos)) then
-         ! QED partners are dynamically found
-         call set_QED_flows(pp)
-      endif
-      flagmc   = .false.
-      ztmp     = 0d0
-      xitmp    = 0d0
-      xjactmp  = 0d0
-      gfactazi = 0d0
-      nofpartners = ipartners(0)
-
-      qMC=get_qMC(xi_i_fks,y_ij_fks)
-
-c     New or standard MC@NLO formulation
-      probne=bogus_probne_fun(qMC)
-
-c Call barred Born and assign shower scale
-      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-
-c Distinguish ISR and FSR
-      if(ileg.le.2)then
-         delta=min(1d0,deltaI)
-      elseif(ileg.ge.3)then
-         delta=min(1d0,deltaO)
-      endif
-c G-function parameters 
-      gfactsf=gfunction(x,alsf,besf,2d0)
-      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
-      gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
-      if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
-
-      if (btest(MCcntcalled,2)) then
-         write (*,*) 'Third bit of MCcntcalled should not be set yet'
-     $        ,MCcntcalled
-         stop 1
-      endif
-
-      MCcntcalled=MCcntcalled+4
-      
-c Shower variables (all except HW6, since that one depends on the
-c partner)
-      call get_shower_variables(E0sq,ztmp,xitmp,xjactmp)
-      
-      first_MCcnt_call=.false.
- 222  continue
-c Main loop over colour partners used to begin here
-      E0sq=dot(p_born(0,fksfather),
-     $                   p_born(0,ipartners(npartner)))
-      if(E0sq.lt.0d0)then
-         write(*,*)'Error in xmcsubt: negative E0sq'
-         write(*,*)E0sq,ileg,npartner
-         stop
-      endif
-      if(shower_mc_mod(1:7).eq.'HERWIG6')then
-         z(npartner)=zHW6(E0sq)
-         xi=xiHW6(E0sq,z(npartner))
-         xjac=xjacHW6(E0sq,xi,z(npartner))
-      else
-         z(npartner)=ztmp
-         xi=xitmp
-         xjac=xjactmp
-      endif
-c Compute dead zones
-      call get_dead_zone(z(npartner),xi,qMC
-     $     ,ipartners(npartner),lzone(npartner),PY6PTweight)
-
-c Compute MC subtraction terms
-      if(lzone(npartner))then
-         if(.not.flagmc)flagmc=.true.
-         call limits(xi_i_fks,y_ij_fks)
-         call compute_spitting_kernels(xkern,xkernazi,z(npartner)
-     $        ,xi,xjac)
-      else
-        xkern(1:2)=0d0
-        xkernazi(1:2)=0d0
-      endif
-c
-      xkern(1:2)=xkern(1:2)*gfactsf
-      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
-      if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
-         xkern(1:2)=xkern(1:2)*PY6PTweight
-         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
-      endif
-
-c Main loop over colour partners used to end here
-      return
-      end
+c$$$c Main routine for MC counterterms. Now to be called inside a loop
+c$$$c over colour partners
+c$$$      subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
+c$$$     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,
+c$$$     &     bornbars,bornbarstilde,npartner)
+c$$$      ! TODO cleanup 'flagmc'
+c$$$      use process_module
+c$$$      use kinematics_module
+c$$$      use scale_module
+c$$$      implicit none
+c$$$      include 'nexternal.inc'
+c$$$      include 'born_nhel.inc'
+c$$$      include 'orders.inc'
+c$$$      include 'fks_powers.inc'
+c$$$      include 'coupl.inc'
+c$$$! arguments:
+c$$$      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
+c$$$     $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
+c$$$     $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
+c$$$      integer nofpartners,npartner
+c$$$      logical lzone(nexternal),flagmc
+c$$$
+c$$$! local
+c$$$      double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
+c$$$     $     ,PY6PTweight,pmass(nexternal),xi,xjac
+c$$$! external
+c$$$      double precision bogus_probne_fun,gfunction,zHW6,xiHW6
+c$$$     $     ,xjacHW6
+c$$$      external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
+c$$$! parameters      
+c$$$      double precision ymin,zero
+c$$$      parameter (ymin=0.9d0)
+c$$$      parameter(zero=0d0)
+c$$$! common
+c$$$      logical first_MCcnt_call
+c$$$      common/cMCcall/first_MCcnt_call
+c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+c$$$      common /MC_info/ ipartners,colorflow
+c$$$      double precision alsf,besf
+c$$$      common/cgfunsfp/alsf,besf
+c$$$      double precision alazi,beazi
+c$$$      common/cgfunazi/alazi,beazi
+c$$$      integer              MCcntcalled
+c$$$      common/c_MCcntcalled/MCcntcalled
+c$$$      double precision       ch_i,ch_j,ch_m
+c$$$      integer                i_type,j_type,m_type
+c$$$      common/cparticle_types/ch_i,ch_j,ch_m,
+c$$$     &                       i_type,j_type,m_type
+c$$$      logical split_type(nsplitorders) 
+c$$$      common /c_split_type/split_type
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$      save
+c$$$
+c$$$      include "pmass.inc"
+c$$$
+c$$$c Initialise if first time
+c$$$      if(.not.first_MCcnt_call)goto 222
+c$$$      if (split_type(QED_pos)) then
+c$$$         ! QED partners are dynamically found
+c$$$         call set_QED_flows(pp)
+c$$$      endif
+c$$$      flagmc   = .false.
+c$$$      ztmp     = 0d0
+c$$$      xitmp    = 0d0
+c$$$      xjactmp  = 0d0
+c$$$      gfactazi = 0d0
+c$$$      nofpartners = ipartners(0)
+c$$$
+c$$$      qMC=get_qMC(xi_i_fks,y_ij_fks)
+c$$$
+c$$$c     New or standard MC@NLO formulation
+c$$$      probne=bogus_probne_fun(qMC)
+c$$$
+c$$$c Call barred Born and assign shower scale
+c$$$      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
+c$$$
+c$$$c Distinguish ISR and FSR
+c$$$      if(ileg.le.2)then
+c$$$         delta=min(1d0,deltaI)
+c$$$      elseif(ileg.ge.3)then
+c$$$         delta=min(1d0,deltaO)
+c$$$      endif
+c$$$c G-function parameters 
+c$$$      gfactsf=gfunction(x,alsf,besf,2d0)
+c$$$      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
+c$$$      gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
+c$$$      if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
+c$$$
+c$$$      if (btest(MCcntcalled,2)) then
+c$$$         write (*,*) 'Third bit of MCcntcalled should not be set yet'
+c$$$     $        ,MCcntcalled
+c$$$         stop 1
+c$$$      endif
+c$$$
+c$$$      MCcntcalled=MCcntcalled+4
+c$$$      
+c$$$c Shower variables (all except HW6, since that one depends on the
+c$$$c partner)
+c$$$      call get_shower_variables(E0sq,ztmp,xitmp,xjactmp)
+c$$$      
+c$$$      first_MCcnt_call=.false.
+c$$$ 222  continue
+c$$$c Main loop over colour partners used to begin here
+c$$$      E0sq=dot(p_born(0,fksfather),
+c$$$     $                   p_born(0,ipartners(npartner)))
+c$$$      if(E0sq.lt.0d0)then
+c$$$         write(*,*)'Error in xmcsubt: negative E0sq'
+c$$$         write(*,*)E0sq,ileg,npartner
+c$$$         stop
+c$$$      endif
+c$$$      if(shower_mc_mod(1:7).eq.'HERWIG6')then
+c$$$         z(npartner)=zHW6(E0sq)
+c$$$         xi=xiHW6(E0sq,z(npartner))
+c$$$         xjac=xjacHW6(E0sq,xi,z(npartner))
+c$$$      else
+c$$$         z(npartner)=ztmp
+c$$$         xi=xitmp
+c$$$         xjac=xjactmp
+c$$$      endif
+c$$$c Compute dead zones
+c$$$      call get_dead_zone(z(npartner),xi,qMC
+c$$$     $     ,ipartners(npartner),lzone(npartner),PY6PTweight)
+c$$$
+c$$$c Compute MC subtraction terms
+c$$$      if(lzone(npartner))then
+c$$$         if(.not.flagmc)flagmc=.true.
+c$$$         call limits(xi_i_fks,y_ij_fks)
+c$$$         call compute_spitting_kernels(xkern,xkernazi,z(npartner)
+c$$$     $        ,xi,xjac)
+c$$$      else
+c$$$        xkern(1:2)=0d0
+c$$$        xkernazi(1:2)=0d0
+c$$$      endif
+c$$$c
+c$$$      xkern(1:2)=xkern(1:2)*gfactsf
+c$$$      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+c$$$      if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
+c$$$         xkern(1:2)=xkern(1:2)*PY6PTweight
+c$$$         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
+c$$$      endif
+c$$$
+c$$$c Main loop over colour partners used to end here
+c$$$      return
+c$$$      end
 
 
 
