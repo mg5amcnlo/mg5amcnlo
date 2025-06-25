@@ -4725,7 +4725,7 @@ RESTART = %(mint_mode)s
         for Pdir, jobs in job_dict.items():
             print(Pdir,jobs)
             
-        self.run_all(job_dict, [['dummy']], 'Running reweight')
+        self.run_all(job_dict, [['dummy']], 'Running LO->NLO reweight')
 
         #update file name in nevents_unweighted
         newfile = open(nev_unw, 'w')

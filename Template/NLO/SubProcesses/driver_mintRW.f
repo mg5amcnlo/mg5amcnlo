@@ -103,13 +103,17 @@ c general MadFKS parameters
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
-     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP),SCALUP
+     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
-     # SCALUP_a(MAXNUP,MAXNUP)
+     # SCALUP_a(MAXNUP,MAXNUP),SCALUP
 
       character*1000 buff,buff2
-      double precision ratio
+      double precision ratio,showerscale
+
+      logical do_only_Sevents
+      common /c_do_only_Sevents/do_only_Sevents
+
       
 C-----
 C  BEGIN CODE
@@ -186,6 +190,9 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+
+      do_only_Sevents=.true.
+      
       ! Set folding to one (instead of reading it in get_user_params)
 c$$$      ixi_i=1
 c$$$      iphi_i=1
@@ -244,8 +251,10 @@ c     Prepare the MINT folding
      $        ,buff,buff2,SCALUP_a)
          read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
 !     compute the NLOoverBorn ratio:
-         call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
+         call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
+     $        ,showerscale)
          XWGTUP=XWGTUP*ratio
+         SCALUP=showerscale
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
      $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
@@ -288,7 +297,8 @@ c timing statistics
       data t_coupl/0.0/
       end
 
-      subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x)
+      subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
+     $     ,showerscale)
       use mint_module
       use weight_lines
       implicit none
@@ -298,6 +308,7 @@ c timing statistics
       include "coupl.inc"
       double precision x(ndimmax),ratio,jac,p(0:3,nexternal),vegas_wgt
      $     ,probne,gfactsf,gfactcl,replace_MC_subt,sudakov_damp,rwgt
+     $     ,vol1,showerscale
       integer nndim,i,iFKS_picked,nFKS_picked_nbody,sum
      $     ,proc_map(0:fks_configs,0:fks_configs),iFKS
       save proc_map,sum
@@ -327,6 +338,8 @@ c timing statistics
       common/c_MCcntcalled/MCcntcalled
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
+      double precision SCALUP(fks_configs*2)
+      common /cshowerscale/SCALUP
 
       if (firsttime) then
          firsttime=.false.
@@ -343,7 +356,10 @@ c timing statistics
       MCcntcalled=0
       nbody=.true.
       calculatedBorn=.false.
+
       vegas_wgt=1d0
+      vol1=1d0
+      
       ifold_counter=1
 
       do i=1,proc_map(0,0)
@@ -352,7 +368,7 @@ c timing statistics
             exit
          endif
       enddo
-      
+
       call update_fks_dir(iFKS_picked)
       icolup_s(1,1)=-1          ! set colour connection to -1: i.e., complete_xmcsubt has not been called
       if (ini_fin_fks.eq.0) then
@@ -360,6 +376,8 @@ c timing statistics
       else
          jac=0.5d0
       endif
+
+      jac=jac/(proc_map(0,0)*vol1)
          
       call generate_momenta(nndim,iconfig,jac,x,p)
       
@@ -385,7 +403,7 @@ c timing statistics
          wgt_me_born=0d0
          iFKS=proc_map(proc_map(0,1),i)
          call update_fks_dir(iFKS)
-         jac=1d0*proc_map(0,0)
+         jac=1d0/vol1
          probne=1d0
          gfactsf=1.d0
          gfactcl=1.d0
@@ -464,6 +482,11 @@ c determined which contributions are identical.
       call update_shower_scale_Sevents(ifold_counter,ifold_picked)
 
       call fill_mint_function_RATIO(ratio)
+
+      
+      call pick_unweight_contr(iFKS_picked,ifold_picked)
+      call update_fks_dir(iFKS_picked)
+      showerscale=SCALUP(iFKS_picked*2-1)
       
       end
 
@@ -1318,7 +1341,8 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
       write (*,*) "Enter 'born0' or 'virt0' to perform"
       write (*,*) " a pure n-body integration (no S functions)"
-      read(83,*) abrvinput
+c$$$      read(83,*) abrvinput
+      abrvinput='all  '
       if(abrvinput(5:5).eq.'0')then
          write (*,*) 'This option is no longer supported:',abrvinput
          stop

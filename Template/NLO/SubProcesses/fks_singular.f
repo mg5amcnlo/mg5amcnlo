@@ -1890,6 +1890,8 @@ c        contribution
       integer get_n_tagged_photons
       double precision get_rescale_alpha_factor
       external get_n_tagged_photons get_rescale_alpha_factor
+      logical do_only_Sevents
+      common /c_do_only_Sevents/do_only_Sevents
 
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
@@ -1897,6 +1899,13 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
 
+      if (do_only_Sevents) then
+         if (type.eq.1 .or. (type.ge.8 .and. type.le.10) .or. type.eq.13
+     $        ) then
+            return
+         endif
+      endif
+      
 C Apply user-defined (in FKS_params.dat) contribution type filters if necessary
       if (VetoedContributionTypes(0).gt.0) then
         do i=1,VetoedContributionTypes(0)

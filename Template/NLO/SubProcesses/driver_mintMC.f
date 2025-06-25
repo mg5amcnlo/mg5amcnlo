@@ -89,6 +89,8 @@ c general MadFKS parameters
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+      logical do_only_Sevents
+      common /c_do_only_Sevents/do_only_Sevents
 C-----
 C  BEGIN CODE
 C-----  
@@ -147,6 +149,9 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+
+      do_only_Sevents=.false.
+         
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
          doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
