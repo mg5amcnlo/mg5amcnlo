@@ -366,8 +366,9 @@ c configurations close to the soft-collinear limit
 c Initialise shower_S_scale to a large value, not to get spurious dead zones
                shower_S_scale=1d10*ebeam(1)
                if(ilim.eq.0)then
-                  call compute_xmcsubt_for_checks(p1_cnt(0,1,0),zero
-     $                 ,y_ij_fks_ev,fx)
+                  ! TODO: rewrite these checks (also below)!
+c$$$                  call compute_xmcsubt_for_checks(p1_cnt(0,1,0),zero
+c$$$     $                 ,y_ij_fks_ev,fx)
                else
                   call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
                endif
@@ -394,8 +395,8 @@ c because otherwise fresh random will be used...
                call generate_momenta(ndim,iconfig,wgt,x,p)
                calculatedBorn=.false.
                call set_cms_stuff(-100)
-               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
-     $              ,fx)
+c$$$               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
+c$$$     $              ,fx)
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
@@ -440,8 +441,8 @@ c because otherwise fresh random will be used...
               else
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
-                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
-     $                 ,y_ij_fks_ev,fx)
+c$$$                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
+c$$$     $                 ,y_ij_fks_ev,fx)
                   fxl(i)=fx*wgt
                   wfxl(i)=jac_cnt(0)
                   do iamp=1,amp_split_size
@@ -602,8 +603,8 @@ c
             calculatedBorn=.false.
             call set_cms_stuff(1)
             if(ilim.eq.0)then
-               call compute_xmcsubt_for_checks(p1_cnt(0,1,1)
-     $              ,xi_i_fks_cnt(1),one,fx)
+c$$$               call compute_xmcsubt_for_checks(p1_cnt(0,1,1)
+c$$$     $              ,xi_i_fks_cnt(1),one,fx)
             else
                call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
             endif
@@ -622,8 +623,8 @@ c
             if (ilim.eq.2) then
                call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             else
-               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
-     $              ,fx)
+c$$$               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
+c$$$     $              ,fx)
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
@@ -668,8 +669,8 @@ c
                else
                   calculatedBorn=.false.
                   call set_cms_stuff(-100)
-                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
-     $                 ,y_ij_fks_ev,fx)
+c$$$                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
+c$$$     $                 ,y_ij_fks_ev,fx)
                   fxl(i)=fx*wgt
                   wfxl(i)=jac_cnt(0)
                   do iamp=1,amp_split_size

@@ -817,7 +817,7 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne)
+      subroutine compute_MC_subt_term(p,passcuts,probne)
       use extra_weights
       use kinematics_module
       implicit none
@@ -834,16 +834,22 @@ c$$$  include 'madfks_mcatnlo.inc'
       include 'orders.inc'
       include 'run.inc'
       include 'born_nhel.inc'
-      integer nofpartners,i
-      double precision p(0:3,nexternal),gfactsf,gfactcl,probne,fks_Sij
-     $     ,sevmc,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
-     $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(2
-     $     ,amp_split_size)
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer nofpartners,i,k_fks,l_fks,iconnect,iFKS,n_connect
+      double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
+     $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
+     $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
+     $     ,y,z(2)
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $     ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer           fks_j_from_i(nexternal,0:nexternal)
@@ -869,7 +875,7 @@ c$$$  if(UseSfun)then
 c$$$  else
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
 c$$$  endif
-      if (sevmc.eq.0d0) return
+      if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
       do iFKS=1,fks_configs
          k_fks=FKS_I_D(iFKS)
          l_fks=FKS_J_D(iFKS)
@@ -881,12 +887,12 @@ c$$$  endif
 !     compute kinematic variables
          xi=get_xi_from_p(k_fks,l_fks,p)
          y=get_yij_from_p(k_fks,l_fks,p)
-         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
+         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
             call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
-               if (amp_split_xmcxsec(iconnect,iamp).eq.0d0) cycle
+               if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
                wgtcpower=0d0
@@ -896,11 +902,11 @@ c$$$  endif
                g22=g**(QCD_power)
                if (iFKS.eq.nFKSprocess) then
                   wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
-     &                 amp_split_xmcxsec(iconnect,iamp)/g22
+     &                 amp_split_xmcxsec(iamp,iconnect)/g22
                   call add_wgt(12,orders,wgt1,0d0,0d0)
                endif
                wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
-     &              amp_split_xmcxsec(iconnect,iamp)/g22
+     &              amp_split_xmcxsec(iamp,iconnect)/g22
                call add_wgt(13,orders,-wgt1,0d0,0d0)
             enddo
          enddo
