@@ -18,13 +18,71 @@ contains
     implicit none
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
-    get_xi_from_p=sqrt(2d0)*p(0,i_fks)/sqrt(dot(p(0,1),p(0,2)))
+    double precision :: s,t,u,y
+    double precision,dimension(0:3,3) :: p_cm
+    ! check if incoming have same energy; if so, these momenta were
+    ! generated with a final-state j_fks.
+    if (abs(p(0,1)-p(0,2))/(p(0,1)+p(0,2)).lt.1d-10 .and. j_fks.gt.3) then
+    ! If the input j_fks (argument of this function) is also final
+    ! state, we can compute xi directly from the momenta:
+       get_xi_from_p=sqrt(2d0)*p(0,i_fks)/sqrt(dot(p(0,1),p(0,2)))
+    else
+       ! either momenta were generated with initial state j_fks,
+       ! and/or the input j_fks to this routine is initial state
+       if (j_fks.eq.1) then
+          s= 2d0*dot(p(0,1),p(0,2))
+          t=-2d0*dot(p(0,1),p(0,i_fks))
+          u=-2d0*dot(p(0,2),p(0,i_fks))
+          get_xi_from_p=-(t+u)/s
+!          y=(u-t)/(t+u)
+       elseif (j_fks.eq.2) then
+          s= 2d0*dot(p(0,1),p(0,2))
+          t=-2d0*dot(p(0,2),p(0,i_fks))
+          u=-2d0*dot(p(0,1),p(0,i_fks))
+          get_xi_from_p=-(t+u)/s
+       else
+          ! boost to cm frame
+          y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
+          call boostz(p(0,1),y,p_cm(0,1))
+          call boostz(p(0,2),y,p_cm(0,2))
+          call boostz(p(0,i_fks),y,p_cm(0,3))
+          get_xi_from_p=sqrt(2d0)*p_cm(0,3)/sqrt(dot(p_cm(0,1),p_cm(0,2)))
+       endif
+    endif
   end function get_xi_from_p
   double precision function get_yij_from_p(i_fks,j_fks,p)
     implicit none
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
-    get_yij_from_p=dot3(p(0,i_fks),p(0,j_fks))/(rho(p(0,i_fks))*rho(p(0,j_fks)))
+    double precision :: s,t,u,y
+    double precision,dimension(0:3,2) :: p_cm
+    ! check if incoming have same energy; if so, these momenta were
+    ! generated with a final-state j_fks.
+    if (abs(p(0,1)-p(0,2))/(p(0,1)+p(0,2)).lt.1d-10 .and. j_fks.gt.3) then
+       ! If the input j_fks (argument of this function) is also final
+       ! state, we can compute xi directly from the momenta:
+       get_yij_from_p=dot3(p(0,i_fks),p(0,j_fks))/(rho(p(0,i_fks))*rho(p(0,j_fks)))
+    else
+       ! either momenta were generated with initial state j_fks,
+       ! and/or the input j_fks to this routine is initial state
+       if (j_fks.eq.1) then
+          s= 2d0*dot(p(0,1),p(0,2))
+          t=-2d0*dot(p(0,1),p(0,i_fks))
+          u=-2d0*dot(p(0,2),p(0,i_fks))
+          get_yij_from_p=(u-t)/(t+u)
+       elseif (j_fks.eq.2) then
+          s= 2d0*dot(p(0,1),p(0,2))
+          t=-2d0*dot(p(0,2),p(0,i_fks))
+          u=-2d0*dot(p(0,1),p(0,i_fks))
+          get_yij_from_p=(u-t)/(t+u)
+       else
+          ! boost to cm frame
+          y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
+          call boostz(p(0,i_fks),y,p_cm(0,1))
+          call boostz(p(0,j_fks),y,p_cm(0,2))
+          get_yij_from_p=dot3(p_cm(0,1),p_cm(0,2))/(rho(p_cm(0,1))*rho(p_cm(0,2)))
+       endif
+    endif
   end function get_yij_from_p
   double precision function dot3(p1,p2)
     implicit none
@@ -36,6 +94,15 @@ contains
     double precision,dimension(0:3) :: p1
     rho=sqrt(dot3(p1,p1))
   end function rho
+  subroutine boostz(p,yb,pb)
+    ! boost in the z-direction with rapidity yb
+    implicit none
+    real(kind=8),dimension(0:3) :: p,pb
+    real(kind=8) :: yb
+    pb(0)=p(0)*cosh(yb)-p(3)*sinh(yb)
+    pb(1:2)=p(1:2)
+    pb(3)=p(3)*cosh(yb)-p(0)*sinh(yb)
+  end subroutine boostz
   
   !TODO: modify qMC to be the shower variable???
   double precision function get_qMC(xi_i_fks,y_ij_fks)
