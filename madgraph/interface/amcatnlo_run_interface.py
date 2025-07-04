@@ -3785,7 +3785,7 @@ RESTART = %(mint_mode)s
            or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         if mode in ['aMC@LO','noshowerLO']:
-            self.run_LONLO_RW()
+            self.run_LONLO_RW(options)
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
@@ -4705,7 +4705,7 @@ RESTART = %(mint_mode)s
         output.close()
         return shower
 
-    def run_LONLO_RW(self):
+    def run_LONLO_RW(self,options):
         """runs the LO to NLO reweighting"""
         logger.info('    Doing LO -> NLO reweighting')
         #read the nevents_unweighted file to get the list of event files
@@ -4722,9 +4722,14 @@ RESTART = %(mint_mode)s
             path, evt = os.path.split(evt_file)
             job_dict[path] = [exe]
             
-        for Pdir, jobs in job_dict.items():
-            print(Pdir,jobs)
-            
+        fixed_order=False
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+        jobs_to_run,jobs_to_collect,integration_step=create_jobs_to_run(options,p_dirs, \
+                                                                    1.,1,1,1,fixed_order)
+        for job in jobs_to_run:
+            self.write_input_file(job,fixed_order)
+
         self.run_all(job_dict, [['dummy']], 'Running LO->NLO reweight')
 
         #update file name in nevents_unweighted
