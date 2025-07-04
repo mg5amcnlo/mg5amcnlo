@@ -1321,6 +1321,47 @@ c f_* multiplication factors for Born and nbody
       end
 
 
+      subroutine include_born_flow_weight(born_flow_factor)
+      implicit none
+      integer born_flow_factor
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
+      common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
+      ! the f_b and f_nb do not require the factor, since we can include
+      ! them for all flows. That is, they do not play any role in the
+      ! subtraction.
+c$$$      f_b=      f_b      *born_flow_factor
+c$$$      f_nb=     f_nb     *born_flow_factor
+      f_r=      f_r      *born_flow_factor
+      ! the f_MC_S and f_MC_H already include this factor by construction
+c$$$      f_MC_S=   f_MC_S   *born_flow_factor
+c$$$      f_MC_H=   f_MC_H   *born_flow_factor
+      f_s=      f_s      *born_flow_factor
+      f_s_MC_S= f_s_MC_S *born_flow_factor
+      f_S_MC_H= f_S_MC_H *born_flow_factor
+      f_c=      f_c      *born_flow_factor
+      f_c_MC_S= f_c_MC_S *born_flow_factor
+      f_c_MC_H= f_c_MC_H *born_flow_factor
+      f_dc=     f_dc     *born_flow_factor
+      f_sc=     f_sc     *born_flow_factor
+      f_sc_MC_S=f_sc_MC_S*born_flow_factor
+      f_sc_MC_H=f_sc_MC_H*born_flow_factor
+      f_dsc(1)= f_dsc(1) *born_flow_factor
+      f_dsc(2)= f_dsc(2) *born_flow_factor
+      f_dsc(3)= f_dsc(3) *born_flow_factor
+      f_dsc(4)= f_dsc(4) *born_flow_factor
+      f_pdfsch_d=  f_pdfsch_d  *born_flow_factor
+      f_pdfsch_p=  f_pdfsch_p  *born_flow_factor
+      f_pdfsch_l=  f_pdfsch_l  *born_flow_factor
+      end
+
       subroutine include_multichannel_enhance(imode)
       implicit none
       include 'nexternal.inc'
@@ -7727,7 +7768,7 @@ c     reset the default dynamical_scale_choice
       end
 
 
-      subroutine get_born_flow(flow_picked)
+      subroutine get_born_flow(flow_picked,born_flow_factor)
 ! This assumes that the Born matrix elements are called. This is
 ! always the case if either the compute_born or the virtual
 ! (through bornsoftvirtual) are evaluated.
@@ -7735,7 +7776,7 @@ c     reset the default dynamical_scale_choice
       include 'genps.inc'
       include "born_nhel.inc"
       integer :: flow_picked,i
-      double precision :: sumborn,target,sum
+      double precision :: sumborn,target,sum,born_flow_factor
       double precision,external :: ran2
       double Precision :: amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/  amp2         ,jamp2
@@ -7754,6 +7795,7 @@ c     reset the default dynamical_scale_choice
          sum=sum+jamp2(i)
          if(sum.gt.target) then
             flow_picked=i
+            born_flow_factor=jamp2(flow_picked)/sumborn
             return
          endif
       enddo

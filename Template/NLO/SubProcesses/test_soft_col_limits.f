@@ -94,7 +94,8 @@ C split orders stuff
       common/c_MCcntcalled/MCcntcalled
       character*4 abrv
       integer fks_father
-c
+      double precision born_flow_factor
+c     
 c     Properly initialize PY8 controls
 c
       include 'pythia8_control.inc'
@@ -342,7 +343,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             if (ilim.ne.2) then
                fks_father=min(i_fks,j_fks)
                call compute_shower_scale_nbody(p_born,-fks_father) 
-               call get_born_flow(flow_picked)
+               call get_born_flow(flow_picked,born_flow_factor)
                call determine_partner(flow_picked,partner_picked)
                call init_process_module_n1body_wrapper(flow_picked)
                call compute_shower_scale_n1body(p,i_fks,j_fks)

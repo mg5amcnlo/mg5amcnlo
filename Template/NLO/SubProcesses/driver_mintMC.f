@@ -730,6 +730,7 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double complex wgt1(2)
+      double precision born_flow_factor
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -815,7 +816,8 @@ c 1/proc_map(0,0)*vol1)
             if (abrv.eq.'born') then
                ! Doing only the Born contribution.
                call compute_born
-               if (ifl.eq.0) call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked
+     $              ,born_flow_factor)
                call Bornonly_shower_scale(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
@@ -823,7 +825,8 @@ c 1/proc_map(0,0)*vol1)
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
-               if (ifl.eq.0) call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked
+     $              ,born_flow_factor)
                call compute_shower_scale_nbody(p_born,born_flow_picked)
                emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
      $              =get_random_shower_dipole_scale()
@@ -833,7 +836,8 @@ c 1/proc_map(0,0)*vol1)
                call compute_born
                call compute_nbody_noborn
                ! only for ifl==0, since we want the same flow for each fold.
-               if (ifl.eq.0) call get_born_flow(born_flow_picked)
+               if (ifl.eq.0) call get_born_flow(born_flow_picked
+     $              ,born_flow_factor)
                ! We need to fill emsca_S(iFKS_born) with a value that
                ! will be used if we are in the dead-zone. If we are not
                ! in the dead-zone, this will not be used (or
@@ -844,7 +848,7 @@ c 1/proc_map(0,0)*vol1)
             endif
          elseif (ifl.eq.0) then
             call sborn(p_born,wgt1)
-            call get_born_flow(born_flow_picked)
+            call get_born_flow(born_flow_picked,born_flow_factor)
 ! give it a negative value so that we can keep track of the fact that
 ! this was obtained with momenta that do not pass the cuts.
             born_flow_picked=-born_flow_picked
@@ -935,6 +939,7 @@ c counter-event momenta do not exist).
             endif
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
+            call include_born_flow_weight(born_flow_factor)
 c Include the FxFx Sudakovs into the prefactors
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p) ! reset the FxFx scales
