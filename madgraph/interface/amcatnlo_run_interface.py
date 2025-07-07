@@ -4718,16 +4718,16 @@ RESTART = %(mint_mode)s
         #prepare the job_dict
         job_dict = {}
         exe = '../madevent_mintRW'
+        fixed_order=False
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
             job_dict[path] = [exe]
-            
-        fixed_order=False
-        p_dirs = [d for d in \
-                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
-        jobs_to_run,jobs_to_collect,integration_step=create_jobs_to_run(options,p_dirs, \
-                                                                    1.,1,1,1,fixed_order)
-        for job in jobs_to_run:
+            job={}
+            job['accuracy']=0.
+            job['channel']=(path.rsplit('GB',1)[1]).split('_')[0]
+            job['mint_mode']=0
+            job['run_mode']='all  '
+            job['dirname']=pjoin(self.me_dir,'SubProcesses',path)
             self.write_input_file(job,fixed_order)
 
         self.run_all(job_dict, [['dummy']], 'Running LO->NLO reweight')
