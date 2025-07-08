@@ -378,8 +378,7 @@ c timing statistics
             x_phi(ifold_3)=ran2()
          endif
       enddo
-      
-      
+
       ifold_counter=0
       do ifold_1=1,ifold(ifold_energy)
       ! update random variable corresponding to ifold_energy, which is ndim-2:
@@ -398,7 +397,7 @@ c timing statistics
          else
             fold=1
          endif
-
+         
       MCcntcalled=0
       nbody=.true.
       calculatedBorn=.false.
@@ -425,6 +424,8 @@ c timing statistics
       jac=jac/(proc_map(0,0)*vol1)
          
       call generate_momenta(nndim,iconfig,jac,x,p)
+
+      if (p1_cnt(0,1,0).lt.0d0) cycle
       
       call compute_prefactors_nbody(vegas_wgt)
 

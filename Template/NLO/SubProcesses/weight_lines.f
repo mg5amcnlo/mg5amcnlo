@@ -19,10 +19,11 @@
       end module weight_lines
 
 
-      subroutine weight_lines_allocated(nexternal,n_contr,n_wgt,n_proc)
+      subroutine weight_lines_allocated(nexternal,n_contr_in,n_wgt_in
+     $     ,n_proc_in)
       use weight_lines
       implicit none
-      integer n_contr,n_wgt,n_proc,nexternal
+      integer n_contr,n_wgt,n_proc,n_contr_in,n_wgt_in,n_proc_in,nexternal
       logical, allocatable :: ltemp1(:)
       integer, allocatable :: itemp1(:),itemp2(:,:),itemp3(:,:,:)
       double precision, allocatable :: temp1(:),temp2(:,:),temp3(:,:,:)
@@ -33,7 +34,8 @@ c of the allocated arrays.
          call allocate_weight_lines(nexternal)
       endif
 c --- increase size of max_iproc ---
-      if (n_proc.gt.max_iproc) then
+      if (n_proc_in.gt.max_iproc) then
+         n_proc=2*max_iproc
 c parton_pdg_uborn
          allocate(itemp3(nexternal,n_proc,max_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdg_uborn
@@ -58,7 +60,8 @@ c update maximum
          max_iproc=n_proc
       endif
 c --- increase size of max_wgt ---
-      if (n_wgt.gt.max_wgt) then
+      if (n_wgt_in.gt.max_wgt) then
+         n_wgt=2*max_wgt
 c wgts
          allocate(temp2(n_wgt,max_contr))
          temp2(1:max_wgt,1:max_contr)=wgts
@@ -71,7 +74,8 @@ c update maximum
          max_wgt=n_wgt
       endif
 c --- increase size of max_contr ---
-      if (n_contr.gt.max_contr) then
+      if (n_contr_in.gt.max_contr) then
+         n_contr=2*max_contr
 c H_event
          allocate(ltemp1(n_contr))
          ltemp1(1:max_contr)=H_event

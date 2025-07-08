@@ -4725,7 +4725,7 @@ RESTART = %(mint_mode)s
             job={}
             job['accuracy']=0.
             job['channel']=(path.rsplit('GB',1)[1]).split('_')[0]
-            job['mint_mode']=0
+            job['mint_mode']=2
             job['run_mode']='all  '
             job['dirname']=pjoin(self.me_dir,'SubProcesses',path)
             self.write_input_file(job,fixed_order)
