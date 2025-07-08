@@ -35,7 +35,7 @@ c of the allocated arrays.
       endif
 c --- increase size of max_iproc ---
       if (n_proc_in.gt.max_iproc) then
-         n_proc=2*max_iproc
+         n_proc=max(2*max_iproc,n_proc_in)
 c parton_pdg_uborn
          allocate(itemp3(nexternal,n_proc,max_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdg_uborn
@@ -61,7 +61,7 @@ c update maximum
       endif
 c --- increase size of max_wgt ---
       if (n_wgt_in.gt.max_wgt) then
-         n_wgt=2*max_wgt
+         n_wgt=max(2*max_wgt,n_wgt_in)
 c wgts
          allocate(temp2(n_wgt,max_contr))
          temp2(1:max_wgt,1:max_contr)=wgts
@@ -75,7 +75,7 @@ c update maximum
       endif
 c --- increase size of max_contr ---
       if (n_contr_in.gt.max_contr) then
-         n_contr=2*max_contr
+         n_contr=max(2*max_contr,n_contr_in)
 c H_event
          allocate(ltemp1(n_contr))
          ltemp1(1:max_contr)=H_event
