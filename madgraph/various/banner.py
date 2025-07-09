@@ -5785,8 +5785,8 @@ class RunCardNLO(RunCard):
         if len(self['folding']) != 3:
             raise InvalidRunCard("'folding' should contain exactly three integers")
         for ifold in self['folding']:
-            if ifold not in [1,2,4,8]: 
-                raise InvalidRunCard("The three 'folding' parameters should be equal to 1, 2, 4, or 8.")
+            if ifold not in [1,2,4,8,16,32,64,128]: 
+                raise InvalidRunCard("The three 'folding' parameters should be a multiple of 2 (up to 128)")
     # Check MC@NLO-Delta
         if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
             raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
