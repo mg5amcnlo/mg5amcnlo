@@ -341,7 +341,7 @@ c timing statistics
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
       integer ifold_1,ifold_2,ifold_3
-      double precision x_E(8),x_yij(8),x_phi(8),ran2
+      double precision x_E(128),x_yij(128),x_phi(128),ran2
       external ran2
       
       if (firsttime) then

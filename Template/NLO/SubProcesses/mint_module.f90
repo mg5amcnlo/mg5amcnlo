@@ -75,7 +75,7 @@ module mint_module
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
   integer, parameter, private :: min_it1=5        ! minimal number of iterations in the mint step 1 phase
-  integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
+  integer, parameter, public :: max_fold=16384     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
