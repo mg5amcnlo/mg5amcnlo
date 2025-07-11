@@ -2216,7 +2216,7 @@ RESTART = %(mint_mode)s
 """ \
               % job
         else:
-            if job['mint_mode'] == 0:
+            if job['mint_mode'] == 0 or job['run_mode'] != 'all':
                 job['fold_string']='1 1 1'
             else:
                 job['fold_string']=' '.join(map(str, self.run_card['folding']))
@@ -4726,7 +4726,7 @@ RESTART = %(mint_mode)s
             job['accuracy']=0.
             job['channel']=(path.rsplit('GB',1)[1]).split('_')[0]
             job['mint_mode']=2
-            job['run_mode']='all  '
+            job['run_mode']='all'
             job['dirname']=pjoin(self.me_dir,'SubProcesses',path)
             self.write_input_file(job,fixed_order)
 
