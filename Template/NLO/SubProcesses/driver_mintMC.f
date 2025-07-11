@@ -141,6 +141,7 @@ c
       call run_printout          !Prints out a summary of the run settings
       call fill_configurations_common
       call check_amp_split 
+
 c     
 c     Get user input
 c
@@ -160,6 +161,9 @@ c Only do the reweighting when actually generating the events
       else
          only_virt=.false.
       endif
+
+      !MZ
+      if(imode.eq.1) open(unit=69,file='dump.dat',status='unknown')
 
       if(imode.eq.0)then
         flat_grid=.true.
@@ -393,6 +397,10 @@ c Randomly pick the contribution that will be written in the event file
       write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
+
+
+      !MZ
+      if(imode.eq.1) close(69)
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
@@ -707,6 +715,11 @@ c
       common /c_vegas_x_fold/x_save,ifold_picked
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
+
+      !MZ
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -749,6 +762,8 @@ c "npNLO".
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
+         !MZ
+         if (imode.eq.1) write(69,*) 'NEWPS', x(1:nndim)
          do i=1,nndim
             x_save(i,ifold_counter)=x(i)
          enddo
@@ -779,6 +794,17 @@ c FKS configurations (for the shower scale) (multiply by
 c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
          call generate_momenta(nndim,iconfig,jac,x,p)
+         !MZ
+         if (imode.eq.1) then
+           write(69,*) 'XIY',xi_i_fks_ev,y_ij_fks_ev
+           do i = 1, nexternal
+             write(69,*) 'P', i , p(:,i)
+           enddo
+           do i = 1, nexternal-1
+             write(69,*) 'PB', i , p1_cnt(:,i,0)
+           enddo
+         endif
+
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)

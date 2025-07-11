@@ -2140,6 +2140,8 @@ c overwrite the relevant information.]
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
+         ! MZ
+         if (imode.eq.1) write(69,*) 'WGT',itype(i), wgts(iwgt,i)
          if (itype(i).eq.14 .and. .not.virt_found) then
             virt_found=.true.
 c Special for the soft-virtual needed for the virt-tricks. The
@@ -2165,6 +2167,8 @@ c and not be part of the plots nor computation of the cross section.
       enddo
       call cpu_time(tAfter)
       t_as=t_as+(tAfter-tBefore)
+      ! MZ 
+      if (imode.eq.1) write(69,*) 'ENDPS'
       return
       end
 

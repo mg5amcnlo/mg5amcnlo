@@ -214,6 +214,8 @@ contains
           call combine_results_channels
        endif
        call update_accumulated_results
+       !MZ
+       if (imode.eq.1) write(69,*) 'NEWITER'
     enddo
     call finalise_mint
   end subroutine mint
