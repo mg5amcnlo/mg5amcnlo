@@ -2,10 +2,10 @@
       implicit none
       integer ilim,nsofttests,ncolltests,fks_loop_min
      $     ,fks_loop_max,fks_loop,bs_min,bs_max
-      double precision xi_i_fks_fix_save,y_ij_fks_fix_save
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
       
       call read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
-     $     ,fks_loop_max,xi_i_fks_fix_save,y_ij_fks_fix_save)
+     $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
 
       call init_test_limits(ilim)
       
@@ -14,13 +14,15 @@
          do iconfig=bs_min,bs_max
             call init_iconfig_loop(ilim)
 
-            call test_soft_limit(nsofttests)
+            call test_soft_limit(ilim,iconfig,nsofttests,xi_i_fks_fix_input
+     $           ,y_ij_fks_fix_input)
             
          enddo
       enddo
       end
 
-      subroutine test_soft_limits(nsofttests)
+      subroutine test_soft_limits(ilim,iconfig,nsofttests,xi_i_fks_fix_input
+     $     ,y_ij_fks_fix_input)
       implicit none
       imax=10
       Hevents=.true.
@@ -29,58 +31,119 @@
       nerr(:)=0
       imax=10
       do j=1,nsofttests
-         call set_arrays_to_zero(imax)
-         call compute_at_the_limit()
-
-         do
-            call compute_towards_limit()
+         xi_i_fks_fix=xi_i_fks_fix_input
+         y_ij_fks_fix=y_ij_fks_fix_input
+         call generate_valid_momenta(ndim,iconfig,wgt,x,p)
+         do i=1,imax
+            if (softtest) xi_i_fks_fix=0.1d0**i
+            if (colltest) y_ij_fks_fix=1-0.1d0**i
+            call compute_towards_limit(ilim,iconfig,x
+     $           ,towards_amp_split(1,i),towards_wgt_PS(i),towards_p(0,1
+     $           ,i))
          enddo
          
+         call compute_in_the_limit(ilim,xi_i_fks_fix_input
+     $     ,y_ij_fks_fix_input)
+
       enddo      
       end
 
-      subroutine set_arrays_to_zero(imax,fxl_split,wfxl_split
-     $     ,limit_split,wlimit_split)
+      subroutine compute_towards_limit(ilim,iconfig,x,amp,wgt_PS,xp)
       implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer ilim,iamp,iconfig
+      double precision amp(amp_split_size),wgt_PS,wgt,x(99),p(0:3
+     $     ,nexternal),xp(0:3,nexternal+1)
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      if (ilim.eq.2) then
+         calculatedBorn=.false.
+         call set_cms_stuff(-100)
+         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+      else
+         write (*,*) 'to implement'
+      endif
+
+      ! save amplitudes (and PS weight) towards limit
       do iamp=1,amp_split_size
-         do i = 1,imax
-            fxl_split(i,iamp) = 0d0
-            wfxl_split(i,iamp) = 0d0
-            limit_split(i,iamp) = 0d0
-            wlimit_split(i,iamp) = 0d0
-         enddo
+         if (ilim.eq.2) then
+            amp(iamp) = amp_split(iamp)*wgt
+         else
+            amp(iamp) = amp_split_mc(iamp)*wgt
+         endif
       enddo
+      wgt_PS = wgt
+
+      ! save momenta
+      xp(0:3,1:nexternal)=p(0:3,1:nexternal)
+      xp(0:3,nexternal+1)=p_i_fks_ev(0:3)
+      
+      end
+      
+      
+      
+      subroutine compute_in_the_limit(ilim,xi_i_fks_fix_input
+     $     ,y_ij_fks_fix_input)
+      implicit none
+      integer ilim
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
+      xi_i_fks_fix=xi_i_fks_fix_input
+      y_ij_fks_fix=y_ij_fks_fix_input
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      if (ilim.eq.2) then
+         calculatedBorn=.false.
+         if (softtest) then
+            call set_cms_stuff(0)
+            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+         elseif(colltest) then
+            call set_cms_stuff(1)
+            call sreal(p1_cnt(0,1,1),xi_i_fks_ev,one,fx)
+         endif
+      else
+         write (*,*) 'to implement'
+      endif
+      
+      ! save amplitudes (and PS weight) in the limit
+      do iamp=1,amp_split_size
+         if (ilim.eq.2) then
+            limit_split(iamp) = amp_split(iamp)*wgt
+         else
+            limit_split(iamp) = amp_split_mc(iamp)*wgt
+         endif
+         limit_PS_split(iamp) = wgt
+      enddo
+
+! save momenta
+      if (softtest) then
+         lxp(0:3,1:nexternal)=p1_cnt(0:3,1:nexternal,0)
+         lxp(0:3,nexternal+1)=p_i_fks_cnt(0:3,0)
+      elseif (colltest) then
+         lxp(0:3,1:nexternal)=p1_cnt(0:3,1:nexternal,1)
+         lxp(0:3,nexternal+1)=p_i_fks_cnt(0:3,1)
+      endif
+      
       end
 
-      
-      subroutine init_iconfig_loop(ilim)
+
+
+      subroutine generate_valid_momenta(ndim,iconfig,wgt,x,p)
       use mint_module
       implicit none
       include 'nexternal.inc'
-      integer ilim,ntry,jj
-      double precision x(99),wgt,p(0:3,nexternal)
-      double complex wgt1(2)
+      integer ndim,iconfig
+      double precision wgt,x(99),p(0:3,nexternal)
+      integer jj,ntry
       double precision ran2
       external ran2
-      logical        softtest,colltest
-      common/sctests/softtest,colltest
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      ichan=1
-      iconfigs(1)=iconfig
-      if (ilim.eq.2) then
-         call setfksfactor(.false.)
-      else
-         call setfksfactor(.true.)
-      endif
-      call setcuts
-      ntry=1
-
-      softtest=.false.
-      colltest=.false.
-
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
       do jj=1,ndim
          x(jj)=ran2()
       enddo
@@ -105,6 +168,33 @@
      $        /' Cannot perform ME tests properly for config',iconfig
          cycle
       endif
+      end
+      
+      subroutine init_iconfig_loop(ilim)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      integer ilim
+      double precision x(99),wgt,p(0:3,nexternal)
+      double complex wgt1(2)
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      ichan=1
+      iconfigs(1)=iconfig
+      if (ilim.eq.2) then
+         call setfksfactor(.false.)
+      else
+         call setfksfactor(.true.)
+      endif
+      call setcuts
+
+      softtest=.false.
+      colltest=.false.
+
+      call generate_valid_momenta(ndim,iconfig,wgt,x,p)
+      
       call sborn(p_born,wgt1)
       write (*,*) ''
       write (*,*) ''
@@ -253,7 +343,7 @@ c-----
 
 
       subroutine read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
-     $     ,fks_loop_max,xi_i_fks_fix_save,y_ij_fks_fix_save)
+     $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
       implicit none
       integer ilim,nsofttests,ncolltests,fks_conf_number,fks_loop_min
      $     ,fks_loop_max
@@ -263,7 +353,7 @@ c$$$      common/cMonteCarloType/MonteCarlo
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
       common /cgfunazi/alazi,beazi
-      double precision xi_i_fks_fix_save,y_ij_fks_fix_save
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
       write(*,*) 'Enter 0 to compute MC/MC(limit)'
       write(*,*) '      1 to compute MC/ME(limit)'
       write(*,*) '      2 to compute ME/ME(limit)'
@@ -293,7 +383,7 @@ c$$$         endif
       endif
       write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
       write(*,*) ' Enter -2 to generate them randomly'
-      read (*,*) xi_i_fks_fix_save,y_ij_fks_fix_save
+      read (*,*) xi_i_fks_fix_input,y_ij_fks_fix_input
 
       write(*,*) 'Enter number of tests for soft and collinear limits'
       read (*,*) nsofttests,ncolltests
