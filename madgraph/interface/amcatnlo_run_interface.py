@@ -2018,6 +2018,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
+                if mint_step == 1:
+                    self.collect_dump_files(jobs_to_run)
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
                 if mint_step+1==2 and nevents==0:
@@ -3089,6 +3091,14 @@ RESTART = %(mint_mode)s
 
         outfile.write('</font>\n</BODY></HTML>\n')
         outfile.close()
+
+    def collect_dump_files(self, jobs):
+        rundir = pjoin(self.me_dir, 'Events', self.run_name) 
+
+        for job in jobs:
+            # put an anchor
+            file=pjoin(job['dirname'],'dump.dat')
+            files.cp(file, pjoin(rundir,'dump_%s_GF%s.dat' % (job['p_dir'], job['channel'])))
 
 
     def finalise_run_FO(self,folder_name,jobs):
