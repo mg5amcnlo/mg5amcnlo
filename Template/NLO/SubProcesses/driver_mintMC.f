@@ -803,6 +803,7 @@ c 1/proc_map(0,0)*vol1)
            do i = 1, nexternal-1
              write(69,*) 'PB', i , p1_cnt(:,i,0)
            enddo
+           write(69,*)'VEGASWGT', vegas_wgt
          endif
 
          if (p_born(0,1).lt.0d0) goto 12
