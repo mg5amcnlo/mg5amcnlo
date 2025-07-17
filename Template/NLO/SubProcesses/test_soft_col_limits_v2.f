@@ -1,62 +1,216 @@
       program test_soft_col_limits
       implicit none
       integer ilim,nsofttests,ncolltests,fks_loop_min
-     $     ,fks_loop_max,fks_loop,bs_min,bs_max
+     $     ,fks_loop_max,fks_loop,bs_min,bs_max,nstep
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input
       
       call read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
      $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
 
-      call init_test_limits(ilim)
+      call init_test_limits(ilim,nstep)
       
       do fks_loop=fks_loop_min,fks_loop_max
          call init_new_loop(fks_loop,bs_min,bs_max)
          do iconfig=bs_min,bs_max
             call init_iconfig_loop(ilim)
-
-            call test_soft_limit(ilim,iconfig,nsofttests,xi_i_fks_fix_input
-     $           ,y_ij_fks_fix_input)
             
+            softtest=.true.
+            colltest=.false.
+            ntests=nsofttest
+            
+            call test_limit(ilim,iconfig,ntests,xi_i_fks_fix_input
+     $           ,y_ij_fks_fix_input,nstep)
          enddo
       enddo
       end
 
-      subroutine test_soft_limits(ilim,iconfig,nsofttests,xi_i_fks_fix_input
-     $     ,y_ij_fks_fix_input)
+      subroutine test_limits(ilim,iconfig,ntests,xi_i_fks_fix_input
+     $     ,y_ij_fks_fix_input,nstep)
+      use mint_module
       implicit none
-      imax=10
-      Hevents=.true.
-      softtest=.true.
-      colltest=.false.
-      nerr(:)=0
-      imax=10
-      do j=1,nsofttests
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,iconfig,ntests,i,ilim,jtest
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input,wgt,x(99)
+     $     ,p(0:3,nexternal),towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1)
+      double precision xi_i_fks_fix,y_ij_fks_fix
+      common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      do jtest=1,ntests
          xi_i_fks_fix=xi_i_fks_fix_input
          y_ij_fks_fix=y_ij_fks_fix_input
-         call generate_valid_momenta(ndim,iconfig,wgt,x,p)
-         do i=1,imax
+         call generate_valid_momenta(iconfig,wgt,x,p)
+         do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
             if (colltest) y_ij_fks_fix=1-0.1d0**i
             call compute_towards_limit(ilim,iconfig,x
      $           ,towards_amp_split(1,i),towards_wgt_PS(i),towards_p(0,1
      $           ,i))
          enddo
-         
-         call compute_in_the_limit(ilim,xi_i_fks_fix_input
-     $     ,y_ij_fks_fix_input)
-
+         xi_i_fks_fix=xi_i_fks_fix_input ! reset xi and y to input values
+         y_ij_fks_fix=y_ij_fks_fix_input
+         call compute_in_the_limit(ilim,iconfig,x,limit_amp_split
+     $        ,limit_wgt_PS,limit_p(0,1))
+         call check_limit_and_print_result(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,ntests,jtest)
       enddo      
       end
 
-      subroutine compute_towards_limit(ilim,iconfig,x,amp,wgt_PS,xp)
+      subroutine check_limit_and_print_result(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,ntests,jtest)
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer ilim,iamp,iconfig
-      double precision amp(amp_split_size),wgt_PS,wgt,x(99),p(0:3
-     $     ,nexternal),xp(0:3,nexternal+1)
+      integer nstep,ntests,jtest
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1)
+      if (ntests.le.10) then
+         call check_and_print_to_screen(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      else
+         call check_limits(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      endif
+      end
+
+      subroutine check_limits(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,jtest
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1),amp(1:nstep),limit
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+      if (softtest) then
+         iflag=0
+      endif
+      if (colltest) then
+         iflag=1
+      endif
+      
+! check limit summed over orders
+      amp(1:nstep)=sum(towards_amp_split(1:amp_split_size,1:nstep),dim
+     $     =1)
+      limit=sum(limit_amp_split(1:amp_split_size),dim=1)
+
+      call checkres(amp(1:nstep) ,limit,towards_wgt_PS(1:nstep)
+     $     ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
+     $     ,j_fks,iret)
+      nerr(0)=nerr(0)+iret
+! check limit order-by-order
+      do iamp=1, amp_split_size
+         if (towards_amp_split(iamp ,1).ne.0d0 .or.
+     $        limit_amp_split(iamp).ne.0d0) then
+            call checkres(towards_amp_split(iamp,1:nstep)
+     $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
+     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
+     $           ,j_fks,iret)
+            nerr(iamp)=nerr(iamp)+iret
+         endif
+      enddo
+      
+      end
+
+      subroutine check_and_print_to_screen(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,iret,jtest,iflag,iamp
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1),amp(1:nstep),limit
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      if (softtest) then
+         write (*,*) 'Soft limit:'
+         iflag=0
+      endif
+      if (colltest) then
+         write (*,*) 'Collinear limit:'
+         iflag=1
+      endif
+! print amplitudes summed over orders:
+      amp(1:nstep)=sum(towards_amp_split(1:amp_split_size,1:nstep),dim
+     $     =1)
+      limit=sum(limit_amp_split(1:amp_split_size),dim=1)
+      do i=1,nstep
+         call xprintout(6,amp(i),limit)
+      enddo
+! print amplitude order-by-order, and check that they approach limit correctly.
+      do iamp=1, amp_split_size
+         if (limit_amp_split(iamp).ne.0d0 .or. towards_amp_split(iamp
+     $        ,1).ne.0d0) then
+            write(*,*) '   Split-order', iamp
+            call amp_split_pos_to_orders(iamp,orders)
+            do i=1,nsplitorders
+               write(*,*) '      ',ordernames(i), ':',orders(i)
+            enddo
+            do i=1,nstep
+               call xprintout(6,towards_amp_split(iamp,i)
+     $              ,limit_amp_split(iamp))
+            enddo
+            call checkres(towards_amp_split(iamp,1:nstep)
+     $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
+     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
+     $           ,j_fks ,iret)
+            write(*,*) 'RETURN CODE', iret
+         endif
+      enddo
+c dump momenta in a fort.80 file
+      write(80,*)'  '
+      write(80,*)'****************************'
+      write(80,*)'  '
+      do k=1,nexternal+1
+         write(80,*)''
+         write(80,*)'part:',k
+         do l=0,3
+            write(80,*)'comp:',l
+            do i=1,nstep
+               call xprintout(80,towards_p(i,l,k),limit_p(l,k))
+            enddo
+         enddo
+      enddo
+      end
+      
+      subroutine compute_towards_limit(ilim,iconfig,x,amp,wgt_PS,xp)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer ilim,iconfig,iamp
+      double precision wgt,x(99),p(0:3,nexternal),fx
+     $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1)
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
 
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
@@ -86,13 +240,32 @@
       
       
       
-      subroutine compute_in_the_limit(ilim,xi_i_fks_fix_input
-     $     ,y_ij_fks_fix_input)
+      subroutine compute_in_the_limit(ilim,iconfig,x,limit_split
+     $        ,limit_PS_wgt,lxp)
+      use mint_module
       implicit none
-      integer ilim
-      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
-      xi_i_fks_fix=xi_i_fks_fix_input
-      y_ij_fks_fix=y_ij_fks_fix_input
+      include 'nexternal.inc'
+      include 'orders.inc'
+      double precision zero,    one
+      parameter       (zero=0d0,one=1d0)
+      integer ilim,iconfig,iamp
+      double precision wgt,x(99),p(0:3,nexternal),fx
+     $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
+     $     +1)
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       if (ilim.eq.2) then
@@ -115,7 +288,7 @@
          else
             limit_split(iamp) = amp_split_mc(iamp)*wgt
          endif
-         limit_PS_split(iamp) = wgt
+         limit_PS_wgt = wgt
       enddo
 
 ! save momenta
@@ -131,11 +304,11 @@
 
 
 
-      subroutine generate_valid_momenta(ndim,iconfig,wgt,x,p)
+      subroutine generate_valid_momenta(iconfig,wgt,x,p)
       use mint_module
       implicit none
       include 'nexternal.inc'
-      integer ndim,iconfig
+      integer iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       integer jj,ntry
       double precision ran2
@@ -174,6 +347,7 @@
       use mint_module
       implicit none
       include 'nexternal.inc'
+      include 'orders.inc'
       integer ilim
       double precision x(99),wgt,p(0:3,nexternal)
       double complex wgt1(2)
@@ -181,6 +355,8 @@
       common/sctests/softtest,colltest
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
       ichan=1
       iconfigs(1)=iconfig
       if (ilim.eq.2) then
@@ -193,12 +369,13 @@
       softtest=.false.
       colltest=.false.
 
-      call generate_valid_momenta(ndim,iconfig,wgt,x,p)
+      call generate_valid_momenta(iconfig,wgt,x,p)
       
       call sborn(p_born,wgt1)
       write (*,*) ''
       write (*,*) ''
       write (*,*) ''
+      nerr(0:amp_split_size)=0
       end
 
       subroutine init_new_loop(fks_loop,bs_min,bs_max)
@@ -311,7 +488,9 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
       include 'run.inc'
       include 'born_nhel.inc'
       include 'genps.inc'
-      integer ilim
+      integer ilim,nstep
+      logical         Hevents
+      common/SHevents/Hevents
 c-----
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
@@ -339,6 +518,8 @@ c-----
       call init_process_module_nbody_wrapper()
       call init_scale_module(nexternal,shower_scale_factor,fks_configs
      $     ,1)
+      Hevents=.true.
+      nstep=10  ! take 10 steps towards the limit
       end
 
 

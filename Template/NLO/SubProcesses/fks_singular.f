@@ -5663,14 +5663,14 @@ c it as the standard, one should think a bit about it
 
 
       subroutine xprintout(iunit,xv,xlim)
-      implicit real*8(a-h,o-z)
-c
+      implicit none
+      integer iunit
+      double precision xv,xlim
       if(abs(xlim).gt.1.d-30)then
-        write(iunit,*)xv/xlim,xv,xlim
+         write(iunit,*) xv/xlim,xv,xlim
       else
-        write(iunit,*)xv,xlim
+         write(iunit,*) '--',xv,xlim
       endif
-      return
       end
 
 
