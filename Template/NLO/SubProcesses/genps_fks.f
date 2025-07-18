@@ -1121,6 +1121,8 @@ c Set all to negative values and exit
       common /cxiimaxev/xiimax_ev
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
+      double precision phidump
+      common /tophidump/phidump
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
@@ -1224,6 +1226,7 @@ c
 c set-up phi_i_fks
 c
       phi_i_fks=2d0*pi*x(ixpi)
+      phidump=phi_i_fks
       xjac=xjac*2d0*pi
 c To keep track of the special phase-space region with massive j_fks
       isolsign=0

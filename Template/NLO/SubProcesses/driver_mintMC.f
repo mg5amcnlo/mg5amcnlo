@@ -720,6 +720,8 @@ c
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision phidump
+      common /tophidump/phidump
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -796,7 +798,7 @@ c 1/proc_map(0,0)*vol1)
          call generate_momenta(nndim,iconfig,jac,x,p)
          !MZ
          if (imode.eq.1) then
-           write(69,*) 'XIY',xi_i_fks_ev,y_ij_fks_ev
+           write(69,*) 'XIYPHI',xi_i_fks_ev,y_ij_fks_ev,phidump
            do i = 1, nexternal
              write(69,*) 'P', i , p(:,i)
            enddo
