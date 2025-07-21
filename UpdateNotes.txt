@@ -4,6 +4,11 @@ ANNOUNCEMENT:
    2.9.X version as a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+3.6.4
+     RF: Fixed critical bug in FxFx merging, introduced in version 3.3.1. This resulted in too many negatively weighted events,
+         and too many high-pT jets. Particularly relevant for merging with up to 2 or 3 jets at NLO. Thanks to Lenart Jerala
+	 for pointing this out and testing the fixes.
+
 
 3.6.3 (12/6/25):
      OM: Fix conversion model for the FD gauge
