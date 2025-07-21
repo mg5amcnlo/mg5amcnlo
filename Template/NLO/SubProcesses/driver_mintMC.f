@@ -828,6 +828,8 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
+c Compute the n1-body prefactors
+            call compute_prefactors_n1body(vegas_wgt,jac)
 c Set the shower scales            
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p) ! reset the FxFx scales
@@ -844,8 +846,6 @@ c Set the shower scales
                   call set_FxFx_scale(3,p)
                endif
             endif              
-c Compute the n1-body prefactors
-            call compute_prefactors_n1body(vegas_wgt,jac)
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
