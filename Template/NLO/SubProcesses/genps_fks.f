@@ -935,6 +935,9 @@ c saves
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
 
+      integer imode
+      common /toimodedump/imode
+
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -977,6 +980,9 @@ c
       ! generate tau and y
       call generate_tau_y_wrapper(
      $ qmass,qwidth,totmass,stot,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
+      if (imode.eq.1) then
+          write(69,*) 'JACPDF', xjac0
+      endif
       ! filter unphysical configurations
       if (xjac0.lt.0d0) goto 222
 
@@ -1011,6 +1017,10 @@ c Trivial, but prevents loss of accuracy
         call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+        if (imode.eq.1) then
+          write(69,*) 'JACPDFBORN', xjac0
+        endif
+
 
         call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
      $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
@@ -1123,6 +1133,9 @@ c Set all to negative values and exit
       common /cxiimaxcnt/xiimax_cnt
       double precision phidump
       common /tophidump/phidump
+
+      integer imode
+      common /toimodedump/imode
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
@@ -1282,6 +1295,7 @@ c All done, so check four-momentum conservation
          endif
       endif
 
+      if (imode.eq.1) write(69,*) 'JACPDFBORNFKS',xjac,icountevts
       call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
 c      
  112  continue
