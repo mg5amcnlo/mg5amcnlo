@@ -1,8 +1,11 @@
       program test_soft_col_limits
+      use mint_module
       implicit none
       integer ilim,nsofttests,ncolltests,fks_loop_min
-     $     ,fks_loop_max,fks_loop,bs_min,bs_max,nstep
+     $     ,fks_loop_max,fks_loop,bs_min,bs_max,nstep,ntests
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
       
       call read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
      $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
@@ -13,24 +16,22 @@
          call init_new_loop(fks_loop,bs_min,bs_max)
          do iconfig=bs_min,bs_max
             call init_iconfig_loop(ilim)
-            
             softtest=.true.
             colltest=.false.
-            ntests=nsofttest
-            
-            call test_limit(ilim,iconfig,ntests,xi_i_fks_fix_input
+            ntests=nsofttests
+            call test_limits(ilim,ntests,xi_i_fks_fix_input
      $           ,y_ij_fks_fix_input,nstep)
          enddo
       enddo
       end
 
-      subroutine test_limits(ilim,iconfig,ntests,xi_i_fks_fix_input
+      subroutine test_limits(ilim,ntests,xi_i_fks_fix_input
      $     ,y_ij_fks_fix_input,nstep)
       use mint_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer nstep,iconfig,ntests,i,ilim,jtest
+      integer nstep,ntests,i,ilim,jtest
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input,wgt,x(99)
      $     ,p(0:3,nexternal),towards_amp_split(1:amp_split_size,1:nstep)
      $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
@@ -43,22 +44,68 @@
       do jtest=1,ntests
          xi_i_fks_fix=xi_i_fks_fix_input
          y_ij_fks_fix=y_ij_fks_fix_input
-         call generate_valid_momenta(iconfig,wgt,x,p)
+         call generate_valid_momenta(wgt,x,p)
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
             if (colltest) y_ij_fks_fix=1-0.1d0**i
-            call compute_towards_limit(ilim,iconfig,x
-     $           ,towards_amp_split(1,i),towards_wgt_PS(i),towards_p(0,1
-     $           ,i))
+            call compute_towards_limit(ilim,x,towards_amp_split(1,i)
+     $           ,towards_wgt_PS(i),towards_p(0,1 ,i))
          enddo
          xi_i_fks_fix=xi_i_fks_fix_input ! reset xi and y to input values
          y_ij_fks_fix=y_ij_fks_fix_input
-         call compute_in_the_limit(ilim,iconfig,x,limit_amp_split
-     $        ,limit_wgt_PS,limit_p(0,1))
+         call compute_in_the_limit(ilim,x,limit_amp_split,limit_wgt_PS
+     $        ,limit_p(0,1))
          call check_limit_and_print_result(nstep,towards_amp_split
      $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
      $        ,limit_p,ntests,jtest)
-      enddo      
+      enddo
+      if (ntests.gt.10) then
+         call print_summary(iconfig,ntests)
+      endif
+      end
+
+      subroutine print_summary(iconfig,ntests)
+      implicit none
+      include 'orders.inc'
+      double precision max_fail
+      parameter       (max_fail=0.3d0)
+      integer iamp,i,orders(nsplitorders),ntests ,iconfig
+      double precision fail_frac
+      character*9 print_string
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      if (softtest) then
+         print_string='     Soft'
+      elseif (colltest) then
+         print_string='Collinear'
+      endif
+      write(*,*)print_string//' tests done for (Born) config',iconfig
+      write(*,*)'Failures:',nerr
+      do iamp = 0, amp_split_size
+         if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+         fail_frac= nerr(iamp)/dble(ntests)
+         if (iamp.ne.0) then
+            write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+            call amp_split_pos_to_orders(iamp,orders)
+            do i = 1, nsplitorders
+               write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':'
+     $              ,orders(i),'; '
+            enddo
+         else
+            write(*,fmt="(a)", advance="no")'Sum of all orders: '
+         endif
+         if (fail_frac.lt.max_fail) then
+            write(*,401) print_string,nFKSprocess,fail_frac
+         else
+            write(*,402) print_string,nFKSprocess,fail_frac
+         endif
+      enddo
+ 401  format(a9,'test ',i2,' PASSED. Fraction of failures: ', f4.2) 
+ 402  format(a9,'test ',i2,' FAILED. Fraction of failures: ', f4.2) 
       end
 
       subroutine check_limit_and_print_result(nstep,towards_amp_split
@@ -89,7 +136,7 @@
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer nstep,jtest
+      integer nstep,jtest,iamp,iflag,iret
       double precision towards_amp_split(1:amp_split_size,1:nstep)
      $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
      $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
@@ -136,7 +183,7 @@
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer nstep,iret,jtest,iflag,iamp
+      integer nstep,iret,jtest,iflag,iamp,i,k,l,orders(nsplitorders)
       double precision towards_amp_split(1:amp_split_size,1:nstep)
      $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
      $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
@@ -175,8 +222,8 @@
             enddo
             call checkres(towards_amp_split(iamp,1:nstep)
      $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
-     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
-     $           ,j_fks ,iret)
+     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,nexternal
+     $           ,i_fks ,j_fks ,iret)
             write(*,*) 'RETURN CODE', iret
          endif
       enddo
@@ -190,18 +237,18 @@ c dump momenta in a fort.80 file
          do l=0,3
             write(80,*)'comp:',l
             do i=1,nstep
-               call xprintout(80,towards_p(i,l,k),limit_p(l,k))
+               call xprintout(80,towards_p(l,k,i),limit_p(l,k))
             enddo
          enddo
       enddo
       end
       
-      subroutine compute_towards_limit(ilim,iconfig,x,amp,wgt_PS,xp)
+      subroutine compute_towards_limit(ilim,x,amp,wgt_PS,xp)
       use mint_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer ilim,iconfig,iamp
+      integer ilim,iamp
       double precision wgt,x(99),p(0:3,nexternal),fx
      $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1)
       logical                calculatedBorn
@@ -240,7 +287,7 @@ c dump momenta in a fort.80 file
       
       
       
-      subroutine compute_in_the_limit(ilim,iconfig,x,limit_split
+      subroutine compute_in_the_limit(ilim,x,limit_split
      $        ,limit_PS_wgt,lxp)
       use mint_module
       implicit none
@@ -248,7 +295,7 @@ c dump momenta in a fort.80 file
       include 'orders.inc'
       double precision zero,    one
       parameter       (zero=0d0,one=1d0)
-      integer ilim,iconfig,iamp
+      integer ilim,iamp
       double precision wgt,x(99),p(0:3,nexternal),fx
      $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
      $     +1)
@@ -304,11 +351,10 @@ c dump momenta in a fort.80 file
 
 
 
-      subroutine generate_valid_momenta(iconfig,wgt,x,p)
+      subroutine generate_valid_momenta(wgt,x,p)
       use mint_module
       implicit none
       include 'nexternal.inc'
-      integer iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       integer jj,ntry
       double precision ran2
@@ -339,7 +385,7 @@ c dump momenta in a fort.80 file
          write (*,*) 'No points passed cuts...'
          write (12,*) 'ERROR: no points passed cuts...'/
      $        /' Cannot perform ME tests properly for config',iconfig
-         cycle
+         stop 1
       endif
       end
       
@@ -365,11 +411,11 @@ c dump momenta in a fort.80 file
          call setfksfactor(.true.)
       endif
       call setcuts
-
+      
       softtest=.false.
       colltest=.false.
 
-      call generate_valid_momenta(iconfig,wgt,x,p)
+      call generate_valid_momenta(wgt,x,p)
       
       call sborn(p_born,wgt1)
       write (*,*) ''
@@ -379,12 +425,16 @@ c dump momenta in a fort.80 file
       end
 
       subroutine init_new_loop(fks_loop,bs_min,bs_max)
+      use process_module
       use mint_module
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
-      integer iconfig_in,bs_min,bs_max
+      include 'born_nhel.inc'
+      include 'born_maxamps.inc'
+      include 'born_conf.inc'
+      integer iconfig_in,bs_min,bs_max,fks_loop
       integer         nndim
       common/tosigint/nndim
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -392,6 +442,8 @@ c dump momenta in a fort.80 file
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
       
       nFKSprocess=fks_loop
       call fks_inc_chooser()
@@ -441,11 +493,17 @@ c
       include 'nexternal.inc'
       include 'cuts.inc'
       include 'run.inc'
+      double precision ZERO,    one
+      parameter       (ZERO=0d0,one=1d0)
       integer i,k
       double precision totmass,pmass(nexternal)
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
       call setcuts              !Sets up cuts 
 c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
@@ -478,9 +536,10 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
 
       
 
-      subroutine init_test_limits(ilim)
+      subroutine init_test_limits(ilim,nstep)
       use mint_module
       use process_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -526,6 +585,7 @@ c-----
       subroutine read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
      $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
       implicit none
+      include 'nFKSconfigs.inc'
       integer ilim,nsofttests,ncolltests,fks_conf_number,fks_loop_min
      $     ,fks_loop_max
 c$$$      character*10           MonteCarlo
@@ -582,3 +642,95 @@ c$$$         endif
       
       end
      
+
+
+      subroutine init_process_module_nbody_wrapper()
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      external get_color
+      double precision mass(1:nexternal-1),get_mass_from_id
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,max_bcol)
+      include 'born_leshouche.inc'
+
+      do i=1,nexternal-1
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do k=1,max_bcol
+         do j=1,nexternal-1
+            if (icolup(1,j,k).eq.0 .and. icolup(2,j,k).eq.0) cycle
+            do i=1,nexternal-1
+               if (i.eq.j) cycle
+               if (icolup(1,i,k).eq.0 .and. icolup(2,i,k).eq.0) cycle
+               if ( (abs(icolup(1,i,k)).eq.abs(icolup(1,j,k)).and.icolup(1,i,k).ne.0) .or.
+     &              (abs(icolup(1,i,k)).eq.abs(icolup(2,j,k)).and.icolup(1,i,k).ne.0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(1,j,k)).and.icolup(2,i,k).ne.0) .or.
+     &              (abs(icolup(2,i,k)).eq.abs(icolup(2,j,k)).and.icolup(2,i,k).ne.0) ) then
+                  valid_dipole(i,j,k)=.true.
+               endif
+            enddo
+         enddo
+      enddo
+      call init_process_module_nbody(nexternal-1,mass,colour
+     $     ,max_bcol,valid_dipole)
+      
+      end
+
+      
+      subroutine init_process_module_n1body_wrapper(bornflow)
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      integer iFKS,colour(1:nexternal),i,j,k,get_color,bornflow
+      double precision mass(1:nexternal),get_mass_from_id
+      external get_color
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal,1:nexternal)
+      integer icolup(1:2,1:nexternal)
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     dummy(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,dummy,niprocs
+
+      call fill_icolor_H(bornflow,jpart,.true.)
+      do i=1,nexternal
+        ICOLUP(1,i)=jpart(4,i)
+        ICOLUP(2,i)=jpart(5,i)
+      enddo
+      
+      do i=1,nexternal
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      do j=1,nexternal
+         if (icolup(1,j).eq.0 .and. icolup(2,j).eq.0) cycle
+         do i=1,nexternal
+            if (i.eq.j) cycle
+            if (icolup(1,i).eq.0 .and. icolup(2,i).eq.0) cycle
+            if ( (abs(icolup(1,i)).eq.abs(icolup(1,j)).and.icolup(1,i).ne.0) .or.
+     &           (abs(icolup(1,i)).eq.abs(icolup(2,j)).and.icolup(1,i).ne.0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(1,j)).and.icolup(2,i).ne.0) .or.
+     &           (abs(icolup(2,i)).eq.abs(icolup(2,j)).and.icolup(2,i).ne.0) ) then
+               valid_dipole(i,j)=.true.
+            endif
+         enddo
+      enddo
+      
+      call init_process_module_n1body(nexternal,mass,colour
+     $     ,maxflow,valid_dipole)
+      
+      end
+      

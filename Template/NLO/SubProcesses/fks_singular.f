@@ -5610,8 +5610,8 @@ c
 c The following line solves some problem as well, but before putting
 c it as the standard, one should think a bit about it
               if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
-              if(xrat.gt.tiny .and.
-     &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
+              if(xrat.gt.tiny .and. (pmass(ipart).eq.0d0 .or. xnum
+     $             /(pmass(ipart)+vtiny).gt.vtiny))then
                  write(*,*)'Kinematics of counterevents'
                  write(*,*)inum,iden
                  write(*,*)'is different. Particle:',ipart
@@ -5678,7 +5678,7 @@ c it as the standard, one should think a bit about it
 c The following has been derived with minor modifications from the
 c analogous routine written for VBF
       subroutine checkres(xsecvc,xseclvc,wgt,wgtl,xp,lxp,
-     #                    iflag,imax,iev,nexternal,i_fks,j_fks,iret)
+     &     iflag,imax,iev,nexternal,i_fks,j_fks,iret)
 c Checks that the sequence xsecvc(i), i=1,imax, converges to xseclvc.
 c Due to numerical inaccuracies, the test is deemed OK if there are
 c at least ithrs+1 consecutive elements in the sequence xsecvc(i)
@@ -5701,129 +5701,126 @@ c When the test is not passed, one may choose to stop the program dead here;
 c in such a case, set istop=1 below. Each time the test is not passed,
 c the results are written onto fort.77; set iwrite=0 to prevent the writing
       implicit none
-      real*8 xsecvc(15),xseclvc,wgt(15),wgtl,lxp(0:3,21),xp(15,0:3,21)
-      real*8 ckc(15),rckc(15),rat
       integer iflag,imax,iev,nexternal,i_fks,j_fks,iret,ithrs,istop,
-     # iwrite,i,k,l,imin,icount
+     $     iwrite,i,k,l,imin,icount
+      real*8 xsecvc(imax),xseclvc,wgt(imax),wgtl,lxp(0:3,nexternal+1)
+     $     ,xp(0:3,nexternal+1,imax)
+      real*8 ckc(imax),rckc(imax),rat
       parameter (ithrs=3)
       parameter (istop=0)
       parameter (iwrite=1)
 c
-      if(imax.gt.15)then
-        write(6,*)'Error in checkres: imax is too large',imax
-        stop
-      endif
       do i=1,imax
-        if(xseclvc.eq.0.d0)then
-          ckc(i)=abs(xsecvc(i))
-        else
-          ckc(i)=abs(xsecvc(i)/xseclvc-1.d0)
-        endif
+         if(xseclvc.eq.0.d0)then
+            ckc(i)=abs(xsecvc(i))
+         else
+            ckc(i)=abs(xsecvc(i)/xseclvc-1.d0)
+         endif
       enddo
       if(iflag.eq.0)then
-        rat=4.d0
+         rat=4.d0
       elseif(iflag.eq.1)then
-        rat=2.d0
+         rat=2.d0
       else
-        write(6,*)'Error in checkres: iflag=',iflag
-        write(6,*)' Must be 0 for soft, 1 for collinear'
-        stop
+         write(6,*)'Error in checkres: iflag=',iflag
+         write(6,*)' Must be 0 for soft, 1 for collinear'
+         stop
       endif
 c
       i=1
-      do while(ckc(i).gt.0.1d0 .and. xseclvc.ne.0d0)
-        i=i+1
+      do while(ckc(i).gt.0.1d0 .and. xseclvc.ne.0d0 .and. i.lt.imax)
+         i=i+1
       enddo
       imin=i
       do i=imin,imax-1
-        if(ckc(i+1).ne.0.d0)then
-          rckc(i)=ckc(i)/ckc(i+1)
-        else
-          rckc(i)=1.d8
-        endif
+         if(ckc(i+1).ne.0.d0)then
+            rckc(i)=ckc(i)/ckc(i+1)
+         else
+            rckc(i)=1.d8
+         endif
       enddo
       icount=0
       i=imin
       do while(icount.lt.ithrs.and.i.lt.imax)
-        if(rckc(i).gt.rat)then
-          icount=icount+1
-        else
-          icount=0
-        endif
-        i=i+1
+         if(rckc(i).gt.rat)then
+            icount=icount+1
+         else
+            icount=0
+         endif
+         i=i+1
       enddo
 c
       iret=0
       if(icount.ne.ithrs)then
-        iret=1
-        if(istop.eq.1)then
-          write(6,*)'Test failed',iflag
-          write(6,*)'Event #',iev
-          stop
-        endif
-        if(iwrite.eq.1)then
-          write(77,*)'    '
-          if(iflag.eq.0)then
-            write(77,*)'Soft #',iev
-          elseif(iflag.eq.1)then
-            write(77,*)'Collinear #',iev
-          endif
-          write(77,*)'ME*wgt:'
-          do i=1,imax
-             call xprintout(77,xsecvc(i),xseclvc)
-          enddo
-          write(77,*)'wgt:'
-          do i=1,imax
-             call xprintout(77,wgt(i),wgtl)
-          enddo
+         iret=1
+         if(istop.eq.1)then
+            write(6,*)'Test failed',iflag
+            write(6,*)'Event #',iev
+            stop
+         endif
+         if(iwrite.eq.1)then
+            write(77,*)'    '
+            if(iflag.eq.0)then
+               write(77,*)'Soft #',iev
+            elseif(iflag.eq.1)then
+               write(77,*)'Collinear #',iev
+            endif
+            write(77,*)'ME*wgt:'
+            do i=1,imax
+               call xprintout(77,xsecvc(i),xseclvc)
+            enddo
+            write(77,*)'wgt:'
+            do i=1,imax
+               call xprintout(77,wgt(i),wgtl)
+            enddo
 c
-          write(78,*)'    '
-          if(iflag.eq.0)then
-            write(78,*)'Soft #',iev
-          elseif(iflag.eq.1)then
-            write(78,*)'Collinear #',iev
-          endif
-          do k=1,nexternal
-            write(78,*)''
-            write(78,*)'part:',k
-            do l=0,3
-              write(78,*)'comp:',l
-              do i=1,imax
-                call xprintout(78,xp(i,l,k),lxp(l,k))
-              enddo
+            write(78,*)'    '
+            if(iflag.eq.0)then
+               write(78,*)'Soft #',iev
+            elseif(iflag.eq.1)then
+               write(78,*)'Collinear #',iev
+            endif
+            do k=1,nexternal
+               write(78,*)''
+               write(78,*)'part:',k
+               do l=0,3
+                  write(78,*)'comp:',l
+                  do i=1,imax
+                     call xprintout(78,xp(l,k,i),lxp(l,k))
+                  enddo
+               enddo
             enddo
-          enddo
-          if(iflag.eq.0)then
-            write(78,*)''
-            write(78,*)'part: i_fks reduced'
-            do l=0,3
-              write(78,*)'comp:',l
-              do i=1,imax
-                call xprintout(78,xp(i,l,nexternal+1),
-     #                            lxp(l,nexternal+1))
-              enddo
-            enddo
-            write(78,*)''
-            write(78,*)'part: i_fks full/reduced'
-            do l=0,3
-              write(78,*)'comp:',l
-              do i=1,imax
-                call xprintout(78,xp(i,l,i_fks),
-     #                            xp(i,l,nexternal+1))
-              enddo
-            enddo
-          elseif(iflag.eq.1)then
-            write(78,*)''
-            write(78,*)'part: i_fks+j_fks'
-            do l=0,3
-              write(78,*)'comp:',l
-              do i=1,imax
-                call xprintout(78,xp(i,l,i_fks)+xp(i,l,j_fks),
-     #                            lxp(l,i_fks)+lxp(l,j_fks))
-              enddo
-            enddo
-          endif
-        endif
+            if(iflag.eq.0)then
+               write(78,*)''
+               write(78,*)'part: i_fks reduced'
+               do l=0,3
+                  write(78,*)'comp:',l
+                  do i=1,imax
+                     call xprintout(78,xp(l,nexternal+1,i), lxp(l
+     $                    ,nexternal+1))
+                  enddo
+               enddo
+               write(78,*)''
+               write(78,*)'part: i_fks full/reduced'
+               do l=0,3
+                  write(78,*)'comp:',l
+                  do i=1,imax
+                     call xprintout(78,xp(l,i_fks,i),xp(l,nexternal+1
+     $                    ,i))
+                  enddo
+               enddo
+            elseif(iflag.eq.1)then
+               write(78,*)''
+               write(78,*)'part: i_fks+j_fks'
+               do l=0,3
+                  write(78,*)'comp:',l
+                  do i=1,imax
+                     call xprintout(78,xp(l,i_fks,i)+xp(l,j_fks,i),
+     $                    lxp(l,i_fks)+lxp(l,j_fks))
+                  enddo
+               enddo
+            endif
+         endif
       endif
       return
       end
