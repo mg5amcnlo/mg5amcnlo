@@ -722,6 +722,11 @@ c
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision phidump
       common /tophidump/phidump
+
+      integer imodedump
+      common /toimodedump/imodedump
+
+      imodedump=imode
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -847,6 +852,9 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
+            if (imode.eq.1) then
+                write(69,*)'NFKS',nFKS_picked_nbody,iFKS
+            endif
             jac=1d0/vol1
             probne=1d0
             gfactsf=1.d0

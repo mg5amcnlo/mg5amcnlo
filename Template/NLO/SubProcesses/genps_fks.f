@@ -646,6 +646,8 @@ c Conflicting BW stuff
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
       common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
+      integer imode
+      common /toimodedump/imode
 
       ndim_dummy=-1 ! this is actually not used anymore
 
@@ -678,6 +680,7 @@ c     not a Breit Wigner
          
 c Generate the rapditity of the Born system
            call generate_y(tau_born,rndx(2),ycm_born,ycmhat,xjac)
+           if (imode.eq.1) write(69,*)'TAUY',tau_born,ycm_born
 
         else                    ! this is for dressed ee collisions
            call generate_ee_tau_y(rndx(1), rndx(2), one_body, totmass,
