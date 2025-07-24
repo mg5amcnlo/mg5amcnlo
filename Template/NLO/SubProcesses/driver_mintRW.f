@@ -563,8 +563,7 @@ c determined which contributions are identical.
       j=3
       do i=3,nexternal-1
          if (istup(j).eq.2) j=j+1
-         if (abs(p_born(1,i)-pup(1,j))/abs(p_born(1,i)+pup(1,j)).gt. 
-     $        1d-1) then
+         if (abs(p_born(1,i)-pup(1,j)).gt.3d0) then
             write (*,*) 'MOMENTA NOT COMPATIBLE',p_born(1,i),pup(1,j),i,j
             do j=1,nexternal-1
                write (*,*)p_born(0:3,j)
