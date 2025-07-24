@@ -252,7 +252,7 @@ c     Prepare the MINT folding
          read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
 !     compute the NLOoverBorn ratio:
          call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
-     $        ,showerscale)
+     $        ,showerscale,nup,istup,pup)
          XWGTUP=XWGTUP*ratio
          SCALUP=showerscale
 !     write the event:
@@ -298,7 +298,7 @@ c timing statistics
       end
 
       subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
-     $     ,showerscale)
+     $     ,showerscale,nup,istup,pup)
       use mint_module
       use weight_lines
       implicit none
@@ -343,6 +343,10 @@ c timing statistics
       integer ifold_1,ifold_2,ifold_3
       double precision x_E(128),x_yij(128),x_phi(128),ran2
       external ran2
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,ISTUP(MAXNUP)
+      DOUBLE PRECISION PUP(5,MAXNUP)
       
       if (firsttime) then
          firsttime=.false.
@@ -356,6 +360,7 @@ c timing statistics
       endif
 
       icontr=0
+      new_point=.true.
 
       do ifold_1=1,ifold(ifold_energy)
          if (ifold_1.eq.1) then
@@ -425,6 +430,9 @@ c timing statistics
          
       call generate_momenta(nndim,iconfig,jac,x,p)
 
+      call check_compatible_momenta(p_born,nup,istup,pup)
+      
+      
       if (p1_cnt(0,1,0).lt.0d0) cycle
       
       call compute_prefactors_nbody(vegas_wgt)
@@ -541,6 +549,36 @@ c determined which contributions are identical.
       
       end
 
+
+      subroutine check_compatible_momenta(p_born,nup,istup,pup)
+! check that re-generated momenta are similar to the momenta in the event file.
+      implicit none
+      include 'nexternal.inc'
+      double precision p_born(0:3,nexternal-1)
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,ISTUP(MAXNUP)
+      DOUBLE PRECISION PUP(5,MAXNUP)
+      integer i,j
+      j=3
+      do i=3,nexternal-1
+         if (istup(j).eq.2) j=j+1
+         if (abs(p_born(1,i)-pup(1,j))/abs(p_born(1,i)+pup(1,j)).gt. 
+     $        1d-1) then
+            write (*,*) 'MOMENTA NOT COMPATIBLE',p_born(1,i),pup(1,j),i,j
+            do j=1,nexternal-1
+               write (*,*)p_born(0:3,j)
+            enddo
+            do j=1,NUP
+               write (*,*) PUP(1:5,j)
+            enddo
+            stop 1
+         endif
+         j=j+1
+      enddo
+      end
+
+      
 c$$$      
 c$$$      function sigintF(xx,vegas_wgt,ifl,f)
 c$$$      use weight_lines
