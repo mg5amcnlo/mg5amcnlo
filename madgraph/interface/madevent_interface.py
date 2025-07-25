@@ -6197,7 +6197,7 @@ tar -czf split_$1.tar.gz split_$1
                     else:
                         critical_bwconfig.add(os.sep.join(base.rsplit(os.sep)[-2:]))
                 for G in critical_bwconfig:
-                    logger.warning('Gdirectory %s has no events.lhe file. (no BW config found %s times)' % G) 
+                    logger.warning('Gdirectory %s has no events.lhe file.' % G) 
 
                 logger.debug('  - impossible BW configuration: %s' % len(reasons['bwconfig']))
                 logger.debug('  - channel with no possible BW configuration: %s' %  len(critical_bwconfig))
