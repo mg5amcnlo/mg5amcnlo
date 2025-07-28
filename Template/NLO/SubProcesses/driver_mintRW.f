@@ -231,6 +231,7 @@ c     Prepare the MINT folding
       close(99)
       write(*,*) 'Reweighting ', nevts, 'events'
 
+      call get_orderstags_glob_infos()
 
 ! open the existing event file for reading:
       open(unit=99,file='events.lhe.rwgt',status='old',err=999)

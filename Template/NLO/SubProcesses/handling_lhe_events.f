@@ -326,6 +326,8 @@ c Write here the reweight information if need be
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer tag
+      dyn_scale(0)=0
       nevents = -1
       MonteCarlo = ''
 c
@@ -367,8 +369,15 @@ c     find the start of a weightgroup
                  if (index(string,'</initrwgt').ne.0) exit
               enddo
               if (index(string,"name='scale_variation").ne.0) then
+                 read(string(55:58),'(i4)') tag
+                 do i=1,dyn_scale(0)
+                    if (dyn_scale(i).eq.tag) exit
+                 enddo
+                 if (i.eq.dyn_scale(0)+1) then
+                    dyn_scale(0)=dyn_scale(0)+1
+                    dyn_scale(i)=tag
+                 endif
                  do_rwgt_scale=.true.
-                 dyn_scale(0)=dyn_scale(0)+1
                  read(ifile,'(a)')string
                  read(string(index(string,'dyn=')+4:),*)
      $                dyn_scale(dyn_scale(0))

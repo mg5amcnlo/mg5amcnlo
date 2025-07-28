@@ -71,7 +71,7 @@ MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o p
 MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for mintRW
-MINTRW= $(RUN) driver_mintRW.o handling_lhe_events.o write_event.o BinothLHA.o
+MINTRW= $(RUN) driver_mintRW.o handling_lhe_events.o write_event.o BinothLHA.o orderstags_glob.o
 
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
