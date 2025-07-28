@@ -2141,7 +2141,7 @@ c overwrite the relevant information.]
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
          ! MZ
-         if (imode.eq.1) write(69,*) 'WGT',itype(i), wgts(iwgt,i)
+         if (imode.eq.1) write(69,*) 'WGT',itype(i), wgts(iwgt,i),nfks(i),xlum
          if (itype(i).eq.14 .and. .not.virt_found) then
             virt_found=.true.
 c Special for the soft-virtual needed for the virt-tricks. The
