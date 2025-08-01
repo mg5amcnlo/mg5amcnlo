@@ -42,6 +42,7 @@ c Les Houches Event File info:
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,PUP(5,MAXNUP)
      $     ,VTIMUP(MAXNUP),SPINUP(MAXNUP)
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      integer dyn_scale_save(0:maxdynscales)
 c
       call setrun                !Sets up run parameters
 
@@ -76,6 +77,8 @@ c
             endif
          enddo
       endif
+
+      dyn_scale_save=dyn_scale
 
       if(do_rwgt_pdf)then
          do nn=1,lhaPDFid(0)
@@ -118,10 +121,12 @@ c start with central member of the first set
       AddInfoLHE=.true.
       unweighted=.true.
       call read_lhef_header(ifile,maxevt,MonteCarlo)
+
+      dyn_scale=dyn_scale_save
+      
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
-
       do i=1,min(10,maxevt)
          SCALUP_a=-1d0
          call read_lhef_event(ifile, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
@@ -166,6 +171,9 @@ c start with central member of the first set
       open(unit=ofile,file=fname1,status='unknown')
 
       call read_lhef_header(ifile,maxevt,MonteCarlo)
+
+      dyn_scale=dyn_scale_save
+
       call write_lhef_header(ofile,maxevt,MonteCarlo)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
@@ -214,6 +222,7 @@ c Determine the flavor map between the NLO and Born
 
 c Do the actual reweighting.
          call fill_wgt_info_from_rwgt_lines
+
          if (do_rwgt_scale)call reweight_scale_ext
          if (do_rwgt_pdf)  call reweight_pdf_ext
          call fill_rwgt_arrays
@@ -440,7 +449,6 @@ c do the same as above for the counterevents
       integer orderstag_this, iamp
       integer get_orders_tag_from_amp_pos
       external get_orders_tag_from_amp_pos
-
       iwgt_save=iwgt
       do i=1,icontr
          iwgt=iwgt_save
