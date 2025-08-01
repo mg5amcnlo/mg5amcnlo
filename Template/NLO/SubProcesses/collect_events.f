@@ -234,7 +234,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-      character*1000 buff
+      character*1000 buff,buff2
       character*10 MonteCarlo,MonteCarlo1, MonteCarlo0
       character*100 path
       integer iseed
@@ -419,7 +419,7 @@ c      header. Check consistency in this case
         SCALUP_a=-1d0
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
         if (proc_id(i0).ne.-1) IDPRUP=proc_id(i0)
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
@@ -458,7 +458,7 @@ c reweighting
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
       enddo
       write(ioutput,'(a)')'</LesHouchesEvents>'
       return
