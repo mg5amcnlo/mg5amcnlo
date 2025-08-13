@@ -351,15 +351,14 @@ c          Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
         ZTEMP = (0.D0,0.D0)
         DO J = I, NCOLOR
           CF_INDEX = CF_INDEX + 1
-          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J,M)
-        ENDDO
-	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
+          DO N = 1, NAMPSO
+             ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + CF(CF_INDEX)*JAMPH(2,J,M)*DCONJG(JAMPH(1,I,N))+CF(CF_INDEX)*JAMPH(2,I,M)*DCONJG(JAMPH(1,J,N))
+          ENDDO
         ENDDO
       ENDDO
 
 	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))/DENOM 
+        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))/(2d0*DENOM) 
         ENDDO
       ENDDO
       nhel(glu_ij) = back_hel

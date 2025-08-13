@@ -626,15 +626,14 @@ C ----------
         ZTEMP = (0.D0,0.D0)
         DO J = I, NCOLOR
           CF_INDEX = CF_INDEX +1
-          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J,M)
-        ENDDO
-	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
+          DO  N = 1, NAMPSO
+             ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + CF(CF_INDEX)*(JAMPH(2,J,M)*DCONJG(JAMPH(1,I,N))+JAMPH(2,I,M)*DCONJG(JAMPH(1,J,N)))
+          ENDDO
         ENDDO
       ENDDO
 
       DO N = 1, NAMPSO
-      ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/DENOM
+      ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/(2d0*DENOM)
       ENDDO
       ENDDO
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel

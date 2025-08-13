@@ -270,10 +270,10 @@ C ----------
         ZTEMP = (0.D0,0.D0)
         DO J = I, NCOLOR
           CF_INDEX = CF_INDEX +1
-          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J)
+          BORNTILDE = BORNTILDE + CF(CF_INDEX)*JAMPH(2,J)*DCONJG(JAMPH(1,I))+CF(CF_INDEX)*JAMPH(2,I)*DCONJG(JAMPH(1,J))
         ENDDO
-        BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))
       ENDDO
+      BORNTILDE = BORNTILDE/(2d0*DENOM)
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END
        
