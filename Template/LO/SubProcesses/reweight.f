@@ -955,9 +955,9 @@ c       There parton emissions with code <= jcode are not jets
      $     ' and jcentral is ',jcentral(1),jcentral(2)
 
       if (btest(mlevel,3)) then
-         write(*,'(a$)') 'QCD jets (final): '
+         write(*,'(a,$)') 'QCD jets (final): '
          do i=3,nexternal
-            if(iqjets(i).gt.0) write(*,'(i3$)') i
+            if(iqjets(i).gt.0) write(*,'(i3,$)') i
          enddo
          write(*,*)
       endif
