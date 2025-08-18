@@ -556,6 +556,8 @@ c**************************************************************************
       jwin = 0
       cluster=.false.
       clustered=.false.
+      iwin =0
+      jwin =0
       do i=0,3
         pcmsp(i)=0
       enddo
@@ -665,8 +667,11 @@ c        Set info for LH clustering output
 c     initialize graph storage
       igraphs(0)=0
       nleft=nexternal
-c     cluster
-      if (iwin.eq.0.or.jwin.eq.0) stop 21
+      if(iwin.eq.0.or.jwin.eq.0)then
+          cluster=.false.
+          return
+      endif
+c     cluster 
       do n=1,nexternal-2
 c     combine winner
          imocl(n)=imap(iwin,2)+imap(jwin,2)

@@ -1186,7 +1186,7 @@ c     Take care of case when jcentral are zero
             if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(2)
          else
             if(.not.fixed_fac_scale1) q2fact(1)=scalefact**2*pt2ijcl(nexternal-2)
-            if(.not.fixed_fac_scale2) q2fact(2)=scalefact**2*q2fact(1)
+            if(.not.fixed_fac_scale2) q2fact(2)=scalefact**2*pt2ijcl(nexternal-2)
          endif
       elseif(jcentral(1).eq.0)then
             if(.not.fixed_fac_scale1)  q2fact(1) = scalefact**2*pt2ijcl(jfirst(1))

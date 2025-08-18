@@ -21,7 +21,7 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       integer icol ! color selected
 
       integer isym(nexternal,99), jsym
-      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
+      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,ic
       integer mo_color,da_color(2),itmp
       integer ito(-nexternal+3:nexternal),iseed,maxcolor,maxorg
       integer icolalt(2,-nexternal+2:2*nexternal-3)
@@ -113,14 +113,15 @@ c     ...unless the diagram is passed in igraphs(1); then use that diagram
          endif
          lconfig = vec_igraph1(ivec)
       endif
-      
+      is_LC=.true.
+      maxcolor=0
 c
 c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
       if (icol.eq.0) then
       do i=1,nexternal
-	 icolalt(1,i)=0
+         icolalt(1,i)=0
          icolalt(2,i)=0
       enddo
       else

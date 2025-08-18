@@ -1035,12 +1035,12 @@ class MultiEventFile(EventFile):
                 from_init = True
 
             if not from_init:
-                if group in grouped_cross:
-                    grouped_cross[group] += self.allcross[i]
-                    grouped_error[group] += self.error[i]**2 
+                if int(group) in grouped_cross:
+                    grouped_cross[int(group)] += self.allcross[i]
+                    grouped_error[int(group)] += self.error[i]**2 
                 else:
-                    grouped_cross[group] = self.allcross[i]
-                    grouped_error[group] = self.error[i]**2
+                    grouped_cross[int(group)] = self.allcross[i]
+                    grouped_error[int(group)] = self.error[i]**2
             else:
                 ban = banner_mod.Banner(ff.banner)
                 for line in  ban['init'].split('\n'):
@@ -1048,11 +1048,11 @@ class MultiEventFile(EventFile):
                     if len(splitline)==4:
                         cross, error, _, group = splitline
                         if int(group) in grouped_cross:
-                            grouped_cross[group] += float(cross)
-                            grouped_error[group] += float(error)**2                        
+                            grouped_cross[int(group)] += float(cross)
+                            grouped_error[int(group)] += float(error)**2                        
                         else:
-                            grouped_cross[group] = float(cross)
-                            grouped_error[group] = float(error)**2                             
+                            grouped_cross[int(group)] = float(cross)
+                            grouped_error[int(group)] = float(error)**2                             
         nb_group = len(grouped_cross)
         
         # compute the information for the first line 
@@ -1086,6 +1086,8 @@ class MultiEventFile(EventFile):
                 self.seek(0)
             if init_information["idbmup2"] in [0,9]:
                 event = next(self)
+                if len(event) == 0:
+                    event = Event(str(event))
                 init_information["idbmup2"] = event[1].pdg
                 self.seek(0)
         
@@ -2166,10 +2168,13 @@ class Event(list):
             abspz += abs(particle.pz)
             # check mass
             fourmass = FourMomentum(particle).mass
-            
-            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
-                
+            if particle.mass:
+                expected = (particle.E - math.sqrt(particle.E**2 -particle.mass**2))/particle.E
+                if expected > 1e-8:
+                    mass_threshold = particle.E**2 - (particle.E-threshold)**2
+                    if  (abs(particle.mass) - fourmass)/ mass_threshold > 5:
+                        raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+                    
 
         if E/absE > threshold:
             logger.critical(self)

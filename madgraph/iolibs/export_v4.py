@@ -1257,7 +1257,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         ret_list = []
         my_cs = color.ColorString()
-        denominator = min(matrix_element.get('color_matrix').get_line_denominators())
+        denominator = max(matrix_element.get('color_matrix').get_line_denominators())
         ret_list.append("DATA Denom/%i/" % denominator)
 
         cf_index = 0
@@ -4758,9 +4758,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        one_def = ' IF(%(w)s.ne.0d0) then \nfk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s) \n else \n fk_%(w)s = 0d0\n endif\n'     
         for m, w in mass_width:
-            if w == 'zero':
+            if w.lower() == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
                     fk_w_defs.append(' fk_zero = 0d0')
                 continue    

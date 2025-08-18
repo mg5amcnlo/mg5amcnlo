@@ -1225,6 +1225,50 @@ class TestMEfromfile(unittest.TestCase):
         self.assertEqual(cwd, os.getcwd())
 
 
+    def test_generation_heft(self):
+        """test added since heft was crashing due to a wrong handling of color denominator
+           in the fortran exporter
+        """
+
+        cwd = os.getcwd()
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model heft
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate g g > b b~ HIW<=1
+        output %(path)s
+        launch 
+        set nevents 1000
+        set shower none
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
+
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()

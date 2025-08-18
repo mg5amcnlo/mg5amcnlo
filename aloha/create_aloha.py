@@ -823,7 +823,7 @@ class AbstractALOHAModel(dict):
             elif not init:
                 # need to create the aloha object
                 lorentz = eval('self.model.lorentz.%s' % lorentzname)
-                abstract = AbstractRoutineBuilder(lorentz)
+                abstract = AbstractRoutineBuilder(lorentz, model=self.model)
                 routine = abstract.compute_routine(outgoing, tag, factorize=False)                
                 init = True
 
@@ -1039,7 +1039,7 @@ class AbstractALOHAModel(dict):
                 l_lorentz = []
                 for l_name in list_l_name: 
                     l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
-                builder = CombineRoutineBuilder(l_lorentz)
+                builder = CombineRoutineBuilder(l_lorentz, model=self.model)
                                
                 for conjg in request[list_l_name[0]]:
                     #ensure that routines are in rising order (for symetries)

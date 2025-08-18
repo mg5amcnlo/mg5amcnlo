@@ -1373,6 +1373,10 @@ c
       double precision smin,smax,spole,swidth,s,jac
       double precision x
       logical pass
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
 c
 c     Local
 c     
@@ -1384,6 +1388,10 @@ c
 c-----
 c  Begin Code
 c-----
+      if (dsqrt_shatmax.ne.-1d0)then
+          smax = min(smax, dsqrt_shatmax**2)
+      endif 
+
       pass=.true.
       if (jac .eq. 0 .and. .not. warned0) then
          print*,'Input jacobian 0 in genps'
@@ -1628,7 +1636,10 @@ C     LOCAL
       DOUBLE PRECISION ETA,ETAMIN,ETAMAX
       logical warned
       data warned/.false./
-
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
 C------------
 C  BEGIN CODE
 C------------
@@ -1645,7 +1656,11 @@ C     &     X(1),TAU,SJACOBI)
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
       TAUMIN = 0d0 !SMIN/S !keep scale fix
-      TAUMAX = 1D0
+      if (dsqrt_shatmax.ne.-1d0)then
+          TAUMAX=dsqrt_shatmax**2/S
+      else
+        TAUMAX = 1D0
+      endif
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
 

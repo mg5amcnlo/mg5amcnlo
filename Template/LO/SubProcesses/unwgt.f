@@ -497,6 +497,7 @@ c
       integer ip, np, ic, nc
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
+      double precision beam_mass
       double precision pboost(0:3)
       double precision beta, get_betaz
       double precision ebi(0:3), ebo(0:3)
@@ -506,7 +507,7 @@ c
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
-
+      double precision eta
       integer nsym
 
       integer ievent
@@ -638,21 +639,20 @@ c
       if (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
-           if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0).and.xbk(2).ne.1d0) then
-               ! construct the beam momenta in each frame and compute the related (z)boost
-               if (pmass(1).eq.0d0.and.(abs(lpp(1)).eq.3.or.abs(lpp(1)).eq.4).and.ebeam(1).gt.10d0*m1)then
-                  local_mass = 0d0
-              else
-                  local_mass = m1
-              endif
+           if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then
+                if((abs(lpp(1)).gt.2.and.abs(lpp(1)).ne.9).or.xbk(1).eq.1d0)then
+                    beam_mass = pmass(1)
+                else
+                    beam_mass = m1
+                endif   
                ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = DSQRT(ebi(0)**2-local_mass**2)
+               ebi(3) = DSQRT(ebi(0)**2-beam_mass**2)
                ebo(0) = ebeam(1)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = DSQRT(ebo(0)**2-local_mass**2)
+               ebo(3) = DSQRT(ebo(0)**2-beam_mass**2)
                beta = get_betaz(ebi, ebo)
                if (xbk(1).eq.1d0) then
                 pb(0,isym(1,jsym)) = ebo(0)
@@ -668,20 +668,19 @@ c
                enddo
 
             else
-               if (pmass(1).eq.0d0.and.(abs(lpp(1)).eq.3.or.abs(lpp(1)).eq.4.and.ebeam(2).gt.10d0*m2))then
-                  local_mass = 0d0
-              else
-                  local_mass = m2
-              endif
-               ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
+                if((abs(lpp(2)).gt.2.and.abs(lpp(2)).ne.9).or.xbk(2).eq.1d0)then
+                    beam_mass = pmass(2)
+                else
+                    beam_mass = m2
+                endif   
                ebi(0) = p(0,2)/xbk(2) ! this assumes that particle 2 is massless or mass equal to beam
                ebi(1) = 0
                ebi(2) = 0
-               ebi(3) = -1d0*DSQRT(ebi(0)**2-local_mass**2)
+               ebi(3) = -1d0*DSQRT(ebi(0)**2-beam_mass**2)
                ebo(0) = ebeam(2)
                ebo(1) = 0
                ebo(2) = 0
-               ebo(3) = -1d0*DSQRT(ebo(0)**2-local_mass**2)
+               ebo(3) = -1d0*DSQRT(ebo(0)**2-beam_mass**2)
                beta = get_betaz(ebi, ebo)
                if (xbk(2).eq.1d0) then
                 pb(0,isym(2,jsym)) = ebo(0)
@@ -701,6 +700,21 @@ c
             write(*,*) 'Warning bad x1 or x2 in write_leshouche',
      $           xbk(1),xbk(2)
          endif
+         do j=1,nexternal
+            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+            pb(4,isym(j,jsym))=pmass(j)
+         enddo
+
+         ! check for numerical_accuracy
+         if (pb(0,1).gt.ebeam(1).or.pb(0,2).gt.ebeam(2))then
+            ! go back to old method --more accurate when boosting with xbk close  to one-- 
+            eta = sqrt(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+            pboost(0)=p(0,1)*(eta + 1d0/eta)
+            pboost(3)=p(0,1)*(eta - 1d0/eta)
+            do j=1,nexternal
+               call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
+            enddo
+          endif
       else
          do j=1,nexternal
             call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
@@ -708,6 +722,8 @@ c
             pb(4,isym(j,jsym))=pmass(j)
          enddo
       endif
+
+
 
       if (IMIRROR.eq.2.and.pmass(1).ne.pmass(2)) then
 c        Note that in this context isym(1,jsym) should never be "2" since the mass differ 
