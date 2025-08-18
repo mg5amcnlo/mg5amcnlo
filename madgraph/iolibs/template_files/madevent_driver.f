@@ -281,6 +281,33 @@ c      write(*,*) 'Final xsec: ',xsec
       rewind(lun)
 
       close(lun)
+
+#ifdef MG5AMC_MEEXPORTER_CUDACPP
+      CALL FBRIDGEDELETE(FBRIDGE_PBRIDGE) ! this must be at the end as it shuts down the CUDA device
+      IF( FBRIDGE_MODE .LE. -1 ) THEN ! (BothQuiet=-1 or BothDebug=-2)
+        WRITE(*,'(a,f10.8,a,e8.2)')
+     &    ' [MERATIOS] ME ratio CudaCpp/Fortran: MIN = ',
+     &    FBRIDGE_CBYF1MIN + 1, ' = 1 - ', -FBRIDGE_CBYF1MIN
+        WRITE(*,'(a,f10.8,a,e8.2)')
+     &    ' [MERATIOS] ME ratio CudaCpp/Fortran: MAX = ',
+     &    FBRIDGE_CBYF1MAX + 1, ' = 1 + ', FBRIDGE_CBYF1MAX
+        WRITE(*,'(a,i6)')
+     &    ' [MERATIOS] ME ratio CudaCpp/Fortran: NENTRIES = ',
+     &    FBRIDGE_NCBYF1
+c        WRITE(*,'(a,e8.2)')
+c    &    ' [MERATIOS] ME ratio CudaCpp/Fortran - 1: AVG = ',
+c    &    FBRIDGE_CBYF1SUM / FBRIDGE_NCBYF1
+c       WRITE(*,'(a,e8.2)')
+c    &    ' [MERATIOS] ME ratio CudaCpp/Fortran - 1: STD = ',
+c    &    SQRT( FBRIDGE_CBYF1SUM2 / FBRIDGE_NCBYF1 ) ! ~standard deviation
+        WRITE(*,'(a,e8.2,a,e8.2)')
+     &    ' [MERATIOS] ME ratio CudaCpp/Fortran - 1: AVG = ',
+     &    FBRIDGE_CBYF1SUM / FBRIDGE_NCBYF1, ' +- ',
+     &    SQRT( FBRIDGE_CBYF1SUM2 ) / FBRIDGE_NCBYF1 ! ~standard error
+      ENDIF
+      CALL COUNTERS_FINALISE()
+#endif
+
 %(DRIVER_EXTRA_FINALISE)s
       end
 
