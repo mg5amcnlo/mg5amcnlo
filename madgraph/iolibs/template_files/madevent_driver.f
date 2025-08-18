@@ -76,7 +76,17 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       INTEGER VECSIZE_USED
+
+#ifdef MG5AMC_MEEXPORTER_CUDACPP
+      INCLUDE 'fbridge.inc'
+      INCLUDE 'fbridge_common.inc'
+      character*255 env_name, env_value
+      integer env_length, env_status
+#else
+      INTEGER*4 FBRIDGE_MODE ! (CppOnly=1, FortranOnly=0, BothQuiet=-1, BothDebug=-2)
       DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime
+#endif
+
 %(DRIVER_EXTRA_HEADER)s
 C-----
 C  BEGIN CODE
