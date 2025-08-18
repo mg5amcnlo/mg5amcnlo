@@ -4960,6 +4960,12 @@ This implies that with decay chains:
         myleglist = base_objects.MultiLegList()
         state = False
 
+        if ('!a!' in args and 'j' in args):
+            upc_with_jet = True
+            self.do_define('aUPC = a j / g', log=False)
+        else:
+            upc_with_jet = False
+
         # Extract process
         for part_name in args:
             if part_name == '>':
@@ -4981,8 +4987,10 @@ This implies that with decay chains:
 
             # check that only final-state particles are tagged
             if is_tagged and not state:
-                if part_name!='a' and part_name!='aa' and part_name!='22':
+                if part_name!='a' and part_name!='22':
                     raise self.InvalidCmd("only initial photons can be tagged")
+                elif upc_with_jet:
+                    part_name = 'aUPC'.lower()
 
             mylegids = []
             polarization = []
