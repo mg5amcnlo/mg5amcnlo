@@ -4482,14 +4482,15 @@ Parameters              %(params)s\n\
         else:
             ret_list = []
             my_cs = color.ColorString()
-            for index, denominator in \
-                enumerate(color_matrix.get_line_denominators()):
-                # Then write the numerators for the matrix elements
+            denominator = min(color_matrix.get_line_denominators())
+            ret_list.append("DATA Denom/%i/" % denominator)
+            
+            for index in range(len(color_matrix._col_basis1)):
                 num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                                     ','.join(["%u" % int(i) for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================

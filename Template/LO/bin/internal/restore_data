@@ -48,8 +48,17 @@ for i in `cat subproc.mg` ; do
     cd ../
 done
 
+# check if we are on a Mac, otherwise assume Linux
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # no nproc on Mac, so use sysctl instead
+    # use -S1024 because there is a limit on the length of the command
+    xargs_opts="-P $(sysctl -n hw.ncpu) -S1024"
+else
+    xargs_opts="-P $(nproc --all)"
+fi
+
 find . -mindepth 2 -maxdepth 2 -type d -name 'G*' -print0 \
-    | xargs --null -P "$(nproc --all)" -I{} bash -c "
+    | xargs --null ${xargs_opts} -I{} bash -c "
 cd {}
 for j in $1_results.dat ; do
     if [[ -e \$j ]] ; then

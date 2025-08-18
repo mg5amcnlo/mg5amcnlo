@@ -302,11 +302,11 @@ c fill the information for the write_header_init common block
 c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
-            call fill_rwgt_lines
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
             endif
+            call fill_rwgt_lines
             call finalize_event(x_save(1,ifold_picked),weight,lunlhe
      $           ,putonshell)
          enddo

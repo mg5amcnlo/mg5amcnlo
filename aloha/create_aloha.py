@@ -63,7 +63,7 @@ class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
     
-    def __init__(self, expr, outgoing, spins, name, infostr, denom=None):
+    def __init__(self, expr, outgoing, spins, name, infostr, model, denom=None):
         """ store the information """
 
         self.spins = spins
@@ -76,7 +76,7 @@ class AbstractRoutine(object):
         self.combined = []
         self.tag = []
         self.contracted = {}
-        
+        self.model = model
 
         
     def add_symmetry(self, outgoing):
@@ -240,7 +240,7 @@ in presence of majorana particle/flow violation"""
         infostr = str(self.lorentz_expr)
 
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
-                                                    infostr, self.denominator)
+                                                    infostr, self.model, self.denominator)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])

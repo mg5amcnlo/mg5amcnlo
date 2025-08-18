@@ -1,9 +1,10 @@
 include ../../Source/make_opts
 SHELL = /bin/bash
-LIBDIR = ../../lib/
+HERE := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+LIBDIR = $(HERE)/../../lib/
 PROG   = check
 PROG_SPLITORDERS = check_sa_born_splitOrders
-LINKLIBS =  -L../../lib/ -ldhelas -lmodel
+LINKLIBS =  -L$(LIBDIR) -ldhelas -lmodel
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
 PROCESS=  matrix.o
 CHECK_SA=  check_sa.o
@@ -24,4 +25,4 @@ endif
 
 matrix$(MENUM)py.so: matrix.f makefile $(LIBS)
 	touch __init__.py
-	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --f77exec=$(FC)
+	$(F2PY) $(LINKLIBS) -c  matrix.f -m matrix$(MENUM)py --f77exec=$(FC) --include-paths=$(HERE)

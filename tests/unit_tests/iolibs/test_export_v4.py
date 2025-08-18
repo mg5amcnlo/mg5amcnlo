@@ -2840,7 +2840,7 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
                      [3,    9,    9,   27,    3,    9],
                      [3,    9,    9,    3,   27,    9],
                      [9,    3,    3,    9,    9,   27]]
-        denom = [1]*6
+        denom = 1
 
         i = 0
         for data in exporter.get_color_data_lines(\
@@ -2848,10 +2848,16 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
             #misc.sprint(data)
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/')
+                self.assertEqual(int(data), denom) 
+                continue 
+            else:   
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
             for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
+                coeff = 1 if j ==0 else 2 # symmetry factor
+                self.assertAlmostEqual((coeff*numerator[i][i+j]), val)
             i+=1 
 
 
@@ -3765,19 +3771,28 @@ CALL VVVXXX(W(1,2),W(1,3),W(1,5),GG,AMP(6))""")
                      [-2,    4,   -2,   19,   -2,   -2],
                      [-2,   -2,    4,   -2,   19,   -2],
                      [4,   -2,   -2,   -2,   -2,   19]]
-        denom = [6,6,6,6,6,6]
+        denom = 6
 
         i = 0
         for data in exporter.get_color_data_lines(\
                          matrix_element):
-            #misc.sprint(data)
+
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
-            for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
-            i+=1 
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/') 
+                self.assertEqual(int(data), denom) 
+                continue
+            else:
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
+                for j,val in enumerate(number):
+                    if j ==0: 
+                        self.assertEqual((numerator[i][i+j]), val)
+                    else:
+                       # factor 2 due to symmetry
+                       self.assertEqual((2*numerator[i][i+j]), val) 
+                i+=1 
 
         # Test JAMP (color amplitude) output
         out, nb = exporter.get_JAMP_lines(matrix_element)

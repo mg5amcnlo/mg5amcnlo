@@ -554,7 +554,8 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS), JAMPH(2, NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(0)
@@ -587,11 +588,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -673,16 +673,22 @@ C         JAMPs contributing to orders QCD=0 QED=2
           JAMP(1,2) = (-1.000000000000000D+00)*AMP(1)+(
      $     -1.000000000000000D+00)*AMP(3)
           DO M = 1, NAMPSO
+            CF_INDEX = 0
             DO I = 1, NCOLOR
               ZTEMP = (0.D0,0.D0)
-              DO J = 1, NCOLOR
-                ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+              DO J = I, NCOLOR
+                CF_INDEX = CF_INDEX + 1
+                ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
               ENDDO
               DO N = 1, NAMPSO
                 BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2
      $           -(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))+ZTEMP
      $           *DCONJG(JAMP(I,N))
               ENDDO
+            ENDDO
+            DO N = 1, NAMPSO
+              BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2-(1
+     $         +BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))/DENOM
             ENDDO
           ENDDO
           DO I = 1, NGRAPHS
@@ -702,15 +708,21 @@ C         JAMPs contributing to orders QCD=0 QED=2
         ANS(1,I) = BORNS(1,I) + BORNS(2,I)
       ENDDO
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J,M)
           ENDDO
           DO N = 1, NAMPSO
             ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP
      $       *DCONJG(JAMPH(1,I,N))
           ENDDO
+        ENDDO
+
+        DO N = 1, NAMPSO
+          ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/DENOM
         ENDDO
       ENDDO
       IF (GLU_IJ.NE.0) NHEL(GLU_IJ) = BACK_HEL

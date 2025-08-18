@@ -494,7 +494,8 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM   
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -588,14 +589,19 @@ C ----------
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX + 1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
               BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))   
           ENDDO
+        ENDDO
+        DO N = 1, NAMPSO
+             BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))/DENOM
         ENDDO
         ENDDO
         Do I = 1, NGRAPHS
@@ -615,14 +621,20 @@ C ----------
       ans(1,i) = borns(1,i) + borns(2,i) 
       enddo
       DO M = 1, NAMPSO
+      CF_INDEX = 0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX +1
+          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J,M)
         ENDDO
 	DO N = 1, NAMPSO
         ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
         ENDDO
+      ENDDO
+
+      DO N = 1, NAMPSO
+      ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/DENOM
       ENDDO
       ENDDO
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel

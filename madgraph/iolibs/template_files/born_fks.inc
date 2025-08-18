@@ -166,7 +166,8 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -244,13 +245,16 @@ C ----------
         enddo
         endif
 %(jamp_lines)s
+        CF_INDEX = 0 
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
           ENDDO
           BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)+ZTEMP*DCONJG(JAMP(I))   
         ENDDO
+        BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)/DENOM
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
         Enddo
@@ -261,10 +265,12 @@ C ----------
       endif
       Enddo
       BORN=BORNS(1)+BORNS(2)
+      CF_INDEX = 0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J)
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX +1
+          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMPH(2,J)
         ENDDO
         BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))
       ENDDO

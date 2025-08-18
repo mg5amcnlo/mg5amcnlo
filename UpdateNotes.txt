@@ -1,8 +1,18 @@
     Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 ANNOUNCEMENT: 
-   2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
+   2.9.X version as a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
+
+
+3.6.2
+      RF: Implemented flavour_bias parameter in the NLO run-card to allow for biassed event generation
+          based on the flavours of the external particles, as used in 2403.14419.
+      RF: Use a grid for the running of alpha_S (NLO only and only when not using LHAPDF). 
+      Andy Buckley: change jpg output by png output for better quality (with OM)
+      RF: Updated histograms.py to prevent warnings/errors with latest gnuplot version
+      OM: Update Color computation (that part of the computation is close to two times faster and 
+          much faster to compile)
 
 3.6.1 (29/11/24):
       OM+MZ: Fix a bug for lhapdf at NLO where the code was incorectly changed like the LO version (and was crashing at compilation)
@@ -25,6 +35,15 @@ ANNOUNCEMENT:
             - SIMD support on cpu
           Those modes need to install the cudacpp plugin (can be done via the command "install cudacpp")
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
+      OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
+
+3.5.8:
+  OM: Fix a quite serious bug introduced in 3.2.0:
+      The scale choice can in some cases be assigned in a assymetric way in precessence of mirror process
+      This was leading to an assymetric z -> -z production for LHC process.
+  OM: Fixing a gridpack issue that cross-section was wrongly reported in the comment of the banner
+      Thanks to Joon-Bin-Lee and the CMS validation team to have identified those two bugs.
+  OM: Include fix from LTS 2.9.23
 
 3.5.7 (29/11/24)
   OM: Include fix from LTS 2.9.22
@@ -224,6 +243,8 @@ ANNOUNCEMENT:
 
                         ** Long Term Stable Update **
 
+2.9.23 (14/03/25)
+    MZ:fix in pseudorapidity function in lhe_parser FourMomentum class (super minor issue) 
 
 2.9.22 (29/11/24):
     OM: Fix a (NLO) issue if the environment variable was setting FFLAGS

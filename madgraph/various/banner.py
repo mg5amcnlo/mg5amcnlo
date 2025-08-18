@@ -353,7 +353,7 @@ class Banner(dict):
         assert "init" in self
         
         cross = dict(cross)
-        for key in cross.keys():
+        for key in list(cross.keys()):
             if isinstance(key, str) and key.isdigit() and int(key) not in cross:
                 cross[int(key)] = cross[key]
         
@@ -5602,6 +5602,9 @@ class RunCardNLO(RunCard):
 
         #technical
         self.add_param('folding', [1,1,1], include=False)
+
+        #bias
+        self.add_param('flavour_bias',[5,1], hidden=True, comment="Example: '5,100' means that the probability to generate an event with a bottom (or anti-bottom) quark is increased by a factor 100, but the weight of those events is reduced by a factor 100. Requires that the 'event_norm' is set to 'bias'.")
         
         #merging
         self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
@@ -5829,6 +5832,17 @@ class RunCardNLO(RunCard):
         if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
             raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
 
+    # check that the flavour_bias is consistent
+        if len(self['flavour_bias']) != 2:
+            raise InvalidRunCard("'flavour_bias' should contain exactly two numbers: the abs(PDG) of the flavour to enhance, and the enhancement multiplication factor.")
+        for i in self['flavour_bias']:
+            if i < 0:
+                raise InvalidRunCard("flavour and multiplication factor should be positive in the flavour_bias parameter")
+        if self['flavour_bias'][1] != 1 and self['event_norm'] != 'bias':
+            logger.warning('Non-trivial flavour enhancement factor: setting event normalisation to "bias"')
+            self['event_norm']='bias'
+            
+    
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
             # do not for proton mass if not proton PDF (or when scan initialization)

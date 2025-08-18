@@ -137,14 +137,14 @@ C       LP=SIGN(1,LPP(IB(1)))
           ENDDO
           QSCALE=QSCALE/2D0
         ELSE
-          QSCALE=DSQRT(Q2FACT(IB(1)))
+          QSCALE=DSQRT(Q2FACT(1))
         ENDIF
         U1=PDG2PDF(LPP(IB(1)),2, IB(1),XBK(IB(1)), QSCALE)
       ENDIF
       IF (ABS(LPP(IB(2))).GE.1) THEN
 C       LP=SIGN(1,LPP(IB(2)))
         IF (DSQRT(Q2FACT(IB(2))).NE.0D0) THEN
-          QSCALE=DSQRT(Q2FACT(IB(2)))
+          QSCALE=DSQRT(Q2FACT(2))
         ENDIF
         UX2=PDG2PDF(LPP(IB(2)),-2, IB(2),XBK(IB(2)), QSCALE)
       ENDIF
@@ -290,6 +290,10 @@ C
 
       INTEGER I_EE
 C     
+C     STUFF FOR UPC
+C     
+      DOUBLE PRECISION PHOTONPDFSQUARE
+C     
 C     EXTERNAL FUNCTIONS
 C     
       LOGICAL PASSCUTS
@@ -373,12 +377,12 @@ C     Continue only if IMODE is 0, 4 or 5
           IF (ABS(LPP(IB(1))).GE.1) THEN
 C           LP=SIGN(1,LPP(IB(1)))
             U1(IVEC)=PDG2PDF(LPP(IB(1)),2, IB(1),ALL_XBK(IB(1),IVEC)
-     $       ,DSQRT(ALL_Q2FACT(IB(1), IVEC)))
+     $       ,DSQRT(ALL_Q2FACT(1, IVEC)))
           ENDIF
           IF (ABS(LPP(IB(2))).GE.1) THEN
 C           LP=SIGN(1,LPP(IB(2)))
             UX2(IVEC)=PDG2PDF(LPP(IB(2)),-2, IB(2),ALL_XBK(IB(2),IVEC)
-     $       ,DSQRT(ALL_Q2FACT(IB(2), IVEC)))
+     $       ,DSQRT(ALL_Q2FACT(2, IVEC)))
           ENDIF
         ENDDO  ! IWARP LOOP
       ENDDO  ! CURRWARP LOOP

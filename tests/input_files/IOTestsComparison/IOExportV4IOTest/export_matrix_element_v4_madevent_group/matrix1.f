@@ -354,7 +354,8 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP, TMP_JAMP(0)
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
       COMPLEX*16 W(18,NWAVEFUNCS)
 C     Needed for v4 models
@@ -397,11 +398,10 @@ C     2 means approximation by the	denominator of the propagator
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -459,10 +459,12 @@ C     JAMPs contributing to orders ALL_ORDERS=1
 
       MATRIX1 = 0.D0
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX + 1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
 
@@ -471,6 +473,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
           ENDDO
         ENDDO
       ENDDO
+      MATRIX1 = MATRIX1/DENOM
 
       IF(SDE_STRAT.EQ.1)THEN
         AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))

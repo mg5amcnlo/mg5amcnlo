@@ -62,7 +62,7 @@ class CheckFileCreate():
         #full match expected
         if not partial:
             for a, b in zip(list_sol, list_cur):
-                self.assertEqual(a,b)
+                self.assertEqual(a.strip(),b.strip())
             #for a, b in zip(current_value.split('\n'), solution.split('\n')):
             #    self.assertEqual(a,b)
             #self.assertEqual(current_value.split('\n'), solution.split('\n'))

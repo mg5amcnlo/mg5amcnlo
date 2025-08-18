@@ -761,7 +761,8 @@ C
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
-        target = 166.36114
+        #target = 166.36114 # value used as reference before changing sde_strategy
+        target = 165.7 # computed with sde_strategy #165.8 +- 0.02099 pb
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -774,7 +775,7 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 165.7
+        target = 165.7 
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -1155,7 +1156,75 @@ class TestMEfromfile(unittest.TestCase):
         self.assertEqual(cwd, os.getcwd())
         
         
+    def test_DY_onejet(self):
+        """
+        This test is checking that the scale in auto_dsig are correctly assigned
+        in 3.6.2, a wrong Q2FACT(IB(1)) was used instead of Q2FACT(1).
+        Leading to an assymetry in the DY +1j process.
+        This acceptance test is there to prevent such type of error
+        """
+
+        cwd = os.getcwd()
         
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > mu+ mu- j
+        output %(path)s
+        launch
+        shower=OFF    
+        set nevents 10000
+        set ickkw 1
+        set xqcut 10
+        set mmll 50
+        set auto_ptj_mmjj False
+        set ptj 0.01
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross=591.1733, error=2.17,target_event=10000)
+
+        count = [0,0]
+        for event in lhe_parser.EventFile(pjoin(self.run_dir, 'Events', 'run_01','unweighted_events.lhe.gz')):
+            event.check()
+            for particle in event:
+                if particle.pid == 13:
+                    if particle.pz > 0:
+                        count[0] += 1
+                    else:
+                        count[1] += 1
+                    break 
+
+        self.assertTrue(0.49<count[0]/10000.<0.51)       
+        self.assertTrue(0.49<count[1]/10000.<0.51)
+
+
+        self.assertEqual(cwd, os.getcwd())
+
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()

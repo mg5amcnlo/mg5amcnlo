@@ -16,6 +16,9 @@ import aloha.aloha_lib as aloha_lib
 import cmath
 from six.moves import range
 
+import logging
+logger = logging.getLogger('aloha')
+
 class WrongFermionFlow(Exception):
     pass
 
@@ -30,8 +33,15 @@ def get_fermion_flow(expression, nb_fermion):
     # Need to expand the expression in order to have a simple sum of expression
     try:
         expr = eval(expression)
+    except NameError as error:
+        # handle formfactors
+        logger.debug('Error in get_fermion_flow: %s -> handle like formfactor' % error)
+        import re
+        var_name = re.findall(r"'([^']*)'", str(error))[0]
+        expr = expression.replace(var_name, '1') 
+        return get_fermion_flow(expr, nb_fermion)
     except Exception as error:
-        print(error)
+        print(expression, error)
         return
     expr = expr.simplify()
     #expr is now a valid AddVariable object if they are a sum or

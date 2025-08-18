@@ -276,7 +276,6 @@ if rev_nb and auto_update:
         p = subprocess.call("git tag  'L%s' " % int(rev_nb), shell=True)
     elif MG_branch == '3.x':
         p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
-
 if (rev_nb and auto_update) or MG_branch == "LTS_2":
     p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
     print('new tag added')

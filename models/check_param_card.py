@@ -1092,11 +1092,11 @@ class ParamCardIterator(ParamCard):
             to_print = self.cross[-1:]
         for info in to_print:
             name = info['run_name']
-            bench = info['bench']
+            bench = [float(x) for x in info['bench']]
             data = []
             for k in keys:
                 if k in info:
-                    data.append(info[k])
+                    data.append(float(info[k]))
                 else:
                     data.append(0.)
             ff.write(formatting % tuple([name] + bench + data))

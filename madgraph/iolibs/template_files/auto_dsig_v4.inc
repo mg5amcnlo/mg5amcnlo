@@ -9,7 +9,7 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
-C             imode 0 run, 1 init, 2 reweight, 
+C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
@@ -17,9 +17,9 @@ C     Output:
 C             Amplitude squared and summed
 C ****************************************************
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       include 'genps.inc'
       include 'nexternal.inc'
       include 'maxconfigs.inc'
@@ -28,17 +28,17 @@ C
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
       REAL*8     PI
       PARAMETER (PI=3.1415926d0)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
       INTEGER IMODE
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER I,ITYPE,LP,IPROC
       double precision Qscale
-%(pdf_vars)s      
+%(pdf_vars)s
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION DSIGUU,R,RCONF
 
@@ -47,7 +47,7 @@ C
       SAVE NFACT
 C
 C     STUFF FOR DRESSED EE COLLISIONS
-C     
+C
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars)s
@@ -56,15 +56,15 @@ C
 C     STUFF FOR UPC
 C
       double precision photonpdfsquare
-C  
+C
 C EXTERNAL FUNCTIONS
-C  
+C
       LOGICAL PASSCUTS
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF,CUSTOM_BIAS
       INTEGER NEXTUNOPEN
-C  
+C
 C GLOBAL VARIABLES
-C  
+C
       INTEGER          IPSEL
       COMMON /SubProc/ IPSEL
 C     MINCFIG has this config number
@@ -88,14 +88,14 @@ c     local
 c
 	   double precision P1(0:3, nexternal)
       integer channel
-C  
+C
 C DATA
-C  
+C
 %(pdf_data)s
 C ----------
 C BEGIN CODE
 C ----------
-      selected_hel(:) = 0 
+      selected_hel(:) = 0
       selected_col(:) = 0
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
@@ -122,9 +122,9 @@ C     Continue only if IMODE is 0, 4 or 5
 
 %(passcuts_begin)s
 ## if( nogrouping) {
-      ! for no grouping update the scale here (done in main autodsig for grouping  
+      ! for no grouping update the scale here (done in main autodsig for grouping
       call update_scale_coupling(PP, WGT)
-## }	 
+## }
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -143,7 +143,7 @@ C     Continue only if IMODE is 0, 4 or 5
 
 
 		 IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN		 
+            IF (DSIGUU.LT.1D199) THEN
 		      DSIG%(proc_id)s = DSIGUU*CONV
 			else
 		      DSIG%(proc_id)s = 0.0d0
@@ -157,7 +157,7 @@ C     Select a flavor combination (need to do here for right sign)
             IPSEL=IPSEL+1
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
-	 
+
          DSIGUU=DSIGUU*REWGT(PP,1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
@@ -199,7 +199,7 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
-C             imode 0 run, 1 init, 2 reweight, 
+C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
@@ -207,7 +207,7 @@ C     Output:
 C             Amplitude squared and summed
 C ****************************************************
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
 C
       include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
@@ -219,9 +219,9 @@ C
       PARAMETER (CONV=389379.66*1000)  !CONV TO PICOBARNS
       REAL*8     PI
       PARAMETER (PI=3.1415926d0)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,VECSIZE_MEMMAX)
       DOUBLE PRECISION ALL_WGT(VECSIZE_MEMMAX)
       DOUBLE PRECISION ALL_XBK(2,VECSIZE_MEMMAX)
@@ -233,18 +233,18 @@ C
       INTEGER ICONF_VEC(*)
       INTEGER VECSIZE_USED
       INTEGER SYMCONF(0:LMAXCONFIGS)
-      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)      
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
 C ----------
 C BEGIN CODE
 C ----------
-C  
-C LOCAL VARIABLES 
+C
+C LOCAL VARIABLES
 C
       INTEGER I,ITYPE,LP,IPROC
       DOUBLE PRECISION QSCALE
-%(pdf_vars_vec)s      
+%(pdf_vars_vec)s
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX) 
+      DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
@@ -253,7 +253,7 @@ C
       integer channel
 C
 C     STUFF FOR DRESSED EE COLLISIONS
-C     
+C
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars_vec)s
@@ -261,17 +261,17 @@ C
 C
 C     STUFF FOR UPC
 C
-      DOUBLE PRECISION PHOTONPDFSQUARE
-C  
+      double precision photonpdfsquare
+C
 C EXTERNAL FUNCTIONS
-C  
+C
       LOGICAL PASSCUTS
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF,CUSTOM_BIAS
       INTEGER NEXTUNOPEN
       DOUBLE PRECISION DSIG%(proc_id)s
-C  
+C
 C GLOBAL VARIABLES
-C  
+C
       INTEGER          IPSEL
       COMMON /SubProc/ IPSEL
 C     MINCFIG has this config number
@@ -291,12 +291,12 @@ C     Keep track of whether cuts already calculated for this event
       integer selected_hel(VECSIZE_MEMMAX)
       integer selected_col(VECSIZE_MEMMAX)
       double precision all_rwgt(VECSIZE_MEMMAX)
-      
+
 C     Common blocks
       include '../../Source/PDF/pdf.inc'
 c      CHARACTER*7         PDLABEL,EPA_LABEL
 c      INTEGER       LHAID
-c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 
 c
 c     local
@@ -304,20 +304,20 @@ c
 	   double precision P1(0:3, nexternal)
 	   integer ivec, curr_warp, iwarp, NB_WARP_USED
 	   integer channels(VECSIZE_MEMMAX)
-C  
+C
 C DATA
-C  
+C
 %(pdf_data_vec)s
 C ----------
 C BEGIN CODE
 C ----------
       selected_hel(:) = 0
-      selected_col(:) = 0 
+      selected_col(:) = 0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
 	RETURN
-      ENDIF	   
+      ENDIF
 
 C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
@@ -325,7 +325,7 @@ C     Continue only if IMODE is 0, 4 or 5
 %(passcuts_begin)s
 %(pdf_lines_vec)s
 
-	 
+
          IF (IMODE.EQ.4)THEN
             ALL_OUT(:) = ALL_PD(0,:)
             RETURN
@@ -337,11 +337,11 @@ C     Continue only if IMODE is 0, 4 or 5
 	     IB(2) = 2
 	   else
 	     IB(1) = 2
-	     IB(2) = 1	   
+	     IB(2) = 1
 	   endif
 	   DO IWARP=1, WARP_SIZE
 	      IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
-c        Do not need those three here. do I?	 
+c        Do not need those three here. do I?
 	      XBK(:) = ALL_XBK(:,IVEC)
 c	      CM_RAP = ALL_CM_RAP(IVEC)
 	      Q2FACT(:) = ALL_Q2FACT(:, IVEC)
@@ -366,7 +366,7 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-	 ENDDO ! end loop on IWARP/IVEC	 
+	 ENDDO ! end loop on IWARP/IVEC
 	 ENDDO ! end loop on the CURR_WARP
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
@@ -374,7 +374,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 DO IVEC=1,VECSIZE_USED
 	 DSIGUU = ALL_OUT(IVEC)
 	 IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN		 
+            IF (DSIGUU.LT.1D199) THEN
 		      ALL_OUT(IVEC) = DSIGUU*CONV
 			else
 		      ALL_OUT(IVEC) = 0.0d0
@@ -468,7 +468,7 @@ C       Call UNWGT to unweight and store events
 
 	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
 c         if hel>0 return the helicity of particule ipart for the selected helicity configuration
-c         if hel=0 return the number of helicity state possible for that particle 
+c         if hel=0 return the number of helicity state possible for that particle
 	  implicit none
 	  integer hel,i, ipart
 	  Include 'nexternal.inc'
@@ -484,4 +484,3 @@ c         if hel=0 return the number of helicity state possible for that particl
 
 
 %(ADDITIONAL_FCT)s
-

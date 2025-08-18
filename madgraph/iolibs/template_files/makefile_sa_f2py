@@ -1,9 +1,10 @@
 include ../Source/make_opts
 SHELL = /bin/bash
-LIBDIR = ../lib/
+HERE := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+LIBDIR = $(HERE)/../lib/
 PROG   = check
-LINKLIBS_ME =  -L../lib/ -ldhelas -lmodel
-LINKLIBS_ALL =  -L../lib/ -lmatrix -ldhelas -lmodel
+LINKLIBS_ME =  -L$(LIBDIR) -ldhelas -lmodel
+LINKLIBS_ALL =  -L$(LIBDIR) -lmatrix -ldhelas -lmodel
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
 PROCESS=  allmatrix.o
 LIBRARY = libmatrix.a
@@ -14,10 +15,11 @@ ifeq ($(origin MENUM),undefined)
 endif
 
 %$(MENUM)py.so: %/matrix.f
-	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ME) -c $^ -m $(patsubst %/matrix.f,%$(MENUM)py,$^)
+	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ME) -c $^ -m $(patsubst %/matrix.f,%$(MENUM)py,$^) --include-paths=$(HERE)/$(patsubst %/matrix.f,%,$^)
+	
 	
 all_matrix$(MENUM)py.so: $(LIBDIR)/$(LIBRARY) all_matrix.f
-	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ALL) -c all_matrix.f -m all_matrix$(MENUM)py
+	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ALL) -c all_matrix.f -m all_matrix$(MENUM)py --include-paths=$(HERE)
 
     
 allmatrix$(MENUM)py.so: $(patsubst %/matrix.f,%$(MENUM)py.so,$(wildcard */matrix.f)) all_matrix$(MENUM)py.so

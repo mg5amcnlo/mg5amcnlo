@@ -700,8 +700,8 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
   std::complex<double> ztemp; 
   std::complex<double> jamp[ncolor]; 
   // The color matrix;
-  static const double denom[ncolor] = {1, 1}; 
-  static const double cf[ncolor][ncolor] = {{9, 3}, {3, 9}}; 
+  static const int denom = 1; 
+  static const int cf[ncolor * (ncolor + 1)/2] = {9, 6, 9}; 
 
   // Calculate color flows
   jamp[0] = +1./6. * amp[0] - amp[1] + 1./2. * amp[2]; 
@@ -709,13 +709,17 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
+  int cf_index = 0;
   for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(int j = 0; j < ncolor; j++ )
-      ztemp = ztemp + cf[i][j] * jamp[j]; 
-    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
+    for(int j = i; j < ncolor; j++ , cf_index++ )
+    {
+      ztemp = ztemp + static_cast<double> (cf[cf_index]) * jamp[j]; 
+    }
+    matrix = matrix + real(ztemp * conj(jamp[i])); 
   }
+  matrix = matrix/denom;
 
   // Store the leading color flows for choice of color
   for(int i = 0; i < ncolor; i++ )
@@ -1000,21 +1004,25 @@ double Sigma_sm_qq_six::matrix_uu_six()
   std::complex<double> ztemp; 
   std::complex<double> jamp[ncolor]; 
   // The color matrix;
-  static const double denom[ncolor] = {1}; 
-  static const double cf[ncolor][ncolor] = {{6}}; 
+  static const int denom = 1; 
+  static const int cf[ncolor * (ncolor + 1)/2] = {6}; 
 
   // Calculate color flows
   jamp[0] = -amp[0]; 
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
+  int cf_index = 0; 
   for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(int j = 0; j < ncolor; j++ )
-      ztemp = ztemp + cf[i][j] * jamp[j]; 
-    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
+    for(int j = i; j < ncolor; j++ , cf_index++ )
+      {
+      ztemp = ztemp + static_cast<double> (cf[cf_index]) * jamp[j]; 
+      }
+    matrix = matrix + real(ztemp * conj(jamp[i])); 
   }
+  matrix = matrix/denom;
 
   // Store the leading color flows for choice of color
   for(int i = 0; i < ncolor; i++ )

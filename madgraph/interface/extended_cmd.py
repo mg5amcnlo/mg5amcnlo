@@ -1317,6 +1317,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        if __debug__:
+            traceback.print_exc()
         if hasattr(error, 'filename'):
             debug_file.write("Related File: %s\n" % error.filename)
         # Create a nice error output

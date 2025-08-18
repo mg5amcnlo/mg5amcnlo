@@ -526,6 +526,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         out.write('implicit none\n')
         # Check if we are in formfactor mode
         if self.has_model_parameter:
+            out.write(' include "../vector.inc"\n') 
             out.write(' include "../MODEL/input.inc"\n')
             out.write(' include "../MODEL/coupl.inc"\n')
         argument_var = [name for type,name in self.call_arg]
@@ -1589,7 +1590,14 @@ class ALOHAWriterForCPP(WriteALOHA):
     
                 out.write(' %s %s[%s];\n' % (self.type2def[type], name, size))
             elif (type, name) not in self.call_arg:
-                out.write(' %s %s;\n' % (self.type2def[type], name))               
+                if type == 'parameter':
+                    model_name =self.routine.model.__name__ 
+                    if '.' in model_name:
+                        model_name = model_name.split('.')[-1]
+                    out.write('std::complex<double> %s = Parameters_%s::getInstance()->mdl_%s;' % (name,self.routine.model.__name__,name))
+                    out.write('std::complex<double> mdl_%s = %s;' % (name,name))
+                elif type != 'fct':
+                    out.write(' %s %s;\n' % (self.type2def[type], name))               
 
         return out.getvalue()
 
@@ -1688,7 +1696,20 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
         
-        for name, (fct, objs) in self.routine.fct.items():
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            fct, objs = self.routine.fct[name]
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
             
@@ -1742,7 +1763,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                             out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s;\n' % \
                                   mydict) 
                         else:
-                            mydict['denom'] = self.routine.denominator
+                            mydict['denom'] = self.write_obj(self.routine.denominator)
                             out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s);\n' % \
                                   mydict) 
                     else:

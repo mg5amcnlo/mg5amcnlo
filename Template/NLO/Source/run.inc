@@ -1,5 +1,5 @@
 c**************************************************************
-c    run.inc 
+c    run.inc
 c**************************************************************
 c
 c     Scales
@@ -8,7 +8,7 @@ c
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult, fixed_extra_scale
       integer         ickkw,nhmult,dynamical_scale_choice
       common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
-     $                mue_ref_fixed, mue_over_ref, fixed_extra_scale, 
+     $                mue_ref_fixed, mue_over_ref, fixed_extra_scale,
      $                fixed_fac_scale,fixed_couplings,ickkw,nhmult,hmult,
      $                dynamical_scale_choice
 
@@ -51,7 +51,7 @@ c
       common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 c
 c     BW treatment
-c      
+c
       double precision bwcutoff
       common/to_bwcutoff/ bwcutoff
 c
@@ -63,7 +63,7 @@ c
 
 c
 c     Shower MonteCarlo
-c     
+c
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
 
@@ -78,7 +78,7 @@ c
       double precision rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up
       common/to_rwgt/ do_rwgt_scale, rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up,
      & do_rwgt_pdf, pdf_set_min, pdf_set_max,
-     & store_rwgt_info 
+     & store_rwgt_info
 c
 c    For FO run (with lhe type of analysis
 c
@@ -88,10 +88,10 @@ c
 c
 c
       integer pdg_cut(0:25)
-      double precision ptmin4pdg(0:25) 
-      double precision ptmax4pdg(0:25) 
-      double precision mxxmin4pdg(0:25) 
-      logical mxxpart_antipart(1:25) 
+      double precision ptmin4pdg(0:25)
+      double precision ptmax4pdg(0:25)
+      double precision mxxmin4pdg(0:25)
+      logical mxxpart_antipart(1:25)
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart
 
 C stuff for alpha running in lepton collisions
@@ -111,3 +111,7 @@ C
 C UPC parameter
       double precision RAI(2),xiAI(2)
       common /heavyion_upc_beams/ RAI, xiAI
+
+c for biassed generation based on the particle flavours of the processes
+      integer flavour_bias(0:2)
+      common /c_flavour_bias/ flavour_bias

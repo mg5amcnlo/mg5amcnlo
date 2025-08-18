@@ -2953,8 +2953,8 @@ class FourMomentum(object):
     
     @property
     def pseudorapidity(self):
-        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
-        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
+        norm = math.sqrt(self.px**2 + self.py**2 + self.pz**2)
+        return  0.5* math.log((norm + self.pz) / (norm - self.pz))
     
     @property
     def rapidity(self):

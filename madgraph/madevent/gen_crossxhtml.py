@@ -133,7 +133,7 @@ class AllResults(dict):
     
     web = False 
     
-    _run_entries = ['cross', 'error','nb_event_pythia','run_mode','run_statistics',
+    _run_entries = ['cross', 'error','axsec','nb_event_pythia','run_mode','run_statistics',
                     'nb_event','cross_pythia','error_pythia',
                     'nb_event_pythia8','cross_pythia8','error_pythia8', 'shower_dir']
 

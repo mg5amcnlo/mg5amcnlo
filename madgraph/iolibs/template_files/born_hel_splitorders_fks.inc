@@ -169,7 +169,8 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,M,N
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -203,13 +204,16 @@ C ----------
     ANS(I) = 0d0
     ENDDO
     DO M = 1, NAMPSO
+      CF_INDEX = 0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP*DCONJG(JAMP(I,M))
       ENDDO
+          ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))/DENOM
     ENDDO
     END
        
