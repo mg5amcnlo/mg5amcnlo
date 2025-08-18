@@ -93,6 +93,58 @@ C  BEGIN CODE
 C----- 
       call cpu_time(t_before)
       CUMULATED_TIMING = t_before
+
+#ifdef _OPENMP
+      CALL OMPNUMTHREADS_NOT_SET_MEANS_ONE_THREAD()
+#endif
+
+#ifdef MG5AMC_MEEXPORTER_CUDACPP
+      CALL COUNTERS_INITIALISE()
+      fbridge_mode = 1 ! CppOnly=1, default for CUDACPP
+      env_name = 'CUDACPP_RUNTIME_FBRIDGEMODE'
+      call get_environment_variable(env_name, env_value, env_length, env_status)
+      if( env_status.eq.0 ) then
+        write(*,*) 'Found environment variable "', trim(env_name), '" with value "', trim(env_value), '"'
+        read(env_value,'(I255)') FBRIDGE_MODE ! see https://gcc.gnu.org/onlinedocs/gfortran/ICHAR.html
+        write(*,*) 'FBRIDGE_MODE (from env) = ', FBRIDGE_MODE
+      else if( env_status.eq.1 ) then ! 1 = not defined
+        write(*,*) 'FBRIDGE_MODE (default) = ', FBRIDGE_MODE
+      else ! -1 = too long for env_value, 2 = not supported by O/S
+        write(*,*) 'ERROR! get_environment_variable failed for "', trim(env_name), '"'
+        STOP
+      endif
+      vecsize_used = vecsize_memmax ! default ! CppOnly=1, default for CUDACPP
+      env_name = 'CUDACPP_RUNTIME_VECSIZEUSED'
+      call get_environment_variable(env_name, env_value, env_length, env_status)
+      if( env_status.eq.0 ) then
+        write(*,*) 'Found environment variable "', trim(env_name), '" with value "', trim(env_value), '"'
+        read(env_value,'(I255)') VECSIZE_USED ! see https://gcc.gnu.org/onlinedocs/gfortran/ICHAR.html
+        write(*,*) 'VECSIZE_USED (from env) = ', VECSIZE_USED
+      else if( env_status.eq.1 ) then ! 1 = not defined
+        write(*,*) 'VECSIZE_USED (default) = ', VECSIZE_USED
+      else ! -1 = too long for env_value, 2 = not supported by O/S
+        write(*,*) 'ERROR! get_environment_variable failed for "', trim(env_name), '"'
+        STOP
+      endif
+      if( VECSIZE_USED.gt.VECSIZE_MEMMAX .or. VECSIZE_USED.le.0 ) then
+        write(*,*) 'ERROR! Invalid VECSIZE_USED = ', VECSIZE_USED
+        STOP
+      endif
+
+      CALL FBRIDGECREATE(FBRIDGE_PBRIDGE, VECSIZE_USED, NEXTERNAL, 4) ! this must be at the beginning as it initialises the CUDA device
+      FBRIDGE_NCBYF1 = 0
+      FBRIDGE_CBYF1SUM = 0
+      FBRIDGE_CBYF1SUM2 = 0
+      FBRIDGE_CBYF1MAX = -1D100
+      FBRIDGE_CBYF1MIN = 1D100
+#else
+      fbridge_mode = 0 ! FortranOnly=0, default for FORTRAN
+      if( fbridge_mode.ne.0 ) then
+        write(*,*) 'ERROR! Invalid fbridge_mode (in FORTRAN backend mode) = ', fbridge_mode
+        STOP
+      endif
+#endif
+
 %(DRIVER_EXTRA_INITIALISE)s
 c
 c     Read process number
