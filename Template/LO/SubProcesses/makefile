@@ -77,7 +77,7 @@ $(LIBDIR)libgammaUPC.$(libext):
 $(MATRIX): %.o: %.f
 	$(FC) $(FFLAGS) $(MATRIX_FLAG) -c $< -I../../Source/ -I../../Source/PDF/gammaUPC
 %.o: %.f
-	$(FC) $(FFLAGS) -c $< -I../../Source/ -I../../Source/PDF/gammaUPC
+	$(FC) -cpp $(FFLAGS) -c $< -I../../Source/ -I../../Source/PDF/gammaUPC
 
 # Dependencies
 
