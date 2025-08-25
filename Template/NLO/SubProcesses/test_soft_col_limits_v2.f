@@ -42,8 +42,16 @@
       logical        softtest,colltest
       common/sctests/softtest,colltest
       do jtest=1,ntests
-         xi_i_fks_fix=xi_i_fks_fix_input
-         y_ij_fks_fix=y_ij_fks_fix_input
+         if (colltest) then
+            xi_i_fks_fix=xi_i_fks_fix_input
+         else
+            xi_i_fks_fix=0.05d0
+         endif
+         if (softtest) then
+            y_ij_fks_fix=y_ij_fks_fix_input
+         else
+            y_ij_fks_fix=0.9d0
+         endif
          call generate_valid_momenta(wgt,x,p)
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
@@ -51,8 +59,17 @@
             call compute_towards_limit(ilim,x,towards_amp_split(1,i)
      $           ,towards_wgt_PS(i),towards_p(0,1 ,i))
          enddo
-         xi_i_fks_fix=xi_i_fks_fix_input ! reset xi and y to input values
-         y_ij_fks_fix=y_ij_fks_fix_input
+         ! reset xi and y to input values
+         if (colltest) then
+            xi_i_fks_fix=xi_i_fks_fix_input
+         else
+            xi_i_fks_fix=0.05d0
+         endif
+         if (softtest) then
+            y_ij_fks_fix=y_ij_fks_fix_input
+         else
+            y_ij_fks_fix=0.9d0
+         endif
          call compute_in_the_limit(ilim,x,limit_amp_split,limit_wgt_PS
      $        ,limit_p(0,1))
          call check_limit_and_print_result(nstep,towards_amp_split
@@ -160,8 +177,8 @@
       limit=sum(limit_amp_split(1:amp_split_size),dim=1)
 
       call checkres(amp(1:nstep) ,limit,towards_wgt_PS(1:nstep)
-     $     ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
-     $     ,j_fks,iret)
+     $     ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,nexternal
+     $     ,i_fks,j_fks,iret)
       nerr(0)=nerr(0)+iret
 ! check limit order-by-order
       do iamp=1, amp_split_size
@@ -169,8 +186,8 @@
      $        limit_amp_split(iamp).ne.0d0) then
             call checkres(towards_amp_split(iamp,1:nstep)
      $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
-     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,i_fks
-     $           ,j_fks,iret)
+     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest
+     $           ,nexternal,i_fks,j_fks,iret)
             nerr(iamp)=nerr(iamp)+iret
          endif
       enddo
@@ -222,8 +239,8 @@
             enddo
             call checkres(towards_amp_split(iamp,1:nstep)
      $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
-     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,nexternal
-     $           ,i_fks ,j_fks ,iret)
+     $           ,limit_wgt_PS ,towards_p,limit_p,iflag,nstep,jtest
+     $           ,nexternal,i_fks,j_fks,iret)
             write(*,*) 'RETURN CODE', iret
          endif
       enddo
@@ -382,8 +399,8 @@ c dump momenta in a fort.80 file
          ntry=ntry+1
       enddo
       if (ntry.ge.1000) then
-         write (*,*) 'No points passed cuts...'
-         write (12,*) 'ERROR: no points passed cuts...'/
+         write (*,*) 'No valid phase-space points...'
+         write (12,*) 'ERROR: no valid phase-space points...'/
      $        /' Cannot perform ME tests properly for config',iconfig
          stop 1
       endif
@@ -493,6 +510,7 @@ c
       include 'nexternal.inc'
       include 'cuts.inc'
       include 'run.inc'
+      include 'coupl.inc'
       double precision ZERO,    one
       parameter       (ZERO=0d0,one=1d0)
       integer i,k
