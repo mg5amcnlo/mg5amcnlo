@@ -11,7 +11,7 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 
+C     imode 0 run, 1 init, 2 reweight,
 C     3 finalize, 4 only PDFs,
 C     5 squared amplitude only (never
 C     generate events)
@@ -31,12 +31,12 @@ C
       REAL*8     PI
       PARAMETER (PI=3.1415926D0)
 C     
-C     ARGUMENTS 
+C     ARGUMENTS
 C     
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
       INTEGER IMODE
 C     
-C     LOCAL VARIABLES 
+C     LOCAL VARIABLES
 C     
       INTEGER I,ITYPE,LP,IPROC
       DOUBLE PRECISION QSCALE
@@ -127,7 +127,7 @@ C     Continue only if IMODE is 0, 4 or 5
 
 
 C     for no grouping update the scale here (done in main autodsig for
-C      grouping  
+C      grouping
       CALL UPDATE_SCALE_COUPLING(PP, WGT)
       IF (ABS(LPP(1)) .GE. 1) THEN
 C       LP=SIGN(1,LPP(1))
@@ -266,7 +266,7 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 
+C     imode 0 run, 1 init, 2 reweight,
 C     3 finalize, 4 only PDFs,
 C     5 squared amplitude only (never
 C     generate events)
@@ -287,7 +287,7 @@ C
       REAL*8     PI
       PARAMETER (PI=3.1415926D0)
 C     
-C     ARGUMENTS 
+C     ARGUMENTS
 C     
       DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,VECSIZE_MEMMAX)
       DOUBLE PRECISION ALL_WGT(VECSIZE_MEMMAX)
@@ -305,7 +305,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 C     
-C     LOCAL VARIABLES 
+C     LOCAL VARIABLES
 C     
       INTEGER I,ITYPE,LP,IPROC
       DOUBLE PRECISION QSCALE
@@ -364,7 +364,7 @@ C     Common blocks
       INCLUDE '../../Source/PDF/pdf.inc'
 C     CHARACTER*7         PDLABEL,EPA_LABEL
 C     INTEGER       LHAID
-C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
+C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 
 C     
 C     local
@@ -447,7 +447,7 @@ C           LP=SIGN(1,LPP(2))
         ENDIF
         DO IWARP=1, WARP_SIZE
           IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
-C         Do not need those three here. do I?	 
+C         Do not need those three here. do I?
           XBK(:) = ALL_XBK(:,IVEC)
 C         CM_RAP = ALL_CM_RAP(IVEC)
           Q2FACT(:) = ALL_Q2FACT(:, IVEC)
@@ -473,7 +473,7 @@ C         Select a flavor combination (need to do here for right sign)
           ENDIF
           CALL RANMAR(HEL_RAND(IVEC))
           CALL RANMAR(COL_RAND(IVEC))
-        ENDDO  ! end loop on IWARP/IVEC	 
+        ENDDO  ! end loop on IWARP/IVEC
       ENDDO  ! end loop on the CURR_WARP
       CALL SMATRIX_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
      $  ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
@@ -585,7 +585,7 @@ C         Call UNWGT to unweight and store events
 C     if hel>0 return the helicity of particule ipart for the selected
 C      helicity configuration
 C     if hel=0 return the number of helicity state possible for that
-C      particle 
+C      particle
       IMPLICIT NONE
       INTEGER HEL,I, IPART
       INCLUDE 'nexternal.inc'
@@ -711,6 +711,5 @@ C     all subleading color.
 
       RETURN
       END
-
 
 
