@@ -2,18 +2,18 @@
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
-"""Definitions of the objects needed both for MadFKS from real 
+"""Definitions of the objects needed both for MadFKS from real
 and MadFKS from born"""
 
 from __future__ import absolute_import
@@ -31,10 +31,10 @@ import array
 import fractions
 import six
 from six.moves import range
-    
+
 if madgraph.ordering:
-    set = misc.OrderedSet    
-    
+    set = misc.OrderedSet
+
 class FKSProcessError(Exception):
     """Exception for MadFKS"""
     pass
@@ -137,24 +137,24 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
                 vert_ids.remove(vert_ids[vert_legs.index(j)])
                 vert_legs.remove(j)
                 last_leg = vert_legs[0]
-                #check absolute value in order not to worry about 
+                #check absolute value in order not to worry about
                 #incoming/outgoing particles
                 if abs(vert_ids[0]) == abs(id_ij):
                     diag['diagram']['vertices'].remove(vert)
-                    good_diags.append({'diagram': diag['diagram'], 
+                    good_diags.append({'diagram': diag['diagram'],
                                       'leg_ij': last_leg,
                                       'number': diag['number']})
                 break #no need to continue once the vertex is found
 
-    # now good_diags contains the real_confs which had the splitting, 
+    # now good_diags contains the real_confs which had the splitting,
     #  with the vertex corresponding to the splitting removed
 
-    # The legs in the born and real diags are ordered according to 
+    # The legs in the born and real diags are ordered according to
     #  the same criterion. Once we removed i-j, we have to re-label the
     #  real legs to match the born numbering.
 
     # now relabel the legs according to shift_dict
-    # replace from lower to higher leg number, in order not to 
+    # replace from lower to higher leg number, in order not to
     # overwrite
     for ir in range(1, nlegs_r + 1):
         for good_diag in good_diags:
@@ -194,12 +194,12 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
                             replaced = True
 
     # now create the tags
-    born_tags = [FKSDiagramTag(d['diagram'], 
+    born_tags = [FKSDiagramTag(d['diagram'],
                                born_amp.get('process').get('model')) \
                                for d in born_confs]
 
 
-    real_tags = [FKSDiagramTag(d['diagram'], 
+    real_tags = [FKSDiagramTag(d['diagram'],
                                real_amp.get('process').get('model')) \
                                for d in good_diags ]
     real_tags = []
@@ -213,12 +213,12 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
         print('\n'.join([str(r) for r in real_tags]) + '\n')
         raise FKSProcessError('Cannot map born/real configurations between \
                 %s and %s (i,j=%d,%d): not same number of configurations: %d %d' % \
-                (born_amp.get('process').nice_string().replace('Process:',''), 
+                (born_amp.get('process').nice_string().replace('Process:',''),
                  real_amp.get('process').nice_string().replace('Process:',''),
                                i,j,
                                len(born_tags),
                                len(real_tags)))
-    
+
     links = []
     for ib, btag in enumerate(born_tags):
         try:
@@ -231,7 +231,7 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
             print(real_tags, i, j, ij)
             print('\n'.join( d['diagram'].nice_string() for d in good_diags))
             raise FKSProcessError('Linking %s to %s: could not link born diagram %s' % \
-                 (born_amp.get('process').nice_string().replace('Process:',''), 
+                 (born_amp.get('process').nice_string().replace('Process:',''),
                   real_amp.get('process').nice_string().replace('Process:',''),
                                   born_confs[ib]['diagram'].nice_string()) )
 
@@ -284,7 +284,7 @@ def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #t
                         nsoft += 1
                 if nsoft >= 1:
                     for split in split_leg(leg, parts, model):
-                        # check if the leg is tagged, that 
+                        # check if the leg is tagged, that
                         # the same particles appear also in the two daughters
                         if 'is_tagged' in leg.keys() and leg['is_tagged'] and \
                            leg['state'] and \
@@ -293,13 +293,14 @@ def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #t
                             continue
 
                         # UPC: only photon -> f fbar initial splitting is allowed
-                        if leg['is_tagged'] and not leg['state'] and leg['id'] != 22:
+                        if 'is_tagged' in leg.keys() and leg['is_tagged'] and \
+                            not leg['state'] and leg['id'] != 22:
                             if (split[0]['id'] == 22 and split[0]['state']):
                                 continue
                             if (split[1]['id'] == 22 and split[1]['state']):
                                 continue
 
-                        # add the splitting, but check if there is 
+                        # add the splitting, but check if there is
                         # an initial-state lepton if the flag
                         # include_init_leptons is False
                         if include_init_leptons or \
@@ -349,14 +350,14 @@ def split_leg(leg, parts, model): #test written
             split[-1].append(to_fks_leg({'state': True, \
                                  'id': part.get_pdg_code()},model))
             ij_final(split[-1])
-    #while for an initial state particle one can have two splittings 
+    #while for an initial state particle one can have two splittings
     # if the two partons are different
     else:
         if parts[0] != parts[1]:
             for part in parts:
                 cparts = copy.deepcopy(parts)
                 split.append([\
-                          to_fks_leg({'state': False, 
+                          to_fks_leg({'state': False,
                                   'id': cparts.pop(cparts.index(part)).get_pdg_code(),
                                   'fks': 'j'}, model),
                           to_fks_leg({'state': True,
@@ -365,10 +366,10 @@ def split_leg(leg, parts, model): #test written
                           ])
         else:
             split.append([\
-                            to_fks_leg({'state': False, 
+                            to_fks_leg({'state': False,
                                   'id': parts[0].get_pdg_code(),
                                   'fks': 'j'}, model),
-                            to_fks_leg({'state': True, 
+                            to_fks_leg({'state': True,
                                   'id': parts[1].get_anti_pdg_code(),
                                   'fks': 'i'}, model)])
     return split
@@ -406,7 +407,7 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
     else:
         raise FKSProcessError("Only QCD or QED is allowed not  %s" % pert)
     # the deepcopy statement is crucial
-    leglist = FKSLegList(copy.deepcopy(leglist_orig))         
+    leglist = FKSLegList(copy.deepcopy(leglist_orig))
     #find the position of the first final state leg
     for i in range(len(leglist)):
         if leglist[-i - 1].get('state'):
@@ -443,7 +444,7 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
     #so now the maximum of the max_col entries should be the position to insert leg i
     leglist.insert(max(list(col_maxindex.values()) + list(mass_col_maxindex.values()) + [firstfinal - 1] ) + 1, split[1])
 ###    leglist.insert(max(col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
-#    for sleg in split:            
+#    for sleg in split:
 #        leglist.insert(i, sleg)
 #        #keep track of the number for initial state legs
 #        #if not sleg.get('state') and not leg.get('state'):
@@ -451,16 +452,16 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
 #        i += 1
 #        if i < firstfinal:
 #            i = firstfinal
-#            
+#
 #    leglist.sort()
     for i, leg in enumerate(leglist):
-        leg['number'] = i + 1        
-    return leglist 
+        leg['number'] = i + 1
+    return leglist
 
 
 def combine_ij( i, j, model, dict, pert='QCD'): #test written
     """checks whether FKSlegs i and j can be combined together in the given model
-    and with given perturbation order and if so combines them into ij. 
+    and with given perturbation order and if so combines them into ij.
     If dict is empty it is initialized with find_pert_particles_interactions
     """
     if dict == {}:
@@ -469,14 +470,14 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
     num = copy.copy(min(i.get('number'), j.get('number')))
 
     # we do not want j being a massless vector unless also i is or j is initial
-    not_double_counting = (j.get('spin') == 3 and j.get('massless') and 
+    not_double_counting = (j.get('spin') == 3 and j.get('massless') and
                            i.get('spin') == 3 and i.get('massless')) or \
                            j.get('spin') != 3 or not j.get('massless') or \
                            not j.get('state')
 
     #if i and j are a final state particle and antiparticle pair,
-    # then we want i to be antipart and j to be 
-    if j.get('state') and j.get('id') == - i.get('id'):  
+    # then we want i to be antipart and j to be
+    if j.get('state') and j.get('id') == - i.get('id'):
         not_double_counting = not_double_counting and j.get('id') >0
 
     if i.get('id') in dict['soft_particles'] and \
@@ -499,7 +500,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
                 parts.remove(model.get('particle_dict')[j_id])
             except ValueError:
                 continue
-            
+
             #ij is what remains if j is initial, the anti of if j is final
             if j.get('state'):
                 ij.append(MG.Leg({
@@ -512,7 +513,7 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
                     'state': False,
                     'number': num}))
 
-    return to_fks_legs(ij, model)       
+    return to_fks_legs(ij, model)
 
 
 def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
@@ -523,21 +524,21 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     """
     #ghost_list = [82, -82] # make sure ghost_list is non-empty
     ghost_list = []
-    ghost_list += [ p.get_pdg_code() for p in model.get('particles') 
+    ghost_list += [ p.get_pdg_code() for p in model.get('particles')
                                             if p.get('ghost') or p.get('goldstone')]
 
     qcd_inter = MG.InteractionList()
     pert_parts = []
     soft_parts = []
     for i, ii in model.get('interaction_dict').items():
-        # i want interections of pert_order: 1 (from LO to NLO), 
+        # i want interections of pert_order: 1 (from LO to NLO),
         # without any other orders
         # and of "base" type
         if ii.get('type') != 'base': continue
 
         if ii.get('orders') == {pert_order:1} and len(ii['particles']) == 3 :
             masslist = [p.get('mass').lower() for p in ii['particles']]
-            
+
             # require that at least one particle be soft and of even spin for the interaction to be IR singular
             found_soft_even_spin_particle = False
             for p in ii['particles']:
@@ -547,9 +548,9 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                         break
             if not found_soft_even_spin_particle:
                 continue
-            
-            # check that there is at least a massless particle, and that the 
-            # remaining ones have the same mass 
+
+            # check that there is at least a massless particle, and that the
+            # remaining ones have the same mass
             # (otherwise the real emission final state will not be degenerate
             # with the born one
             try:
@@ -567,7 +568,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
 
     return {'interactions': sorted(qcd_inter, key=misc.cmp_to_key(misc.dict_cmp)),
             'pert_particles': sorted(set(pert_parts)),
-            'soft_particles': sorted(set(soft_parts))}    
+            'soft_particles': sorted(set(soft_parts))}
 
 
 def insert_color_links(col_basis, col_obj, links): #test written
@@ -576,7 +577,7 @@ def insert_color_links(col_basis, col_obj, links): #test written
     --link: the numbers of the linked legs
     --link_basis: the linked color basis
     --link_matrix: the color matrix created from the original basis and the linked one
-    """   
+    """
     assert isinstance(col_basis, color_amp.ColorBasis)
     assert isinstance(col_obj, list)
     result =[]
@@ -587,11 +588,11 @@ def insert_color_links(col_basis, col_obj, links): #test written
         for leg in link['legs']:
             l.append(leg.get('number'))
         this['link'] = l
-            
+
         #replace the indices in col_obj of the linked legs according to
         #   link['replacements']
         # and extend-> product the color strings
-            
+
         this_col_obj = []
         for old_dict in col_obj:
             new_dict = dict(old_dict)
@@ -607,14 +608,14 @@ def insert_color_links(col_basis, col_obj, links): #test written
         basis_link = color_amp.ColorBasis()
         for ind, new_dict in enumerate(this_col_obj):
             basis_link.update_color_basis(new_dict, ind)
-   
+
         this['link_basis'] = basis_link
-        this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)               
+        this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)
         result.append(this)
     basis_orig = color_amp.ColorBasis()
     for ind, new_dict in enumerate(col_obj):
             basis_orig.update_color_basis(new_dict, ind)
-    
+
     for link in result:
         link['orig_basis'] = basis_orig
     return result
@@ -622,7 +623,7 @@ def insert_color_links(col_basis, col_obj, links): #test written
 
 
 def find_color_links(leglist, symm = False,pert = 'QCD'): #test written
-    """Finds all the possible color(charge) links between any 
+    """Finds all the possible color(charge) links between any
     two legs of the born.
     If symm is true, only half of the color links are generated, those
     for which leg1['number'] <= leg2['number']
@@ -649,20 +650,20 @@ def find_color_links(leglist, symm = False,pert = 'QCD'): #test written
                             'replacements': col_dict['replacements']})
 
     return color_links
-             
+
 
 def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all cases
     """given two FKSlegs, returns a dictionary containing:
     --string: the color link between the two particles, to be appended to
         the old color string
         extra minus or 1/2 factor are included as it was done in MadDipole
-    --replacements: a pair of lists containing the replacements of the color 
-        indices in the old string to match the link 
+    --replacements: a pair of lists containing the replacements of the color
+        indices in the old string to match the link
     """
     #the second-to-last index of the t is the triplet,
     # the last is the anti-triplet
 
-    legs = FKSLegList([leg1, leg2]) 
+    legs = FKSLegList([leg1, leg2])
     dict = {}
     min_index = -3000
     iglu = min_index*2
@@ -686,7 +687,7 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
                                color_algebra.T(iglu, min_index, num)]))
                 elif leg.get('color') == 8:
                     string.product(color_algebra.ColorString(init_list = [
-                               color_algebra.f(min_index,iglu,num)], 
+                               color_algebra.f(min_index,iglu,num)],
                                is_imaginary =True))
 
         else:
@@ -703,10 +704,10 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
                      [color_algebra.T(iglu, iglu, min_index-1, num)])
             elif leg1.get('color') == 8:
                 string = color_algebra.ColorString(init_list = [
-                               color_algebra.f(min_index-1,iglu,min_index)], 
+                               color_algebra.f(min_index-1,iglu,min_index)],
                                is_imaginary =True)
                 string.product(color_algebra.ColorString(init_list = [
-                               color_algebra.f(min_index,iglu,num)], 
+                               color_algebra.f(min_index,iglu,num)],
                                is_imaginary =True))
             string.coeff = string.coeff * fractions.Fraction(1, 2)
 
@@ -714,17 +715,17 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
         for leg in legs:
             # make it a fraction
             string.coeff = string.coeff * fractions.Fraction(leg['charge']*3.)*\
-            fractions.Fraction(1,3)            
+            fractions.Fraction(1,3)
     else:
         raise FKSProcessError("Only QCD or QED is allowed not %s"% pert)
-    
+
     dict['replacements'] = replacements
-    dict['string'] = string  
+    dict['string'] = string
     return dict
 
 
 def sort_proc(process,pert = 'QCD'):
-    """Given a process, this function returns the same process 
+    """Given a process, this function returns the same process
     but with sorted FKSLegs.
     """
     leglist = to_fks_legs(process.get('legs'), process.get('model'))
@@ -761,7 +762,7 @@ def to_legs(fkslegs):
 
 
 def to_fks_leg(leg, model): #test written
-    """Given a leg or a dict with Leg entries, 
+    """Given a leg or a dict with Leg entries,
     adds color, spin and massless entries, according to model"""
     fksleg = FKSLeg(leg)
     part = model.get('particle_dict')[leg['id']]
@@ -770,23 +771,23 @@ def to_fks_leg(leg, model): #test written
     fksleg['massless'] = part['mass'].lower() == 'zero'
     fksleg['spin'] = part.get('spin')
     fksleg['is_part'] = part.get('is_part')
-    fksleg['self_antipart'] = part.get('self_antipart')      
+    fksleg['self_antipart'] = part.get('self_antipart')
     return fksleg
 
-    
+
 def to_fks_legs(leglist, model): #test written
-    """given leglist, sets color and massless entries according to the model 
+    """given leglist, sets color and massless entries according to the model
     variable.
     return a FKSLeglist"""
-    fkslegs = FKSLegList()     
+    fkslegs = FKSLegList()
     for leg in leglist:
         fkslegs.append(to_fks_leg(leg, model))
-    return fkslegs     
+    return fkslegs
 
 
 class FKSLegList(MG.LegList):
     """list of FKSLegs"""
-    
+
     def is_valid_element(self, obj):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
@@ -805,11 +806,11 @@ class FKSLegList(MG.LegList):
             if initial_legs[0]['number'] > initial_legs[1]['number']:
                 initial_legs.reverse()
             sorted_leglist.extend(initial_legs)
-        else: 
+        else:
             raise FKSProcessError('Too many initial legs')
         #find color representations
         # order according to spin and mass
-        #find massive and massless legs 
+        #find massive and massless legs
         massive_legs = [l for l in final_legs if not l['massless']]
         massless_legs = [l for l in final_legs if l['massless']]
 
@@ -843,8 +844,8 @@ class FKSLegList(MG.LegList):
 
 class FKSLeg(MG.Leg):
     """a class for FKS legs: it inherits from the ususal leg class, with two
-    extra keys in the dictionary: 
-    -'fks', whose value can be 'i', 'j' or 'n' (for "normal" particles) 
+    extra keys in the dictionary:
+    -'fks', whose value can be 'i', 'j' or 'n' (for "normal" particles)
     -'color', which gives the color of the leg
     -'charge', which gives the charge of the leg
     -'massless', boolean, true if leg is massless
@@ -866,14 +867,14 @@ class FKSLeg(MG.Leg):
         self['is_tagged'] = False
         self['is_part'] = True
         self['self_antipart'] = False
-    
+
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSLeg, self).get_sorted_keys()
         keys += ['fks', 'color','charge', 'massless', 'spin','is_tagged','is_part','self_antipart',]
         return keys
 
-    
+
     def filter(self, name, value):
         """Filter for valid leg property values."""
 
@@ -885,7 +886,7 @@ class FKSLeg(MG.Leg):
             if not isinstance(value, int):
                 six.reraise(self.PhysicsObjectError, "%s is not a valid leg %s flag" % \
                                                  str(value), name)
-                                                 
+
         if name in ['massless','is_tagged','self_antipart','is_part']:
             if not isinstance(value, bool):
                 six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
@@ -893,8 +894,5 @@ class FKSLeg(MG.Leg):
         if name == 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \
-                    % str(value))                                                           
+                    % str(value))
         return super(FKSLeg,self).filter(name, value)
-    
-     
-
