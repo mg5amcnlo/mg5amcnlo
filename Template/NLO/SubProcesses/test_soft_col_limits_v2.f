@@ -4,6 +4,7 @@
       integer ilim,nsofttests,ncolltests,fks_loop_min
      $     ,fks_loop_max,fks_loop,bs_min,bs_max,nstep,ntests
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input
+      logical is_massive_jfks
       logical        softtest,colltest
       common/sctests/softtest,colltest
       
@@ -13,12 +14,21 @@
       call init_test_limits(ilim,nstep)
       
       do fks_loop=fks_loop_min,fks_loop_max
-         call init_new_loop(fks_loop,bs_min,bs_max)
+         call init_new_loop(fks_loop,bs_min,bs_max,is_massive_jfks)
          do iconfig=bs_min,bs_max
             call init_iconfig_loop(ilim)
             softtest=.true.
             colltest=.false.
             ntests=nsofttests
+            call test_limits(ilim,ntests,xi_i_fks_fix_input
+     $           ,y_ij_fks_fix_input,nstep)
+            if (is_massive_jfks) then
+               write (*,*) 'No collinear test for massive j_fks'
+               cycle
+            endif
+            softtest=.false.
+            colltest=.true.
+            ntests=ncolltests
             call test_limits(ilim,ntests,xi_i_fks_fix_input
      $           ,y_ij_fks_fix_input,nstep)
          enddo
@@ -45,7 +55,7 @@
          if (colltest) then
             xi_i_fks_fix=xi_i_fks_fix_input
          else
-            xi_i_fks_fix=0.05d0
+            xi_i_fks_fix=0.1d0
          endif
          if (softtest) then
             y_ij_fks_fix=y_ij_fks_fix_input
@@ -63,7 +73,7 @@
          if (colltest) then
             xi_i_fks_fix=xi_i_fks_fix_input
          else
-            xi_i_fks_fix=0.05d0
+            xi_i_fks_fix=0.1d0
          endif
          if (softtest) then
             y_ij_fks_fix=y_ij_fks_fix_input
@@ -286,6 +296,8 @@ c dump momenta in a fort.80 file
          write (*,*) 'to implement'
       endif
 
+      wgt_PS = wgt
+
       ! save amplitudes (and PS weight) towards limit
       do iamp=1,amp_split_size
          if (ilim.eq.2) then
@@ -294,8 +306,6 @@ c dump momenta in a fort.80 file
             amp(iamp) = amp_split_mc(iamp)*wgt
          endif
       enddo
-      wgt_PS = wgt
-
       ! save momenta
       xp(0:3,1:nexternal)=p(0:3,1:nexternal)
       xp(0:3,nexternal+1)=p_i_fks_ev(0:3)
@@ -330,8 +340,11 @@ c dump momenta in a fort.80 file
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision amp_split_mc(amp_split_size)
       common /to_amp_split_mc/amp_split_mc
+      double precision   xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
+      
       if (ilim.eq.2) then
          calculatedBorn=.false.
          if (softtest) then
@@ -339,22 +352,27 @@ c dump momenta in a fort.80 file
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
          elseif(colltest) then
             call set_cms_stuff(1)
-            call sreal(p1_cnt(0,1,1),xi_i_fks_ev,one,fx)
+            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
          endif
       else
          write (*,*) 'to implement'
       endif
       
+      if (softtest) then
+         limit_PS_wgt = jac_cnt(0)
+      elseif (colltest) then
+         limit_PS_wgt = jac_cnt(1)
+      endif
+      
       ! save amplitudes (and PS weight) in the limit
       do iamp=1,amp_split_size
          if (ilim.eq.2) then
-            limit_split(iamp) = amp_split(iamp)*wgt
+            limit_split(iamp) = amp_split(iamp)*limit_PS_wgt
          else
-            limit_split(iamp) = amp_split_mc(iamp)*wgt
+            limit_split(iamp) = amp_split_mc(iamp)*limit_PS_wgt
          endif
-         limit_PS_wgt = wgt
       enddo
-
+      
 ! save momenta
       if (softtest) then
          lxp(0:3,1:nexternal)=p1_cnt(0:3,1:nexternal,0)
@@ -441,7 +459,7 @@ c dump momenta in a fort.80 file
       nerr(0:amp_split_size)=0
       end
 
-      subroutine init_new_loop(fks_loop,bs_min,bs_max)
+      subroutine init_new_loop(fks_loop,bs_min,bs_max,is_massive_jfks)
       use process_module
       use mint_module
       implicit none
@@ -451,7 +469,12 @@ c dump momenta in a fort.80 file
       include 'born_nhel.inc'
       include 'born_maxamps.inc'
       include 'born_conf.inc'
+      include 'coupl.inc'
+      double precision ZERO,    one
+      parameter       (ZERO=0d0,one=1d0)
       integer iconfig_in,bs_min,bs_max,fks_loop
+      logical is_massive_jfks
+      double precision pmass(nexternal)
       integer         nndim
       common/tosigint/nndim
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -461,10 +484,10 @@ c dump momenta in a fort.80 file
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      
       nFKSprocess=fks_loop
       call fks_inc_chooser()
       call leshouche_inc_chooser()
+
       write (*,*) ''
       write (*,*) '================================================='
       write (*,*) ''
@@ -480,6 +503,9 @@ c
       nndim=ndim
 
       call set_ebeam()
+      
+      include 'pmass.inc' ! this is filled by setcuts (which is in set_ebeam())
+      is_massive_jfks=pmass(j_fks).gt.0d0
 
 !     update shat
       call init_process_module_global(shower_mc,'all ',nexternal
