@@ -438,7 +438,7 @@ C     Computing the amplitudes
         ENDIF
       ENDDO
       DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM*COMPLEX(LDME,0D0))
+        PROJ(J) = SQRT(NORM)
         DO I =1, NONIA
           QQ = ONIA(I)
           Q1 = FINDLOC(PAIRS, I, DIM=1)
@@ -483,7 +483,7 @@ C           Store amplitudes for reuse
           ENDDO
           DO N = 1, NAMPSO
             %(select_configs_if)s
-            MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
+            MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))*LDME
             %(select_configs_endif)s
           ENDDO
         ENDDO

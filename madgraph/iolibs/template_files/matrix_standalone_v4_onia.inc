@@ -312,7 +312,7 @@ C     Computing the amplitudes
         ENDIF
       ENDDO
       DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM*COMPLEX(LDME,0D0))
+        PROJ(J) = SQRT(NORM)
         DO I =1, NONIA
           QQ = ONIA(I)
           Q1 = FINDLOC(PAIRS, I, DIM=1)
@@ -344,7 +344,7 @@ C           Store amplitudes for reuse
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))
+          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))*LDME
       ENDDO
       %(amp2_lines)s
       END
