@@ -57,10 +57,10 @@ class TestEvent(unittest.TestCase):
         """ check the static method get_permutation"""
 
 
-        out = lhe_parser.Event.get_permutation([3,4,5], "AAA")
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAA", permutate_two_decay=True)
         self.assertEqual(len(out), 1)
         
-        out = lhe_parser.Event.get_permutation([3,4,5], "AAB")
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAB", permutate_two_decay=True)
         self.assertEqual(len(out), 3)
         self.assertIn((3,4,5), out)
         check = set()
@@ -69,22 +69,67 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(len(check), 3)
         self.assertEqual(check, set([3,4,5]))
 
-        out = lhe_parser.Event.get_permutation([3,4,5], "ABC")
+        out = lhe_parser.Event.get_permutation([3,4,5], "ABC", permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5), out)
         self.assertIn((4,3,5), out)
 
-        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC")
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC",permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5,6), out)
         self.assertNotIn((4,3,6,5), out)
         self.assertIn((4,5,3,6), out)
 
-        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA")
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA",permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5,6), out)
         self.assertIn((4,3,6,5), out)
   
+    def test_all_momenta_for_zz(self):      
+        """ test that for u u~ >  z z only one ordering is returned"""                     
+
+        text_lhe = """<event>
+        84      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+       -1 -1    0    0    0  501 -0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        1 -1    0    0  501    0 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       23  1    1    2    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  1    1    2    0    0 +1.0803264452e+01 +4.0782658931e+01 -9.7070204270e+01 1.3970616197e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       </event>"""
+
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n'))
+        all_p = Event.get_all_momenta(([-1,1],[23,23]),debug_output=False)
+        self.assertEqual(len(all_p), 1)
+        self.assertEqual(len(all_p[0]), 4)
+        # check that particle are in the correct order    
+        self.assertEqual(all_p[0][0][3], 44.934420219, )
+        self.assertEqual(all_p[0][3][3], -9.7070204270e+01)
+
+
+        text_lhe ="""<event>
+ 8      1 +9.3182000e+00 1.24864100e+02 7.54677100e-03 1.23528200e-01
+        1 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1193143155e+02 1.1193143155e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       -1 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -1.4479335429e+02 1.4479335429e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       23  2    1    2    0    0 -3.9109420390e+01 -7.5804058190e+01 +8.5916956812e+00 1.2515938071e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 +3.9109420390e+01 +7.5804058190e+01 -4.1453618425e+01 1.3156540513e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 -3.6688912923e+01 -2.9778691677e+01 -3.7238302752e+01 6.0162596365e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       11  1    3    3    0    0 -2.4205074678e+00 -4.6025366514e+01 +4.5829998433e+01 6.4996784348e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+      -11  1    4    4    0    0 +5.2267279628e+01 +1.6179927919e+01 +4.8591069017e+00 5.4929677835e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 -1.3157859241e+01 +5.9624130265e+01 -4.6312725324e+01 7.6635727286e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+
+
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n'))
+        all_p = Event.get_all_momenta(([-1,1],[-11,11,-11,11]),debug_output=False)
+        self.assertEqual(len(all_p), 1)
+        self.assertEqual(len(all_p[0]), 6)
+        # check that particle are in the correct order    
+        #self.assertEqual(all_p[0][0][3], 44.934420219, )
+        #self.assertEqual(all_p[0][3][3], -9.7070204270e+01)
+
+
+
 
     def test_event_property(self):
         """
@@ -132,14 +177,14 @@ class TestEvent(unittest.TestCase):
 
 
 
-        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2, permutate_two_decay=True)
         self.assertEqual(len(perm_gen), 2)
         self.assertEqual(len(perm_gen[11]), 6)
         self.assertEqual(len(perm_gen[-11]), 6)
         self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(2, 2), (4, 3), (3, 4)], [(3, 2), (2, 3), (4, 4)], [(3, 2), (4, 3), (2, 4)], [(4, 2), (2, 3), (3, 4)], [(4, 2), (3, 3), (2, 4)]], 
                                      11: [[(5, 5), (6, 6), (7, 7)], [(5, 5), (7, 6), (6, 7)], [(6, 5), (5, 6), (7, 7)], [(6, 5), (7, 6), (5, 7)], [(7, 5), (5, 6), (6, 7)], [(7, 5), (6, 6), (5, 7)]]}
         )
-        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2, permutate_two_decay=True)
         self.assertEqual(len(perm_gen2), 2)
         self.assertEqual(len(perm_gen2[11]), 6)
         self.assertEqual(len(perm_gen2[-11]), 6)
@@ -149,9 +194,28 @@ class TestEvent(unittest.TestCase):
         
         )
         
-        
-    
-        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0)
+        # same but does not allow to permutate two decay in the final state
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen), 2)
+        self.assertEqual(len(perm_gen[11]), 3)
+        self.assertEqual(len(perm_gen[-11]), 3)
+        # not clear if this is really the best output
+        # might have been better to get for -11 to have has last entry: 
+        # [(4, 2), (3, 3), (2, 4)] ???
+        # I guess that it should be fine as long has the flipping is consistent for 11 
+        self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(3, 2), (2, 3), (4, 4)], [(4, 2), (2, 3), (3, 4)]], 
+                                    11: [[(5, 5), (6, 6), (7, 7)], [(6, 5), (5, 6), (7, 7)], [(7, 5), (5, 6), (6, 7)]]}            
+        )
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen2), 2)
+        self.assertEqual(len(perm_gen2[11]), 3)
+        self.assertEqual(len(perm_gen2[-11]), 3)
+        self.assertNotEqual(perm_gen, perm_gen2)
+        self.assertEqual(perm_gen2, {-11: [[(2, 2), (4, 4), (6, 6)], [(4, 2), (2, 4), (6, 6)], [(6, 2), (2, 4), (4, 6)]], 
+                                     11: [[(3, 3), (5, 5), (7, 7)], [(5, 3), (3, 5), (7, 7)], [(7, 3), (3, 5), (5, 7)]]}
+        )
+
+        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0, permutate_two_decay=True)
         self.assertEqual(len(all_perms), 36)
         for i in range(len(all_perms)):
             for j in range(i+1, len(all_perms)):

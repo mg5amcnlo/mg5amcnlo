@@ -130,7 +130,7 @@ class MadSpinOptions(banner.ConfigFile):
             logger.warning('Not all functionalities of MadSpin handle this mode correctly (only onshell mode so far).')
 
     ############################################################################
-    def post_identical_in_prod_and_decay(self, value, change_userdefine, raiseerror):
+    def post_identical_particle_in_prod_and_decay(self, value, change_userdefine, raiseerror):
         """ special handling for set fixed_order """
         if value not in ["crash", 'average', 'max', 'first']:
             raise Exception("value %s not supported for this parameter identical_in_prod_and_decay")

@@ -2380,10 +2380,11 @@ class Event(list):
         return out
 
 
-    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,permutate_two_decay=False):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
               for easier development debug output allow to return internal variable for the unittest to check
+              permutate_two_decay allow to also consider the case with flip between two decay products
         """  
 
 
@@ -2432,11 +2433,12 @@ class Event(list):
                     for val in data[pdg][mother]:
                         mapping.append(mother)
                         positions.append(val)
-                all_perms = Event.get_permutation(positions, mapping)
+                all_perms = Event.get_permutation(positions, mapping, permutate_two_decay=permutate_two_decay)
                 perms_perid[pdg] = [[(pos, positions[i]) for i,pos in enumerate(perm)] for perm in all_perms]
 
         if debug_output == 2:
             return perms_perid
+    
 
         all_perms = []
         import itertools
@@ -2461,6 +2463,9 @@ class Event(list):
         so (3,4,5) and (4,3,5) are the same for mapping={0:"a",1:"a",2:"b"}
         since a is assocated to 3,4 in both case (and b to 5 in each case
         but (3,4,5) and (3,5,4) are not the same because b has 5 in one case and 4 in the second
+
+        if permutate_two_decay is False, then two permutation are consider equivalent if they differ by a swap of particles having not
+        (1,2) as mothers
         """
         content1 = collections.defaultdict(set)
         content2 = collections.defaultdict(set)
@@ -2471,10 +2476,11 @@ class Event(list):
         for key in content1:
             if content1[key] != content2[key]:
                 return False
+            
         return True
 
     @staticmethod
-    def get_permutation(orig, belong):
+    def get_permutation(orig, belong, permutate_two_decay=False):
         """
         orig is the position of the various particle to permutate
         belong is the class to which they belong
@@ -2482,14 +2488,18 @@ class Event(list):
         three permutation of orig (like)
         [3,4,5], [3,5,4], [4,5,3] 
         """
+        if not permutate_two_decay:
+            belong = list(belong)
+            # then all belong different from (1,2) should be mapped to "D"
+            for i,mother in enumerate(belong):
+                if mother != (0,1):
+                    belong[i] = "D"
 
         import itertools
-
         assert(len(orig) == len(belong))
         invert = {}
         for i in range(len(orig)):
             invert[i] = belong[i]
-
         allperms = []
         for perm in itertools.permutations(orig):
             if not any(Event.equiv_sequence(perm, prev, invert) for prev in allperms):
