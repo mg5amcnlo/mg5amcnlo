@@ -56,8 +56,15 @@ contains
     double precision,dimension(0:3,next_n1) :: p
     double precision :: s,t,u,y
     double precision,dimension(0:3,2) :: p_cm
+    double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+    common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
     ! check if incoming have same energy; if so, these momenta were
     ! generated with a final-state j_fks.
+    if (p(0,i_fks).lt.tiny) then ! TODO: correct this subroutine.
+       pi(0:3)=p_i_fks_cnt(0:3,0)
+    else
+       pi(0:3)=p(0:3,i_fks)
+    endif
     if (abs(p(0,1)-p(0,2))/(p(0,1)+p(0,2)).lt.1d-10 .and. j_fks.gt.3) then
        ! If the input j_fks (argument of this function) is also final
        ! state, we can compute xi directly from the momenta:
@@ -78,7 +85,11 @@ contains
        else
           ! boost to cm frame
           y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
-          call boostz(p(0,i_fks),y,p_cm(0,1))
+          if (p(0,i_fks).gt.tiny) then
+             call boostz(p(0,i_fks),y,p_cm(0,1))
+          else
+             p_cm(0:3,1)=pi(0:3)
+          endif
           call boostz(p(0,j_fks),y,p_cm(0,2))
           get_yij_from_p=dot3(p_cm(0,1),p_cm(0,2))/(rho(p_cm(0,1))*rho(p_cm(0,2)))
        endif

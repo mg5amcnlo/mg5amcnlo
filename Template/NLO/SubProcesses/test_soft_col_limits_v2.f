@@ -38,19 +38,23 @@
       subroutine test_limits(ilim,ntests,xi_i_fks_fix_input
      $     ,y_ij_fks_fix_input,nstep)
       use mint_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer nstep,ntests,i,ilim,jtest
+      integer nstep,ntests,i,ilim,jtest,partner_picked
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input,wgt,x(99)
      $     ,p(0:3,nexternal),towards_amp_split(1:amp_split_size,1:nstep)
      $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
      $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
-     $     ,nexternal+1)
+     $     ,nexternal+1),born_flow_factor
+      double complex wgt1(2)
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
       logical        softtest,colltest
       common/sctests/softtest,colltest
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
       do jtest=1,ntests
          if (colltest) then
             xi_i_fks_fix=xi_i_fks_fix_input
@@ -63,6 +67,14 @@
             y_ij_fks_fix=0.9d0
          endif
          call generate_valid_momenta(wgt,x,p)
+
+         if (ilim.ne.2) then
+            call sborn(p_born,wgt1)
+            call get_born_flow(born_flow_picked,born_flow_factor)
+            call determine_partner(born_flow_picked,partner_picked)
+            call init_process_module_n1body_wrapper(born_flow_picked)
+         endif
+         
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
             if (colltest) y_ij_fks_fix=1-0.1d0**i
@@ -288,10 +300,12 @@ c dump momenta in a fort.80 file
 
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
+      calculatedBorn=.false.
+      call set_cms_stuff(-100)
       if (ilim.eq.2) then
-         calculatedBorn=.false.
-         call set_cms_stuff(-100)
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+      elseif (ilim.eq.0) then
+         call compute_MC_subt_term_test(p)
       else
          write (*,*) 'to implement'
       endif
@@ -345,17 +359,20 @@ c dump momenta in a fort.80 file
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       
-      if (ilim.eq.2) then
-         calculatedBorn=.false.
-         if (softtest) then
-            call set_cms_stuff(0)
+      calculatedBorn=.false.
+      if (softtest) then
+         call set_cms_stuff(0)
+         if (ilim.eq.2) then
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-         elseif(colltest) then
-            call set_cms_stuff(1)
-            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
+         elseif (ilim.eq.0) then
+            call compute_MC_subt_term_test(p1_cnt(0,1,0))
+         else
+            write (*,*) 'unknown ilim,',ilim
+            stop 1
          endif
-      else
-         write (*,*) 'to implement'
+      elseif(colltest) then
+         call set_cms_stuff(1)
+         call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
       endif
       
       if (softtest) then
@@ -385,6 +402,49 @@ c dump momenta in a fort.80 file
       end
 
 
+
+      subroutine compute_MC_subt_term_test(p)
+      use kinematics_module
+      implicit none
+      include 'nexternal.inc'
+c$$$      include 'coupl.inc'
+      include 'orders.inc'
+c$$$      include 'run.inc'
+c$$$      include 'born_nhel.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      logical include_gfun
+      integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp
+      double precision p(0:3,nexternal),xi,y,z(2)
+     $     ,amp_split_xmcxsec(amp_split_size,2)
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      do iFKS=1,fks_configs
+         k_fks=FKS_I_D(iFKS)
+         l_fks=FKS_J_D(iFKS)
+         if (k_fks.eq.i_fks .and. l_fks.eq.j_fks) then
+            include_gfun=.true.
+         else
+            include_gfun=.false.
+         endif
+!     compute kinematic variables
+         xi=get_xi_from_p(k_fks,l_fks,p)
+         y=get_yij_from_p(k_fks,l_fks,p)
+         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_born
+     $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
+         amp_split=0d0
+         do iconnect=1,n_connect
+            do iamp=1, amp_split_size
+               if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
+               amp_split(iamp)=amp_split(iamp)+amp_split_xmcxsec(iamp
+     $              ,iconnect)
+            enddo
+         enddo
+      enddo
+      end
+      
 
       subroutine generate_valid_momenta(wgt,x,p)
       use mint_module
