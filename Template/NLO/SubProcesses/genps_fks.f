@@ -4224,10 +4224,21 @@ c     S=A/(B-x) transformation:
       subroutine generate_x_ee(rnd, xmin, x, omx, jac)
       implicit none
       ! generates the momentum fraction with importance
-      !  sampling suitable for ee collisions
+      !  sampling suitable for ee collisions, with 
+      ! further importance sampling at small x
+      !
       ! rnd is generated uniformly in [0,1], 
-      ! x is generated according to (1 -rnd)^-expo, starting
-      ! from xmin
+      ! With relative probabilities corresponding to
+      ! (0.5-xmin)/(1-xmin) and 0.5/(1-xmin), one employs
+      ! either a small-x sampling or a large-x one, respectively.
+      ! In the case of large-x, x is generated 
+      ! according to (1 -rnd)^-expo, starting
+      ! from max(0.5,xmin).
+      ! In the case of small-x (only if xmin<0.5), one
+      ! assumes a 1/x behaviour of the PDF.
+      ! 0.5 is chosen from fig2 of 2309.07515, and
+      ! is encoded in the variable pivot
+      !
       ! jac is the corresponding jacobian
       ! omx is 1-x, stored to improve numerical accuracy
       double precision rnd, x, omx, jac, xmin
@@ -4235,24 +4246,55 @@ c     S=A/(B-x) transformation:
       double precision get_ee_expo
       double precision tolerance
       parameter (tolerance=1.d-5)
+      double precision pivot
+      double precision xpivot 
+      common/to_xpivot/xpivot
+      double precision rndresc
+      pivot = xpivot
 
-      expo = get_ee_expo()
-
-      x = 1d0 - rnd ** (1d0/(1d0-expo))
-      omx = rnd ** (1d0/(1d0-expo))
-      if (x.ge.1d0) then
-        if (x.lt.1d0+tolerance) then
-          x=1d0
-        else
-          write(*,*) 'ERROR in generate_x_ee', rnd, x
-          stop 1
+      ! large x sampling
+      !!!!! change things, throw a new random number to understand
+      ! where to generate 
+      if (xmin.gt.pivot.or.rnd.gt.pivot/(1d0-xmin)) then
+        expo = get_ee_expo()
+        ! rescale rnd so that rndresc is in (0,1)
+        if (xmin.gt.pivot) then
+          rndresc = rnd 
+          jac = 1d0
+        else if (rnd.gt.pivot/(1d0-xmin)) then
+          rndresc = (rnd - pivot/(1d0-xmin))/(1d0-pivot/(1d0-xmin))
+          jac = 1d0/(1d0-pivot/(1d0-xmin))
         endif
+        ! now do the variable transformation
+        x = 1d0 - rndresc ** (1d0/(1d0-expo))
+        omx = rndresc ** (1d0/(1d0-expo))
+        if (x.ge.1d0) then
+          if (x.lt.1d0+tolerance) then
+            x=1d0
+          else
+            write(*,*) 'ERROR in generate_x_ee', rnd, x
+            stop 1
+          endif
+        endif
+        jac = jac*1d0/(1d0-expo) 
+        ! then rescale it between xmin and 1
+        x = x * (1d0 - max(xmin,pivot)) + max(xmin,pivot)
+        omx = omx * (1d0 - max(xmin,pivot))
+        jac = jac * (1d0 - max(xmin,pivot))**(1d0-expo)
+      else ! small-x sampling
+        rndresc = rnd / (pivot/(1d0-xmin))
+        jac = 1d0 / (pivot/(1d0-xmin))
+        x = xmin*(pivot/xmin)**rndresc
+        omx = 1d0 - x
+        jac = jac * x * dlog(pivot/xmin)
+        ! include a factor 1/(1-x)^expo in the jacobian for consistency
+        ! with the large-x region
+        jac = jac / (1d0-x)**expo
+
       endif
-      jac = 1d0/(1d0-expo) 
-      ! then rescale it between xmin and 1
-      x = x * (1d0 - xmin) + xmin
-      omx = omx * (1d0 - xmin)
-      jac = jac * (1d0 - xmin)**(1d0-expo)
+      if (x.gt.1d0.or.x.lt.xmin) write(*,*)'ERR',x,xmin
+      if (omx.le.0d0) write(*,*) 'ERR1',omx
+      if (isnan(x).or.isnan(jac)) write(*,*) 'NAN', x, jac
 
       return 
       end
@@ -4377,12 +4419,24 @@ C dressed lepton stuff
         ! wrt the pp case. In the pp case, tau and y_cm are generated, 
         ! while in the ee case x1 and x2 are generated first.
 
-        call generate_x_ee(rnd1, tau_born_lower_bound,
+        if (rnd1.gt.0.5d0) then
+          ! first x1, then x2
+          call generate_x_ee((rnd1-0.5d0)*2d0, tau_born_lower_bound,
      $      x1_ee, omx_ee(1), jac_ee)
-        xjac0 = xjac0 * jac_ee
-        call generate_x_ee(rnd2, tau_born_lower_bound/x1_ee,
+          xjac0 = xjac0 * jac_ee
+          call generate_x_ee(rnd2, tau_born_lower_bound/x1_ee,
      $      x2_ee, omx_ee(2), jac_ee)
-        xjac0 = xjac0 * jac_ee
+          xjac0 = xjac0 * jac_ee
+        else
+          ! first x2, then x1
+          call generate_x_ee(rnd1*2d0, tau_born_lower_bound,
+     $      x2_ee, omx_ee(2), jac_ee)
+          xjac0 = xjac0 * jac_ee
+          call generate_x_ee(rnd2, tau_born_lower_bound/x2_ee,
+     $      x1_ee, omx_ee(1), jac_ee)
+          xjac0 = xjac0 * jac_ee
+
+        endif
 
         tau_born = x1_ee * x2_ee
         ! better numerical accuracy

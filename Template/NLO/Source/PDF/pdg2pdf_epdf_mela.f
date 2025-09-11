@@ -62,6 +62,8 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
       double precision omx_ee(2)
       common /to_ee_omx1/ omx_ee
 
+      if(omx_ee(ibeam).eq.-1d0) omx_ee(ibeam) = 1d0-x
+
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -85,7 +87,7 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
 C     dressed leptons
-      if (abs(ih).eq.3) then
+      if (abs(ih).eq.3.or.abs(ih).eq.4) then
         ! change e/mu/tau = 8/9/10 to 11/13/15 
         if (abs(ipdg).eq.8) then
           ipart = sign(1,ipdg) * 11
@@ -110,7 +112,7 @@ C     dressed leptons
           ! we pass ih/abs(ih)*ipart as PDG id because
           ! the eMELA/ePDF convention always refers as an electron beam
           ! Note that the photon from the positron will have -7!!
-          ee_components(1) = call_epdf_nobs(x,omx_ee(ibeam),xmu,ih/abs(ih)*ipart)
+          ee_components(1) = call_epdf_nobs(x,omx_ee(ibeam),xmu,ih,ih/abs(ih)*ipart)
           ee_components(2:n_ee) = 0d0
         else
           ! case with beamstrahlung. This case may not be symmetric
@@ -125,6 +127,11 @@ C     dressed leptons
         endif
       endif
 
+      if (ee_components(1).ne.ee_components(1)) then
+         write(*,*) 'WARNING, 1-x too small',x,omx_ee,xmu
+         ee_components(1) = 0d0
+      endif
+
       return
       end
 
@@ -135,7 +142,7 @@ C     dressed leptons
       ! the Bjorken x's
       implicit none
       double precision expo
-      parameter (expo=0.96d0)
+      parameter (expo=0.975d0)
       get_ee_expo = expo
       return
       end
@@ -143,10 +150,10 @@ C     dressed leptons
 
 
 
-      double precision function call_epdf_nobs(x, omx, xmu, id)
+      double precision function call_epdf_nobs(x, omx, xmu,ih, id)
       implicit none
       double precision x, omx, xmu
-      integer id
+      integer id, ih
 
       double precision xmu2
       double precision k_exp
@@ -167,9 +174,12 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
 
       xmu2=xmu**2
 
-      if (id.eq.11) then
+      if (id.eq.11.and.abs(ih).eq.3) then
           ! e+ in e+ / e- in e-
           id_epdf = 11
+      else if (id.eq.13.and.abs(ih).eq.4) then
+          ! mu+ in mu+ / mu- in mu-
+          id_epdf = 13
       else if (iabs(id).eq.7.or.abs(id).eq.22) then
           ! photon in e+/e-; 
           !  the abs comes because photon from positron has -7
