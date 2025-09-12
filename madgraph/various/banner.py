@@ -3788,13 +3788,14 @@ class RunCard(ConfigFile):
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
         output["pdfgup2"] = 0
-        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"])
-        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"])
+        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"], beam=1)
+        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"], beam=2)
         return output
     
-    def get_pdf_id(self, pdf):
+    def get_pdf_id(self, pdf, beam=None):
         if pdf == "lhapdf":
-            lhaid = self["lhaid"]
+            beamID = "" if beam==None else str(beam)
+            lhaid = self["lhaid"+beamID]
             if isinstance(lhaid, list):
                 return lhaid[0]
             else:
@@ -3809,7 +3810,18 @@ class RunCard(ConfigFile):
                 return 0   
     
     def get_lhapdf_id(self):
+        '''return pdf configuration from pdlabel'''
+        logger.warning('pulling pdf configuration from "pdlabel," not "pdlabel1,2"')
         return self.get_pdf_id(self['pdlabel'])
+    
+    def get_lhapdf_id_multi(self):
+        '''return pdf configuration from pdlabel1,2'''
+        logger.warning('pulling pdf configuration from "pdlabel1,2" not "pdlabel"')
+        tmpIDs = []
+        tmpIDs.append(self.get_pdf_id(self['pdlabel1']))
+        tmpIDs.append(self.get_pdf_id(self['pdlabel2']))
+        return tmpIDs
+    
 
     def remove_all_cut(self): 
         """remove all the cut"""
@@ -4027,9 +4039,9 @@ class PDLabelBlock(RunBlock):
                     if card['pdlabel'] != card['pdlabel1']:
                         dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
                 elif card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
-                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option") 
+                    raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option") 
                 elif card['pdlabel2'] in sum(card.allowed_lep_densities.values(),[]):
-                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option")
+                    raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option")
                 elif card['pdlabel1'] == 'none':
                     dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
                 elif card['pdlabel2'] == 'none':
@@ -4042,7 +4054,7 @@ class PDLabelBlock(RunBlock):
 
         if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
             abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
-            raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
+            raise InvalidRunCard("Asymmetric beam pdf not supported for proton-proton collision") 
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""
@@ -4201,6 +4213,10 @@ class RunCardLO(RunCard):
         self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
         self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
+        self.add_param('lhaid1', -1,fortran_name='lhasubid(1)')
+        self.add_param('lhaid2', -1,fortran_name='lhasubid(2)')
+        self.add_param('multi_lhaid_alphas_scheme', 0,fortran_name='multi_lhaid_alphas_scheme',
+                       allowed = [0,1,2], comment="0 = alphas extracted from geometric avg; 1(2) = from lhaid1(2)")
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
         self.add_param("fixed_fac_scale1", False, hidden=True)
@@ -5566,8 +5582,14 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
-             sum(self.allowed_lep_densities.values(),[]) )                
+             sum(self.allowed_lep_densities.values(),[]) )
+        self.add_param("pdlabel1", "nn23nlo", hidden=True, fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23nlo", hidden=True, fortran_name="pdsublabel(2)")
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
+        self.add_param('lhaid1', [-1],fortran_name='lhasubid(1)')
+        self.add_param('lhaid2', [-1],fortran_name='lhasubid(2)')
+        self.add_param('multi_lhaid_alphas_scheme', 0,fortran_name='multi_lhaid_alphas_scheme',
+                       allowed = [0,1,2], comment="0 = alphas extracted from geometric avg; 1(2) = from lhaid1(2)")
         self.add_param('pdfscheme', 0)
         # whether to include or not photon-initiated processes in lepton collisions
         self.add_param('photons_from_lepton', True)

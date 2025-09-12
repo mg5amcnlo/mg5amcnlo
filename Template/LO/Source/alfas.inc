@@ -5,7 +5,7 @@ c
 c     asmz   = alpha_s(Mz) is set based on the pdf chosen in setcuts.f
 c     nloop  = order of the running of alpha_s based on the pdf chosen  
 c***********************************************************************
-      integer nloop
+      integer nloop,nset
       double precision asmz
-      common/a_block/asmz,nloop
+      common/a_block/asmz,nloop,nset
 
