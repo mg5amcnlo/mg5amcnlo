@@ -15,11 +15,11 @@ ifeq ($(origin MENUM),undefined)
 endif
 
 %$(MENUM)py.so: %/matrix.f
-	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ME) -c $^ -m $(patsubst %/matrix.f,%$(MENUM)py,$^) --include-paths=$(HERE)/$(patsubst %/matrix.f,%,$^)
+	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ME) -c $^ -m $(patsubst %/matrix.f,%$(MENUM)py,$^) --include-paths=$(HERE)/$(patsubst %/matrix.f,%,$^) -I$(HERE)/$(patsubst %/matrix.f,%,$^)
 	
 	
 all_matrix$(MENUM)py.so: $(LIBDIR)/$(LIBRARY) all_matrix.f
-	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ALL) -c all_matrix.f -m all_matrix$(MENUM)py --include-paths=$(HERE)
+	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ALL) -c all_matrix.f -m all_matrix$(MENUM)py --include-paths=$(HERE) -I$(HERE)
 
     
 allmatrix$(MENUM)py.so: $(patsubst %/matrix.f,%$(MENUM)py.so,$(wildcard */matrix.f)) all_matrix$(MENUM)py.so

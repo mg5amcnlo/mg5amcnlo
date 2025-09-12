@@ -631,13 +631,22 @@ class MadSpinInterface(extended_cmd.Cmd):
     
         args = self.split_arg(line)
         self.check_launch(args)
-        for part in self.list_branches.keys():
+        for part in list(self.list_branches.keys()):
             if part in self.mg5cmd._multiparticles:
-            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
             else:
-                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                try:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                except KeyError:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part.lower()]
+                    self.list_branches[part.lower()] = self.list_branches[part]
+                    del self.list_branches[part]
+                    particle = self.mg5cmd._curr_model.get_particle(pid)
+                    if particle.get('antiname').upper() in self.list_branches:
+                        self.list_branches[particle.get('antiname').lower()] = \
+                            self.list_branches[particle.get('antiname').upper()]
+                        del self.list_branches[particle.get('antiname').upper()]
                 if pid in self.final_state:
                     break
         else:

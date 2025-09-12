@@ -51,6 +51,7 @@ c
       integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
+      integer fake_id
       include 'configs.inc'
       data use_config/0,lmaxconfigs*0/
 
@@ -232,7 +233,7 @@ c            do j=1,2**nbw
 c               write(*,*) 'mapping',ic,mapconfig(i),icode               
                if (icode .eq. 0) then
 c                 Create format string based on number of digits
-                  write(formstr,'(a,i1,a)') '(I',nconf,'$)'
+                  write(formstr,'(a,i1,a)') '(I',nconf,',$)'
                   write(*,formstr) mapconfig(i)
 c                 Write symmetry factors
                   write(formstr2,'(a,i2,a)') '(2i',nsym,')'
@@ -242,10 +243,10 @@ c                 Create format string based on number of digits
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   if(nconf+ncode+1.lt.10) then
                      write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   else
                      write(formstr,'(a,i2,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   endif
                   write(*,formstr) dconfig
 c                 Write symmetry factors
@@ -260,7 +261,7 @@ c                 Write symmetry factors
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   write(27,formstr2) dconfig,use_config(i)
                endif
-               write(*,'(a$)') ' '
+               write(*,'(a,$)') ' '
  100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else

@@ -2476,7 +2476,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         filename = "loop_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              matrix_element.get('base_amplitude').get('loop_diagrams')),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
@@ -4763,18 +4763,21 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     # We must add the corresponding includes for these TIR
                     if tir in ['golem','samurai','ninja','collier']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
+                        trg_path2 = pjoin(trg_path,tir)
+                        to_include = None
                         if os.path.isdir(trg_path):
                             to_include = misc.find_includes_path(trg_path,
                                                         self.include_names[tir])
-                        else:
-                            to_include = None
+                        if to_include is None and os.path.isdir(trg_path2):
+                            to_include = misc.find_includes_path(trg_path2,
+                                                        self.include_names[tir])
                         # Special possible location for collier
                         if to_include is None and tir=='collier':
                             to_include = misc.find_includes_path(
                                pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
-'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
+'Could not find the include directory for %s, looking in %s and %s.\n' % (tir ,str(trg_path), str(trg_path2))+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             to_include = '<Not_found_define_it_yourself>'
                         tir_include.append('-I %s'%to_include)
@@ -4937,9 +4940,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+        #writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              matrix_element.get('base_amplitude').get('loop_diagrams')),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')

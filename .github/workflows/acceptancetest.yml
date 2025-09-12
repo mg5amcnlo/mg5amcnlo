@@ -1968,3 +1968,19 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_ttbar_ewsudakov -pA -t0 -l INFO
+
+  acceptancetest_heft:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            ./tests/test_manager.py test_generation_heft -pA -t0 -l INFO

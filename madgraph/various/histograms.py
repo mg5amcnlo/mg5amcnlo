@@ -1149,11 +1149,8 @@ class HwU(Histogram):
             boundaries = [0.0,0.0]
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
-                if (j == len(weight_header)):
-                    continue
-                if j == len(all_weight_header):
-                    raise HwU.ParseError("There is more bin weights"+\
-                              " specified than expected (%i)"%len(weight_header))
+                #if (j == len(weight_header)):
+                #    continue
                 if selected_central_weight == all_weight_header[j]:
                     bin_weights['central'] = float(weight.group('weight'))
                 if all_weight_header[j] == 'boundary_xmin':
@@ -1858,6 +1855,8 @@ class HwUList(histograms_PhysicsObjectList):
         # If merging cut is negative, then pick only the one of the central scale
         # If not specified, then take them all but use the PDF and scale weight
         # of the central merging_scale for the variation.
+        if not all_weights:
+            raise MadGraph5Error('No weights were found in the HwU XML source.')
         if merging_scale is None or merging_scale < 0.0:
             merging_scale_chosen = all_weights[2]['MERGING']
         else:
@@ -2405,10 +2404,10 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            output.decode(errors='ignore')
+            output = output.decode(errors='ignore')
             if not output:
                 gnuplot_output_list=gnuplot_output_list_v5
-            elif float(output.split()[1]) < 5. :
+            elif int(output.split()[1].split('.')[0]) < 5 :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5

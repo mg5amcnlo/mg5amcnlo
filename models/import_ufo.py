@@ -778,7 +778,7 @@ class UFOMG5Converter(object):
         for particle in self.particles[:]:
             if particle.get('type') == 'goldstone':
                 self.particles.remove(particle)
-                vector = [p for p in self.particles if p.get('mass') == particle.get('mass')]
+                vector = [p for p in self.particles if p.get('mass') == particle.get('mass') and p.get('spin') == 3]
                 if len(vector) != 1:
                     raise Exception("Failed to idendity goldstone/boson relation")
                 
@@ -826,7 +826,11 @@ class UFOMG5Converter(object):
             names = tuple(sorted([p.get_name() if p.get_name() != g_name else v_name
                       for p in vertex.get('particles')]))
             if names in search_int:
-                self.update_vertex_for_goldstone(search_int[names], vertex, goldstone, vector)
+                new_vertex = self.update_vertex_for_goldstone(search_int[names], vertex, goldstone, vector)
+                if new_vertex:
+                    new_vertex = self.convert_goldstone_to_V(vertex, goldstone, vector)
+                    self.interactions.append(new_vertex)
+                    search_int[names].append(new_vertex)
             else:
                 new_vertex = self.convert_goldstone_to_V(vertex, goldstone, vector)
                 self.interactions.append(new_vertex)
@@ -902,6 +906,8 @@ class UFOMG5Converter(object):
         """change the order of the particle within a given interaction"""
 
         new_vertex = copy.deepcopy(vertex)
+        #fix some weird behavior of the copy
+        new_vertex['color'] = list(vertex.get('color'))
 
         # reorder the particle within the new vertex
         old_particles = vertex.get('particles')
@@ -921,8 +927,11 @@ class UFOMG5Converter(object):
         for i, col in enumerate(all_color):
             new_color = self.get_symmetric_color(str(col), restricted_mapping)
             if new_color not in  ['1 ','1 1']:
-                all_color[i] = ColorString(new_color)
-
+                if new_color.startswith('1 '):
+                    new_color = new_color[2:]
+                from madgraph.core.color_algebra import T,f,d,Epsilon,EpsilonBar,K6,K6Bar,T6,Tr
+                all_color[i]= color.ColorString([eval(nc) \
+                                    for nc in new_color.split() if nc !='1'])
         return new_vertex
 
 
@@ -944,7 +953,8 @@ class UFOMG5Converter(object):
                         indices[i] = str(substitution[int(oneindex)])
 
                 new_expr += ','.join(indices)+')'
-        return old_color.__class__(new_expr)
+        new_color = old_color.__class__(new_expr)
+        return new_color
 
 
 
@@ -1028,7 +1038,12 @@ class UFOMG5Converter(object):
         """
 
         if len(vertex) !=1 :
-            raise Exception
+            for onevertex in vertex:
+                to_be_done = self.update_vertex_for_goldstone([onevertex], gold_vertex, goldstone, vector)
+                if not to_be_done:
+                    return
+            return True
+                
         vertex = vertex[0]
 
         nb_vector = 0
@@ -1089,6 +1104,8 @@ class UFOMG5Converter(object):
         # now we can add the coupling to the original vertex
         for (color, lorentz), value in gold_vertex.get('couplings').items():
             key = (translate_color[color], translate_lorentz[lorentz])
+            if key in vertex.get('couplings'):
+                return True # will include it in a new vertex
             assert key not in vertex.get('couplings')
             vertex.get('couplings')[key] = value
 
@@ -1101,7 +1118,7 @@ class UFOMG5Converter(object):
                 for i, col in enumerate(gold_vertex.get('color')):
                     new_col = self.get_symmetric_color(str(col), mapping)
                     if new_col not in  ['1 ', '1 1']:
-                        new_col = ColorString(new_col)
+                        new_col = ColorString([eval(nc) for nc in new_col.split() if nc !='1'])
                     else:
                         color_map[i]=i
                         continue 

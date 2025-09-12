@@ -1369,6 +1369,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,2)/0,0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
         # Test config_subproc_map.inc
@@ -2036,6 +2038,8 @@ C     Diagram 12
       DATA TPRID(-5,12)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/12/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
 
@@ -2330,6 +2334,8 @@ C     Diagram 6
       DATA (SPROP(I,-5,6),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         symmetry, perms, ident_perms = \
@@ -3482,6 +3488,8 @@ C     Diagram 42
       DATA (SPROP(I,-4,42),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/42/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -3843,6 +3851,8 @@ C     Diagram 4
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -5569,6 +5579,8 @@ C     Diagram 3
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
@@ -5983,6 +5995,8 @@ C     Diagram 4
       DATA (SPROP(I,-3,4),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/4/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -7853,6 +7867,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -9295,6 +9311,8 @@ C     Diagram 10
       DATA (SPROP(I,-4,10),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/10/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test maxconfigs.inc
@@ -9517,6 +9535,8 @@ C     Number of configs
       DATA TPRID(-7,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
     def test_configs_long_decay(self):
@@ -9752,6 +9772,8 @@ C     Diagram 6
       DATA TPRID(-3,6)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_configs_8fs(self):
@@ -9954,6 +9976,8 @@ C     Number of configs
       DATA (SPROP(I,-2,1),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test get_color.f output

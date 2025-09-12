@@ -2512,7 +2512,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                  '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1']):
         "Complete the output command"
 
-        possible_format = self._export_formats
+        possible_format = list(self._export_formats)
+        possible_format += misc.from_plugin_import(self.plugin_path, 'new_output', keyname=None, warning=False,
+                       info=None)
         #don't propose directory use by MG_ME
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
@@ -2930,7 +2932,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
                               'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA',
-                              'cudacpp']
+                              'cudacpp', 'hepmc3', 'pythia8_hepmc3']
 
     _install_opts.extend(_advanced_install_opts)
 

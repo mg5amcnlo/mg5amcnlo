@@ -1069,7 +1069,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Write them out
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
-        aloha_model.write(write_dir, 'Fortran')
+        options= {}
+        options['vector.inc'] = True if self.opt['export_format']=='madevent' else False
+        aloha_model.write(write_dir, 'Fortran', options=options)
 
         # Revert the original aloha loop mode
         aloha.loop_mode = old_loop_mode
@@ -1257,7 +1259,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         ret_list = []
         my_cs = color.ColorString()
-        denominator = min(matrix_element.get('color_matrix').get_line_denominators())
+        denominator = max(matrix_element.get('color_matrix').get_line_denominators())
         ret_list.append("DATA Denom/%i/" % denominator)
 
         cf_index = 0
@@ -4075,7 +4077,7 @@ c     channel position
                     width = 'zero'
                     pow_part = 0
                 else:
-                    if (last_leg.get('id')!=7):
+                    if (last_leg.get('id')!=self.model.get_first_non_pdg()):
                       particle = particle_dict[last_leg.get('id')]
                       # Get mass
                       mass = particle.get('mass')
@@ -4758,9 +4760,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        one_def = ' IF(%(w)s.ne.0d0) then \nfk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s) \n else \n fk_%(w)s = 0d0\n endif\n'     
         for m, w in mass_width:
-            if w == 'zero':
+            if w.lower() == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
                     fk_w_defs.append(' fk_zero = 0d0')
                 continue    
@@ -5490,6 +5492,9 @@ c           This is dummy particle used in multiparticle vertices
         # Write out number of configs
         lines.append("# Number of configs")
         lines.append("data mapconfig(0)/%d/" % nconfigs)
+
+        lines.append("#used fake id")
+        lines.append("data fake_id/%d/" %new_pdg)
 
         # Write the file
         writer.writelines(lines)

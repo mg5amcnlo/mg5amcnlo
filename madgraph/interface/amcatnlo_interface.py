@@ -120,11 +120,11 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
     def check_add(self, args):
 
-        # this is for the Sudakov approximation of EW corrections
-        logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
-                       'Please cite arxiv:2110.03714, arxiv:2309.00452')
         if "--ewsudakov" in args:
             self.ewsudakov = True
+            # this is for the Sudakov approximation of EW corrections
+            logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
+                           'Please cite arxiv:2110.03714, arxiv:2309.00452')
             args.remove('--ewsudakov')
         
         super(CheckFKS, self).check_add(args)        

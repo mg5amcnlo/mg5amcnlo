@@ -1170,6 +1170,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $                     FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       INTEGER              NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
@@ -1179,7 +1181,9 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
       integer need_matching(nexternal),need_matching_izero(nexternal)
       integer need_matching_S(nexternal),need_matching_H(nexternal)
+     $     ,need_matching_cuts(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
+     $     ,need_matching_cuts
       save need_matching_izero
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
@@ -1212,7 +1216,10 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
-            need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
+            need_matching_cuts(1:nexternal)=[need_matching_S(1:i_fks-1)
+     $           ,1,need_matching_S(i_fks:nexternal-1)]
+            need_matching_izero(1:nexternal)=
+     $           need_matching_S(1:nexternal)
 c Update shower starting scale to be the scale down to which the MINLO
 c Sudakov factors are included.
             shower_S_scale(nFKSprocess*2-1)=
@@ -1269,6 +1276,7 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
+            need_matching_cuts(1:nexternal)=need_matching_H(1:nexternal)
 c Update shower starting scale
             pthardness=ref_H_scale(nFKSprocess*2)-
      $           shower_H_scale(nFKSprocess*2)
@@ -1307,6 +1315,8 @@ c Update shower starting scale
          return
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
 c Restore scales for the n-body FxFx terms
+         need_matching_cuts(1:nexternal)=[need_matching_S(1:i_fks-1),1,
+     $        need_matching_S(i_fks:nexternal-1)]
          nFxFx_ren_scales=nFxFx_ren_scales_izero
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
@@ -1316,6 +1326,7 @@ c Restore scales for the n-body FxFx terms
          enddo
       elseif (iterm.eq.-3) then
 c Restore scales for the n+1-body FxFx terms
+         need_matching_cuts(1:nexternal)=need_matching_H(1:nexternal)
          nFxFx_ren_scales=nFxFx_ren_scales_mohdr
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
@@ -1882,7 +1893,9 @@ c        contribution
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
+     $     ,need_matching_cuts(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
+     $     ,need_matching_cuts
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ntagph

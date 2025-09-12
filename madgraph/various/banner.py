@@ -1991,6 +1991,11 @@ class PY8Card(ConfigFile):
         self.add_param("PartonLevel:FSRinResonances", True, hidden=True, always_write_to_card=False, comment="Do not allow shower to run from decay product of unstable particle")
         self.add_param("ProcessLevel:resonanceDecays", True, hidden=True, always_write_to_card=False, comment="Do not allow unstable particle to decay.")
 
+        # Parameters only needed for main164 type of run (not pythia8/MG5 interface)
+        self.add_param("Main:HepMC", True, hidden=True, always_write_to_card=False,
+                       comment="""Specify the type of output to be used by the main164 run. """)
+        self.add_param("HepMC:output", 'hepmc.gz', hidden=True, always_write_to_card=False,
+                       comment="Specify the HepMC output file to be used by the main164 run.")
         # Add parameters controlling the subruns execution flow.
         # These parameters should not be part of PY8SubRun daughter.
         self.add_default_subruns('parameters')
@@ -2087,8 +2092,10 @@ class PY8Card(ConfigFile):
             force = False
         if name.lower() not in self or (force or name.lower() not in self.user_set):
             self.__setitem__(name, value, change_userdefine=False, **opts)
-            self.system_set.add(name.lower())            
-    
+            self.system_set.add(name.lower())  
+        else:
+            raise Exception("The parameter %s is already set to %s. You can not change it." % (name, self[name]))          
+
     def defaultSet(self, name, value, **opts):
             self.__setitem__(name, value, change_userdefine=False, **opts)
         
@@ -2144,9 +2151,19 @@ class PY8Card(ConfigFile):
             else:
                 return ','.join([PY8Card.pythia8_formatting(arg) for arg in value])
             
+    #change of name convention between MG5 old interface and main164 from Pythia8
+    interface_to_164 = {'HEPMCoutput:file': 'HepMC:output',
+                        'SysCalc:fullCutVariation': '!SysCalc:fullCutVariation (not supported with 164)',
+                        'SysCalc:qCutList': '!SysCalc:qCutList (not supported with 164)',
+                        'SysCalc:qWeed': '!SysCalc:qWeed (not supported with 164)',
+                        'SysCalc:tmsList': '!SysCalc:tmsList (not supported with 164)',
+                        'HEPMCoutput:scaling' : '!HEPMCoutput :scaling (not supported with 164)',
+                        'LHEFInputs:nSubruns' : 'Main:numberOfSubruns'}
+
 
     def write(self, output_file, template, read_subrun=False, 
-                    print_only_visible=False, direct_pythia_input=False, add_missing=True):
+                    print_only_visible=False, direct_pythia_input=False, add_missing=True,
+                    use_mg5amc_py8_interface=False):
         """ Write the card to output_file using a specific template.
         > 'print_only_visible' specifies whether or not the hidden parameters
             should be written out if they are in the hidden_params_to_always_write
@@ -2155,7 +2172,12 @@ class PY8Card(ConfigFile):
           in the self.visible_params_to_always_write list and are not user_set
           or system_set are commented.
         > If 'add_missing' is False then parameters that should be written_out but are absent
-        from the template will not be written out."""
+        from the template will not be written out.
+        > use_mg5amc_py8_interface is a flag to indicate that the MG5aMC-PY8 interface is used or not
+          if not used some parameters need to be translated from the old convention to the new one
+        """
+
+        self.use_mg5amc_py8_interface = use_mg5amc_py8_interface
 
         # First list the visible parameters
         visible_param = [p for p in self if p.lower() not in self.hidden_param
@@ -2297,7 +2319,16 @@ class PY8Card(ConfigFile):
             else:
                 # Just copy parameters which don't need to be specified
                 if param.lower() not in self.params_to_never_write:
-                    output.write(line)
+
+                    if not use_mg5amc_py8_interface and direct_pythia_input and \
+                                   param in self.interface_to_164:
+                        param_entry = self.interface_to_164[param.strip()]
+                        # special case for HepMC needs two flags
+                        if 'HepMC:output' == param_entry:
+                            output.write(' %s=%s\n'%('Main:HepMC', 'on'))
+                        output.write('%s=%s\n'%(param_entry,new_value))
+                    else:
+                        output.write(line)
                 else:
                     output.write('! The following parameter was forced to be commented out by MG5aMC.\n')
                     output.write('! %s'%line)
@@ -2313,6 +2344,7 @@ class PY8Card(ConfigFile):
             if ((not direct_pythia_input) or
                   (param.lower() in self.visible_params_to_always_write) or
                   (param.lower() in self.user_set) or
+                  (param.lower() in self.hidden_params_to_always_write) or
                   (param.lower() in self.system_set)):
                 template = '%s=%s'
             else:
@@ -2321,6 +2353,19 @@ class PY8Card(ConfigFile):
                 # then they shouldn't be passed to Pythia
                 template = '!%s=%s'
 
+            if not use_mg5amc_py8_interface and direct_pythia_input and \
+                                   param in self.interface_to_164:
+                param_entry = self.interface_to_164[param]
+                # special case for HepMC needs two flags
+                if 'HepMC:output' == param_entry:
+                    output.write(' %s=%s\n'%('Main:HepMC', 'on'))
+                    if 'Main:InternalAnalysis'.lower() in self.user_set and \
+                        self['Main:InternalAnalysis'].lower() == 'on':
+                        output.write('InternalAnalysis:output = ./djrs.dat\n')
+
+            #elif param in self.interface_to_164.values() and not direct_pythia_input:
+            #    misc.sprint(use_mg5amc_py8_interface, direct_pythia_input,param)
+            #    raise Exception('The parameter %s is not supported in the MG5aMC-PY8 interface. Please use the new interface.'%param_entry
             output.write(template%(param_entry,
                                   value_entry.replace(value,new_value)))
         
@@ -2365,6 +2410,8 @@ class PY8Card(ConfigFile):
                 comment = '\n'.join('! %s'%c for c in 
                           self.comments[param.lower()].split('\n'))
                 output.write(comment+'\n')
+            if not use_mg5amc_py8_interface and param in self.interface_to_164:
+                continue
             output.write('%s=%s\n'%(param,PY8Card.pythia8_formatting(self[param])))
         
         # Don't close the file if we were reading a subrun, but simply write 
@@ -4048,8 +4095,8 @@ class FixedfacscaleBlock(RunBlock):
         if 'fixed_fac_scale2' in card.user_set:
             card.user_set.remove('fixed_fac_scale2')
 
-        # #card['pdlabel1'] = value
-        # #card['pdlabel2'] = value
+        dict.__setitem__(card, 'fixed_fac_scale1', card['fixed_fac_scale'])
+        dict.__setitem__(card, 'fixed_fac_scale2', card['fixed_fac_scale'])
 
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name='unknown', **opt):
@@ -4199,6 +4246,7 @@ class RunCardLO(RunCard):
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
         self.add_param('dsqrt_shat',0., cut=True)
+        self.add_param('dsqrt_shatmax', -1, cut=True) 
         self.add_param("nhel", 0, include=False)
         self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
@@ -4449,11 +4497,11 @@ class RunCardLO(RunCard):
                 time.sleep(5)
             if self['drjj'] != 0:
                 if 'drjj' in self.user_set:
-                    logger.warning('Since icckw>0, changing the value of \'drjj\' to 0')
+                    logger.warning('Since ickkw>0, changing the value of \'drjj\' to 0')
                 self['drjj'] = 0
             if self['drjl'] != 0:
                 if 'drjl' in self.user_set:
-                    logger.warning('Since icckw>0, changing the value of \'drjl\' to 0')
+                    logger.warning('Since ickkw>0, changing the value of \'drjl\' to 0')
                 self['drjl'] = 0    
             if not self['auto_ptj_mjj']:         
                 if self['mmjj'] > self['xqcut']:
@@ -4751,7 +4799,6 @@ class RunCardLO(RunCard):
                 self['fixed_fac_scale1'] = True
                 self['nhel']    = 1
                 for i in beam_id_split[1]:
-                    exit
                     if abs(i) == 11:
                         self['lpp1']    = -math.copysign(3,i)
                         self['lpp2']    =  math.copysign(3,i)

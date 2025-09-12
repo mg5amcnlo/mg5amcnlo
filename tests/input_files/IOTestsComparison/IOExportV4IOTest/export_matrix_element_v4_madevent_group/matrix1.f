@@ -408,8 +408,12 @@ C     BEGIN CODE
 C     ----------
       IF (FIRST) THEN
         FIRST=.FALSE.
-        IF(WZ.NE.0D0) FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ
-     $   *SMALL_WIDTH_TREATMENT)), WZ)
+        IF(WZ.NE.0D0) THEN
+          FK_WZ = SIGN(MAX(ABS(WZ), ABS(MZ*SMALL_WIDTH_TREATMENT)), WZ)
+        ELSE
+          FK_WZ = 0D0
+        ENDIF
+
         FK_ZERO = 0D0
 
         IF(INIT_MODE) THEN

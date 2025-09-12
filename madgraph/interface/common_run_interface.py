@@ -1463,11 +1463,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                              self.run_name, '%s_pts.dat' % tag)
                 for observable_name, data_path in [('djr',djr_path),
                                                    ('pt',pt_path)]:
-                    if not self.generate_Pythia8_HwU_plots(
+                    try:
+                        if not self.generate_Pythia8_HwU_plots(
                                     PY8_plots_root_path, merging_scale_name,
                                                      observable_name,data_path):
-                        return False
-
+                            return False
+                    except Exception as error:
+                        if os.path.exists(data_path):
+                            logger.info('plot information present in %s' % data_path)
+                        return True
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
             if not misc.which('gnuplot'):
@@ -1964,12 +1968,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
             except Exception:
                 self.cluster.remove()
+                for i in range(nb_submit):
+                    os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
                 old_run_mode = self.options['run_mode']
                 self.options['run_mode'] =0
+                out =False
                 try:
                     out = self.do_systematics(line)
                 finally:
                     self.options['run_mode']  =  old_run_mode
+                return out
             #collect the data
             all_cross = []
             for i in range(nb_submit):
@@ -1995,18 +2003,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
                 
-            sys_obj = systematics.call_systematics([input, None] + opts, 
-                                         log=lambda x: logger.info(str(x)),
-                                         result=result_file,
-                                         running=False
-                                         )                    
+
+            sys_obj = systematics.call_systematics([input, None] + opts,
+                                        log=lambda x: logger.info(str(x)),
+                                        result=result_file,
+                                        running=False
+                                        )
+
             sys_obj.print_cross_sections(all_cross, nb_event, result_file)
-            
+
             #concatenate the output file
             subprocess.call(['cat']+\
                             ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
                             stdout=open(output,'w'),
                             cwd=os.path.dirname(output))
+                
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
@@ -6879,8 +6890,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             log_level=20
 
-
-        if run_card:
+        if run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+            # They are likely case like lpp=+-3, where alpas not need reset
+            # but those have dedicated name of pdf avoid the reset
             as_for_pdf = {'cteq6_m': 0.118,
                           'cteq6_d': 0.118, 
                           'cteq6_l': 0.118, 

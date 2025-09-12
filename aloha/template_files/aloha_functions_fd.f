@@ -2120,14 +2120,14 @@ c     local variable
 
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
-      double complex W1(3)
+      double complex W1(7)
       double complex Wall(7,*)
       double complex Amp(*)
 c     local variable
       integer i
 
       do i = 1, nb
-         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i))
+         Amp(ihels(i)) =  W1(7) * Wall(7,iwfcts(i))
       enddo
       return
       end

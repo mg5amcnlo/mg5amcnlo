@@ -398,8 +398,11 @@ C now check that there are enough photons
       external pt,eta
       include "run.inc" 
       include "cuts.inc"
-
       integer i, j 
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+     $     ,need_matching_cuts(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
+     $     ,need_matching_cuts
 
 c
 c JET CUTS
@@ -427,6 +430,7 @@ c more than the Born).
          nQCD=0
          do j=nincoming+1,nexternal
             if (is_a_j(j)) then
+               if (ickkw.eq.3 .and. need_matching_cuts(j).eq.-1) cycle ! skip the 'EW-jets'
                nQCD=nQCD+1
                do i=0,3
                   pQCD(i,nQCD)=p(i,j)
@@ -458,14 +462,14 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
       passcuts_fxfx=.true.
 c First apply a numerical stability cut
 c Define jet clustering parameters with a pTmin=1 GeV
-      palg=1.0                  ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-      rfj=1.0                   ! the radius parameter
-      sycut=1.0                 ! minimum transverse momentum
+      palg=1d0                  ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+      rfj=1d0                   ! the radius parameter
+      sycut=ptj                 ! minimum transverse momentum
       etaj_max=1000d0
 c     call FASTJET to get all the jets
       call amcatnlo_fastjetppgenkt_etamax_timed(
      $     pQCD,nQCD,rfj,sycut,etaj_max,palg,pjet,njet,jet)
-c Apply the jet cut
+c     Apply the jet cut
       if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
          passcuts_fxfx=.false.
          return

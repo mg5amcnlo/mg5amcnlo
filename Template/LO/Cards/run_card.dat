@@ -90,6 +90,7 @@ $psoptim
 # Parton level cuts definition *
 #*******************************
   %(dsqrt_shat)s  = dsqrt_shat ! minimal shat for full process
+  %(dsqrt_shatmax)s  = dsqrt_shatmax ! maximum shat for full process
 #                                                                    
 #
 #*********************************************************************
