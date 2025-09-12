@@ -8,5 +8,6 @@ c***********************************************************************
       character*7 pdlabel,epa_label
       character*7 pdsublabel(2)
       integer lhaid, pdfscheme
-      common/to_pdf/lhaid,pdfscheme,pdlabel,epa_label,pdsublabel
+      integer lhasubid(2)
+      common/to_pdf/lhaid,pdfscheme,pdlabel,epa_label,pdsublabel,lhasubid
  	
