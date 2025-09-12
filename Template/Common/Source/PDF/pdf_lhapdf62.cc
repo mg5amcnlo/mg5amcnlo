@@ -1135,35 +1135,59 @@ extern "C" {
   void pdfset_(const char* par, const double* value, int parlength) {
 
     string my_par(par), message;
-    int id;
+    int id = -1;
+    int subid[2] = {-1,-1};
     // Identify the calling program (yuck!)
-    if (my_par.find("NPTYPE") != string::npos) {
-      message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
-      // Take PDF ID from value[2]
-      id = value[2]+1000*value[1];
+    if (my_par.find("DEFAULT") != string::npos) {
+      message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
+      // Take PDF ID from value[0]
+      id = value[0];
+      subid[0] = int(value[1]);
+      subid[1] = int(value[2]);
     } else if (my_par.find("HWLHAPDF") != string::npos) {
       message = "==== LHAPDF6 USING HERWIG-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[0]
       id = value[0];
-    } else if (my_par.find("DEFAULT") != string::npos) {
-      message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
-      // Take PDF ID from value[0]
-      id = value[0];
+      subid[0] = int(value[1]);
+      subid[1] = int(value[2]);
+    } else if (my_par.find("NPTYPE") != string::npos) {
+      message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
+      // Take PDF ID from value[2]
+      id = int(value[2]+1000*value[1]);
     } else {
       message = "==== LHAPDF6 USING PDFLIB-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
-      id = value[2]+1000*value[1];
+      id = int(value[2]+1000*value[1]);
     }
     pair<string, int> set_id = LHAPDF::lookupPDF(id);
+    pair<string, int> set_subid[2] = {
+      LHAPDF::lookupPDF(subid[0]),
+      LHAPDF::lookupPDF(subid[1])
+    }; // string = "" if subid[kk] = -1
     if (set_id.first != ACTIVESETS[1].setname || set_id.second != ACTIVESETS[1].currentmem) {
       if (LHAPDF::verbosity() > 0) cout << message << endl;
-      ACTIVESETS[1] = PDFSetHandler(id);
+      ACTIVESETS[0] = PDFSetHandler(id);
+      if(subid[0]>0) ACTIVESETS[1] = PDFSetHandler(subid[0]);
+      if(subid[1]>0) ACTIVESETS[2] = PDFSetHandler(subid[1]);
     }
 
-    CURRENTSET = 1;
+    CURRENTSET = int(value[4]); // only for initialization
 
     // Extract parameters for common blocks (with sensible fallback values)
-    PDFPtr pdf = ACTIVESETS[1].activeMember();
+    PDFPtr pdf;
+    switch(CURRENTSET) { // multi_lhaid_alphas_scheme = 0,1,2
+      case 2:
+        cout << "LHAPDF6: using nset=2 for common block params" << endl;
+        pdf = ACTIVESETS[2].activeMember();
+        break;
+      case 1:
+        cout << "LHAPDF6: using nset=1 for common block params" << endl;
+        pdf = ACTIVESETS[1].activeMember();
+        break;
+      default:
+        cout << "LHAPDF6: using nset=0 for common block params" << endl;
+        pdf = ACTIVESETS[0].activeMember();
+    }
     w50513_.xmin = pdf->info().get_entry_as<double>("XMin", 0.0);
     w50513_.xmax = pdf->info().get_entry_as<double>("XMax", 1.0);
     w50513_.q2min = LHAPDF::sqr(pdf->info().get_entry_as<double>("QMin", 1.0));
@@ -1188,7 +1212,22 @@ extern "C" {
                 double& str, double& chm, double& bot, double& top, double& glu) {
     CURRENTSET = 1;
     /// Fill (partial) parton return variables
-    PDFPtr pdf = ACTIVESETS[1].activeMember();
+    PDFPtr pdf;
+    try {
+      cout << "LHAPDF6: trying CURRENTSET=0 for structm" << endl;
+      CURRENTSET = 0;
+      pdf = ACTIVESETS[CURRENTSET].activeMember();
+    } catch(...){
+      try {
+        cout << "LHAPDF6: trying CURRENTSET=1 for structm" << endl;
+        CURRENTSET = 1;
+        pdf = ACTIVESETS[CURRENTSET].activeMember();
+      } catch(...){
+        cout << "LHAPDF6: trying CURRENTSET=0 for structm" << endl;
+        CURRENTSET = 2;
+        pdf = ACTIVESETS[CURRENTSET].activeMember();
+      }
+    }
     dsea = pdf->xfxQ(-1, x, q);
     usea = pdf->xfxQ(-2, x, q);
     dnv = pdf->xfxQ(1, x, q) - dsea;

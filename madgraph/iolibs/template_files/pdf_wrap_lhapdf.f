@@ -12,10 +12,12 @@ C
       real*8 zmass
       data zmass/91.188d0/
       Character*150 LHAPath
-      character*20 parm(20)
-      double precision value(20)
-      real*8 alphasPDF
-      external alphasPDF
+      character*20 parm(0:19) ! align indices with c++ value[20] for clarity
+      double precision value(0:19) ! align indices with c++ value[20] for clarity
+      integer tmpnloop(2)
+      double precision tmpasmz(2)
+      real*8 alphasPDF,alphasPDFM
+      external alphasPDF,alphasPDFM
 
 
 c-------------------
@@ -25,13 +27,32 @@ c-------------------
 c     initialize the pdf set
       call FindPDFPath(LHAPath)
       CALL SetPDFPath(LHAPath)
-      value(1)=lhaid
-      parm(1)='DEFAULT'
+      value(0)=lhaid
+      value(1)=lhasubid(1)
+      value(2)=lhasubid(2)
+      value(4)=multi_lhaid_alphas_scheme ! = 0,1,2
+      parm(0)='DEFAULT'
+      nset = multi_lhaid_alphas_scheme
       if (pdlabel.eq.'lhapdf') then
+c        initialize PDFs via lhapdf62.cc
          call pdfset(parm,value)
-         call GetOrderAs(nloop)
-         nloop=nloop+1  
+c        initialize alphas, etc
+         select case(multi_lhaid_alphas_scheme)
+c           pull information from PDF1,2
+         case (1,2)
+         call GetOrderAsM(multi_lhaid_alphas_scheme,nloop)
          asmz=alphasPDF(zmass)
+         asmz=alphasPDFM(multi_lhaid_alphas_scheme,zmass)
+c           otherwise, take smaller loop order, avg of PDFs
+         !case default
+         call GetOrderAsM(1,tmpnloop(1))
+         call GetOrderAsM(2,tmpnloop(2))
+         nloop=minval(tmpnloop) ! go with lower precision
+         tmpasmz(1)=alphasPDFM(1,zmass)
+         tmpasmz(2)=alphasPDFM(2,zmass)
+         asmz=sqrt(tmpasmz(1)*tmpasmz(2))
+         end select
+         nloop=nloop+1
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
           stop 1

@@ -5588,7 +5588,7 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhaid1', [-1],fortran_name='lhasubid(1)')
         self.add_param('lhaid2', [-1],fortran_name='lhasubid(2)')
-        self.add_param('multi_lhaid_alphas_scheme', 0,fortran_name='multi_lhaid_alphas_scheme',
+        self.add_param('multi_lhaid_alphas_scheme', 0, fortran_name='multi_lhaid_alphas_scheme',
                        allowed = [0,1,2], comment="0 = alphas extracted from geometric avg; 1(2) = from lhaid1(2)")
         self.add_param('pdfscheme', 0)
         # whether to include or not photon-initiated processes in lepton collisions

@@ -150,15 +150,16 @@ c              q2max = xmu*xmu
 
       iporg=ipart
 c     Determine the iset used in lhapdf
-      call getnset(iset)
-      if (iset.ne.1) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
-         stop 1
-      endif
+c      call getnset(iset)
+c      if (iset.ne.1) then
+c         write (*,*) 'PDF not supported for Bjorken x ', x
+c         open(unit=26,file='../../../error',status='unknown')
+c         write(26,*) 'Error: PDF not supported for Bjorken x ',x
+c         stop 1
+c      endif
 
 c     Determine the member of the set (function of lhapdf)
+      iset = iabs(beamid)
       call getnmem(iset,imem)
 
       ireuse = 0
