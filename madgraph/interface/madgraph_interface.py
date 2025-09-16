@@ -5031,11 +5031,21 @@ This implies that with decay chains:
                         polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
-                    elif p in ["A",'a']:
+                    elif p.upper() in ["A",'S']:
                         if spin == 3:
                             polarization += [99]
                         else:
-                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
+                            raise self.InvalidCmd('"A/S" (auxiliary/scalar) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['G']:
+                        if spin == 3:
+                            polarization += [4]
+                        else:
+                            raise self.InvalidCmd('"G" (metric) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['TH']:
+                        if spin == 3:
+                            polarization += [5]
+                        else:
+                            raise self.InvalidCmd('"TH" (theta) polarization is only supported for spin one particles.')
                     elif p in ['+']:
                         if i +1 < len(pol) and pol[i+1].isdigit():
                             p = int(pol[i+1])
@@ -5069,6 +5079,8 @@ This implies that with decay chains:
                             raise self.InvalidCmd("polarization are between -3 and 3")
                         polarization.append(p)
                     else:
+                        print(p)
+                        print(f"{p=}")
                         raise self.InvalidCmd('Invalid Polarization')
 
             duplicate =1
