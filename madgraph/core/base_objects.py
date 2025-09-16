@@ -2143,7 +2143,7 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                if i not in [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 99]:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
                                                                     
@@ -2330,7 +2330,7 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                if i not in [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 99]:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 

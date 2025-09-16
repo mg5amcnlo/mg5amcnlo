@@ -1602,38 +1602,47 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1L' 
             elif self.get('polarization') == [1,-1]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1T'
             elif self.get('polarization') == [99]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd('polarization not handle for decay particle')
+                    raise InvalidCmd('polarization not handled for decay particle')
                 output['propa'] = 'P1A'
             elif self.get('polarization') == [99,0]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1AL'
             elif self.get('polarization') == [4]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1G'
             elif self.get('polarization') == [5]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
-                output['propa'] = 'P1TH'
+                    raise InvalidCmd( 'polarization not handled for decay particle')
+                output['propa'] = 'P1H'
+            elif self.get('polarization') == [6]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handled for decay particle')
+                output['propa'] = 'P1Q'
+            elif self.get('polarization') == [7]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handled for decay particle')
+                output['propa'] = 'P1W'
+
             elif self.get('polarization') == [1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not handle for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
+                    raise InvalidCmd( 'Left polarization not handled for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
                 output['propa'] = 'P1M'
             else:            
-                raise InvalidCmd( 'polarization not handle for decay particle')
+                raise InvalidCmd( 'polarization not handled for decay particle')
             
         # optimization
         if aloha.complex_mass: 
@@ -1851,7 +1860,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 tags.append('P1L') 
-            elif self.get('polarization') == [1,-1]:
+            elif self.get('polarization') == [1,-1]: # = 4+5
                 tags.append('P1T')
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
@@ -1861,10 +1870,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1M')
             elif self.get('polarization') == [99,0]:
                 tags.append('P1AL')
-            elif self.get('polarization') == [4]:
+            elif self.get('polarization') == [4]: # = T-5
                 tags.append('P1G')
-            elif self.get('polarization') == [5]:
-                tags.append('P1TH')
+            elif self.get('polarization') == [5]: # = T-4
+                tags.append('P1H')
+            elif self.get('polarization') == [6]: # = 0-5
+                tags.append('P1Q')
+            elif self.get('polarization') == [7]: # = 0+99-5
+                tags.append('P1W')
+
 
 
             else:
