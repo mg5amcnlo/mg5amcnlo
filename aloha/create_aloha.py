@@ -463,6 +463,12 @@ in presence of majorana particle/flow violation"""
         elif propa == "1AL":
             numerator = "(Mass(id)**2 * EPSL(1,id) * EPSL(2,id)+ (P(-2,id)**2 - Mass(id)**2) * PVec(-1,id)**2 * P(1,id) * P(2,id))"
             denominator = "Mass(id)**2 * PVec(-2,id)**2 * P(-3,id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1G":
+            numerator = "-1*Metric(1, 2)"
+            denominator = "P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
+        elif propa == "1TH":
+            numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id) + PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * Metric(1, 2)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         elif propa in ["1P"]:
             # shift and flip the tag if we multiply by C matrices
             spin_id = id
