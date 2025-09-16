@@ -1616,6 +1616,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self.get('spin') != 3:
                     raise InvalidCmd( 'polarization not handle for decay particle')
                 output['propa'] = 'P1AL'
+            elif self.get('polarization') == [4]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handle for decay particle')
+                output['propa'] = 'P1G'
+            elif self.get('polarization') == [5]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handle for decay particle')
+                output['propa'] = 'P1TH'
             elif self.get('polarization') == [1]:
                 if self.get('spin') != 2:
                     raise InvalidCmd( 'polarization not handle for decay particle')
@@ -1853,6 +1861,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1M')
             elif self.get('polarization') == [99,0]:
                 tags.append('P1AL')
+            elif self.get('polarization') == [4]:
+                tags.append('P1G')
+            elif self.get('polarization') == [5]:
+                tags.append('P1TH')
+
+
             else:
                 raise InvalidCmd( 'polarization not handle for decay particle')
 
