@@ -5020,14 +5020,14 @@ This implies that with decay chains:
                     if ignore or p==',':
                         ignore= False
                         continue
-                    if p in ['t','T']:
+                    if p.upper() in ['T']:
                         if spin == 3:
                             polarization += [1,-1]
                         else:
                             raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
-                    elif p in ['l', 'L']:
+                    elif p.upper() in ['L']:
                         if spin == 3:
-                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                            logger.warning('"L" (longitudinal) polarization is interpreted as Left for Longitudinal please use "0".')
                         polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
@@ -5046,12 +5046,12 @@ This implies that with decay chains:
                             polarization += [5]
                         else:
                             raise self.InvalidCmd('"H" (theta) polarization is only supported for spin one particles.')
-                    elif p.upper() in ['Q'.upper()]:
+                    elif p.upper() in ['Q']:
                         if spin == 3:
                             polarization += [6]
                         else:
                             raise self.InvalidCmd('"Q" (longitudinal - theta) polarization is only supported for spin one particles.')
-                    elif p.upper() in ['W'.upper()]:
+                    elif p.upper() in ['W']:
                         if spin == 3:
                             polarization += [7]
                         else:
