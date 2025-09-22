@@ -460,6 +460,9 @@ in presence of majorana particle/flow violation"""
         elif propa == "1A":
             numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        elif propa == "1S":
+            numerator = "P(1,id) * P(2,id)"
+            denominator = "P(-2,id)**2 * (Mass(id) * Mass(id) - complex(0,1) * Mass(id) * Width(id))"
         elif propa == "1AL":
             numerator = "(Mass(id)**2 * EPSL(1,id) * EPSL(2,id)+ (P(-2,id)**2 - Mass(id)**2) * PVec(-1,id)**2 * P(1,id) * P(2,id))"
             denominator = "Mass(id)**2 * PVec(-2,id)**2 * P(-3,id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"

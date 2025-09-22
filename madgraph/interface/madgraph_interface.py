@@ -5031,11 +5031,16 @@ This implies that with decay chains:
                         polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
-                    elif p.upper() in ["A",'S']:
+                    elif p.upper() in ["A"]:
                         if spin == 3:
                             polarization += [99]
                         else:
-                            raise self.InvalidCmd('"A/S" (auxiliary/scalar) polarization is only supported for spin one particles.')
+                            raise self.InvalidCmd('"A" (auxiliary) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['S']:
+                        if spin == 3:
+                            polarization += [9]
+                        else:
+                            raise self.InvalidCmd('"S" (scalar+width) polarization is only supported for spin one particles.')
                     elif p.upper() in ['G']:
                         if spin == 3:
                             polarization += [4]

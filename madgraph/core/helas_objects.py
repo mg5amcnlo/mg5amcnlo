@@ -840,7 +840,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 99]:
+                if i not in [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]:
                     raise self.PhysicsObjectError( \
                       "%s is not a valid polarization" % str(value))
 
@@ -1632,6 +1632,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self.get('spin') != 3:
                     raise InvalidCmd( 'polarization not handled for decay particle')
                 output['propa'] = 'P1W'
+            elif self.get('polarization') == [9]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not handled for decay particle')
+                output['propa'] = 'P1S'
 
             elif self.get('polarization') == [1]:
                 if self.get('spin') != 2:
@@ -1878,6 +1882,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1Q')
             elif self.get('polarization') == [7]: # = 0+99-5
                 tags.append('P1W')
+            elif self.get('polarization') == [9]: # = 99 + width
+                tags.append('P1S')
 
 
 
