@@ -5160,7 +5160,7 @@ This implies that with decay chains:
                 onium_j = onium_info.get('J')
                 onium_color = onium_info.get('color')
                 onium_charge = onium_info.get('charge')
-                constituents = [onium_info.get('particle'),onium_info.get('antiparticle')]
+                constituents = onium_info.get('particles')
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
 
