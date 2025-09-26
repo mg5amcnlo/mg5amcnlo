@@ -5878,6 +5878,11 @@ c           This is dummy particle used in multiparticle vertices
         replace_dict['DRIVER_EXTRA_INITIALISE'] = ""
         replace_dict['DRIVER_EXTRA_FINALISE'] = ""
 
+        # Default values
+        replace_dict['CUDACPP_EXTRA_HEADER'] = "      DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime"
+        replace_dict['CUDACPP_EXTRA_INITIALISE'] = ""
+        replace_dict['CUDACPP_EXTRA_FINALISE'] = ""
+
         if writer:
             text = open(path).read() % replace_dict
             writer.write(text)
