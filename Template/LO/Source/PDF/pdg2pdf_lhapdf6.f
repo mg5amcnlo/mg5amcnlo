@@ -159,8 +159,8 @@ c         stop 1
 c      endif
 
 c     Determine the member of the set (function of lhapdf)
-      iset = iabs(beamid)
-      call getnmem(iset,imem)
+      iset = lhasubid(iabs(beamid))
+      call getnmem(iset,imem) ! CURRENTSET = nset = iset (see pdf_lhapdf62.cc)
 
       ireuse = 0
       ii=i_replace
@@ -201,21 +201,21 @@ c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       if(iabs(ih).eq.1) then
          if (nb_proton(iabs(beamid)).eq.1.and.nb_neutron(iabs(beamid)).eq.0) then
-            call evolvepart(ipart,x,xmu,pdg2pdf)
+            call evolvepartM(iset,ipart,x,xmu,pdg2pdf)
             if (abs(ipart).le.7)   pdflast(ipart, i_replace)=pdg2pdf
          else
             if (ipart.eq.1.or.ipart.eq.2) then
-               call evolvepart(1,x*nb_hadron
+               call evolvepartM(iset,1,x*nb_hadron
      &                         ,xmu,pdflast(1, i_replace))
-               call evolvepart(2,x*nb_hadron
+               call evolvepartM(iset,2,x*nb_hadron
      &                         ,xmu,pdflast(2, i_replace))
             else if (ipart.eq.-1.or.ipart.eq.-2)then
-               call evolvepart(-1,x*nb_hadron
+               call evolvepartM(iset,-1,x*nb_hadron
      &                         ,xmu,pdflast(-1, i_replace))
-               call evolvepart(-2,x*nb_hadron
+               call evolvepartM(iset,-2,x*nb_hadron
      &                         ,xmu,pdflast(-2, i_replace))
             else
-               call evolvepart(ipart,x*nb_hadron
+               call evolvepartM(iset,ipart,x*nb_hadron
      &                         ,xmu,pdflast(ipart, i_replace))
             endif 
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))

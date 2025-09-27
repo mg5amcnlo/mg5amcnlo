@@ -27,32 +27,34 @@ c-------------------
 c     initialize the pdf set
       call FindPDFPath(LHAPath)
       CALL SetPDFPath(LHAPath)
-      value(0)=lhaid
+      value(0)=-1
       value(1)=lhasubid(1)
       value(2)=lhasubid(2)
       value(4)=multi_lhaid_alphas_scheme ! = 0,1,2
+      nset = value(multi_lhaid_alphas_scheme)
+
       parm(0)='DEFAULT'
-      nset = multi_lhaid_alphas_scheme
+
       if (pdlabel.eq.'lhapdf') then
-c        initialize PDFs via lhapdf62.cc
-         call pdfset(parm,value)
-c        initialize alphas, etc
-         select case(multi_lhaid_alphas_scheme)
-c           pull information from PDF1,2
-         case (1,2)
-         call GetOrderAsM(multi_lhaid_alphas_scheme,nloop)
-         asmz=alphasPDF(zmass)
-         asmz=alphasPDFM(multi_lhaid_alphas_scheme,zmass)
-c           otherwise, take smaller loop order, avg of PDFs
-         !case default
-         call GetOrderAsM(1,tmpnloop(1))
-         call GetOrderAsM(2,tmpnloop(2))
+         call pdfset(parm,value) ! initialize PDFs via lhapdf62.cc
+
+         select case(multi_lhaid_alphas_scheme) ! initialize alpha_s, etc
+
+         case (1,2)     ! pull from PDF1 or PDF2
+         call GetOrderAsM(nset,nloop)     ! set nloop
+         asmz=alphasPDFM(nset,zmass)      ! set asmz
+
+         case default   ! pull from PDF1 and PDF2
+         call GetOrderAsM(lhasubid(1),tmpnloop(1))
+         call GetOrderAsM(lhasubid(2),tmpnloop(2))
          nloop=minval(tmpnloop) ! go with lower precision
-         tmpasmz(1)=alphasPDFM(1,zmass)
-         tmpasmz(2)=alphasPDFM(2,zmass)
+         tmpasmz(1)=alphasPDFM(lhasubid(1),zmass)
+         tmpasmz(2)=alphasPDFM(lhasubid(2),zmass)
          asmz=sqrt(tmpasmz(1)*tmpasmz(2))
+
          end select
          nloop=nloop+1
+
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
           stop 1
