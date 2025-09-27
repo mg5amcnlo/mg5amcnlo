@@ -1227,7 +1227,7 @@ extern "C" {
       cout  << "LHAPDF6: trying CURRENTSET=" 
             << CURRENTSET <<" for structm" << endl;
       pdf = ACTIVESETS[CURRENTSET].activeMember();
-    } catch(...)}{
+    } catch(...){
       cout  << "failed. setting CURRENTSET=0 (likely to also fail)" << endl;
       CURRENTSET = 0;
       pdf = ACTIVESETS[CURRENTSET].activeMember();
