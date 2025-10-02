@@ -3923,15 +3923,16 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 
 
-# EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
+# EVA PDF PRECISION ------------------------------------------------------------------------------------
 template_on = \
-"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
-                         ! 0 for evo by q^2; 1 for evo by pT^2
+"""     %(evaorder)s = evaorder         ! 0=EVA@LLA, 1=full LP, 2=NLP [2502.07878]
+     %(eva_xcut)s = eva_xcut         ! =1 [default] for restricting xi > MV/Ebeam
+                          ! =0 for no restriction [results of 2111.02442]
+     %(ievo_eva)s = ievo_eva         ! scale evolution for EW pdfs (eva) in LLA
+                          ! =0 for evo by q^2; =1 for evo by pT^2
 """
 template_off = ""
-eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
-
-
+eva_pdf_block = RunBlock('eva_pdf', template_on=template_on, template_off=template_off)
 
 # MLM Merging ------------------------------------------------------------------------------------
 template_on = \
@@ -4143,7 +4144,7 @@ class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
-             frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
+             frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
               pdlabel_block, fixedfacscale, running_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
@@ -4215,6 +4216,10 @@ class RunCardLO(RunCard):
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
+        self.add_param("evaorder",0,hidden=True, allowed=[0,1,2],fortran_name="evaorder",
+                        comment='eva order: 0=EVA, 1=iEVA, 2=iEVA@nlp')
+        self.add_param("eva_xcut",1,hidden=True, allowed=[0,1],fortran_name="eva_xcut",
+                        comment='eva_xcut: 1 = impose x > MV/Ebeam restriction; set to 1 (0) to recover results of [2502.07878 (2111.02442)]')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
@@ -4467,7 +4472,16 @@ class RunCardLO(RunCard):
             self['iseed'] = self['gseed']
         
         #Some parameter need to be fixed when using syscalc
-        #if self['use_syst']:
+        if self['use_syst']:
+            if (self['pdlabel1'] in ['eva']) and \
+               (self['pdlabel2'] in ['eva']):
+                # update for EVAxEVA (no pdf replicas available for EVA)
+                opts = self['systematics_arguments']
+                pdf = [a[6:] for a in opts if a.startswith('--pdf=')]                
+                if pdf==['errorset']:
+                    logger.warning('systematics.py with --pdf=errorset not supported for EVAxEVA; updating to --pdf=central')
+                    self['systematics_arguments'].remove('--pdf=errorset')
+                    self['systematics_arguments'].append('--pdf=central')
         #    if self['scalefact'] != 1.0:
         #        logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
         #        self['scalefact'] = 1.0
@@ -4523,16 +4537,16 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
-                if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
+                if self[pdlabelX] in ['eva','iww','edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
-                if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none','eva','iww'] + sum(self.allowed_lep_densities.values(),[]):
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none','chff','edff','iww']:
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
 
@@ -4594,13 +4608,13 @@ class RunCardLO(RunCard):
         if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
             for i in [1,2]:
                 if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
+                    logger.warning("Weak boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
                     if self['pdlabel'] in ['edff','chff']:
                         logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
                     else:
-                        logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
+                        logger.warning("Since 2.7.1 elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
         if six.PY2 and self['hel_recycling']:
@@ -4827,7 +4841,7 @@ class RunCardLO(RunCard):
                         self['ebeam2']  = '15k'
 
             if any(i in beam_id for i in [22,23,24,-24,12,-12,14,-14]):
-                self.display_block.append('eva_scale')
+                self.display_block.append('eva_pdf')
 
             # automatic polarisation of the beam if neutrino beam  
             if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):

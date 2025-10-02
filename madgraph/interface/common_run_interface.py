@@ -2002,7 +2002,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if 'event_norm' in self.run_card and \
                                        self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
-                
+
 
             sys_obj = systematics.call_systematics([input, None] + opts,
                                         log=lambda x: logger.info(str(x)),
@@ -2017,7 +2017,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
                             stdout=open(output,'w'),
                             cwd=os.path.dirname(output))
-                
+
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
@@ -6432,14 +6432,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception("Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\".")
             
-            # check for nhel if using eva
-            if  self.run_card['pdlabel']  == 'eva' or \
-                self.run_card['pdlabel1'] == 'eva' or \
-                self.run_card['pdlabel2'] == 'eva':
+            # check for nhel if using eva/ieva
+            if  (self.run_card['pdlabel']  in  ['eva']) or \
+                (self.run_card['pdlabel1'] in  ['eva']) or \
+                (self.run_card['pdlabel2'] in  ['eva']) :
                 logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
 
                 if self.run_card['nhel'] == 0:
-                    logger.warning("EVA mode requies MC sampling by polarization: updating run_card with nhel=1")
+                    logger.warning("EVA mode requires MC sampling by polarization: updating run_card with nhel=1")
                     self.do_set('run_card nhel 1')
 
             # check the status of small width status from LO
