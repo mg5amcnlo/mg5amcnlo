@@ -114,6 +114,7 @@ c factors. Hence, simply use the first fks_configuration.
       if (nFKSprocess.gt.fks_configs) nFKSprocess=1
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
+      call set_alphas_firsttime 
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
       call printout
