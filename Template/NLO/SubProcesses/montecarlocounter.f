@@ -615,7 +615,7 @@ c$$$
 !     and j_fks configuration. (Same as original code).
 
       
-      subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,pborn
+      subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,pborn
      $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
       use process_module
       use kinematics_module
@@ -624,11 +624,11 @@ c$$$
       include 'nexternal.inc'
       include 'fks_info.inc'
       include 'orders.inc'
-      integer k_fks,l_fks
+      integer k_fks,l_fks,i
       logical lzone(2)
-      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass
-     $     ,z(2),amp_split_xmcxsec(1:amp_split_size,2),probne
-     $     ,bogus_probne_fun
+      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass ,z(2)
+     $     ,amp_split_xmcxsec(1:amp_split_size,2),probne
+     $     ,bogus_probne_fun,p_cm(0:3,nexternal)
       external bogus_probne_fun
       double precision pmass(nexternal)
       common /to_mass/pmass
@@ -637,11 +637,13 @@ c$$$
       integer n_connect,i_connect(2),iconnect
       logical include_gfun
       mass=pmass(l_fks)
-      veckn_ev=rho(p(0,l_fks))
+      veckn_ev=rho(p_cm(0,l_fks))
       veckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
-      xp0jfks=p(0,l_fks)
-      call fill_kinematics_module(p,k_fks,l_fks,xi,y,mass,include_gfun)
+      xp0jfks=p_cm(0,l_fks)
 
+      call fill_kinematics_module(p_cm,k_fks,l_fks,xi,y,mass
+     $     ,include_gfun)
+      
 !     compute MC subtraction term for the 'kl' configuration
 
 !     find to which particle(s) fksfather connects in the colour flow
@@ -650,6 +652,7 @@ c$$$
 
 !     given the flow, loop over the (up to two) partners of the
 !     fks-father.
+
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,i_connect(iconnect)
      $        ,include_gfun,lzone(iconnect),z(iconnect)
@@ -892,88 +895,40 @@ c     positivity check
       end
       
 
-      subroutine xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,wgt)
+      subroutine compute_MCsubtraction_from_gfun(xi,y,amp_split_gfunc)
+      use kinematics_module
       implicit none
       include "nexternal.inc"
-      include "coupl.inc"
-      double precision pp(0:3,nexternal),gfactsf,gfactcl,wgt,wgts,wgtc,wgtsc
-      double precision xi_i_fks,y_ij_fks
-
+      include 'orders.inc'
       double precision zero,one
-      parameter (zero=0d0)
-      parameter (one=1d0)
-
+      parameter (zero=0d0,one=1d0)
       integer izero,ione,itwo
-      parameter (izero=0)
-      parameter (ione=1)
-      parameter (itwo=2)
-
+      parameter (izero=0,ione=1,itwo=2)
+      double precision xi,y
+      integer iFKS
+      double precision amp_split_gfunc(amp_split_size)
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision dum,amp_split_s(amp_split_size),
+     $     amp_split_c(amp_split_size),amp_split_sc(amp_split_size)
+      amp_split_gfunc(1:amp_split_size) = 0d0
+      call set_cms_stuff(izero)
+      call sreal(p1_cnt(0,1,0),zero,y,dum)
+      amp_split_s(1:amp_split_size) = amp_split(1:amp_split_size)
+      call set_cms_stuff(ione)
+      call sreal(p1_cnt(0,1,1),xi,one,dum)
+      amp_split_c(1:amp_split_size) = amp_split(1:amp_split_size)
+      call set_cms_stuff(itwo)
+      call sreal(p1_cnt(0,1,2),zero,one,dum)
+      amp_split_sc(1:amp_split_size) = amp_split(1:amp_split_size)
+      amp_split_gfunc(1:amp_split_size) = (1d0-gfactsf)
+     $     *(amp_split_s(1:amp_split_size)+(1d0-gfactcl)
+     $     *(amp_split_c(1:amp_split_size)
+     $     -amp_split_sc(1:amp_split_size)))
 
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-c     Particle types (=colour) of i_fks, j_fks and fks_mother
-      double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
-      common/cparticle_types/ch_i,ch_j,ch_m,
-     &     i_type,j_type,m_type
-
-      logical is_aorg(nexternal)
-      common /c_is_aorg/is_aorg
-!     amp split stuff
-      include 'orders.inc'
-      integer iamp
-      double precision amp_split_gfunc(amp_split_size)
-      common /to_amp_split_gfunc/amp_split_gfunc
-      double precision amp_split_s(amp_split_size), 
-     $     amp_split_c(amp_split_size), 
-     $     amp_split_sc(amp_split_size)
-      double precision pmass(nexternal)
-      include "pmass.inc"
-c     
-      wgt=0d0
-      do iamp=1, amp_split_size
-         amp_split_gfunc(iamp) = 0d0
-      enddo
-!     this contribution is needed only for i_fks being a gluon/photon
-!     (soft limit)
-      if (is_aorg(i_fks))then
-c     i_fks is gluon/photon
-         call set_cms_stuff(izero)
-         call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts)
-         do iamp=1, amp_split_size
-            amp_split_s(iamp) = amp_split(iamp)
-         enddo
-         call set_cms_stuff(ione)
-         call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc)
-         do iamp=1, amp_split_size
-            amp_split_c(iamp) = amp_split(iamp)
-         enddo
-         call set_cms_stuff(itwo)
-         call sreal(p1_cnt(0,1,2),zero,one,wgtsc)
-         do iamp=1, amp_split_size
-            amp_split_sc(iamp) = amp_split(iamp)
-         enddo
-         wgt=wgts+(1-gfactcl)*(wgtc-wgtsc)
-         wgt=wgt*(1-gfactsf)
-         do iamp = 1, amp_split_size
-            amp_split_gfunc(iamp) = amp_split_s(iamp)+(1-gfactcl)*(amp_split_c(iamp)-amp_split_sc(iamp))
-            amp_split_gfunc(iamp) = amp_split_gfunc(iamp)*(1-gfactsf)
-         enddo
-      elseif (abs(i_type).ne.3.and.ch_i.eq.0d0)then
-!     we should never get here
-         write(*,*) 'FATAL ERROR #1 in xmcsubtME',i_type,i_fks
-         stop
-      endif
-c     
       return
       end
 
@@ -1017,9 +972,9 @@ c over colour partners
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &     i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       double precision p_born(0:3,nexternal-1)
@@ -1051,7 +1006,7 @@ c     New or standard MC@NLO formulation
 
 c     Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-
+      
 c$$$  c     Distinguish ISR and FSR
 c$$$  if(ileg.le.2)then
 c$$$  delta=min(1d0,deltaI)
@@ -1079,11 +1034,11 @@ c     Shower variables
       
 c     Compute dead zones
       call get_dead_zone(z,xi,qMC,i_connect,lzone,PY6PTweight)
-
+      
 c     Compute MC subtraction terms
       if (lzone) then
          call limits(xi_i_fks,y_ij_fks)
-         call compute_spitting_kernels(xkern,xkernazi,z,xi,xjac)
+         call compute_splitting_kernels(xkern,xkernazi,z,xi,xjac)
       else
          xkern(1:2)=0d0
          xkernazi(1:2)=0d0
@@ -1276,7 +1231,7 @@ c$$$      end
 
 
 
-      subroutine compute_spitting_kernels(xkern,xkernazi,z,xi,xjac)
+      subroutine compute_splitting_kernels(xkern,xkernazi,z,xi,xjac)
       use kinematics_module
       implicit none
       double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
@@ -1285,11 +1240,14 @@ c$$$      end
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       xkern(1:2)    = 0d0
       xkernazi(1:2) = 0d0
+
+      ! TODO: check m_type, j_type, etc. when looping over k_fks and l_fks
+      
       if( (ileg.ge.3 .and.
      $     (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
      $    (ileg.le.2 .and.
@@ -1392,9 +1350,9 @@ c one can remove any reference to xi_i_fks
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1476,9 +1434,9 @@ c
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1532,9 +1490,9 @@ c
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
       s=shat_n1
@@ -1595,13 +1553,11 @@ c
       double precision vcf,one
       parameter (vcf=4d0/3d0)
       parameter (one=1d0)
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -1625,7 +1581,7 @@ c
          N_p=1
          if(non_limit)then
             xfact=xfact_ileg3(N_p)
-            if(abs(PDG_type(j_fks)).le.6)then
+            if(abs(j_pdg).le.6)then
                if(shower_mc_mod(1:8).ne.'HERWIGPP')
      &              call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
                if(shower_mc_mod(1:8).eq.'HERWIGPP')
@@ -2709,9 +2665,9 @@ c the same method
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       double precision born(nsplitorders)
       double complex borntilde(nsplitorders)
       logical split_type(nsplitorders) 
@@ -2774,7 +2730,7 @@ C check if any extra_cnt is needed
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
             else
-               write(*,*) 'ERROR in sborncol_isr', iord
+               write(*,*) 'ERROR in get_mbar', iord
                stop
             endif
         else
@@ -3884,6 +3840,7 @@ c Determine correct sign
          if(min(diff_p,diff_m)/max(abs(veckn_ev),1d0).ge.1d-3)then
             write(*,*)'Fatal error 1 in dinvariants_dFKS'
             write(*,*)mom_fks_sister_p,mom_fks_sister_m,veckn_ev
+            write (*,*) 1d0-x,yij,sqrt(xm12),sqrt(xm22)
             stop
          elseif(min(diff_p,diff_m)/max(abs(veckn_ev),1d0).ge.tiny)then
             write(*,*)'Numerical imprecision 1 in dinvariants_dFKS'
@@ -3958,6 +3915,7 @@ c Definition and initialisation of variables
       lzone=.true.
       PY6PTweight=-1d0
       max_scale=shower_scale_nbody_max(ipartner,fksfather)
+      ! TODO: fix max_scale for tests. maybe ipartner?
       do i=0,3
          pfather(i)=p_born(i,fksfather) ! father momentum (Born level)
          ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)

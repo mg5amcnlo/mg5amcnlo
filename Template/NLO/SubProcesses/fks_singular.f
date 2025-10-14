@@ -837,10 +837,11 @@ c$$$  include 'madfks_mcatnlo.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       integer nofpartners,i,k_fks,l_fks,iconnect,iFKS,n_connect
+     $     ,nFKSprocess_save
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
-     $     ,y,z(2)
+     $     ,y,z(2),p_cm(0:3,nexternal)
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -876,20 +877,27 @@ c$$$  else
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
 c$$$  endif
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
+      call boost_n1_to_its_cms(p,p_cm)
+      nFKSprocess_save=nFKSprocess
       do iFKS=1,fks_configs
-         k_fks=FKS_I_D(iFKS)
-         l_fks=FKS_J_D(iFKS)
-         if (k_fks.eq.i_fks .and. l_fks.eq.j_fks) then
+         nFKSprocess=iFKS
+         ! This sets i_fks and j_fks to correspond to the ones in
+         ! nFKSprocess (which here is iFKS).
+         call fks_inc_chooser()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+         if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
+     &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
             include_gfun=.true.
          else
             include_gfun=.false.
          endif
 !     compute kinematic variables
-         xi=get_xi_from_p(k_fks,l_fks,p)
-         y=get_yij_from_p(k_fks,l_fks,p)
-         call compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_born
+         xi=get_xi_from_p(i_fks,j_fks,p_cm)
+         y=get_yij_from_p(i_fks,j_fks,p_cm)
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
+            if (any(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
             call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
                if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
@@ -900,7 +908,7 @@ c$$$  endif
                orders_tag=get_orders_tag(orders)
                amp_pos=iamp
                g22=g**(QCD_power)
-               if (iFKS.eq.nFKSprocess) then
+               if (nFKSprocess.eq.nFKSprocess_save) then
                   wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
      &                 amp_split_xmcxsec(iamp,iconnect)/g22
                   call add_wgt(12,orders,wgt1,0d0,0d0)
@@ -911,6 +919,9 @@ c$$$  endif
             enddo
          enddo
       enddo
+      nFKSprocess=nFKSprocess_save
+      call fks_inc_chooser()
+      call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
       
 c$$$  call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
 c$$$  $     ,lzone,z_shower,nofpartners,xmcxsec)
@@ -3918,8 +3929,6 @@ c
       return
       end
 
-
-
       subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt)
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
 c squared reduced by the FKS damping factor xi**2*(1-y).
@@ -3928,9 +3937,12 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-
-      double precision pp(0:3,nexternal),wgt
-      double precision xi_i_fks,y_ij_fks
+      include "fks_info.inc"
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
+      double precision wgt
+      
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 
       double precision shattmp,dot
       integer i,j
@@ -3949,7 +3961,7 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       parameter (zero=0d0)
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
-
+      
       double precision pmass(nexternal)
       include 'orders.inc'
 
@@ -4002,7 +4014,7 @@ c has soft singularities
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
          amp_split(1:amp_split_size) = amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
-
+      
       return
       end
 
@@ -4046,13 +4058,13 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
 
-      double precision zero,vtiny
+      double precision zero,vtiny,tiny
       parameter (zero=0d0)
-      parameter (vtiny=1d-8)
+      parameter (vtiny=1d-8,tiny=1d-6)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
@@ -4068,6 +4080,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
 
       double precision iden_comp
       common /c_iden_comp/iden_comp
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 C  
       amp_split_local(1:amp_split_size) = 0d0
       
@@ -4103,6 +4117,11 @@ C check if any extra_cnt is needed
                call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
+               if (nlo_ps) then
+                  write (*,*) "Cannot have both QCD and EW "/
+     $                 /"corrections when matching to shower"
+                  stop 1
+               endif
             else
                write(*,*) 'ERROR in sborncol_fsr', iord
                stop
@@ -4120,12 +4139,12 @@ C check if any extra_cnt is needed
          elseif (m_type.eq.8.or.ch_m.eq.0d0) then
 c Insert <ij>/[ij] which is not included by sborn()
             if (1d0-y_ij_fks.lt.vtiny)then
+               ! This should happen only when S_ij=S_kl, so we can use
+               ! analytic form here (otherwise, damped by S-function). 
                azifact=xij_aor
             else
-               do i=0,3
-                  pi(i)=p_i_fks_ev(i)
-                  pj(i)=p(i,j_fks)
-               enddo
+               pi(0:3)=p_i_fks_ev(0:3)
+               pj(0:3)=p(0:3,j_fks)
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
                CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
                CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
@@ -4208,9 +4227,9 @@ C
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
 
       integer i, j, iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
@@ -4219,9 +4238,9 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
       double complex azifact
 
-      double precision zero,vtiny
+      double precision zero,vtiny,tiny
       parameter (zero=0d0)
-      parameter (vtiny=1d-8)
+      parameter (vtiny=1d-8,tiny=1d-6)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
@@ -4242,6 +4261,8 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
 
       logical use_evpr
       common /to_use_evpr/use_evpr
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
 C  
       amp_split_local(1:amp_split_size) = 0d0
 
@@ -4249,7 +4270,12 @@ C in the case of the collinear CT, use p_born_coll
 C  (when not doing event projection). 
 C For the soft-collinear one, use p_born
       if (xi_i_fks.gt.0d0.and..not.use_evpr) then
-          p_born_used(:,:) = p_born_coll(:,:)
+         p_born_used(:,:) = p_born_coll(:,:)
+         if (nlo_ps) then
+            write (*,*) "Must do  event projection when "/
+     $           /"matching to shower"
+            stop 1
+         endif
       else ! if (xi_i_fks.eq.0d0) then
           p_born_used(:,:) = p_born(:,:)
       endif
@@ -4282,6 +4308,11 @@ C check if any extra_cnt is needed
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born_used, iextra_cnt, ans_extra_cnt)
                wgt1(1:2) = ans_extra_cnt(1:2,iord)
+               if (nlo_ps) then
+                  write (*,*) "Cannot have both QCD and EW "/
+     $                 /"corrections when matching to shower"
+                  stop 1
+               endif
             else
                write(*,*) 'ERROR in sborncol_isr', iord
                stop
@@ -4302,12 +4333,12 @@ C check if any extra_cnt is needed
         else
 c Insert <ij>/[ij] which is not included by sborn()
            if (1d0-y_ij_fks.lt.vtiny)then
+               ! This should happen only when S_ij=S_kl, so we can use
+               ! analytic form here (otherwise, damped by S-function).
               azifact=xij_aor
            else
-              do i=0,3
-                 pi(i)=p_i_fks_ev(i)
-                 pj(i)=p(i,j_fks)
-              enddo
+              pi(0:3)=p_i_fks_ev(0:3)
+              pj(0:3)=p(0:3,j_fks)
               if(j_fks.eq.2 .and. nincoming.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed
@@ -4877,7 +4908,8 @@ c part2==colour(i_fks)
 
       include "coupl.inc"
       write(*,*) 'FIX AP REDUCED SUSY'
-
+      stop 1
+      
       if (col2.ne.8.and.ch2.ne.0d0)then
          write (*,*) 'Fatal error #0 in AP_reduced_SUSY',col1,col2,ch1,ch2
          stop
@@ -4924,6 +4956,7 @@ c fraction of the energy of part1 and t is the invariant mass of the mother.
 
       include "coupl.inc"
       write(*,*) 'FIX AP REDUCED MASSIVE'
+      stop 1
 
       if (col1.eq.8 .and. col2.eq.8)then
 c g->gg splitting
@@ -4968,6 +5001,7 @@ c      include "fks.inc"
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "coupl.inc"
+      include "fks_info.inc"
 
       integer m,n
 
@@ -5013,7 +5047,8 @@ C Reset the amp_split array
             n=fks_j_from_i(i_fks,j)
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
-C wgt includes the gs/w^2 
+C     wgt includes the gs/w^2
+
                call sborn_sf(p_born,m,n,wgt)
                if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
@@ -5069,26 +5104,26 @@ c Define the reduced momentum for i_fks
       softcol=0
       if (1d0-y_ij_fks.lt.tiny)softcol=2
       if(p_i_fks_cnt(0,softcol).lt.0d0)then
-        if(xi_i_fks.eq.0.d0)then
-           write (*,*) 'Error #1 in eikonal_reduced',
-     #                 softcol,xi_i_fks,y_ij_fks
-           stop
-        endif
-        if(pp(0,i_fks).ne.0.d0)then
-          write(*,*)'WARNING in eikonal_reduced: no cnt momenta',
-     #      softcol,xi_i_fks,y_ij_fks
-          do i=0,3
-            phat_i_fks(i)=pp(i,i_fks)/xi_i_fks
-          enddo
-        else
-          write (*,*) 'Error #2 in eikonal_reduced',
-     #                 softcol,xi_i_fks,y_ij_fks
-          stop
-        endif
+         if(xi_i_fks.eq.0.d0)then
+            write (*,*) 'Error #1 in eikonal_reduced', softcol,xi_i_fks
+     $           ,y_ij_fks
+            stop
+         endif
+         if(pp(0,i_fks).ne.0.d0)then
+            write(*,*)'WARNING in eikonal_reduced: no cnt momenta',
+     $           softcol,xi_i_fks,y_ij_fks
+            do i=0,3
+               phat_i_fks(i)=pp(i,i_fks)/xi_i_fks
+            enddo
+         else
+            write (*,*) 'Error #2 in eikonal_reduced', softcol,xi_i_fks
+     $           ,y_ij_fks
+            stop
+         endif
       else
-        do i=0,3
-          phat_i_fks(i)=p_i_fks_cnt(i,softcol)
-        enddo
+         do i=0,3
+            phat_i_fks(i)=p_i_fks_cnt(i,softcol)
+         enddo
       endif
 c Calculate the eikonal factor
       dotnm=dot(pp(0,n),pp(0,m))
@@ -5156,9 +5191,9 @@ c Calculate the eikonal factor
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
       common /c_born_cnt/ ans_cnt
       logical split_type(nsplitorders) 
@@ -5701,7 +5736,8 @@ c When the test is not passed, one may choose to stop the program dead here;
 c in such a case, set istop=1 below. Each time the test is not passed,
 c the results are written onto fort.77; set iwrite=0 to prevent the writing
       implicit none
-      integer iflag,imax,iev,nexternal,i_fks,j_fks,iret,ithrs,istop,
+      integer,intent(in) :: imax
+      integer iflag,iev,nexternal,i_fks,j_fks,iret,ithrs,istop,
      $     iwrite,i,k,l,imin,icount
       real*8 xsecvc(imax),xseclvc,wgt(imax),wgtl,lxp(0:3,nexternal+1)
      $     ,xp(0:3,nexternal+1,imax)
@@ -7100,12 +7136,12 @@ c
      &     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
      &     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
      &     ,nphotons_FKS(fks_configs),iden_real_FKS(fks_configs)
-     &     ,iden_born_FKS(fks_configs)
+     &     ,iden_born_FKS(fks_configs),j_pdg_FKS(fks_configs)
       double precision ch_i_FKS(fks_configs),ch_j_FKS(fks_configs)
      &     ,ch_m_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
      &     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS,nphotons_FKS
-     &     ,iden_real_FKS,iden_born_FKS
+     &     ,iden_real_FKS,iden_born_FKS,j_pdg_FKS
 
       character*13 filename
 
@@ -7117,9 +7153,9 @@ c
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type
+      integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type
+     &                       i_type,j_type,m_type,j_pdg
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
@@ -7279,13 +7315,15 @@ c Set color types of i_fks, j_fks and fks_mother.
          j_type=particle_type(j_fks)
          ch_i=particle_charge(i_fks)
          ch_j=particle_charge(j_fks)
-         call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
+         call get_mother_col_charge(i_fks,j_fks,i_type,ch_i,j_type,ch_j
+     $        ,m_type,ch_m) 
          i_type_FKS(nFKSprocess)=i_type
          j_type_FKS(nFKSprocess)=j_type
          m_type_FKS(nFKSprocess)=m_type
          ch_i_FKS(nFKSprocess)=ch_i
          ch_j_FKS(nFKSprocess)=ch_j
          ch_m_FKS(nFKSprocess)=ch_m
+         j_pdg_FKS(nFKSprocess)=pdg_type(j_fks)
 
 c Compute the identical particle symmetry factor that is in the
 c real-emission matrix elements.
@@ -7330,6 +7368,7 @@ c Born matrix elements.
       ch_i=ch_i_FKS(nFKSprocess)
       ch_j=ch_j_FKS(nFKSprocess)
       ch_m=ch_m_FKS(nFKSprocess)
+      j_pdg=j_pdg_FKS(nFKSprocess)
 
 c Compensating factor needed in the soft & collinear counterterms for
 c the fact that the identical particle symmetry factor in the Born
@@ -7801,3 +7840,20 @@ c     reset the default dynamical_scale_choice
       end
   
       
+      subroutine update_coltype_and_charge(iFKS,i_fks,j_fks)
+      implicit none
+      include 'nexternal.inc'
+      include 'fks_info.inc'
+      integer iFKS,i_fks,j_fks
+      double precision       ch_i,ch_j,ch_m
+      integer                i_type,j_type,m_type,j_pdg
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type,j_pdg
+      i_type=particle_type_d(iFKS,i_fks)
+      j_type=particle_type_d(iFKS,j_fks)
+      ch_i=particle_charge_d(iFKS,i_fks)
+      ch_j=particle_charge_d(iFKS,j_fks)
+      call get_mother_col_charge(i_fks,j_fks,i_type,ch_i,j_type,ch_j
+     $     ,m_type,ch_m)
+      j_pdg=pdg_type_d(iFKS,j_fks)
+      end

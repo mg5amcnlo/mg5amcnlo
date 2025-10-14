@@ -158,7 +158,8 @@ c
             ch_i=particle_charge(i_fks)
             ch_j=particle_charge(j_fks)
             particle_tag_born(i) = particle_tag(j_fks)
-            call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
+            call get_mother_col_charge(i_fks,j_fks,i_type,ch_i,j_type
+     $           ,ch_j,m_type,ch_m) 
             particle_type_born(i)=m_type
             particle_charge_born(i)=ch_m
          elseif (i.ne.max(i_fks,j_fks)) then
@@ -384,8 +385,8 @@ c born_leshouche.inc file.
       end
 
 
-      subroutine get_mother_col_charge(i_type, ch_i, j_type, ch_j,
-     $     m_type, ch_m)
+      subroutine get_mother_col_charge(i_fks,j_fks,i_type, ch_i, j_type,
+     $     ch_j,m_type,ch_m)
 C Given the type (color representation) and charges of i and j, return
 C the type and charges of the mother particle
       implicit none
@@ -393,8 +394,6 @@ C the type and charges of the mother particle
       double precision ch_i, ch_j, ch_m
       include 'nexternal.inc'
       integer i_fks,j_fks
-
-      common/fks_indices/i_fks,j_fks
 
       if (abs(i_type).eq.abs(j_type) .and. 
      &    abs(ch_i).eq.abs(ch_j) .and. 
