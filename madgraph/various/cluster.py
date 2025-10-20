@@ -663,7 +663,7 @@ class MultiCore(Cluster):
             try:
                 args = self.queue.get(timeout=10)
                 tag, exe, arg, opt = args
-                opt['env'] = env2
+                #opt['env'] = env2
                 try:
                     # check for executable case
                     if isinstance(exe,str):
