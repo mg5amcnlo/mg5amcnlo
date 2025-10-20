@@ -1553,9 +1553,9 @@ contains
 
 
 
-  subroutine gen(fun,gen_mode,vn,x)
+  subroutine gen(fun,gen_mode,vn,x,ne)
     implicit none
-    integer :: vn,gen_mode
+    integer :: vn,gen_mode,ne
     logical :: found_point
     double precision, external :: fun
     double precision, dimension(ndimmax) :: x
@@ -1575,8 +1575,8 @@ contains
        endif
        call compute_integrand(fun,x,vol)
        call increase_gen_counters_middle(vn)
-       call check_upper_bound(vn,found_point)
-       if (.not.found_point) goto 10
+       call check_upper_bound(vn,found_point,ne)
+       if (ne.eq.0) goto 10
        call increase_gen_counters_end(vn)
     else
        write (*,*) "Unknown gen_mode in gen (from mint_module)",gen_mode
@@ -1620,11 +1620,12 @@ contains
     endif
   end subroutine increase_gen_counters_end
 
-  subroutine check_upper_bound(vn,found_point)
+  subroutine check_upper_bound(vn,found_point,ne)
     implicit none
     logical :: found_point
-    integer :: vn
-    if (f(1).gt.upper_bound) then
+    integer :: vn,ne
+    ne=0
+    do while (f(1).gt.upper_bound)
        if (vn.eq.2) then
           gen_counters(7)=gen_counters(7)+1
        elseif (vn.eq.1) then
@@ -1632,13 +1633,16 @@ contains
        elseif(vn.eq.3) then
           gen_counters(9)=gen_counters(9)+1
        endif
-    endif
+       ne=ne+1
+       f(1)=f(1)-upper_bound
+    enddo
     upper_bound=upper_bound*ran3(.false.)
     if (upper_bound.gt.f(1)) then
        gen_counters(10)=gen_counters(10)+1
        found_point=.false.
     else
        found_point=.true.
+       ne=ne+1
     endif
   end subroutine check_upper_bound
   

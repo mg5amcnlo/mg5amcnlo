@@ -1,4 +1,4 @@
-      subroutine finalize_event(xx,weight,lunlhe,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,putonshell,ne)
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -8,7 +8,7 @@
       include 'timing_variables.inc'
       logical Hevents
       common/SHevents/Hevents
-      integer i,j,lunlhe
+      integer i,j,lunlhe,ne
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
@@ -83,7 +83,7 @@ c Put the Hevent info in a common block
 
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale,shower_scale_a,ickkw,x)
+     $     ,shower_scale,shower_scale_a,ickkw,x,ne)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -155,7 +155,7 @@ c get info on beam and PDFs
       end
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
-     $     ,shower_scale_a,ickkw,x)
+     $     ,shower_scale_a,ickkw,x,ne)
       use extra_weights
       use mint_module
       implicit none
@@ -163,7 +163,7 @@ c get info on beam and PDFs
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
       double precision p(0:4,2*nexternal-3),wgt
-      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
+      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw,ne
       double precision pi,zero,x(99)
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
@@ -293,9 +293,11 @@ c********************************************************************
          VTIMUP(i)=0.d0
          SPINUP(i)=dfloat(ic(7,i))
       enddo
+      do i=1,ne
       call write_lhef_event(lunlhe,
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,buff2,SCALUP_a)
+      enddo
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
       end

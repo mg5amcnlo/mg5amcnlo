@@ -19,7 +19,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,nndim,nevts
+      integer i,j,k,l,l1,l2,nndim,nevts,ne
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -283,27 +283,29 @@ c fill the information for the write_header_init common block
 
          write (*,*) 'imode is ',imode
          vn=-1
-         call gen(sigintF,0,vn,x)
-         do j=1,ncalls0
+         call gen(sigintF,0,vn,x,ne)
+         j=1
+         do while (j.le.ncalls0)
             if (abrv(1:4).eq.'born') then
                vn=3
-               call gen(sigintF,1,vn,x)
+               call gen(sigintF,1,vn,x,ne)
             else
                if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
-                     call gen(sigintF,1,vn,x)
+                     call gen(sigintF,1,vn,x,ne)
                   else
                      vn=1
-                     call gen(sigintF,1,vn,x)
+                     call gen(sigintF,1,vn,x,ne)
                   endif
                else
                   abrv='novi'
                   vn=2
-                  call gen(sigintF,1,vn,x)
+                  call gen(sigintF,1,vn,x,ne)
                endif
             endif
+            ne=min(ne,ncalls0-j+1)
 c Randomly pick the contribution that will be written in the event file
             call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
@@ -313,11 +315,12 @@ c Randomly pick the contribution that will be written in the event file
             endif
             call fill_rwgt_lines
             call finalize_event(x_save(1,ifold_picked),weight,lunlhe
-     $           ,putonshell)
+     $           ,putonshell,ne)
+            j=j+ne
          enddo
          call deallocate_weight_lines
          vn=-1
-         call gen(sigintF,3,vn,x) ! print counters generation efficiencies
+         call gen(sigintF,3,vn,x,ne) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
