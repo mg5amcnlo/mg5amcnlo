@@ -670,6 +670,9 @@ c$$$
          endif
          amp_split_xmcxsec(1:amp_split_size,1:2)=amp_split_xmcxsec(
      $        1:amp_split_size,1:2)*probne
+     $        /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they
+                               ! should not depend on 'kl', but rather
+                               ! on 'ij'
       else
          amp_split_xmcxsec(1:amp_split_size,1:2)=0d0
       endif
@@ -928,7 +931,8 @@ c     positivity check
      $     *(amp_split_s(1:amp_split_size)+(1d0-gfactcl)
      $     *(amp_split_c(1:amp_split_size)
      $     -amp_split_sc(1:amp_split_size)))
-
+     $     /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they should
+                            ! not depend on 'kl', but rather on 'ij'
       return
       end
 

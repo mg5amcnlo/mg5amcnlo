@@ -21,41 +21,7 @@ contains
     double precision :: s,t,u,y
     double precision,dimension(0:3,3) :: p_cm
     get_xi_from_p=sqrt(2d0)*p(0,i_fks)/sqrt(dot(p(0,1),p(0,2)))
-!!$    ! check if incoming have same energy; if so, these momenta were
-!!$    ! generated with a final-state j_fks.
-!!$    if (abs(p(0,1)-p(0,2))/(p(0,1)+p(0,2)).lt.1d-10 .and. j_fks.gt.3) then
-!!$    ! If the input j_fks (argument of this function) is also final
-!!$    ! state, we can compute xi directly from the momenta:
-!!$    else
-!!$       ! either momenta were generated with initial state j_fks,
-!!$       ! and/or the input j_fks to this routine is initial state
-!!$       if (j_fks.eq.1) then
-!!$          s= 2d0*dot(p(0,1),p(0,2))
-!!$          t=-2d0*dot(p(0,1),p(0,i_fks))
-!!$          u=-2d0*dot(p(0,2),p(0,i_fks))
-!!$          get_xi_from_p=-(t+u)/s
-!!$!          y=(u-t)/(t+u)
-!!$       elseif (j_fks.eq.2) then
-!!$          s= 2d0*dot(p(0,1),p(0,2))
-!!$          t=-2d0*dot(p(0,2),p(0,i_fks))
-!!$          u=-2d0*dot(p(0,1),p(0,i_fks))
-!!$          get_xi_from_p=-(t+u)/s
-!!$       else
-!!$          ! boost to cm frame
-!!$          y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
-!!$          call boostz(p(0,1),y,p_cm(0,1))
-!!$          call boostz(p(0,2),y,p_cm(0,2))
-!!$          call boostz(p(0,i_fks),y,p_cm(0,3))
-!!$          write (*,*) 'p_cm from get_xi'
-!!$          write (*,*) p_cm(0:3,1)
-!!$          write (*,*) p_cm(0:3,2)
-!!$          write (*,*) p_cm(0:3,3)
-!!$          get_xi_from_p=sqrt(2d0)*p_cm(0,3)/sqrt(dot(p_cm(0,1),p_cm(0,2)))
-!!$       endif
-!!$    endif
-!!$    write (*,*) 'get_xi_from_p',get_xi_from_p
   end function get_xi_from_p
-
   subroutine boost_n1_to_its_cms(p,p_cm)
     implicit none
     double precision,dimension(0:3,next_n1),intent(in) :: p
@@ -67,7 +33,6 @@ contains
        call boostz(p(0,i),y,p_cm(0,i))
     enddo
   end subroutine boost_n1_to_its_cms
-  
   double precision function get_yij_from_p(i_fks,j_fks,p)
     implicit none
     integer :: i_fks,j_fks
@@ -90,37 +55,6 @@ contains
        pj(0:3)=p(0:3,j_fks)
     endif
     get_yij_from_p=dot3(pi(0),pj(0))/(rho(pi(0))*rho(pj(0)))
-!!$    ! check if incoming have same energy; if so, these momenta were
-!!$    ! generated with a final-state j_fks.
-!!$    if (abs(p(0,1)-p(0,2))/(p(0,1)+p(0,2)).lt.tiny .and. j_fks.gt.3) then
-!!$       ! If the input j_fks (argument of this function) is also final
-!!$       ! state, we can compute xi directly from the momenta:
-!!$    else
-!!$       ! either momenta were generated with initial state j_fks,
-!!$       ! and/or the input j_fks to this routine is initial state
-!!$       if (j_fks.eq.1) then
-!!$          t=-2d0*dot(p(0,1),pi(0))
-!!$          u=-2d0*dot(p(0,2),pi(0))
-!!$          get_yij_from_p=(u-t)/(t+u)
-!!$       elseif (j_fks.eq.2) then
-!!$          t=-2d0*dot(p(0,2),pi(0))
-!!$          u=-2d0*dot(p(0,1),pi(0))
-!!$          get_yij_from_p=(u-t)/(t+u)
-!!$       else
-!!$          ! boost to cm frame
-!!$          y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
-!!$          write (*,*) 'get_yij_from_p',y
-!!$          if ((p(0,i_fks).lt.tiny .or. p(0,j_fks).lt.tiny) .and. abs(y).gt.tiny2) then
-!!$             write (*,*) 'non-zero boost in soft limit',y
-!!$             write (*,*) p(0:3,i_fks)
-!!$             write (*,*) p(0:3,j_fks)
-!!$             stop 1
-!!$          endif
-!!$          call boostz(pi(0),y,p_cm(0,1))
-!!$          call boostz(pj(0),y,p_cm(0,2))
-!!$          get_yij_from_p=dot3(p_cm(0,1),p_cm(0,2))/(rho(p_cm(0,1))*rho(p_cm(0,2)))
-!!$       endif
-!!$    endif
   end function get_yij_from_p
   double precision function dot3(p1,p2)
     implicit none

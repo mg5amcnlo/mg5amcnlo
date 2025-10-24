@@ -901,6 +901,9 @@ c$$$  endif
             call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
                if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
+!     re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
+               amp_split_xmcxsec(iamp,iconnect)= amp_split_xmcxsec(iamp
+     $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
                wgtcpower=0d0

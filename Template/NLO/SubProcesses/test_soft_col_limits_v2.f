@@ -284,7 +284,9 @@ c dump momenta in a fort.80 file
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer ilim,iamp,idum
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer ilim,iamp,idum,nFKSprocess_save,iFKS
       double precision wgt,x(99),born_flow_factor,p(0:3,nexternal),fx
      $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1)
       logical                calculatedBorn
@@ -292,6 +294,10 @@ c dump momenta in a fort.80 file
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
 
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
@@ -300,10 +306,22 @@ c dump momenta in a fort.80 file
       if (ilim.eq.2) then
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
       elseif (ilim.eq.1) then
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         do iamp=1,amp_split_size
-            amp(iamp) = amp_split(iamp)*born_flow_factor
+         amp=0d0
+         nFKSprocess_save=nFKSprocess
+         do iFKS=1,fks_configs
+            nFKSprocess=iFKS
+            call fks_inc_chooser()
+            call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+            if ( i_fks.ne.FKS_I_D(nFKSprocess_save) .or.
+     &           j_fks.ne.FKS_J_D(nFKSprocess_save) ) cycle
+            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+            do iamp=1,amp_split_size
+               amp(iamp) = amp(iamp)+amp_split(iamp)*born_flow_factor
+            enddo
          enddo
+         nFKSprocess=nFKSprocess_save
+         call fks_inc_chooser()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          call compute_MC_subt_term_test(p,born_flow_factor)
          do iamp=1,amp_split_size
             if (amp_split(iamp).ne.0d0) then
@@ -441,6 +459,7 @@ c dump momenta in a fort.80 file
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
      &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
+c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
             include_gfun=.true.
          else
             include_gfun=.false.
@@ -465,7 +484,9 @@ c dump momenta in a fort.80 file
       call fks_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
       ! Set amp_split to amp_split_mc (see comment above)
-      amp_split=amp_split_mc
+      xi=get_xi_from_p(i_fks,j_fks,p_cm) ! these correspond to ij, not kl
+      y=get_yij_from_p(i_fks,j_fks,p_cm)
+      amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
       end
       
 
