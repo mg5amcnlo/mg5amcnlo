@@ -220,10 +220,10 @@ class CmdExtended(cmd.Cmd):
                                 bzrversion)
         elif os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
             logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
-            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
-            info_line += "\033[1;31m#*          WARNING: UNKNOWN DEVELOPMENT VERSION.           *\033[1;0m\n"
-            info_line += "\033[1;31m#*            WARNING: DO NOT USE FOR PRODUCTION            *\033[1;0m\n"
-            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
+            info_line += "#*%s*\n" % (' '*58)
+            info_line += "#*          WARNING: UNKNOWN DEVELOPMENT VERSION.           *\n"
+            info_line += "#*            WARNING: DO NOT USE FOR PRODUCTION            *\n"
+            info_line += "#*%s*\n" % (' '*58)
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
