@@ -57,6 +57,15 @@ MODULE ElasticPhotonPhotonFlux
   INTEGER,PRIVATE,SAVE::nuclearA_beam1,nuclearA_beam2,nuclearZ_beam1,nuclearZ_beam2
   ! energy in GeV per nucleon in each beam
   REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam_PN
+  ! minimal energies (GeV) to be integrated in neutron tagging (in target frame)
+  ! Emin_Xn, Emin_1n, Emin_2n, Emin_3n, Emin_4n
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emin_Xn=5d-3, Emin_1n=5d-3, Emin_2n=1d-2
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emin_3n=1.5d-2, Emin_4n=2d-2
+  ! maximal energies (GeV) to be integrated in neutron tagging (in target frame)
+  ! if it is 0, it means we take all possible energies (xgamma up to unity)
+  ! Emax_Xn, Emax_1n, Emax_2n, Emax_3n, Emax_4n
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_Xn=0d0, Emax_1n=2d-1, Emax_2n=2d-1
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_3n=2d-1, Emax_4n=2d-1
 CONTAINS
   FUNCTION PNOHAD_pp(bx,by,b0)
     ! the probability of no hardonic interaction at impact b=(bx,by)
@@ -1856,7 +1865,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2259,7 +2268,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2707,7 +2716,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -3121,7 +3130,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -3559,7 +3568,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4076,7 +4085,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4479,7 +4488,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4924,7 +4933,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5503,7 +5512,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5546,7 +5555,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5785,7 +5794,7 @@ CONTAINS
     ! P^{Xn,(1)}
     IF(in2.NE.-2.OR.conj_sum)THEN
        PXn_LO_proj1=PbreakXn_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-            RA_save(1),wVal_save(1),aaVal_save(1),1d-3,0d0,1)
+            RA_save(1),wVal_save(1),aaVal_save(1),Emin_Xn,Emax_Xn,1)
        PXn_LO_proj1=PXn_LO_proj1*Z_save(1)**2*alpha
        P0n_proj1=DEXP(-PXn_LO_proj1)
        IF(in2.EQ.-1.OR.(conj_sum.AND.in1.EQ.-1))THEN
@@ -5810,7 +5819,7 @@ CONTAINS
        IF(in2.EQ.1.OR.(conj_sum.AND.in1.EQ.1))THEN
           ! 1n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P1n_proj1=P1n_LO_proj1*P0n_proj1
           IF(in2.EQ.1)THEN
@@ -5823,10 +5832,10 @@ CONTAINS
        IF(in2.EQ.2.OR.(conj_sum.AND.in1.EQ.2))THEN
           ! 2n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P2n_proj1=(P1n_LO_proj1**2/2d0+P2n_LO_proj1)*P0n_proj1
           IF(in2.EQ.2)THEN
@@ -5839,13 +5848,13 @@ CONTAINS
        IF(in2.EQ.3.OR.(conj_sum.AND.in1.EQ.3))THEN
           ! 3n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P3n_LO_proj1=Pbreak3n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),2.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_3n,Emax_3n,1)
           P3n_LO_proj1=P3n_LO_proj1*Z_save(1)**2*alpha
           P3n_proj1=(P1n_LO_proj1**3/6d0+P1n_LO_proj1*P2n_LO_proj1+P3n_LO_proj1)*P0n_proj1
           IF(in2.EQ.3)THEN
@@ -5858,16 +5867,16 @@ CONTAINS
        IF(in2.EQ.4.OR.(conj_sum.AND.in1.EQ.4))THEN
           ! 4n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P3n_LO_proj1=Pbreak3n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),2.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_3n,Emax_3n,1)
           P3n_LO_proj1=P3n_LO_proj1*Z_save(1)**2*alpha
           P4n_LO_proj1=Pbreak4n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),3.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_4n,Emax_4n,1)
           P4n_LO_proj1=P4n_LO_proj1*Z_save(1)**2*alpha
           P4n_proj1=(P1n_LO_proj1**4/24d0+P1n_LO_proj1**2*P2n_LO_proj1/2d0&
                +P1n_LO_proj1*P3n_LO_proj1+P2n_LO_proj1**2/2d0+P4n_LO_proj1)*P0n_proj1
@@ -5882,7 +5891,7 @@ CONTAINS
     ! For in1, projectile is beam 2 and target is beam 1
     IF(in1.NE.-2.OR.conj_sum)THEN
        PXn_LO_proj2=PbreakXn_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-            RA_save(2),wVal_save(2),aaVal_save(2),1d-3,0d0,2)
+            RA_save(2),wVal_save(2),aaVal_save(2),Emin_Xn,Emax_Xn,2)
        PXn_LO_proj2=PXn_LO_proj2*Z_save(2)**2*alpha
        P0n_proj2=DEXP(-PXn_LO_proj2)
        IF(in1.EQ.-1.OR.(conj_sum.AND.in2.EQ.-1))THEN
@@ -5907,7 +5916,7 @@ CONTAINS
        IF(in1.EQ.1.OR.(conj_sum.AND.in2.EQ.1))THEN
           ! 1n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P1n_proj2=P1n_LO_proj2*P0n_proj2
           IF(in1.EQ.1)THEN
@@ -5920,10 +5929,10 @@ CONTAINS
        IF(in1.EQ.2.OR.(conj_sum.AND.in2.EQ.2))THEN
           ! 2n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P2n_proj2=(P1n_LO_proj2**2/2d0+P2n_LO_proj2)*P0n_proj2
           IF(in1.EQ.2)THEN
@@ -5936,13 +5945,13 @@ CONTAINS
        IF(in1.EQ.3.OR.(conj_sum.AND.in2.EQ.3))THEN
           ! 3n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P3n_LO_proj2=Pbreak3n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),2.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_3n,Emax_3n,2)
           P3n_LO_proj2=P3n_LO_proj2*Z_save(2)**2*alpha
           P3n_proj2=(P1n_LO_proj2**3/6d0+P1n_LO_proj2*P2n_LO_proj2+P3n_LO_proj2)*P0n_proj2
           IF(in1.EQ.3)THEN
@@ -5955,16 +5964,16 @@ CONTAINS
        IF(in1.EQ.4.OR.(conj_sum.AND.in2.EQ.4))THEN
           ! 4n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P3n_LO_proj2=Pbreak3n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),2.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_3n,Emax_3n,2)
           P3n_LO_proj2=P3n_LO_proj2*Z_save(2)**2*alpha
           P4n_LO_proj2=Pbreak4n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),3.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_4n,Emax_4n,2)
           P4n_LO_proj2=P4n_LO_proj2*Z_save(2)**2*alpha
           P4n_proj2=(P1n_LO_proj2**4/24d0+P1n_LO_proj2**2*P2n_LO_proj2/2d0&
                +P1n_LO_proj2*P3n_LO_proj2+P2n_LO_proj2**2/2d0+P4n_LO_proj2)*P0n_proj2
@@ -6074,7 +6083,7 @@ CONTAINS
     ENDIF
 
     Pbreak_pA_WoodsSaxon=1d0
-    PXn_LO_proj1=PbreakXn_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,0d0)
+    PXn_LO_proj1=PbreakXn_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_Xn,Emax_Xn)
     PXn_LO_proj1=PXn_LO_proj1*alpha
     P0n_proj1=DEXP(-PXn_LO_proj1)
     IF(in2.EQ.-1)THEN
@@ -6086,37 +6095,37 @@ CONTAINS
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P0n_proj1
     ELSEIF(in2.EQ.1)THEN
        ! 1n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
        P1n_proj1=P1n_LO_proj1*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P1n_proj1
     ELSEIF(in2.EQ.2)THEN
        ! 2n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
        P2n_proj1=(P1n_LO_proj1**2/2d0+P2n_LO_proj1)*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P2n_proj1
     ELSEIF(in2.EQ.3)THEN
        ! 3n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
-       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,2.2d-2,1.4d-1)
+       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_3n,Emax_3n)
        P3n_LO_proj1=P3n_LO_proj1*alpha
        P3n_proj1=(P1n_LO_proj1**3/6d0+P1n_LO_proj1*P2n_LO_proj1+P3n_LO_proj1)*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P3n_proj1
     ELSEIF(in2.EQ.4)THEN
        ! 4n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
-       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,2.2d-2,1.4d-1)
+       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_3n,Emax_3n)
        P3n_LO_proj1=P3n_LO_proj1*alpha
-       P4n_LO_proj1=Pbreak4n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,3.2d-2,1.4d-1)
+       P4n_LO_proj1=Pbreak4n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_4n,Emax_4n)
        P4n_LO_proj1=P4n_LO_proj1*alpha
        P4n_proj1=(P1n_LO_proj1**4/24d0+P1n_LO_proj1**2*P2n_LO_proj1/2d0&
             +P1n_LO_proj1*P3n_LO_proj1+P2n_LO_proj1**2/2d0+P4n_LO_proj1)*P0n_proj1
