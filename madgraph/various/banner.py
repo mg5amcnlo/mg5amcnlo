@@ -3773,13 +3773,14 @@ class PDLabelBlock(RunBlock):
     def check_validity(self, card):
         """check which template is active and fill the parameter in the inactive one. """
 
+        upclabels=['edff','chff']
+        # neutron forward taggings
+        for y in ['i','x','0','1','2','3','4']:
+            for z in ['i','x','0','1','2','3','4']:
+                upclabels.append('edf'+y+'n'+z+'n')
+                upclabels.append('chf'+y+'n'+z+'n')
+                
         if self.status(card):
-            upclabels=['edff','chff']
-            # neutron forward taggings
-            for y in ['i','x','0','1','2','3','4']:
-                for z in ['i','x','0','1','2','3','4']:
-                    upclabels.append('edf'+y+'n'+z+'n')
-                    upclabels.append('chf'+y+'n'+z+'n')
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
             elif card['pdlabel1'] in upclabels or card['pdlabel2'] in upclabels:
@@ -3813,7 +3814,48 @@ class PDLabelBlock(RunBlock):
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
         if abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
-            raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
+            raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision")
+        
+        # check neutron tagging
+        if card['lpp1'] == 2 == card['lpp2'] and card['pdlabel1'] in upclabels:
+            if card['pdlabel1'] in upclabels:
+                upcneutrontagging_msg=("pdlabel1=%s is not implemented (check your two beam particle species)"%card['pdlabel1'])
+                beam1_n=card['pdlabel1'][3:5]
+                beam2_n=card['pdlabel1'][5:7]
+            else:
+                beam1_n='in'
+                beam2_n='in'
+            if beam1_n in ['xn','0n','1n','2n','3n','4n']:
+                if (card['nb_proton1'] == 82 and card['nb_neutron1'] == 126) or\
+                   (card['nb_proton1'] == 79 and card['nb_neutron1'] == 118):
+                    # for Pb208 and Au197, they are implemented
+                    pass
+                elif (card['nb_proton1'] == 8 and card['nb_neutron1'] == 8 and\
+                      beam1_n in ['xn','0n','1n','2n']):
+                    # for O16 (only up to 2n is allowed)
+                    pass
+                elif card['nb_proton1'] == 1 and card['nb_neutron1'] == 0:
+                    # for proton, it will be ignored
+                    pass
+                else:
+                    # not implemented yet
+                    raise InvalidRunCard(upcneutrontagging_msg)
+            if beam2_n in ['xn','0n','1n','2n','3n','4n']:
+                if (card['nb_proton2'] == 82 and card['nb_neutron2'] == 126) or\
+                   (card['nb_proton2'] == 79 and card['nb_neutron2'] == 118):
+                    # for Pb208 and Au197, they are implemented
+                    pass
+                elif (card['nb_proton2'] == 8 and card['nb_neutron2'] == 8 and\
+                      beam2_n in ['xn','0n','1n','2n']):
+                    # for O16 (only up to 2n is allowed)
+                    pass
+                elif card['nb_proton2'] == 1 and card['nb_neutron2'] ==	0:
+                    # for proton, it will be ignored
+                    pass
+                else:
+                    # not implemented yet
+                    raise InvalidRunCard(upcneutrontagging_msg)
+            
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""

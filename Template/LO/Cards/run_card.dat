@@ -49,7 +49,7 @@ $frame
 #          in gamma-UPC, where <y>,<z> should be i (inclusive,0n+Xn),*
 #          x (Xn with X>=1), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)  *
 #          The neutron tagging only works for the following nuclei:  *
-#              Pb208                                                 *
+#              Pb208, Au197, O16 (3n and 4n not allowed for O16)     *
 #          Note: For proton beam(s), neutron tagging parameter(s)    *
 #          will be ignored !                                         *
 #          none=No PDF, same as lhapdf with lppx=0                   *

@@ -5935,6 +5935,52 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['pdlabel2'] in upclabels:
             self.make_opts_var['pdlabel2'] = self.run_card['pdlabel2']
 
+        # check constraints on neutron taggings
+        if self.run_card['lpp1'] == 2 and self.run_card['lpp2'] == 2 and\
+           (self.run_card['pdlabel1'] in upclabels or self.run_card['pdlabel2'] in upclabels):
+            upcneutrontagging_msg=""
+            if self.run_card['pdlabel1'] in upclabels:
+                beam1_n=self.run_card['pdlabel1'][3:5]
+                beam2_n=self.run_card['pdlabel1'][5:7]
+                upcneutrontagging_msg=("pdlabel1=%s is not implemented (check your two beam particle species)"%self.run_card['pdlabel1'])
+            elif self.run_card['pdlabel2'] in upclabels:
+                beam1_n=self.run_card['pdlabel2'][3:5]
+                beam2_n=self.run_card['pdlabel2'][5:7]
+                upcneutrontagging_msg=("pdlabel2=%s is not implemented (check your two beam particle species)"%self.run_card['pdlabel2'])
+            else:
+                beam1_n='in'
+                beam2_n='in'
+            if beam1_n in ['xn','0n','1n','2n','3n','4n']:
+                if (self.run_card['nb_proton1'] == 82 and self.run_card['nb_neutron1'] == 126) or\
+                   (self.run_card['nb_proton1'] == 79 and self.run_card['nb_neutron1'] == 118):
+                      # for Pb208 and Au197, they are implemented
+                      pass
+                elif (self.run_card['nb_proton1'] == 8 and self.run_card['nb_neutron1'] == 8 and\
+                      beam1_n in ['xn','0n','1n','2n']):
+                      # for O16 (only up to 2n is allowed)
+                      pass
+                elif (self.run_card['nb_proton1'] == 1 and self.run_card['nb_neutron1'] == 0):
+                      # for proton, it will be ignored
+                      pass
+                else:
+                      # not implemented yet
+                      raise Exception(upcneutrontagging_msg)
+            if beam2_n in ['xn','0n','1n','2n','3n','4n']:
+                if (self.run_card['nb_proton2'] == 82 and self.run_card['nb_neutron2'] == 126) or\
+                   (self.run_card['nb_proton2'] == 79 and self.run_card['nb_neutron2'] == 118):
+                      # for Pb208 and Au197, they are implemented
+                      pass
+                elif (self.run_card['nb_proton2'] == 8 and self.run_card['nb_neutron2'] == 8 and\
+                      beam2_n in ['xn','0n','1n','2n']):
+                      # for O16 (only up to 2n is allowed)
+                      pass
+                elif (self.run_card['nb_proton2'] == 1 and self.run_card['nb_neutron2'] == 0):
+                      # for proton, it will be ignored
+                      pass
+                else:
+                      # not implemented yet
+                      raise Exception(upcneutrontagging_msg)
+
 
         # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
