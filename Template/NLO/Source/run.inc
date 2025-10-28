@@ -107,3 +107,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
 c for biassed generation based on the particle flavours of the processes
       integer flavour_bias(0:2)
       common /c_flavour_bias/ flavour_bias
+
+c parameters relevant for the born to NLO reweighting code (and also for computing the H-events remainder)
+      logical only_h_events,only_s_events
+      common /c_Born2NLOrwgt/ only_h_events,only_s_events

@@ -111,9 +111,6 @@ c general MadFKS parameters
       character*1000 buff,buff2
       double precision ratio,showerscale
 
-      logical do_only_Sevents
-      common /c_do_only_Sevents/do_only_Sevents
-
       
 C-----
 C  BEGIN CODE
@@ -191,7 +188,7 @@ c
       call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 
-      do_only_Sevents=.true.
+      only_S_events=.true.
       
       ! Set folding to one (instead of reading it in get_user_params)
 c$$$      ixi_i=1
