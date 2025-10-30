@@ -5,6 +5,8 @@ module photoabsorption
   ! Elab. Then, we have Etarget=(En+sqrt(En**2-mn**2))/mn*Elab, where mn is the  ! average nucleon mass. It can be approximated as
   ! Etarget = 2*Elab*En/mn*(1-mn**2/En**2/4+O(mn**4/En**4))
   implicit none
+  ! it will calculate cross sections by increasing all parameters by XSIGMA sigma.
+  REAL(KIND(1d0))::XSIGMA=0d0
 contains
 
   ! absorption cross section (mb)
@@ -269,10 +271,10 @@ contains
     REAL(KIND(1d0)),PARAMETER::mp=0.9382720813d0 ! proton mass (in GeV)
     REAL(KIND(1d0))::a,b,eps,eta,W2gap
     ! eqs.(5-6) in hep-ex/0202034
-    a=57d0
-    b=121d0
-    eps=0.093d0
-    eta=0.358d0
+    a=57d0+XSIGMA*5d0
+    b=121d0+XSIGMA*13d0
+    eps=0.093d0+XSIGMA*0.002d0
+    eta=0.358d0+XSIGMA*0.015d0
     W2gap=(2d0*E_gamma/1000+mp)*mp
     SIGMA_p_Reggon=a*W2gap**eps+b*W2gap**(-eta)
     SIGMA_p_Reggon=SIGMA_p_Reggon/1000d0 ! from mu b to mb
@@ -307,16 +309,22 @@ contains
     ! the shadowing factor in the HE tail
     REAL(KIND(1d0)),PARAMETER::Rshadow=0.82d0
     INTEGER,PARAMETER::AAA=16
+    REAL(KIND(1d0))::rescalingfact=1d0
     SIGMAXN_HE_O16=0d0
     ! S2n threshold
     IF(E_gamma.LT.28.89d0)RETURN
     IF(E_gamma.LE.EXnregg)THEN
-       p0=1.47782584d0
-       a=0.01380006d0
-       x0=158.03854494d0
-       constlor=5.05725353d0
-       meanlor=351.97783343d0
-       gammalor=347.39629465d0
+       IF(E_gamma.LE.185d0)THEN
+          rescalingfact=-1d0
+       ELSE
+          rescalingfact=1d0
+       ENDIF
+       p0=1.47782584d0+rescalingfact*XSIGMA*0.01590469d0
+       a=0.01380006d0+rescalingfact*XSIGMA*0.00364337d0
+       x0=158.03854494d0+rescalingfact*XSIGMA*21.15543269d0
+       constlor=5.05725353d0+rescalingfact*XSIGMA*0.30859858d0
+       meanlor=351.97783343d0+rescalingfact*XSIGMA*7.61077610d0
+       gammalor=347.39629465d0+rescalingfact*XSIGMA*25.18670363d0
        u=a*(E_gamma-x0)
        u0=a*x0
        SIGMAXN_HE_O16=p0*(1d0/(1d0+DEXP(-2d0*u))-1d0/(1d0+DEXP(2d0*u0)))
@@ -326,6 +334,7 @@ contains
        ! we use the reggeon one (we take the central value only)
        SIGMAXN_HE_O16=SIGMA_p_Reggon(E_gamma)*AAA*Rshadow
     ENDIF
+    SIGMAXN_HE_O16=MAX(SIGMAXN_HE_O16,0d0)
     RETURN
   END FUNCTION SIGMAXN_HE_O16
   
@@ -343,30 +352,31 @@ contains
     ! Sn threshold
     IF(E_gamma.LT.15.66d0)RETURN
     IF(E_gamma.GT.140d0)RETURN
-    constlor1=1.53841359d0
-    meanlor1=17.33471911d0
-    gammalor1=0.45948392d0
-    constlan1=1.81255372d0
-    meanlan1=19.12889083d0
-    sigmalan1=0.22285157d0
-    constlor2=6.99746328d0
-    meanlor2=22.08228205d0
-    gammalor2=1.02929524d0
-    constlan2=9.87132029d0
-    meanlan2=24.35781354d0
-    sigmalan2=1.17815356d0
-    constlan3=1.71511428d0
-    meanlan3=34.32932490d0
-    sigmalan3=6.84525905d0
-    constgaus=1.18465809d0
-    meangaus=61.40869615d0
-    sigmagaus=16.51718901d0
+    constlor1=1.53841359d0+XSIGMA*0.12217653d0
+    meanlor1=17.33471911d0+XSIGMA*0.01619269d0
+    gammalor1=0.45948392d0+XSIGMA*0.06056148d0
+    constlan1=1.81255372d0+XSIGMA*0.20499132d0
+    meanlan1=19.12889083d0+XSIGMA*0.03488850d0
+    sigmalan1=0.22285157d0+XSIGMA*0.03566147d0
+    constlor2=6.99746328d0+XSIGMA*0.27195205d0
+    meanlor2=22.08228205d0+XSIGMA*0.01960723d0
+    gammalor2=1.02929524d0+XSIGMA*0.05906911d0
+    constlan2=9.87132029d0+XSIGMA*0.31557737d0
+    meanlan2=24.35781354d0+XSIGMA*0.07103115d0
+    sigmalan2=1.17815356d0+XSIGMA*0.05403314d0
+    constlan3=1.71511428d0+XSIGMA*0.43538579d0
+    meanlan3=34.32932490d0+XSIGMA*0.99277220d0
+    sigmalan3=6.84525905d0+XSIGMA*1.54804718d0
+    constgaus=1.18465809d0+XSIGMA*0.15926411d0
+    meangaus=61.40869615d0+XSIGMA*5.50341919d0
+    sigmagaus=16.51718901d0+XSIGMA*6.23231339d0
     SIGMA1N_O16=LORENTZ(E_gamma,constlor1,meanlor1,gammalor1)
     SIGMA1N_O16=SIGMA1N_O16+LANDAUAPPROX(E_gamma,constlan1,meanlan1,sigmalan1,sigmalan1)
     SIGMA1N_O16=SIGMA1N_O16+LORENTZ(E_gamma,constlor2,meanlor2,gammalor2)
     SIGMA1N_O16=SIGMA1N_O16+LANDAUAPPROX(E_gamma,constlan2,meanlan2,sigmalan2,sigmalan2)
     SIGMA1N_O16=SIGMA1N_O16+GAUSS(E_gamma,constlan3,meanlan3,sigmalan3)
     SIGMA1N_O16=SIGMA1N_O16+GAUSS(E_gamma,constgaus,meangaus,sigmagaus)
+    SIGMA1N_O16=MAX(SIGMA1N_O16,0d0)
     return
   END FUNCTION SIGMA1N_O16
 
@@ -425,12 +435,12 @@ contains
     ! S5n threshold
     IF(E_gamma.LT.38.73d0)RETURN
     IF(E_gamma.LE.EXnregg)THEN
-       p0=6.26975066d0
-       a=0.00285338d0
-       x0=1113.15581374d0
-       const=71.74968521d0
-       mean=375.84028844d0
-       gamma=439.70436525d0
+       p0=6.26975066d0+XSIGMA*0.10158607d0
+       a=0.00285338d0+XSIGMA*0.00061583d0
+       x0=1113.15581374d0+XSIGMA*56.74519478d0
+       const=71.74968521d0+XSIGMA*2.63957277d0
+       mean=375.84028844d0+XSIGMA*4.77743035d0
+       gamma=439.70436525d0+XSIGMA*28.89017985d0
        u=a*(E_gamma-x0)
        u0=a*x0
        SIGMAXN_HE_Au197=SIGMAX5N_Au197(E_gamma)
@@ -442,6 +452,7 @@ contains
        ! we use the reggeon one (we take the central value only)
        SIGMAXN_HE_Au197=SIGMA_p_Reggon(E_gamma)*AAA*Rshadow
     ENDIF
+    SIGMAXN_HE_Au197=MAX(SIGMAXN_HE_Au197,0d0)
     RETURN
   END FUNCTION SIGMAXN_HE_Au197
   
@@ -456,17 +467,18 @@ contains
     ! Sn threshold
     IF(E_gamma.LT.8.07d0)RETURN
     IF(E_gamma.GT.200d0)RETURN
-    constlor1=749.58846550d0
-    meanlor1=14.16503172d0
-    gammalor1=4.10826491d0
-    meangauss=10.28799832d0
-    sigmagauss=4.59183356d0
-    constlor2=13.43523511d0
-    meanlor2=25.70317632d0
-    sigmalor2=10.04604873d0
+    constlor1=749.58846550d0+XSIGMA*24.13949089d0
+    meanlor1=14.16503172d0+XSIGMA*0.05096954d0
+    gammalor1=4.10826491d0+XSIGMA*0.10265047d0
+    meangauss=10.28799832d0+XSIGMA*0.25006213d0
+    sigmagauss=4.59183356d0+XSIGMA*0.25195422d0
+    constlor2=13.43523511d0+XSIGMA*2.34589988d0
+    meanlor2=25.70317632d0+XSIGMA*0.95996896d0
+    sigmalor2=10.04604873d0+XSIGMA*3.22749664d0
     SIGMA1N_Au197=MODIFIED_LORENTZ(E_gamma,constlor1,meanlor1,gammalor1)*&
          GAUSS(E_gamma,1d0,meangauss,sigmagauss)
     SIGMA1N_Au197=SIGMA1N_Au197+MODIFIED_LORENTZ(E_gamma,constlor2,meanlor2,sigmalor2)
+    SIGMA1N_Au197=MAX(SIGMA1N_Au197,0d0)
     return
   END FUNCTION SIGMA1N_Au197
 
@@ -476,21 +488,25 @@ contains
     REAL(KIND(1D0))::SIGMA2N_Au197
     REAL(KIND(1d0))::p0,p2,p4,mpv,sigma1,sigma2
     REAL(KIND(1d0))::constgauss,meangauss,sigmagauss
+    ! additional rescaling factor to be applied
+    REAL(KIND(1d0)),PARAMETER::rescalingfact=0.5d0
     SIGMA2N_Au197=0d0
     ! S2n threshold
     IF(E_gamma.LT.14.71d0)RETURN
-    p0=232.02774513d0
-    p2=-0.37290448d0
-    p4=0.00015705d0
-    mpv=16.04127399d0
-    sigma1=4.18359994d0
-    sigma2=0.61823840d0
-    constgauss=16.34516425d0
-    meangauss=24.35594069d0
-    sigmagauss=1.53810657d0
+    IF(E_gamma.GT.200d0)RETURN
+    p0=232.02774513d0+rescalingfact*XSIGMA*14.81413800d0
+    p2=-0.37290448d0+rescalingfact*XSIGMA*0.04800320d0
+    p4=0.00015705d0+rescalingfact*XSIGMA*0.00003068d0
+    mpv=16.04127399d0+rescalingfact*XSIGMA*0.07179598d0
+    sigma1=4.18359994d0+rescalingfact*XSIGMA*0.23751454d0
+    sigma2=0.61823840d0+rescalingfact*XSIGMA*0.05633909d0
+    constgauss=16.34516425d0+rescalingfact*XSIGMA*2.87014296d0
+    meangauss=24.35594069d0+rescalingfact*XSIGMA*0.23992731d0
+    sigmagauss=1.53810657d0+rescalingfact*XSIGMA*0.33861400d0
     SIGMA2N_Au197=LANDAUAPPROX(E_gamma,1d0,mpv,sigma1,sigma2)&
          *(p0+p2*E_gamma**2+p4*E_gamma**4)
     SIGMA2N_Au197=SIGMA2N_Au197+GAUSS(E_gamma,constgauss,meangauss,sigmagauss)
+    SIGMA2N_Au197=MAX(SIGMA2N_Au197,0d0)
     return
   END FUNCTION SIGMA2N_Au197
 
@@ -502,10 +518,11 @@ contains
     SIGMA3N_Au197=0d0
     ! S3n threshold
     IF(E_gamma.LT.23.08d0)RETURN
-    p0=37.079297001687d0
-    mpv=29.314436297842d0
-    sigma=2.458105060946d0
+    p0=37.079297001687d0+XSIGMA*1.065754102759d0
+    mpv=29.314436297842d0+XSIGMA*0.108149921600d0
+    sigma=2.458105060946d0+XSIGMA*0.078402823792d0
     SIGMA3N_Au197=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
+    SIGMA3N_Au197=MAX(SIGMA3N_Au197,0d0)
     return
   END FUNCTION SIGMA3N_Au197
 
@@ -517,10 +534,11 @@ contains
     SIGMA4N_Au197=0d0
     ! S4n threshold
     IF(E_gamma.LT.30.04d0)RETURN
-    p0=17.399669899307d0
-    mpv=39.406441478882d0
-    sigma=3.356697687837d0
+    p0=17.399669899307d0+XSIGMA*1.000106951622d0
+    mpv=39.406441478882d0+XSIGMA*0.326474623884d0
+    sigma=3.356697687837d0+XSIGMA*0.237739152385d0
     SIGMA4N_Au197=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
+    SIGMA4N_Au197=MAX(SIGMA4N_Au197,0d0)
     return
   END FUNCTION SIGMA4N_Au197
 
@@ -533,12 +551,13 @@ contains
     SIGMAX5N_Au197=0d0
     ! S5n threshold
     IF(E_gamma.LT.38.73d0)RETURN
-    p0=9.031507911726d0
-    a=0.274160384720d0
-    x0=45.161755558767d0
+    p0=9.031507911726d0+XSIGMA*0.620289501385d0
+    a=0.274160384720d0+XSIGMA*0.128815984784d0
+    x0=45.161755558767d0+XSIGMA*0.833305126405d0
     u=a*(E_gamma-x0)
     u0=a*x0
     SIGMAX5N_Au197=p0*(1d0/(1d0+DEXP(-2d0*u))-1d0/(1d0+DEXP(2d0*u0)))
+    SIGMAX5N_Au197=MAX(SIGMAX5N_Au197,0d0)
     return
   END FUNCTION SIGMAX5N_Au197
 
@@ -611,12 +630,12 @@ contains
     ! S5n threshold
     IF(E_gamma.LT.37.3d0)RETURN
     IF(E_gamma.LE.EXnregg)THEN
-       p0=4.87715571d0
-       a=0.00433266d0
-       x0=1077.91851015d0
-       const=73.54430802d0
-       mean=381.20497036d0
-       gamma=479.16675543d0
+       p0=4.87715571d0+XSIGMA*0.10142092d0
+       a=0.00433266d0+XSIGMA*0.00151412d0
+       x0=1077.91851015d0+XSIGMA*54.68761205d0
+       const=73.54430802d0+XSIGMA*3.00140716d0
+       mean=381.20497036d0+XSIGMA*5.68016890d0
+       gamma=479.16675543d0+XSIGMA*35.23050896d0
        u=a*(E_gamma-x0)
        u0=a*x0
        SIGMAXN_HE_Pb208=SIGMAX5N_Pb208(E_gamma)
@@ -628,6 +647,7 @@ contains
        ! we use the reggeon one (we take the central value only)
        SIGMAXN_HE_Pb208=SIGMA_p_Reggon(E_gamma)*AAA*Rshadow
     ENDIF
+    SIGMAXN_HE_Pb208=MAX(SIGMAXN_HE_Pb208,0d0)
     RETURN
   END FUNCTION SIGMAXN_HE_Pb208
   
@@ -643,21 +663,22 @@ contains
     ! Sn threshold
     IF(E_gamma.LT.7.37d0)RETURN
     IF(E_gamma.GT.200d0)RETURN
-    constlor=848.54599804d0
-    meanlor=14.16335892d0
-    gammalor=4.75621788d0
-    meangauss1=11.18294867d0
-    sigmagauss1=3.29767635d0
-    constlor1=18.08656200d0
-    meanlor1=20.36074947d0
-    sigmalor1=3.37200408d0
-    constlor2=7.28913825d0
-    meanlor2=31.99532030d0
-    sigmalor2=3.02555715d0
+    constlor=848.54599804d0+XSIGMA*55.83988892d0
+    meanlor=14.16335892d0+XSIGMA*0.11517196d0
+    gammalor=4.75621788d0+XSIGMA*0.17855457d0
+    meangauss1=11.18294867d0+XSIGMA*0.12457364d0
+    sigmagauss1=3.29767635d0+XSIGMA*0.17054524d0
+    constlor1=18.08656200d0+XSIGMA*9.21660307d0
+    meanlor1=20.36074947d0+XSIGMA*1.01629369d0
+    sigmalor1=3.37200408d0+XSIGMA*2.75519828d0
+    constlor2=7.28913825d0+XSIGMA*8.38392035d0
+    meanlor2=31.99532030d0+XSIGMA*1.65265455d0
+    sigmalor2=3.02555715d0+XSIGMA*5.11113578d0
     SIGMA1N_Pb208=MODIFIED_LORENTZ(E_gamma,constlor,meanlor,gammalor)*&
          GAUSS(E_gamma,1d0,meangauss1,sigmagauss1)
     SIGMA1N_Pb208=SIGMA1N_Pb208+MODIFIED_LORENTZ(E_gamma,constlor1,meanlor1,sigmalor1)
     SIGMA1N_Pb208=SIGMA1N_Pb208+MODIFIED_LORENTZ(E_gamma,constlor2,meanlor2,sigmalor2)
+    SIGMA1N_Pb208=MAX(SIGMA1N_Pb208,0d0)
     return
   END FUNCTION SIGMA1N_Pb208
 
@@ -672,18 +693,19 @@ contains
     ! S2n threshold
     IF(E_gamma.LT.14.11d0)RETURN
     IF(E_gamma.GT.200d0)RETURN
-    p0=154.23071627d0
-    mpv=16.49136582d0
-    sigma=1.13827892d0
-    constgauss=39.61700774d0
-    meangauss=22.60755279d0
-    sigmagauss=3.11704789d0
-    constlor=4.22801657d0
-    meanlor=62.07740587d0
-    sigmalor=87.87650723d0
+    p0=154.23071627d0+XSIGMA*6.29449187d0
+    mpv=16.49136582d0+XSIGMA*0.10433356d0
+    sigma=1.13827892d0+XSIGMA*0.07998836d0
+    constgauss=39.61700774d0+XSIGMA*3.07403680d0
+    meangauss=22.60755279d0+XSIGMA*0.36446014d0
+    sigmagauss=3.11704789d0+XSIGMA*0.25175020d0
+    constlor=4.22801657d0+XSIGMA*1.11355146d0
+    meanlor=62.07740587d0+XSIGMA*11.24291967d0
+    sigmalor=87.87650723d0+XSIGMA*68.08597745d0
     SIGMA2N_Pb208=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
     SIGMA2N_Pb208=SIGMA2N_Pb208+GAUSS(E_gamma,constgauss,meangauss,sigmagauss)
     SIGMA2N_Pb208=SIGMA2N_Pb208+MODIFIED_LORENTZ(E_gamma,constlor,meanlor,sigmalor)
+    SIGMA2N_Pb208=MAX(SIGMA2N_Pb208,0d0)
     return
   END FUNCTION SIGMA2N_Pb208
 
@@ -695,10 +717,11 @@ contains
     SIGMA3N_Pb208=0d0
     ! S3n threshold
     IF(E_gamma.LT.22.2d0)RETURN
-    p0=39.288077638417d0
-    mpv=29.167769062312d0
-    sigma=2.662454235648d0
+    p0=39.288077638417d0+XSIGMA*0.839372807844d0
+    mpv=29.167769062312d0+XSIGMA*0.097243544711d0
+    sigma=2.662454235648d0+XSIGMA*0.056375203420d0
     SIGMA3N_Pb208=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
+    SIGMA3N_Pb208=MAX(SIGMA3N_Pb208,0d0)
     return
   END FUNCTION SIGMA3N_Pb208
 
@@ -710,10 +733,11 @@ contains
     SIGMA4N_Pb208=0d0
     ! S4n threshold
     IF(E_gamma.LT.28.9d0)RETURN
-    p0=18.210909748612d0
-    mpv=39.332314221991d0
-    sigma=3.358485085166d0
+    p0=18.210909748612d0+XSIGMA*0.754385015845d0
+    mpv=39.332314221991d0+XSIGMA*0.225554225531d0
+    sigma=3.358485085166d0+XSIGMA*0.140721364413d0
     SIGMA4N_Pb208=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
+    SIGMA4N_Pb208=MAX(SIGMA4N_Pb208,0d0)
     return
   END FUNCTION SIGMA4N_Pb208
 
@@ -726,12 +750,13 @@ contains
     SIGMAX5N_Pb208=0d0
     ! S5n threshold
     IF(E_gamma.LT.37.3d0)RETURN
-    p0=9.470598638805d0
-    a=0.277273681013d0
-    x0=45.133614846275d0
+    p0=9.470598638805d0+XSIGMA*0.630314227734d0
+    a=0.277273681013d0+XSIGMA*0.126696250854d0
+    x0=45.133614846275d0+XSIGMA*0.799636327694d0
     u=a*(E_gamma-x0)
     u0=a*x0
     SIGMAX5N_Pb208=p0*(1d0/(1d0+DEXP(-2d0*u))-1d0/(1d0+DEXP(2d0*u0)))
+    SIGMAX5N_Pb208=MAX(SIGMAX5N_Pb208,0d0)
     return
   END FUNCTION SIGMAX5N_Pb208
 
@@ -804,12 +829,12 @@ contains
     ! S5n threshold
     IF(E_gamma.LT.23.12d0)RETURN
     IF(E_gamma.LE.EXnregg)THEN
-       p0=7.29252922d0
-       a=0.00338930d0
-       x0=998.58162812d0
-       const=82.83579233d0
-       mean=401.21655386d0
-       gamma=421.30445797d0
+       p0=7.29252922d0+XSIGMA*0.13895533d0
+       a=0.00338930d0+XSIGMA*0.00090291d0
+       x0=998.58162812d0+XSIGMA*64.53314293d0
+       const=82.83579233d0+XSIGMA*3.29748995d0
+       mean=401.21655386d0+XSIGMA*5.45817549d0
+       gamma=421.30445797d0+XSIGMA*29.01861515d0
        u=a*(E_gamma-x0)
        u0=a*x0
        SIGMAXN_HE_U238=SIGMAX4N_U238(E_gamma)
@@ -821,6 +846,7 @@ contains
        ! we use the reggeon one (we take the central value only)
        SIGMAXN_HE_U238=SIGMA_p_Reggon(E_gamma)*AAA*Rshadow
     ENDIF
+    SIGMAXN_HE_U238=MAX(SIGMAXN_HE_U238,0d0)
     RETURN
   END FUNCTION SIGMAXN_HE_U238
   
@@ -831,21 +857,23 @@ contains
     REAL(KIND(1d0))::constlor,meanlor,gammalor
     REAL(KIND(1d0))::meangauss1,sigmagauss1
     REAL(KIND(1d0))::constlor1,meanlor1,sigmalor1
+    REAL(KIND(1d0)),PARAMETER::rescalingfact=0.5d0 ! to ensure the band width good
     SIGMA1N_U238=0d0
     ! Sn threshold (make it a bit lower)
     IF(E_gamma.LT.6.01d0)RETURN
     IF(E_gamma.GT.200d0)RETURN
-    constlor=737.88781361d0
-    meanlor=11.66556337d0
-    gammalor=2.79688077d0
-    meangauss1=8.38235402d0
-    sigmagauss1=2.18875124d0
-    constlor1=81.71913660d0
-    meanlor1=13.63467523d0
-    sigmalor1=4.00830564d0
+    constlor=737.88781361d0+rescalingfact*XSIGMA*197.28295518d0
+    meanlor=11.66556337d0+rescalingfact*XSIGMA*0.10449796d0
+    gammalor=2.79688077d0+rescalingfact*XSIGMA*0.39629312d0
+    meangauss1=8.38235402d0+rescalingfact*XSIGMA*0.17689627d0
+    sigmagauss1=2.18875124d0+rescalingfact*XSIGMA*0.26727411d0
+    constlor1=81.71913660d0+rescalingfact*XSIGMA*15.63558357d0
+    meanlor1=13.63467523d0+rescalingfact*XSIGMA*0.51281138d0
+    sigmalor1=4.00830564d0+rescalingfact*XSIGMA*0.72089007d0
     SIGMA1N_U238=MODIFIED_LORENTZ(E_gamma,constlor,meanlor,gammalor)*&
          GAUSS(E_gamma,1d0,meangauss1,sigmagauss1)
     SIGMA1N_U238=SIGMA1N_U238+MODIFIED_LORENTZ(E_gamma,constlor1,meanlor1,sigmalor1)
+    SIGMA1N_U238=MAX(SIGMA1N_U238,0d0)
     return
   END FUNCTION SIGMA1N_U238
 
@@ -860,18 +888,19 @@ contains
     ! S2n threshold (lower it a bit)
     IF(E_gamma.LT.10.20d0)RETURN
     IF(E_gamma.GT.200d0)RETURN
-    p0=281.02421578d0
-    mpv=13.51210766d0
-    sigma=1.02249288d0
-    constgauss=46.37341129d0
-    meangauss=15.63541196d0
-    sigmagauss=2.41634605d0
-    constlor=5.43697647d0
-    meanlor=62.16425623d0
-    sigmalor=52.55735354d0
+    p0=281.02421578d0+XSIGMA*20.87414743d0
+    mpv=13.51210766d0+XSIGMA*0.10799686d0
+    sigma=1.02249288d0+XSIGMA*0.07532587d0
+    constgauss=46.37341129d0+XSIGMA*17.49223241d0
+    meangauss=15.63541196d0+XSIGMA*0.28480609d0
+    sigmagauss=2.41634605d0+XSIGMA*0.24356455d0
+    constlor=5.43697647d0+XSIGMA*1.46963626d0
+    meanlor=62.16425623d0+XSIGMA*6.70721615d0
+    sigmalor=52.55735354d0+XSIGMA*33.19823843d0
     SIGMA2N_U238=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
     SIGMA2N_U238=SIGMA2N_U238+GAUSS(E_gamma,constgauss,meangauss,sigmagauss)
     SIGMA2N_U238=SIGMA2N_U238+MODIFIED_LORENTZ(E_gamma,constlor,meanlor,sigmalor)
+    SIGMA2N_U238=MAX(SIGMA2N_U238,0d0)
     return
   END FUNCTION SIGMA2N_U238
   
@@ -883,10 +912,11 @@ contains
     SIGMA3N_U238=0d0
     ! S3n threshold
     IF(E_gamma.LT.17.83d0)RETURN
-    p0=59.102002803219d0
-    mpv=26.078948834759d0
-    sigma=3.322505462362d0
+    p0=59.102002803219d0+XSIGMA*14.654052791675d0
+    mpv=26.078948834759d0+XSIGMA*0.814327833076d0
+    sigma=3.322505462362d0+XSIGMA*0.426298064714d0
     SIGMA3N_U238=LANDAUAPPROX(E_gamma,p0,mpv,sigma,sigma)
+    SIGMA3N_U238=MAX(SIGMA3N_U238,0d0)
     return
   END FUNCTION SIGMA3N_U238
 
@@ -910,6 +940,7 @@ contains
     SIGMAX5N_U238=0d0
     ! S5n threshold
     IF(E_gamma.LT.29.97d0)RETURN
+    ! no error for >=5n
     p0=10.836556028407577d0
     a=0.3172542141382115d0
     x0=51.643259608533185d0
@@ -927,11 +958,12 @@ contains
     SIGMAX4N_U238=0d0
     ! S4n
     IF(E_gamma.LT.23.12d0)RETURN
-    const=19.666982872665d0
-    mean=42.162280860636d0
-    sigma1=4.742193582540d0
+    const=19.666982872665d0+XSIGMA*2.282073757972d0
+    mean=42.162280860636d0+XSIGMA*0.939062213589d0
+    sigma1=4.742193582540d0+XSIGMA*0.728768182482d0
     SIGMAX4N_U238=SIGMAX5N_U238(E_gamma)
     SIGMAX4N_U238=SIGMAX4N_U238+LANDAUAPPROX(E_gamma,const,mean,sigma1,sigma1)
+    SIGMAX4N_U238=MAX(SIGMAX4N_U238,0d0)
     return
   END FUNCTION SIGMAX4N_U238
 

@@ -66,6 +66,8 @@ MODULE ElasticPhotonPhotonFlux
   ! Emax_Xn, Emax_1n, Emax_2n, Emax_3n, Emax_4n
   REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_Xn=0d0, Emax_1n=2d-1, Emax_2n=2d-1
   REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_3n=2d-1, Emax_4n=2d-1
+  ! it will calculate cross sections by increasing all parameters by XSIGMA sigma.
+  REAL(KIND(1d0)),PUBLIC::NEUTRON_XSIGMA=0d0
 CONTAINS
   FUNCTION PNOHAD_pp(bx,by,b0)
     ! the probability of no hardonic interaction at impact b=(bx,by)
@@ -6453,6 +6455,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/PbreakXn_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -6758,6 +6767,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/PbreakXn_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7107,6 +7123,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak1n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7413,6 +7436,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak1n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7762,6 +7792,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak2n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8068,6 +8105,14 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak2n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
+    
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8417,6 +8462,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak3n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8723,6 +8775,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak3n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -9072,6 +9131,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak4n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -9378,6 +9444,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak4n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
