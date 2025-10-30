@@ -136,13 +136,13 @@ c     saved. 'pdflast' is filled below.
       if(pdlabel(1:2).eq.'ed') then
          USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
 c        for neutron tagging uncertainty
-         if(pdlabel(3).eq.'f')then
+         if(pdlabel(3:3).eq.'f')then
 c           central value of neutron xs
             neutron_xsigma=0d0
-         elseif(pdlabel(3).eq.'p')then
+         elseif(pdlabel(3:3).eq.'p')then
 c     upper value of neutron xs
             neutron_xsigma=1d0
-         elseif(pdlabel(3).eq.'m')then
+         elseif(pdlabel(3:3).eq.'m')then
 c     lower value of neutron xs
             neutron_xsigma=-1d0
          else
@@ -214,13 +214,13 @@ c 4n
       elseif(pdlabel(1:2).eq.'ch') then
          USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
 c     for neutron tagging uncertainty
-         if(pdlabel(3).eq.'f')then
+         if(pdlabel(3:3).eq.'f')then
 c     central value of neutron xs
             neutron_xsigma=0d0
-         elseif(pdlabel(3).eq.'p')then
+         elseif(pdlabel(3:3).eq.'p')then
 c     upper value of neutron xs
             neutron_xsigma=1d0
-         elseif(pdlabel(3).eq.'m')then
+         elseif(pdlabel(3:3).eq.'m')then
 c     lower value of neutron xs
             neutron_xsigma=-1d0
          else
