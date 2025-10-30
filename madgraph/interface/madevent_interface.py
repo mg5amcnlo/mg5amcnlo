@@ -5924,12 +5924,13 @@ tar -czf split_$1.tar.gz split_$1
             self.make_opts_var['pdlabel1'] = 'eva'
         if self.run_card['pdlabel2'] in ['eva', 'iww']:
             self.make_opts_var['pdlabel2'] = 'eva'
-        upclabels=['edff','chff']
+        upclabels=['edff','chff','edpf','edmf','chpf','chmf']
         # for forward neutron tagging
-        for y in ['i','x','0','1','2','3','4']:
-            for z in ['i','x','0','1','2','3','4']:
-                upclabels.append('edf'+y+'n'+z+'n')
-                upclabels.append('chf'+y+'n'+z+'n')
+        for nerr in ['f','p','m']:
+            for y in ['i','x','0','1','2','3','4']:
+                for z in ['i','x','0','1','2','3','4']:
+                    upclabels.append('ed'+nerr+y+'n'+z+'n')
+                    upclabels.append('ch'+nerr+y+'n'+z+'n')
         if self.run_card['pdlabel1'] in upclabels:
             self.make_opts_var['pdlabel1'] = self.run_card['pdlabel1']
         if self.run_card['pdlabel2'] in upclabels:

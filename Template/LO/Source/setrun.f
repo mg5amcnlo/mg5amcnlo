@@ -277,6 +277,15 @@ C-------------------------------------------------
         endif
       enddo
 
+      if(pdfin(1:3).eq.'edf'.or.pdfin(1:3).eq.'edp'
+     $     .or.pdfin(1:3).eq.'edm')then
+         mpdf=numspdf(4)
+      endif
+      if(pdfin(1:3).eq.'chf'.or.pdfin(1:3).eq.'chp'
+     $     .or.pdfin(1:3).eq.'chm')then
+         mpdf=numspdf(5)
+      endif
+
       if(mpdf.eq.-1) then
         write(*,*)'pdf ',pdfin,' not implemented in get_pdfup.'
         write(*,*)'known pdfs are'

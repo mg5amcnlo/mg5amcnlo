@@ -3773,12 +3773,13 @@ class PDLabelBlock(RunBlock):
     def check_validity(self, card):
         """check which template is active and fill the parameter in the inactive one. """
 
-        upclabels=['edff','chff']
+        upclabels=['edff','chff','edpf','edmf','chpf','chmf']
         # neutron forward taggings
-        for y in ['i','x','0','1','2','3','4']:
-            for z in ['i','x','0','1','2','3','4']:
-                upclabels.append('edf'+y+'n'+z+'n')
-                upclabels.append('chf'+y+'n'+z+'n')
+        for nerr in ['f','p','m']:
+            for y in ['i','x','0','1','2','3','4']:
+                for z in ['i','x','0','1','2','3','4']:
+                    upclabels.append('ed'+nerr+y+'n'+z+'n')
+                    upclabels.append('ch'+nerr+y+'n'+z+'n')
                 
         if self.status(card):
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
@@ -4006,13 +4007,14 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','edpf','edmf','chpf','chmf','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         # forward neutrons
-        for y in ['i','x','0','1','2','3','4']:
-            for z in ['i','x','0','1','2','3','4']:
-                valid_pdf.append('edf'+y+'n'+z+'n')
-                valid_pdf.append('chf'+y+'n'+z+'n')
+        for nerr in ['f','p','m']:
+            for y in ['i','x','0','1','2','3','4']:
+                for z in ['i','x','0','1','2','3','4']:
+                    valid_pdf.append('ed'+nerr+y+'n'+z+'n')
+                    valid_pdf.append('ch'+nerr+y+'n'+z+'n')
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
         self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
         self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
@@ -4321,11 +4323,12 @@ class RunCardLO(RunCard):
         for i in [1,2]:
             lpp = 'lpp%i' %i 
             pdlabelX = 'pdlabel%i' % i
-            upclabels=['edff','chff']
-            for y in ['i','x','0','1','2','3','4']:
-                for z in ['i','x','0','1','2','3','4']:
-                    upclabels.append('edf'+y+'n'+z+'n')
-                    upclabels.append('chf'+y+'n'+z+'n')
+            upclabels=['edff','chff','edpf','edmf','chpf','chmf']
+            for nerr in ['f','p','m']:
+                for y in ['i','x','0','1','2','3','4']:
+                    for z in ['i','x','0','1','2','3','4']:
+                        upclabels.append('ed'+nerr+y+'n'+z+'n')
+                        upclabels.append('ch'+nerr+y+'n'+z+'n')
             if self[lpp] == 0: # nopdf
                 if self[pdlabelX] != 'none':
                     self.set(pdlabelX, 'none')
@@ -4405,11 +4408,12 @@ class RunCardLO(RunCard):
                     logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    upclabels=['edff','chff']
-                    for y in ['i','x','0','1','2','3','4']:
-                        for z in ['i','x','0','1','2','3','4']:
-                            upclabels.append('edf'+y+'n'+z+'n')
-                            upclabels.append('chf'+y+'n'+z+'n')
+                    upclabels=['edff','chff','edpf','edmf','chpf','chmf']
+                    for nerr in ['f','p','m']:
+                        for y in ['i','x','0','1','2','3','4']:
+                            for z in ['i','x','0','1','2','3','4']:
+                                upclabels.append('ed'+nerr+y+'n'+z+'n')
+                                upclabels.append('ch'+nerr+y+'n'+z+'n')
                     if self['pdlabel'] in upclabels:
                         logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
                     else:

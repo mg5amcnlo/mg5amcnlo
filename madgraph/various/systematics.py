@@ -163,13 +163,14 @@ class Systematics(object):
             #self.b1 = beam1//2212
             isEVAxDIS=True
         # none, chff, edff and their neutron tagging options
-        nosystlabels=['none','chff','edff']
-        for y in ['i','x','0','1','2','3','4']:
-            for z in ['i','x','0','1','2','3','4']:
-                nosystlabels.append('edf'+y+'n'+z+'n')
-                nosystlabels.append('chf'+y+'n'+z+'n')
+        nosystlabels=['none','chff','edff','chpf','chmf','edpf','edmf']
+        for nerr in ['f','p','m']:
+            for y in ['i','x','0','1','2','3','4']:
+                for z in ['i','x','0','1','2','3','4']:
+                    nosystlabels.append('ed'+nerr+y+'n'+z+'n')
+                    nosystlabels.append('ch'+nerr+y+'n'+z+'n')
         if(self.banner.run_card['pdlabel'] in nosystlabels):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff,chf<y>n<z>n, edf<y>n<z>n')
+            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff,chpf,chmf,edpf,edmf,chf<y>n<z>n,edf<y>n<z>n,chp<y>n<z>n,chm<y>n<z>n,edp<y>n<z>n,edm<y>n<z>n')
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling

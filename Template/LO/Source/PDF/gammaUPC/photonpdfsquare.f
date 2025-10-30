@@ -132,8 +132,23 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
 
       neutron_tagging(1:2)=-2
-      if(pdlabel(1:3).eq.'edf') then
+      neutron_xsigma=0d0
+      if(pdlabel(1:2).eq.'ed') then
          USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
+c        for neutron tagging uncertainty
+         if(pdlabel(3).eq.'f')then
+c           central value of neutron xs
+            neutron_xsigma=0d0
+         elseif(pdlabel(3).eq.'p')then
+c     upper value of neutron xs
+            neutron_xsigma=1d0
+         elseif(pdlabel(3).eq.'m')then
+c     lower value of neutron xs
+            neutron_xsigma=-1d0
+         else
+            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+            STOP -1
+         endif
          if(pdlabel(4:4).ne.'f')then
 c     forward neutron tagging
             if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
@@ -196,8 +211,22 @@ c 4n
                STOP 9
             endif
          endif
-      elseif(pdlabel(1:3).eq.'chf') then
+      elseif(pdlabel(1:2).eq.'ch') then
          USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
+c     for neutron tagging uncertainty
+         if(pdlabel(3).eq.'f')then
+c     central value of neutron xs
+            neutron_xsigma=0d0
+         elseif(pdlabel(3).eq.'p')then
+c     upper value of neutron xs
+            neutron_xsigma=1d0
+         elseif(pdlabel(3).eq.'m')then
+c     lower value of neutron xs
+            neutron_xsigma=-1d0
+         else
+            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+            STOP -2
+         endif
          if(pdlabel(4:4).ne.'f')then
 c     forward neutron tagging
             if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
@@ -285,3 +314,30 @@ c     write(*,*) 'running gamma-UPC'
       return
       end
      
+
+      subroutine Get_nucleus_RA(nb_p,nb_n,RAI)
+      USE ElasticPhotonPhotonFlux
+      implicit none
+      ! number of protons and neutrons in the nucleus
+      integer nb_p,nb_n
+      ! radius of the nucleus in unit of GeV-1
+      double precision RAI
+      integer nb_pn
+      double precision RRR, AAA, WWW, Aval, Zval
+      character*7 nucleus_name
+      ! the charge radius of proton (in fm)
+      double precision Rproto
+      parameter (Rproto=0.877d0)
+      ! convert from GeV-1 to fm
+      double precision GeVm12fm1
+      parameter (GeVm12fm1=0.1973d0)
+      if(nb_p.eq.1.and.nb_n.eq.0)then
+         RAI=Rproto/GeVm12fm1
+         return
+      endif
+      nb_pn=nb_p+nb_n
+      nucleus_name=GetASymbol(nb_pn,nb_p)
+      CALL GetNuclearInfo(nucleus_name,Aval,Zval,RRR,AAA,WWW)
+      RAI=RRR/GeVm12fm1
+      return
+      end

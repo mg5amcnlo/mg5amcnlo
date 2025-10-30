@@ -52,6 +52,10 @@ $frame
 #              Pb208, Au197, O16 (3n and 4n not allowed for O16)     *
 #          Note: For proton beam(s), neutron tagging parameter(s)    *
 #          will be ignored !                                         *
+#          Note: If one is interested in estimating neutron tagging  *
+#          uncertainty, one has to rerun with                        *
+#          edp<y>n<z>n and edm<y>n<z>n (for EDFF) OR                 *
+#          chp<y>n<z>n and chm<y>n<z>n (for ChFF) for error estimate *
 #          none=No PDF, same as lhapdf with lppx=0                   *
 #*********************************************************************
 $pdlabel
