@@ -4,6 +4,12 @@ ANNOUNCMENT:
    2.9.X version has a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+2.9.26 (30/10/25):
+  OM: setup the code to not print the python3.12 syntax warning anymore (still printed in debug mode)
+  OM: fix card edition issue when combining "set" and "edit" command
+  OM: fix some additional issue related to GCC15
+
+
 2.9.25 (11/9/25):
   OM: (thanks to SungBeom Cho) crash when running  multi_run during the merging of multiple lhe file if 
       MadSpin was activated (if the BR was different of one). If the BR=1, the merging was going trough but 
