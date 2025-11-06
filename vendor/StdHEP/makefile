@@ -22,7 +22,7 @@ ifdef CRNLIB
 endif
 #------------------------------------------
 
-all: binlib mcfio stdhep $(BUILD_DISPLAY)
+all: binlib stdhep $(BUILD_DISPLAY)
 
 binlib:
 	-test -d $(STDHEP_DIR)/bin || mkdir -p $(STDHEP_DIR)/bin
