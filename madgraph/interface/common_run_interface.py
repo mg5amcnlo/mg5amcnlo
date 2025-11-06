@@ -7379,6 +7379,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # write the line at the first not commented line
                 text = open(path).read()
                 split = text.split('\n')
+                posline = -1
                 for posline,l in  enumerate(split):
                     if not l.startswith('#'):
                         break
@@ -7396,6 +7397,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7408,7 +7410,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
                 if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
                     new_line = re.split(search_pattern,new_line)[-1]
                 # overwrite the previous line
                 old_line = split[posline]
@@ -7428,6 +7430,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
                 nb_mod = 0
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         split[posline] = '#%s' % l
@@ -7450,6 +7453,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[13:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7468,6 +7472,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[12:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break

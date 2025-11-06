@@ -1782,10 +1782,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
                     if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
                             os.path.exists(pjoin(self.path_me,'param_card.dat')):
-                        mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                        mymod.py_initialisemodel(pjoin(self.path_me,'param_card.dat'))
                     else:
-                        mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_value 
+                        mymod.py_initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
+            self.all_f2py[pdir] = mymod.py_get_value 
             return self.calculate_matrix_element(event)
         
         
