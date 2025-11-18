@@ -157,7 +157,7 @@ module mint_module
   common /c_fnlo_nlops/fixed_order,nlo_ps
 
 ! functions and subroutines:
-  public :: mint,gen,read_grids_from_file
+  public :: mint,gen,read_grids_from_file,get_mint_wgt
   private :: initialise_mint,setup_basic_mint &
        &,update_accumulated_results,prepare_next_iteration &
        &,check_desired_accuracy,update_integration_grids &
@@ -811,6 +811,28 @@ contains
        f(1:nintegrals)=f1(1:nintegrals)
     endif
   end subroutine compute_integrand
+
+  subroutine get_mint_wgt(x,vol)
+    ! Given a random point x, compute the corresponding wgt from the
+    ! importance sampling accompanying that point.
+    implicit none
+    double precision, dimension(ndimmax),intent(in) :: x
+    double precision,intent(out) :: vol
+    integer :: kdim,icell
+    double precision :: dx
+    ! This assumes we are in channel 'ichan'
+    vol=1d0/vol_chan * wgt_mult
+    do kdim=1,ndim
+       ! determine the cell
+       icell=1
+       do while (xgrid(icell,kdim,ichan).lt.x)
+          icell=icell+1
+       enddo
+       ! compute wgt
+       dx=xgrid(icell,kdim,ichan)-xgrid(icell-1,kdim,ichan)
+       vol=vol*dx*nint_used/ifold(kdim)
+    enddo
+  end subroutine get_mint_wgt
   
   subroutine get_random_x(x,vol,kfold)
     implicit none
