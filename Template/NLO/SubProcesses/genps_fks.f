@@ -4581,6 +4581,205 @@ C dressed lepton stuff
       end
 
 
+      subroutine generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
+     $     stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $     xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+      use kinematics_module
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal), stot
+     $     ,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,jac
+     $     ,xbjrk_born(2),M(-max_branch:max_particles),m_born(nexternal
+     $     -1)
+      integer ndim
+      logical input_granny_m2,pass
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+      integer ixEi,ixyij,ixpi,imother
+      double precision m_j_fks,xi_i_fks,y_ij_fks
+      
+! TODO: determine what to do for 2nd fold of massive j_fks.
+      ixEi=ndim-2
+      ixyij=ndim-1
+      ixpi=ndim
+      imother=min(j_fks,i_fks)
+      m_j_fks=pmass(j_fks)
+
+      xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
+      y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
+      phi_fks=get_phi_from_p(i_fks,j_fks,p)
+      if (j_fks.gt.nincoming) then
+         if (m_j_fks.eq.0d0) then
+            call generate_momenta_massless_final_inverse()
+         else
+            call generate_momenta_massive_final_inverse()
+         endif
+      else
+         call generate_momenta_initial_inverse()
+      endif
+      end
+
+      subroutine generate_momenta_massive_final_inverse()
+      implicit none
+      ! y_ij_fks
+      x(2)=sqrt((1d0-y_ij_fks)/2d0)
+      xjac=xjac*2d0*x(2)*2d0
+
+      ! x_i_fks
+      xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
+      if (nincoming.eq.2) then
+         recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
+      else
+         recoil(0:3)=xp(0:3,1)-xp_mother(0:3)
+      endif
+      sumrec=recoil(0)+rho(recoil)
+      xmrec2=dot(recoil,recoil)
+      xmj=m_j_fks
+      xmj2=xmj**2
+      xmjhat=xmj/sqrtshat
+      xmhat=sqrt(xmrec2)/sqrtshat
+      xim=(1-xmhat**2-2*xmjhat+xmjhat**2)/(1-xmjhat)
+      cffA2=1-xmjhat**2*(1-y_ij_fks**2)
+      cffB2=-2*(1-xmhat**2-xmjhat**2)
+      cffC2=(1-(xmhat-xmjhat)**2)*(1-(xmhat+xmjhat)**2)
+      cffDEL2=cffB2**2-4*cffA2*cffC2
+      xiBm=(-cffB2-sqrt(cffDEL2))/(2*cffA2)
+      ximax=1-(xmhat+xmjhat)**2
+      if(y_ij_fks.ge.0.d0)then
+         xirplus=xim
+         xirminus=0.d0
+      else
+         xirplus=xiBm
+         xirminus=xiBm-xim
+      endif
+      xiimax=xirplus
+      xinorm=xirplus+xirminus
+      rat_xi=xiimax/xinorm
+
+      x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
+      x1_2=(2*xiimax-xi_i_fks)/xinorm
+
+      if (x1_1.gt.0d0.and.x1_1.lt.rat_xi) then
+         valid1=.true.
+      else
+         valid1=.false.
+      endif
+      if (x1_2.gt.rat_xi.and.x1_2.lt.1d0) then
+         valid2=.true.
+      else
+         valid2=.false.
+      endif
+      if (valid1.and. (.not.valid2)) then
+         x(1)=x1_1
+         xjac=xjac*2*x(1)/rat_xi
+      elseif((.not.valid1).and.valid2) then
+         x(1)=x1_2
+      elseif(valid1.and.valid2) then
+         if (ran2().gt.0.5d0) then
+            x(1)=x1_1
+            xjac=xjac*2*x(1)/rat_xi
+         else
+            x(1)=x1_2
+         endif
+         xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
+      else
+         write (*,*) 'No valid xi_i_fks in inverse '/
+     $        /'massive final phase-space.'
+         stop 1
+      endif
+
+      ! phi_i_fks
+      x(3)=phi_i_fks/(2d0*pi)
+      xjac=xjac*2d0*pi
+      
+      if(xmrec2.lt.1.d-16*shat)then
+         expybst=sqrtshat*sumrec/(shat-xmj2)*
+     &           (1+xmj2*xmrec2/(shat-xmj2)**2)
+      else
+         expybst=sumrec/(2*sqrtshat*xmrec2)*
+     &           (shat+xmrec2-xmj2-shat*sqrt(cffC2))
+      endif
+      if(expybst.le.0.d0)then
+         write(*,*)'Fatal error #10 in one_tree',expybst
+         stop
+      endif
+      shybst=(expybst-1/expybst)/2.d0
+      chybst=(expybst+1/expybst)/2.d0
+      chybstmo=chybst-1.d0
+      xdir(1:3)=xp_mother(1:3)/rho(xp_mother)
+c Boost the momenta
+      do i=nincoming+1,nexternal
+         if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
+     &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &        p_born(0,i))
+      enddo
+      call boostwdir2(chybst,shybst,chybstmo,xdir,xp_mother(0),p_born(0
+     $     ,j_fks))
+c
+c Phase-space factor for (xii,yij,phii)
+      veckn=rho(xp(0,j_fks))
+      veckbarn=rho(p_born(j_fks))
+      xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
+     &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+      xpswgt=abs(xpswgt)
+      end
+      
+
+      subroutine generate_momenta_massless_final_inverse()
+      implicit none
+
+      xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
+      if (nincoming.eq.2) then
+         recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
+      else
+         recoil(0:3)=xp(0:3,1)-xp_mother(0:3)
+      endif
+      sumrec=recoil(0)+rho(recoil)
+      sumrec2=sumrec**2
+      ! shat_born=shat for final state j_fks.
+      betabst=-(shat-sumrec2)/(shat+sumrec2)
+      gammabst=1/sqrt(1-betabst**2)
+      shybst=-(shat-sumrec2)/(2*sumrec*sqrtshat)
+      chybst=(shat+sumrec2)/(2*sumrec*sqrtshat)
+c cosh(y) is very often close to one, so define cosh(y)-1 as well
+      chybstmo=(sqrtshat-sumrec)**2/(2*sumrec*sqrtshat)
+      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother(1:3))
+c Perform the boost here
+      do i=nincoming+1,nexternal
+         if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
+     &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &        p_born(0,i))
+      enddo
+      call boostwdir2(chybst,shybst,chybstmo,xdir,xp_mother(0),p_born(0
+     $     ,j_fks))
+      
+c Phase-space factor for (xii,yij,phii)
+      veckn=rho(xp(0,j_fks))
+      veckbarn=rho(p_born(0,j_fks))
+      xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
+     &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+      xpswgt=abs(xpswgt)
+
+      
+! random number associated with xi_i_fks
+      call get_recoil(p_born,j_fks,shat,xmrec2,pass)
+      xiimax=1d0-xmrec2/shat
+      x(1)=sqrt(xi_i_fks/xiimax)
+      xjac=xjac*2d0*x(1)
+
+! random number associated with y_ij_fks
+      x(2)=sqrt((1d0-y_ij_fks)/2d0)
+      xjac=xjac*2d0*x(2)*2d0
+
+! random number associated with phi_i_fks
+      x(3)=phi_i_fks/(2d0*pi)
+      xjac=xjac*2d0*pi
+      end
+      
+      
       subroutine generate_momenta_born_inverse(x,shat_born,sqrtshat_born
      $     ,totmass,m,s,qmass,qwidth,granny_m2_red,input_granny_m2
      $     ,m_born,xpswgt0,xjac0,pb)
