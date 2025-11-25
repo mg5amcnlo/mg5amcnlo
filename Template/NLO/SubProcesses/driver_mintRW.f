@@ -19,7 +19,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,nndim,nevts
+      integer i,j,k,l,l1,l2,nndim,nevts,jj,kk
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -109,7 +109,10 @@ c general MadFKS parameters
      # SCALUP_a(MAXNUP,MAXNUP),SCALUP
 
       character*1000 buff,buff2
-      double precision ratio,showerscale
+      double precision ratio,showerscale,showerscale_a(-nexternal+3:2
+     $     *nexternal-3,-nexternal+3:2*nexternal-3)
+      integer colour_connections(2,nexternal)
+      common /colour_connections_to_write/ colour_connections
 
       
 C-----
@@ -250,9 +253,41 @@ c     Prepare the MINT folding
          read(buff2(8:),*) ichan,iFKS_picked,(x(i),i=1,ndim)
 !     compute the NLOoverBorn ratio:
          call compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
-     $        ,showerscale,nup,istup,pup)
+     $        ,showerscale,showerscale_a,nup,istup,pup)
          XWGTUP=XWGTUP*ratio
          SCALUP=showerscale
+! Overwrite the existing shower scale. Note that for MC@NLO-Delta, this
+! is an array of scales.
+         scalup_a=-1d0 ! set all to zero
+         jj=0
+         do j=1,NUP
+            if (abs(istup(j)).eq.1) jj=jj+1 ! skip intermediate resonances
+            kk=0
+            do k=1,NUP
+               if (abs(istup(k)).eq.1) kk=kk+1
+               if(j.eq.k)cycle
+               scalup_a(j,k)=showerscale_a(jj,kk)
+            enddo
+         enddo
+! Overwrite the colour connections with the ones compatible with what's
+! used in xmcsubt_complete()
+         if (colour_connections(1,1).ge.0) then
+            do j=1,NUP
+               if (abs(istup(j)).ne.1) then
+                  if (any(icolup(1:2,j).ne.0)) then
+                     write (*,*) 'LO2NLO reweighting not implemented'/
+     $                    /' for colour charged resonances'
+                     stop 1
+                  endif
+               endif
+            enddo
+            ICOLUP=0 ! set all to zero
+            jj=0
+            do j=1,NUP
+               if (abs(istup(j)).eq.1) jj=jj+1 ! skip intermediate resonances
+               icolup(1:2,j)=colour_connections(1:2,jj)
+            enddo
+         endif
 !     write the event:
          call write_lhef_event(98, NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP
      $        ,AQCDUP, IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff
@@ -296,7 +331,7 @@ c timing statistics
       end
 
       subroutine compute_Born2NLO_RW_factor(iFKS_picked,ratio,x
-     $     ,showerscale,nup,istup,pup)
+     $     ,showerscale,showerscale_a,nup,istup,pup)
       use mint_module
       use weight_lines
       implicit none
@@ -306,8 +341,9 @@ c timing statistics
       include "coupl.inc"
       double precision x(ndimmax),ratio,jac,p(0:3,nexternal),vegas_wgt
      $     ,probne,gfactsf,gfactcl,replace_MC_subt,sudakov_damp,rwgt
-     $     ,vol1,showerscale
-      integer nndim,i,iFKS_picked,nFKS_picked_nbody,sum
+     $     ,vol1,showerscale,showerscale_a(-nexternal+3:2
+     $     *nexternal-3,-nexternal+3:2*nexternal-3)
+      integer nndim,i,j,iFKS_picked,nFKS_picked_nbody,sum
      $     ,proc_map(0:fks_configs,0:fks_configs),iFKS
       save proc_map,sum
       double precision p_born(0:3,nexternal-1)
@@ -345,6 +381,8 @@ c timing statistics
       PARAMETER (MAXNUP=500)
       INTEGER NUP,ISTUP(MAXNUP)
       DOUBLE PRECISION PUP(5,MAXNUP)
+      double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
       
       if (firsttime) then
          firsttime=.false.
@@ -540,11 +578,14 @@ c determined which contributions are identical.
 
       call fill_mint_function_RATIO(ratio)
 
-      
       call pick_unweight_contr(iFKS_picked,ifold_picked)
       call update_fks_dir(iFKS_picked)
       showerscale=SCALUP(iFKS_picked*2-1)
-      
+      do i=1,nexternal
+         do j=1,nexternal
+            showerscale_a(i,j)=SCALUP_a(iFKS_picked*2-1,i,j)
+         enddo
+      enddo
       end
 
 
