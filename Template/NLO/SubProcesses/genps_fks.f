@@ -4580,7 +4580,120 @@ C dressed lepton stuff
       return
       end
 
+      subroutine generate_tau_y_wrapper_inverse(
+     $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
+      implicit none
+      include 'nexternal.inc'
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),totmass
+     $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac
+      if (abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) then
+         if (one_body) then
+c     tau is fixed by the mass of the final state particle
+            call compute_tau_one_body_inverse(totmass,stot,xjac)
+         else
+            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+     $           cBW(-ns_channel-1).ne.2)then
+c     Generate tau according to a Breit-Wiger function
+               call generate_tau_BW_inverse(stot,ndim_dummy,rndx(1)
+     $              ,qmass(-ns_channel-1),qwidth(-ns_channel-1),cBW(
+     $              -ns_channel-1),cBW_mass(-1, -ns_channel-1)
+     $              ,cBW_width(-1,-ns_channel-1),tau_born,xjac)
+            else 
+c     not a Breit Wigner
+               call generate_tau_inverse(stot,ndim_dummy,rndx(1)
+     $              ,tau_born,xjac)
+            endif
+         endif
+         
+c     Generate the rapditity of the Born system (tau and ycm input)
+         call generate_y_inverse(tau_born,rndx(2),ycm_born,ycmhat,xjac)
+      else
+         write (*,*) 'Inverted phase-space only implemented'/
+     $        /' for hadron-hadron collisions.'
+         stop 1
+      endif
+      end
 
+      subroutine generate_tau_inverse(stot,idim,x,tau,jac)
+      implicit none
+      integer idim
+      double precision x,tau,jac,smin,smax,s_mass,s,tiny,dum,dum3(-1:1)
+     $     ,stot
+      parameter (tiny=1d-8)
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
+      smin=tau_born_lower_bound*stot
+      smax=stot
+      s_mass=tau_lower_bound_resonance*stot
+      if (s_mass.gt.smin*(1d0+tiny)) then
+         call trans_x_inverse(2,idim,x,smin,smax,s_mass,dum,dum
+     $        ,dum3,dum3,jac,s)
+      elseif(abs(s_mass-smin).lt.tiny*smin) then
+         call trans_x_inverse(7,idim,x,smin,smax,s_mass,dum,dum
+     $        ,dum3,dum3,jac,s)
+      else
+         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
+         jac=-1d0
+      endif
+      tau=s/stot
+      jac=jac/stot
+      return
+      end
+
+
+      subroutine generate_y_inverse(tau,x,ycm,ycmhat,jac)
+      implicit none
+      double precision tau,x,ycm,jac
+      double precision ylim,ycmhat
+      ylim=-0.5d0*log(tau)
+      ycmhat=ycm/ylim
+      x=(ycmhat+1d0)/2d0
+      jac=jac*ylim*2
+      return
+      end
+
+      subroutine generate_tau_BW_inverse(stot,idim,x,mass,width,cBW
+     $     ,BWmass,BWwidth,tau,jac)
+      implicit none
+      integer cBW,idim
+      double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
+     $     -1:1),s_mass,s
+      double precision smax,smin
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
+      if (cBW.eq.1 .and. width.gt.0d0 .and. BWwidth(1).gt.0d0) then
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x_inverse(5,idim,x,smin,smax,s_mass,mass,width
+     $        ,BWmass(-1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      else
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x_inverse(3,idim,x,smin,smax,s_mass,mass,width
+     $        ,BWmass(-1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      endif
+      return
+      end
+
+      subroutine compute_tau_one_body_inverse(totmass,stot,jac)
+      implicit none
+      double precision totmass,stot,jac
+c Jacobian due to delta() of tau_born
+      jac=jac*2*totmass/stot
+      return
+      end
+
+      
       subroutine generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
      $     stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
      $     xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
@@ -4601,7 +4714,6 @@ C dressed lepton stuff
       integer ixEi,ixyij,ixpi,imother
       double precision m_j_fks,xi_i_fks,y_ij_fks
       
-! TODO: determine what to do for 2nd fold of massive j_fks.
       ixEi=ndim-2
       ixyij=ndim-1
       ixpi=ndim
@@ -4622,6 +4734,193 @@ C dressed lepton stuff
       endif
       end
 
+      subroutine generate_moment_initial_inverse(tau,ycm)
+      implicit none
+      idir=0
+      if(.not.fks_as_is)then
+         if(j_fks.eq.1)then
+            idir=1
+         elseif(j_fks.eq.2)then
+            idir=-1
+         endif
+      else
+         idir=1
+         write(*,*)'One_tree: option not checked (inverse)'
+         stop
+      endif
+      yijdir=idir*y_ij_fks
+      costh_i_fks=yijdir
+      omega=sqrt( (2-xi_i_fks*(1+yijdir))/
+     &     (2-xi_i_fks*(1-yijdir)) )
+      tau_born=tau*(1-xi_i_fks)
+      ycm_born=ycm+log(omega)
+      shat=tau*stot
+      sqrtshat=sqrt(shat)
+      xbjrk_born(1)=xbjrk(1)*(sqrt(1-xi_i_fks)*omega)
+      xbjrk_born(2)=xbjrk(2)/omega*sqrt(1-xi_i_fks)   
+
+      
+! this is to overcome numerical instabilities in ee collisions
+      if (1d0-tau_born.gt.stiny) then
+        ltau_born = log(tau_born)
+      else
+        ltau_born = tau_born-1d0
+      endif
+      if (abs(ycm_born).gt.stiny) then
+        e2ycm_born = exp(2*ycm_born)
+        em2ycm_born = exp(-2*ycm_born)
+      else
+        e2ycm_born = 1d0 + 2*ycm_born + 2*ycm_born**2
+        em2ycm_born = 1d0 - 2*ycm_born + 2*ycm_born**2
+      endif
+      
+      if( tau_born.le.tau_lower_bound) then
+         if (ycm_born.gt. (0.5d0*ltau_born-log(tau_lower_bound)) )then
+            yij_upp= (tau_lower_bound+tau_born)*
+     &           ( 1-e2ycm_born*tau_lower_bound ) /
+     &           ( (tau_lower_bound-tau_born)*
+     &           (1+e2ycm_born*tau_lower_bound) )
+         else
+            yij_upp=1.d0
+         endif
+      else
+         yij_upp=1.d0
+      endif
+      if( tau_born.le.tau_lower_bound) then
+         if (ycm_born.lt. (-0.5d0*ltau_born+log(tau_lower_bound)) )then
+            yij_low=-(tau_lower_bound+tau_born)*
+     &           ( 1-em2ycm_born*tau_lower_bound ) / 
+     &           ( (tau_lower_bound-tau_born)*
+     &           (1+em2ycm_born*tau_lower_bound) )
+         else
+            yij_low=1.d0
+         endif
+      else
+         yij_low=-1.d0
+      endif
+      if(idir.eq.1)then
+         y_ij_fks_upp=yij_upp
+         y_ij_fks_low=yij_low
+      elseif(idir.eq.-1)then
+         y_ij_fks_upp=-yij_low
+         y_ij_fks_low=-yij_upp
+      endif
+      x(2)=sqrt((y_ij_fks_upp-y_ij_fks)/(y_ij_fks_upp-y_ij_fks_low))
+      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+
+      x1bar2 = xbjrk_born(1)**2
+      omx1bar2 = 1d0-x1bar2
+      x2bar2 = xbjrk_born(2)**2
+      omx2bar2 = 1d0-x2bar2
+      if(1-tau_born.gt.1.d-5)then
+         yij_sol=-sinh(ycm_born)*(1+tau_born)/
+     &            ( cosh(ycm_born)*(1-tau_born) )
+      else
+         yij_sol=-ycmhat
+      endif
+      if(abs(yij_sol).gt.1.d0)then
+         if (abs(yij_sol).lt.1d0+qtiny) then
+           yij_sol = sign(1d0, yij_sol)
+         else
+            write(*,*)'Error #9 in genps_fks.f (inverse)',yij_sol
+     $           ,icountevts
+           write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         endif
+      endif
+
+      if(yijdir.eq.yij_sol)then
+         ximaxtmp=1-xbjrk_born(1)*xbjrk_born(2)
+      elseif(yijdir.ge.yij_sol)then
+         !this is an expansion when both yij->-1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+           xi1=(4*x1bar2 + yijdir + 11*x1bar2*yijdir - 5*x1bar2**2*yijdir +
+     &          x1bar2**3*yijdir+4*yijdir**2)/(2*(1 + yijdir)**2)
+           ximaxtmp=1-xi1
+         else if (omx1bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx1bar2 / (1+yijdir)
+         else
+           xi1=2*(1+yijdir)*x1bar2/(
+     &        sqrt( ((1+x1bar2)*(1-yijdir))**2+16*yijdir*x1bar2 ) +
+     &        (1-yijdir)*(omx1bar2) )
+           ximaxtmp=1-xi1
+         endif
+      elseif(yijdir.lt.yij_sol)then
+         !this is an expansion when both yij->+1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir-1d0).lt.ctiny.and.omx2bar2.lt.ctiny) then
+           xi2=(4*x2bar2 - yijdir - 11*x2bar2*yijdir + 5*x2bar2**2*yijdir -
+     &          x2bar2**3*yijdir +4*yijdir**2)/(4*(-1 + yijdir)**2)
+           ximaxtmp=1-xi2
+         else if (omx2bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx2bar2 / (1-yijdir)
+         else
+           xi2=2*(1-yijdir)*x2bar2/(
+     &        sqrt( ((1+x2bar2)*(1+yijdir))**2-16*yijdir*x2bar2 ) +
+     &        (1+yijdir)*(omx2bar2) )
+           ximaxtmp=1-xi2
+         endif
+      else
+         write(*,*)'Fatal error #14 in one_tree:'/
+     $        /' unknown option (inverse)'
+         write(*,*)y_ij_fks,yij_sol,idir
+         stop
+      endif
+      xiimax=ximaxtmp
+
+c
+c Lower bound on xi_i_fks
+      if (tau_born.lt.tau_lower_bound) then
+         xiimin=1d0-tau_born/tau_lower_bound
+      else
+         xiimin=0d0
+      endif
+      if (xiimax.lt.xiimin) then
+         write (*,*) 'WARNING #10 in genps_fks.f (inverse)',icountevts
+     $        ,xiimax,xiimin
+         xjac=-342d0
+         pass=.false.
+         return
+      endif
+
+      xinorm=xiimax-xiimin
+
+      x(1)=sqrt(xi_i_fks-xxmin)/(xiimax-xiimin))
+      xjac=xjac*2d0*x(1)
+
+
+      x(3)=phi_i_fks/(2d0*pi)
+      xjac=xjac*2d0*pi
+      
+      bstfact=sqrt( (2-xi_i_fks*(1-yijdir))*(2-xi_i_fks*(1+yijdir)) )
+      shy_tbst=-xi_i_fks*sqrt(1-yijdir**2)/(2*sqrt(1-xi_i_fks))
+      chy_tbst=bstfact/(2*sqrt(1-xi_i_fks))
+      chy_tbstmo=chy_tbst-1.d0
+      cosphi_i_fks=cos(phi_i_fks)
+      sinphi_i_fks=sin(phi_i_fks)
+      xdir_t(1)=cosphi_i_fks
+      xdir_t(2)=sinphi_i_fks
+      xdir_t(3)=zero
+
+c Boost the momenta
+      do i=3,nexternal
+         if(i.ne.i_fks.and.shy_tbst.ne.0.d0)
+     &        call boostwdir2(chy_tbst,shy_tbst,chy_tbstmo,xdir_t,
+     &        xp(0,i),p_born(0,i))
+      enddo
+
+      xpswgt=xpswgt*shat
+      xpswgt=xpswgt/(4*pi)**3/(1-xi_i_fks)
+      xpswgt=abs(xpswgt)
+      
+      end
+
+
+      
       subroutine generate_momenta_massive_final_inverse()
       implicit none
       ! y_ij_fks
