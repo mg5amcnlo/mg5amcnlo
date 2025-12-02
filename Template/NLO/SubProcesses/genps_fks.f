@@ -4539,17 +4539,14 @@ C dressed lepton stuff
       xjac0=1d0
       xpswgt0=1d0
 
-      ! given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
+! given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
       call generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
-     $     stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
-     $     xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+     $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
 
-      ! given Born momenta, return x's and jac corresponding to tau_born and y_born.
+! given Born momenta, return x's and jac corresponding to tau_born and y_born.
       call generate_tau_y_wrapper_inverse(qmass,qwidth,totmass,stot
      $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
       if (xjac0.lt.0d0) goto 222
-      xbjrk_born(1)=sqrt(tau_born)*exp(ycm_born)
-      xbjrk_born(2)=sqrt(tau_born)*exp(-ycm_born)
       if(.not.one_body)then
          shat_born=tau_born*stot
          sqrtshat_born=sqrt(shat_born)
@@ -4569,10 +4566,12 @@ C dressed lepton stuff
      $        /' with event projection'
          stop 1
       endif
-      ! given Born momenta, return all other x's and jac
+
+      call fill_intermediate_momenta_inverse(pb,itree,m)
+      
+! given Born momenta, return all other x's and jac
       call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,s,qmass,qwidth,granny_m2_red,input_granny_m2
-     $     ,m_born,xpswgt0,xjac0,pb)
+     $     ,totmass,m,s,qmass,qwidth,m_born,xpswgt0,xjac0,pb)
       if(.not.pass.or.xjac0.lt.0d0)goto 222
       return
  222  continue
@@ -4688,23 +4687,21 @@ c     Generate the rapditity of the Born system (tau and ycm input)
       subroutine compute_tau_one_body_inverse(totmass,stot,jac)
       implicit none
       double precision totmass,stot,jac
-c Jacobian due to delta() of tau_born
+c     Jacobian due to delta() of tau_born
       jac=jac*2*totmass/stot
       return
       end
 
       
       subroutine generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
-     $     stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
-     $     xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+     $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
       use kinematics_module
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal), stot
-     $     ,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,jac
-     $     ,xbjrk_born(2),M(-max_branch:max_particles),m_born(nexternal
-     $     -1)
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),stot
+     $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
+     $     -max_branch:nexternal-1)
       integer ndim
       logical input_granny_m2,pass
       integer i_fks,j_fks
@@ -4712,30 +4709,64 @@ c Jacobian due to delta() of tau_born
       double precision pmass(nexternal)
       common /to_mass/pmass
       integer ixEi,ixyij,ixpi,imother
-      double precision m_j_fks,xi_i_fks,y_ij_fks
-      
-      ixEi=ndim-2
-      ixyij=ndim-1
-      ixpi=ndim
+      double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
-
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
-      phi_fks=get_phi_from_p(i_fks,j_fks,p)
+      phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
+      xbjrk(1:2)=p(0,1:2)/(sqrt(stot)/2d0)
+      ycm=log(xbjrk(1)/xbjrk(2))/2d0
+      tau=xbjrk(1)*xbjrk(2)
+      shat=tau*stot
+      sqrtshat=sqrt(shat)
       if (j_fks.gt.nincoming) then
          if (m_j_fks.eq.0d0) then
-            call generate_momenta_massless_final_inverse()
+            call generate_momenta_massless_final_inverse(p,xi_i_fks
+     $           ,y_ij_fks,phi_i_fks,pb,x(ndim-2:ndim),xjac0,xpswgt0
+     $           ,shat,sqrtshat,i_fks,j_fks)
          else
-            call generate_momenta_massive_final_inverse()
+            call generate_momenta_massive_final_inverse(p,xi_i_fks
+     $           ,y_ij_fks,phi_i_fks,pb,x(ndim-2:ndim),xjac0,xpswgt0
+     $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
          endif
+         tau_born=tau
+         ycm_born=ycm
+         xbjrk_born(1:2)=xbjrk(1:2)
       else
-         call generate_momenta_initial_inverse()
+         call generate_momenta_initial_inverse(p,xi_i_fks,y_ij_fks
+     $        ,phi_i_fks,pb,x(ndim-2:ndim),xjac0,xpswgt0,shat,sqrtshat
+     $        ,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born
+     $        ,xbjrk_born)
       endif
       end
 
-      subroutine generate_moment_initial_inverse(tau,ycm)
+      subroutine generate_momenta_initial_inverse(xp,xi_i_fks ,y_ij_fks
+     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
+     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       implicit none
+      double precision pi,stiny,qtiny,zero,ctiny
+      parameter (pi=3.1415926535897932d0,stiny=1d-6,qtiny=1d-7,zero=0d0
+     $     ,ctiny=5d-7)
+      logical fks_as_is
+      parameter (fks_as_is=.false.)
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
+     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
+     $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
+      integer i_fks,j_fks
+      double precision yijdir,costh_i_fks,omega,tau_born,ycm_born
+     $     ,ltau_born,e2ycm_born,em2ycm_born,yij_upp,yij_low
+     $     ,y_ij_fks_upp,y_ij_fks_low,x1bar2,omx1bar2,x2bar2,omx2bar2
+     $     ,yij_sol,ximaxtmp,xi1,xi2,xiimax,xiimin,xinorm,bstfact
+     $     ,shy_tbst,chy_tbst,chy_tbstmo,cosphi_i_fks,sinphi_i_fks
+     $     ,xdir_t(1:3)
+      integer idir,i
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
       idir=0
       if(.not.fks_as_is)then
          if(j_fks.eq.1)then
@@ -4921,8 +4952,26 @@ c Boost the momenta
 
 
       
-      subroutine generate_momenta_massive_final_inverse()
+      subroutine generate_momenta_massive_final_inverse(xp,xi_i_fks
+     $           ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat
+     $           ,i_fks,j_fks,m_j_fks)
       implicit none
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
+     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
+     $     ,xpswgt
+      integer i_fks,j_fks
+      double precision recoil(0:3),xp_mother(0:3),sumrec,sumrec2,xmj
+     $     ,xmj2,xmjhat,xmhat,ximcffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
+     $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,x1_1,x1_2,expybst
+     $     ,shybst,chybst,chybstmo,veckn,vecknbar
+      integer i
+      logical valid1,valid2
+      double precision rho
+      external rho
       ! y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
       xjac=xjac*2d0*x(2)*2d0
@@ -5027,9 +5076,26 @@ c Phase-space factor for (xii,yij,phii)
       end
       
 
-      subroutine generate_momenta_massless_final_inverse()
+      subroutine generate_momenta_massless_final_inverse(xp,xi_i_fks
+     $     ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks
+     $     ,j_fks)
+      ! TODO: probably need xiimax as argument, to update the prefactors.
       implicit none
-
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
+     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
+     $     ,xpswgt
+      integer i_fks,j_fks
+      double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
+     $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
+     $     ,xpswgt,xiimax
+      integer i
+      double precision rho
+      external rho
+      
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
       if (nincoming.eq.2) then
          recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
@@ -5038,15 +5104,15 @@ c Phase-space factor for (xii,yij,phii)
       endif
       sumrec=recoil(0)+rho(recoil)
       sumrec2=sumrec**2
-      ! shat_born=shat for final state j_fks.
+! shat_born=shat for final state j_fks.
       betabst=-(shat-sumrec2)/(shat+sumrec2)
       gammabst=1/sqrt(1-betabst**2)
       shybst=-(shat-sumrec2)/(2*sumrec*sqrtshat)
       chybst=(shat+sumrec2)/(2*sumrec*sqrtshat)
-c cosh(y) is very often close to one, so define cosh(y)-1 as well
+c     cosh(y) is very often close to one, so define cosh(y)-1 as well
       chybstmo=(sqrtshat-sumrec)**2/(2*sumrec*sqrtshat)
       xdir(1:3)=-xp_mother(1:3)/rho(xp_mother(1:3))
-c Perform the boost here
+c     Perform the boost here
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
@@ -5055,7 +5121,7 @@ c Perform the boost here
       call boostwdir2(chybst,shybst,chybstmo,xdir,xp_mother(0),p_born(0
      $     ,j_fks))
       
-c Phase-space factor for (xii,yij,phii)
+c     Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
       veckbarn=rho(p_born(0,j_fks))
       xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
@@ -5063,33 +5129,31 @@ c Phase-space factor for (xii,yij,phii)
       xpswgt=abs(xpswgt)
 
       
-! random number associated with xi_i_fks
+!     random number associated with xi_i_fks
       call get_recoil(p_born,j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
       x(1)=sqrt(xi_i_fks/xiimax)
       xjac=xjac*2d0*x(1)
 
-! random number associated with y_ij_fks
+!     random number associated with y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
       xjac=xjac*2d0*x(2)*2d0
 
-! random number associated with phi_i_fks
+!     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
       end
       
       
       subroutine generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,s,qmass,qwidth,granny_m2_red,input_granny_m2
-     $     ,m_born,xpswgt0,xjac0,pb)
+     $     ,totmass,m,s,qmass,qwidth,m_born,xpswgt0,xjac0,pb)
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       double precision x(99),shat_born,sqrtshat_born,totmass,s(
      $     -max_branch:max_particles),m(-max_branch:max_particles)
-     $     ,qmass(-nexternal:0),qwidth(-nexternal:0), granny_m2_red(
-     $     -1:1),m_born(nexternal-1),xpswgt0, xjac0
-      logical input_granny_m2
+     $     ,qmass(-nexternal:0),qwidth(-nexternal:0),m_born(nexternal-1)
+     $     ,xpswgt0, xjac0
       integer itree(2,-max_branch:-1)
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
@@ -5126,7 +5190,21 @@ c Phase-space factor for (xii,yij,phii)
       endif
       end
 
-
+      subroutine fill_intermediate_momenta_inverse(ns_channel,pb,itree,m)
+      implicit none
+      double precision pb(0:3,-max_branch:nexternal-1),m(
+     $     -max_branch:max_particles)
+      integer itree(2,-max_branch:-1),ns_channel
+      integer i
+      do i=-1,-ns_channel,-1
+         pb(0:3,i)=pb(0:3,itree(1,i))+pb(0:3,itree(2,i))
+         m(i)=sqrt(dot(pb(0,i),pb(0,i)))
+      enddo
+      do i=-ns_channel-1,-nbranch,-1
+         pb(0:3,i)=p(0:3,itree(1,i))-p(0:3,itree(2,i))
+      enddo
+      end
+      
       subroutine generate_inv_mass_sch_inverse(ns_channel,itree,m
      $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
      $     ,x,xjac0,pb,pass)
