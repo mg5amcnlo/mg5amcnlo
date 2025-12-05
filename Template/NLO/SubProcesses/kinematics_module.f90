@@ -14,6 +14,34 @@ module kinematics_module
   private
 
 contains
+  
+  double precision function get_phi_from_p(i_fks,j_fks,p)
+    implicit none
+    integer :: i_fks,j_fks
+    double precision,dimension(0:3,next_n1) :: p
+    integer :: i
+    double precision,dimension(0:3) :: p_born_imother,p_rot
+    ! undo boost:
+    p_born_imother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
+
+    ! TODO: determine direction and magnitude of boost.
+    
+    ! undo rotation:
+    call getangles(p_born_imother, & 
+         th_mother_fks,costh_mother_fks,sinth_mother_fks, &
+         phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
+    call rotate_invar_inverse(p(0,i_fks),p_rot(0), &
+         costh_mother_fks,-sinth_mother_fks, &
+         cosphi_mother_fks,-sinphi_mother_fks)
+    ! compute phi:
+    if (p_rot(1).lt.0d0) then
+       get_phi_from_p=atan(p_rot(2)/p_rot(1)) + pi
+    elseif (p_rot(1).gt.0d0 .and. p_rot(2).lt.0d0) then
+       get_phi_from_p=atan(p_rot(2)/p_rot(1)) + 2d0*pi
+    else
+       get_phi_from_p=atan(p_rot(2)/p_rot(1))
+    endif
+  end function get_phi_from_p
   double precision function get_xi_from_p(i_fks,j_fks,p)
     implicit none
     integer :: i_fks,j_fks
@@ -44,6 +72,7 @@ contains
     double precision :: p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
     common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
     double precision,parameter :: tiny=1d-6,tiny2=1d-4
+    ! TODO: check if we need boost
     if (p(0,i_fks).lt.tiny) then ! In soft limit, we use momenta with energy divided out
        pi(0:3)=p_i_fks_cnt(0:3,0)
     else
@@ -603,5 +632,55 @@ contains
     endif
   end function gfunction
 
+  subroutine getangles(pin,th,cth,sth,phi,cphi,sphi)
+    implicit none
+    double precision :: pin(0:3),th,cth,sth,phi,cphi,sphi,xlength
+    xlength=pin(1)**2+pin(2)**2+pin(3)**2
+    if(xlength.eq.0)then
+       th=0.d0
+       cth=1.d0
+       sth=0.d0
+       phi=0.d0
+       cphi=1.d0
+       sphi=0.d0
+    else
+       xlength=sqrt(xlength)
+       cth=pin(3)/xlength
+       th=acos(cth)
+       if(cth.ne.1.d0)then
+          sth=sqrt(1-cth**2)
+          ! TODO: check 'atan2' function --> update atan().
+          phi=atan2(pin(2),pin(1))
+          cphi=cos(phi)
+          sphi=sin(phi)
+       else
+          sth=0.d0
+          phi=0.d0
+          cphi=1.d0
+          sphi=0.d0
+       endif
+    endif
+  end subroutine getangles
   
+  subroutine rotate_invar_inverse(pin,pout,cth,sth,cphi,sphi)
+! Given the four momentum pin, returns the four momentum pout (in the
+! same Lorentz frame) by performing a three-rotation of an angle phi
+! (cos(phi)=cphi) along the z axis, followed by a three-rotation of an
+! angle theta (cos(theta)=cth) around the y axis. The components of pin
+! and pout are given along these axes This is the inverse of
+! rotate_invar(), if the signs of the angles are flipped:
+!     call rotate_invar(pin,pout,cth,sth,cphi,sphi)
+!     call rotate_invar_inverse(pout,pin2,cth,-sth,cphi,-sphi)
+! Then pin==pin2
+    implicit none
+    double precision :: cth,sth,cphi,sphi,pin(0:3),pout(0:3)
+    double precision :: q1,q2,q3
+    q1=pin(1)
+    q2=pin(2)
+    q3=pin(3)
+    pout(1)=(q1*cphi-q2*sphi)*cth+q3*sth
+    pout(2)=q1*sphi+q2*cphi
+    pout(3)=-(q1*cphi-q2*sphi)*sth+q3*cth
+    pout(0)=pin(0)
+  end subroutine rotate_invar_inverse
 end module kinematics_module
