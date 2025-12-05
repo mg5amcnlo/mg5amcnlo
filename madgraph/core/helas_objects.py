@@ -1551,6 +1551,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # temporary END
             nb = mother.get('me_id') - flip
             output[str(i)] = nb
+            output['%s_id' % str(i)] = mother.ext_part_id
             if not OptimizedOutput:
                 if mother.get('is_loop'):
                     output['WF%d'%i] = 'L(1,%d)'%nb
@@ -2092,6 +2093,16 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             return None
         
+    @property
+    def ext_part_id(self):
+
+        if self.get('mothers'):
+            return sum([wf.ext_part_id for wf in self.get('mothers')])
+        else:
+            #misc.sprint(self.get('interaction_id'), self.get('state'), self.get('particles'))
+            return 2**(self.get('number_external')-1)    
+
+
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
@@ -3191,6 +3202,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('me_id') - flip 
             output[str(i)] = nb
+            output['%s_id' % i] = mother.ext_part_id
             if mother.get('is_loop'):
                 output['WF%d' % i ] = 'L(1,%d)'%nb
             else:
