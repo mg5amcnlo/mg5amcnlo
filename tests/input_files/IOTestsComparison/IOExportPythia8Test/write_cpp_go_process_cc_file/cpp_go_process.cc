@@ -213,8 +213,8 @@ double CPPProcess::matrix_uux_gogo()
   std::complex<double> ztemp; 
   std::complex<double> jamp[ncolor]; 
   // The color matrix;
-  static const int denom = 3; 
-  static const int cf[ncolor * (ncolor + 1)/2] = {16, -4, 16}; 
+  static const double denom[ncolor] = {3, 3}; 
+  static const double cf[ncolor][ncolor] = {{16, -2}, {-2, 16}}; 
 
   // Calculate color flows
   jamp[0] = -std::complex<double> (0, 1) * amp[0]; 
@@ -222,17 +222,13 @@ double CPPProcess::matrix_uux_gogo()
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
-  int cf_index = 0; 
   for(int i = 0; i < ncolor; i++ )
   {
     ztemp = 0.; 
-    for(int j = i; j < ncolor; j++ , cf_index++ )
-    {
-      ztemp = ztemp + static_cast<double> (cf[cf_index]) * jamp[j]; 
-    }
-    matrix = matrix + real(ztemp * conj(jamp[i])); 
+    for(int j = 0; j < ncolor; j++ )
+      ztemp = ztemp + cf[i][j] * jamp[j]; 
+    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
   }
-  matrix = matrix/denom; 
 
   // Store the leading color flows for choice of color
   for(int i = 0; i < ncolor; i++ )

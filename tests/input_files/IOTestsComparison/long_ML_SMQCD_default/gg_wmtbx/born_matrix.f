@@ -254,9 +254,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      INTEGER CF_INDEX
-      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
-      INTEGER DENOM
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(1)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -269,10 +267,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/3/
-      DATA (CF(I),I=  1,  2) /16,-4/
+      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
+     $ -6.666666666666666D-01/
 C     1 T(1,2,4,5)
-      DATA (CF(I),I=  3,  3) /16/
+      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+     $ ,5.333333333333333D+00/
 C     1 T(2,1,4,5)
 C     ----------
 C     BEGIN CODE
@@ -314,16 +313,13 @@ C     Amplitude(s) for diagram number 8
      $ +((0.000000000000000D+00,-1.000000000000000D+00))*TMP_JAMP(1)
 
       ML5_0_MATRIX = 0.D0
-      CF_INDEX = 0
       DO I = 1, NCOLOR
-        ZTEMP = (0D0,0D0)
-        DO J = I, NCOLOR
-          CF_INDEX = CF_INDEX +1
-          ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        ML5_0_MATRIX = ML5_0_MATRIX+REAL(ZTEMP*DCONJG(JAMP(I)))
+        ML5_0_MATRIX = ML5_0_MATRIX+ZTEMP*DCONJG(JAMP(I))
       ENDDO
-      ML5_0_MATRIX = ML5_0_MATRIX / DENOM
 
       END
 

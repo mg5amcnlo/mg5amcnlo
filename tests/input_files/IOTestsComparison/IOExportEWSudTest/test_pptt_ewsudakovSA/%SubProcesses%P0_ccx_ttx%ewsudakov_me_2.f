@@ -159,8 +159,7 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      INTEGER DENOM
-      INTEGER CF(NCOLOR2,NCOLOR1)
+      REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1
      $ ,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(8,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP1(0)
@@ -186,9 +185,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I,  1),I=  1,  2) /9,3/
-      DATA (CF(I,  2),I=  1,  2) /3,9/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -242,7 +242,7 @@ C     Finally interfere the two sets of color-stripped amplitudes
           ENDDO
           DO N = 1, NAMPSO
             ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))/DENOM
+     $       *DCONJG(JAMP1(I,N))
           ENDDO
         ENDDO
       ENDDO

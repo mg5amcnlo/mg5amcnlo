@@ -230,8 +230,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      INTEGER CF(NCOLOR*(NCOLOR+1))
-      INTEGER CF_INDEX, DENOM
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(0)
@@ -250,10 +249,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -278,20 +278,15 @@ C     JAMPs contributing to orders QCD=2
 
       RES = 0.D0
       DO M = 1, NAMPSO
-        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = I, NCOLOR
-            CF_INDEX = CF_INDEX +1
-            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
+          DO J = 1, NCOLOR
+            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N)) +
      $        ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
-        ENDDO
-        DO N = 1, NAMPSO
-          RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N))/DENOM
         ENDDO
       ENDDO
 
@@ -367,7 +362,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-C     REAL*8 CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
@@ -382,10 +377,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -503,7 +499,6 @@ C     JAMPs contributing to orders QCD=2
       NCOL = 2
       RETURN
       END
-
 
 
 
