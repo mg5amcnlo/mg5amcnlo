@@ -6045,9 +6045,10 @@ This implies that with decay chains:
                 break
 
             if 4 in multi:
-                if (c['mass'] != 'ZERO') and ('onia' in self._curr_model.get('name')):
-                    multi.remove(4)
-                    multi.remove(-4)
+                if c['mass'] != 'ZERO':
+                    if 'onia' in self._curr_model.get('name'):
+                        multi.remove(4)
+                        multi.remove(-4)
                     scheme = 3
             elif c['mass'] == 'ZERO':
                 multi.append(4)
