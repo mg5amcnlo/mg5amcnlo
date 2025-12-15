@@ -5010,6 +5010,16 @@ This implies that with decay chains:
                 process = f" ".join(["process"]+copy_args)
                 logger.info("INFO: Trying to generate "+process)
                 if not idx==last:
+                    for order in model_orders:
+                        try:
+                            (order_val,order_op) = squared_orders[order]
+                        except KeyError:
+                            try:
+                                order_val = orders[order]
+                                order_op = '='
+                            except KeyError:
+                                continue
+                        process += " "+order+order_op+str(order_val)
                     self.do_add(process)
                 else:
                     args = [arg.lower() for arg in copy_args]
