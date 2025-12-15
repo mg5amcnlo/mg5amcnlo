@@ -265,7 +265,8 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8  CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
@@ -276,21 +277,14 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  4) /1.200000000000000D+01
-     $ ,4.000000000000000D+00,4.000000000000000D+00,0.000000000000000D
-     $ +00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  4) /12,8,8,0/
 C     1 T(2,3,1) T(5,4)
-      DATA (CF(I,  2),I=  1,  4) /4.000000000000000D+00
-     $ ,1.200000000000000D+01,0.000000000000000D+00,4.000000000000000D
-     $ +00/
+      DATA (CF(I),I=  5,  7) /12,0,8/
 C     1 T(2,3,4) T(5,1)
-      DATA (CF(I,  3),I=  1,  4) /4.000000000000000D+00
-     $ ,0.000000000000000D+00,1.200000000000000D+01,4.000000000000000D
-     $ +00/
+      DATA (CF(I),I=  8,  9) /12,8/
 C     1 T(2,5,1) T(3,4)
-      DATA (CF(I,  4),I=  1,  4) /0.000000000000000D+00
-     $ ,4.000000000000000D+00,4.000000000000000D+00,1.200000000000000D
-     $ +01/
+      DATA (CF(I),I= 10, 10) /12/
 C     1 T(2,5,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -361,15 +355,21 @@ C     JAMPs contributing to orders QCD=1 QED=2
         RES(I)=0D0
       ENDDO
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX+1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX6(M,N)) = RES(SQSOINDEX6(M,N)) + ZTEMP
      $       *DCONJG(JAMP(I,N))
           ENDDO
+        ENDDO
+
+        DO N = 1, NAMPSO
+          RES(SQSOINDEX6(M,N)) = RES(SQSOINDEX6(M,N))/DENOM
         ENDDO
       ENDDO
 

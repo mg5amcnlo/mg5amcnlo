@@ -128,8 +128,7 @@ class TestImportUFO_fromcmd(unittest.TestCase):
         path = os.path.join(_file_path, '..', 'input_files', '231_Model_UFO')
         self.cmd.exec_cmd("import model %s" % path, postcmd=True, precmd=True)
 
-        # self.assertNotIn("j", self.cmd._multiparticles) 
-        self.assertIn("j", self.cmd._multiparticles) 
+        self.assertNotIn("j", self.cmd._multiparticles) 
 
 class TestNFlav(unittest.TestCase):
     """Test class for the get_nflav function"""
