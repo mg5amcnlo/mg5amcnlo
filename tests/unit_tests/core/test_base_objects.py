@@ -1062,7 +1062,8 @@ class LegTest(unittest.TestCase):
                       'from_group':False,
                       'onshell':None,                       
                       'loop_line':False,
-                      'polarization':[]}
+                      'polarization':[],
+                      'onium': {}}
 
         self.myleg = base_objects.Leg(self.mydict)
 
