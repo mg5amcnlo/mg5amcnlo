@@ -15,17 +15,15 @@ module kinematics_module
 
 contains
   
-  double precision function get_phi_from_p(i_fks,j_fks,p)
+  double precision function get_phi_from_p(i_fks,j_fks,p,p_born)
     implicit none
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
+    double precision,dimension(0:3,next_n) :: p_born
     integer :: i
     double precision,dimension(0:3) :: p_born_imother,p_rot
-    ! undo boost:
-    p_born_imother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
-
-    ! TODO: determine direction and magnitude of boost.
-    
+    ! get the mother momentum at the n-body level
+    p_born_imother(0:3)=p_born(0:3,min(i_fks,j_fks))
     ! undo rotation:
     call getangles(p_born_imother, & 
          th_mother_fks,costh_mother_fks,sinth_mother_fks, &

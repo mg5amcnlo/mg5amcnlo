@@ -4714,7 +4714,7 @@ c     Jacobian due to delta() of tau_born
       m_j_fks=pmass(j_fks)
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
-      phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
+      phi_i_fks=get_phi_from_p(i_fks,j_fks,p,pb(0:3,1:nexternal-1))
       xbjrk(1:2)=p(0,1:2)/(sqrt(stot)/2d0)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
       tau=xbjrk(1)*xbjrk(2)
