@@ -17,11 +17,15 @@ contains
   
   double precision function get_phi_from_p(i_fks,j_fks,p,p_born)
     implicit none
+    double precision,parameter :: pi=3.1415926535897932d0
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
     double precision,dimension(0:3,next_n) :: p_born
     integer :: i
     double precision,dimension(0:3) :: p_born_imother,p_rot
+    double precision :: th_mother_fks,costh_mother_fks&
+         &,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks&
+         &,sinphi_mother_fks
     ! get the mother momentum at the n-body level
     p_born_imother(0:3)=p_born(0:3,min(i_fks,j_fks))
     ! undo rotation:
@@ -32,13 +36,8 @@ contains
          costh_mother_fks,-sinth_mother_fks, &
          cosphi_mother_fks,-sinphi_mother_fks)
     ! compute phi:
-    if (p_rot(1).lt.0d0) then
-       get_phi_from_p=atan(p_rot(2)/p_rot(1)) + pi
-    elseif (p_rot(1).gt.0d0 .and. p_rot(2).lt.0d0) then
-       get_phi_from_p=atan(p_rot(2)/p_rot(1)) + 2d0*pi
-    else
-       get_phi_from_p=atan(p_rot(2)/p_rot(1))
-    endif
+    get_phi_from_p=atan2(p_rot(2),p_rot(1))
+    if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
   end function get_phi_from_p
   double precision function get_xi_from_p(i_fks,j_fks,p)
     implicit none
