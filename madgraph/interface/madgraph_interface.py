@@ -5027,6 +5027,7 @@ This implies that with decay chains:
         myleglist = base_objects.MultiLegList()
         state = False
         onium_index = 0
+        aloha.dual_mode = False
         for part_name in args:
             if part_name == '>':
                 if not myleglist:
@@ -5171,6 +5172,10 @@ This implies that with decay chains:
                 onium_color = onium_info.get('color')
                 onium_charge = onium_info.get('charge')
                 constituents = onium_info.get('particles')
+
+                # use dual mode for P-wave ONIA
+                if onium_orbit >= 1:
+                    aloha.dual_mode = True
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
 

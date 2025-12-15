@@ -38,7 +38,7 @@ class WriteALOHA:
 
             
     def __init__(self, abstract_routine, dirpath):
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             self.momentum_size = 4
         else:
             self.momentum_size = 2
@@ -557,14 +557,14 @@ class ALOHAWriterForFortran(WriteALOHA):
                 elif name.startswith('P'):
                     size='0:3'
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
                     elif aloha.unitary_gauge == 3 and name[0] in 'V':
                         size = 7
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
                     elif aloha.unitary_gauge == 3: # FD gauge 
                         # Need to fix since this need to be dependent if S is a goldstone or not
@@ -572,7 +572,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
@@ -685,14 +685,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         type = self.particles[i-1]
         
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='P%(i)d(%(j)d) = %(sign)s%(type)s%(i)d(%(nb)d)\n'
         else:
             template ='P%(i)d(%(j)d) = %(sign)s%(operator)s(%(type)s%(i)d(%(nb2)d))\n'
 
         nb2 = 1
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j + 1
                 if j == 0: 
                     assert not aloha.mp_precision 
@@ -1128,17 +1128,17 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 elif name in argument_var:
                     size ='*'
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
@@ -1238,7 +1238,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 
         # define the resulting momenta
         if self.offshell:
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -1572,17 +1572,17 @@ class ALOHAWriterForCPP(WriteALOHA):
                     continue
                     #should be define in the header
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
@@ -1628,7 +1628,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.offshell:
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -1648,14 +1648,14 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         type = self.particles[i-1]
         
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='P%(i)d[%(j)d] = %(sign)s%(type)s%(i)d[%(nb)d];\n'
         else:
             template ='P%(i)d[%(j)d] = %(sign)s%(type)s%(i)d[%(nb2)d]%(operator)s;\n'
 
         nb2 = 0
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j 
                 if j == 0: 
                     assert not aloha.mp_precision 
@@ -2344,7 +2344,7 @@ class ALOHAWriterForPython(WriteALOHA):
         if self.offshell:
             type = self.particles[self.outgoing-1]
             out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -2366,7 +2366,7 @@ class ALOHAWriterForPython(WriteALOHA):
         type = self.particles[i-1]
         
         main = '    P%d = [' % i
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='%(sign)s%(type)s%(i)d[%(nb)d]'
         else:
             template ='%(sign)scomplex(%(type)s%(i)d[%(nb2)d])%(operator)s'
@@ -2375,7 +2375,7 @@ class ALOHAWriterForPython(WriteALOHA):
         strfile.write(main)
         data = []
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j
                 if j == 0: 
                     assert not aloha.mp_precision 

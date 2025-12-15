@@ -1211,8 +1211,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
-        # Backup the loop mode, because it can be changed in what follows.
+        # Backup the loop and dual modes, because they can be changed in what follows.
         old_loop_mode = aloha.loop_mode
+        old_dual_mode = aloha.dual_mode
 
         # Create the aloha model or use the existing one (for loop exporters
         # this is useful as the aloha model will be used again in the
@@ -1240,8 +1241,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
         aloha_model.write(write_dir, 'Fortran')
 
-        # Revert the original aloha loop mode
+        # Revert the original aloha loop and dual modes
         aloha.loop_mode = old_loop_mode
+        aloha.dual_mode = old_dual_mode
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
@@ -1249,6 +1251,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f',
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
+        elif aloha.dual_mode:
+            cp(MG5DIR + '/aloha/template_files/aloha_functions_dual.f',
+                                                 write_dir+'/aloha_functions.f')
+            aloha_model.dual_mode = True
         else:
             if aloha.unitary_gauge !=3:
                 cp(MG5DIR + '/aloha/template_files/aloha_functions.f',
@@ -5460,6 +5466,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 6
             if hasattr(self.model, '_curr_gauge') and self.model._curr_gauge == 'FD':
                 replace_dict['wavefunctionsize'] = 7
+            if aloha.dual_mode:
+                replace_dict['wavefunctionsize'] = 8
 
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)
