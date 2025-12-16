@@ -2155,7 +2155,7 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid dictionary" % str(value))
             if value:
-                if value['N'] not in [1, 2]:
+                if not value['N'] > 0:
                     raise self.PhysicsObjectError( \
                       " %s is not a valid principal quantum number" % str(value['N']))
                 if value['S'] not in [0, 1, 99]:
@@ -2364,7 +2364,7 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             if value:
-                if value['N'] not in [1, 2]:
+                if not value['N'] > 0:
                     raise self.PhysicsObjectError( \
                       " %s is not a valid principal quantum number" % str(value['N']))
                 if value['S'] not in [0, 1, 99]:
