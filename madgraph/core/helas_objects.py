@@ -855,7 +855,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         elif name == 'onium':
             if value:
-                if value['N'] not in [1, 2]:
+                if not value['N'] > 0:
                     raise self.PhysicsObjectError( \
                       " %s is not a valid principal quantum number" % str(value['N']))
                 if value['S'] not in [0, 1, 99]:
@@ -4769,7 +4769,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Gives the total number of external onia states"""
 
         external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
-
         nonia = 0
         for wf in external_wfs:
             if wf.get('onium'):
