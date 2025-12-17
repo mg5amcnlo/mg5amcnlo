@@ -10,7 +10,7 @@ module kinematics_module
   double precision,private,parameter :: tiny=1d-5
 
   public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR,boost_n1_to_its_cms&
-       &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p,fill_father_and_ileg
+       &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p,get_phi_from_p,fill_father_and_ileg
   private
 
 contains
@@ -26,6 +26,31 @@ contains
     double precision :: th_mother_fks,costh_mother_fks&
          &,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks&
          &,sinphi_mother_fks
+
+    if (massless final-state radiator) then
+       q(0:3)=p(0:3,1)+p(0:3,2)
+       p_mother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
+       krec(0:3)=q(0:3)-p_mother(0:3)
+       kbarrec=rho(krec)
+       q2=dot(q,q)
+       beta=(q2-(krec(0)+kbarrec)**2)/(q2+(krec(0)+kbarrec)**2)
+       xdir(1:3)=p_mother(1:3)/rho(p_mother)
+
+       shybst=beta/sqrt(1-beta**2)
+       chybst=sqrt(1+shybst**2)
+       chybstmo=sqrt(1+shybst**2)-1d0
+       call boostwdir2(chybst,shybst,chybstmo,xdir,krec,krec_bst)
+
+       p_born_imother(0:3)=q(0:3)-krec_bst(0:3)
+
+    elseif(...)
+    elseif(...)
+    endif
+    
+    write (*,*) "WE CANNOT USE FIXED BORN. Need to recompute"//&
+         " p_born_imother from mapped n+1 kinematics."
+    stop 1
+    
     ! get the mother momentum at the n-body level
     p_born_imother(0:3)=p_born(0:3,min(i_fks,j_fks))
     ! undo rotation:

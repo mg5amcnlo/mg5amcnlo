@@ -4447,7 +4447,7 @@ C dressed lepton stuff
          qmass(i)=pmass(i,iconfig,0)
          qwidth(i)=pwidth(i,iconfig,0)
       enddo
-      call generate_mopmenta_conf_wrapper_inverse(ndim,jac,x,itree,qmass
+      call generate_momenta_conf_wrapper_inverse(ndim,jac,x,itree,qmass
      $     ,qwidth,p)
       wgt=wgt*jac
       end
@@ -4515,6 +4515,7 @@ C dressed lepton stuff
       double precision m(-max_branch:max_particles),stot,totmassin
      $     ,totmass,fksmass,tau_born,ycm_born,ycmhat,xjac0,xpswgt0
      $     ,shat_born,sqrtshat_born,pb(0:3,-max_branch:nexternal-1)
+     $     ,xbjrk_born(2)
       integer i,iconfigsave
       save m,stot,totmassin,totmass,fksmass
       pass=.true.
@@ -4580,7 +4581,8 @@ C dressed lepton stuff
          stop 1
       endif
 
-      call fill_intermediate_momenta_inverse(pb,itree,m)
+      call fill_intermediate_momenta_inverse(ns_channel,nbranch,pb,itree
+     $     ,m)
       
 ! given Born momenta, return all other x's and jac
       call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
@@ -4596,12 +4598,21 @@ C dressed lepton stuff
      $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
       implicit none
       include 'nexternal.inc'
+      include 'genps.inc'
+      include 'run.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),totmass
      $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac
       integer itree_c(2,-max_branch:-1)
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
       common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
+     $     ,cBW_level
+      integer ndim_dummy
+      ndim_dummy=1
       if (abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) then
          if (one_body) then
 c     tau is fixed by the mass of the final state particle
@@ -4726,7 +4737,8 @@ c     Jacobian due to delta() of tau_born
       double precision pmass(nexternal)
       common /to_mass/pmass
       integer ixEi,ixyij,ixpi,imother
-      double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2)
+      double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
+     $     ,sqrtshat,tau,ycm
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
@@ -4859,18 +4871,18 @@ c     Jacobian due to delta() of tau_born
       omx1bar2 = 1d0-x1bar2
       x2bar2 = xbjrk_born(2)**2
       omx2bar2 = 1d0-x2bar2
-      if(1-tau_born.gt.1.d-5)then
+      if(1-tau_born.gt.1.d-8)then ! prevent numerical inaccuracies.
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
      &            ( cosh(ycm_born)*(1-tau_born) )
       else
-         yij_sol=-ycmhat
+         xjac=-341d0
+         return
       endif
       if(abs(yij_sol).gt.1.d0)then
          if (abs(yij_sol).lt.1d0+qtiny) then
            yij_sol = sign(1d0, yij_sol)
          else
             write(*,*)'Error #9 in genps_fks.f (inverse)',yij_sol
-     $           ,icountevts
            write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
          endif
       endif
@@ -4927,10 +4939,9 @@ c Lower bound on xi_i_fks
          xiimin=0d0
       endif
       if (xiimax.lt.xiimin) then
-         write (*,*) 'WARNING #10 in genps_fks.f (inverse)',icountevts
+         write (*,*) 'WARNING #10 in genps_fks.f (inverse)'
      $        ,xiimax,xiimin
          xjac=-342d0
-         pass=.false.
          return
       endif
 
@@ -4978,16 +4989,16 @@ c Boost the momenta
       include 'nexternal.inc'
       double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
-     $     ,xpswgt
+     $     ,xpswgt,m_j_fks
       integer i_fks,j_fks
       double precision recoil(0:3),xp_mother(0:3),sumrec,sumrec2,xmj
-     $     ,xmj2,xmjhat,xmhat,ximcffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
+     $     ,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
      $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,x1_1,x1_2,expybst
-     $     ,shybst,chybst,chybstmo,veckn,vecknbar
+     $     ,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
       integer i
       logical valid1,valid2
-      double precision rho
-      external rho
+      double precision rho,dot,ran2
+      external rho,dot,ran2
       ! y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
       xjac=xjac*2d0*x(2)*2d0
@@ -5085,7 +5096,7 @@ c Boost the momenta
 c
 c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
-      veckbarn=rho(p_born(j_fks))
+      veckbarn=rho(p_born(0,j_fks))
       xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
      &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
       xpswgt=abs(xpswgt)
@@ -5107,7 +5118,8 @@ c Phase-space factor for (xii,yij,phii)
       integer i_fks,j_fks
       double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
      $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
-     $     ,xiimax
+     $     ,xiimax,xmrec2
+      logical pass
       integer i
       double precision rho
       external rho
@@ -5206,13 +5218,17 @@ c     Phase-space factor for (xii,yij,phii)
       endif
       end
 
-      subroutine fill_intermediate_momenta_inverse(ns_channel,pb,itree
-     $     ,m)
+      subroutine fill_intermediate_momenta_inverse(ns_channel,nbranch,pb
+     $     ,itree,m)
       implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
       double precision pb(0:3,-max_branch:nexternal-1),m(
      $     -max_branch:max_particles)
-      integer itree(2,-max_branch:-1),ns_channel
+      integer itree(2,-max_branch:-1),ns_channel,nbranch
       integer i
+      double precision dot
+      external dot
       do i=-1,-ns_channel,-1
          pb(0:3,i)=pb(0:3,itree(1,i))+pb(0:3,itree(2,i))
          m(i)=sqrt(dot(pb(0,i),pb(0,i)))
@@ -5409,7 +5425,8 @@ c     And outgoing particles with mass m1,m2
 c     s = (pa+pb)^2  t=(pa-p1)^2
 c*************************************************************************
       implicit none
-c     
+      double precision pi
+      parameter (pi=3.1415926535897932d0)
 c     Arguments
 c     
       double precision t,phi,m1,m2 !inputs
@@ -5452,6 +5469,7 @@ c-----
 ! rotxxx(p,q,prot) and then rotxxx_inv(prot,q,p) should give you
 ! back the original p.
       implicit none
+      real(kind=8),parameter :: vtiny=1d-12
       real(kind=8),dimension(0:3),intent(in) :: p,q
       real(kind=8),dimension(0:3),intent(out) :: prot
       real(kind=8) :: qt2,qt,psgn,qq
@@ -5526,11 +5544,11 @@ c-----
 
       subroutine mom2cx_inverse(esum,mass1,mass2,costh1,phi1 , p1,p2)
       implicit none
+      double precision rZero, rHalf, rOne, rTwo, pi
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, pi=3.1415926535897932d0,
+     $     rOne = 1.0d0, rTwo = 2.0d0 )
       double precision p1(0:3),p2(0:3),
      &     esum,mass1,mass2,costh1,phi1,md2,ed,pp,sinth1
-      double precision rZero, rHalf, rOne, rTwo
-      parameter( rZero = 0.0d0, rHalf = 0.5d0 )
-      parameter( rOne = 1.0d0, rTwo = 2.0d0 )
       md2 = (mass1-mass2)*(mass1+mass2)
       ed = md2/esum
       if ( mass1*mass2.eq.rZero ) then
