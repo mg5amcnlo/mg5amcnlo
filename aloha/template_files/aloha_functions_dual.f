@@ -1,1 +1,1068 @@
-# ALOHA functions in dual representation
+C###############################################################################
+C
+C Copyright (c) 2010 The ALOHA Development team and Contributors
+C
+C This file is a part of the MadGraph5_aMC@NLO project, an application which
+C automatically generates Feynman diagrams and matrix elements for arbitrary
+C high-energy processes in the Standard Model and beyond.
+C
+C It is subject to the ALOHA license which should accompany this
+C distribution.
+C
+C###############################################################################
+
+c LM: The name can be changed by adding "d" or "du" at the beginning, to emphazise the dual type involved
+
+      subroutine ixxxxx(p,fmass,nhel,nsf,dfi)
+      use dual_variables
+c
+c This subroutine computes a fermion wavefunction derivative with the flowing-IN
+c fermion number.
+c
+c input:
+c       complex p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex dfi(8)         : fermion wavefunction derivative      eps_L^alpha . d|fi>/dq^alpha
+c
+      implicit none
+      type(Dual)::dfi(8),chi(2)
+      type(Dual)::p(0:3),omega(2),sfomeg(2),
+     &            pp,pp3,sqp0p3,arg
+      double precision sf(2),fmass,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+c     Convention for dual computations (same as loop)
+      dfi(1) = p(0)*(-nsf)
+      dfi(2) = p(1)*(-nsf)
+      dfi(3) = p(2)*(-nsf)
+      dfi(4) = p(3)*(-nsf)
+
+      nh = nhel*nsf
+
+      if (fmass.ne.rZero) then
+         pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+         pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
+
+         if (pp%comp(0).eq.rZero) then
+            ip = (1+nh)/2
+            im = (1-nh)/2
+
+            sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+
+            dfi(3)%comp(0) = ip     * sqm(ip)
+            dfi(4)%comp(0) = im*nsf * sqm(ip)
+            dfi(5)%comp(0) = ip*nsf * sqm(im)
+            dfi(6)%comp(0) = im     * sqm(im)
+         else
+            ip = (3+nh)/2
+            im = (3-nh)/2
+
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = sqrt(p(0) + pp)
+            omega(2) = fmass/omega(1)
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+
+            pp3 = pp + p(3)
+            pp3%comp(0) = max(pp3%comp(0)%re, rZero)
+
+            arg = rHalf*pp3/pp
+            if (arg%comp(0).eq.0d0) then
+               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
+            endif
+            chi(1) = sqrt(arg)
+
+            if (pp3%comp(0).eq.rZero) then
+               chi(2)%comp(0) = dcmplx(-nh)
+            else
+               chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
+            endif
+
+            dfi(3) = sfomeg(1)*chi(im)
+            dfi(4) = sfomeg(1)*chi(ip)
+            dfi(5) = sfomeg(2)*chi(im)
+            dfi(6) = sfomeg(2)*chi(ip)
+         endif
+      else
+         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
+     &      (p(3)%comp(0).gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
+     &                        p(3)%comp(0),rZero))*nsf
+         end if
+         chi(1) = sqp0p3
+         if (sqp0p3%comp(0).eq.rZero) then
+            chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
+         else
+            chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
+         endif
+         if (nh.eq.1) then
+            dfi(7) = chi(1)
+            dfi(8) = chi(2)
+         else
+            dfi(5) = chi(2)
+            dfi(6) = chi(1)
+         endif
+      endif
+c
+      return
+      end subroutine ixxxxx
+
+
+
+
+
+      subroutine ixxxso(p,fmass,nhel,nsf,dfi)
+c
+c This subroutine computes a fermion wavefunction with the flowing-IN
+c fermion number.
+c
+c input:
+c       real    p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex fi(4)          : fermion wavefunction               |fi>
+c
+c
+      implicit none
+      type(Dual)::dfi(4),chi(2)
+      type(Dual)::p(0:3),omega(2),sfomeg(2),
+     &            pp,pp3,sqp0p3,arg
+      double precision sf(2),fmass,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      nh = nhel*nsf
+
+      if (fmass.ne.rZero) then
+         pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+         pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
+
+         if (pp%comp(0).eq.rZero) then
+            ip = (1+nh)/2
+            im = (1-nh)/2
+
+            sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+
+            dfi(1)%comp(0) = ip     * sqm(ip)
+            dfi(2)%comp(0) = im*nsf * sqm(ip)
+            dfi(3)%comp(0) = ip*nsf * sqm(im)
+            dfi(4)%comp(0) = im     * sqm(im)
+         else
+            ip = (3+nh)/2
+            im = (3-nh)/2
+
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = sqrt(p(0) + pp)
+            omega(2) = fmass/omega(1)
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+
+            pp3 = pp + p(3)
+            pp3%comp(0) = max(pp3%comp(0)%re, rZero)
+
+            arg = rHalf*pp3/pp
+            if (arg%comp(0).eq.0d0) then
+               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
+            endif
+            chi(1) = sqrt(arg)
+
+            if (pp3%comp(0).eq.rZero) then
+               chi(2)%comp(0) = dcmplx(-nh)
+            else
+               chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
+            endif
+
+            dfi(1) = sfomeg(1)*chi(im)
+            dfi(2) = sfomeg(1)*chi(ip)
+            dfi(3) = sfomeg(2)*chi(im)
+            dfi(4) = sfomeg(2)*chi(ip)
+         endif
+      else
+         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
+     &      (p(3)%comp(0).gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
+     &                        p(3)%comp(0),rZero))*nsf
+         end if
+         chi(1) = sqp0p3
+         if (sqp0p3%comp(0).eq.rZero) then
+            chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
+         else
+            chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
+         endif
+         if (nh.eq.1) then
+            dfi(3) = chi(1)
+            dfi(4) = chi(2)
+         else
+            dfi(1) = chi(2)
+            dfi(2) = chi(1)
+         endif
+      endif
+c
+      return
+      end subroutine ixxxso
+
+
+
+      subroutine oxxxxx(p,fmass,nhel,nsf,dfo)
+      use dual_variables
+c
+c This subroutine computes a fermion wavefunction derivative with the flowing-OUT
+c fermion number.
+c
+c input:
+c       complex p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex dfo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
+c
+      implicit none
+      type(Dual)::dfo(8),chi(2)
+      type(Dual)::p(0:3),omega(2)
+     &            pp,pp3,sqp0p3,arg
+      double precision sf(2),fmass,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+c     Convention for dual computations (same as loop)
+      dfo(1) = p(0)*(nsf)
+      dfo(2) = p(1)*(nsf)
+      dfo(3) = p(2)*(nsf)
+      dfo(4) = p(3)*(nsf)
+
+      nh = nhel*nsf
+
+
+
+      if (fmass.ne.rZero) then
+         pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+         pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
+
+         if (pp%comp(0).eq.rZero) then
+            im = nhel * (1+nh)/2
+            ip = nhel * -1 * ((1-nh)/2)
+
+            sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+
+            dfo(5) = im     * sqm(abs(ip))
+            dfo(6) = ip*nsf * sqm(abs(ip))
+            dfo(7) = im*nsf * sqm(abs(im))
+            dfo(8) = ip     * sqm(abs(im))     
+         else
+            ip = (3+nh)/2
+            im = (3-nh)/2
+
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = dsqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+
+            pp3 = pp + p(3)
+            pp3%comp(0) = max(pp3%comp(0)%re, rZero)
+            arg = rHalf*pp3/pp
+
+            if (arg%comp(0).eq.0d0) then
+               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
+            endif
+            chi(1) = sqrt(arg)
+         
+
+            if (pp3%comp(0).eq.rZero) then
+               chi(2)%comp(0) = dcmplx(-nh)
+            else
+               chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
+            endif
+
+            dfo(3) = sfomeg(2)*chi(im)
+            dfo(4) = sfomeg(2)*chi(ip)
+            dfo(5) = sfomeg(1)*chi(im)
+            dfo(6) = sfomeg(1)*chi(ip)
+
+         endif
+
+      else
+
+         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
+     &      (p(3)%comp(0).gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
+     &                        p(3)%comp(0),rZero))*nsf
+         end if
+         chi(1) = sqp0p3
+         if (sqp0p3%comp(0).eq.rZero) then
+            chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
+         else
+            chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
+         endif
+         if (nh.eq.1) then
+            dfo(5) = chi(1)
+            dfo(6) = chi(2)
+         else
+            dfo(7) = chi(2)
+            dfo(8) = chi(1)
+         endif
+
+      endif
+c
+      return
+      end subroutine oxxxxx
+
+
+      subroutine oxxxso(p,fmass,nhel,nsf,dfo)
+      use dual_variables
+c
+c This subroutine computes a fermion wavefunction derivative with the flowing-OUT
+c fermion number.
+c
+c input:
+c       complex p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex dfo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
+c
+      implicit none
+      type(Dual)::dfo(4),chi(2)
+      type(Dual)::p(0:3),omega(2)
+     &            pp,pp3,sqp0p3,arg
+      double precision sf(2),fmass,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      nh = nhel*nsf
+
+      if (fmass.ne.rZero) then
+         pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+         pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
+
+         if (pp%comp(0).eq.rZero) then
+            im = nhel * (1+nh)/2
+            ip = nhel * -1 * ((1-nh)/2)
+
+            sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+
+            dfo(1) = im     * sqm(abs(ip))
+            dfo(2) = ip*nsf * sqm(abs(ip))
+            dfo(3) = im*nsf * sqm(abs(im))
+            dfo(4) = ip     * sqm(abs(im))     
+         else
+            ip = (3+nh)/2
+            im = (3-nh)/2
+
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = dsqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+
+            pp3 = pp + p(3)
+            pp3%comp(0) = max(pp3%comp(0)%re, rZero)
+            arg = rHalf*pp3/pp
+
+            if (arg%comp(0).eq.0d0) then
+               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
+            endif
+            chi(1) = sqrt(arg)
+         
+
+            if (pp3%comp(0).eq.rZero) then
+               chi(2)%comp(0) = dcmplx(-nh)
+            else
+               chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
+            endif
+
+            dfo(1) = sfomeg(2)*chi(im)
+            dfo(2) = sfomeg(2)*chi(ip)
+            dfo(3) = sfomeg(1)*chi(im)
+            dfo(4) = sfomeg(1)*chi(ip)
+
+         endif
+
+      else
+
+         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
+     &      (p(3)%comp(0).gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
+     &                        p(3)%comp(0),rZero))*nsf
+         end if
+         chi(1) = sqp0p3
+         if (sqp0p3%comp(0).eq.rZero) then
+            chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
+         else
+            chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
+         endif
+         if (nh.eq.1) then
+            dfo(1) = chi(1)
+            dfo(2) = chi(2)
+         else
+            dfo(3) = chi(2)
+            dfo(4) = chi(1)
+         endif
+
+      endif
+c
+      return
+      end subroutine oxxxso
+
+
+
+      subroutine vxxxxx(p,vmass,nhel,nsv,vc)
+c
+c This subroutine computes a VECTOR wavefunction.
+c
+c input:
+c       complex p(0:3)         : four-momentum of vector boson
+c       real    fmass          : mass          of vector boson
+c       integer nhel = -1, 0, 1: helicity      of bector boson
+c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex vc(6)          : vector wavefunction       epsilon^mu(p)
+c
+      implicit none
+      type(Dual)::vc(8)
+      type(Dual)::p(0:3),pp,pt,pt2,pzpt,emp
+      double precision vmass,hel,hel0,sqh
+      integer nhel,nsv,nsvahl
+
+      double precision rZero, rHalf, rOne, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0 )
+      parameter( rOne = 1.0d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      sqh = dsqrt(rHalf)
+      hel = dble(nhel)
+      nsvahl = nsv*dabs(hel)
+      pt2 = p(1)**2+p(2)**2
+      pp = sqrt(pt2+p(3)**2)
+      pt = sqrt(pt2)
+
+      pp%comp(0) = min(p(0)%comp(0)%re,pp%comp(0)%re)
+      pt = min(pp%comp(0)%re,pt%comp(0)%re)
+
+c     Convention for dual computations (same as loop)
+      vc(1) = p(0)*nsv
+      vc(2) = p(1)*nsv
+      vc(3) = p(2)*nsv
+      vc(4) = p(3)*nsv
+
+      if (vmass.ne.rZero) then
+
+         hel0 = rOne-dabs(hel)
+
+         if ( pp%comp(0).eq.rZero ) then
+            vc(5)%comp(0) = dcmplx( rZero )
+            vc(6)%comp(0) = dcmplx(-hel*sqh )
+            vc(7)%comp(0) = dcmplx( rZero , nsvahl*sqh )
+            vc(8)%comp(0) = dcmplx( hel0 )
+
+         else
+            emp = p(0)/(vmass*pp)
+            vc(5) = hel0*pp/vmass
+            vc(8) = hel0*p(3)*emp+hel*pt/pp*sqh
+            if ( pt%comp(p).ne.rZero ) then
+               pzpt = p(3)/(pp*pt)*sqh*hel
+               vc(6) = hel0*p(1)*emp-p(1)*pzpt
+     &                   -ci*nsvahl*p(2)/pt*sqh
+               vc(7) = hel0*p(2)*emp-p(2)*pzpt
+     &                   +ci*nsvahl*p(1)/pt*sqh
+            else
+               vc(6)%comp(0) = dcmplx( -hel*sqh )
+               vc(7)%comp(0) = dcmplx( rZero , 
+     &                   nsvahl*sign(sqh,p(3)%comp(0)%re) )
+            endif
+
+         endif
+
+      else
+         pp = p(0)
+         pt = sqrt(p(1)**2+p(2)**2)
+         vc(5)%comp(0) = dcmplx( rZero )
+         vc(8)%comp(0) = hel*pt/pp*sqh
+         if ( pt%comp(0).ne.rZero ) then
+            pzpt = p(3)/(pp*pt)*sqh*hel
+            vc(6) = -p(1)*pzpt-ci*nsv*p(2)/pt*sqh
+            vc(7) = -p(2)*pzpt+ci*nsv*p(1)/pt*sqh
+        else
+            vc(6)%comp(0) = dcmplx( -hel*sqh )
+            vc(7)%comp(0) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+         endif
+
+      endif
+c
+      return
+      end subroutine vxxxxx
+
+
+
+      subroutine sxxxxx(p,nss,sc)
+c
+c This subroutine computes a complex SCALAR wavefunction.
+c
+c input:
+c       complex    p(0:3)      : four-momentum of scalar boson
+c       integer nss  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex sc(3)          : scalar wavefunction                   s
+c
+      implicit none
+      type(Dual)::sc(5),p(0:3)
+      integer nss
+
+      double precision rOne
+      parameter( rOne = 1.0d0 )
+
+      sc(5) = dcmplx( rOne )
+
+c     Convention for dual computations (same as loop)
+      sc(1) = p(0)*nss
+      sc(2) = p(1)*nss
+      sc(3) = p(2)*nss
+      sc(4) = p(3)*nss
+c
+      return
+      end subroutine sxxxxx
+
+
+
+      subroutine pxxxxx(p,tmass,nhel,nst,tc)
+         print*, "The pxxxxx subroutine for PSEUDOR is not (yet) implementated in dual computation"
+         stop
+      end
+
+
+
+      subroutine txxxxx(p,tmass,nhel,nst,tc)
+c
+c This subroutine computes a TENSOR wavefunction.
+c
+c input:
+c       complex p(0:3)         : four-momentum of tensor boson
+c       real    tmass          : mass          of tensor boson
+c       integer nhel           : helicity      of tensor boson
+c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
+c       integer nst  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c
+      implicit none
+      type(Dual)::tc(20),p(0:3)
+      double precision  tmass
+      integer nhel, nst
+
+      ! double complex ft(8,4), ep(4), em(4), e0(4)
+      ! double precision pt, pt2, pp, pzpt, emp, sqh, sqs
+      type(Dual)::ft(8,4), ep(4), em(4), e0(4)
+      type(Dual)::pt, pt2, pp, pzpt, emp
+      double precision sqh, sqs
+      integer i, j
+
+      double precision rZero, rHalf, rOne, rTwo
+      double complex ci
+      parameter( rZero = 0.0d0, rHalf = 0.5d0 )
+      parameter( rOne = 1.0d0, rTwo = 2.0d0 )
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      integer stdo
+      parameter( stdo = 6 )
+
+      sqh = sqrt(rHalf)
+      sqs = sqrt(rHalf/3.d0)
+
+      pt2 = p(1)**2+p(2)**2
+      pp = sqrt(pt2+p(3)**2)
+      pt = sqrt(pt2)
+
+      pp%comp(0) = min(p(0)%comp(0)%re,pp%comp(0)%re)
+      pt = min(pp%comp(0)%re,pt%comp(0)%re)
+
+c     Convention for dual computations (same as loop)
+      ft(5,1) = p(0)*nst
+      ft(6,1) = p(1)*nst
+      ft(7,1) = p(2)*nst
+      ft(8,1) = p(3)*nst
+
+      if ( nhel.ge.0 ) then
+c construct eps+
+         if ( pp%comp(0).eq.rZero ) then
+            ep(1)%comp(0) = dcmplx( rZero )
+            ep(2)%comp(0) = dcmplx( -sqh )
+            ep(3)%comp(0) = dcmplx( rZero , nst*sqh )
+            ep(4)%comp(0) = dcmplx( rZero )
+         else
+            ep(1)%comp(0) = dcmplx( rZero )
+            ep(4) = pt/pp*sqh
+            if ( pt%comp(0).ne.rZero ) then
+               pzpt = p(3)/(pp*pt)*sqh
+               ep(2) = -p(1)*pzpt-ci*nst*p(2)/pt*sqh
+               ep(3) = -p(2)*pzpt+ci*nst*p(1)/pt*sqh
+            else
+               ep(2)%comp(0) = dcmplx( -sqh )
+               ep(3)%comp(0) = dcmplx( rZero , 
+     &                     nst*sign(sqh,p(3)%comp(0)%re) )
+            endif
+         endif
+      end if
+
+      if ( nhel.le.0 ) then
+c construct eps-
+         if ( pp%comp(0).eq.rZero ) then
+            em(1)%comp(0) = dcmplx( rZero )
+            em(2)%comp(0) = dcmplx( sqh )
+            em(3)%comp(0) = dcmplx( rZero , nst*sqh )
+            em(4)%comp(0) = dcmplx( rZero )
+         else
+            em(1)%comp(0) = dcmplx( rZero )
+            em(4) = -pt/pp*sqh
+            if ( pt%comp(0).ne.rZero ) then
+               pzpt = -p(3)/(pp*pt)*sqh
+               em(2) = -p(1)*pzpt-ci*nst*p(2)/pt*sqh
+               em(3) = -p(2)*pzpt+ci*nst*p(1)/pt*sqh
+            else
+               em(2)%comp(0) = dcmplx( sqh )
+               em(3)%comp(0) = dcmplx( rZero , 
+     &                     nst*sign(sqh,p(3)%comp(0)%re) )
+            endif
+         endif
+      end if
+
+      if ( abs(nhel).le.1 ) then
+c construct eps0
+         if ( pp.eq.rZero ) then
+            e0(1)%comp(0) = dcmplx( rZero )
+            e0(2)%comp(0) = dcmplx( rZero )
+            e0(3)%comp(0) = dcmplx( rZero )
+            e0(4)%comp(0) = dcmplx( rOne )
+         else
+            emp = p(0)/(tmass*pp)
+            e0(1) = pp/tmass
+            e0(4) = p(3)*emp
+            if ( pt%comp(0).ne.rZero ) then
+               e0(2) = p(1)*emp
+               e0(3) = p(2)*emp
+            else
+               e0(2)%comp(0) = dcmplx( rZero )
+               e0(3)%comp(0) = dcmplx( rZero )
+            endif
+         end if
+      end if
+
+      if ( nhel.eq.2 ) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j) = ep(i)*ep(j)
+            end do
+         end do
+      else if ( nhel.eq.-2 ) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j) = em(i)*em(j)
+            end do
+         end do
+      else if (tmass.eq.0) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j)%comp(0) = 0
+            end do
+         end do
+      else if (tmass.ne.0) then
+        if  ( nhel.eq.1 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqh*( ep(i)*e0(j) + e0(i)*ep(j) )
+              end do
+           end do
+        else if ( nhel.eq.0 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqs*( ep(i)*em(j) + em(i)*ep(j)
+     &                                + rTwo*e0(i)*e0(j) )
+              end do
+           end do
+        else if ( nhel.eq.-1 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqh*( em(i)*e0(j) + e0(i)*em(j) )
+              end do
+           end do
+        else
+           write(stdo,*) 'invalid helicity in TXXXXX'
+           stop
+        end if
+      end if
+
+      tc(5) = ft(1,1)
+      tc(6) = ft(1,2)
+      tc(7) = ft(1,3)
+      tc(8) = ft(1,4)
+      tc(9) = ft(2,1)
+      tc(10) = ft(2,2)
+      tc(11) = ft(2,3)
+      tc(12) = ft(2,4)
+      tc(13) = ft(3,1)
+      tc(14) = ft(3,2)
+      tc(15) = ft(3,3)
+      tc(16) = ft(3,4)
+      tc(17) = ft(4,1)
+      tc(18) = ft(4,2)
+      tc(19) = ft(4,3)
+      tc(20) = ft(4,4)
+
+      tc(1) = ft(5,1)
+      tc(2) = ft(6,1)
+      tc(3) = ft(7,1)
+      tc(4) = ft(8,1)
+
+      return
+      end subroutine txxxxx
+
+
+
+      subroutine onia_proj_dual(fq, fqb, masses, p, m, nhel, spin
+     &, proj)
+c
+c This subroutine computes the spin projector for an onium states.
+c
+c input:
+c       dual    fq(1:8)        : spinor of first consituent (particle)
+c       dual    fqb(1:8)       : spinor of second consituent (anti-particle)
+c       real    p(0:3)         : four-momentum of bound state
+c       real    m(0:3)         : mass          of bound state
+c       integer nhel           : helicity      of bound state
+c       integer spin           : spin          of the bound state
+c LM:: can I use optional inputs?->      complex vc(1:6)        : polarization vector of physical particle (optional)
+c
+c output:
+c       complex proj           : value of the projector
+c
+      implicit none
+      type(Dual)::fq(1:8),fqb(1:8),vc(1:8),tmp
+      double precision masses(1:2)
+      integer spin
+      type(Dual)::proj
+      
+      double complex ci
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+      
+      if (spin.eq.0) then
+c     spin singlet    
+
+         tmp = -fq(5)*fqb(5)-fq(6)*fqb(6)+fq(7)*fqb(7)+fq(8)*fqb(8)
+
+      elseif (spin.eq.1) then
+c     spin triplet
+         call vxxxxx(p3,m3,nhel3,+1,vc)
+         tmp = (fq(5)*fqb(8)-fq(7)*fqb(6))*(vc(4)+ci*vc(5))+
+     &         (fq(6)*fqb(7)-fq(8)*fqb(5))*(vc(4)-ci*vc(5))+
+     &         (fq(5)*fqb(7)+fq(8)*fqb(6))*(vc(3)+vc(6))+
+     &         (fq(6)*fqb(8)+fq(7)*fqb(5))*(vc(3)-vc(6))
+      else
+         print *,"spin projector not yet implemented"
+         stop
+      endif
+
+      proj = 0.5d0/SQRT(2d0*masses(1)*masses(2))*tmp
+
+      return
+      end
+
+
+
+
+
+      subroutine boostx(p,q,pboost)
+c
+c This subroutine performs the Lorentz boost of a four-momentum.  The
+c momentum p is assumed to be given in the rest frame of q.  pboost is
+c the momentum p boosted to the frame in which q is given.  q must be a
+c timelike momentum.
+c
+c input:
+c       real    p(0:3)         : four-momentum p in the q rest  frame
+c       real    q(0:3)         : four-momentum q in the boosted frame
+c
+c output:
+c       real    pboost(0:3)    : four-momentum p in the boosted frame
+c
+      implicit none
+      double precision p(0:3),q(0:3),pboost(0:3),pq,qq,m,lf
+
+      double precision rZero
+      parameter( rZero = 0.0d0 )
+
+      qq = q(1)**2+q(2)**2+q(3)**2
+
+c#ifdef HELAS_CHECK
+c      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in boostx is zero momentum'
+c      endif
+c      if (abs(q(0))+qq.eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is zero momentum'
+c      endif
+c      if (p(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      if (q(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : q(0) = ',q(0)
+c      endif
+c      pp=p(0)**2-p(1)**2-p(2)**2-p(3)**2
+c      if (pp.lt.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx is spacelike'
+c         write(stdo,*)
+c     &        '             : p**2 = ',pp
+c      endif
+c      if (q(0)**2-qq.le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is not timelike'
+c         write(stdo,*)
+c     &        '             : q**2 = ',q(0)**2-qq
+c      endif
+c      if (qq.eq.rZero) then
+c         write(stdo,*)
+c     &   ' helas-warn  : q(0:3) in boostx has zero spacial components'
+c      endif
+c#endif
+
+      if ( qq.ne.rZero ) then
+         pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
+         m = sqrt(q(0)**2-qq)
+         lf = ((q(0)-m)*pq/qq+p(0))/m
+         pboost(0) = (p(0)*q(0)+pq)/m
+         pboost(1) =  p(1)+q(1)*lf
+         pboost(2) =  p(2)+q(2)*lf
+         pboost(3) =  p(3)+q(3)*lf
+      else
+         pboost(0) = p(0)
+         pboost(1) = p(1)
+         pboost(2) = p(2)
+         pboost(3) = p(3)
+      endif
+c
+      return
+      end
+
+      subroutine boostm(p,q,m, pboost)
+c
+c This subroutine performs the Lorentz boost of a four-momentum.  The
+c momentum p is assumed to be given in the rest frame of q.  pboost is
+c the momentum p boosted to the frame in which q is given.  q must be a
+c timelike momentum.
+c
+c input:
+c       real    p(0:3)         : four-momentum p in the q rest  frame
+c       real    q(0:3)         : four-momentum q in the boosted frame
+c       real    m        : mass of q (for numerical stability)
+c
+c output:
+c       real    pboost(0:3)    : four-momentum p in the boosted frame
+c
+      implicit none
+      double precision p(0:3),q(0:3),pboost(0:3),pq,qq,m,lf
+
+      double precision rZero
+      parameter( rZero = 0.0d0 )
+c
+      qq = q(1)**2+q(2)**2+q(3)**2
+
+      if ( qq.ne.rZero ) then
+         pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
+         lf = ((q(0)-m)*pq/qq+p(0))/m
+         pboost(0) = (p(0)*q(0)+pq)/m
+         pboost(1) =  p(1)+q(1)*lf
+         pboost(2) =  p(2)+q(2)*lf
+         pboost(3) =  p(3)+q(3)*lf
+      else
+         pboost(0) = p(0)
+         pboost(1) = p(1)
+         pboost(2) = p(2)
+         pboost(3) = p(3)
+      endif
+c
+      return
+      end
+
+      subroutine momntx(energy,mass,costh,phi , p)
+c
+c This subroutine sets up a four-momentum from the four inputs.
+c
+c input:
+c       real    energy         : energy
+c       real    mass           : mass
+c       real    costh          : cos(theta)
+c       real    phi            : azimuthal angle
+c
+c output:
+c       real    p(0:3)         : four-momentum
+c
+      implicit none
+      double precision p(0:3),energy,mass,costh,phi,pp,sinth
+
+      double precision rZero, rOne
+      parameter( rZero = 0.0d0, rOne = 1.0d0 )
+
+      p(0) = energy
+
+      if ( energy.eq.mass ) then
+
+         p(1) = rZero
+         p(2) = rZero
+         p(3) = rZero
+
+      else
+
+         pp = sqrt((energy-mass)*(energy+mass))
+         sinth = sqrt((rOne-costh)*(rOne+costh))
+         p(3) = pp*costh
+         if ( phi.eq.rZero ) then
+            p(1) = pp*sinth
+            p(2) = rZero
+         else
+            p(1) = pp*sinth*cos(phi)
+            p(2) = pp*sinth*sin(phi)
+         endif
+
+      endif
+c
+      return
+      end
+
+      subroutine rotxxx(p,q , prot)
+c
+c This subroutine performs the spacial rotation of a four-momentum.
+c the momentum p is assumed to be given in the frame where the spacial
+c component of q points the positive z-axis.  prot is the momentum p
+c rotated to the frame where q is given.
+c
+c input:
+c       real    p(0:3)         : four-momentum p in q(1)=q(2)=0 frame
+c       real    q(0:3)         : four-momentum q in the rotated frame
+c
+c output:
+c       real    prot(0:3)      : four-momentum p in the rotated frame
+c
+      implicit none
+      double precision p(0:3),q(0:3),prot(0:3),qt2,qt,psgn,qq,p1
+
+      double precision rZero, rOne
+      parameter( rZero = 0.0d0, rOne = 1.0d0 )
+c
+      prot(0) = p(0)
+
+      qt2 = q(1)**2 + q(2)**2
+
+      if ( qt2.eq.rZero ) then
+          if ( q(3).eq.rZero ) then
+             prot(1) = p(1)
+             prot(2) = p(2)
+             prot(3) = p(3)
+          else
+             psgn = dsign(rOne,q(3))
+             prot(1) = p(1)*psgn
+             prot(2) = p(2)*psgn
+             prot(3) = p(3)*psgn
+          endif
+      else
+          qq = sqrt(qt2+q(3)**2)
+          qt = sqrt(qt2)
+          p1 = p(1)
+          prot(1) = q(1)*q(3)/qq/qt*p1 -q(2)/qt*p(2) +q(1)/qq*p(3)
+          prot(2) = q(2)*q(3)/qq/qt*p1 +q(1)/qt*p(2) +q(2)/qq*p(3)
+          prot(3) =          -qt/qq*p1               +q(3)/qq*p(3)
+      endif
+c
+      return
+      end
+
+      subroutine mom2cx(esum,mass1,mass2,costh1,phi1 , p1,p2)
+c
+c This subroutine sets up two four-momenta in the two particle rest
+c frame.
+c
+c input:
+c       real    esum           : energy sum of particle 1 and 2
+c       real    mass1          : mass            of particle 1
+c       real    mass2          : mass            of particle 2
+c       real    costh1         : cos(theta)      of particle 1
+c       real    phi1           : azimuthal angle of particle 1
+c
+c output:
+c       real    p1(0:3)        : four-momentum of particle 1
+c       real    p2(0:3)        : four-momentum of particle 2
+c     
+      implicit none
+      double precision p1(0:3),p2(0:3),
+     &     esum,mass1,mass2,costh1,phi1,md2,ed,pp,sinth1
+
+      double precision rZero, rHalf, rOne, rTwo
+      parameter( rZero = 0.0d0, rHalf = 0.5d0 )
+      parameter( rOne = 1.0d0, rTwo = 2.0d0 )
+
+      md2 = (mass1-mass2)*(mass1+mass2)
+      ed = md2/esum
+      if ( mass1*mass2.eq.rZero ) then
+         pp = (esum-abs(ed))*rHalf
+      else
+         pp = sqrt((md2/esum)**2-rTwo*(mass1**2+mass2**2)+esum**2)*rHalf
+      endif
+      sinth1 = sqrt((rOne-costh1)*(rOne+costh1))
+
+      p1(0) = max((esum+ed)*rHalf,rZero)
+      p1(1) = pp*sinth1*cos(phi1)
+      p1(2) = pp*sinth1*sin(phi1)
+      p1(3) = pp*costh1
+
+      p2(0) = max((esum-ed)*rHalf,rZero)
+      p2(1) = -p1(1)
+      p2(2) = -p1(2)
+      p2(3) = -p1(3)
+c
+      return
+      end
