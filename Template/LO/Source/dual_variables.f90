@@ -423,14 +423,23 @@ module dual_variables
       ! otherwise, please increase the dimension
       integer,dimension(bnarray(size(a)),0:size(a))::c_split
       complex(kind(1d0))::cterm
+
       nn=size(a)
       if(size(res).ne.nn)then
          WRITE(*,*)"Error: the output dual variable does not match in power"
          stop
       endif
+
       if(np.eq.0)then
          res%comp(0)=dcmplx(1d0,0d0)
          do i=1,2**nn-1
+            res%comp(i)=dcmplx(0d0,0d0)
+         enddo
+         return
+      endif
+
+      if(a%comp(0).eq.0d0)then
+         do i=0,2**nn-1
             res%comp(i)=dcmplx(0d0,0d0)
          enddo
          return
@@ -473,14 +482,23 @@ module dual_variables
       ! otherwise, please increase the dimension
       integer,dimension(bnarray(size(a)),0:size(a))::c_split
       complex(kind(1d0))::cterm
+
       nn=size(a)
       if(size(res).ne.nn)then
          WRITE(*,*)"Error: the output dual variable does not match in power"
          stop
       endif
+
       if(np.eq.0d0)then
          res%comp(0)=dcmplx(1d0,0d0)
          do i=1,2**nn-1
+            res%comp(i)=dcmplx(0d0,0d0)
+         enddo
+         return
+      endif
+
+      if(a%comp(0).eq.0d0)then
+         do i=0,2**nn-1
             res%comp(i)=dcmplx(0d0,0d0)
          enddo
          return

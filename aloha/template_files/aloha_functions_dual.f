@@ -13,7 +13,7 @@ C###############################################################################
 
 c LM: The name can be changed by adding "d" or "du" at the beginning, to emphazise the dual type involved
 
-      subroutine ixxxxx(p,fmass,nhel,nsf,dfi)
+      subroutine ixxxxx(p,fmass,nhel,nsf,fi)
       use dual_variables
 c
 c This subroutine computes a fermion wavefunction derivative with the flowing-IN
@@ -26,12 +26,12 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex dfi(8)         : fermion wavefunction derivative      eps_L^alpha . d|fi>/dq^alpha
+c       complex fi(8)         : fermion wavefunction derivative      eps_L^alpha . d|fi>/dq^alpha
 c
       implicit none
-      type(Dual)::dfi(8),chi(2)
+      type(Dual)::fi(8),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
-     &            pp,pp3,sqp0p3,arg
+     &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1)
       integer nhel,nsf,ip,im,nh
 
@@ -41,10 +41,10 @@ c
       parameter( ci = dcmplx(0.0d0,1.0d0) )
 
 c     Convention for dual computations (same as loop)
-      dfi(1) = p(0)*(-nsf)
-      dfi(2) = p(1)*(-nsf)
-      dfi(3) = p(2)*(-nsf)
-      dfi(4) = p(3)*(-nsf)
+      fi(1) = p(0)*(-nsf)
+      fi(2) = p(1)*(-nsf)
+      fi(3) = p(2)*(-nsf)
+      fi(4) = p(3)*(-nsf)
 
       nh = nhel*nsf
 
@@ -59,10 +59,10 @@ c     Convention for dual computations (same as loop)
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            dfi(3)%comp(0) = ip     * sqm(ip)
-            dfi(4)%comp(0) = im*nsf * sqm(ip)
-            dfi(5)%comp(0) = ip*nsf * sqm(im)
-            dfi(6)%comp(0) = im     * sqm(im)
+            fi(3)%comp(0) = ip     * sqm(ip)
+            fi(4)%comp(0) = im*nsf * sqm(ip)
+            fi(5)%comp(0) = ip*nsf * sqm(im)
+            fi(6)%comp(0) = im     * sqm(im)
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -77,11 +77,7 @@ c     Convention for dual computations (same as loop)
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
-            arg = rHalf*pp3/pp
-            if (arg%comp(0).eq.0d0) then
-               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
-            endif
-            chi(1) = sqrt(arg)
+            chi(1) = sqrt(rHalf*pp3/pp)
 
             if (pp3%comp(0).eq.rZero) then
                chi(2)%comp(0) = dcmplx(-nh)
@@ -89,10 +85,10 @@ c     Convention for dual computations (same as loop)
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            dfi(3) = sfomeg(1)*chi(im)
-            dfi(4) = sfomeg(1)*chi(ip)
-            dfi(5) = sfomeg(2)*chi(im)
-            dfi(6) = sfomeg(2)*chi(ip)
+            fi(3) = sfomeg(1)*chi(im)
+            fi(4) = sfomeg(1)*chi(ip)
+            fi(5) = sfomeg(2)*chi(im)
+            fi(6) = sfomeg(2)*chi(ip)
          endif
       else
          if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
@@ -107,11 +103,11 @@ c     Convention for dual computations (same as loop)
             chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            dfi(7) = chi(1)
-            dfi(8) = chi(2)
+            fi(7) = chi(1)
+            fi(8) = chi(2)
          else
-            dfi(5) = chi(2)
-            dfi(6) = chi(1)
+            fi(5) = chi(2)
+            fi(6) = chi(1)
          endif
       endif
 c
@@ -122,7 +118,7 @@ c
 
 
 
-      subroutine ixxxso(p,fmass,nhel,nsf,dfi)
+      subroutine ixxxso(p,fmass,nhel,nsf,fi)
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number.
@@ -138,9 +134,9 @@ c       complex fi(4)          : fermion wavefunction               |fi>
 c
 c
       implicit none
-      type(Dual)::dfi(4),chi(2)
+      type(Dual)::fi(4),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
-     &            pp,pp3,sqp0p3,arg
+     &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1)
       integer nhel,nsf,ip,im,nh
 
@@ -162,10 +158,10 @@ c
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            dfi(1)%comp(0) = ip     * sqm(ip)
-            dfi(2)%comp(0) = im*nsf * sqm(ip)
-            dfi(3)%comp(0) = ip*nsf * sqm(im)
-            dfi(4)%comp(0) = im     * sqm(im)
+            fi(1)%comp(0) = ip     * sqm(ip)
+            fi(2)%comp(0) = im*nsf * sqm(ip)
+            fi(3)%comp(0) = ip*nsf * sqm(im)
+            fi(4)%comp(0) = im     * sqm(im)
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -180,11 +176,7 @@ c
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
-            arg = rHalf*pp3/pp
-            if (arg%comp(0).eq.0d0) then
-               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
-            endif
-            chi(1) = sqrt(arg)
+            chi(1) = sqrt(rHalf*pp3/pp)
 
             if (pp3%comp(0).eq.rZero) then
                chi(2)%comp(0) = dcmplx(-nh)
@@ -192,10 +184,10 @@ c
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            dfi(1) = sfomeg(1)*chi(im)
-            dfi(2) = sfomeg(1)*chi(ip)
-            dfi(3) = sfomeg(2)*chi(im)
-            dfi(4) = sfomeg(2)*chi(ip)
+            fi(1) = sfomeg(1)*chi(im)
+            fi(2) = sfomeg(1)*chi(ip)
+            fi(3) = sfomeg(2)*chi(im)
+            fi(4) = sfomeg(2)*chi(ip)
          endif
       else
          if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
@@ -210,11 +202,11 @@ c
             chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            dfi(3) = chi(1)
-            dfi(4) = chi(2)
+            fi(3) = chi(1)
+            fi(4) = chi(2)
          else
-            dfi(1) = chi(2)
-            dfi(2) = chi(1)
+            fi(1) = chi(2)
+            fi(2) = chi(1)
          endif
       endif
 c
@@ -223,7 +215,7 @@ c
 
 
 
-      subroutine oxxxxx(p,fmass,nhel,nsf,dfo)
+      subroutine oxxxxx(p,fmass,nhel,nsf,fo)
       use dual_variables
 c
 c This subroutine computes a fermion wavefunction derivative with the flowing-OUT
@@ -236,12 +228,12 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex dfo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
+c       complex fo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
 c
       implicit none
-      type(Dual)::dfo(8),chi(2)
+      type(Dual)::fo(8),chi(2)
       type(Dual)::p(0:3),omega(2)
-     &            pp,pp3,sqp0p3,arg
+     &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1)
       integer nhel,nsf,ip,im,nh
 
@@ -251,10 +243,10 @@ c
       parameter( ci = dcmplx(0.0d0,1.0d0) )
 
 c     Convention for dual computations (same as loop)
-      dfo(1) = p(0)*(nsf)
-      dfo(2) = p(1)*(nsf)
-      dfo(3) = p(2)*(nsf)
-      dfo(4) = p(3)*(nsf)
+      fo(1) = p(0)*(nsf)
+      fo(2) = p(1)*(nsf)
+      fo(3) = p(2)*(nsf)
+      fo(4) = p(3)*(nsf)
 
       nh = nhel*nsf
 
@@ -271,10 +263,10 @@ c     Convention for dual computations (same as loop)
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            dfo(5) = im     * sqm(abs(ip))
-            dfo(6) = ip*nsf * sqm(abs(ip))
-            dfo(7) = im*nsf * sqm(abs(im))
-            dfo(8) = ip     * sqm(abs(im))     
+            fo(5) = im     * sqm(abs(ip))
+            fo(6) = ip*nsf * sqm(abs(ip))
+            fo(7) = im*nsf * sqm(abs(im))
+            fo(8) = ip     * sqm(abs(im))     
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -288,12 +280,8 @@ c     Convention for dual computations (same as loop)
 
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
-            arg = rHalf*pp3/pp
 
-            if (arg%comp(0).eq.0d0) then
-               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
-            endif
-            chi(1) = sqrt(arg)
+            chi(1) = sqrt(rHalf*pp3/pp)
          
 
             if (pp3%comp(0).eq.rZero) then
@@ -302,10 +290,10 @@ c     Convention for dual computations (same as loop)
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            dfo(3) = sfomeg(2)*chi(im)
-            dfo(4) = sfomeg(2)*chi(ip)
-            dfo(5) = sfomeg(1)*chi(im)
-            dfo(6) = sfomeg(1)*chi(ip)
+            fo(3) = sfomeg(2)*chi(im)
+            fo(4) = sfomeg(2)*chi(ip)
+            fo(5) = sfomeg(1)*chi(im)
+            fo(6) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -323,11 +311,11 @@ c     Convention for dual computations (same as loop)
             chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            dfo(5) = chi(1)
-            dfo(6) = chi(2)
+            fo(5) = chi(1)
+            fo(6) = chi(2)
          else
-            dfo(7) = chi(2)
-            dfo(8) = chi(1)
+            fo(7) = chi(2)
+            fo(8) = chi(1)
          endif
 
       endif
@@ -336,7 +324,7 @@ c
       end subroutine oxxxxx
 
 
-      subroutine oxxxso(p,fmass,nhel,nsf,dfo)
+      subroutine oxxxso(p,fmass,nhel,nsf,fo)
       use dual_variables
 c
 c This subroutine computes a fermion wavefunction derivative with the flowing-OUT
@@ -349,10 +337,10 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex dfo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
+c       complex fo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
 c
       implicit none
-      type(Dual)::dfo(4),chi(2)
+      type(Dual)::fo(4),chi(2)
       type(Dual)::p(0:3),omega(2)
      &            pp,pp3,sqp0p3,arg
       double precision sf(2),fmass,sqm(0:1)
@@ -376,10 +364,10 @@ c
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            dfo(1) = im     * sqm(abs(ip))
-            dfo(2) = ip*nsf * sqm(abs(ip))
-            dfo(3) = im*nsf * sqm(abs(im))
-            dfo(4) = ip     * sqm(abs(im))     
+            fo(1) = im     * sqm(abs(ip))
+            fo(2) = ip*nsf * sqm(abs(ip))
+            fo(3) = im*nsf * sqm(abs(im))
+            fo(4) = ip     * sqm(abs(im))     
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -407,10 +395,10 @@ c
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            dfo(1) = sfomeg(2)*chi(im)
-            dfo(2) = sfomeg(2)*chi(ip)
-            dfo(3) = sfomeg(1)*chi(im)
-            dfo(4) = sfomeg(1)*chi(ip)
+            fo(1) = sfomeg(2)*chi(im)
+            fo(2) = sfomeg(2)*chi(ip)
+            fo(3) = sfomeg(1)*chi(im)
+            fo(4) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -428,11 +416,11 @@ c
             chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            dfo(1) = chi(1)
-            dfo(2) = chi(2)
+            fo(1) = chi(1)
+            fo(2) = chi(2)
          else
-            dfo(3) = chi(2)
-            dfo(4) = chi(1)
+            fo(3) = chi(2)
+            fo(4) = chi(1)
          endif
 
       endif
