@@ -153,7 +153,7 @@ def cp(path1, path2, log=True, error=False):
     except IOError as why:
         try:
             import madgraph.various.misc as misc
-        except ImportError:
+        except ModuleNotFoundError:
             import internal.misc as misc
         try: 
             if 'same file' in  str(why):
