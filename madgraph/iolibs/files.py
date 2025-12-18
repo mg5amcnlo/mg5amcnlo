@@ -151,7 +151,10 @@ def cp(path1, path2, log=True, error=False):
         logger.debug('no cp since identical: %s', why)
         return
     except IOError as why:
-        import madgraph.various.misc as misc
+        try:
+            import madgraph.various.misc as misc
+        except ImportError:
+            import internal.misc as misc
         try: 
             if 'same file' in  str(why):
                 return
