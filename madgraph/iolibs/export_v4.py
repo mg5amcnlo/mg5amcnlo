@@ -1252,8 +1252,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         elif aloha.dual_mode:
+            cp(MG5DIR + '/aloha/template_files/Makefile_F_dual', write_dir+'/makefile')
             cp(MG5DIR + '/aloha/template_files/aloha_functions_dual.f',
                                                  write_dir+'/aloha_functions.f')
+            cp(MG5DIR + '/aloha/template_files/dual_variables.f',
+                                                 write_dir+'/dual_variables.f')
             aloha_model.dual_mode = True
         else:
             if aloha.unitary_gauge !=3:

@@ -52,7 +52,7 @@ c     Convention for dual computations (same as loop)
          pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
-         if (pp%comp(0).eq.rZero) then
+         if (pp%comp(0)%re.eq.rZero) then
             ip = (1+nh)/2
             im = (1-nh)/2
 
@@ -91,10 +91,10 @@ c     Convention for dual computations (same as loop)
             fi(6) = sfomeg(2)*chi(ip)
          endif
       else
-         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
-     &      (p(3)%comp(0).gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
-     &                        p(3)%comp(0),rZero))*nsf
+         if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
+     &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+     &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
          if (sqp0p3%comp(0).eq.rZero) then
@@ -119,6 +119,7 @@ c
 
 
       subroutine ixxxso(p,fmass,nhel,nsf,fi)
+      use dual_variables
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number.
@@ -151,7 +152,7 @@ c
          pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
-         if (pp%comp(0).eq.rZero) then
+         if (pp%comp(0)%re.eq.rZero) then
             ip = (1+nh)/2
             im = (1-nh)/2
 
@@ -178,7 +179,7 @@ c
 
             chi(1) = sqrt(rHalf*pp3/pp)
 
-            if (pp3%comp(0).eq.rZero) then
+            if (pp3%comp(0)%re.eq.rZero) then
                chi(2)%comp(0) = dcmplx(-nh)
             else
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
@@ -190,13 +191,13 @@ c
             fi(4) = sfomeg(2)*chi(ip)
          endif
       else
-         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
-     &      (p(3)%comp(0).gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
-     &                        p(3)%comp(0),rZero))*nsf
+         if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
+     &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+     &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
-         if (sqp0p3%comp(0).eq.rZero) then
+         if (sqp0p3%comp(0)%re.eq.rZero) then
             chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
          else
             chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
@@ -232,7 +233,7 @@ c       complex fo(8)         : fermion wavefunction derivative       eps_L^alph
 c
       implicit none
       type(Dual)::fo(8),chi(2)
-      type(Dual)::p(0:3),omega(2)
+      type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1)
       integer nhel,nsf,ip,im,nh
@@ -256,24 +257,24 @@ c     Convention for dual computations (same as loop)
          pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
-         if (pp%comp(0).eq.rZero) then
+         if (pp%comp(0)%re.eq.rZero) then
             im = nhel * (1+nh)/2
             ip = nhel * -1 * ((1-nh)/2)
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            fo(5) = im     * sqm(abs(ip))
-            fo(6) = ip*nsf * sqm(abs(ip))
-            fo(7) = im*nsf * sqm(abs(im))
-            fo(8) = ip     * sqm(abs(im))     
+            fo(5)%comp(0) = im     * sqm(abs(ip))
+            fo(6)%comp(0) = ip*nsf * sqm(abs(ip))
+            fo(7)%comp(0) = im*nsf * sqm(abs(im))
+            fo(8)%comp(0) = ip     * sqm(abs(im))     
          else
             ip = (3+nh)/2
             im = (3-nh)/2
 
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
-            omega(1) = dsqrt(p(0)+pp)
+            omega(1) = sqrt(p(0)+pp)
             omega(2) = fmass/omega(1)
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
@@ -284,7 +285,7 @@ c     Convention for dual computations (same as loop)
             chi(1) = sqrt(rHalf*pp3/pp)
          
 
-            if (pp3%comp(0).eq.rZero) then
+            if (pp3%comp(0)%re.eq.rZero) then
                chi(2)%comp(0) = dcmplx(-nh)
             else
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
@@ -299,13 +300,13 @@ c     Convention for dual computations (same as loop)
 
       else
 
-         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
-     &      (p(3)%comp(0).gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
-     &                        p(3)%comp(0),rZero))*nsf
+         if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
+     &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+     &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
-         if (sqp0p3%comp(0).eq.rZero) then
+         if (sqp0p3%comp(0)%re.eq.rZero) then
             chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
          else
             chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
@@ -341,8 +342,8 @@ c       complex fo(8)         : fermion wavefunction derivative       eps_L^alph
 c
       implicit none
       type(Dual)::fo(4),chi(2)
-      type(Dual)::p(0:3),omega(2)
-     &            pp,pp3,sqp0p3,arg
+      type(Dual)::p(0:3),omega(2),sfomeg(2),
+     &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1)
       integer nhel,nsf,ip,im,nh
 
@@ -357,39 +358,34 @@ c
          pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
-         if (pp%comp(0).eq.rZero) then
+         if (pp%comp(0)%re.eq.rZero) then
             im = nhel * (1+nh)/2
             ip = nhel * -1 * ((1-nh)/2)
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
 
-            fo(1) = im     * sqm(abs(ip))
-            fo(2) = ip*nsf * sqm(abs(ip))
-            fo(3) = im*nsf * sqm(abs(im))
-            fo(4) = ip     * sqm(abs(im))     
+            fo(1)%comp(0) = im     * sqm(abs(ip))
+            fo(2)%comp(0) = ip*nsf * sqm(abs(ip))
+            fo(3)%comp(0) = im*nsf * sqm(abs(im))
+            fo(4)%comp(0) = ip     * sqm(abs(im))     
          else
             ip = (3+nh)/2
             im = (3-nh)/2
 
             sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
             sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
-            omega(1) = dsqrt(p(0)+pp)
+            omega(1) = sqrt(p(0)+pp)
             omega(2) = fmass/omega(1)
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
 
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
-            arg = rHalf*pp3/pp
-
-            if (arg%comp(0).eq.0d0) then
-               arg%comp(0) = 1.d-15 ! avoids issues in the dual implementation when sqrt of exact 0 is taken
-            endif
-            chi(1) = sqrt(arg)
+            chi(1) = sqrt(rHalf*pp3/pp)
          
 
-            if (pp3%comp(0).eq.rZero) then
+            if (pp3%comp(0)%re.eq.rZero) then
                chi(2)%comp(0) = dcmplx(-nh)
             else
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
@@ -404,13 +400,13 @@ c
 
       else
 
-         if((p(1)%comp(0).ne.0d0).or.(p(2)%comp(0).ne.0d0).or.
-     &      (p(3)%comp(0).gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)+
-     &                        p(3)%comp(0),rZero))*nsf
+         if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
+     &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+     &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
-         if (sqp0p3%comp(0).eq.rZero) then
+         if (sqp0p3%comp(0)%re.eq.rZero) then
             chi(2) = dcmplx(-nhel)*sqrt(rTwo*p(0))
          else
             chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
@@ -431,6 +427,7 @@ c
 
 
       subroutine vxxxxx(p,vmass,nhel,nsv,vc)
+      use dual_variables
 c
 c This subroutine computes a VECTOR wavefunction.
 c
@@ -463,7 +460,7 @@ c
       pt = sqrt(pt2)
 
       pp%comp(0) = min(p(0)%comp(0)%re,pp%comp(0)%re)
-      pt = min(pp%comp(0)%re,pt%comp(0)%re)
+      pt%comp(0) = min(pp%comp(0)%re,pt%comp(0)%re)
 
 c     Convention for dual computations (same as loop)
       vc(1) = p(0)*nsv
@@ -475,7 +472,7 @@ c     Convention for dual computations (same as loop)
 
          hel0 = rOne-dabs(hel)
 
-         if ( pp%comp(0).eq.rZero ) then
+         if ( pp%comp(0)%re.eq.rZero ) then
             vc(5)%comp(0) = dcmplx( rZero )
             vc(6)%comp(0) = dcmplx(-hel*sqh )
             vc(7)%comp(0) = dcmplx( rZero , nsvahl*sqh )
@@ -485,7 +482,7 @@ c     Convention for dual computations (same as loop)
             emp = p(0)/(vmass*pp)
             vc(5) = hel0*pp/vmass
             vc(8) = hel0*p(3)*emp+hel*pt/pp*sqh
-            if ( pt%comp(p).ne.rZero ) then
+            if ( pt%comp(0)%re.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
                vc(6) = hel0*p(1)*emp-p(1)*pzpt
      &                   -ci*nsvahl*p(2)/pt*sqh
@@ -503,14 +500,15 @@ c     Convention for dual computations (same as loop)
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
          vc(5)%comp(0) = dcmplx( rZero )
-         vc(8)%comp(0) = hel*pt/pp*sqh
-         if ( pt%comp(0).ne.rZero ) then
+         vc(8) = hel*pt/pp*sqh
+         if ( pt%comp(0)%re.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
             vc(6) = -p(1)*pzpt-ci*nsv*p(2)/pt*sqh
             vc(7) = -p(2)*pzpt+ci*nsv*p(1)/pt*sqh
         else
             vc(6)%comp(0) = dcmplx( -hel*sqh )
-            vc(7)%comp(0) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+            vc(7)%comp(0) = dcmplx( rZero , 
+     &                   nsv*sign(sqh,p(3)%comp(0)%re) )
          endif
 
       endif
@@ -521,6 +519,7 @@ c
 
 
       subroutine sxxxxx(p,nss,sc)
+      use dual_variables
 c
 c This subroutine computes a complex SCALAR wavefunction.
 c
@@ -538,7 +537,7 @@ c
       double precision rOne
       parameter( rOne = 1.0d0 )
 
-      sc(5) = dcmplx( rOne )
+      sc(5)%comp(0) = dcmplx( rOne )
 
 c     Convention for dual computations (same as loop)
       sc(1) = p(0)*nss
@@ -552,13 +551,15 @@ c
 
 
       subroutine pxxxxx(p,tmass,nhel,nst,tc)
-         print*, "The pxxxxx subroutine for PSEUDOR is not (yet) implementated in dual computation"
+         print*, "The pxxxxx subroutine for PSEUDOR is not (yet) "//
+     1           "implementated in dual computation"
          stop
       end
 
 
 
       subroutine txxxxx(p,tmass,nhel,nst,tc)
+      use dual_variables
 c
 c This subroutine computes a TENSOR wavefunction.
 c
@@ -601,7 +602,7 @@ c
       pt = sqrt(pt2)
 
       pp%comp(0) = min(p(0)%comp(0)%re,pp%comp(0)%re)
-      pt = min(pp%comp(0)%re,pt%comp(0)%re)
+      pt%comp(0) = min(pp%comp(0)%re,pt%comp(0)%re)
 
 c     Convention for dual computations (same as loop)
       ft(5,1) = p(0)*nst
@@ -611,7 +612,7 @@ c     Convention for dual computations (same as loop)
 
       if ( nhel.ge.0 ) then
 c construct eps+
-         if ( pp%comp(0).eq.rZero ) then
+         if ( pp%comp(0)%re.eq.rZero ) then
             ep(1)%comp(0) = dcmplx( rZero )
             ep(2)%comp(0) = dcmplx( -sqh )
             ep(3)%comp(0) = dcmplx( rZero , nst*sqh )
@@ -619,7 +620,7 @@ c construct eps+
          else
             ep(1)%comp(0) = dcmplx( rZero )
             ep(4) = pt/pp*sqh
-            if ( pt%comp(0).ne.rZero ) then
+            if ( pt%comp(0)%re.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh
                ep(2) = -p(1)*pzpt-ci*nst*p(2)/pt*sqh
                ep(3) = -p(2)*pzpt+ci*nst*p(1)/pt*sqh
@@ -633,7 +634,7 @@ c construct eps+
 
       if ( nhel.le.0 ) then
 c construct eps-
-         if ( pp%comp(0).eq.rZero ) then
+         if ( pp%comp(0)%re.eq.rZero ) then
             em(1)%comp(0) = dcmplx( rZero )
             em(2)%comp(0) = dcmplx( sqh )
             em(3)%comp(0) = dcmplx( rZero , nst*sqh )
@@ -641,7 +642,7 @@ c construct eps-
          else
             em(1)%comp(0) = dcmplx( rZero )
             em(4) = -pt/pp*sqh
-            if ( pt%comp(0).ne.rZero ) then
+            if ( pt%comp(0)%re.ne.rZero ) then
                pzpt = -p(3)/(pp*pt)*sqh
                em(2) = -p(1)*pzpt-ci*nst*p(2)/pt*sqh
                em(3) = -p(2)*pzpt+ci*nst*p(1)/pt*sqh
@@ -655,7 +656,7 @@ c construct eps-
 
       if ( abs(nhel).le.1 ) then
 c construct eps0
-         if ( pp.eq.rZero ) then
+         if ( pp%comp(0)%re.eq.rZero ) then
             e0(1)%comp(0) = dcmplx( rZero )
             e0(2)%comp(0) = dcmplx( rZero )
             e0(3)%comp(0) = dcmplx( rZero )
@@ -664,7 +665,7 @@ c construct eps0
             emp = p(0)/(tmass*pp)
             e0(1) = pp/tmass
             e0(4) = p(3)*emp
-            if ( pt%comp(0).ne.rZero ) then
+            if ( pt%comp(0)%re.ne.rZero ) then
                e0(2) = p(1)*emp
                e0(3) = p(2)*emp
             else
@@ -745,8 +746,9 @@ c construct eps0
 
 
 
-      subroutine onia_proj_dual(fq, fqb, masses, p, m, nhel, spin
+      subroutine onia_proj(fq, fqb, masses, p, m, nhel, spin
      &, proj)
+      use dual_variables
 c
 c This subroutine computes the spin projector for an onium states.
 c
@@ -763,9 +765,9 @@ c output:
 c       complex proj           : value of the projector
 c
       implicit none
-      type(Dual)::fq(1:8),fqb(1:8),vc(1:8),tmp
-      double precision masses(1:2)
-      integer spin
+      type(Dual)::fq(1:8),fqb(1:8),vc(1:8),p(0:3),tmp
+      double precision masses(1:2),m
+      integer nhel,spin
       type(Dual)::proj
       
       double complex ci
@@ -778,7 +780,7 @@ c     spin singlet
 
       elseif (spin.eq.1) then
 c     spin triplet
-         call vxxxxx(p3,m3,nhel3,+1,vc)
+         call vxxxxx(p,m,nhel,+1,vc)
          tmp = (fq(5)*fqb(8)-fq(7)*fqb(6))*(vc(4)+ci*vc(5))+
      &         (fq(6)*fqb(7)-fq(8)*fqb(5))*(vc(4)-ci*vc(5))+
      &         (fq(5)*fqb(7)+fq(8)*fqb(6))*(vc(3)+vc(6))+

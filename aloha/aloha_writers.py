@@ -38,6 +38,7 @@ class WriteALOHA:
 
             
     def __init__(self, abstract_routine, dirpath):
+
         if (aloha.loop_mode or aloha.dual_mode):
             self.momentum_size = 4
         else:
@@ -106,7 +107,7 @@ class WriteALOHA:
                                  
     def get_header_txt(self,mode=''): 
         """ Prototype for language specific header""" 
-        raise Exception('THis function should be overwritten')
+        raise Exception('This function should be overwritten')
         return ''
     
     def get_declaration_txt(self):
@@ -247,7 +248,7 @@ class WriteALOHA:
     def write(self, mode=None):
                          
         self.mode = mode
-        
+
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
@@ -457,8 +458,8 @@ class ALOHAWriterForFortran(WriteALOHA):
     else:
         type2def['double'] = 'real*8'
         type2def['complex'] = 'complex*16'
-        
         format = 'd0'
+    type2def['dual'] = 'type(dual)'
     
     def get_fct_format(self, fct):
         """Put the function in the correct format"""
@@ -505,7 +506,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         arguments = [arg for format, arg in self.define_argument_list(couplings)]
         if not self.offshell:
             output = 'vertex'
-            self.declaration.add(('complex','vertex'))
+            if aloha.dual_mode:
+                self.declaration.add(('dual','vertex'))
+            else:
+                self.declaration.add(('complex','vertex'))
         else:
             output = '%(spin)s%(id)d' % {
                      'spin': self.particles[self.outgoing -1],
@@ -523,6 +527,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         """
         
         out = StringIO()
+        if aloha.dual_mode:
+            out.write('use dual_variables\n')
         out.write('implicit none\n')
         # Check if we are in formfactor mode
         if self.has_model_parameter:
@@ -551,11 +557,15 @@ class ALOHAWriterForFortran(WriteALOHA):
         for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
+                if aloha.dual_mode and type=='complex':
+                    type = 'dual'
                 #determine the size of the list
                 if name in argument_var:
                     size ='*'
                 elif name.startswith('P'):
                     size='0:3'
+                    if aloha.dual_mode:
+                        type = 'dual'
                 elif name[0] in ['F','V']:
                     if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
@@ -578,7 +588,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                         size = 18
                 else:
                     size = '*'
-    
+
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
                 if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
@@ -586,6 +596,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
+                if aloha.dual_mode and name[0] == 'T' or name == 'denom':
+                    type = 'dual'
                 out.write(' %s %s\n' % (self.type2def[type], name))
                 
         # Add the lines corresponding to the symmetry
