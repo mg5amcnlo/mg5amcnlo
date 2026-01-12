@@ -5791,6 +5791,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            for me in matrix_elements], []))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
+        onium_legs = []
+        for me in matrix_elements:
+            for proc in me.get('processes'):
+                for leg in proc.get('legs'):
+                    if leg.get('onium'):
+                        onium_legs.append((leg.get('onium').get('id'),leg.get('onium').get('C')))
+        onium_legs = sorted(list(set(onium_legs)))
+
         lines = """function get_color(ipdg)
         implicit none
         integer get_color, ipdg
@@ -5805,6 +5813,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             get_color=%d
             return
             """ % (part_id, model.get_particle(part_id).get_color())
+        for (part_id,part_color) in onium_legs:
+            lines += """else if(ipdg.eq.%d)then
+            get_color=%d
+            return
+            """ % (part_id, part_color)
         # Dummy particle for multiparticle vertices with pdg given by
         # first code not in the model
         lines += """else if(ipdg.eq.%d)then
