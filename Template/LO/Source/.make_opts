@@ -116,6 +116,14 @@ else
   llhapdf=
 endif
 
+# Link dual module if needed
+
+PATH_TO_DUAL_MODULE=../../Source/DHELAS/dual_variables.mod
+ifneq ("$(wildcard $(PATH_TO_DUAL_MODULE))","")
+    FFLAGS+= -I../../Source/DHELAS/
+endif
+
+
 # Helper function to check MG5 version
 define CHECK_MG5AMC_VERSION
 python -c 'import re; from distutils.version import StrictVersion; print StrictVersion("$(MG5AMC_VERSION)") >= StrictVersion("$(1)") if re.match("^[\d\.]+$$","$(MG5AMC_VERSION)") else True;'
