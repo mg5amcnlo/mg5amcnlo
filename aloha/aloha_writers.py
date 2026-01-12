@@ -596,7 +596,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
-                if aloha.dual_mode and name[0] == 'T' or name == 'denom':
+                if aloha.dual_mode and (name[0] == 'T' or name == 'denom'):
                     type = 'dual'
                 out.write(' %s %s\n' % (self.type2def[type], name))
                 
