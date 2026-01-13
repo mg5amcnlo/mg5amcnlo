@@ -954,10 +954,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         nonia = matrix_element.get_nonia()
+        npwave = matrix_element.get_npwave()
+        der_order = matrix_element.get_highest_derivate_order()
 
         lines = []
         lines.append("INTEGER    NONIA")
+        if npwave: 
+            lines.append("INTEGER    NPWAVE")
+            lines.append("INTEGER    DER_ORDER")
         lines.append("PARAMETER (NONIA=%d)"%nonia)
+        if npwave: 
+            lines.append("PARAMETER (NPWAVE=%d)"%npwave)
+            lines.append("PARAMETER (DER_ORDER=%d)"%der_order)
 
         # Get mapping between production of bound states and open production mode
         mapping = []
@@ -1021,6 +1029,30 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          (nonia,",".join(str(x) for x in j)))
         lines.append("DATA (C_ONIA(i),i=1,%d)/%s/" % \
                          (nonia,",".join(str(x) for x in c)))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+    
+    def write_onia_file_short(self, writer, matrix_element):
+        """Write the onia.inc file for MG4"""
+
+        model = matrix_element.get('processes')[0].get('model')
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
+        npwave = matrix_element.get_npwave()
+        der_order = matrix_element.get_highest_derivate_order()
+
+        lines = []
+        lines.append("INTEGER    NONIA")
+        lines.append("INTEGER    NPWAVE")
+        lines.append("INTEGER    DER_ORDER")
+        lines.append("PARAMETER (NONIA=%d)"%nonia)
+        lines.append("PARAMETER (NPWAVE=%d)"%npwave)
+        lines.append("PARAMETER (DER_ORDER=%d)"%der_order)
 
         # Write the file
         writer.writelines(lines)
@@ -2279,6 +2311,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         nonia = matrix_element.get_nonia()
+        npwave = matrix_element.get_npwave()
 
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
@@ -3475,7 +3508,10 @@ CF2PY integer, intent(in) :: new_value
                 self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()]
 
         if matrix_element.get_nonia()>0:
-                self.matrix_file = 'matrix_standalone_v4_onia.inc'
+                if matrix_element.get_npwave()>0:
+                    self.matrix_file = 'matrix_standalone_v4_onia_pwave.inc'
+                else:
+                    self.matrix_file = 'matrix_standalone_v4_onia.inc'
 
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -3512,6 +3548,10 @@ CF2PY integer, intent(in) :: new_value
             filename = pjoin(dirpath, 'onia.inc')
             self.write_onia_file(writers.FortranWriter(filename),
                          matrix_element)
+            if matrix_element.get_npwave()>0:
+                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'onia.inc')
+                self.write_onia_file_short(writers.FortranWriter(filename),
+                            matrix_element)
 
             filename = pjoin(dirpath, 'pmassonia.inc')
             self.write_pmassonia_file(writers.FortranWriter(filename),
@@ -3730,7 +3770,10 @@ CF2PY integer, intent(in) :: new_value
 
         if matrix_element.get_nonia()>0:
             if not 'onia' in matrix_template:
-                matrix_template = matrix_template.replace('.inc','_onia.inc')
+                if matrix_element.get_npwave()>0:
+                    matrix_template = matrix_template.replace('.inc','_onia_pwave.inc')
+                else:
+                    matrix_template = matrix_template.replace('.inc','_onia.inc')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')

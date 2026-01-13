@@ -4780,6 +4780,39 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             nonia /= 2
 
         return int(nonia)
+    
+    def get_npwave(self):
+        """Gives the total number of external p-wave onia states"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+        npwave = 0
+        for wf in external_wfs:
+             try:
+                if wf.get('onium').get('L') == 1:
+                  npwave +=1
+             except: 
+                pass
+        if npwave%2:
+            raise MadGraph5Error("Odd number of quarkonia constituents detected.")
+        else:
+            npwave /= 2
+
+        return int(npwave)
+    
+    # LM::This function should evaluate what is the higher derivative order needed. For the time being I have introduced a placeholder function
+    def get_highest_derivate_order(self):
+        """Gives the highest derivative order used"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+        nder = 0
+        for wf in external_wfs:
+             try:
+                if wf.get('onium').get('L') > nder:
+                  nder = wf.get('onium').get('L')
+             except: 
+                pass
+
+        return int(nder)
 
     def get_onia_pairs(self):
         """Gives the total number of external onia states"""

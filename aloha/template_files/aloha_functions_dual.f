@@ -11,8 +11,6 @@ C distribution.
 C
 C###############################################################################
 
-c LM: The name can be changed by adding "d" or "du" at the beginning, to emphazise the dual type involved
-
       subroutine ixxxxx(p,fmass,nhel,nsf,fi)
       use dual_variables
 c
@@ -32,8 +30,9 @@ c
       type(Dual)::fi(8),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
-      double precision sf(2),fmass,sqm(0:1)
+      double precision sf(2),fmass,sqm(0:1),oHsqm(0:1)
       integer nhel,nsf,ip,im,nh
+      integer i
 
       double precision rZero, rHalf, rTwo
       double complex ci
@@ -58,11 +57,30 @@ c     Convention for dual computations (same as loop)
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
+            oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
-            fi(3)%comp(0) = ip     * sqm(ip)
-            fi(4)%comp(0) = im*nsf * sqm(ip)
-            fi(5)%comp(0) = ip*nsf * sqm(im)
-            fi(6)%comp(0) = im     * sqm(im)
+            fi(5)%comp(0) = ip     * sqm(ip)
+            fi(6)%comp(0) = im*nsf * sqm(ip)
+            fi(7)%comp(0) = ip*nsf * sqm(im)
+            fi(8)%comp(0) = im     * sqm(im)
+            do i = 1, size(p(0))
+               fi(3)%comp(i) = oHsqm(ip)*
+     &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
+     &             -im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))) 
+
+               fi(4)%comp(i) = oHsqm(ip)*
+     &            (-ip*    (p(1)%comp(i) + ci*p(2)%comp(i))
+     &             +im*nsf*(p(0)%comp(i) +    p(3)%comp(i)))
+
+               fi(5)%comp(i) = oHsqm(im)*
+     &            (+ip*nsf*(p(0)%comp(i) +    p(3)%comp(i))
+     &             +im*    (p(1)%comp(i) - ci*p(2)%comp(i))) 
+
+               fi(6)%comp(i) = oHsqm(im)*
+     &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
+     &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
+            enddo
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -138,8 +156,9 @@ c
       type(Dual)::fi(4),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
-      double precision sf(2),fmass,sqm(0:1)
+      double precision sf(2),fmass,sqm(0:1),oHsqm(0:1)
       integer nhel,nsf,ip,im,nh
+      integer i
 
       double precision rZero, rHalf, rTwo
       double complex ci
@@ -158,11 +177,30 @@ c
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
+            oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
             fi(1)%comp(0) = ip     * sqm(ip)
             fi(2)%comp(0) = im*nsf * sqm(ip)
             fi(3)%comp(0) = ip*nsf * sqm(im)
             fi(4)%comp(0) = im     * sqm(im)
+            do i = 1, size(p(0))
+               fi(1)%comp(i) = oHsqm(ip)*
+     &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
+     &             -im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))) 
+
+               fi(2)%comp(i) = oHsqm(ip)*
+     &            (-ip*    (p(1)%comp(i) + ci*p(2)%comp(i))
+     &             +im*nsf*(p(0)%comp(i) +    p(3)%comp(i)))
+
+               fi(3)%comp(i) = oHsqm(im)*
+     &            (+ip*nsf*(p(0)%comp(i) +    p(3)%comp(i))
+     &             +im*    (p(1)%comp(i) - ci*p(2)%comp(i))) 
+
+               fi(4)%comp(i) = oHsqm(im)*
+     &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
+     &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
+            enddo
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -235,8 +273,10 @@ c
       type(Dual)::fo(8),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
-      double precision sf(2),fmass,sqm(0:1)
+      type(Dual)::p3_tmp
+      double precision sf(2),fmass,sqm(0:1),oHsqm(0:1)
       integer nhel,nsf,ip,im,nh
+      integer i
 
       double precision rZero, rHalf, rTwo
       double complex ci
@@ -258,16 +298,35 @@ c     Convention for dual computations (same as loop)
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
          if (pp%comp(0)%re.eq.rZero) then
-            im = nhel * (1+nh)/2
-            ip = nhel * -1 * ((1-nh)/2)
+            im = +nhel * (1+nh)/2
+            ip = -nhel * (1-nh)/2
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
+            oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
             fo(5)%comp(0) = im     * sqm(abs(ip))
             fo(6)%comp(0) = ip*nsf * sqm(abs(ip))
             fo(7)%comp(0) = im*nsf * sqm(abs(im))
-            fo(8)%comp(0) = ip     * sqm(abs(im))     
+            fo(8)%comp(0) = ip     * sqm(abs(im))
+            do i = 1, size(p(0))
+               fo(5)%comp(i) = oHsqm(abs(ip))*
+     &            (+im*    (p(0)%comp(i) +    p(3)%comp(i))
+     &             +ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))) 
+
+               fo(6)%comp(i) = oHsqm(abs(ip))*
+     &            (+im*    (p(1)%comp(i) - ci*p(2)%comp(i))
+     &             +ip*nsf*(p(0)%comp(i) -    p(3)%comp(i)))
+
+               fo(7)%comp(i) = oHsqm(abs(im))*
+     &            (+im*nsf*(p(0)%comp(i) -    p(3)%comp(i))
+     &             -ip*    (p(1)%comp(i) + ci*p(2)%comp(i))) 
+
+               fo(8)%comp(i) = oHsqm(abs(im))*
+     &            (-im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))
+     &             +ip*    (p(0)%comp(i) +    p(3)%comp(i)))
+            enddo     
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -344,8 +403,9 @@ c
       type(Dual)::fo(4),chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
-      double precision sf(2),fmass,sqm(0:1)
+      double precision sf(2),fmass,sqm(0:1),oHsqm(0:1)
       integer nhel,nsf,ip,im,nh
+      integer i
 
       double precision rZero, rHalf, rTwo
       double complex ci
@@ -359,16 +419,35 @@ c
          pp%comp(0) = min(p(0)%comp(0)%re, pp%comp(0)%re)
 
          if (pp%comp(0)%re.eq.rZero) then
-            im = nhel * (1+nh)/2
-            ip = nhel * -1 * ((1-nh)/2)
+            im = +nhel * (1+nh)/2
+            ip = -nhel * (1-nh)/2
 
             sqm(0) = dsqrt(abs(fmass))  ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
+            oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
             fo(1)%comp(0) = im     * sqm(abs(ip))
             fo(2)%comp(0) = ip*nsf * sqm(abs(ip))
             fo(3)%comp(0) = im*nsf * sqm(abs(im))
-            fo(4)%comp(0) = ip     * sqm(abs(im))     
+            fo(4)%comp(0) = ip     * sqm(abs(im))
+            do i = 1, size(p(0))
+               fo(1)%comp(i) = oHsqm(abs(ip))*
+     &            (+im*    (p(0)%comp(i) +    p(3)%comp(i))
+     &             +ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))) 
+
+               fo(2)%comp(i) = oHsqm(abs(ip))*
+     &            (+im*    (p(1)%comp(i) - ci*p(2)%comp(i))
+     &             +ip*nsf*(p(0)%comp(i) -    p(3)%comp(i)))
+
+               fo(3)%comp(i) = oHsqm(abs(im))*
+     &            (+im*nsf*(p(0)%comp(i) -    p(3)%comp(i))
+     &             -ip*    (p(1)%comp(i) + ci*p(2)%comp(i))) 
+
+               fo(4)%comp(i) = oHsqm(abs(im))*
+     &            (-im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))
+     &             +ip*    (p(0)%comp(i) +    p(3)%comp(i)))  
+            enddo  
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -395,11 +474,8 @@ c
             fo(2) = sfomeg(2)*chi(ip)
             fo(3) = sfomeg(1)*chi(im)
             fo(4) = sfomeg(1)*chi(ip)
-
          endif
-
       else
-
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
             sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
@@ -418,7 +494,6 @@ c
             fo(3) = chi(2)
             fo(4) = chi(1)
          endif
-
       endif
 c
       return
@@ -746,7 +821,88 @@ c construct eps0
 
 
 
-      subroutine onia_proj(fq, fqb, masses, p, m, nhel, spin
+
+      subroutine clebsch_gordan(L, Lz, S, Sz, J, Jz, cg)
+c
+c This subroutine computes the Clebsch-Gordan coefficient <j1,m1,j2,m2|j,m>
+c For species with spin<5/2, values are given in a table.
+c For higher spins, it computes the values from general formula on the fly.
+c
+c input:
+c       integer L, Lz       : angular momentum and its z-component
+c       integer S, Sz       : spin and its z-component
+c       integer J, Jz       : total angular momentum and its z-component
+c
+c output:
+c       double precision cg   : value of the Clebsch-Gordan coefficient
+c
+      implicit none
+      real L, Lz, S, Sz, J, Jz
+      double precision cg
+
+      if (J.gt.(L + S)) then
+         print*, "ERROR: angular momentum cannot be conserved!"
+         print*, "(L, S, J): (", L, ",", S, ",", J, ")"
+         stop
+      endif
+
+      if ((abs(Jz).gt.J).or.(abs(Lz).gt.L).or.(abs(Sz).gt.S)) then
+         ! the previous check should be improve to check that also the values of Lz, Sz and Jz are physically acceptable
+         print*, "ERROR: magnetic number overshoots angular number!"
+         print*, "(L, Lz): (", L, ",", Lz, ")"
+         print*, "(S, Sz): (", S, ",", Sz, ")"
+         print*, "(J, Jz): (", J, ",", Jz, ")"
+         stop
+      endif
+
+
+      if (Jz.ne.(Lz + Sz)) then
+         cg = 0.0d0
+      
+      elseif ((L.eq.0).or.(S.eq.0)) then
+         cg = 1.0d0
+
+      elseif ((L.eq.1).or.(S.eq.1)) then
+         if (J.eq.2) then
+            if ((Lz.eq.0).and.(Sz.eq.0)) then
+               cg = dsqrt(2/3.0d0)
+            elseif ((Lz.eq.0).or.(Sz.eq.0)) then
+               cg = 1/dsqrt(2.0d0)
+            elseif (Lz.eq.Sz) then
+               cg = 1
+            else 
+               cg = 1/dsqrt(6.0d0)
+            end if
+         elseif (J.eq.1) then
+            if ((Lz.eq.1).or.(Sz.eq.-1)) then
+               cg = 1/dsqrt(2.0d0)
+            elseif ((Lz.eq.-1).or.(Sz.eq.+1)) then
+               cg = -1/dsqrt(2.0d0)
+            else
+               cg = 0.0d0
+            end if
+         elseif (J.eq.0) then
+            if ((Lz.eq.0).and.(S.eq.0)) then
+               cg = -1/dsqrt(3.0d0)
+            else
+               cg = 1/dsqrt(3.0d0)
+            end if
+         else
+            cg = 0.0d0
+         end if
+
+      
+      else
+         print*, "Clebsch-Gordan coefficient not implemented for"//
+     1            " L=", L, " S=", S
+         cg = 0.0d0
+      end if
+
+
+      return
+      end subroutine clebsch_gordan
+
+      subroutine onia_proj_dual(fq, fqb, masses, p, m, nhel, spin
      &, proj)
       use dual_variables
 c

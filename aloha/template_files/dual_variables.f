@@ -9,24 +9,16 @@
       public :: DBLE, DIMAG
       public :: size
    
-      ! include "onia.inc"
-      ! LM:: Uncomment these line to hard code the variable for cross checks
-      integer,parameter :: npwave = 1
-      integer,parameter :: der_order = 1
+      include "onia.inc"
    
       type :: Dual
-         complex(kind(1d0)),dimension(0:2**npwave-1) :: comp = (0d0,0d0) ! npwave taken from onia.inc
-      !   complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: comp = (0d0,0d0) ! npwave taken from onia.inc
+         complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: comp = (0d0,0d0) ! npwave taken from onia.inc
    
-      ! LM:: Some additional functions that can be thought to be useful later on
+      ! Printing routine used for constitency checks
       contains
          procedure :: write_formatted
          generic :: write(formatted) => write_formatted
          procedure :: pmath
-      !  procedure :: n => get_lenght
-      !  procedure :: ord => derivative order
-      !  procedure :: compare
-      !  procedure :: print_dual_variable
       end type Dual
 
       interface operator(+)
