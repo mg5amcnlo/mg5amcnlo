@@ -22,47 +22,57 @@ contains
     double precision,dimension(0:3,next_n1) :: p
     double precision,dimension(0:3,next_n) :: p_born
     integer :: i
-    double precision,dimension(0:3) :: p_born_imother,p_rot
+    double precision,dimension(0:3) :: p_born_imother,p_rot,qq,p_mother,krec,krec_bst
+    double precision,dimension(3) :: xdir
     double precision :: th_mother_fks,costh_mother_fks&
-         &,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks&
-         &,sinphi_mother_fks
-
-    if (massless final-state radiator) then
-       q(0:3)=p(0:3,1)+p(0:3,2)
+         &,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks &
+         &,sinphi_mother_fks,kbarrec,q2,beta,shybst,chybst,chybstmo&
+         &,sqrtshat,xmrec2,sumrec,xmj,xmj2,xmjhat,xmhat,cffC2,expybst
+    if (j_fks.gt.nincoming_mod) then
+       qq(0:3)=p(0:3,1)+p(0:3,2)
        p_mother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
-       krec(0:3)=q(0:3)-p_mother(0:3)
+       krec(0:3)=qq(0:3)-p_mother(0:3)
        kbarrec=rho(krec)
-       q2=dot(q,q)
-       beta=(q2-(krec(0)+kbarrec)**2)/(q2+(krec(0)+kbarrec)**2)
+       q2=dot(qq,qq)
        xdir(1:3)=p_mother(1:3)/rho(p_mother)
-
-       shybst=beta/sqrt(1-beta**2)
-       chybst=sqrt(1+shybst**2)
-       chybstmo=sqrt(1+shybst**2)-1d0
+       if (jmass.eq.0d0) then
+          beta=(q2-(krec(0)+kbarrec)**2)/(q2+(krec(0)+kbarrec)**2)
+          shybst=beta/sqrt(1-beta**2)
+          chybst=sqrt(1+shybst**2)
+          chybstmo=sqrt(1+shybst**2)-1d0
+       elseif (jmass.gt.0d0) then
+          sqrtshat=sqrt(q2)
+          xmrec2=dot(krec,krec)
+          sumrec=krec(0)+kbarrec
+          xmj=jmass
+          xmj2=xmj**2
+          xmjhat=xmj/sqrtshat
+          xmhat=sqrt(xmrec2)/sqrtshat
+          cffC2=(1-(xmhat-xmjhat)**2)*(1-(xmhat+xmjhat)**2)
+          if(xmrec2.lt.1.d-16*q2)then
+             expybst=sqrtshat*sumrec/(q2-xmj2)*(1+xmj2*xmrec2/(q2-xmj2)**2)
+          else
+             expybst=sumrec/(2*sqrtshat*xmrec2)*(q2+xmrec2-xmj2-q2*sqrt(cffC2))
+          endif
+          shybst=(expybst-1/expybst)/2.d0
+          chybst=(expybst+1/expybst)/2.d0
+          chybstmo=chybst-1.d0
+       endif
        call boostwdir2(chybst,shybst,chybstmo,xdir,krec,krec_bst)
-
-       p_born_imother(0:3)=q(0:3)-krec_bst(0:3)
-
-    elseif(...)
-    elseif(...)
+       p_born_imother(0:3)=qq(0:3)-krec_bst(0:3)
+       call getangles(p_born_imother, & 
+            th_mother_fks,costh_mother_fks,sinth_mother_fks, &
+            phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
+       call rotate_invar_inverse(p(0,i_fks),p_rot(0), &
+            costh_mother_fks,-sinth_mother_fks, &
+            cosphi_mother_fks,-sinphi_mother_fks)
+       ! compute phi:
+       get_phi_from_p=atan2(p_rot(2),p_rot(1))
+       if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
+    else
+       get_phi_from_p=atan2(p(2,i_fks),p(1,i_fks))
+       if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
     endif
-    
-    write (*,*) "WE CANNOT USE FIXED BORN. Need to recompute"//&
-         " p_born_imother from mapped n+1 kinematics."
-    stop 1
-    
-    ! get the mother momentum at the n-body level
-    p_born_imother(0:3)=p_born(0:3,min(i_fks,j_fks))
-    ! undo rotation:
-    call getangles(p_born_imother, & 
-         th_mother_fks,costh_mother_fks,sinth_mother_fks, &
-         phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
-    call rotate_invar_inverse(p(0,i_fks),p_rot(0), &
-         costh_mother_fks,-sinth_mother_fks, &
-         cosphi_mother_fks,-sinphi_mother_fks)
-    ! compute phi:
-    get_phi_from_p=atan2(p_rot(2),p_rot(1))
-    if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
   end function get_phi_from_p
   double precision function get_xi_from_p(i_fks,j_fks,p)
     implicit none
