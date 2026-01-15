@@ -535,9 +535,11 @@ class EventFile(object):
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
+        found_target = False
         for i in range(nb_try):
+            misc.sprint("Unweighting iteration %s with max_wgt= %s" % (i, max_wgt))
             self.seek(0)
-            if event_target:
+            if event_target and not found_target:
                 if i==0:
                     max_wgt = max_wgt_for_trunc(0)
                 else:
@@ -589,29 +591,37 @@ class EventFile(object):
                         trunc_cross += abs(wgt) - max_wgt
                     if outputpath and (event_target ==0 or nb_keep <= event_target):
                         outfile.write(str(event))
-            
-            if event_target and nb_keep > event_target:
-                if not outputpath:
-                    #no outputpath define -> wants only the nb of unweighted events
-                    continue
-                elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+            misc.sprint(found_target, event_target, nb_keep)
+            if found_target:
+                if event_target:# and nb_keep > event_target:
+                    if not outputpath:
+                        #no outputpath define -> wants only the nb of unweighted events
+                        continue
+                    elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
+                        #logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+                        continue
+                    else:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
+                    break
+                elif event_target == 0:
+                    if outputpath:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
+                    break                    
+                elif outputpath:
                     outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
-                    #logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
-                    continue
-                else:
-                    outfile.write("</LesHouchesEvents>\n")
-                    outfile.close()
-                break
-            elif event_target == 0:
-                if outputpath:
-                    outfile.write("</LesHouchesEvents>\n")
-                    outfile.close()
-                break                    
-            elif outputpath:
-                outfile.write("</LesHouchesEvents>\n")
-                outfile.close()
-#                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+    #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
+            elif event_target and nb_keep > event_target:
+                found_target = True
+                logger.info("Reaching target event %s with max_wgt= %s (iteration=%s) redo one", 
+                            event_target, max_wgt, i)
+                continue
+
+
             
         else:
             # pass here if event_target > 0 and all the attempt fail.

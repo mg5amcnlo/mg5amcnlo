@@ -2281,39 +2281,45 @@ c
 c               write(*,*) 'We got it',1d0/sqrt(tsigma), accur
 c               if (1d0/sqrt(tsigma) .lt. accur) then
                if (sqrt(xchi2/tsigma) .lt. accur) then
-                  write(*,*) 'Finished due to accuracy ',sqrt(xchi2/tsigma), accur
-                  tmean = tmean / tsigma
-                  trmean = trmean / tsigma
-                  if (cur_it .gt. 2) then
-                     chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
-                  else
-                     chi2=0d0
-                  endif
-                  tsigma = tmean / sqrt(tsigma)
-                  write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
-                  if (use_cut .ne. 0) then
-                  open(26, file='ftn26',status='unknown')
-                  write(26,fmt='(4f21.17)')
-     $                 ((grid(2,i,j),i=1,ng),j=1,invar)
-                  write(26,*) twgt, force_max_wgt
+                   if(cur_it.ge.itm)then
+                        write(*,*) 'cur_it', cur_it, 'itmin', itmin, 'itm', itm
+                        write(*,*) 'Finished due to accuracy ',sqrt(xchi2/tsigma), accur
+                        tmean = tmean / tsigma
+                        trmean = trmean / tsigma
+                        if (cur_it .gt. 2) then
+                            chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
+                        else
+                            chi2=0d0
+                        endif
+                        tsigma = tmean / sqrt(tsigma)
+                        write(*, 80) real(tmean), real(tsigma), real(trmean), real(chi2)
+                        if (use_cut .ne. 0) then
+                            open(26, file='ftn26',status='unknown')
+                            write(26,fmt='(4f21.17)')
+     $                          ((grid(2,i,j),i=1,ng),j=1,invar)
+                            write(26,*) twgt, force_max_wgt
 c                  write(26,fmt='(4f21.16)') (alpha(i),i=1,maxconfigs)
-                  call write_discrete_grids(26,'ref')
-                  close(26)                  
-                  endif
-                  call sample_writehtm()
+                            call write_discrete_grids(26,'ref')
+                            close(26)                  
+                        endif
+                        call sample_writehtm()
 c                  open(unit=22,file=result_file,status='old',
 c     $                 access='append',err=122)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 122              close(22)
-                  tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
-                  if (use_cut.eq.-2)then
-                    call store_events(force_max_wgt, .False.)
-                  else
-                     call store_events(-1d0, .True.)
-                  endif
-                  cur_it = itm+2
-                  return
-               endif
+                        tsigma = tsigma*sqrt(chi2)  !This gives the 68% confidence cross section
+                        if (use_cut.eq.-2)then
+                            call store_events(force_max_wgt, .False.)
+                        else
+                            call store_events(-1d0, .True.)
+                        endif
+                        cur_it = itm+2
+                        return
+                    else
+                        write(*,*) 'add one extra iteration'
+                        itm = cur_it
+                    endif
+                endif
             endif                  
 c
 c New check to see if we need to keep integrating this one or not.
@@ -2352,7 +2358,8 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
 c     JA 8/17/2011 Redefined -accur as lumi, so nevents is -accur*cross section
                write(*,*) "Checking number of events",-accur*tmeant,nun,' chi2: ',chi2tmp
 c     Check nun and chi2 (ja 03/11)
-               if (nun .gt. -accur*tmeant .and. chi2tmp .lt. 10d0)then   
+               if (nun .gt. -accur*tmeant .and. chi2tmp .lt. 10d0)then 
+                   if (cur_it.ge.itm) then
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
@@ -2379,7 +2386,11 @@ c 129              close(22)
                   tsigma = tsigma*sqrt(max(0d0,chi2)) !This gives the 68% confidence cross section
                   cur_it = itm+20
                   return
+              else
+                write(*,*) 'target suceed add one iter'
+                itm = cur_it
                endif
+           endif
             endif                     
 
 
