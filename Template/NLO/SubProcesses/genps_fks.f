@@ -2888,7 +2888,7 @@ c
         x2bar2 = xbjrk_born(2)**2
         omx2bar2 = 1d0-x2bar2
       endif
-
+      
       if(1-tau_born.gt.1.d-5.and.omx1_ee.eq.0d0.and.omx2_ee.eq.0d0)then
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
      &            ( cosh(ycm_born)*(1-tau_born) )
@@ -4727,6 +4727,7 @@ c     Jacobian due to delta() of tau_born
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include "run.inc"
       double precision xjac0,xpswgt0,xx(99),p(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
      $     -max_branch:nexternal-1)
@@ -4744,7 +4745,8 @@ c     Jacobian due to delta() of tau_born
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p,pb(0:3,1:nexternal-1))
-      xbjrk(1:2)=p(0,1:2)/(sqrt(stot)/2d0)
+      call set_cms_stuff(-100)
+      xbjrk(1:2)=xbk(1:2)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
       tau=xbjrk(1)*xbjrk(2)
       shat=tau*stot
@@ -4944,9 +4946,8 @@ c Lower bound on xi_i_fks
          xjac=-342d0
          return
       endif
-
+      
       xinorm=xiimax-xiimin
-
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       xjac=xjac*2d0*x(1)
 

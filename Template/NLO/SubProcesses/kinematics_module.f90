@@ -79,8 +79,9 @@ contains
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
     double precision :: s,t,u,y
-    double precision,dimension(0:3,3) :: p_cm
-    get_xi_from_p=sqrt(2d0)*p(0,i_fks)/sqrt(dot(p(0,1),p(0,2)))
+    double precision,dimension(0:3) :: p_cm
+    call boost_1_to_its_cms(p,p(0,i_fks),p_cm)
+    get_xi_from_p=sqrt(2d0)*p_cm(0)/sqrt(dot(p(0,1),p(0,2)))
   end function get_xi_from_p
   subroutine boost_n1_to_its_cms(p,p_cm)
     implicit none
@@ -93,13 +94,21 @@ contains
        call boostz(p(0,i),y,p_cm(0,i))
     enddo
   end subroutine boost_n1_to_its_cms
+  subroutine boost_1_to_its_cms(p,p1,p_cm)
+    implicit none
+    double precision,dimension(0:3,next_n1),intent(in) :: p
+    double precision,dimension(0:3),intent(in) :: p1
+    double precision,dimension(0:3),intent(out) :: p_cm
+    double precision :: y
+    y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
+    call boostz(p1(0),y,p_cm(0))
+  end subroutine boost_1_to_its_cms
   double precision function get_yij_from_p(i_fks,j_fks,p)
     implicit none
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
     double precision :: t,u,y
-    double precision,dimension(0:3,2) :: p_cm
-    double precision,dimension(0:3) :: pi,pj
+    double precision,dimension(0:3) :: pi,pj,pi_cm,pj_cm
     double precision :: xi_i_fks_ev,y_ij_fks_ev
     double precision :: p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
     common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -115,7 +124,9 @@ contains
     else
        pj(0:3)=p(0:3,j_fks)
     endif
-    get_yij_from_p=dot3(pi(0),pj(0))/(rho(pi(0))*rho(pj(0)))
+    call boost_1_to_its_cms(p,pi,pi_cm)
+    call boost_1_to_its_cms(p,pj,pj_cm)
+    get_yij_from_p=dot3(pi_cm(0),pj_cm(0))/(rho(pi_cm(0))*rho(pj_cm(0)))
   end function get_yij_from_p
   double precision function dot3(p1,p2)
     implicit none
