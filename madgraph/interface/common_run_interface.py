@@ -1794,6 +1794,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     
         self.update_status('Running Systematics computation', level='parton')
+        logger.warning('sys args = %s' % line)
         args = self.split_arg(line)
         #split arguments and option
         opts= []
@@ -1848,7 +1849,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             output = input
     
-        lhaid = [self.run_card.get_lhapdf_id()]
+        logger.warning('common: calling get_lhapdf_id')
+        #lhaid = [self.run_card.get_lhapdf_id()]
+        lhaid = self.run_card.get_lhapdf_id_multi()
+        logger.warning('common: PDFs = %s, %s ' % (lhaid[0],lhaid[1]))
         if 'store_rwgt_info' in self.run_card and not self.run_card['store_rwgt_info']:
             raise self.InvalidCmd("The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event file.")
         elif 'use_syst'  in self.run_card:
@@ -6939,48 +6943,86 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             # run_card full validity not run at this stage. 
             # since we need the pdlabel here, just run that part of the check
-            if 'pdlabel' in run_card.parameter_in_block:
-                run_card.parameter_in_block['pdlabel'].check_validity(run_card)
-            pdlabel = run_card['pdlabel']
-            if pdlabel == 'mixed':
-                pdlabel1 = run_card['pdlabel1']
-                if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
-                    pdlabel = pdlabel1
+            if 'pdlabel1' in run_card.parameter_in_block:
+                run_card.parameter_in_block['pdlabel1'].check_validity(run_card)
+            if 'pdlabel2' in run_card.parameter_in_block:
+                run_card.parameter_in_block['pdlabel2'].check_validity(run_card)
+            pdlabel1 = run_card['pdlabel1']
+            pdlabel2 = run_card['pdlabel2']
+            # mixed check now redundant since beam functions specified
+            #if pdlabel == 'mixed':
+            #    pdlabel1 = run_card['pdlabel1']
+            #    if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
+            #        pdlabel = pdlabel1
 
             try:
                 old_value = param_card.get('sminputs').get((3,)).value
             except (KeyError, AttributeError):
                 old_value = None
 
+            # get alphas from each instance of lhapdf
+            # get alphas from each instance of built-in pdf
+            # update alphas according to 'multi_lhaid_alphas_scheme'
+            new_val_Dict = {}
             if old_value is None:
                 pass
-            elif pdlabel == 'lhapdf':
+            # check if lhapdf is used and get alphas
+            elif (pdlabel1 == 'lhapdf') or (pdlabel2 == 'lhapdf'):
                 lhapdf = misc.import_python_lhapdf(lhapdfconfig)
 
                 if lhapdf:
-                    if isinstance(run_card['lhaid'], list):
-                        lhaid= run_card['lhaid'][0]
-                    else:
-                        lhaid = run_card['lhaid']
+                    beamList=[]
+                    if pdlabel1 == 'lhapdf': beamList.append(1)
+                    if pdlabel2 == 'lhapdf': beamList.append(2)
+
+                    lhaDict={} # list of lhaids from run_card
+                    for beam in beamList:
+                        lhaDict.update({beam : 230000}) # fix some default
+
+                    for beam in beamList:
+                        if isinstance(run_card['lhaid'+'%s' % beam], list):
+                            lhaDict[beam]= run_card['lhaid'+'%s' % beam][0]
+                        else:
+                            lhaDict[beam]= run_card['lhaid'+'%s' % beam]
 
                     # if supported check first that pdfset is installed (and do it if not)
-                    if hasattr(mecmd, 'copy_lhapdf_set'):
-                        pdfsetsdir = mecmd.get_lhapdf_pdfsetsdir()
-                        mecmd.copy_lhapdf_set([lhaid], pdfsetsdir)
+                    for beam in beamList:
+                        if hasattr(mecmd, 'copy_lhapdf_set'):
+                            pdfsetsdir = mecmd.get_lhapdf_pdfsetsdir()
+                            mecmd.copy_lhapdf_set([lhaDict[beam]], pdfsetsdir)
 
-                    old_value = param_card.get('sminputs').get((3,)).value
                     lhapdf.setVerbosity(0)
-                    pdf = lhapdf.mkPDF(lhaid)
-                    new_value = pdf.alphasQ(91.1876)
-                    param_card.get('sminputs').get((3,)).value = new_value
-                    logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
-                    modify = True
-            elif pdlabel in as_for_pdf:
-                new_value = as_for_pdf[pdlabel]
-                if old_value != new_value:
-                    param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]
-                    logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  as_for_pdf[pdlabel])
-                    modify = True
+                    for beam in beamList:
+                            pdf = lhapdf.mkPDF(lhaDict[beam])
+                            new_val_Dict.update({beam : pdf.alphasQ(91.1876)})
+
+            # check if a built-in pdf is used and get alphas
+            elif (pdlabel1 in as_for_pdf) or (pdlabel1 in as_for_pdf):
+                beamDict={}
+                if pdlabel1 in as_for_pdf: beamDict.update({1: pdlabel1})
+                if pdlabel2 in as_for_pdf: beamDict.update({2: pdlabel2})
+
+                for beam in beamDict:
+                    new_val_Dict.update({beam : as_for_pdf[beamDict[beam]]})
+
+            assert len(new_val_Dict) < 3, f'new_val_Dict is too big: {len(new_val_Dict)}'
+
+            # determine alpha_s according to multi_lhaid_alphas_scheme
+            multiAlphaSscheme=run_card['multi_lhaid_alphas_scheme']
+            if multiAlphaSscheme in [1,2]:
+                new_value = new_val_Dict[multiAlphaSscheme]
+            elif multiAlphaSscheme in [0]:
+                assert len(new_val_Dict)==2, f'new_val_Dict is too small: {len(new_val_Dict)}'
+                new_value = math.sqrt(new_val_Dict[1]*new_val_Dict[2])
+            else:
+                assert False, 'this is a dev area. please check how multi_lhaid_alphas_scheme is set/overwritten'
+
+            # update alpha_s
+            old_value = param_card.get('sminputs').get((3,)).value
+            if old_value != new_value:
+                param_card.get('sminputs').get((3,)).value = new_value
+                logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
+                modify = True
 
         if timer:
             signal.alarm(timer)

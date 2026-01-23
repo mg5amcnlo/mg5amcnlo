@@ -1088,7 +1088,7 @@ class ConfigFile(dict):
         """set the attribute and set correctly the type if the value is a string.
            change_userdefine on True if we have to add the parameter in user_set
         """
-                       
+
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()
@@ -3788,8 +3788,8 @@ class RunCard(ConfigFile):
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
         output["pdfgup2"] = 0
-        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"], beam=1)
-        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"], beam=2)
+        output["pdfsup1"] = self.get_pdf_id(self["pdlabel1"], beam=1)
+        output["pdfsup2"] = self.get_pdf_id(self["pdlabel2"], beam=2)
         return output
     
     def get_pdf_id(self, pdf, beam=None):
@@ -3818,8 +3818,8 @@ class RunCard(ConfigFile):
         '''return pdf configuration from pdlabel1,2'''
         logger.warning('pulling pdf configuration from "pdlabel1,2" not "pdlabel"')
         tmpIDs = []
-        tmpIDs.append(self.get_pdf_id(self['pdlabel1']))
-        tmpIDs.append(self.get_pdf_id(self['pdlabel2']))
+        for beamID in [1,2]:
+            tmpIDs.append(self.get_pdf_id(self['pdlabel'+str(beamID)],beamID))
         return tmpIDs
     
 
@@ -4020,9 +4020,9 @@ class PDLabelBlock(RunBlock):
         """check which template is active and fill the parameter in the inactive one. """
 
         if self.status(card):
-            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
-                dict.__setitem__(card, 'pdlabel','lhapdf')
-            elif card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
+            #if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
+            #    dict.__setitem__(card, 'pdlabel','lhapdf')
+            if card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
                 if card['pdlabel1'] != card['pdlabel2']:
                     if card['pdlabel1'] in ['edff','chff']:
                         dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
@@ -4035,26 +4035,27 @@ class PDLabelBlock(RunBlock):
             elif card['pdlabel1'] == 'emela' or card['pdlabel2'] == 'emela':
                 dict.__setitem__(card, 'pdlabel','emela')
             else:
-                if card['pdlabel1'] == card['pdlabel2']:
-                    if card['pdlabel'] != card['pdlabel1']:
-                        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
-                elif card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
+                #if card['pdlabel1'] == card['pdlabel2']:
+                #    if card['pdlabel'] != card['pdlabel1']:
+                #        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                if card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
                     raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option") 
                 elif card['pdlabel2'] in sum(card.allowed_lep_densities.values(),[]):
                     raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option")
-                elif card['pdlabel1'] == 'none':
-                    dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
-                elif card['pdlabel2'] == 'none':
-                    dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
-                else:
-                    dict.__setitem__(card, 'pdlabel', 'mixed')
+                #elif card['pdlabel1'] == 'none':
+                #    dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
+                #elif card['pdlabel2'] == 'none':
+                #    dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                #else:
+                #    dict.__setitem__(card, 'pdlabel', 'mixed')
         else:
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
-        if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
-            abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
-            raise InvalidRunCard("Asymmetric beam pdf not supported for proton-proton collision") 
+        #if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
+        #    abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
+        #    raise InvalidRunCard("Asymmetric beam pdf not supported for proton-proton collision") 
+
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""
@@ -4215,8 +4216,8 @@ class RunCardLO(RunCard):
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param('lhaid1', -1,fortran_name='lhasubid(1)')
         self.add_param('lhaid2', -1,fortran_name='lhasubid(2)')
-        self.add_param('multi_lhaid_alphas_scheme', 0,fortran_name='multi_lhaid_alphas_scheme',
-                       allowed = [0,1,2], comment="0 = alphas extracted from geometric avg; 1(2) = from lhaid1(2)")
+        self.add_param('multi_lhaid_alphas_scheme', 1,fortran_name='multi_lhaid_alphas_scheme',
+                       allowed = [0,1,2], comment="1(2) = alphas extracted from lhaid1(2); 0 = geometric avg of 1,2")
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
         self.add_param("fixed_fac_scale1", False, hidden=True)
