@@ -654,7 +654,6 @@ c Conflicting BW stuff
           write(*,*) 'Different beams not implemented', lpp
           stop 1
       endif
-
       if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
          if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collisions
@@ -1012,7 +1011,6 @@ c Trivial, but prevents loss of accuracy
         call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
-
         call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
      $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
      $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
@@ -1221,6 +1219,7 @@ c is correct; put i_fks momenta equal to zero.
             m(i)=m_born(i-1)
          endif
       enddo
+      
 c
 c set-up phi_i_fks
 c
@@ -1682,9 +1681,7 @@ c Boost the momenta
       implicit none
       include 'nexternal.inc'
       double precision shat,sqrtshat,m1,m2,xpswgt,xjac
-
-      double precision pwgt, flux
-
+      double precision flux
       double precision lambda
       external lambda
       real*8 pi
@@ -1703,8 +1700,8 @@ c This extra pi-dependent factor is due to the fact that the phase-space
 c part relevant to i_fks and j_fks does contain all the pi's needed for 
 c the correct normalization of the phase space
       flux  = flux * (2d0*pi)**3
-      pwgt=max(xjac*xpswgt,1d-99)
-      xjac = pwgt*flux
+c
+      xjac=xjac*xpswgt*flux
 c
       return
       end
@@ -1937,16 +1934,16 @@ c parameters
       parameter (ctiny=5d-7)
 c
       pass=.true.
-      if(softtest)then
+c$$$      if(softtest)then
         sstiny=0.d0
-      else
-        sstiny=stiny
-      endif
-      if(colltest)then
+c$$$      else
+c$$$        sstiny=stiny
+c$$$      endif
+c$$$      if(colltest)then
         cctiny=0.d0
-      else
-        cctiny=ctiny
-      endif
+c$$$      else
+c$$$        cctiny=ctiny
+c$$$      endif
 
 c
 c FKS for left or right incoming parton
@@ -2150,16 +2147,16 @@ c parameters
       parameter (ximag=(0d0,1d0))
 c
       pass=.true.
-      if(softtest)then
+c$$$      if(softtest)then
         sstiny=0.d0
-      else
-        sstiny=stiny
-      endif
-      if(colltest)then
+c$$$      else
+c$$$        sstiny=stiny
+c$$$      endif
+c$$$      if(colltest)then
         cctiny=0.d0
-      else
-        cctiny=ctiny
-      endif
+c$$$      else
+c$$$        cctiny=ctiny
+c$$$      endif
 c
 c set-up y_ij_fks
 c
@@ -2421,16 +2418,16 @@ c
       endif
 c
       pass=.true.
-      if(softtest)then
+c$$$      if(softtest)then
         sstiny=0.d0
-      else
-        sstiny=stiny
-      endif
-      if(colltest)then
+c$$$      else
+c$$$        sstiny=stiny
+c$$$      endif
+c$$$      if(colltest)then
         cctiny=0.d0
-      else
-        cctiny=ctiny
-      endif
+c$$$      else
+c$$$        cctiny=ctiny
+c$$$      endif
 c
 c set-up y_ij_fks
 c
@@ -2665,6 +2662,7 @@ c
       do j=1,3
          xdir(j)=xp_mother(j)/x3len_fks_mother
       enddo
+      
 c Boost the momenta
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
@@ -2749,11 +2747,11 @@ c parameters
       parameter (ctiny=5d-7)
 c
       pass=.true.
-      if(softtest)then
+c$$$      if(softtest)then
         sstiny=0.d0
-      else
-        sstiny=stiny
-      endif
+c$$$      else
+c$$$        sstiny=stiny
+c$$$      endif
 c
 c FKS for left or right incoming parton
 c
@@ -2824,11 +2822,11 @@ c
 c
 c set-up y_ij_fks
 c
-      if(colltest)then
+c$$$      if(colltest)then
         cctiny=0.d0
-      else
-        cctiny=ctiny
-      endif
+c$$$      else
+c$$$        cctiny=ctiny
+c$$$      endif
       if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
      &     ((.not.softtest) .or. 
      &            (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
@@ -4515,7 +4513,9 @@ C dressed lepton stuff
       double precision m(-max_branch:max_particles),stot,totmassin
      $     ,totmass,fksmass,tau_born,ycm_born,ycmhat,xjac0,xpswgt0
      $     ,shat_born,sqrtshat_born,pb(0:3,-max_branch:nexternal-1)
-     $     ,xbjrk_born(2)
+     $     ,xbjrk_born(2),s(-max_branch:max_particles),shat,sqrtshat
+      double precision sumdot,dot
+      external sumdot,dot
       integer i,iconfigsave
       save m,stot,totmassin,totmass,fksmass
       pass=.true.
@@ -4553,13 +4553,22 @@ C dressed lepton stuff
       xjac0=1d0
       xpswgt0=1d0
 
-! given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
+!     given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
+
       call generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
 
 ! given Born momenta, return x's and jac corresponding to tau_born and y_born.
       call generate_tau_y_wrapper_inverse(qmass,qwidth,totmass,stot
      $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
+
+      pb(0,1)=sqrt(tau_born*stot)/2d0
+      pb(1:2,1)=0d0
+      pb(3,1)=sqrt(tau_born*stot)/2d0
+      pb(0,2)=sqrt(tau_born*stot)/2d0
+      pb(1:2,2)=0d0
+      pb(3,2)=-sqrt(tau_born*stot)/2d0
+
       if (xjac0.lt.0d0) goto 222
       if(.not.one_body)then
          shat_born=tau_born*stot
@@ -4581,13 +4590,19 @@ C dressed lepton stuff
          stop 1
       endif
 
-      call fill_intermediate_momenta_inverse(ns_channel,nbranch,pb,itree
-     $     ,m)
+      call fill_intermediate_momenta_inverse(ns_channel,nt_channel
+     $     ,nbranch,pb,itree,m,s)
       
 ! given Born momenta, return all other x's and jac
       call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,qmass,qwidth,xpswgt0,xjac0,pb)
+     $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
       if(.not.pass.or.xjac0.lt.0d0)goto 222
+
+      shat=sumdot(p(0,1),p(0,2),1d0)
+      sqrtshat=sqrt(shat)
+      call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt0,xjac0)
+      
+      jac=xjac0
       return
  222  continue
       jac=-222
@@ -4654,6 +4669,7 @@ c     Generate the rapditity of the Born system (tau and ycm input)
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
+      s=tau*stot
       if (s_mass.gt.smin*(1d0+tiny)) then
          call trans_x_inverse(2,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
@@ -4664,7 +4680,6 @@ c     Generate the rapditity of the Born system (tau and ycm input)
          write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
          jac=-1d0
       endif
-      tau=s/stot
       jac=jac/stot
       return
       end
@@ -4696,17 +4711,17 @@ c     Generate the rapditity of the Born system (tau and ycm input)
          smin=tau_Born_lower_bound*stot
          smax=stot
          s_mass=smin
+         s=tau*stot
          call trans_x_inverse(5,idim,x,smin,smax,s_mass,mass,width
      $        ,BWmass(-1),BWwidth(-1),jac,s)
-         tau=s/stot
          jac=jac/stot
       else
          smin=tau_Born_lower_bound*stot
          smax=stot
          s_mass=smin
+         s=tau*stot
          call trans_x_inverse(3,idim,x,smin,smax,s_mass,mass,width
      $        ,BWmass(-1),BWwidth(-1),jac,s)
-         tau=s/stot
          jac=jac/stot
       endif
       return
@@ -5085,15 +5100,19 @@ c Boost the momenta
       shybst=(expybst-1/expybst)/2.d0
       chybst=(expybst+1/expybst)/2.d0
       chybstmo=chybst-1.d0
-      xdir(1:3)=xp_mother(1:3)/rho(xp_mother)
+      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c Boost the momenta
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
      &        p_born(0,i))
       enddo
-      call boostwdir2(chybst,shybst,chybstmo,xdir,xp_mother(0),p_born(0
-     $     ,j_fks))
+      p_born(0:3,1:2)=xp(0:3,1:2)
+      p_born(0:3,j_fks)=p_born(0:3,1)+p_born(0:3,2)
+      do i=3,nexternal-1
+         if (i.eq.j_fks) cycle
+         p_born(0:3,j_fks)=p_born(0:3,j_fks)-p_born(0:3,i)
+      enddo
 c
 c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
@@ -5140,15 +5159,19 @@ c Phase-space factor for (xii,yij,phii)
       chybst=(shat+sumrec2)/(2*sumrec*sqrtshat)
 c     cosh(y) is very often close to one, so define cosh(y)-1 as well
       chybstmo=(sqrtshat-sumrec)**2/(2*sumrec*sqrtshat)
-      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother(1:3))
+      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c     Perform the boost here
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
      &        p_born(0,i))
       enddo
-      call boostwdir2(chybst,shybst,chybstmo,xdir,xp_mother(0),p_born(0
-     $     ,j_fks))
+      p_born(0:3,1:2)=xp(0:3,1:2)
+      p_born(0:3,j_fks)=p_born(0:3,1)+p_born(0:3,2)
+      do i=3,nexternal-1
+         if (i.eq.j_fks) cycle
+         p_born(0:3,j_fks)=p_born(0:3,j_fks)-p_born(0:3,i)
+      enddo
       
 c     Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
@@ -5157,9 +5180,8 @@ c     Phase-space factor for (xii,yij,phii)
      &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
       xpswgt=abs(xpswgt)
 
-      
 !     random number associated with xi_i_fks
-      call get_recoil(p_born,j_fks,shat,xmrec2,pass)
+      call get_recoil(p_born(0,1),j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
       x(1)=sqrt(xi_i_fks/xiimax)
       xjac=xjac*2d0*x(1)
@@ -5175,13 +5197,13 @@ c     Phase-space factor for (xii,yij,phii)
       
       
       subroutine generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,qmass,qwidth,xpswgt0,xjac0,pb)
+     $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       double precision x(99),shat_born,sqrtshat_born,totmass,m(
      $     -max_branch:max_particles),qmass(-nexternal:0),qwidth(
-     $     -nexternal:0),xpswgt0, xjac0
+     $     -nexternal:0),xpswgt0, xjac0,s(-max_branch:max_particles)
       integer itree(2,-max_branch:-1)
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
@@ -5193,8 +5215,7 @@ c     Phase-space factor for (xii,yij,phii)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
       logical pass
-      double precision pb(0:3,-max_branch:nexternal-1),s(
-     $     -max_branch:max_particles)
+      double precision pb(0:3,-max_branch:nexternal-1)
       pass = .true.
       call generate_inv_mass_sch_inverse(ns_channel,itree,m
      $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
@@ -5219,23 +5240,34 @@ c     Phase-space factor for (xii,yij,phii)
       endif
       end
 
-      subroutine fill_intermediate_momenta_inverse(ns_channel,nbranch,pb
-     $     ,itree,m)
+      subroutine fill_intermediate_momenta_inverse(ns_channel,nt_channel
+     $     ,nbranch,pb,itree,m,s)
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       double precision pb(0:3,-max_branch:nexternal-1),m(
-     $     -max_branch:max_particles)
-      integer itree(2,-max_branch:-1),ns_channel,nbranch
+     $     -max_branch:max_particles),s(-max_branch:max_particles)
+      integer itree(2,-max_branch:-1),ns_channel,nbranch,nt_channel
       integer i
       double precision dot
       external dot
+      pb(0:3,-nbranch)=pb(0:3,1)+pb(0:3,2)
+      s(-nbranch)=dot(pb(0,-nbranch),pb(0,-nbranch))
+      m(-nbranch)=sqrt(s(-nbranch))
+      if (nt_channel.eq.0d0) then
+         pb(0:3,-nbranch+1)=pb(0:3,-nbranch)
+         s(-nbranch+1)=s(-nbranch)
+         m(-nbranch+1)=m(-nbranch)
+      endif
       do i=-1,-ns_channel,-1
          pb(0:3,i)=pb(0:3,itree(1,i))+pb(0:3,itree(2,i))
-         m(i)=sqrt(dot(pb(0,i),pb(0,i)))
+         s(i)=dot(pb(0,i),pb(0,i))
+         m(i)=sqrt(s(i))
       enddo
-      do i=-ns_channel-1,-nbranch,-1
+      do i=-ns_channel-1,-nbranch+2,-1
          pb(0:3,i)=pb(0:3,itree(1,i))-pb(0:3,itree(2,i))
+         s(i)=dot(pb(0,i),pb(0,i))
+         m(i)=sqrt(s(i))
       enddo
       end
       
