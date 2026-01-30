@@ -4211,12 +4211,12 @@ class RunCardLO(RunCard):
         valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
-        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
-        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
+        self.add_param("pdlabel1", "nn23lo1", hidden=False, allowed=valid_pdf, fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23lo1", hidden=False, allowed=valid_pdf, fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
-        self.add_param('lhaid1', -1,fortran_name='lhasubid(1)')
-        self.add_param('lhaid2', -1,fortran_name='lhasubid(2)')
-        self.add_param('multi_lhaid_alphas_scheme', 1,fortran_name='multi_lhaid_alphas_scheme',
+        self.add_param('lhaid1', -1,hidden=False, fortran_name='lhasubid(1)')
+        self.add_param('lhaid2', -1,hidden=False, fortran_name='lhasubid(2)')
+        self.add_param('multi_lhaid_alphas_scheme', 1, hidden=False, fortran_name='multi_lhaid_alphas_scheme',
                        allowed = [0,1,2], comment="1(2) = alphas extracted from lhaid1(2); 0 = geometric avg of 1,2")
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")

@@ -39,8 +39,12 @@
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
-     %(pdlabel)s    = pdlabel     ! PDF set                                     
-     %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+     %(pdlabel1)s    = pdlabel1     ! PDF set for beam 1
+     %(pdlabel2)s    = pdlabel2     ! PDF set for beam 2
+     %(lhaid1)s    = lhaid1     ! if pdlabel1=lhapdf, this is the lhapdf number
+     %(lhaid2)s    = lhaid2     ! if pdlabel2=lhapdf, this is the lhapdf number
+     %(multi_lhaid_alphas_scheme)s = multi_lhaid_alphas_scheme ! 1(2) =
+              ! alphas pulled from lhaid1(2); 0 = using geometric avg
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
