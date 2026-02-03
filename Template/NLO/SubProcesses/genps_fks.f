@@ -1875,7 +1875,6 @@ c so give some non-physical values
          wgt_cnt(icountevts)=-1d99
          pswgt_cnt(icountevts)=-1d99
       endif
-
       return
       end
 
@@ -2326,7 +2325,7 @@ c cosh(y) is very often close to one, so define cosh(y)-1 as well
       do j=1,3
          xdir(j)=xp_mother(j)/x3len_fks_mother
       enddo
-c Perform the boost here
+c     Perform the boost here
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &      call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),xp(0,i))
@@ -4417,7 +4416,8 @@ C dressed lepton stuff
 
 
 
-      subroutine generate_momenta_inverse(ndim,iconfig,wgt,x,p)
+      subroutine generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p)
+      ! Momenta to invert should be in the lab frame !
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -4737,7 +4737,7 @@ c     Jacobian due to delta() of tau_born
 
       
       subroutine generate_FKS_kinematics_inverse(xx,ndim,xjac0,xpswgt0,
-     $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
+     $     stot,tau_born,ycm_born,xbjrk_born,plab,pb)
       use kinematics_module
       implicit none
       include 'genps.inc'
@@ -4745,7 +4745,7 @@ c     Jacobian due to delta() of tau_born
       include "run.inc"
       double precision xjac0,xpswgt0,xx(99),p(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
-     $     -max_branch:nexternal-1)
+     $     -max_branch:nexternal-1),plab(0:3,nexternal)
       integer ndim
       logical input_granny_m2,pass
       integer i_fks,j_fks
@@ -4757,11 +4757,20 @@ c     Jacobian due to delta() of tau_born
      $     ,sqrtshat,tau,ycm
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
+
+      xbjrk(1:2)=plab(0,1:2)/(sqrt(stot)/2d0)
+
+      write (*,*) 'bjorken',xbjrk
+      
+      call boost_n1_to_its_cms(plab,p)
+      
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
-      phi_i_fks=get_phi_from_p(i_fks,j_fks,p,pb(0:3,1:nexternal-1))
+      phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
+
+      ! FIX THIS: momenta are in CMS frame, but need to have bjorken x
+      ! which are defined in lab frame.
       call set_cms_stuff(-100)
-      xbjrk(1:2)=xbk(1:2)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
       tau=xbjrk(1)*xbjrk(2)
       shat=tau*stot
@@ -4961,6 +4970,7 @@ c Lower bound on xi_i_fks
          xjac=-342d0
          return
       endif
+
       
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
@@ -5049,7 +5059,6 @@ c Boost the momenta
       xiimax=xirplus
       xinorm=xirplus+xirminus
       rat_xi=xiimax/xinorm
-
       x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
       x1_2=(2*xiimax-xi_i_fks)/xinorm
 

@@ -15,12 +15,11 @@ module kinematics_module
 
 contains
   
-  double precision function get_phi_from_p(i_fks,j_fks,p,p_born)
+  double precision function get_phi_from_p(i_fks,j_fks,p)
     implicit none
     double precision,parameter :: pi=3.1415926535897932d0
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
-    double precision,dimension(0:3,next_n) :: p_born
     integer :: i
     double precision,dimension(0:3) :: p_born_imother,p_rot,qq,p_mother,krec,krec_bst
     double precision,dimension(3) :: xdir
