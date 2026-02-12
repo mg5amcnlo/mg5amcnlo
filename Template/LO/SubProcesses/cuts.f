@@ -307,12 +307,18 @@ c     Also make sure there's no INF or NAN
 c
 c     Limit S_hat
 c
-      if (dsqrt_shat.ne.0d0)then
-         if (nincoming.eq.2.and.sumdot(p(0,1),p(0,2),1d0) .lt. dsqrt_shat**2) then
-            passcuts=.false.
-            return
-         endif
-      endif
+      if(nincoming.eq.2) then
+        if (dsqrt_shat.ne.0d0.or.dsqrt_shatmax.ne.-1d0)then
+            xvar = sumdot(p(0,1),p(0,2),1d0)
+            if (xvar .lt. dsqrt_shat**2)then
+                passcuts=.false.
+                return
+            else if  (dsqrt_shatmax.ne.-1d0 .and. xvar .gt. dsqrt_shatmax**2)then
+                passcuts = .false.
+                return
+            endif
+        endif
+      endif      
 C $B$ DESACTIVATE_CUT $E$ !This is a tag for MadWeight
 
       if(debug) write (*,*) '============================='

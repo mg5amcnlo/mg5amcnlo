@@ -550,7 +550,7 @@ class HelicityRecycler():
     def get_amp2_lines(self, line):
         if line.startswith('      DO I = 1, NCOLOR'):
             self.in_amp2 = False
-        elif not line.isspace():
+        elif not line.isspace() and 'DENOM' not in line:
             self.template_dict['amp2_lines'] += f'{line[0:6]}  {self.add_indices(line[6:])}'
 
     def prepare_bools(self):

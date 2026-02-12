@@ -24,6 +24,9 @@ import sys
 if sys.version_info < (3, 7):
    sys.exit('MadGraph5_aMC@NLO works with python 3.7 or higher.\n\
               Please upgrade your version of python.')
+if sys.version_info[1] < 10:
+    logging.warning("\033[91mSupport for Python3.9 (and below) has been dropped since end of 2025. Please consider update your version of Python. Continue at your own risk \033[0m")
+
     
 try:
     import six
@@ -68,19 +71,24 @@ import subprocess
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
-        os.system('%s -O -W ignore::DeprecationWarning %s' % (sys.executable, ' '.join(sys.argv)))
-        sys.exit()
+        import subprocess
+        command = '%s -O -W ignore::DeprecationWarning -W ignore::SyntaxWarning %s' % (sys.executable, ' '.join(sys.argv))
+        result = subprocess.Popen(command, shell=True)
+        result.communicate()
+        return_code = result.returncode
+        sys.exit(return_code)
 
 import logging
 import logging.config
 import madgraph.interface.coloring_logging
 
+
 if ' ' in os.getcwd():
     logging.warning("\033[91mThe current working directory (%s) does contain spaces. We advise that you change the location of the code/working area to avoid to have space in such path.\033[0m", os.getcwd())
 
 
-if sys.version_info[0] == 3 and sys.version_info[1] == 12:
-    logging.warning("\033[91mpython3.12 support is still experimental. For the moment re-weighting is NOT working and do expect a LOT of syntax warning. We do not advise python3.12 for production for the moment.\033[0m")
+if sys.version_info[0] == 3 and sys.version_info[1] >= 12:
+    logging.warning("\033[91mpython3.12+ support: For reweighting feature, please use 3.6.X release.\033[0m")
 
 try: 
     import readline

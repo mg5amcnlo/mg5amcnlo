@@ -1211,8 +1211,12 @@ C
 
       SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL)
       IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'  ! for the definition of maxflow
       INCLUDE 'coloramps.inc'  ! set the coloramps
+      INCLUDE 'cluster.inc'
+      INCLUDE 'genps.inc'
+      INCLUDE 'run.inc'
 C     
 C     argument IN
 C     
@@ -1233,6 +1237,11 @@ C
       DOUBLE PRECISION TARGETAMP(0:MAXFLOW)
       INTEGER I,J
       DOUBLE PRECISION XTARGET
+
+      IF (ICKKW.GT.0) THEN
+        ICONFIG = IGRAPHS(1)
+      ENDIF
+
 
       NC = INT(JAMP2(0))
       IS_LC = .TRUE.

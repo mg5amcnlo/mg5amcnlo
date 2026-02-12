@@ -201,23 +201,36 @@ class CmdExtended(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
-        if os.path.exists(pjoin(MG5DIR, '.bzr')):
-            try:
-                proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
+        if os.path.exists(pjoin(MG5DIR, '.git')):
+            try: 
+                proc = subprocess.Popen(['git', 'tag', '--points-at', 'HEAD'], stdout=subprocess.PIPE,cwd=MG5DIR)
             except OSError:
+                # user does not have git installed
                 logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
                 info_line += "#*     UNKNOWN DEVELOPMENT VERSION. NOT FOR PRODUCTION      *\n"
             else:
-                bzrname,_ = proc.communicate()
-                proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
-                bzrversion,_ = proc.communicate()
-                bzrname, bzrversion = bzrname.decode(errors='ignore').strip(), bzrversion.decode(errors='ignore').strip()
-                len_name = len(bzrname)
-                len_version = len(bzrversion)
-                info_line += "#*         BZR %s %s %s         *\n" % \
-                                (bzrname,
-                                (34 - len_name - len_version) * ' ',
-                                bzrversion)
+                # check if the version corresponds to a tag
+                #
+                alltag,_ = proc.communicate() 
+                alltag = alltag.decode(errors='ignore').strip().split()
+              
+                if not alltag:
+                    proc = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                    tag,_ = proc.communicate()
+                    tag = tag.decode(errors='ignore').strip()
+                    
+                elif len(alltag) == 1:
+                    tag = alltag[0]
+                else:
+                    tag = [name for name in alltag if name.startswith('v')][0]
+                branch,_ = subprocess.Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=subprocess.PIPE,cwd=MG5DIR).communicate()
+                branch = branch.decode(errors='ignore').strip()
+                
+
+                info_line += "#*         GIT %s %s %s         *\n" % \
+                                (tag,
+                                (34 - len(tag) - len(branch)) * ' ',
+                                branch)
         elif os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
             logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
             info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
@@ -738,11 +751,43 @@ class HelpToCmd(cmd.HelpCmd):
     def help_set(self):
         logger.info("-- set options for generation or output.",'$MG:color:BLUE')
         logger.info("syntax: set <option_name> <option_value>",'$MG:BOLD')
-        logger.info("Possible options are: ")
-        for opts in [self._set_options[i*3:(i+1)*3] for i in \
-                                          range((len(self._set_options)//4)+1)]:
-            logger.info("%s"%(','.join(opts)),'$MG:color:GREEN')
-        logger.info("Details of each option:")
+        logger.info("Documented options are: \n", '$MG:BOLD')
+        #options = [self._set_options[i*3:(i+1)*3] for i in \
+        #                                  range((len(self._set_options)//4)+1)]
+        doc_options = [name[5:] for name in dir(self) if name.startswith('set2_')]
+        doc_options.sort()
+        doc_options = [doc_options[i*3:(i+1)*3] for i in \
+                                          range((len(doc_options)//3)+1)]
+        for opts in doc_options:
+            if len(opts)<3:
+                    opts += ['']*(3-len(opts))
+            mystr="%-35s\t%-35s\t%-25s" % (tuple(opts))
+            logger.info(mystr)
+
+            #logger.info("%30s"%('\t'.join(opts)))
+        doc_options = sum(doc_options, [])
+            
+        logger.info("\nFor details for each option: please type: help set <option_name>\n ",'$MG:color:GREEN')
+        
+        logger.info("Undocumented options are: \n", '$MG:BOLD')
+
+        options = self._set_options
+        options += self.options_configuration.keys()
+        options += self.options_madgraph.keys()
+        options += self.options_madevent.keys()
+        options = [opt for opt in options if not opt in doc_options]
+        options = list(set(options))
+        options.sort()
+        options = [options[i*3:(i+1)*3] for i in \
+                                          range((len(options)//3)+1)]
+        for opts in options:
+            if len(opts)<3:
+                    opts += ['']*(3-len(opts))
+            mystr="%-25s\t%-25s\t%-25s" % (tuple(opts))
+            logger.info(mystr)
+
+        #lo
+        return
         logger.info("group_subprocesses True/False/Auto/gpu: ",'$MG:color:GREEN')
         logger.info(" > (default Auto) Smart grouping of subprocesses into ")
         logger.info("   directories, mirroring of initial states, and ")
@@ -1686,7 +1731,7 @@ This will take effect only in a NEW terminal
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
             elif path != 'auto':
-                if path in ['HELAS', 'tests', 'MadSpin', 'madgraph', 'mg5decay', 'vendor']:
+                if path in ['HELAS', 'tests', 'MadSpin', 'madgraph', 'mg5decay', 'vendor','madevent_gpu', 'madevent_simd']:
                     if os.getcwd() == MG5DIR:
                         raise self.InvalidCmd("This name correspond to a buildin MG5 directory. Please choose another name")
                 self._export_dir = path
@@ -2511,7 +2556,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                  '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1']):
         "Complete the output command"
 
-        possible_format = self._export_formats
+        possible_format = list(self._export_formats)
+        possible_format += misc.from_plugin_import(self.plugin_path, 'new_output', keyname=None, warning=False,
+                       info=None)
         #don't propose directory use by MG_ME
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
@@ -2637,7 +2684,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
             elif args[1] == 'cluster_type':
                 return self.list_completion(text, list(cluster.from_name.keys()) + ['default'])
-            elif args[1] in ['cluster_queue', 'cluster_walltime']:
+            elif args[1] in ['cluster_queue', 'cluster_walltime',\
+                             'cluster_requirement', 'cluster_vacatetime']:
                 return []
             elif args[1] == 'automatic_html_opening':
                 return self.list_completion(text, ['False', 'True', 'default'])
@@ -2929,7 +2977,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
                               'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA',
-                              'cudacpp']
+                              'cudacpp', 'hepmc3', 'pythia8_hepmc3', 'DMTCP']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -2979,22 +3027,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
+                       'use_pigz':None,
                        'text_editor':None,
                        'fortran_compiler':None,
                        'f2py_compiler':None,
                        'f2py_compiler_py2':None,
                        'f2py_compiler_py3':None,
                        'cpp_compiler':None,
+                       'checkpointing': False,
                        'cluster_type': 'condor',
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'cluster_walltime': None,
+                       'cluster_requirement': None,
+                       'cluster_vacatetime': '120',
+                       'enforce_shared_disk': False,
                        'fastjet':'fastjet-config',
                        'eMELA':'eMELA-config',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
                        'collier':'./HEPTools/lib',
+                       'dmtcp': None,
                        'lhapdf':'lhapdf-config',
                        'pineappl':'pineappl',
                        'lhapdf_py2': None,
@@ -3010,7 +3064,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'output_dependencies':'external',
                        'crash_on_error':False,
                        'auto_convert_model': True,
-                       'acknowledged_v3.1_syntax': False,
+                       'acknowledged_v3.1_syntax': True,
                        'auto_update':7,
                        }
 
@@ -5026,7 +5080,15 @@ This implies that with decay chains:
 
         myleglist = base_objects.MultiLegList()
         state = False
+
+        if ('!a!' in args and 'j' in args):
+            upc_with_jet = True
+            self.do_define('aUPC = a j / g', log=False)
+        else:
+            upc_with_jet = False
+
         onium_index = 0
+        # Extract process
         for part_name in args:
             if part_name == '>':
                 if not myleglist:
@@ -5063,7 +5125,10 @@ This implies that with decay chains:
 
             # check that only final-state particles are tagged
             if is_tagged and not state:
-                raise self.InvalidCmd("initial particles cannot be tagged")
+                if part_name!='a' and part_name!='22':
+                    raise self.InvalidCmd("only initial photons can be tagged")
+                elif upc_with_jet:
+                    part_name = 'aUPC'.lower()
 
             mylegids = []
             polarization = []
@@ -5136,7 +5201,7 @@ This implies that with decay chains:
                             polarization += [-1]
                     elif p in [0,'0']:
                         if spin in [1,2]:
-                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                            raise self.InvalidCmd('"0" (longitudinal) polarizations are not supported for scalars/fermions.')
                         elif spin in [3,5] and (mass == "ZERO" or "ZERO" in mass):
                             logger.info('"0" (longitudinal) polarization detected for massless boson.')
                             polarization += [0] # those mode will be bypass at generation time
@@ -5153,8 +5218,8 @@ This implies that with decay chains:
 
             duplicate = 1
             if part_name in self._multiparticles:
-                # multiparticles cannot be tagged
-                if is_tagged:
+                # final-state multiparticles cannot be tagged
+                if is_tagged and state:
                     raise self.InvalidCmd("Multiparticles cannot be tagged")
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
@@ -5232,8 +5297,10 @@ This implies that with decay chains:
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
 
-        if any(['is_tagged' in l.keys()  and l['is_tagged'] for l in myleglist]):
+        if any(['is_tagged' in l.keys()  and l['is_tagged'] and l['state'] for l in myleglist]):
             logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
+        if any(['is_tagged' in l.keys()  and l['is_tagged'] and not l['state'] for l in myleglist]):
+            logger.warning('The process involves coherent photons in the initial-state. Please consider citing arXiv:2504.10104 if relevant.')
 
         # Apply the keyword 'all' for perturbed coupling orders.
         if perturbation_couplings.lower() in ['all', 'loonly']:
@@ -6724,7 +6791,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 return self.do_install('%s --source=%s' % (' '.join(args), othersource),
                                        paths, additional_options)
             else:
-                if 'xxx' in advertisements[name][0]:
+                if name in advertisements and 'xxx' in advertisements[name][0]:
                     logger.warning("Program not yet released. Please try later")
                 else:
                     raise Exception("Online server are corrupted. No tarball available for %s" % name)
@@ -7442,14 +7509,19 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 line = line.split('#',1)[0]
             line = line.replace('\n','').replace('\r\n','')
             try:
-                name, value = line.split('=')
+                name, value = line.split('=',1)
             except ValueError:
+                #misc.sprint('ignore line in mg5_configuration.txt: %s' % line)
                 pass
             else:
                 name = name.strip()
                 value = value.strip()
-                if name != 'mg5_path':
+                if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3']:
                     self.options[name] = value
+                elif hasattr(self, 'set_%s' % name):
+                    misc.sprint('set configuration option %s to %s' % (name, value) )
+                    func = getattr(self, 'set_%s' % name)
+                    func(value.split())
                 if value.lower() == "none" or value=="":
                     self.options[name] = None
         config_file.close()
@@ -7569,7 +7641,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     else:
                         if key in self.options_madgraph:
                             self.history.append('set %s %s' % (key, self.options[key]))
-            elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
+            elif key not in ['text_editor','eps_viewer','use_pigz','web_browser', 'stdout_level',
+                             'f2py_compiler', 'f2py_compiler_py2', 'f2py_compiler_py3']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
@@ -7587,6 +7660,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
+        # Configure the way to compress a file:
+        misc.configure_gzip(self.options)
         return self.options
 
     def check_for_export_dir(self, filepath):
@@ -7907,7 +7982,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             if '_path' in key and os.path.basename(self.options[key]) == 'None':
                                 continue
                             to_define[key] = self.options[key]
-                        elif key in ['cluster_queue', 'cluster_walltime'] and self.options[key] is None:
+                        elif key in ['cluster_queue', 'cluster_walltime',\
+                                     'cluster_requirement', 'cluster_vacatetime']\
+                                     and self.options[key] is None:
                             to_define[key] = self.options[key]
 
                 if '--all' in args:
@@ -7939,285 +8016,487 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 to_define = to_keep
             self.write_configuration(filepath, basefile, basedir, to_define)
 
-    # Set an option
-    def do_set(self, line, log=True, model_reload=True):
-        """Set an option, which will be default for coming generations/outputs.
+    def help_set2_ignore_six_quark_processes(self):
+        logger.info("ignore_six_quark_processes multi_part_label",'$MG:color:GREEN')
+        logger.info(" > (default none) ignore processes with at least 6 of any")
+        logger.info("   of the quarks given in multi_part_label.")
+        logger.info(" > These processes give negligible contribution to the")
+        logger.info("   cross section but have subprocesses/channels.")
+
+    def set2_ignore_six_quark_processes(self, args, log=True):
+        """Set the list of quarks to ignore processes with six quarks in the
+        final state.  The argument is a multiparticle label.
+        Example: set ignore_six_quark_processes p
+        or: set ignore_six_quark_processes none
         """
+        args = ['ignore_six_quark_processes'] + args
 
-        # Be careful:
-        # This command is associated to a post_cmd: post_set.
-        args = self.split_arg(line)
-
-        # Check the validity of the arguments
         self.check_set(args)
 
-        if args[0] == 'ignore_six_quark_processes':
-            if args[1].lower() == 'false':
-                self.options[args[0]] = False
-                return
-            self.options[args[0]] = misc.make_unique([abs(p) for p in \
-                                      self._multiparticles[args[1]]\
-                                      if self._curr_model.get_particle(p).\
-                                      is_fermion() and \
-                                      self._curr_model.get_particle(abs(p)).\
-                                      get('color') == 3])
-            if log:
-                logger.info('Ignore processes with >= 6 quarks (%s)' % \
-                        ",".join([\
-                            self._curr_model.get_particle(q).get('name') \
-                            for q in self.options[args[0]]]))
+        if args[1].lower() == 'false':
+            self.options[args[0]] = False
+            return
+        self.options[args[0]] = misc.make_unique([abs(p) for p in \
+                                    self._multiparticles[args[1]]\
+                                    if self._curr_model.get_particle(p).\
+                                    is_fermion() and \
+                                    self._curr_model.get_particle(abs(p)).\
+                                    get('color') == 3])
+        if log:
+            logger.info('Ignore processes with >= 6 quarks (%s)' % \
+                    ",".join([\
+                        self._curr_model.get_particle(q).get('name') \
+                        for q in self.options[args[0]]]))
 
-        elif args[0] == 'group_subprocesses':
-            if args[1].lower() not in ['auto', 'nlo', 'gpu']:
-                self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, name="group_subprocesses")
-            else:
-                if args[1].lower() == 'nlo':
-                    self.options[args[0]] = "NLO"
-                elif args[1].lower() == 'gpu':
-                    self.options[args[0]] = "gpu"
-                else:
-                    self.options[args[0]] = "Auto"
-            if log:
-                logger.info('Set group_subprocesses to %s' % \
-                                                    str(self.options[args[0]]))
-                logger.info('Note that you need to regenerate all processes')
-            self._curr_amps = diagram_generation.AmplitudeList()
-            self._curr_proc_defs = base_objects.ProcessDefinitionList()
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            if self.options[args[0]] == 'gpu':
-                export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'gpu'
-            else:
-                export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'madevent'
+    def help_set2_group_subprocesses(self):
+        """Help for set group_subprocesses command"""
+        logger.info("group_subprocesses True/False/Auto/gpu: ",'$MG:color:GREEN')
+        logger.info(" > (default Auto) Smart grouping of subprocesses into ")
+        logger.info("   directories, mirroring of initial states, and ")
+        logger.info("   combination of integration channels.")
+        logger.info(" > Example: p p > j j j w+ gives 5 directories and 184 channels",'$MG:BOLD')
+        logger.info("   (cf. 65 directories and 1048 channels for regular output)",'$MG:BOLD')
+        logger.info(" > Auto means False for decay computation and True for collisions.")
+        logger.info(" > gpu means a single matrix-element type per directory",'$MG:BOLD')
 
-        elif args[0] == "stdout_level":
-            if args[1].isdigit():
-                level = int(args[1])
-            else:
-                level = eval('logging.' + args[1])
-            logging.root.setLevel(level)
-            logging.getLogger('madgraph').setLevel(level)
-            logging.getLogger('madevent').setLevel(level)
-            self.options[args[0]] = level
-            if log:
-                logger.info('set output information to level: %s' % level)
-        elif args[0].lower() == "ewscheme":
-            if args[1] == 'external':
-                logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
-                                              (self._curr_model.get('name'), args[1]))
-            else:
-                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
-            logger.info("Importing a new model will restore the default scheme")
+    def set2_group_subprocesses(self, args, log=True):
+        """Set the grouping of subprocesses mode. Options are:
+           auto: let MG5 decide the best option (default)
+              nlo: group subprocesses for NLO computations
+              gpu: group subprocesses for GPU computations
+              True: group subprocesses for CPU computations
+              False: do not group subprocesses (MG4 style)
+        """   
+        args = ['group_subprocesses'] + args
 
-            self._curr_model.change_electroweak_mode(args[1])
-        elif args[0] == "complex_mass_scheme":
-            old = self.options[args[0]]
-            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, "complex_mass_scheme")
-            aloha.complex_mass = self.options[args[0]]
-            aloha_lib.KERNEL.clean()
-            if self.options[args[0]]:
-                if old:
-                    if log:
-                        logger.info('Complex mass already activated.')
-                    return
+        self.check_set(args)
+
+        if args[1].lower() not in ['auto', 'nlo', 'gpu']:
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, name="group_subprocesses")
+        else:
+            if args[1].lower() == 'nlo':
+                self.options[args[0]] = "NLO"
+            elif args[1].lower() == 'gpu':
+                self.options[args[0]] = "gpu"
+            else:
+                self.options[args[0]] = "Auto"
+        if log:
+            logger.info('Set group_subprocesses to %s' % \
+                                                str(self.options[args[0]]))
+            logger.info('Note that you need to regenerate all processes')
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        if self.options[args[0]] == 'gpu':
+            export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'gpu'
+        else:
+            export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'madevent'
+
+    def set2_stdout_level(self, args, log=True):
+        """Set the level of output information.  Options are:
+              DEBUG, INFO, WARNING, ERROR, CRITICAL, 5
+        """
+        args = ['stdout_level'] + args
+        self.check_set(args)
+        if args[1].isdigit():
+            level = int(args[1])
+        else:
+            level = eval('logging.' + args[1])
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+        logging.getLogger('madevent').setLevel(level)
+        self.options[args[0]] = level
+        if log:
+            logger.info('set output information to level: %s' % level)
+
+    def set2_EWscheme(self, args, log=True):
+        """Set the electroweak scheme to be used in the model. Options are:
+           sm: Standard Model scheme (default)
+           external: external scheme where you are responsible of the validity
+                        of the input parameters.
+        """
+        args = ['EWscheme'] + args
+        self.check_set(args)
+
+        if args[1] == 'external':
+            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+                                            (self._curr_model.get('name'), args[1]))
+        else:
+            logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
+        logger.info("Importing a new model will restore the default scheme")
+
+        self._curr_model.change_electroweak_mode(args[1])
+    set2_ewscheme = set2_EWscheme
+
+    def help_set2_complex_mass_scheme(self):
+        """Help for set complex_mass_scheme command"""
+        logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
+        logger.info(" > (default False) Set complex mass scheme.")
+        logger.info(" > This automatically change the EW scheme of the model to have mass as input parameters.")
+        logger.info(" > Complex mass scheme is not yet supported for loop processes.")
+
+
+    def set2_complex_mass_scheme(self, args, log=True):
+        """Activate/Deactivate the complex mass scheme in the model. Options are:
+           True: activate the complex mass scheme
+           False: deactivate the complex mass scheme
+           Can be done either before/after model import.
+        """
+
+        args = ['complex_mass_scheme'] + args
+        self.check_set(args)
+
+        old = self.options[args[0]]
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, "complex_mass_scheme")
+        aloha.complex_mass = self.options[args[0]]
+        aloha_lib.KERNEL.clean()
+        if self.options[args[0]]:
+            if old:
                 if log:
-                    logger.info('Activate complex mass scheme.')
-            else:
-                if not old:
-                    if log:
-                        logger.info('Complex mass already desactivated.')
-                    return
+                    logger.info('Complex mass already activated.')
+                return
+            if log:
+                logger.info('Activate complex mass scheme.')
+        else:
+            if not old:
                 if log:
-                    logger.info('Desactivate complex mass scheme.')
-            if not self._curr_model:
+                    logger.info('Complex mass already desactivated.')
                 return
-            self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
+            if log:
+                logger.info('Desactivate complex mass scheme.')
+        if not self._curr_model:
+            return
+        self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
 
-        elif args[0] == "gauge":
-            # Treat the case where they are no model loaded
-            if not self._curr_model:
-                if args[1] == 'unitary':
-                    aloha.unitary_gauge = True
-                elif args[1] == 'axial':
-                    aloha.unitary_gauge = 2
-                elif args[1] == 'FD':
-                    aloha.unitary_gauge = 3
-                else:
-                    aloha.unitary_gauge = False
-                aloha_lib.KERNEL.clean()
-                self.options[args[0]] = args[1]
-                if log: logger.info('Passing to gauge %s.' % args[1])
-                return
+    def help_set2_gauge(self):
+        """Help for set gauge command"""
+        logger.info("gauge unitary|Feynman|axial|FD",'$MG:color:GREEN')
+        logger.info(" > (default unitary) choose the gauge of the non QCD part.")
+        logger.info(" > axial is also named the parton-shower gauge (for massless particles only).")
+        logger.info(" > FD is for Feynman Diagram gauge: (see 2203.10440 and 2405.01256). This is the extension of the axial gauge to massive particles.")
+        logger.info(" > For loop processes, only Feynman gauge is employable.")
 
-            # They are a valid model
-            able_to_mod = True
+        
+
+    def set2_gauge(self, args, log=True):
+        """Set the gauge to be used in the model. Options are:
+              unitary: Unitary gauge
+              feynman: Feynman gauge
+              axial: Parton-shower gauge
+              FD: Four-Dimensional gauge (see 2203.10440 and 2405.01256)
+        """
+        args = ['gauge'] + args
+        self.check_set(args)
+
+        # Treat the case where they are no model loaded
+        if not self._curr_model:
             if args[1] == 'unitary':
-                if 0 in self._curr_model.get('gauge'):
-                    aloha.unitary_gauge = True
-                else:
-                    able_to_mod = False
-                    if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
-                                           % self._curr_model.get('name'))
+                aloha.unitary_gauge = True
             elif args[1] == 'axial':
-                if 0 in self._curr_model.get('gauge'):
-                    aloha.unitary_gauge = 2
-                else:
-                    able_to_mod = False
-                    if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
-                                           % self._curr_model.get('name'))
+                aloha.unitary_gauge = 2 
             elif args[1] == 'FD':
-                logger.warning("WARNING: NOT ALL MODEL ARE SUPPORTING THIS GAUGE. PLEASE CHECK/CITE 2203.10440 and 2405.01256")
-                if 1 in self._curr_model.get('gauge'):
-                    aloha.unitary_gauge = 3
-                else:
-                    able_to_mod = False
-                    if log: logger.warning('Note that FD gauge is not allowed for your current model %s' \
-                                           % self._curr_model.get('name'))
+                aloha.unitary_gauge = 3 
             else:
-                if 1 in self._curr_model.get('gauge'):
-                    aloha.unitary_gauge = False
-                else:
-                    able_to_mod = False
-                    if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
-                                           % self._curr_model.get('name'))
-
-            self._curr_model._curr_gauge = args[1]
-            if self.options['gauge'] == args[1]:
-                return
-
-
+                aloha.unitary_gauge = False
+            aloha_lib.KERNEL.clean()
             self.options[args[0]] = args[1]
+            if log: logger.info('Passing to gauge %s.' % args[1])
+            return
 
-            if able_to_mod and log and args[0] == 'gauge' and \
-                args[1] == 'unitary' and not self.options['gauge']=='unitary' and \
-                isinstance(self._curr_model,loop_base_objects.LoopModel) and \
-                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
-                logger.warning('You will only be able to do tree level'+\
-                                   ' and QCD corrections in the unitary gauge.')
+        # They are a valid model
+        able_to_mod = True
+        if args[1] == 'unitary':
+            if 0 in self._curr_model.get('gauge'):
+                aloha.unitary_gauge = True
+            else:
+                able_to_mod = False
+                if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+                                        % self._curr_model.get('name'))
+        elif args[1] == 'axial':
+            if 0 in self._curr_model.get('gauge'):
+                aloha.unitary_gauge = 2
+            else:
+                able_to_mod = False
+                if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
+                                        % self._curr_model.get('name'))
+        elif args[1] == 'FD':
+            logger.warning("WARNING: NOT ALL MODEL ARE SUPPORTING THIS GAUGE. PLEASE CHECK/CITE 2203.10440 and 2405.01256")
+            if 1 in self._curr_model.get('gauge'):
+                aloha.unitary_gauge = 3
+            else:
+                able_to_mod = False
+                if log: logger.warning('Note that FD gauge is not allowed for your current model %s' \
+                                        % self._curr_model.get('name'))   
+        else:
+            if 1 in self._curr_model.get('gauge'):
+                aloha.unitary_gauge = False
+            else:
+                able_to_mod = False
+                if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
+                                        % self._curr_model.get('name'))
+
+        self._curr_model._curr_gauge = args[1]
+        if self.options['gauge'] == args[1]:
+            return
+        
+        
+        self.options[args[0]] = args[1]
+
+        if able_to_mod and log and args[0] == 'gauge' and \
+            args[1] == 'unitary' and not self.options['gauge']=='unitary' and \
+            isinstance(self._curr_model,loop_base_objects.LoopModel) and \
+                not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
+            logger.warning('You will only be able to do tree level'+\
+                                ' and QCD corrections in the unitary gauge.')
 
 
 
-            #re-init all variable
-            model_name = self._curr_model.get('modelpath+restriction')
-            self._curr_model = None
-            self._curr_amps = diagram_generation.AmplitudeList()
-            self._curr_proc_defs = base_objects.ProcessDefinitionList()
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self._curr_helas_model = None
-            self._curr_exporter = None
-            self._second_exporter = None
-            self._done_export = False
-            import_ufo._import_once = []
-            if able_to_mod:
-                # We don't want to go through the MasterCommand again
-                # because it messes with the interface switching when
-                # importing a loop model from MG5
-                if 'modelname' in self.history.get('full_model_line'):
-                    opts = '--modelname'
-                else:
-                    opts=''
-                MadGraphCmd.do_import(self,'model %s %s' % (model_name, opts), force=True)
-            elif log:
-                logger.info('Note that you have to reload the model')
+        #re-init all variable
+        model_name = self._curr_model.get('modelpath+restriction')
+        self._curr_model = None
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._curr_helas_model = None
+        self._curr_exporter = None
+        self._second_exporter = None
+        self._done_export = False
+        import_ufo._import_once = []
+        if able_to_mod:
+            # We don't want to go through the MasterCommand again
+            # because it messes with the interface switching when
+            # importing a loop model from MG5
+            if 'modelname' in self.history.get('full_model_line'):
+                opts = '--modelname'
+            else:
+                opts=''
+            MadGraphCmd.do_import(self,'model %s %s' % (model_name, opts), force=True)
+        elif log:
+            logger.info('Note that you have to reload the model')
 
-        elif args[0] == 'fortran_compiler':
+
+
+
+
+    def set2_fortran_compiler(self, args, log=True):
+        """Set the fortran compiler to be used in the code generation.
+        Example: set fortran_compiler gfortran
+        or: set fortran_compiler None
+        """
+
+        args = ['fortran_compiler'] + args
+        self.check_set(args)
+
+        if args[1] != 'None':
+            if log:
+                logger.info('set fortran compiler to %s' % args[1])
+            self.options['fortran_compiler'] = args[1]
+        else:
+            self.options['fortran_compiler'] = None
+
+    def set2_default_unset_couplings(self, args, log=True):
+        """Set the default value for unset couplings in the model.
+        Example: set default_unset_couplings 0
+        Default is 99 
+        Note that this is used when at least one coupling is defined in the process.
+        """
+        args = ['default_unset_couplings'] + args
+        self.check_set(args)    
+        self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
+
+    def set2_f2py_compiler(self, args, log=True):
+        """Set the f2py compiler to be used in the code generation.
+        Example: set f2py_compiler f2py3.10
+        trick (for config file): set f2py_compiler f2py3.10 --python=3.10
+        only apply the setting if the python version match the current one
+        """
+
+        if "--no_save" in args:
+            raise Exception 
+
+        args = ['f2py_compiler'] + args
+        self.check_set(args)
+
+        if len(args) > 2 and args[2].startswith('--python='):
+            py_version = args[2].split('=')[1]
+            major_version = int(py_version.split('.')[0])
+            minor_version = int(py_version.split('.')[1])
+            if major_version != sys.version_info[0] or \
+               minor_version != sys.version_info[1]:
+               return 
+            
+        to_do = True
+        if args[0].endswith('_py2') and six.PY3:
+            to_do = False
+        # not supported anymore
+        #elif args[0].endswith('_py3') and six.PY2:
+        #    to_do = False
+        if to_do:
             if args[1] != 'None':
                 if log:
-                    logger.info('set fortran compiler to %s' % args[1])
-                self.options['fortran_compiler'] = args[1]
+                    logger.info('set f2py compiler to %s' % args[1])
+            
+                self.options['f2py_compiler'] = args[1]
             else:
-                self.options['fortran_compiler'] = None
-        elif args[0] == 'default_unset_couplings':
-            self.options['default_unset_couplings'] = banner_module.ConfigFile.format_variable(args[1], int, name="default_unset_couplings")
-        elif args[0].startswith('f2py_compiler'):
-            to_do = True
-            if args[0].endswith('_py2') and six.PY3:
-                to_do = False
-            elif args[0].endswith('_py3') and six.PY2:
-                to_do = False
-            if to_do:
-                if args[1] != 'None':
-                    if log:
-                        logger.info('set f2py compiler to %s' % args[1])
+                self.options['f2py_compiler'] = None
 
-                    self.options['f2py_compiler'] = args[1]
-                else:
-                    self.options['f2py_compiler'] = None
+    set2_f2py_compiler_py2 = set2_f2py_compiler
+    set2_f2py_compiler_py3 = set2_f2py_compiler
 
-        elif args[0] == 'loop_optimized_output':
+    def help_set2_loop_optimized_output(self):
+        """Help for set loop_optimized_output command"""
+        logger.info("loop_optimized_output True|False",'$MG:color:GREEN')
+        logger.info(" > Exploits the open loop thechnique for considerable")
+        logger.info("   improvement.")
+        logger.info(" > CP relations among helicites are detected and the helicity")
+        logger.info("   filter has more potential.")
 
-            if log:
-                    logger.info('set loop optimized output to %s' % args[1])
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = args[1]
-            if not self.options['loop_optimized_output'] and \
-                                               self.options['loop_color_flows']:
-                logger.warning("Turning off option 'loop_color_flows'"+\
-                    " since it is not available for non-optimized loop output.")
-                self.do_set('loop_color_flows False',log=False)
-        elif args[0] == "nlo_mixed_expansion":
-            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1],bool,args[0])
-        elif args[0] == 'loop_color_flows':
-            if log:
-                    logger.info('set loop color flows to %s' % args[1])
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self.options[args[0]] = args[1]
-            if self.options['loop_color_flows'] and \
-                                      not self.options['loop_optimized_output']:
-                logger.warning("Turning on option 'loop_optimized'"+\
-                                     " needed for loop color flow computation.")
-                self.do_set('loop_optimized_output True',False)
 
-        elif args[0] == 'eMELA':
-            try:
-                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-                output, error = p.communicate()
-                output = output.decode()
-                res = 0
-            except Exception:
-                res = 1
+    def set2_loop_optimized_output(self, args, log=True):
+        """This option corresponds to using the polynomial decomposition of the integrand 
+        numerator (Eq. 2.6 of 1507.00020), to optimise the use of OPP reduction and allow 
+        to interface TIR tools. For debugging and validation purposes it is useful to be 
+        able to turn this option off (before generating the loop matrix element code) 
+        and to force MadLoop to recompute the complete integrand numerator for each new value 
+        of the loop-momentum specified by the OPP reduction procedure.
+        """
+        args = ['loop_optimized_output'] + args
+        self.check_set(args)    
 
-            if res != 0 or error:
+
+        if log:
+                logger.info('set loop optimized output to %s' % args[1])
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self.options[args[0]] = args[1]
+        if not self.options['loop_optimized_output'] and \
+                                            self.options['loop_color_flows']:
+            logger.warning("Turning off option 'loop_color_flows'"+\
+                " since it is not available for non-optimized loop output.")
+            self.do_set('loop_color_flows False',log=False)
+
+    def help_set2_nlo_mixed_expansion(self):
+        logger.info("nlo_mixed_expansion <value>",'$MG:color:GREEN') 
+        logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
+
+    def set2_nlo_mixed_expansion(self, args, log=True):
+        """Set the nlo mixed expansion option.
+        True is default. False go back to MG5 2.x behavior.
+        Example: set nlo_mixed_expansion True
+        """
+        args = ['nlo_mixed_expansion'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1],bool,args[0])
+        
+    def help_set2_loop_color_flows(self):
+        """Help for set loop_color_flows command"""
+        logger.info("loop_color_flows True|False",'$MG:color:GREEN')
+        logger.info(" > Only relevant for the loop optimized output.")
+        logger.info(" > Reduces the loop diagrams at the amplitude level")
+        logger.info("   rendering possible the computation of the loop amplitude")
+        logger.info("   for a fixed color flow or color configuration.")
+        logger.info(" > This option can considerably slow down the loop ME")
+        logger.info("   computation time, especially when summing over all color")
+        logger.info("   and helicity configuration, hence turned off by default.")        
+
+    def set2_loop_color_flows(self, args, log=True):
+        """ usage set loop_color_flows True|False
+        The computation of partial colour sub-amplitudes (i.e. amplitudes for fixed 
+        colour flows) is turned off by default for the case of NLO virtual matrix elements 
+        and turned on for loop-induced matrix elements.. This is because in the former case 
+        it comes at the price of giving up loop reduction at the squared amplitude level,
+        hence slowing down MadLoop execution speed since the number of OPP reductions is 
+        no longer independent of the number of contributing helicity configurations. 
+        This option can however be turned on (before MadLoop writes out the source code 
+        for the process) since colour sub-amplitudes can be necessary for certain applications, 
+        such as NLO event generation within the context of a controlled colour expansion
+        and/or Monte-Carlo over colours. 
+        """
+        
+        args = ['loop_color_flows'] + args
+        self.check_set(args)
+
+        if log:
+                logger.info('set loop color flows to %s' % args[1])
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self.options[args[0]] = args[1]
+        if self.options['loop_color_flows'] and \
+                                    not self.options['loop_optimized_output']:
+            logger.warning("Turning on option 'loop_optimized'"+\
+                                    " needed for loop color flow computation.")
+            self.do_set('loop_optimized_output True',False)
+
+    def set2_eMELA(self, args, log=True):
+        """Set the eMELA-config path.
+        Example: set eMELA /PATH/TO/eMELA-config
+        or: set eMELA None
+        """
+        args = ['eMELA'] + args
+        self.check_set(args)
+        
+        try:
+            p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            output = output.decode()
+            res = 0
+        except Exception:
+            res = 1
+
+        if res != 0 or error:
+            if args[1] != 'None':
                 logger.info('%s does not seem to correspond to a valid eMELA-config ' % args[1] + \
-                 'executable.\n Please set the \'fastjet\'' + \
-                 'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).' +
-                        '\n MG5_aMC> set eMELA /PATH/TO/eMELA-config\n')
-                self.options[args[0]] = None
-                if self.history and 'eMELA' in self.history[-1]:
-                    self.history.pop()
-            else: #everything is fine
-                logger.info('set eMELA to %s' % args[1])
-                self.options[args[0]] = args[1]
-
-        elif args[0] == 'fastjet':
-            try:
-                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-                output, error = p.communicate()
-                output = output.decode(errors='ignore')
-                res = 0
-            except Exception:
-                res = 1
-
-            if res != 0 or error:
-                logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                 'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
-                 'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
-                        '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
-                self.options[args[0]] = None
-                if self.history and 'fastjet' in self.history[-1]:
-                    self.history.pop()
-            elif int(output.split('.')[0]) < 3:
-                logger.warning('%s is not ' % args[1] + \
-                        'v3 or greater. Please install FastJet v3+.')
-                self.options[args[0]] = None
+                'executable.\n Please set the \'fastjet\'' + \
+                'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).' +
+                    '\n MG5_aMC> set eMELA /PATH/TO/eMELA-config\n')
+            self.options[args[0]] = None
+            if self.history and 'eMELA' in self.history[-1]:
                 self.history.pop()
-            else: #everything is fine
-                logger.info('set fastjet to %s' % args[1])
-                self.options[args[0]] = args[1]
+        else: #everything is fine
+            logger.info('set eMELA to %s' % args[1])
+            self.options[args[0]] = args[1]
 
-        elif args[0] in ['golem','samurai','ninja','collier'] and \
-             not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
+    def set2_fastjet(self, args, log=True):
+        """Set the fastjet-config path.
+        Example: set fastjet /PATH/TO/fastjet-config
+        or: set fastjet None
+        """
+        args = ['fastjet'] + args
+        self.check_set(args)
+        
+        try:
+            p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            output = output.decode(errors='ignore')
+            res = 0
+        except Exception:
+            res = 1
+
+        if res != 0 or error:
+            logger.info('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
+                'executable (v3+). We will use fjcore instead.\n Please set the \'fastjet\'' + \
+                'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).' +
+                    '\n MG5_aMC> set fastjet /PATH/TO/fastjet-config\n')
+            self.options[args[0]] = None
+            if self.history and 'fastjet' in self.history[-1]:
+                self.history.pop()
+        elif int(output.split('.')[0]) < 3:
+            logger.warning('%s is not ' % args[1] + \
+                    'v3 or greater. Please install FastJet v3+.')
+            self.options[args[0]] = None
+            self.history.pop()
+        else: #everything is fine
+            logger.info('set fastjet to %s' % args[1])
+            self.options[args[0]] = args[1]
+
+
+    def setup_path_for_options(self,name, args, log=True):
+        """Set the path for golem/samurai/ninja/collier options.
+        Example: set golem /PATH/TO/golem/lib
+        or: set golem None
+        """
+        args = [name] + args[:]
+        if not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
             else:
@@ -8233,98 +8512,670 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
                             '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
                             'You will NOT be able to run %s otherwise.\n'%args[0])
+        else:
+           self.options[args[0]] = args[1] 
+        
 
+    set2_golem = lambda self, *args, **opts : self.setup_path_for_options('golem'   , *args, **opts)
+    set2_samurai = lambda self, *args, **opts : self.setup_path_for_options('samurai' , *args, **opts)  
+    set2_ninja = lambda self, *args, **opts : self.setup_path_for_options('ninja'   , *args,   **opts)
+    set2_collier = lambda self,*args, **opts : self.setup_path_for_options('collier' , *args, **opts)
+
+    def set2_lhapdf(self, args, log=True):
+        """Set the lhapdf-config path.
+        Example: set lhapdf /PATH/TO/lhapdf-config
+        or: set lhapdf None
+        trick (for config file): set f2py_compiler f2py3.10 --python=3.10
+        only apply the setting if the python version match the current one
+        """
+        
+        args = ['lhapdf'] + args
+        self.check_set(args)  
+        
+        # allow filter for python version  
+        if len(args) > 2 and args[2].startswith('--python='):
+            py_version = args[2].split('=')[1]
+            major_version = int(py_version.split('.')[0])
+            minor_version = int(py_version.split('.')[1])
+            if major_version != sys.version_info[0] or \
+               minor_version != sys.version_info[1]:
+               return  
+
+        to_do = True
+        if args[0].endswith('_py2') and six.PY3:
+            to_do = False
+        #elif args[0].endswith('_py3') and six.PY2:
+        #    to_do = False
+        if to_do:
+            try:
+                res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
+                                                                stderr=subprocess.PIPE)
+                logger.info('set lhapdf to %s' % args[1])
+                self.options['lhapdf'] = args[1]
+                self.options[args[0]] = args[1]
+            except Exception:
+                res = 1
+            if res != 0 and args[1] != 'None':
+                logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
+                        'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
+                        '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
+                        ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
+               
+    set2_lhapdf_py2 = set2_lhapdf
+    set2_lhapdf_py3 = set2_lhapdf
+
+
+
+
+    def set2_timeout(self, args, log=True):
+        """Time allowed to answer question (if no answer takes default value)
+            Note that pressing tab always stops the timer (or any other keys)."""
+        args = ['timeout'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+    
+    def set2_auto_update(self, args, log=True):
+        """Number of days between two automatic update checks (0 means never)
+           Default: 7 days"""
+        args = ['auto_update'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+                
+    def set2_cluster_nb_retry(self, args, log=True):
+        """Number of retries for a failed cluster job (default: 1)"""
+        args = ['cluster_nb_retry'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+
+    def help_set2_max_t_for_channel(self):
+        logger.info("max_t_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for tree-level output with madevent]")
+        logger.info(" > Forbids the inclusion of channel of integration with more than X")
+        logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
+
+    def set2_max_t_for_channel(self, args, log=True):
+        """ This parameter controls the maximum number of t-channel"""
+        args = ['max_t_for_channel'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+
+    def set2_cluster_retry_wait(self, args, log=True):
+        """Time (in seconds) to wait before retrying a failed cluster job (default: 300s)"""
+        args = ['cluster_retry_wait'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+
+    def set2_cluster_size(self, args, log=True):
+        """ Used only for loop-induced mode and in cluster mode, helps the code to control how many
+              processes are sent to the cluster at the same time (default: 100)"""
+        args = ['cluster_size'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+        
+    def help_set2_max_npoint_for_channel(self):
+        logger.info("max_npoint_for_channel <value>",'$MG:color:GREEN')
+        logger.info(" > (default '0') [Used ONLY for loop-induced outputs with madevent]")
+        logger.info(" > Sets the maximum 'n' of n-points loops to be used for")
+        logger.info(" > setting up the integration multichannels.") 
+        logger.info(" > The default value of zero automatically picks the apparent")
+        logger.info(" > appropriate choice which is to sometimes pick box loops")
+        logger.info(" > but never higher n-points ones.")
+        logger.info(" > This parameter to take effect, must to be modified prior the generation of the source code of the process considered.")
+        logger.info(" > In general, we do not observe any significant gain (when not detrimental) when setting this parameter to 4 or larger (except in the case of gg → zz)")
+
+
+
+    def set2_max_npoint_for_channel(self, args, log=True):
+        """ This parameter controls what topologies enter
+            the multi-channeling to be used for integrating loop-induced processes. For instance,
+            when set to 4, all loop diagrams with 4 or less loop propagators seed their own channel
+            of integration. This means that tree topologies obtained by shrinking up to box loop
+            diagrams are considered for the multi-channeling and therefore integrated separately.
+            In general, we do not observe any significant gain (when not detrimental) when setting
+            this parameter to 4 or larger (except in the case of gg → zz). We stress here that,
+            for this parameter to take effect, it must to be modified prior the generation of the
+            source code of the process considered."""
+        args = ['max_npoint_for_channel'] + args
+        self.check_set(args)
+        self.options[args[0]] = int(args[1])
+
+    def set2_cluster_local_path(self, args, log=True):
+        """default=None 
+        This parameter avoids either to transfer PDF sets to the cluster nodes or 
+        to read them directly on a central disk. This path should point to a (node specific) 
+        directory containing the associated PDF sets (either those from LHAPDF or built-in ones). 
+        A typical usage is to set this path to a local directory mirrored via cvmfs.
+        """
+        args = ['cluster_local_path'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+    
+
+    def set2_cluster_status_update(self, args, log=True):
+        """Set the time interval and number of checks for updating the cluster job status.
+           The code starts by to check the status after the second interval (in seconds).
+           After few iterations the jobs switch to the first interval (in seconds).
+           The code can switch back to the second interval when reaching the end of the submissions.
+           The user can type ctrl-c to force to switch back to the second (smaller) interval.
+        Default is (600, 30)
+        Example: set cluster_status_update 300 5
+        or: set cluster_status_update (300,5)
+        """
+        args = ['cluster_status_update'] + args
+        self.check_set(args)
+        
+        if '(' in args[1]:
+            data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+            data = data.replace('(','').replace(')','').replace(',',' ').split()
+            first, second = data[:2]
+        else:
+            first, second = args[1:3]
+
+        self.options[args[0]] = (int(first), int(second))
+        
+    def set2_madanalysis5_path(self, args, log=True):
+        """Set the madanalysis5 path.
+        Example: set madanalysis5_path /PATH/TO/madanalysis5
+        or: set madanalysis5_path None
+        """
+        args = ['madanalysis5_path'] + args
+        self.check_set(args)
+
+        ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
+        message = misc.is_MA5_compatible_with_this_MG5(ma5path)
+        if message is None:
+            self.options['madanalysis5_path'] = args[1]
+        else:
+            logger.warning(message)
+
+    def help_set2_OLP(self):
+        logger.info("OLP ProgramName",'$MG:color:GREEN')
+        logger.info(" > (default 'MadLoop') [Used for virtual generation]")
+        logger.info(" > Chooses what One-Loop Program to use for the virtual")
+        logger.info(" > matrix element generation via the BLAH accord.")
+        logger.info(" Example: set OLP Gosam", "$MG:color:BOLD")
+        logger.info(" > Ensure the external OLP is installed and accessible (e.g., gosam.py in PATH for GoSam).")
+
+
+
+
+
+
+
+    def set2_OLP(self, args, log=True):
+        """Select the One-Loop Provider (OLP) for NLO computations in MG5_aMC. 
+        By default, MG5 uses its internal engine MadLoop. 
+        This option allows switching to an external OLP via the BLHA interface (e.g., GoSam, OpenLoops).
+        Example: set OLP Gosam
+        Ensure the external OLP is installed and accessible (e.g., gosam.py in PATH for GoSam).
+        Supported providers depend on your MG5 version and configuration.
+        """
+        args = ['OLP'] + args
+        self.check_set(args)
+        if six.PY3 and self.options['low_mem_multicore_nlo_generation'] and args[1] != "MadLoop":
+            raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
+        # Reset the amplitudes, MatrixElements and exporter as they might
+        # depend on this option
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._curr_exporter = None
+        self._second_exporter = None
+        self.options[args[0]] = args[1]
+
+    def help_set2_output_dependencies(self):
+        logger.info("output_dependencies <mode>",'$MG:color:GREEN')
+        logger.info(" > (default 'external') [Use for NLO outputs]")
+        logger.info(" > Choses how the external dependences (such as CutTools)")
+        logger.info(" > of NLO outputs are handled. Possible values are:")
+        logger.info("     o external: Some of the libraries the output depends")
+        logger.info("       on are links to their installation in MG5 root dir.")
+        logger.info("     o internal: All libraries the output depends on are")
+        logger.info("       copied and compiled locally in the output directory.")
+        logger.info("     o environment_paths: The location of all libraries the ")
+        logger.info("       output depends on should be found in your env. paths.")  
+        logger.info(" > This affects whether the template  bundles its build‑time/runtime dependencies (self‑contained) or relies on centrally installed ones.")
+
+
+
+    def set2_output_dependencies(self, args, log=True):
+        """Syntax: set output_dependencies <mode>
+           
+           Control how third‑party code and libraries required by a process are handled in 
+           the output directory produced by output. This affects whether the template 
+           bundles its build‑time/runtime dependencies (self‑contained) 
+           or relies on centrally installed ones.
+           Default: external
+           
+        
+           Modes:
+           o external: Some of the libraries the output depends
+             on are links to their installation in MG5 root dir.
+           o internal: All libraries the output depends on are
+             copied and compiled locally in the output directory.
+           o environment_paths: The location of all libraries the
+             output depends on should be found in your env. paths.           
+        """
+        
+        args = ['output_dependencies'] + args
+        self.check_set(args)
+        
+        self.options[args[0]] = args[1]
+
+    def set2_notification_center(self, args, log=True):
+        """Enable/Disable the notification center (on desktop ubuntu/mac).
+        Example: set notification_center True
+        or: set notification_center False
+        default is True
+        The option is ignored if the notification center is not available on the system.
+        """
+        args = ['notification_center'] + args
+        self.check_set(args)    
+        if args[1] in ['None','True','False']:
+            self.options[args[0]] = eval(args[1])
+            self.allow_notification_center = self.options[args[0]]
+        else:
+            raise self.InvalidCmd('expected bool for notification_center')
+
+    def set2_crash_on_error(self, args, log=True):
+        """Set whether the code should crash or just go back to the prompt and interpret 
+        the next command (default).
+        Example: set crash_on_error True
+        or: set crash_on_error False [Default]
+        or: set crash_on_error never [never crash]
+        if crash_on_error is True, the code will stop with a non zero exit code.
+        """
+
+        args = ['crash_on_error'] + args
+        self.check_set(args)
+        try:
+            tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+        except Exception:
+            if args[1].lower() in ['never']:
+                tmp = args[1].lower()
+            else: 
+                raise
+        self.options[args[0]] = tmp
+
+    def set2_auto_convert_model(self, args, log=True):
+        """Set whether the code should automatically convert UFO models from
+        python2 format to python3 format when imported in a python3 MG5_aMC session.
+        Example: set auto_convert_model True [Default]
+        Note that the UFO model will be overwritten which might be problematic.
+        However, the syntax conversion is usually straightforward and is still python2 compatible.
+        """
+        args = ['auto_convert_model'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+
+    def set2_acknowledged_v3_1_syntax(self, args, log=True):
+        """Set whether the user acknowledge that he is aware of the new v3.1 UFO syntax.
+        This is required to use some specific generate syntax at NLO.
+        Default is set to True since MG5_aMC v3.6.7
+        """
+        args = ['acknowledged_v3.1_syntax'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+        
+    def help_set2_zerowidth_tchannel(self):
+        logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
+        logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")
+        
+
+
+    def set2_zerowidth_tchannel(self, args, log=True):
+        """Set whether the code should use zero-width for t-channel propagators.
+        Default is set to True. (since v2.8.0)
+        Example: set zerowidth_tchannel False 
+        """ 
+        args = ['zerowidth_tchannel'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0]) 
+
+    def set2_store_rwgt_info(args, log=True):
+        """Set whether the code should generate systematics information in the output LHE file at NLO
+        Default is set to False.
+        Example: set store_rwgt_info True
+        """
+        args = ['store_rwgt_info'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+        
+    def set2_cluster_queue(self, args, log=True):
+        """Set the name of the queue to which cluster jobs will be submitted.
+        Example: set cluster_queue long
+        or: set cluster_queue None
+        """
+        args = ['cluster_queue'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+
+    def set2_cluster_walltime(self, args, log=True):
+        """Set the maximum walltime for cluster jobs (format depend of the cluster).
+        Example: set cluster_walltime 48:00:00
+        """
+        args = ['cluster_walltime'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+
+    def set2_low_mem_multicore_nlo_generation(self, args, log=True):
+        """Set whether the code should use low memory mode and multicore
+          when generating NLO code with multiple cores
+        Default is set to False.
+        Example: set low_mem_multicore_nlo_generation True
+        """
+        args = ['low_mem_multicore_nlo_generation'] + args
+        self.check_set(args)
+        if six.PY3 and self.options['OLP'] != 'MadLoop':
+            raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+        else:
+            self.options[args[0]] = args[1]
+    
+    def set2_use_pigz(self, args, log=True):
+        """Usage: set use_pigz <value>
+        pigz is a parallel implementation of gzip.
+        Three possible values:
+           None: autodetect (use pigz if available)
+           False: stick to gzip
+           True: use pigz"""
+        args = ['use_pigz'] + args
+        self.check_set(args)
+        if args[1] in ['None','True','False']:
+            self.options[args[0]] = eval(args[1])
+        else:
+            raise self.InvalidCmd('expected bool for use_pigz')
+        misc.configure_gzip(self.options)
+
+    def help_set2_cluster_temp_path(self):
+
+        logger.info("cluster_temp_path PATH",'$MG:color:GREEN')
+        logger.info(" > (default None) [Used in Madevent Output]")
+        logger.info(" > Allow to perform the run in PATH directory")
+        logger.info(" > This allow to not run on the central disk. ")
+        logger.info(" > This is not used by condor cluster (since condor has")
+        logger.info("   its own way to prevent it).")
+      
+
+
+    def set2_cluster_temp_path(self, args, log=True):
+        """Path to a node directory to avoid direct writing on the central disk
+           Note that condor clusters avoid direct writing by default (therefore this
+           options does not affect condor clusters)
+        """
+        return self.set_default('cluster_temp_path', args, log=log)
+
+    def set2_cpp_compiler(self, args, log=True):
+        """Set the C++ compiler to be used in the code generation.
+        Example: set cpp_compiler g++
+        """
+        return self.set_default('cpp_compiler', args, log=log)
+    
+    def set2_nb_core(self, args, log=True):
+        """Set the number of core to be used for parallelized tasks.
+        Example: set nb_core 4
+        """
+        return self.set_default('nb_core', args, log=log)   
+    
+    def set2_cluster_type(self, args, log=True):
+        """Set the cluster type to be used for cluster jobs submission.
+        Example: set cluster_type condor
+        customized cluster types can be defined via plugins.
+        built-in types are: pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2
+        """
+        return self.set_default('cluster_type', args, log=log)
+    
+    def set2_text_editor(self, args, log=True):
+        """Set the text editor to be used to open files from the MG5_aMC interface.
+        Example: set text_editor emacs
+        Example: set text_editor code
+        Example: set text_editor gedit 
+        Default is to use the system default editor ($EDITOR) falling back to vim.
+        """
+        return self.set_default('text_editor', args, log=log)
+
+
+    def set2_run_mode(self, args, log=True):
+        """Syntax: set run_mode <mode>
+        Control how MG5_aMC runs the various steps of event generation.
+        Modes:
+           - 0: sequential execution of all steps
+           - 1: use a job scheduler for cluster execution (set via the cluster_type parameter)
+           - 2: parallel execution on the current machine (multi-core) [default]
+                use nb_core option to set the number of cores (default is all)
+        """
+        return self.set_default('run_mode', args, log=log)
+        
+    def set2_automatic_html_opening(self, args, log=True):
+        """Set whether the code should automatically open the html status page when
+        running madevent executation (default: yes).
+        """
+        return self.set_default('automatic_html_opening', args, log=log)
+    
+    def set2_web_browser(self, args, log=True):
+        """Set the web browser to be used to open html pages from the MG5_aMC interface.
+        Example: set web_browser firefox
+        Default is to use the system default browser.
+        """
+        return self.set_default('web_browser', args, log=log)
+    
+    def help_set2_include_lepton_initiated_processes(self):
+
+        logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
+        logger.info(" > (default False) Do not include processes with leptons in the initial state (nlo gen. only).")
+
+    
+    def set2_include_lepton_initiated_processes(self, args, log=True):
+        """Set whether lepton-initiated processes should be included in the generation.
+        Default is False.
+        Example: set include_lepton_initiated_processes True
+        """
+        return self.set_default('include_lepton_initiated_processes', args, log=log)
+
+    def set2_checkpointing(self, args, log=True):
+        """ Usage: set checkpointing True|False
+         Default; False
+         Checkpoint is created before the walltime limit and the calculation is resumed on another machine. 
+         Requeuing of checkpointed job is handled automatically by the scheduler. 
+         Implementation for SLURM and HTCondor is provided. 
+         Checkpointing is possible only for NLO calculations (any calculation step). 
+         Periodic checkpointing is supported, period is set to 24 hours.  
+         This options requires DMTCP to be installed on the cluster. ("install DMTCP" command is available in MG5_aMC).
+         Related options: 
+           -  cluster_requirement
+           -  cluster_vacatetime
+           -  enforce_shared_disk (only relevant for HTCondor)
+           -  dmtcp  
+        """
+        args = ['checkpointing'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+    
+    def set2_cluster_requirement(self, args, log=True):
+        """
+        Microarchitecture or CPU model may be specified. This is useful for inhomogenious clusters. 
+        To restart from a DMTCP checkpoint, instruction sets from the previous machine are required.
+        """
+        args = ['cluster_requirement'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+    
+    def set2_cluster_vacatetime(self, args, log=True):
+        """
+        Used only if checkpointing is True.
+        Grace period before the job removal/requeuing allocated for checkpoint creation.
+        """
+        args = ['cluster_vacatetime'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+
+    def set2_enforce_shared_disk(self, args, log=True):
+        """Usage: set enforce_shared_disk True|False 
+        Only relevant for HTCondor clusters. 
+        -> Enforce shared disk usage. 
+           By default HTCondor I/O goes via sandbox (local disk). 
+           Data transfer takes place before and after the job. 
+           Local checkpoint storage may result in a checkpoint loss in the hardware failure scenario.
+        """
+        args = ['enforce_shared_disk'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+
+    def set2_dmtcp(self, args, log=True):
+        """ Usage: set dmtcp /PATH/TO/dmtcp_install_directory
+            usefull only if checkpointing is True.
+            DMTCP installation directory should contain bin/dmtcp_restart and bin/dmtcp_launch
+        """
+        args = ['dmtcp'] + args
+        self.check_set(args)
+        self.options[args[0]] = args[1].strip()
+
+# not documented options:
+#   	            	contur_path         
+#delphes_path             	eps_viewer               	exrootanalysis_path
+#hepmc_path               	hwpp_path                	
+#madanalysis_path         	mg5amc_py8_interface_path
+#pineappl                 	pythia-pgs_path          	pythia8_path
+#rivet_path               	                 	syscalc_path
+#td_path                  	              	thepeg_path
+#              	yoda_path
+
+    def set_default(self, name, args, log=True):
+        """Generic function to set default options.
+        """
+        args = [name] + args
+        self.check_set(args)
+        if args[1] in ['None','True','False']:
+            self.options[args[0]] = eval(args[1])
+        else:
+            self.options[args[0]] = args[1]
+
+    # Set an option
+    def do_set(self, line, log=True, model_reload=True):
+        """Set an option, which will be default for coming generations/outputs.
+        """
+        # Be careful:
+        # This command is associated to a post_cmd: post_set.
+        # This command mainly delegates to set2_xxx functions.
+        # which is the recomend way to provide help via docstrings.
+        args = self.split_arg(line)
+
+        if hasattr(self, 'set2_%s' % args[0]):
+            func = getattr(self, 'set2_%s' % args[0])
+            return func(args[1:], log=log)
+        elif '.' in args[0] and hasattr(self, 'set2_%s' % args[0].replace('.', '_')):
+            func = getattr(self, 'set2_%s' % args[0].replace('.', '_'))
+            return func(args[1:], log=log)
+        
+
+        # generic case 
+
+        # Check the validity of the arguments
+        self.check_set(args)
+        if args[0] in self.options:
+            if args[1] in ['None','True','False']:
+                self.options[args[0]] = eval(args[1])
+            else:
+                self.options[args[0]] = args[1]
+            return
+
+
+        if args[0] == 'ignore_six_quark_processes':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_ignore_six_quark_processes(args[1:], log=log)
+        elif args[0] == 'group_subprocesses':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_group_subprocesses(args[1:], log=log)
+        elif args[0] == "stdout_level":
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_stdout_level(args[1:], log=log)
+        elif args[0].lower() == "ewscheme":
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_ewscheme(args[1:], log=log)
+        elif args[0] == "complex_mass_scheme":
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_complex_mass_scheme(args[1:], log=log)
+        elif args[0] == "gauge":
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_gauge(args[1:], log=log)
+        elif args[0] == 'fortran_compiler':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_fortran_compiler(args[1:], log=log)
+        elif args[0] == 'default_unset_couplings':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_default_unset_couplings(args[1:], log=log)
+        elif args[0].startswith('f2py_compiler'):
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_f2py_compiler(args[1:], log=log)            
+        elif args[0] == 'loop_optimized_output':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_loop_optimized_output(args[1:], log=log)
+        elif args[0] == "nlo_mixed_expansion":
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_nlo_mixed_expansion(args[1:], log=log)
+        elif args[0] == 'loop_color_flows':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_color_flows(args[1:], log=log)
+        elif args[0] == 'eMELA':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_eMELA(args[1:], log=log)
+        elif args[0] == 'fastjet':
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_fastjet(args[1:], log=log)
+        elif args[0] in ['golem','samurai','ninja','collier']:
+            raise Exception('This option is now handled by a dedicated function.')
+            # setup_path_for_options(args, log=log)
         elif args[0].startswith('lhapdf'):
-            to_do = True
-            if args[0].endswith('_py2') and six.PY3:
-                to_do = False
-            elif args[0].endswith('_py3') and six.PY2:
-                to_do = False
-            if to_do:
-                try:
-                    res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
-                                                                 stderr=subprocess.PIPE)
-                    logger.info('set lhapdf to %s' % args[1])
-                    self.options['lhapdf'] = args[1]
-                    self.options[args[0]] = args[1]
-                except Exception:
-                    res = 1
-                if res != 0:
-                    logger.info('%s does not seem to correspond to a valid lhapdf-config ' % args[1] + \
-                            'executable. \nPlease set the \'lhapdf\' variable to the (absolute) ' + \
-                            '/PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
-                            'Note that you can still compile and run aMC@NLO with the built-in PDFs\n' + \
-                            ' MG5_aMC> set lhapdf /PATH/TO/lhapdf-config\n')
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_lhapdf(args[1:], log=log)
         elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry', 'max_t_for_channel',
                          'cluster_retry_wait', 'cluster_size', 'max_npoint_for_channel']:
-                self.options[args[0]] = int(args[1])
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # getattr(self, 'set_%s' % args[0])(args[1:],
         elif args[0] in ['cluster_local_path']:
-            self.options[args[0]] = args[1].strip()
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # getattr(self, 'set_%s' % args[0])(args[1:
         elif args[0] == 'cluster_status_update':
-            if '(' in args[1]:
-                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
-                data = data.replace('(','').replace(')','').replace(',',' ').split()
-                first, second = data[:2]
-            else:
-                first, second = args[1:3]
-
-            self.options[args[0]] = (int(first), int(second))
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # getattr(self, 'set_%s' % args[0])(args[1:
         elif args[0] == 'madanalysis5_path':
-            ma5path = pjoin(MG5DIR, args[1]) if os.path.isfile(pjoin(MG5DIR, args[1])) else args[1]
-            message = misc.is_MA5_compatible_with_this_MG5(ma5path)
-            if message is None:
-                self.options['madanalysis5_path'] = args[1]
-            else:
-                logger.warning(message)
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_madanalysis5_path(args[1:], log=log)
         elif args[0] == 'OLP':
-            if six.PY3 and self.options['low_mem_multicore_nlo_generation'] and args[1] != "MadLoop":
-                raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
-            # Reset the amplitudes, MatrixElements and exporter as they might
-            # depend on this option
-            self._curr_amps = diagram_generation.AmplitudeList()
-            self._curr_proc_defs = base_objects.ProcessDefinitionList()
-            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self._curr_exporter = None
-            self._second_exporter = None
-            self.options[args[0]] = args[1]
-
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_OLP(args[1:], log=log)
         elif args[0] =='output_dependencies':
-            self.options[args[0]] = args[1]
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_output_dependencies(args[1:], log=log)      
         elif args[0] =='notification_center':
-            if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
-                self.allow_notification_center = self.options[args[0]]
-            else:
-                raise self.InvalidCmd('expected bool for notification_center')
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_notification_center(args[1:], log=log)
         # True/False formatting
         elif args[0] in ['crash_on_error', 'auto_convert_model', 'acknowledged_v3.1_syntax']:
-            try:
-                tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
-            except Exception:
-                if args[1].lower() in ['never']:
-                    tmp = args[1].lower()
-                else:
-                    raise
-            self.options[args[0]] = tmp
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_crash_on_error(args[1:], log=log)
+            # set_auto_convert_model(args[1:], log=log)
+            # set_acknowledged_v3_1_syntax(args[1:], log=log
         elif args[0] in ['zerowidth_tchannel']:
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_zerowidth_tchannel(args[1:], log=log) 
+        elif args[0] in ['use_syst']:
+            logger.warning('The option use_syst is deprecated.')
             self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
-        elif args[0] in ['cluster_queue', 'cluster_walltime']:
-            self.options[args[0]] = args[1].strip()
-        elif args[0] in ['low_mem_multicore_nlo_generation']:
-            if six.PY3 and self.options['OLP'] != 'MadLoop':
-                raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
-            else:
-                self.options[args[0]] = args[1]
-        elif args[0] in self.options:
-            if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
-            else:
-                self.options[args[0]] = args[1]
+        elif args[args[0]] in ['store_rwgt_info']:
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_store_rwgt_info(args[1:], log=log)
+        elif args[0] in ['cluster_queue', 'cluster_walltime', 'checkpointing',\
+                         'cluster_requirement', 'cluster_vacatetime', 'enforce_shared_disk']:
+            raise Exception('This option is now handled by a dedicated function.')
+            # getattr(self, 'set_%s' % args[0])(args[1:],
+            # log=log)  
+        elif args[0] in ['low_mem_multicore_nlo_generation']:	  
+            raise Exception('This option is now handled by a dedicated function.')
+            # set_low_mem_multicore_nlo_generation(args[1:], log=log)  
+            
+
 
     def post_set(self, stop, line):
         """Check if we need to save this in the option file"""
@@ -8335,6 +9186,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.check_set(args, log=False)
         except Exception:
             return stop
+
+        # respect if a condition on python version is given
+        if '--python' in line:
+            major, minor = re.findall(r'--python=(\d).(\d+)', line)[-1]
+            if (major != str(sys.version_info[0]) or
+                minor != str(sys.version_info[1])):
+                return stop
+
 
         if args[0] in self.options_configuration and '--no_save' not in args:
             self.exec_cmd('save options %s' % args[0] , log=False)
@@ -8844,9 +9703,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             process_string = self._generate_info, version = version)
                 process_names.append(exporter.process_file_name)
 
+            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             # Output the model parameter and ALOHA files
             model_name, model_path = exporter.convert_model_to_pythia8(\
-                            self._curr_model, self._export_dir)
+                            self._curr_model, self._export_dir, wanted_lorentz=wanted_lorentz)
 
             # Generate the main program file
             filename, make_filename = \
@@ -9236,8 +10096,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 me_cmd.exec_cmd('survey decay -f %s' % (
                        " ".join(['--%s=%s' % val for val in me_opts])),
                       postcmd=False)
-                me_cmd.exec_cmd('combine_events', postcmd=False)
-                #me_cmd.exec_cmd('store_events', postcmd=False)
+                try:
+                    me_cmd.exec_cmd('combine_events', postcmd=False)
+                    me_cmd.exec_cmd('store_events', postcmd=False)
+                except Exception as err:
+                    logger.debug(str(err))
+
                 me_cmd.collect_decay_widths()
                 me_cmd.do_quit('')
                 # cleaning

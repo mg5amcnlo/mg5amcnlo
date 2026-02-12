@@ -184,7 +184,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,M,N
-      REAL*8 CF(NCOLOR2,NCOLOR1)
+      INTEGER CF(NCOLOR2,NCOLOR1),DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -229,6 +229,7 @@ C ----------
           ENDDO
       ENDDO
     ENDDO
+    ANS(:) = ANS(:)/DENOM
     END
        
        

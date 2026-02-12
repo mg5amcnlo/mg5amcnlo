@@ -13,12 +13,15 @@ std::complex<double> jamp[ncolor];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
+int cf_index = 0;
 for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(int j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
 for(int i=0;i < ncolor; i++)

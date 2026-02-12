@@ -40,6 +40,17 @@ ifdef f2pymode
     MACFLAG= 
 endif
 
+# set the flag for dynamical library
+ifeq ($(UNAME), Darwin)
+DYNLIBFLAG=-dynamiclib
+RPATHFLAG=-install_name @rpath/
+dylibext=dylib
+else
+DYNLIBFLAG=-shared -fPIC
+RPATHFLAG=-Wl,-soname,
+dylibext=so
+endif
+
 # Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
 # ensure that no-automatic is done

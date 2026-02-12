@@ -79,8 +79,8 @@ class UFOModelConverterCPP(object):
                  "complex": "std::complex<double>"}
 
     # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile('^#\w')
-    namespace_re = re.compile('^using namespace')
+    compiler_option_re = re.compile(r'^#\w')
+    namespace_re = re.compile(r'^using namespace')
 
     slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
                       ('SMINPUTS', (1,)): ('aEM',)}
@@ -1309,24 +1309,23 @@ class OneProcessExporterCPP(object):
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return "\n".join(["static const double denom[1] = {1.};",
-                              "static const double cf[1][1] = {1.};"])
+            return "\n".join(["static const double denom = 1;",
+                              "static const int cf[1] = {1};"])
         else:
             color_denominators = matrix_element.get('color_matrix').\
                                                  get_line_denominators()
-            denom_string = "static const double denom[ncolor] = {%s};" % \
-                           ",".join(["%i" % denom for denom in color_denominators])
+            denominator = min(color_denominators)
+            denom_string = "static const int denom = %i;" % (denominator)
 
             matrix_strings = []
             my_cs = color.ColorString()
-            for index, denominator in enumerate(color_denominators):
+            for index in range(len(color_denominators)):
                 # Then write the numerators for the matrix elements
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
 
-                matrix_strings.append("{%s}" % \
-                                     ",".join(["%d" % i for i in num_list]))
-            matrix_string = "static const double cf[ncolor][ncolor] = {" + \
+                matrix_strings+= ["%d" % (i if pos==0 else 2*i) for pos,i in enumerate(num_list[index:])]
+            matrix_string = "static const int cf[ncolor*(ncolor+1)/2] = {" + \
                             ",".join(matrix_strings) + "};"
             return "\n".join([denom_string, matrix_string])
 
@@ -2519,7 +2518,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
     #===============================================================================
     # Routines to export/output UFO models in Pythia8 format
     #===============================================================================
-    def convert_model_to_pythia8(self, model, pythia_dir):
+    def convert_model_to_pythia8(self, model, pythia_dir, wanted_lorentz = []):
         """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
     
         if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h'))\
@@ -2527,7 +2526,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
             logger.warning('Directory %s is not a valid Pythia 8 main dir.' % pythia_dir)
     
         # create the model parameter files
-        model_builder = UFOModelConverterPythia8(model, pythia_dir, replace_dict=self.get_default_converter())
+        model_builder = UFOModelConverterPythia8(model, pythia_dir, 
+                                                 wanted_lorentz=wanted_lorentz,
+                                                 replace_dict=self.get_default_converter())
         model_builder.cc_file_dir = "Processes_" + model_builder.model_name
         model_builder.include_dir = model_builder.cc_file_dir
     
@@ -2611,13 +2612,15 @@ class ProcessExporterCPP(VirtualExporter):
             if self.template_src_make:
                 # Copy src Makefile
                 makefile = self.read_template_file(self.template_src_make) % \
-                               {'model': self.get_model_name(model.get('name'))}
+                               {'model': self.get_model_name(model.get('name')),
+                                'cpp_compiler': self.opt['cpp_compiler'] if self.opt['cpp_compiler'] else 'g++'}
                 open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
             if self.template_Sub_make:
                 # Copy SubProcesses Makefile
                 makefile = self.read_template_file(self.template_Sub_make) % \
-                                        {'model': self.get_model_name(model.get('name'))}
+                                        {'model': self.get_model_name(model.get('name')),
+                                         'cpp_compiler': self.opt['cpp_compiler'] if self.opt['cpp_compiler'] else 'g++'}
                 open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
     #===========================================================================

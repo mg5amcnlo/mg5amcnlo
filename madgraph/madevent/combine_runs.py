@@ -24,6 +24,9 @@ import shutil
 import re
 import logging
 from six.moves import range
+import random
+import time
+
 
 try:
     import madgraph
@@ -84,6 +87,7 @@ class CombineRuns(object):
         """Looks in channel to see if there are multiple runs that
         need to be combined. If so combines them into single run"""
        
+        start = time.time()
         alphabet = "abcdefghijklmnopqrstuvwxyz"
 
         if os.path.exists(pjoin(channel, 'multijob.dat')):
@@ -113,6 +117,7 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
+            
             fsock.write('job %s : %s %s +- %s %s\n' % (r.name, r.xsec, r.axsec,\
                                                        r.xerru, r.nunwgt))  
             
@@ -120,19 +125,26 @@ class CombineRuns(object):
         #back out with the appropriate scaled weight
         to_clean = []
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
-        wgt = results.axsec / results.nunwgt
+        #wgt = results.axsec / results.nunwgt
+        maxwgt = results.axsec / results.nunwgt 
         tot_nevents, nb_file = 0, 0
         for result in results:  
+            #misc.sprint('target:', result.axsec/result.nunwgt)
+            #misc.sprint('job %s : %s %s +- %s: %s' % (result.name, result.xsec, result.axsec,\
+            #                                           result.xerru, result.nunwgt))
+            
+
+            ratio = result.nunwgt/results.nunwgt
             i = result.name
             if channel.endswith(os.path.pathsep):
                 path = channel[:-1] + i 
             else:
                 path = channel + i
-            nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
+            nw = self.copy_events(fsock, pjoin(path,'events.lhe'), ratio, maxwgt)
             tot_nevents += nw
             nb_file += 1
             to_clean.append(path)
-        logger.debug("Combined %s file generating %s events for %s " , nb_file, tot_nevents, channel)
+        logger.debug("Combined %s file generating %s events for %s (%.1f%%): (%fs) " , nb_file, tot_nevents, channel, 100*tot_nevents/results.nunwgt, time.time()-start)
         for path in to_clean:
             try:
                 shutil.rmtree(path)
@@ -148,27 +160,55 @@ class CombineRuns(object):
         return '%.7fE%+03i' %(nb,power)    
 
 
-    def copy_events(self, fsock, input, new_wgt):
+    def copy_events(self, fsock, input, scale_wgt, max_wgt):
         """ Copy events from separate runs into one file w/ appropriate wgts"""
         
+        import collections
+        wgts = collections.defaultdict(int)
 
-        new_wgt = self.get_fortran_str(new_wgt)
+
+        do_unweight = True
+        #tmp_max_wgt = 0
+        #new_wgt = self.get_fortran_str(new_wgt)
         old_line = ""
         nb_evt =0 
+        skip = False
+        nb_read = 0
         for line in open(input):
             if old_line.startswith("<event>"):
-                nb_evt+=1
+                nb_read +=1
                 data = line.split()
                 if not len(data) == 6:
                     raise MadGraph5Error("Line after <event> should have 6 entries")
-                if float(data[2]) > 0:
-                    sign = ''
+
+                new_wgt = float(data[2]) * scale_wgt
+                wgts[new_wgt] +=1
+                if new_wgt < 0:
+                    sign = '-'
                 else:
-                    sign = '-'  
-                line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
-                                           new_wgt, '  '.join(data[3:]))
-            fsock.write(line)
+                    sign = ''
+                new_wgt = abs(new_wgt)
+                skip = False
+                #if new_wgt > tmp_max_wgt:
+                    #misc.sprint("Found event with wgt %s higher than max wgt %s. uwgt to %s " % (new_wgt, tmp_max_wgt, max_wgt))
+                #    tmp_max_wgt = new_wgt
+                if do_unweight and abs(new_wgt) < random.random() * max_wgt:
+                    skip = True 
+                else:
+                    nb_evt+=1
+                    if do_unweight:
+                        new_wgt = max(max_wgt, new_wgt) 
+
+                    new_wgt = self.get_fortran_str(new_wgt)
+                    line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]),
+                                           sign, new_wgt, '  '.join(data[3:]))
+            if not skip and old_line:
+                fsock.write(old_line)
             old_line = line
+        if not skip and old_line:
+                fsock.write(old_line) 
+        #misc.sprint("Read %s events, wrote %s events: %s%%" % (nb_read, nb_evt, 100*nb_evt/nb_read if nb_read else 0))
+        #misc.sprint(wgts)
         return nb_evt
     
     def get_channels(self, proc_path):

@@ -111,45 +111,45 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.2793e-15:3.7328e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
-'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
-'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
-'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 4 title 'jet sample 2',\
-'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 103 title '',\
-'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 103 title '',\
-'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 3 title '',\
-'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 3 title 'jet sample 1',\
-'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 102 title '',\
-'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 2 title '',\
-'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'jet sample 0',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 101 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 1 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'all jet samples'
+1/0 ls 31 title 'all jet samples, merging scale variation',\
+1/0 ls 21 title 'all jet samples, PDF variation',\
+1/0 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 104 title '',\
+'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 104 title '',\
+'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 4 title '',\
+'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 4 title 'jet sample 2',\
+'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 103 title '',\
+'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 103 title '',\
+'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 3 title '',\
+'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 3 title 'jet sample 1',\
+'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 102 title '',\
+'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 2 title '',\
+'MLM_djrs_output.HwU' index 1 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'jet sample 0',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 101 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 1 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'all jet samples'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.0096e-01:2.2596e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "(1) rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -185,45 +185,45 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.1712e-15:2.7041e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
-'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
-'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
-'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 4 title 'jet sample 2',\
-'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 103 title '',\
-'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 103 title '',\
-'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 3 title '',\
-'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 3 title 'jet sample 1',\
-'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 102 title '',\
-'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 2 title '',\
-'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'jet sample 0',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 101 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 1 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'all jet samples'
+1/0 ls 31 title 'all jet samples, merging scale variation',\
+1/0 ls 21 title 'all jet samples, PDF variation',\
+1/0 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 104 title '',\
+'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 104 title '',\
+'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 4 title '',\
+'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 4 title 'jet sample 2',\
+'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 103 title '',\
+'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 103 title '',\
+'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 3 title '',\
+'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 3 title 'jet sample 1',\
+'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 102 title '',\
+'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 2 title '',\
+'MLM_djrs_output.HwU' index 5 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'jet sample 0',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 101 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 1 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'all jet samples'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-1.9551e-01:2.0762e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "(1) rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -259,45 +259,45 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.0773e-15:2.4993e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
-'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
-'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
-'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 4 title 'jet sample 2',\
-'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 103 title '',\
-'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 103 title '',\
-'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 3 title '',\
-'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 3 title 'jet sample 1',\
-'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 102 title '',\
-'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 2 title '',\
-'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'jet sample 0',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 101 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 1 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'all jet samples'
+1/0 ls 31 title 'all jet samples, merging scale variation',\
+1/0 ls 21 title 'all jet samples, PDF variation',\
+1/0 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 104 title '',\
+'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 104 title '',\
+'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 4 title '',\
+'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 4 title 'jet sample 2',\
+'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 103 title '',\
+'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 103 title '',\
+'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 3 title '',\
+'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 3 title 'jet sample 1',\
+'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 102 title '',\
+'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 2 title '',\
+'MLM_djrs_output.HwU' index 9 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'jet sample 0',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 101 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 1 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'all jet samples'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.1261e-01:2.3059e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "(1) rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -333,45 +333,45 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.0250e-15:2.6431e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
-'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
-'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
-'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 4 title 'jet sample 2',\
-'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 103 title '',\
-'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 103 title '',\
-'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 3 title '',\
-'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 3 title 'jet sample 1',\
-'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 102 title '',\
-'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 2 title '',\
-'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'jet sample 0',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 101 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 1 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'all jet samples'
+1/0 ls 31 title 'all jet samples, merging scale variation',\
+1/0 ls 21 title 'all jet samples, PDF variation',\
+1/0 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 104 title '',\
+'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 104 title '',\
+'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 4 title '',\
+'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 4 title 'jet sample 2',\
+'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 103 title '',\
+'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 103 title '',\
+'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 3 title '',\
+'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 3 title 'jet sample 1',\
+'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 102 title '',\
+'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 2 title '',\
+'MLM_djrs_output.HwU' index 13 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'jet sample 0',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)):4 w yerrorbar ls 101 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 < 0 ? 1/0 : $3):4 w yerrorbar ls 1 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'all jet samples'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.6022e-01:2.8412e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "(1) rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \

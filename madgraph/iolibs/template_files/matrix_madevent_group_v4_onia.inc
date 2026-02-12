@@ -1,4 +1,4 @@
-C MadOnia
+C MadSons
       SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C
 %(info_lines)s

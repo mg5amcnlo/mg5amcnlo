@@ -1238,7 +1238,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Write them out
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
-        aloha_model.write(write_dir, 'Fortran')
+        options= {}
+        options['vector.inc'] = True if self.opt['export_format']=='madevent' else False
+        aloha_model.write(write_dir, 'Fortran', options=options)
 
         # Revert the original aloha loop mode
         aloha.loop_mode = old_loop_mode
@@ -1396,7 +1398,28 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   ','.join(["%5r" % i for i in list[k:k + n]])))
         return ret_list
 
-    def get_color_data_lines(self, matrix_element, n=6):
+#    def write_namelist_file(self, matrix_element, dirpath):
+#
+#        fsock = open(pjoin(dirpath, 'namelist.def'), 'w')
+#
+#        fsock.write(' &NM_CF\n')
+#        if not matrix_element.get('color_matrix'):
+#            fsock.write('  CF = 1\n')
+#        else:
+#            cf = []
+#            for index, denominator in \
+#                enumerate(matrix_element.get('color_matrix').\
+#                                                 get_line_denominators()): 
+#                num_list = matrix_element.get('color_matrix').\
+#                                            get_line_numerators(index, denominator)
+#                num_list[index] /= 2
+#                cf += [str(int(2*coeff)) for coeff in num_list[index:]]
+#            fsock.write('  CF = %s\n' % (','.join(cf))) 
+#            fsock.write(' /\n')
+
+
+
+    def get_color_data_lines(self, matrix_element, n=128):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
 
@@ -1404,30 +1427,39 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if matrix_element.get_nonia()>0:
                 return ["DATA (CF(i,1),i=1,1) /1D-99/"]
             else:
-                return ["DATA Denom(1)/1D-99/", "DATA (CF(i,1),i=1,1) /1D-99/"]
-        else:
-            ret_list = []
-            my_cs = color.ColorString()
-            for index, denominator in \
-                enumerate(matrix_element.get('color_matrix').\
-                                                 get_line_denominators()):
-                # First write the common denominator for this color matrix line
-                #ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
-                # Then write the numerators for the matrix elements
-                num_list = matrix_element.get('color_matrix').\
-                                            get_line_numerators(index, denominator)
+                return ["DATA Denom/1/", "DATA CF/1/"]
 
-                assert all([int(i)==i for i in num_list])
+        ret_list = []
+        my_cs = color.ColorString()
+        denominator = max(matrix_element.get('color_matrix').get_line_denominators())
+        ret_list.append("DATA Denom/%i/" % denominator)
 
-                for k in range(0, len(num_list), n):
+        cf_index = 0
+        col_basis = matrix_element.get('color_matrix')._col_basis1
+        is_asym = matrix_element.get('color_matrix')._col_basis1 is not matrix_element.get('color_matrix')._col_basis2
+        for index in range(len(col_basis)):
+            num_list = matrix_element.get('color_matrix').get_line_numerators(index, denominator)
+            assert all(int(i) == i for i in num_list)
+            if is_asym:
+                min_k = 0
+            else:
+                min_k = index # only include the upper diagonal
+            for k in range(min_k, len(num_list), n):
+                chunk = num_list[k:k+n]
+                if is_asym:
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
-                                    (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                                    (index+1, k + 1, k+len(chunk),
+                                     ','.join([("%i" % (int(i))) for i in chunk])))  
+                else: 
+                    ret_list.append("DATA (CF(i),i=%3r,%3r) /%s/" % \
+                                    (cf_index+1, cf_index + len(chunk),
+                                     ','.join([("%i" % ((1 if (k==index and pos==0) else 2)*int(i))) for pos,i in enumerate(chunk)])))
+                cf_index += len(chunk)
 
-                my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
-                ret_list.append("C %s" % repr(my_cs))
-            return ret_list
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
+            ret_list.append("C %s" % repr(my_cs))
 
+        return ret_list
 
     def get_den_factor_line(self, matrix_element):
         """Return the denominator factor line for this matrix element"""
@@ -2103,22 +2135,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
                 pdf_lines = pdf_lines + "ELSE\n"
 
-            # Get PDF lines for UPC (non-factorized PDF)
-            if 22 in initial_states[0] and 22 in initial_states[1]:
-                if subproc_group:
-                    pdf_lines = pdf_lines + \
-                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
-                    pdf_lines = pdf_lines + \
-                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
-                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
-                else:
-                    pdf_lines = pdf_lines + \
-                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
-                    pdf_lines = pdf_lines + \
-                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
-                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
-                pdf_lines = pdf_lines + "ELSE\n"
-
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -2135,12 +2151,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                 "    enddo\n"+\
                                 "   qscale=qscale/2d0\n"+\
                                 "else\n"+\
-                                "   qscale=DSQRT(Q2FACT(IB(1)))\n"+\
+                                "   qscale=DSQRT(Q2FACT(1))\n"+\
                                 "endif\n"
                         else:
                             pdf_lines = pdf_lines + \
                                 "if (DSQRT(Q2FACT(IB(2))).ne.0d0) then\n" +\
-                                "   qscale=DSQRT(Q2FACT(IB(2)))\n" +\
+                                "   qscale=DSQRT(Q2FACT(2))\n" +\
                                 "endif\n"
                 else:
                     pdf_lines = pdf_lines + \
@@ -2160,7 +2176,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                         if vector and subproc_group:
                             template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
-                                         "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(IB(%(beam)d), IVEC)))\n"
+                                         "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(%(beam)d, IVEC)))\n"
                             #if dressed_lep and self.opt['vector_size']:
                             #    logger.warning("vector code for lepton pdf not implemented. We removed the option to run dressed lepton")
                             #    self.proc_characteristic['limitations'].append('dressed_ee')
@@ -2222,8 +2238,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pdf_lines += "ENDDO ! IWARP LOOP\n"
                 pdf_lines += "ENDDO ! CURRWARP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
-                comp_list = []
                 for proc in processes:
+                    comp_list = []
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                     pdf_lines += '\n   DO IVEC=1, VECSIZE_USED'
@@ -2870,6 +2886,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     MadGraph v4 StandAlone format."""
 
     matrix_template = "matrix_standalone_v4.inc"
+    f2py_template = "matrix_standalone_f2py.inc"
+    f2py_wrapper_all ="f2py_wrapper_all.inc"
+    f2py_matrix_splitter = "f2py_splitter.py"
     jamp_optim = True
     default_vector_size = 0
 
@@ -3078,204 +3097,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
             ff.write(text)
             ff.close()
+    
 
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
 
-        template = """
-%(python_information)s
-  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
-  IMPLICIT NONE
-C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)
 
-CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
-CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in) :: npdg
-CF2PY double precision, intent(out) :: ANS
-CF2PY double precision, intent(in) :: ALPHAS
-CF2PY double precision, intent(in) :: SCALE2
-  integer pdgs(*)
-  integer npdg, nhel, procid
-  double precision p(*)
-  double precision ANS, ALPHAS, PI,SCALE2
-  include 'coupl.inc'
-
-
-  if (scale2.eq.0)then
-       PI = 3.141592653589793D0
-       G = 2* DSQRT(ALPHAS*PI)
-       CALL UPDATE_AS_PARAM()
-  else
-       CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
-  endif
-
-%(smatrixhel)s
-
-      return
-      end
-
-      SUBROUTINE INITIALISE(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.
-      IMPLICIT NONE
-      CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
-      RETURN
-      END
-
-
-      subroutine CHANGE_PARA(name, value)
-      implicit none
-CF2PY intent(in) :: name
-CF2PY intent(in) :: value
-
-      character*512 name
-      double precision value
-
-      %(helreset_def)s
-
-      include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/coupl.inc'
-
-      %(helreset_setup)s
-
-      SELECT CASE (name)
-         %(parameter_setup)s
-         CASE DEFAULT
-            write(*,*) 'no parameter matching', name, value
-      END SELECT
-
-      return
-      end
-
-    subroutine update_all_coup()
-    implicit none
-     call coup()
-    return
-    end
-
-
-    subroutine get_pdg_order(PDG, ALLPROC)
-  IMPLICIT NONE
-CF2PY INTEGER, intent(out) :: PDG(%(nb_me)i,%(maxpart)i)
-CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
-  INTEGER PDG(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
-  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
-  DATA PDGS/ %(pdgs)s /
-  DATA PIDS/ %(pids)s /
-  PDG = PDGS
-  ALLPROC = PIDS
-  RETURN
-  END
-
-    subroutine get_prefix(PREFIX)
-  IMPLICIT NONE
-CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
-  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
-  DATA PREF / '%(prefix)s'/
-  PREFIX = PREF
-  RETURN
-  END
-
-
-
-    subroutine set_fixed_extra_scale(new_value)
-    implicit none
-CF2PY logical, intent(in) :: new_value
-    logical new_value
-                logical fixed_extra_scale
-            integer maxjetflavor
-            double precision mue_over_ref
-            double precision mue_ref_fixed
-            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-
-        fixed_extra_scale = new_value
-        return
-        end
-
-    subroutine set_mue_over_ref(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-
-    mue_over_ref = new_value
-
-    return
-    end
-
-    subroutine set_mue_ref_fixed(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-
-    mue_ref_fixed = new_value
-
-    return
-    end
-
-
-    subroutine set_maxjetflavor(new_value)
-    implicit none
-CF2PY integer, intent(in) :: new_value
-    integer new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-
-    maxjetflavor = new_value
-
-    return
-    end
-
-
-    subroutine set_asmz(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-          integer nloop
-      double precision asmz
-      common/a_block/asmz,nloop
-    asmz = new_value
-    write(*,*) "asmz is set to ", new_value
-
-    return
-    end
-
-    subroutine set_nloop(new_value)
-    implicit none
-CF2PY integer, intent(in) :: new_value
-    integer new_value
-          integer nloop
-      double precision asmz
-      common/a_block/asmz,nloop
-    nloop = new_value
-     write(*,*) "nloop is set to ", new_value
-
-    return
-    end
-
-        """
+        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_matrix_splitter)).read()
+        template2 = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_wrapper_all)).read()
 
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
+        allncomb = [self.prefix_info[key][2] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key, pid), (prefix, tag) in self.prefix_info.items():
+        for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
 
 
@@ -3315,6 +3153,40 @@ CF2PY integer, intent(in) :: new_value
         for prefix in set(allprefix):
             helreset_setup.append(' %shelreset = .true. ' % prefix)
             helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
+        
+        #nhel
+        all_nhel_f2py = ' '
+        all_nhel = ''
+        nhel_template_f2py = """
+        subroutine %(f2py_prefix)s%(prefix)sget_nhel_entry()
+        integer %(prefix)snhel(%(next)s,%(ncombs)s)
+        common/%(f2py_prefix)s%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        call %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(%(prefix)sNHEL)
+
+        return
+        end 
+"""
+        nhel_template = """subroutine %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(NHEL)
+        integer %(prefix)snhel(%(next)s,%(ncombs)s), NHEL(%(next)s,%(ncombs)s)
+        common/%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        NHEL(:,:) = %(prefix)snhel(:,:)
+        return
+        end 
+"""
+
+        f2py_prefix = ''
+        if self.opt['output_options'] and 'prefixf2py' in self.opt['output_options']:
+            f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
+
+        done_prefix = set()
+        for prefix, ids, ncomb in zip(allprefix, allids, allncomb):
+            if prefix in done_prefix:
+                continue
+            done_prefix.add(prefix)
+            all_nhel += nhel_template % {'prefix': prefix, 'next': len(ids[0]), 'ncombs': ncomb,
+                                          'f2py_prefix': f2py_prefix}
+            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 'next': len(ids[0]), 
+                                                   'ncombs': ncomb, 'f2py_prefix': f2py_prefix}
 
 
         formatting = {'python_information':'\n'.join(info),
@@ -3328,12 +3200,19 @@ CF2PY integer, intent(in) :: new_value
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
+                          'nhel': all_nhel,
+                          'f2py_prefix': f2py_prefix
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
+        formatting['nhel'] = all_nhel_f2py
+        text = template2 % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'f2py_wrapper.f'),'w')
+        fsock.writelines(text)
+        fsock.close()    
 
     def get_model_parameter(self, model):
         """ returns all the model parameter
@@ -3361,9 +3240,14 @@ CF2PY integer, intent(in) :: new_value
                 params['%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
                 params['mdl__%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
 
-        return params
+        return params                      
+                                        
+    def write_f2py_matrix_wrapper(self, writer, replace_dict):
+        """ Write the f2py wrapper for matrix element."""
 
-
+        path =pjoin(_file_path, 'iolibs', 'template_files', self.f2py_template)
+        template = open(path).read()
+        writer.write(template % replace_dict)
 
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
@@ -3461,18 +3345,26 @@ CF2PY integer, intent(in) :: new_value
                 proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
             else:
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
+            ncomb = matrix_element.get_helicity_combinations()
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()]
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
 
         if matrix_element.get_nonia()>0:
                 self.matrix_file = 'matrix_standalone_v4_onia.inc'
-
-        calls = self.write_matrix_element_v4(
+            
+        replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model,
-            proc_prefix=proc_prefix)
+            proc_prefix=proc_prefix,
+            return_replace_dict=True)
+        calls = replace_dict.get('return_value', 0)
+
+        self.write_f2py_matrix_wrapper(
+            writers.FortranWriter(pjoin(dirpath, 'f2py_matrix_wrapper.f')),
+                                  replace_dict=replace_dict)
+        
 
         if self.opt['export_format'] == 'standalone_msP':
             filename =  pjoin(dirpath,'configs_production.inc')
@@ -3586,7 +3478,7 @@ CF2PY integer, intent(in) :: new_value
     # write_matrix_element_v4
     #===========================================================================
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                write=True, proc_prefix=''):
+                                write=True, proc_prefix='', return_replace_dict=False):
         """Export a matrix element to a matrix.f file in MG4 standalone format
         if write is on False, just return the replace_dict and not write anything."""
 
@@ -3765,7 +3657,11 @@ CF2PY integer, intent(in) :: new_value
                 content = '\n' + open(replace_dict['template_file2'])\
                                    .read()%replace_dict
                 writer.writelines(content)
-            return len([call for call in helas_calls if call.find('#') != 0])
+            if return_replace_dict:
+                replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
+                return replace_dict
+            else:
+                return len([call for call in helas_calls if call.find('#') != 0])
         else:
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
@@ -4684,7 +4580,7 @@ c     channel position
                     width = 'zero'
                     pow_part = 0
                 else:
-                    if (last_leg.get('id')!=7):
+                    if (last_leg.get('id')!=self.model.get_first_non_pdg()):
                       particle = particle_dict[last_leg.get('id')]
                       # Get mass
                       mass = particle.get('mass')
@@ -4793,7 +4689,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         elif '%(W)s' in arg['mass']:
             raise Exception
 
-        arg['coup'] = re.sub('coup(\d+)\)s','coup\g<1>)s%(vec\g<1>)s', arg['coup'])
+        arg['coup'] = re.sub(r'coup(\d+)\)s',r'coup\g<1>)s%(vec\g<1>)s', arg['coup'])
 
         return call, arg
 
@@ -5376,10 +5272,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'
+        one_def = ' IF(%(w)s.ne.0d0) then \nfk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s) \n else \n fk_%(w)s = 0d0\n endif\n'     
         for m, w in mass_width:
-            if w == 'zero':
-                if ' fk_zero = 0d0' not in fk_w_defs:
+            if w.lower() == 'zero':
+                if ' fk_zero = 0d0' not in fk_w_defs: 
                     fk_w_defs.append(' fk_zero = 0d0')
                 continue
             fk_w_defs.append(one_def %{'m':m, 'w':w})
@@ -6105,6 +6001,9 @@ c           This is dummy particle used in multiparticle vertices
         # Write out number of configs
         lines.append("# Number of configs")
         lines.append("data mapconfig(0)/%d/" % nconfigs)
+
+        lines.append("#used fake id")
+        lines.append("data fake_id/%d/" %new_pdg)
 
         # Write the file
         writer.writelines(lines)

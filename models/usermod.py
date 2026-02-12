@@ -686,6 +686,8 @@ from object_library import all_propagators, Propagator
             logger.info('The two model defines the block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\'\n'\
                       %  (old_param.lhablock, old_param.lhacode, parameter.name, old_param.name) + \
             '     We will merge those two parameters in a single one')
+            if parameter.texname == 'no_restrict':
+                self.new_external.append(parameter)
             if parameter.name in list(self.old_new.values()):
                 key = [k for k in self.old_new if self.old_new[k] == parameter.name][0]
                 self.old_new[key] = old_param.name
