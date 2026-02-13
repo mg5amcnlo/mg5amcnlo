@@ -5027,7 +5027,7 @@ This implies that with decay chains:
                             raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
                     elif p.upper() in ['L']:
                         if spin == 3:
-                            logger.warning('"L" (longitudinal) polarization is interpreted as Left for Longitudinal please use "0".')
+                            logger.warning('"L" polarization is interpreted as left (-1); for longitudinal (0) please use "0".')
                         polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
@@ -5036,11 +5036,6 @@ This implies that with decay chains:
                             polarization += [99]
                         else:
                             raise self.InvalidCmd('"A" (auxiliary) polarization is only supported for spin one particles.')
-                    elif p.upper() in ['S']:
-                        if spin == 3:
-                            polarization += [9]
-                        else:
-                            raise self.InvalidCmd('"S" (scalar+width) polarization is only supported for spin one particles.')
                     elif p.upper() in ['G']:
                         if spin == 3:
                             polarization += [4]
@@ -5050,17 +5045,22 @@ This implies that with decay chains:
                         if spin == 3:
                             polarization += [5]
                         else:
-                            raise self.InvalidCmd('"H" (theta) polarization is only supported for spin one particles.')
+                            raise self.InvalidCmd('"H" (Theta) polarization is only supported for spin one particles.')
                     elif p.upper() in ['Q']:
                         if spin == 3:
                             polarization += [6]
                         else:
-                            raise self.InvalidCmd('"Q" (longitudinal - theta) polarization is only supported for spin one particles.')
+                            raise self.InvalidCmd('"Q" (qq = longitudinal - Theta) polarization is only supported for spin one particles.')
                     elif p.upper() in ['W']:
                         if spin == 3:
                             polarization += [7]
                         else:
-                            raise self.InvalidCmd('"W" (longitudinal + auxiliary - theta) polarization is only supported for spin one particles.')
+                            raise self.InvalidCmd('"W" (Ward-protected full prop) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['S']:
+                        if spin == 3:
+                            polarization += [9]
+                        else:
+                            raise self.InvalidCmd('"S" (scalar=aux+width) polarization is only supported for spin one particles.')
 
                     elif p in ['+']:
                         if i +1 < len(pol) and pol[i+1].isdigit():
