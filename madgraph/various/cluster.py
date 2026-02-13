@@ -21,6 +21,7 @@ import glob
 import inspect
 import sys
 import six
+import tempfile
 from six.moves import range
 from six.moves import input
 
@@ -97,6 +98,7 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
     identifier_length = 14
+    badstatus = ''
 
     def __init__(self,*args, **opts):
         """Init the cluster"""
@@ -108,6 +110,11 @@ class Cluster(object):
         self.submitted_exes = [] #HTCaaS
         self.submitted_args = [] #HTCaaS
 
+        if MADEVENT:
+            self.run_dir = LOCALDIR
+        else:
+            self.run_dir = MG5DIR
+
         if 'cluster_queue' in opts:
             self.cluster_queue = opts['cluster_queue']
         else:
@@ -116,6 +123,9 @@ class Cluster(object):
             self.temp_dir = opts['cluster_temp_path']
         else:
             self.temp_dir = None
+        self.checkpointing = False
+        if 'checkpointing' in opts:
+            self.checkpointing = opts['checkpointing']
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
@@ -249,6 +259,7 @@ class Cluster(object):
                 self.submitted_ids.remove(pid)
             else:
                 fail += 1
+                self.badstatus = status
 
         return idle, run, self.finish, fail
 
@@ -310,6 +321,8 @@ class Cluster(object):
         if self.options['cluster_type'] == 'htcaas2':
             me_dir = self.metasubmit(self)
 
+        old_idle = -1
+
         while 1: 
             old_mode = mode
             nb_iter += 1
@@ -318,10 +331,17 @@ class Cluster(object):
                 if  idle + run + finish + fail != nb_job:
                     nb_job = idle + run + finish + fail
                     nb_iter = 1 # since some packet finish prevent to pass in long waiting mode
+                    old_idle = -1
             else:
                 nb_job = idle + run + finish + fail
+
+            if old_idle == -1: old_idle = nb_job
+            if self.checkpointing and old_idle < idle and not nb_short:
+                nb_iter = 1 # reset iterator when the job is requeued
+            old_idle = idle
+
             if fail:
-                raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
+                raise ClusterManagmentError(f'Some Jobs are in a {self.badstatus} state. Please try to investigate or contact the IT team')
             if idle + run == 0:
                 #time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
@@ -400,6 +420,45 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             time_check = args['time_check']
         else:
             time_check = 0
+
+        # resubmit if checkpoint dir is present
+        if self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_fail'):
+            if self.nb_retry < 0:
+                logger.critical('''Fail to run correctly job %s.
+                with option: %s
+                failed checkpointing''' % (job_id, args))
+                input('press enter to continue.')
+                return 'done'
+            elif self.nb_retry == 0:
+                logger.critical('''Fail to run correctly job %s.
+                with option: %s
+                failed checkpointing
+                Stopping all runs.''' % (job_id, args))
+                self.remove()
+                return 'done'
+            elif args['nb_submit'] >= self.nb_retry:
+                logger.critical('''Fail to run correctly job %s.
+                with option: %s
+                failed checkpointing
+                Fails %s times
+                No resubmition. ''' % (job_id, args, args['nb_submit']))
+                self.remove()
+                return 'done'
+            else:
+                args['nb_submit'] += 1            
+                logger.warning('resubmit job (for the %s times)' % args['nb_submit'])
+                del self.retry_args[job_id]
+                self.submitted_ids.remove(job_id)
+                if 'time_check' in args: 
+                    del args['time_check']
+                if job_id in self.id_to_packet:
+                    self.id_to_packet[job_id].remove_one()
+                    args['packet_member'] = self.id_to_packet[job_id]
+                    del self.id_to_packet[job_id]            
+                    self.cluster_submit(**args)
+                else:
+                    self.submit2(**args)
+                return 'resubmit'
 
         for path in args['required_output']:
             if args['cwd']:
@@ -602,6 +661,7 @@ class MultiCore(Cluster):
         self.submitted = six.moves.queue.Queue() # one entry by job submitted
         self.stoprequest = threading.Event() #flag to ensure everything to close
         self.demons = []
+        self.gpus_list = []
         self.nb_done =0
         if 'nb_core' in opt:
             self.nb_core = opt['nb_core']
@@ -623,23 +683,51 @@ class MultiCore(Cluster):
         self.done_pid_queue = six.moves.queue.Queue()
         self.fail_msg = None
 
+        mg5_gpu_env_str = 'MG5_GPU_VISIBLE_DEVICES'
+        gpu_variables = [['NVIDIA_VISIBLE_DEVICES', 'CUDA_VISIBLE_DEVICES'],
+                         ['ROCR_VISIBLE_DEVICES', 'HIP_VISIBLE_DEVICES'],]
+        if mg5_gpu_env_str in os.environ:
+            new_var = os.environ[mg5_gpu_env_str].split(',')
+            if len(new_var) == 2:
+                gpu_variables.insert(0, new_var)
+            else:
+                logger.error('Invalid format for %s=%s, it should be a comma-separated list of two elements' % (mg5_gpu_env_str, os.environ[mg5_gpu_env_str]))
 
+        for get_var,set_var in gpu_variables:
+            if get_var in os.environ:
+                self.gpus_list = os.environ.get(get_var).split(',')
+                self.gpu_set_var = set_var
+                self.gpus_count = len(self.gpus_list)
+                logger.info('Found %s GPUs: %s' % (self.gpus_count, self.gpus_list))
         
     def start_demon(self):
         import threading
-        t = threading.Thread(target=self.worker)
+        env2 = None
+        if len(self.gpus_list):
+            env2 = os.environ.copy()
+            this_gpu_idx = len(self.demons) % self.gpus_count
+            env2[self.gpu_set_var] = self.gpus_list[this_gpu_idx]
+            t = threading.Thread(target=self.worker, kwargs={'env2': env2})
+        else:
+            t = threading.Thread(target=self.worker)
         t.daemon = True
         t.start()
         self.demons.append(t)
 
 
-    def worker(self):
+    def worker(self, env2=None):
         import six.moves.queue
         import six.moves._thread
         while not self.stoprequest.isSet():
             try:
                 args = self.queue.get(timeout=10)
                 tag, exe, arg, opt = args
+                if 'env' not in opt and env2:
+                    opt['env'] = env2
+                if 'env' in opt and env2:
+                    for key in env2:
+                        if key not in opt['env']:
+                            opt['env'][key] = env2[key]
                 try:
                     # check for executable case
                     if isinstance(exe,str):
@@ -898,34 +986,50 @@ class CondorCluster(Cluster):
                   error = %(stderr)s
                   log = %(log)s
                   %(argument)s
-                  environment = CONDOR_ID=$(Cluster).$(Process)
+                  environment = CONDOR_ID=$(DAGManJobId); CONDOR_RESTART_COUNT=$(RETRY); SHARED_DIR=%(cwd)s; DMTCP_PATH=%(dmtcp_path)s
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
                   %(requirement)s
+                  %(walltime)s
+                  %(vacatetime)s
                   getenv=True
                   queue 1
                """
         
+        requirement = []
+
         if self.cluster_queue not in ['None', None]:
-            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+            requirement.append('%s=?=True' % self.cluster_queue)
+
+        if 'cluster_requirement' in self.options and self.options['cluster_requirement']\
+            and self.options['cluster_requirement'] != 'None':
+            microarch = self.options['cluster_requirement']
+            requirement.append(f'TARGET.Microarch==\"{microarch}\"')
+
+        if requirement:
+            requirement = 'Requirements = ' + ' && '.join(requirement)
         else:
             requirement = ''
 
         if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
               and self.options['cluster_walltime'] != 'None':
-            requirement+='\n MaxRuntime =  %s' % self.options['cluster_walltime'] 
+            walltime = '+MaxRuntime =  %s' % self.options['cluster_walltime']
+        else:
+            walltime = ''
 
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
             stdout = '/dev/null'
         if stderr is None:
-            stderr = '/dev/null'
+            stderr = 'condor_$(DAGManJobId).err'
         if log is None:
-            log = '/dev/null'
+            log = 'condor_$(DAGManJobId).log'
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+        if self.checkpointing:
+            argument = [prog] + argument
         if argument:
             argument = 'Arguments = %s' % ' '.join(argument)
         else:
@@ -934,10 +1038,52 @@ class CondorCluster(Cluster):
 
         dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
                 'stderr': stderr,'log': log,'argument': argument,
-                'requirement': requirement}
+                'requirement': requirement, 'walltime': walltime, 'vacatetime': ''}
+
+        if self.checkpointing:
+
+            if MADEVENT:
+                wrapper = pjoin(LOCALDIR,'bin','internal','dmtcp_condor_driver.sh')
+            else:
+                wrapper = pjoin(MG5DIR,'Template','Common','bin','internal','dmtcp_condor_driver.sh')
+
+            dico['prog'] = wrapper
+            dico['argument'] = argument
+
+            if not 'dmtcp' in self.options or not self.options['dmtcp']\
+                or self.options['dmtcp'] == 'None':
+                raise ClusterManagmentError('checkpointing selected, but DMTCP path not set')
+
+            if os.path.exists(pjoin(self.options['dmtcp'], 'bin'))\
+                and os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
+                dico['dmtcp_path'] = self.options['dmtcp']
+            else:
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+
+            if 'cluster_vacatetime' in self.options and self.options['cluster_vacatetime']\
+                and self.options['cluster_vacatetime'] != 'None':
+                vacatetime = self.options['cluster_vacatetime']
+                dico['vacatetime'] = f'+JobMaxVacateTime = {vacatetime}'
+
+            with tempfile.NamedTemporaryFile(mode='w', dir=cwd, delete=False) as submit_file:
+                submit_file.write((text % dico))
+                submit_filename = submit_file.name
+
+            with tempfile.NamedTemporaryFile(mode='w', dir=cwd, delete=False) as dag_file:
+                dag_text = f'JOB job {submit_filename}\n'
+                dag_text += 'RETRY job 100 UNLESS-EXIT 0\n'
+
+                dag_file.write(dag_text)
+                dag_filename = dag_file.name
+
+            command = ['condor_submit_dag', dag_filename]
+            text = """"""
+
+        else:
+            command = ['condor_submit']
 
         #open('submit_condor','w').write(text % dico)
-        a = misc.Popen(['condor_submit'], stdout=subprocess.PIPE,
+        a = misc.Popen(command, stdout=subprocess.PIPE,
                        stdin=subprocess.PIPE)
         output, _ = a.communicate((text % dico).encode())
         #output = a.stdout.read()
@@ -966,8 +1112,13 @@ class CondorCluster(Cluster):
         
         if not required_output and output_files:
             required_output = output_files
-        
-        if (input_files == [] == output_files):
+
+        enforce_shared_disk = False
+        if 'enforce_shared_disk' in self.options and self.options['enforce_shared_disk']\
+            and self.options['enforce_shared_disk'] != 'None':
+            enforce_shared_disk = True
+
+        if (input_files == [] == output_files) or enforce_shared_disk:
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
         
@@ -976,33 +1127,56 @@ class CondorCluster(Cluster):
                   error = %(stderr)s
                   log = %(log)s
                   %(argument)s
+                  environment = CONDOR_ID=$(DAGManJobId); CONDOR_RESTART_COUNT=$(RETRY); DMTCP_PATH=%(dmtcp_path)s; INITIAL_DIR=%(cwd)s
+                  %(spool_on_evict)s
                   should_transfer_files = YES
                   when_to_transfer_output = ON_EXIT
                   transfer_input_files = %(input_files)s
                   %(output_files)s
+                  max_transfer_output_mb = -1
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
                   %(requirement)s
+                  %(walltime)s
+                  %(vacatetime)s
                   getenv=True
                   queue 1
                """
         
+        requirement = []
+
         if self.cluster_queue not in ['None', None]:
-            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+            requirement.append('%s=?=True' % self.cluster_queue)
+
+        if 'cluster_requirement' in self.options and self.options['cluster_requirement']\
+            and self.options['cluster_requirement'] != 'None':
+            microarch = self.options['cluster_requirement']
+            requirement.append(f'TARGET.Microarch==\"{microarch}\"')
+
+        if requirement:
+            requirement = 'Requirements = ' + ' && '.join(requirement)
         else:
             requirement = ''
+
+        if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
+              and self.options['cluster_walltime'] != 'None':
+            walltime = '+MaxRuntime =  %s' % self.options['cluster_walltime']
+        else:
+            walltime = ''
 
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
-            stdout = '/dev/null'
+            stdout = 'condor_$(DAGManJobId)_$(restart_count).out'
         if stderr is None:
-            stderr = '/dev/null'
+            stderr = 'condor_$(DAGManJobId).err'
         if log is None:
-            log = '/dev/null'
+            log = 'condor_$(DAGManJobId).log'
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+        if self.checkpointing:
+            argument = [prog] + argument
         if argument:
             argument = 'Arguments = %s' % ' '.join([str(a) for a in argument])
         else:
@@ -1010,7 +1184,7 @@ class CondorCluster(Cluster):
         # input/output file treatment
         if input_files:
             input_files = ','.join(input_files)
-        else: 
+        else:
             input_files = ''
         if output_files:
             output_files = 'transfer_output_files = %s' % ','.join(output_files)
@@ -1019,13 +1193,63 @@ class CondorCluster(Cluster):
         
         
 
-        dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
+        dico = {'prog': prog, 'cwd': cwd, 'dmtcp_path': '', 'stdout': stdout, 
                 'stderr': stderr,'log': log,'argument': argument,
                 'requirement': requirement, 'input_files':input_files, 
-                'output_files':output_files}
+                'output_files':output_files, 'walltime': walltime, 'vacatetime': '',
+                'spool_on_evict': ''}
+
+        if self.checkpointing:
+
+            if MADEVENT:
+                preexec = pjoin(LOCALDIR,'bin','internal','dmtcp_condor_preexec.sh')
+                wrapper = pjoin(LOCALDIR,'bin','internal','dmtcp_condor_driver.sh')
+            else:
+                preexec = pjoin(MG5DIR,'Template','Common','bin','internal','dmtcp_condor_preexec.sh')
+                wrapper = pjoin(MG5DIR,'Template','Common','bin','internal','dmtcp_condor_driver.sh')
+
+            dico['prog'] = wrapper
+            dico['argument'] = argument
+            dico['input_files'] += ',dmtcp_$(DAGManJobId)'
+            dico['output_files'] += ',dmtcp_$(DAGManJobId)'
+            dico['spool_on_evict'] = '+SpoolOnEvict = False'
+
+            if not 'dmtcp' in self.options or not self.options['dmtcp']\
+                or self.options['dmtcp'] == 'None':
+                raise ClusterManagmentError('checkpointing selected, but DMTCP path not set')
+
+            if os.path.exists(pjoin(self.options['dmtcp'], 'bin'))\
+                and os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
+                dico['dmtcp_path'] = self.options['dmtcp']
+            else:
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+
+            if 'cluster_vacatetime' in self.options and self.options['cluster_vacatetime']\
+                and self.options['cluster_vacatetime'] != 'None':
+                vacatetime = self.options['cluster_vacatetime']
+                dico['vacatetime'] = f'+JobMaxVacateTime = {vacatetime}'
+
+            with tempfile.NamedTemporaryFile(mode="w", dir=cwd, delete=False) as submit_file:
+                submit_file.write((text % dico))
+                submit_filename = submit_file.name
+
+            with tempfile.NamedTemporaryFile(mode="w", dir=cwd, delete=False) as dag_file:
+                dag_text = f'JOB job {submit_filename}\n'
+                dag_text += f'SCRIPT PRE job /bin/bash {preexec} {cwd} {dag_file.name}\n'
+                dag_text += 'RETRY job 100 UNLESS-EXIT 0\n'
+                dag_text += 'VARS job restart_count="$(RETRY)"\n'
+
+                dag_file.write(dag_text)
+                dag_filename = dag_file.name
+
+            command = ['condor_submit_dag', dag_filename]
+            text = """"""
+
+        else:
+            command = ['condor_submit']
 
         #open('submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit'], stdout=subprocess.PIPE,
+        a = subprocess.Popen(command, stdout=subprocess.PIPE,
                              stdin=subprocess.PIPE)
         output, _ = a.communicate((text % dico).encode())
         #output = a.stdout.read()
@@ -1103,6 +1327,7 @@ class CondorCluster(Cluster):
                     run += 1
                 elif status != 'C':
                     fail += 1
+                    self.badstatus = status
 
         for id in list(self.submitted_ids):
             if id not in ongoing:
@@ -1120,9 +1345,11 @@ class CondorCluster(Cluster):
         
         if not self.submitted_ids:
             return
-        cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
-        
-        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        for i in range(0, len(self.submitted_ids), 100):
+            cmd = "condor_rm %s" % ' '.join(self.submitted_ids[i:i+100])
+            status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+            time.sleep(5)
+
         self.submitted_ids = []
         
 class PBSCluster(Cluster):
@@ -1246,6 +1473,7 @@ class PBSCluster(Cluster):
                         idle += 1
                 else:
                     fail += 1
+                    self.badstatus = status2
 
         if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError('server fails in someway (errorcode %s)' % status.returncode)
@@ -1405,6 +1633,7 @@ class SGECluster(Cluster):
                     logger.debug(line)
                     fail += 1
                     finished.remove(id)
+                    self.badstatus = status
 
         for id in finished:
             self.check_termination(id)
@@ -1661,6 +1890,7 @@ class GECluster(Cluster):
                         run += 1
                     if statusflag == 'sh':
                         fail += 1
+                        self.badstatus = statusflag
         for id in list(self.submitted_ids):
             if id not in ongoing:
                 self.check_termination(id)
@@ -1695,7 +1925,7 @@ class SLURMCluster(Cluster):
     name = 'slurm'
     job_id = 'SLURM_JOBID'
     idle_tag = ['Q','PD','S','CF']
-    running_tag = ['R', 'CG']
+    running_tag = ['R', 'CG', 'SI']
     complete_tag = ['C']
     identifier_length = 8
 
@@ -1724,12 +1954,43 @@ class SLURMCluster(Cluster):
         if log is None:
             log = '/dev/null'
 
-        
-        command = ['sbatch', '-o', stdout,
-                   '-J', me_dir, 
-                   '-e', stderr, prog] + argument
 
+        if self.checkpointing:
 
+            if MADEVENT:
+                wrapper = pjoin(LOCALDIR,'bin','internal','dmtcp_slurm_driver.sh')
+            else:
+                wrapper = pjoin(MG5DIR,'Template','Common','bin','internal','dmtcp_slurm_driver.sh')
+            argument_dmtcp = [prog] + argument
+
+            command = ['sbatch',
+                       '-J', me_dir, wrapper] + argument_dmtcp
+
+            command.insert(1, '--open-mode')
+            command.insert(2, 'append')
+
+            if not 'dmtcp' in self.options or not self.options['dmtcp']\
+                or self.options['dmtcp'] == 'None':
+                raise ClusterManagmentError('checkpointing selected, but DMTCP path not set')
+
+            if not os.path.exists(pjoin(self.options['dmtcp'], 'bin'))\
+                or not os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+
+            if 'cluster_requirement' in self.options and self.options['cluster_requirement']\
+                and self.options['cluster_requirement'] != 'None':
+                command.insert(1, '-C')
+                command.insert(2, self.options['cluster_requirement'])
+
+            if 'cluster_vacatetime' in self.options and self.options['cluster_vacatetime']\
+                and self.options['cluster_vacatetime'] != 'None':
+                command.insert(1, '--signal')
+                command.insert(2, 'B:USR1@'+self.options['cluster_vacatetime'])
+
+        else:
+            command = ['sbatch', '-o', stdout,
+                       '-J', me_dir,
+                       '-e', stderr, prog] + argument
 
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
@@ -1741,14 +2002,23 @@ class SLURMCluster(Cluster):
                 command.insert(2, self.options['cluster_walltime'])            
             
 
+        jobenv = os.environ.copy()
+        if MADEVENT: jobenv['RUN_DIR'] = LOCALDIR
+        else: jobenv['RUN_DIR'] = MG5DIR
+        if self.checkpointing: jobenv['DMTCP_PATH'] = self.options['dmtcp']
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
-                                      stdin=subprocess.PIPE, cwd=cwd)
+                                      stdin=subprocess.PIPE, cwd=cwd, env=jobenv)
 
         output = a.communicate()
         output_arr = output[0].decode(errors='ignore').split(' ')
         id = output_arr[3].rstrip()
+
+        if self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_fail'):
+            target = os.readlink(f'{self.run_dir}/dmtcp_fail')
+            os.unlink(f'{self.run_dir}/dmtcp_fail')
+            os.symlink(target, f'{self.run_dir}/dmtcp_{id}')
 
         if not id.isdigit():
             id = re.findall(r'Submitted batch job ([\d\.]+)', ' '.join(output_arr))
@@ -1810,22 +2080,37 @@ class SLURMCluster(Cluster):
                 elif status in self.running_tag:
                     run += 1
                 elif status in self.complete_tag:
+                    if self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_{id}'):
+                        os.symlink(f'{self.run_dir}/dmtcp_{id}', f'{self.run_dir}/dmtcp_fail')
                     status = self.check_termination(id)
                     if status == 'wait':
                         run += 1
                     elif status == 'resubmit':
                         idle += 1                    
+                    elif self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_fail'):
+                        target = os.readlink(f'{self.run_dir}/dmtcp_fail')
+                        os.unlink(f'{self.run_dir}/dmtcp_fail')
+                        os.symlink(target, f'{self.run_dir}/dmtcp_{id}_fail')
+                        logger.info(f'Checkpoints stored at {self.run_dir}/dmtcp_{id}_fail')
                 else:
                     fail += 1
+                    self.badstatus = status
         
         #control other finished job
         for id in list(self.submitted_ids):
             if id not in ongoing:
+                if self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_{id}'):
+                    os.symlink(f'{self.run_dir}/dmtcp_{id}', f'{self.run_dir}/dmtcp_fail')
                 status = self.check_termination(id)
                 if status == 'wait':
                     run += 1
                 elif status == 'resubmit':
                     idle += 1
+                elif self.checkpointing and os.path.exists(f'{self.run_dir}/dmtcp_fail'):
+                    target = os.readlink(f'{self.run_dir}/dmtcp_fail')
+                    os.unlink(f'{self.run_dir}/dmtcp_fail')
+                    os.symlink(target, f'{self.run_dir}/dmtcp_{id}_fail')
+                    logger.info(f'Checkpoints stored at {self.run_dir}/dmtcp_{id}_fail')
                     
         
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -1990,6 +2275,7 @@ class HTCaaSCluster(Cluster):
                     idle +=1
             else:
                 fail += 1 
+                self.badstatus = status2
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
@@ -2208,6 +2494,7 @@ class HTCaaS2Cluster(Cluster):
                     idle +=1
             else:
                 fail += 1
+                self.badstatus = status2
 
         return idle, run, self.submitted - (idle+run+fail), fail
 

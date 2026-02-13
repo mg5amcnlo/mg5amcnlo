@@ -319,7 +319,7 @@ C     Amplitude(s) for diagram number 1
 C     JAMPs contributing to orders QCD=0 QED=2
       JAMP(1,1) = AMP(1)
 
-      RES = 0.D0
+      RES(:) = 0.D0
       DO M = 1, NAMPSO
         CF_INDEX= 0
         DO I = 1, NCOLOR
@@ -333,10 +333,8 @@ C     JAMPs contributing to orders QCD=0 QED=2
      $       *DCONJG(JAMP(I,N)))
           ENDDO
         ENDDO
-        DO N = 1, NAMPSO
-          RES(SQSOINDEX(M,N)) = RES(SQSOINDEX(M,N))/DENOM
-        ENDDO
       ENDDO
+      RES(:) = RES(:)/DENOM
       END
 
       SUBROUTINE GET_VALUE(P, ALPHAS, NHEL ,ANS)

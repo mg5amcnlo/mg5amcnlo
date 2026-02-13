@@ -2264,7 +2264,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             outstr += "                      Configuration Options    \n"
             outstr += "                      ---------------------    \n"
             for key, default in self.options_configuration.items():
-                value = self.options[key]
+                value = self.options.get(key, None)
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
@@ -2763,6 +2763,53 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         #else:
         self.do_generate_events(line, *args, **opt)
             
+    def getSysSummaryFromLog(self, kpath=None,knext_name=None):
+        '''extracts and returns MUF and PDF scale uncertainties as lists [Hi,Lo]
+              from  summary.txt log files for MadEvent type events'''
+        # parton_systematics.log files have the following format:
+        #
+        # original cross-section: 574.4537157252221
+        #     scale variation: +29.6% -21.5%
+        #     central scheme variation: + 0% -25.9%
+        # PDF variation: + 2% - 2%
+        #
+        # dynamical scheme # 1 : 537.679 +29% -21.3% # \sum ET
+        # dynamical scheme # 2 : 450.797 +27.4% -20.4% # \sum\sqrt{m^2+pt^2}
+        # dynamical scheme # 3 : 574.454 +29.6% -21.5% # 0.5 \sum\sqrt{m^2+pt^2}
+        # dynamical scheme # 4 : 425.471 +26.8% -20.1% # \sqrt{\hat s}
+        # note possible space between sign and number
+        # define output
+        tmpMUX = []
+        tmpPDF = []
+
+        # open, read, and implicitly close it
+        sys_log = pjoin(kpath.rsplit("/", 2)[0],"Events",knext_name,"parton_systematics.log")
+        with open(sys_log,'r') as sys_out:
+
+            # parse the list for...
+            for sysLine in sys_out.readlines():
+
+                # scale variation
+                if(sysLine.startswith("#     scale variation")):
+                    # does not work for full integers
+                    # e.g., # PDF variation: + 2% - 2%
+                    #varHi=sysLine.split(" ")[-2].replace("%","")
+                    #varLo=sysLine.split(" ")[-1].replace("%","")
+                    varHi=sysLine.split(":")[1].split("%")[0].replace(" ","")
+                    varLo=sysLine.split(":")[1].split("%")[1].replace(" ","")
+                    tmpMUX = [varHi,varLo]
+                    continue
+
+                # PDF variation
+                if(sysLine.startswith("# PDF variation")):
+                    varHi=sysLine.split(":")[1].split("%")[0].replace(" ","")
+                    varLo=sysLine.split(":")[1].split("%")[1].replace(" ","")
+                    tmpPDF = [varHi,varLo]
+                    continue
+
+        # done!
+        return tmpMUX, tmpPDF    
+
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
         data should be of type: gen_crossxhtml.OneTagResults"""
@@ -2943,6 +2990,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 except KeyError:
                     particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
     
+        if not os.path.exists(pjoin(self.me_dir, 'Events', run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', run_name))
         self.update_width_in_param_card(particle_dict,
                         initial = pjoin(self.me_dir, 'Cards', 'param_card.dat'),
                         output=pjoin(self.me_dir, 'Events', run_name, "param_card.dat"))
@@ -3675,7 +3724,7 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull.close()
     
     ############################################################################ 
-    def do_comine_iteration(self, line):
+    def do_combine_iteration(self, line):
         """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
             S is for survey 
             R is for refine
@@ -3794,7 +3843,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_G = len(Gdirs) // nb_chunk 
 
             for i, local_G in enumerate(split(Gdirs, nb_chunk)):
-                line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe.gz" % i)]
+                line = [pjoin(self.me_dir, "Events", self.run_name, "partials%d.lhe" % i)]
                 line.append(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
                 line.append(str(self.results.current.get('axsec')))
                 line += local_G
@@ -3814,10 +3863,12 @@ Beware that this can be dangerous for local multicore runs.""")
                 AllEvent.add(*data)
             
             start_unweight= time.perf_counter()
-            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
+            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
+            misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
             
             #cleaning
             for data in partials_info:
@@ -3851,10 +3902,12 @@ Beware that this can be dangerous for local multicore runs.""")
             if len(AllEvent) == 0:
                 nb_event = 0 
             else:
-                nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                                 proc_charac=self.proc_characteristic)
+                logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
+                misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
 
         if nb_event < self.run_card['nevents']:
             logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
@@ -3910,7 +3963,8 @@ Beware that this can be dangerous for local multicore runs.""")
                              result.get('xsec'),
                              result.get('xerru'),
                              result.get('axsec')
-                             ) 
+                    )
+ 
         if preprocess_only:
             return output, sum_xsec, math.sqrt(sum(x**2 for x in sum_xerru)), sum_axsec
         nb_event = max(min(abs(1.01*self.run_card['nevents']*sum_axsec/cross),self.run_card['nevents']), 10)
@@ -5052,9 +5106,20 @@ tar -czf split_$1.tar.gz split_$1
                                 # other UNIX systems 
                                 os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
                                                                             ["-e '$d'",hepmc_file]))
-                            
-                        os.system(' '.join(['cat',pjoin(tmp_dir,'header.hepmc')]+all_hepmc_files+
-                                                    [pjoin(tmp_dir,'tail.hepmc'),'>',hepmc_output]))
+
+                        all_files = [pjoin(tmp_dir, 'header.hepmc')] + all_hepmc_files + [pjoin(tmp_dir, 'tail.hepmc')]
+                        return_code = os.system(' '.join(['cat'] + all_files + ['>',hepmc_output]))
+                        if return_code != 0:
+                            # max 20 files can be concatenated at once
+                            n_files = len(all_files)
+                            step = 20
+                            intermediate_files = []
+                            for i in range(0, n_files, step):
+                                part_files = all_files[i:i+step]
+                                return_code = os.system(' '.join(['cat'] + part_files + ['>' if i == 0 else '>>', hepmc_output]))
+                                if return_code != 0:
+                                    raise MadGraph5Error('Error during merging of HEPMC files.')
+
 
                 # We are done with the parallelization directory. Clean it.
                 if os.path.isdir(parallelization_dir):
@@ -5634,6 +5699,19 @@ tar -czf split_$1.tar.gz split_$1
                 misc.gzip(filename)              
             else:
                 logger.info('No valid files for delphes plot')
+
+    def do_compile(self, line):
+        """compile the current directory    """
+
+        args = self.split_arg(line)
+        self.ask_run_configuration(mode='parton')
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        self.configure_directory(html_opening =False)
+
+        for Pdir in self.get_Pdir():
+            misc.sprint(Pdir)
+            self.compile(['gensym'], cwd=Pdir)
+            self.compile(['madevent_forhel'], cwd=Pdir)
 
     ############################################################################
     def do_syscalc(self, line):

@@ -79,8 +79,8 @@ class UFOModelConverterCPP(object):
                  "complex": "std::complex<double>"}
 
     # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile('^#\w')
-    namespace_re = re.compile('^using namespace')
+    compiler_option_re = re.compile(r'^#\w')
+    namespace_re = re.compile(r'^using namespace')
 
     slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
                       ('SMINPUTS', (1,)): ('aEM',)}
@@ -2518,7 +2518,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
     #===============================================================================
     # Routines to export/output UFO models in Pythia8 format
     #===============================================================================
-    def convert_model_to_pythia8(self, model, pythia_dir):
+    def convert_model_to_pythia8(self, model, pythia_dir, wanted_lorentz = []):
         """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
     
         if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h'))\
@@ -2526,7 +2526,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
             logger.warning('Directory %s is not a valid Pythia 8 main dir.' % pythia_dir)
     
         # create the model parameter files
-        model_builder = UFOModelConverterPythia8(model, pythia_dir, replace_dict=self.get_default_converter())
+        model_builder = UFOModelConverterPythia8(model, pythia_dir, 
+                                                 wanted_lorentz=wanted_lorentz,
+                                                 replace_dict=self.get_default_converter())
         model_builder.cc_file_dir = "Processes_" + model_builder.model_name
         model_builder.include_dir = model_builder.cc_file_dir
     

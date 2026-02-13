@@ -320,6 +320,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       integer ipdg(-nexternal+1:nexternal)
       double precision mtot
+      integer gForceBW(-max_branch:-1,lmaxconfigs)
       include 'leshouche.inc'
 c
 c     Global
@@ -328,12 +329,15 @@ c
       include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
       double precision stot
       common/to_stot/stot
+      double precision bwcutoff
+      common/to_bwcutoff/bwcutoff
 
 c-----
 c  Begin Code
 c-----
       include 'props.inc'   !Propagator mass and width information prmass,prwidth
       include 'pmass.inc'   !External particle masses
+      include 'decayBW.inc'
 c      write(*,*) 'Checking for BW in config number ',iconfig
 c
 c     Reset variables
@@ -383,9 +387,21 @@ c
 c     Mark all daughters of conflicted BW as conflicting
 c
       do j=i,1,-1
-         if (lconflict(-j)) then 
-            lconflict(itree(1,-j)) = .true.
-            lconflict(itree(2,-j)) = .true.
+         if (lconflict(-j)) then
+             if (itree(1,-j).lt.0) then
+                 if( gForceBW(itree(1,-j),iconfig).ne.1) then
+                     lconflict(itree(1,-j)) = .true.
+                 endif
+             else
+                     lconflict(itree(1,-j)) = .true.
+             endif
+             if (itree(2,-j).lt.0) then
+                 if( gForceBW(itree(2,-j),iconfig).ne.1) then
+                     lconflict(itree(2,-j)) = .true.
+                 endif
+             else
+                     lconflict(itree(2,-j)) = .true.
+             endif
 c            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
          endif
       enddo

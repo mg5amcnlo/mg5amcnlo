@@ -2474,6 +2474,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     MadGraph v4 StandAlone format."""
 
     matrix_template = "matrix_standalone_v4.inc"
+    f2py_template = "matrix_standalone_f2py.inc"
+    f2py_wrapper_all ="f2py_wrapper_all.inc"
+    f2py_matrix_splitter = "f2py_splitter.py"
     jamp_optim = True
     default_vector_size = 0
 
@@ -2683,19 +2686,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
             ff.write(text)
             ff.close()
-                    
+    
+
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-        
-        template = open(self.mgme_dir + '/madgraph/iolibs/template_files/python_all_matrix.f').read()
-        
+
+
+        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_matrix_splitter)).read()
+        template2 = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_wrapper_all)).read()
+
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
+        allncomb = [self.prefix_info[key][2] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key, pid), (prefix, tag) in self.prefix_info.items():
+        for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
@@ -2736,6 +2743,39 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             helreset_setup.append(' %shelreset = .true. ' % prefix)
             helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
         
+        #nhel
+        all_nhel_f2py = ' '
+        all_nhel = ''
+        nhel_template_f2py = """
+        subroutine %(f2py_prefix)s%(prefix)sget_nhel_entry()
+        integer %(prefix)snhel(%(next)s,%(ncombs)s)
+        common/%(f2py_prefix)s%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        call %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(%(prefix)sNHEL)
+
+        return
+        end 
+"""
+        nhel_template = """subroutine %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(NHEL)
+        integer %(prefix)snhel(%(next)s,%(ncombs)s), NHEL(%(next)s,%(ncombs)s)
+        common/%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        NHEL(:,:) = %(prefix)snhel(:,:)
+        return
+        end 
+"""
+
+        f2py_prefix = ''
+        if self.opt['output_options'] and 'prefixf2py' in self.opt['output_options']:
+            f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
+
+        done_prefix = set()
+        for prefix, ids, ncomb in zip(allprefix, allids, allncomb):
+            if prefix in done_prefix:
+                continue
+            done_prefix.add(prefix)
+            all_nhel += nhel_template % {'prefix': prefix, 'next': len(ids[0]), 'ncombs': ncomb,
+                                          'f2py_prefix': f2py_prefix}
+            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 'next': len(ids[0]), 
+                                                   'ncombs': ncomb, 'f2py_prefix': f2py_prefix}
 
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
@@ -2748,13 +2788,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
+                          'nhel': all_nhel,
+                          'f2py_prefix': f2py_prefix
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
-    
+        formatting['nhel'] = all_nhel_f2py
+        text = template2 % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'f2py_wrapper.f'),'w')
+        fsock.writelines(text)
+        fsock.close()    
+
     def get_model_parameter(self, model):
         """ returns all the model parameter
         """
@@ -2783,8 +2830,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         return params                      
                                         
-        
-        
+    def write_f2py_matrix_wrapper(self, writer, replace_dict):
+        """ Write the f2py wrapper for matrix element."""
+
+        path =pjoin(_file_path, 'iolibs', 'template_files', self.f2py_template)
+        template = open(path).read()
+        writer.write(template % replace_dict)
+
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
@@ -2881,15 +2933,22 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
             else:
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
+            ncomb = matrix_element.get_helicity_combinations()
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()] 
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
                 
-        calls = self.write_matrix_element_v4(
+        replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model,
-            proc_prefix=proc_prefix)
+            proc_prefix=proc_prefix,
+            return_replace_dict=True)
+        calls = replace_dict.get('return_value', 0)
+
+        self.write_f2py_matrix_wrapper(
+            writers.FortranWriter(pjoin(dirpath, 'f2py_matrix_wrapper.f')),
+                                  replace_dict=replace_dict)
         
 
         if self.opt['export_format'] == 'standalone_msP':
@@ -2993,7 +3052,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # write_matrix_element_v4
     #===========================================================================
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                write=True, proc_prefix=''):
+                                write=True, proc_prefix='', return_replace_dict=False):
         """Export a matrix element to a matrix.f file in MG4 standalone format
         if write is on False, just return the replace_dict and not write anything."""
 
@@ -3161,7 +3220,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 content = '\n' + open(replace_dict['template_file2'])\
                                    .read()%replace_dict
                 writer.writelines(content)
-            return len([call for call in helas_calls if call.find('#') != 0])
+            if return_replace_dict:
+                replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
+                return replace_dict
+            else:
+                return len([call for call in helas_calls if call.find('#') != 0])
         else:
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
@@ -4186,7 +4249,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         elif '%(W)s' in arg['mass']:
             raise Exception
 
-        arg['coup'] = re.sub('coup(\d+)\)s','coup\g<1>)s%(vec\g<1>)s', arg['coup'])
+        arg['coup'] = re.sub(r'coup(\d+)\)s',r'coup\g<1>)s%(vec\g<1>)s', arg['coup'])
 
         return call, arg
     

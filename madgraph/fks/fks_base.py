@@ -243,6 +243,11 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                              amp.get('process').nice_string().replace('Process', ''))
                 continue
 
+            # skip amplitudes with two initial particles not being photons for UPC processes
+            if [l['id'] not in [22] and l['is_tagged'] for l in [ll for ll in amp.get('process').get('legs') if not ll['state'] and 'is_tagged'in ll]]==[True, True]:
+                logger.info(('Discarding process%s in UPCs.')%amp.get('process').nice_string().replace('Process', ''))
+                continue
+
             logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
                 % (amp['process'].nice_string(print_weighted=False, print_perturbated=False).replace('Process', ''),
                    i + 1, len(amps)))
@@ -370,7 +375,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             elif not myproc['orders']:
                     myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
+            upc = [[l['is_tagged'], l['id'] in [22]] for l in [ll for ll in myproc.get('legs') if not ll['state'] and 'is_tagged'in ll]]
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+            # skip virtual amplitudes with both initial particles not being photons for UPC processes
+            if [item[0] for item in upc]==[True,True] and [item[1] for item in upc]!=[True,True]:
+                logger.info(('Discarding virtual process%s in UPCs.')%myproc.nice_string(print_weighted= False,\
+                                                                    print_perturbated= False).replace('Process', ''))
+                born.virt_amp = None
+                continue
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted= False, print_perturbated= False).replace(\
                                                              'Process', ''),
@@ -889,6 +901,10 @@ class FKSProcess(object):
         # count the number of initial-state leptons
         ninit_lep = [l['id'] in model.get_lepton_pdgs() and not l['state'] for l in leglist].count(True)
 
+        # count the number of initial-state photons and tagged initial-state particles
+        ninit_ph = [l['id'] in [22] and not l['state'] for l in leglist].count(True)
+        ninit_tag = [not l['state'] and l['is_tagged'] for l in leglist].count(True)
+
         for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
@@ -906,6 +922,12 @@ class FKSProcess(object):
                 # only split initial state leptons; do nothing for any other particle
                 elif not self.init_lep_split and ninit_lep >= 1 and \
                   (i['state'] or i['id'] not in model.get_lepton_pdgs()):
+                    splittings=[]
+                # UPC: 1.) final-state splitting is forbidded if not both initial-state particles are photons
+                #      2.) initial-state photons are not allowed to split
+                #      3.) initial-state fermions are not allowed to undergo a QCD splitting
+                elif ninit_tag > 0 and ((i['state'] and ninit_ph < 2) or \
+                  (not i['state'] and i['id'] == 22) or (not i['state'] and pert_order == 'QCD')):
                     splittings=[]
                 else:
                     splittings = fks_common.find_splittings( \

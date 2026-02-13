@@ -255,10 +255,11 @@ C     JAMPs contributing to orders QCD=0 QED=2
           ENDDO
           DO N = 1, NAMPSO
             ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))/DENOM
+     $       *DCONJG(JAMP1(I,N))
           ENDDO
         ENDDO
       ENDDO
+      ANS(:) = ANS(:)/DENOM
       END
 
 

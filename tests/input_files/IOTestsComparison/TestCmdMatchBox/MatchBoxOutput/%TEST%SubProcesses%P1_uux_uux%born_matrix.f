@@ -276,7 +276,7 @@ C     JAMPs contributing to orders QCD=2
       LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
       LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
-      RES = 0.D0
+      RES(:) = 0.D0
       DO M = 1, NAMPSO
         CF_INDEX = 0
         DO I = 1, NCOLOR
@@ -290,11 +290,8 @@ C     JAMPs contributing to orders QCD=2
      $        ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
-        DO N = 1, NAMPSO
-          RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N))/DENOM
-        ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       END
 
 

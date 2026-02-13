@@ -131,10 +131,135 @@ c     saved. 'pdflast' is filled below.
       xlast(2,ireuse)=xx2
       pdlabellast(ireuse)=pdlabel
 
-      if(pdlabel(1:4).eq.'edff') then
+      neutron_tagging(1:2)=-2
+      if(pdlabel(1:3).eq.'edf') then
          USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
-      elseif(pdlabel(1:4).eq.'chff') then
+         if(pdlabel(4:4).ne.'f')then
+c     forward neutron tagging
+            if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 3
+            endif
+            if(pdlabel(4:4).eq.'i')then
+c 0n+Xn
+               neutron_tagging(1)=-2
+            elseif(pdlabel(4:4).eq.'x')then
+c Xn
+               neutron_tagging(1)=-1
+            elseif(pdlabel(4:4).eq.'0')then
+c 0n
+               neutron_tagging(1)=0
+            elseif(pdlabel(4:4).eq.'1')then
+c 1n
+               neutron_tagging(1)=1
+            elseif(pdlabel(4:4).eq.'2')then
+c 2n
+               neutron_tagging(1)=2
+            elseif(pdlabel(4:4).eq.'3')then
+c 3n
+               neutron_tagging(1)=3
+            elseif(pdlabel(4:4).eq.'4')then
+c 4n
+               neutron_tagging(1)=4
+            else
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 4
+            endif
+            if(pdlabel(6:6).eq.'i')then
+c 0n+Xn
+               neutron_tagging(2)=-2
+            elseif(pdlabel(6:6).eq.'x')then
+c Xn
+               neutron_tagging(2)=-1
+            elseif(pdlabel(6:6).eq.'0')then
+c 0n
+               neutron_tagging(2)=0
+            elseif(pdlabel(6:6).eq.'1')then
+c 1n
+               neutron_tagging(2)=1
+            elseif(pdlabel(6:6).eq.'2')then
+c 2n
+               neutron_tagging(2)=2
+            elseif(pdlabel(6:6).eq.'3')then
+c 3n
+               neutron_tagging(2)=3
+            elseif(pdlabel(6:6).eq.'4')then
+c 4n
+               neutron_tagging(2)=4
+            else
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 5
+            endif
+         else
+            if(pdlabel(5:7).ne.'   ')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 9
+            endif
+         endif
+      elseif(pdlabel(1:3).eq.'chf') then
          USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
+         if(pdlabel(4:4).ne.'f')then
+c     forward neutron tagging
+            if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 6
+            endif
+            if(pdlabel(4:4).eq.'i')then
+c 0n+Xn
+               neutron_tagging(1)=-2
+            elseif(pdlabel(4:4).eq.'x')then
+c Xn
+               neutron_tagging(1)=-1
+            elseif(pdlabel(4:4).eq.'0')then
+c 0n
+               neutron_tagging(1)=0
+            elseif(pdlabel(4:4).eq.'1')then
+c 1n
+               neutron_tagging(1)=1
+            elseif(pdlabel(4:4).eq.'2')then
+c 2n
+               neutron_tagging(1)=2
+            elseif(pdlabel(4:4).eq.'3')then
+c 3n
+               neutron_tagging(1)=3
+            elseif(pdlabel(4:4).eq.'4')then
+c 4n
+               neutron_tagging(1)=4
+            else
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 7
+            endif
+            if(pdlabel(6:6).eq.'i')then
+c 0n+Xn
+               neutron_tagging(2)=-2
+            elseif(pdlabel(6:6).eq.'x')then
+c Xn
+               neutron_tagging(2)=-1
+            elseif(pdlabel(6:6).eq.'0')then
+c 0n
+               neutron_tagging(2)=0
+            elseif(pdlabel(6:6).eq.'1')then
+c 1n
+               neutron_tagging(2)=1
+            elseif(pdlabel(6:6).eq.'2')then
+c 2n
+               neutron_tagging(2)=2
+            elseif(pdlabel(6:6).eq.'3')then
+c 3n
+               neutron_tagging(2)=3
+            elseif(pdlabel(6:6).eq.'4')then
+c 4n
+               neutron_tagging(2)=4
+            else
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 8
+            endif
+         else
+            if(pdlabel(5:7).ne.'   ')then
+               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+               STOP 10
+            endif
+         endif
       else
          WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
          STOP 2
@@ -159,4 +284,31 @@ c     write(*,*) 'running gamma-UPC'
       
       return
       end
-     
+      
+
+      subroutine Get_nucleus_RA(nb_p,nb_n,RAI)
+      USE ElasticPhotonPhotonFlux
+      implicit none
+      ! number of protons and neutrons in the nucleus
+      integer nb_p,nb_n
+      ! radius of the nucleus in unit of GeV-1
+      double precision RAI
+      integer nb_pn
+      double precision RRR, AAA, WWW, Aval, Zval
+      character*7 nucleus_name
+      ! the charge radius of proton (in fm)
+      double precision Rproto
+      parameter (Rproto=0.877d0)
+      ! convert from GeV-1 to fm
+      double precision GeVm12fm1
+      parameter (GeVm12fm1=0.1973d0)
+      if(nb_p.eq.1.and.nb_n.eq.0)then
+         RAI=Rproto/GeVm12fm1
+         return
+      endif
+      nb_pn=nb_p+nb_n
+      nucleus_name=GetASymbol(nb_pn,nb_p)
+      CALL GetNuclearInfo(nucleus_name,Aval,Zval,RRR,AAA,WWW)
+      RAI=RRR/GeVm12fm1
+      return
+      end

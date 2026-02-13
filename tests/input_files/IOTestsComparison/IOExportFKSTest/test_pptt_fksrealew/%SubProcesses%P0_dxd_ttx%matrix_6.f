@@ -348,9 +348,7 @@ C     JAMPs contributing to orders QCD=1 QED=2
       JAMP(3,2) = 0D0
       JAMP(4,2) = AMP(1)+AMP(3)+AMP(11)+AMP(13)
 
-      DO I=0,NSQAMPSO
-        RES(I)=0D0
-      ENDDO
+      RES(:) = 0D0
       DO M = 1, NAMPSO
         CF_INDEX = 0
         DO I = 1, NCOLOR
@@ -365,11 +363,8 @@ C     JAMPs contributing to orders QCD=1 QED=2
           ENDDO
         ENDDO
 
-        DO N = 1, NAMPSO
-          RES(SQSOINDEX6(M,N)) = RES(SQSOINDEX6(M,N))/DENOM
-        ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       DO I=1,NSQAMPSO
         RES(0)=RES(0)+RES(I)
       ENDDO

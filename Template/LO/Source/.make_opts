@@ -3,9 +3,9 @@ DEFAULT_F_COMPILER=gfortran
 MACFLAG=-mmacosx-version-min=10.7
 DEFAULT_CPP_COMPILER=clang
 MG5AMC_VERSION=SpecifiedByMG5aMCAtRunTime
-STDLIB=-lc++
+STDLIB=-lstdc++
 PYTHIA8_PATH=NotInstalled
-STDLIB_FLAG=-stdlib=libc++
+STDLIB_FLAG=
 #end_of_make_opts_variables
 
 BIASLIBDIR=../../../lib/
@@ -29,6 +29,14 @@ MACFLAG=
 endif
 endif
 
+# set the flag for dynamical library
+ifeq ($(UNAME), Darwin)
+DYNLIBFLAG=-dynamiclib
+RPATHFLAG=-install_name @rpath/
+else
+DYNLIBFLAG=-shared -fPIC
+RPATHFLAG=-Wl,-soname,
+endif
 
 ifeq ($(origin CXXFLAGS),undefined)
 CXXFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)

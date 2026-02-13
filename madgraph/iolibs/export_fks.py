@@ -282,6 +282,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  'Source','make_opts.inc')).read()  
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        if 'collier' in replace_dict['link_tir_libs']:
+            collierpath = ''
+            for lib in link_tir_libs:
+                if '-lcollier' in lib:
+                    collierpath = lib.split()[0][2:]
+                    break
+            if collierpath:
+                replace_dict['link_tir_libs'] = ' -Wl,-rpath,%s %s ' % (collierpath, replace_dict['link_tir_libs'])
+        #raise Exception
+
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
@@ -1158,8 +1168,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         bornproc = matrix_element.born_me['processes'][0]
         startfromalpha0 = False
         if any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
-            if 'loop_qcd_qed_sm_a0' in bornproc['model'].get('modelpath'):
-                startfromalpha0 = True
+            startfromalpha0 = bornproc['model'].get('startfromalpha0')
 
         text = 'logical  startfroma0\nparameter (startfroma0=%s)\n' % bool_dict[startfromalpha0]
         writer.writelines(text)
@@ -4369,6 +4378,22 @@ Parameters              %(params)s\n\
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF values for the different initial states
             for i, init_states in enumerate(initial_states):
                 if not mirror:
@@ -4420,6 +4445,9 @@ Parameters              %(params)s\n\
                                      "%s%d=0d0\n") % \
                                          (pdf_codes[initial_state],i + 1)                                
 
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            if 22 in initial_states[0] and 22 in initial_states[1]:
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -5049,7 +5077,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
         replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
         replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
-                ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+                ": import_lib('%s')" % dd[0] for dd in self.dirstopdg])   
 
         replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
                         str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),

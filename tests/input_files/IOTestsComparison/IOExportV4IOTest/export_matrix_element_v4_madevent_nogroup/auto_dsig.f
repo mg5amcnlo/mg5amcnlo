@@ -479,52 +479,62 @@ C         Select a flavor combination (need to do here for right sign)
      $  ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
 
 
-      DO IVEC=1,VECSIZE_USED
-        DSIGUU = ALL_OUT(IVEC)
-        IF (IMODE.EQ.5) THEN
-          IF (DSIGUU.LT.1D199) THEN
-            ALL_OUT(IVEC) = DSIGUU*CONV
-          ELSE
-            ALL_OUT(IVEC) = 0.0D0
+      DO CURR_WARP=1, NB_WARP_USED
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
+        ENDIF
+        DO IWARP=1, WARP_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+          DSIGUU = ALL_OUT(IVEC)
+          IF (IMODE.EQ.5) THEN
+            IF (DSIGUU.LT.1D199) THEN
+              ALL_OUT(IVEC) = DSIGUU*CONV
+            ELSE
+              ALL_OUT(IVEC) = 0.0D0
+            ENDIF
+            RETURN
           ENDIF
-          RETURN
-        ENDIF
 
-        XBK(:) = ALL_XBK(:,IVEC)
-C       CM_RAP = ALL_CM_RAP(IVEC)
-        Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+          XBK(:) = ALL_XBK(:,IVEC)
+C         CM_RAP = ALL_CM_RAP(IVEC)
+          Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
-        IF(FRAME_ID.NE.6)THEN
-          CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
-        ELSE
-          P1 = ALL_PP(:,:,IVEC)
-        ENDIF
-C       call restore_cl_val_to(ivec)
-C       DSIGUU=DSIGUU*REWGT(P1,ivec)
-        DSIGUU=DSIGUU*ALL_RWGT(IVEC)
+          IF(FRAME_ID.NE.6)THEN
+            CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
+          ELSE
+            P1 = ALL_PP(:,:,IVEC)
+          ENDIF
+C         call restore_cl_val_to(ivec)
+C         DSIGUU=DSIGUU*REWGT(P1,ivec)
+          DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
-C       Apply the bias weight specified in the run card (default is
-C        1.0)
-        DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
+C         Apply the bias weight specified in the run card (default is
+C          1.0)
+          DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
 
-        DSIGUU=DSIGUU*NFACT
+          DSIGUU=DSIGUU*NFACT
 
-        IF (DSIGUU.LT.1D199) THEN
-C         Set sign of dsig based on sign of PDF and matrix element
-          ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
-     $     *ALL_PD(IPSEL,IVEC))
-        ELSE
-          WRITE(*,*) 'Error in matrix element'
-          DSIGUU=0D0
-          ALL_OUT(IVEC)=0D0
-        ENDIF
-C       Generate events only if IMODE is 0.
-        IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
-C         Call UNWGT to unweight and store events
-          ICONFIG = CHANNELS(IVEC)
-          CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1,
-     $      SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
-        ENDIF
+          IF (DSIGUU.LT.1D199) THEN
+C           Set sign of dsig based on sign of PDF and matrix element
+            ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
+     $       *ALL_PD(IPSEL,IVEC))
+          ELSE
+            WRITE(*,*) 'Error in matrix element'
+            DSIGUU=0D0
+            ALL_OUT(IVEC)=0D0
+          ENDIF
+C         Generate events only if IMODE is 0.
+          IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
+C           Call UNWGT to unweight and store events
+            ICONFIG = SYMCONF(ICONF_VEC(CURR_WARP))
+            CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1
+     $       , SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
+          ENDIF
+        ENDDO
       ENDDO
 
       END
@@ -637,8 +647,12 @@ C      particle
 
       SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL)
       IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'  ! for the definition of maxflow
       INCLUDE 'coloramps.inc'  ! set the coloramps
+      INCLUDE 'cluster.inc'
+      INCLUDE 'genps.inc'
+      INCLUDE 'run.inc'
 C     
 C     argument IN
 C     
@@ -659,6 +673,11 @@ C
       DOUBLE PRECISION TARGETAMP(0:MAXFLOW)
       INTEGER I,J
       DOUBLE PRECISION XTARGET
+
+      IF (ICKKW.GT.0) THEN
+        ICONFIG = IGRAPHS(1)
+      ENDIF
+
 
       NC = INT(JAMP2(0))
       IS_LC = .TRUE.
@@ -711,6 +730,5 @@ C     all subleading color.
 
       RETURN
       END
-
 
 

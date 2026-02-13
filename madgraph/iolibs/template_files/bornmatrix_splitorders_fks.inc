@@ -531,17 +531,11 @@ C ----------
 C BEGIN CODE
 C ----------
       jamp(:,:) = (0d0,0d0)
+      borns(:,:) =0d0
+      ans(:,:) = (0d0, 0d0)
+
       glu_ij = ij_values(nfksprocess)
       if (force_ijglu_zero) glu_ij = 0
-
-      DO I = 1, NSQAMPSO
-        ANS(1,I)=0D0
-        ANS(2,I)=0D0
-        borns(1,I)=0d0
-        borns(2,I)=0d0
-      ENDDO
-      borns(1,0)=0d0
-      borns(2,0)=0d0
       if (glu_ij.ne.0) then
         back_hel = nhel(glu_ij)
         if (back_hel.ne.0) then
@@ -596,14 +590,11 @@ C ----------
             CF_INDEX = CF_INDEX + 1
             ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
-	  DO N = 1, NAMPSO
+	      DO N = 1, NAMPSO
               BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))   
           ENDDO
         ENDDO
-        DO N = 1, NAMPSO
-             BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))/DENOM
-        ENDDO
-        ENDDO
+    ENDDO
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
         Enddo
@@ -615,10 +606,11 @@ C ----------
         ENDDO
       endif
       Enddo
+      borns(:,:) = borns(:,:)/DENOM
       do i = 1, nsqampso
       borns(1,0)=borns(1,0)+borns(1,i)
       borns(2,0)=borns(2,0)+borns(2,i)
-      ans(1,i) = borns(1,i) + borns(2,i) 
+      ans(1,i) = borns(1,i) + borns(2,i)
       enddo
       DO M = 1, NAMPSO
       CF_INDEX = 0
@@ -632,10 +624,8 @@ C ----------
         ENDDO
       ENDDO
 
-      DO N = 1, NAMPSO
-      ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/(2d0*DENOM)
       ENDDO
-      ENDDO
+      ANS(2,:) = ANS(2,:)/(2d0*DENOM)
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END
        

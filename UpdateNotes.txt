@@ -1,10 +1,39 @@
     Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-ANNOUNCEMENT: 
-   2.9.X version as a LONG TERM STABLE has now an end of life for bug fixing/support in december 2025.
-   A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.6.4
+3.7.0 (05/01/26):
+    RR: When carrying out parameter scans in MadGraph/MadEvent or MG5aMC@NLO with systematics (use_syst True or reweight_scale/pdf True), then the uncertain information is also recorded in the scan summary.
+    RR: Enhance the equivalent vector approximation (EVA) implementation by adding full leading-power and next-to-leading-power accuracy modes, plus an optional xcut kinematic restriction, refactor core routines in both Fortran and Python, and introduce new (hidden by default) run_card parameters 'eva_xcut'to enable or disable the kinematic restriction x>MV/Ebeam in EVA.
+    LS: Support for NLO calculations in ultra-peripheral collision (UPC) processes (see arXiv:2504.10104)
+       Details: Introduce tagged initial-state photon (with symbol !a!) to denote coherent incoming photons in UPCs
+       → Prevents generation of ISR diagrams involving initial-state fermion splitting
+       → When QED corrections are requested, adopt the hybrid renormalization scheme (same as for tagged final-state photons)
+       → For Born processes containing jets j, replace coherent photons !a! with the multiparticle aUPC, which includes all jet fermions plus the photon, ensuring all underlying Born diagrams required for subtraction are generated
+    SR: adding support for multi-gpu
+    
+
+3.6.7 (05/01/26):
+     ALL: include bug fix for 2.9.x LTS (latest bug fix for that LTS: 2.9.27) and from the new LTS 3.5.12
+     OM: improvement of the help command (the manual) for the set command.
+         Now any "set" command has it's own help via "help set <name>"
+     GabrielMajeri: Add support for pigz (parralel version of gzip) speeding up the code 
+     jakobnov: Adding support for checkpointing at NLO (with DMTCP), see "help set checkpointing" for details.
+     MZ: Fix another issue with the color matrix (introduced in 3.6.2) for computation with interference term
+     OM: fix a crash for loop-induced (related to the dilog function defined twice --introduced in 3.6.6--
+
+3.6.6 (30/10/25):
+     OM: Fix serious bug on the lhe writting of events where some intermediate particle were wrongly written in the file.
+     OM: change in default restriction for coupling order for BSM (closer to 2.9.x behaviour)
+     OM: new plugin feature: possibility to customize the entry in the scan summary file
+     OM: Fix the support of some electron/muon PDF at LO
+     OM: User using git will now have the git version/tag printed in the banner of MG5aMC instead of a warning
+    
+3.6.5 (17/10/25):
+     MZ: Ensure that the code is crashing at NLO when the analysis contains a syntax error
+     OM: add a "compile" command at LO
+     OM: Fix a bug in the cudacpp where the color of the events was wrongly selected when writting the events into lhef file
+
+3.6.4 (13/9/25):
      RF: Fixed critical bug in FxFx merging, introduced in version 3.3.1. This resulted in too many negatively weighted events,
          and too many high-pT jets. Particularly relevant for merging with up to 2 or 3 jets at NLO. Thanks to Lenart Jerala
 	 for pointing this out and testing the fixes.
@@ -50,12 +79,24 @@ ANNOUNCEMENT:
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
 
-||||||| e0af2abf7
-=======
-3.5.10(12/9/25):
-  ALL: Include fix from LTS 2.9.25 (see details below)
+3.5.13 (05/01/26):
+  VD: fixing issue with custom functions that moving back to no custom functions was not correctly recompiling the code.
+  OM: change f2py interface to make madspin/reweighting compatible both above and below python3.12
+  OM: merge with the lastest version of the 2.9.x LTS (2.9.27) 
+      in particular fix a bug for event with discarded overweight (with RF)
 
->>>>>>> 3.5.10
+3.5.12 (30/10/25):
+  OM: Change in gensym to better determine which channel have impossible BW configuration. This removes many spurious warning.
+  OM: include bug fixing from LTS (2.9.26) --see below --
+
+3.5.11 (19/9/25):
+  RF: Fixed critical bug in FxFx merging, introduced in version 3.3.1. This resulted in too many negatively weighted events,
+      and too many high-pT jets. Particularly relevant for merging with up to 2 or 3 jets at NLO. Thanks to Lenart Jerala
+	  for pointing this out and testing the fixes.
+
+3.5.10 (13/9/25):
+  All: propagate bug fixing from 2.9.x version (up to 2.9.25)
+
 3.5.9 (4/6/25):
   OM: Fixed an issue in fixed_fact_scale when set to T where sometimes some beam where kept on False (in assymetric beam context)
   OM: Fixed a wrong scale assignment when beam#2 was dynamic but beam#1 was static (at LO)
@@ -269,6 +310,21 @@ ANNOUNCEMENT:
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
+
+2.9.27 (05/01/26): LAST Bug fix for that LTS version
+   OM+RF: Fix an issue where overweight were discarded leading to some under-estimation 
+          of the tail (and of the error) 
+   OM: fix madspin onshell in the computation of the BR when multiple decay was present
+   OM: correct an issue with exrootanalysis when event file was deleted due to an unhandle flag on how file was unzip
+   OM: add warning message for python37,3.8,3.9
+   Alexander Puck Neuwirth: Fix quotes and permissions in PYTHIA8 script
+
+2.9.26 (30/10/25):
+  OM: setup the code to not print the python3.12 syntax warning anymore (still printed in debug mode)
+  OM: fix card edition issue when combining "set" and "edit" command
+  OM: fix some additional issue related to GCC15
+
 
 2.9.25 (11/9/25):
   OM: (thanks to SungBeom Cho) crash when running  multi_run during the merging of multiple lhe file if 

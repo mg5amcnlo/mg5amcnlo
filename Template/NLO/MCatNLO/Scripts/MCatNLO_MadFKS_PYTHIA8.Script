@@ -228,20 +228,20 @@ export PYTHIA8LOCATION=$PY8PATH
 
 # check the PYTHIA8 version by the position of certain files
 
-if [ ! -d $PYTHIA8LOCATION/xmldoc ]
+if [ ! -d "$PYTHIA8LOCATION/xmldoc" ]
 then
-  if [ -f $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml ]
+  if [ -f "$PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml" ]
   then
     while read line; do
     if [[ $line == *"Pythia:versionNumber"*"8.2"* ]]; then PY8VER="8.2" ; echo ' USING PYTHIA 8.2xy' ; fi
     if [[ $line == *"Pythia:versionNumber"*"8.3"* ]]; then PY8VER="8.3" ; echo ' USING PYTHIA 8.3xy' ; fi
-    done < $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml
+    done < "$PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml"
   else
     echo "Cannot determine Pythia8 version, stopping run"
     exit -1
   fi
-  chmod +x $PYTHIA8LOCATION/bin/pythia8-config
-  read HEPMCINCLIB <<< $($PYTHIA8LOCATION/bin/pythia8-config --hepmc2)
+  [ -x "$PYTHIA8LOCATION/bin/pythia8-config" ] || chmod +x "$PYTHIA8LOCATION/bin/pythia8-config"
+  read HEPMCINCLIB <<< $("$PYTHIA8LOCATION/bin/pythia8-config" --hepmc2)
 else
   PY8VER="8.1"
   echo ' USING PYTHIA 8.1xy'
@@ -321,7 +321,7 @@ elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 3 ]; then iA=-11; elif [ $BE
 elif [ $BEAM1 == -2 ]; then iA=-2112; else echo "Unrecognized incoming beam 1";
 exit 1; fi
 if [ $BEAM2 == 1 ]; then iB=2212; elif [ $BEAM2 == -1 ]; then iB=-2212;
-elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 3 ]; then iB=11; elif [ $BEAM1 == 4 ]; then iA=13; elif [ $BEAM2 == 2 ]; then iB=2112;
+elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 3 ]; then iB=11; elif [ $BEAM2 == 4 ]; then iB=13; elif [ $BEAM2 == 2 ]; then iB=2112;
 elif [ $BEAM2 == -2 ]; then iB=-2112; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
@@ -374,11 +374,29 @@ Next:numberShowEvent = $MAXPR_PY8     ! print event record n times
 Stat:showProcessLevel = on            ! Process statistics
 Stat:showErrors = on                  ! Error statistics
 Check:epTolErr = 0.001                ! Momentum-conservation tolerance 
+EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+Check:event = off
+EOF
+fi
+
+cat <<EOF >> $ifile
 
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
 EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+BeamRemnants:unresolvedHadron = 3  ! Beam settings for UPC processes
+PartonLevel:Remnants = off         ! No beam remnants in UPC processes
+EOF
+fi
 
 # set tune for ee
 #if [ $TUNE_EE -lt -1 ]
@@ -544,6 +562,16 @@ TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
 
 ! 6) Initial-state shower.
+EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+PartonLevel:ISR = off              ! No initial-state radiation for UPC processes
+EOF
+fi
+
+cat <<EOF >> $ifile
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
 SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
@@ -881,4 +909,3 @@ fi
 #                                   ! it is already off if MEcorrections = off
 #SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first emission
 #                                   ! it is already off if MEcorrections = off
-

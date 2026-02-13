@@ -563,7 +563,12 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 # set all the other coupling to zero
                 for o in myprocdef['model'].get_coupling_orders():
                     if o not in ['QED', 'QCD']:
-                        orders[o] = 0
+                        if self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QCD']:
+                            orders[o] = 2*qcd
+                        elif self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QED']:
+                            orders[o] = 2*qed
+                        else:
+                            orders[o] = 0
 
                 myprocdef.set('squared_orders', orders)
                 # warn the user of what happened
@@ -571,14 +576,24 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                 'If this is not what you need, please regenerate with the correct orders.'), 
                                 ' '.join(['%s^2<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
                                 '$MG:BOLD')
-            else:
+            else: 
                 orders = {'QED': qed, 'QCD': qcd}
                 sqorders = {'QED': 2*qed, 'QCD': 2*qcd}
                 # set all the other coupling to zero
                 for o in myprocdef['model'].get_coupling_orders():
                     if o not in ['QED', 'QCD']:
-                        orders[o] = 0
-                        sqorders[o] = 0
+                        if self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QCD']:
+                            orders[o] = qcd
+                            sqorders[o] = 2*qcd
+                        elif self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QED']:
+                            orders[o] = qed
+                            sqorders[o] = 2*qed
+                        elif o in self._curr_model.get('expansion_order') and self._curr_model.get('expansion_order')[o]<50:
+                            orders[o] = self._curr_model.get('expansion_order')[o]
+                            sqorders[o] = 2*self._curr_model.get('expansion_order')[o]
+                        else:
+                            orders[o] = 0
+                            sqorders[o] = 0
 
                 myprocdef.set('orders', orders)
                 myprocdef.set('squared_orders', sqorders)

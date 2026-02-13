@@ -417,3 +417,18 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
 
         output = self.cmd.get_final_part('p p > 2Z{L} j, Z > e+ e-')
         self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11]))         
+
+
+class TestModel_interface(unittest.TestCase):
+    """ check if the ValidCmd works correctly """
+
+
+    def test_startfromalpha0_attribute(self):
+        """ check that the startfromalpha0 attribute is correctly set in the model """
+
+        self.cmd = cmd.MasterCmd()
+        self.cmd.exec_cmd('import model sm')
+        self.assertFalse(self.cmd._curr_model.get('startfromalpha0'))
+
+        self.cmd.exec_cmd('import model loop_qcd_qed_sm_a0')
+        self.assertTrue(self.cmd._curr_model.get('startfromalpha0'))

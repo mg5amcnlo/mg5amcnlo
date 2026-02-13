@@ -658,6 +658,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'syscalc_path': './SysCalc',
                        'rivet_path': None,
                        'yoda_path': None,
+                       'dmtcp': None,
                        'lhapdf': 'lhapdf-config',
                        'lhapdf_py2': None,
                        'lhapdf_py3': None,
@@ -668,10 +669,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
+                       'use_pigz':None,
                        'fortran_compiler':None,
                        'cpp_compiler': None,
                        'auto_update':7,
+                       'checkpointing': False,
                        'cluster_type': 'condor',
+                       'cluster_vacatetime': '120',
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
                        'cluster_local_path': None,
@@ -749,6 +753,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.ninitial = int(found.group(1))
         else:
             self.ninitial = self.proc_characteristics['ninitial']
+
+        if self.options['checkpointing'] and \
+         ('dmtcp' not in self.options or not self.options['dmtcp']):
+            if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
+                self.options['dmtcp'] = pjoin(self.options['mg5_path'], 'HEPTools', 'DMTCP')
+            else:
+                from madgraph import MG5DIR
+                self.options['dmtcp'] = pjoin(MG5DIR, 'HEPTools', 'DMTCP')
 
     def make_make_all_html_results(self, folder_names = [], jobs=[], get_attr=None):
         return sum_html.make_all_html_results(self, folder_names, jobs, get_attr)
@@ -2002,7 +2014,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if 'event_norm' in self.run_card and \
                                        self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
-                
+
 
             sys_obj = systematics.call_systematics([input, None] + opts,
                                         log=lambda x: logger.info(str(x)),
@@ -2011,13 +2023,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         )
 
             sys_obj.print_cross_sections(all_cross, nb_event, result_file)
+            if result_file is not sys.stdout:
+                result_file.close()
 
             #concatenate the output file
             subprocess.call(['cat']+\
                             ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
                             stdout=open(output,'w'),
                             cwd=os.path.dirname(output))
-                
+
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
@@ -3562,7 +3576,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('run_mode should be 0, 1 or 2.')
             self.cluster_mode = int(args[1])
             self.options['run_mode'] =  self.cluster_mode
-        elif args[0] in  ['cluster_type', 'cluster_queue', 'cluster_temp_path']:
+        elif args[0] in  ['cluster_type', 'cluster_queue', 'cluster_temp_path', 'cluster_vacatetime']:
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
@@ -3842,7 +3856,50 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """return the information that need to be kept for the scan summary.
         Auto-width are automatically added."""
         
-        return {'cross': self.results.current['cross'], 'error': self.results.current['error']}
+        # try retrieving sys info for scan
+        try:
+            extraMUX, extraPDF = self.getSysSummaryFromLog(kpath=pjoin(self.me_dir, 'Cards', 'param_card.dat'),knext_name=self.run_name)                   
+            logger.info("Storing scale/PDF variation for scan summary %s" % self.run_name)
+        except AssertionError as err:
+            logger.debug(str(err))
+            logger.info("Not collecting scale/PDF variation for scan summary")
+            extraMUX, extraPDF = [], []
+        except Exception as err:
+            logger.debug(str(err))
+            logger.info("Failed to collect scale/PDF variation for scan summary from %s. Setting individual variations to zero." % self.run_name)
+            extraMUX, extraPDF = [], []
+
+
+        base_result = {'cross': self.results.current['cross'], 'error': self.results.current['error']}
+
+        # add scale variation if available
+        if len(extraMUX)==2:
+            mux_result = {'scale_hi_percent' : extraMUX[0], 'scale_lo_percent' : extraMUX[1]}
+        else:
+            mux_result = {}
+        base_result.update(mux_result)
+
+        try:
+            custom_scan = misc.plugin_import('custom_scan',
+                                             'custom scan entry can be defined in custom_scan.py via the function custom_store_scan_result',
+                                             fcts=['custom_store_scan_result'])
+        except Exception as e:
+            custom_scan = None
+               
+        if custom_scan:
+            try:
+                base_result.update(custom_scan(self))
+            except Exception as e:
+                logger.error('Error while adding custom scan results: %s: %s',type(e), e)
+
+        # add pdf variation if available
+        if len(extraPDF)==2:
+            pdf_result = {'pdf_hi_percent' : extraPDF[0], 'pdf_lo_percent' : extraPDF[1]}
+        else:
+            pdf_result = {}
+        base_result.update(pdf_result)
+
+        return base_result
 
 
     def add_error_log_in_html(self, errortype=None):
@@ -4078,7 +4135,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if self.options[key] in ['False', 'True']:
                     self.allow_notification_center =ast.literal_eval(self.options[key])
                     self.options[key] =ast.literal_eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+            elif key not in ['text_editor','eps_viewer','use_pigz','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
                 try:
@@ -4089,6 +4146,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
+        
+        # Configure the way to compress a file:
+        misc.configure_gzip(self.options)
 
         # update the path to the PLUGIN directory of MG%
         if MADEVENT and 'mg5_path' in self.options and self.options['mg5_path']:
@@ -6432,14 +6492,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception("Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\".")
             
-            # check for nhel if using eva
-            if  self.run_card['pdlabel']  == 'eva' or \
-                self.run_card['pdlabel1'] == 'eva' or \
-                self.run_card['pdlabel2'] == 'eva':
+            # check for nhel if using eva/ieva
+            if  (self.run_card['pdlabel']  in  ['eva']) or \
+                (self.run_card['pdlabel1'] in  ['eva']) or \
+                (self.run_card['pdlabel2'] in  ['eva']) :
                 logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
 
                 if self.run_card['nhel'] == 0:
-                    logger.warning("EVA mode requies MC sampling by polarization: updating run_card with nhel=1")
+                    logger.warning("EVA mode requires MC sampling by polarization: updating run_card with nhel=1")
                     self.do_set('run_card nhel 1')
 
             # check the status of small width status from LO
@@ -7384,7 +7444,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if card in self.modified_card:
                 self.write_card(card)
                 self.modified_card.discard(card)
-                
+            elif os.path.basename(card.replace('_card.dat','')) in self.modified_card:
+                self.write_card(os.path.basename(card.replace('_card.dat','')))
+                self.modified_card.discard(os.path.basename(card.replace('_card.dat','')))
+                card = os.path.basename(card.replace('_card.dat',''))
+
             if card in self.paths:
                 path = self.paths[card]
             elif os.path.exists(card):
@@ -7411,6 +7475,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
@@ -7422,6 +7487,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
                 
@@ -7429,12 +7495,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # write the line at the first not commented line
                 text = open(path).read()
                 split = text.split('\n')
+                posline = -1
                 for posline,l in  enumerate(split):
                     if not l.startswith('#'):
                         break
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = posline
                 
@@ -7445,6 +7513,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7457,13 +7526,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
                 if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
                     new_line = re.split(search_pattern,new_line)[-1]
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
@@ -7476,6 +7546,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
                 nb_mod = 0
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         split[posline] = '#%s' % l
@@ -7487,6 +7558,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('no line commented (no line matching)')
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
                 self.last_editline_pos = posline               
 
@@ -7497,6 +7569,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[13:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7505,7 +7578,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                
+                ff.close()
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
@@ -7514,6 +7588,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[12:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7522,8 +7597,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                                 
                 self.last_editline_pos = posline+1
                                                  
             else:
@@ -7869,7 +7945,6 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
             order = summaryorder(obj)()
             run_card_iterator.write_summary(path, order=order) 
 
-
     def decorator(original_fct):        
         def new_fct(obj, *args, **opts):
             
@@ -7901,7 +7976,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                     #first run of the function
                     original_fct(obj, *args, **opts)
                     return
-            
+
             with restore_iterator(param_card_iterator, card_path):
                 # this with statement ensure that the original card is restore
                 # whatever happens inside those block
@@ -7915,6 +7990,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                     set_run_name(obj)(next_name)
                     # run for the first time
                     original_fct(obj, *args, **opts)
+                    # store xsec and unc
                     param_card_iterator.store_entry(next_name, store_for_scan(obj)(), param_card_path=card_path)
                     for card in param_card_iterator:
                         card.write(card_path)

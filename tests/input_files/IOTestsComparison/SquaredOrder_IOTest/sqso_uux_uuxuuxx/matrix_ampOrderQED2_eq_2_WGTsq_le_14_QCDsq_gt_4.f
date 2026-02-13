@@ -594,7 +594,7 @@ C     JAMPs contributing to orders WEIGHTED=4 QCD=4
      $ -2.777777777777778D-02)*TMP_JAMP(51)+(-2.500000000000000D-01)
      $ *TMP_JAMP(54)
 
-      RES = 0.D0
+      RES(:) = 0.D0
       DO M = 1, NAMPSO
         CF_INDEX= 0
         DO I = 1, NCOLOR
@@ -608,10 +608,8 @@ C     JAMPs contributing to orders WEIGHTED=4 QCD=4
      $       *DCONJG(JAMP(I,N)))
           ENDDO
         ENDDO
-        DO N = 1, NAMPSO
-          RES(SQSOINDEX(M,N)) = RES(SQSOINDEX(M,N))/DENOM
-        ENDDO
       ENDDO
+      RES(:) = RES(:)/DENOM
       END
 
       SUBROUTINE GET_VALUE(P, ALPHAS, NHEL ,ANS)

@@ -284,12 +284,21 @@ def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #t
                         nsoft += 1
                 if nsoft >= 1:
                     for split in split_leg(leg, parts, model):
-                        # check if the leg is tagged, that 
+                        # check if a final-state leg is tagged, that
                         # the same particles appear also in the two daughters
                         if 'is_tagged' in leg.keys() and leg['is_tagged'] and \
+                           leg['state'] and \
                            leg['id'] != split[0]['id'] and \
                            leg['id'] != split[1]['id']:
                             continue
+
+                        # UPC: only photon -> f fbar initial splitting is allowed
+                        if 'is_tagged' in leg.keys() and leg['is_tagged'] and \
+                            not leg['state'] and leg['id'] != 22:
+                            if (split[0]['id'] == 22 and split[0]['state']):
+                                continue
+                            if (split[1]['id'] == 22 and split[1]['state']):
+                                continue
 
                         # add the splitting, but check if there is 
                         # an initial-state lepton if the flag
@@ -887,6 +896,3 @@ class FKSLeg(MG.Leg):
                 raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \
                     % str(value))                                                           
         return super(FKSLeg,self).filter(name, value)
-    
-     
-

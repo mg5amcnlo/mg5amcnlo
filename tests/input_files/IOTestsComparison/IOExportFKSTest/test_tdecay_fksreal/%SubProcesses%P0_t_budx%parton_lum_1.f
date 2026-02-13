@@ -33,6 +33,10 @@ C
       INTEGER I, ICROSS,LP
 
 C     
+C     STUFF FOR UPC
+C     
+      DOUBLE PRECISION PHOTONPDFSQUARE
+C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     

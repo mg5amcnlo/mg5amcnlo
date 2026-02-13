@@ -204,9 +204,8 @@ C     JAMPs contributing to orders QCD=2 QED=0
       JAMP1(1,1) = (-1.666666666666667D-01)*AMP1(1)
       JAMP1(2,1) = (5.000000000000000D-01)*AMP1(1)
 
-      DO I = 1, NSQAMPSO
-        ANS(I) = (0D0,0D0)
-      ENDDO
+      ANS(:) = (0D0,0D0)
+
 
 C     Reshuffle the momenta here
       P_SAVE(:,:) = P(:,:)
@@ -245,12 +244,9 @@ C     Finally interfere the two sets of color-stripped amplitudes
           DO J = 1, NCOLOR2
             ZTEMP = ZTEMP + CF(J,I)*JAMP2(J,M)
           ENDDO
-          DO N = 1, NAMPSO
-            ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))/DENOM
-          ENDDO
         ENDDO
       ENDDO
+      ANS(:) = ANS(:) /DENOM
 C     C NOT NEEDED
 C     include the imaginary factor if needed
 C     if (imag_power.ne.0) ans(:) = ans(:) * imag1**imag_power 

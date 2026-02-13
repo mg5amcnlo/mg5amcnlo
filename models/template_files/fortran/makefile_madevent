@@ -16,6 +16,7 @@ include makeinc.inc
 
 LIBDIR=../../lib/
 LIBRARY=libmodel.$(libext)
+LIBRARY_SHARED=libmodel.$(dylibext)
 RUNNING = ../alfas_functions.o ../RUNNING/matrix_exponential.o ../RUNNING/c8lib.o  ../RUNNING/r8lib.o
 
 all: $(LIBDIR)$(LIBRARY) ../param_card.inc
@@ -35,9 +36,13 @@ $(LIBRARY): $(MODEL)
 	ar cru $(LIBRARY) $(MODEL)
 	ranlib $(LIBRARY)
 
+$(LIBDIR)$(LIBRARY_SHARED): $(MODEL)
+	$(FC) -shared -o $@ $^ $(LDFLAGS)
+
 $(LIBDIR)$(LIBRARY): $(MODEL)
 	$(call CREATELIB, $@, $^)
 
+shared:  $(LIBDIR)$(LIBRARY_SHARED)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 

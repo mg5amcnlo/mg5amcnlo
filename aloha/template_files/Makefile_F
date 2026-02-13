@@ -14,18 +14,26 @@
 include ../make_opts
 
 LIBRARY	= libdhelas.$(libext)
+LIBRARY_SHARED	= libdhelas.$(dylibext)
 LIBDIR  = ../../lib/
 
 BASIC_OBJS = aloha_functions.o
 
-FFLAGS += $(ALOHA_FLAG)
+FFLAGS += -fPIC $(ALOHA_FLAG)
 
 include ./aloha_file.inc
 
-all: $(LIBDIR)$(LIBRARY)
 
 $(LIBDIR)$(LIBRARY): $(BASIC_OBJS) $(ALOHARoutine)
 	$(call CREATELIB, $@, $^)
 
+# Shared library (optional)
+$(LIBDIR)$(LIBRARY_SHARED): $(BASIC_OBJS) $(ALOHARoutine)
+	$(FC) -shared -o $@ $^ $(LDFLAGS)
+
+shared:  $(LIBDIR)$(LIBRARY_SHARED)
+
 clean:
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
+	
+all: $(LIBDIR)$(LIBRARY)

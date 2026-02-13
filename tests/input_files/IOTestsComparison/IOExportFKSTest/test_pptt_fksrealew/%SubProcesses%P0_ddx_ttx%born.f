@@ -597,17 +597,11 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       JAMP(:,:) = (0D0,0D0)
+      BORNS(:,:) =0D0
+      ANS(:,:) = (0D0, 0D0)
+
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       IF (FORCE_IJGLU_ZERO) GLU_IJ = 0
-
-      DO I = 1, NSQAMPSO
-        ANS(1,I)=0D0
-        ANS(2,I)=0D0
-        BORNS(1,I)=0D0
-        BORNS(2,I)=0D0
-      ENDDO
-      BORNS(1,0)=0D0
-      BORNS(2,0)=0D0
       IF (GLU_IJ.NE.0) THEN
         BACK_HEL = NHEL(GLU_IJ)
         IF (BACK_HEL.NE.0) THEN
@@ -686,10 +680,6 @@ C         JAMPs contributing to orders QCD=0 QED=2
      $           *DCONJG(JAMP(I,N))
               ENDDO
             ENDDO
-            DO N = 1, NAMPSO
-              BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2-(1
-     $         +BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))/DENOM
-            ENDDO
           ENDDO
           DO I = 1, NGRAPHS
             AMP2(I)=AMP2(I)+AMP(I)*DCONJG(AMP(I))
@@ -702,6 +692,7 @@ C         JAMPs contributing to orders QCD=0 QED=2
           ENDDO
         ENDIF
       ENDDO
+      BORNS(:,:) = BORNS(:,:)/DENOM
       DO I = 1, NSQAMPSO
         BORNS(1,0)=BORNS(1,0)+BORNS(1,I)
         BORNS(2,0)=BORNS(2,0)+BORNS(2,I)
@@ -721,10 +712,8 @@ C         JAMPs contributing to orders QCD=0 QED=2
           ENDDO
         ENDDO
 
-        DO N = 1, NAMPSO
-          ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N))/(2D0*DENOM)
-        ENDDO
       ENDDO
+      ANS(2,:) = ANS(2,:)/(2D0*DENOM)
       IF (GLU_IJ.NE.0) NHEL(GLU_IJ) = BACK_HEL
       END
 

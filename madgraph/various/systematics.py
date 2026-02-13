@@ -129,7 +129,7 @@ class Systematics(object):
         isEVA=False
         isEVAxDIS=False
         # eva-on-eva or eva-on-parton
-        if self.banner.run_card['pdlabel']=='eva':      
+        if self.banner.run_card['pdlabel'] in ['eva']:
             if (abs(beam1) == 11 or abs(beam1) == 13) and self.banner.run_card['lpp1'] != 0:
                 self.b1 = beam1
             else:
@@ -147,7 +147,7 @@ class Systematics(object):
             isEVA=True
             pdf='0'
         # eva-on-DIS(lhapdf)
-        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf'):
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1'] in ['eva']) and (self.banner.run_card['pdlabel2']=='lhapdf'):
             if abs(beam1) == 11 or abs(beam1) == 13:
                 self.b1 = beam1
             else:
@@ -155,7 +155,7 @@ class Systematics(object):
             #self.b2 = beam2//2212
             isEVAxDIS=True
         # DIS(lhapdf)-on-eva
-        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva'):
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf') and (self.banner.run_card['pdlabel2'] in ['eva']):
             if abs(beam2) == 11 or abs(beam2) == 13:
                 self.b2 = beam2
             else:
@@ -489,12 +489,12 @@ class Systematics(object):
         for i,arg in enumerate(self.args):
             
             to_print = list(arg)
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva']:
                 to_print[4] = 0
             else:
                 to_print[4] = to_print[4].lhapdfID
 
-            to_print.append(all_cross[i])  
+            to_print.append(all_cross[i])
             to_report = []  
             stdout.write('%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s\n' % tuple(to_print)) 
             
@@ -526,7 +526,7 @@ class Systematics(object):
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
-            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and self.banner.run_card['pdlabel']!='eva':
+            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and (self.banner.run_card['pdlabel'] not in ['eva']):
                 pdfset = pdf.set()
                 if pdfset.lhapdfID in self.pdfsets:
                     if pdfset.lhapdfID not in pdfs :
@@ -548,7 +548,7 @@ class Systematics(object):
             resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
-        if self.banner.run_card['pdlabel']=='eva':
+        if self.banner.run_card['pdlabel'] in ['eva']:
             resume.write( '# PDF variation not available for EVA.\n')
         elif self.orig_pdf.lhapdfID in pdfs:
             lhapdfid = self.orig_pdf.lhapdfID
@@ -636,7 +636,7 @@ class Systematics(object):
                 text += "</weightgroup> # ALPS\n"
                 in_alps=False
             
-            if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
+            if mur == muf == 1 and dyn==-1 and alps ==1 and  (self.banner.run_card['pdlabel'] not in ['eva']):
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
@@ -680,7 +680,7 @@ class Systematics(object):
                 tag += 'DYN_SCALE="%s" ' % dyn
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva']:
                 tag += 'PDF="%s" ' % 0                
             elif pdf != self.orig_pdf:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
@@ -761,7 +761,7 @@ class Systematics(object):
                 info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva']:
                 info += 'PDF=%s MemberID=%s' % (0,0)
             elif pdf != self.orig_pdf:
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
@@ -776,7 +776,7 @@ class Systematics(object):
                 tags.append('ALPSFACT="%s" ' % alps)
             if dyn!=-1.:
                 tags.append('DYN_SCALE="%s" ' % dyn)
-            if self.banner.run_card['pdlabel']=='eva':
+            if self.banner.run_card['pdlabel'] in ['eva']:
                 tags.append('PDF="%s" ' % 0)
             else:
                 tags.append('PDF="%s" ' % pdf.lhapdfID)
@@ -823,14 +823,14 @@ class Systematics(object):
         self.args = [default] + [arg for arg in all_args if arg!= default]
 
         # add the default before the pdf scan to have a full grouping
-        if self.banner.run_card['pdlabel']!='eva': 
+        if self.banner.run_card['pdlabel'] not in ['eva']:
             pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
             if pdfplusone:
                 pdfplusone = default[:-1] + [pdfplusone[0]] 
                 index = self.args.index(pdfplusone)
                 self.args.insert(index, default)
 
-        self.log( "# Will Compute %s weights per event." % (len(self.args)-1))
+        self.log( "# Will compute %s weights per event." % (len(self.args)-1))
         return
     
     def new_event(self):
@@ -975,7 +975,7 @@ class Systematics(object):
                 loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
 
         # MUR part
-        if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
+        if self.b1 == 0 == self.b2 or (self.banner.run_card['pdlabel'] in ['eva']):
             if loinfo['n_qcd'] != 0:
                 wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
             else:
@@ -985,34 +985,38 @@ class Systematics(object):
 
         # MUF/PDF part
         if self.b1 and muf1 :
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel1']=='eva':
+            if (self.banner.run_card['pdlabel']  in ['eva']) or \
+               (self.banner.run_card['pdlabel1'] in ['eva']):
                 vPol = event[0].helicity
                 vPID = event[0].pid
-                ievo = self.banner.run_card['ievo_eva']
-                if ievo != 0 and len(loinfo['pdf_x1']) != 1:
+                ievo_eva = self.banner.run_card['ievo_eva']
+                evaorder = self.banner.run_card['evaorder']
+                if ievo_eva != 0 and len(loinfo['pdf_x1']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
-                xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
+                xx = loinfo['pdf_x1'][-1] # ignored if ievo_eva=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
+                    ebeam1 = self.banner.run_card['ebeam1']
+                    wgt *= self.get_eva_scale_wgt_by_vx(Dmuf*muf1,vPID,self.b1,vPol,xx,ebeam1,ievo_eva,evaorder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel2']=='eva':
+            if (self.banner.run_card['pdlabel']  in ['eva']) or \
+               (self.banner.run_card['pdlabel2'] in ['eva']):
                 vPol = event[1].helicity
                 vPID = event[1].pid
-                ievo = self.banner.run_card['ievo_eva']
-                if ievo != 0 and len(loinfo['pdf_x2']) != 1:
+                ievo_eva = self.banner.run_card['ievo_eva']
+                evaorder = self.banner.run_card['evaorder']
+                if ievo_eva != 0 and len(loinfo['pdf_x2']) != 1:
                     raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
-                xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
+                xx = loinfo['pdf_x2'][-1] # ignored if ievo_eva=0
                 if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
+                    ebeam2 = self.banner.run_card['ebeam2']
+                    wgt *= self.get_eva_scale_wgt_by_vx(Dmuf*muf2,vPID,self.b2,vPol,xx,ebeam2,ievo_eva,evaorder)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:
-            if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
+            if self.b1 == 0 == self.b2 or (self.banner.run_card['pdlabel'] in ['eva']):
                 wgt = self.alpsrunner(Dalps*scale)
             else:
                 wgt *= pdf.alphasQ(Dalps*scale)
@@ -1101,37 +1105,185 @@ class Systematics(object):
         return wgt
 
 
-    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
-        if abs(vPol) == 1:
-            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-        elif vPol == 0:
-            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+    def get_eva_scale_wgt_by_vx(self, muf, vPID, fPID, vPol, xx, beam, ievo_eva=0, evaorder=0):
+        if(vPol==0):
+            assert (abs(vPID) not in [7,22]), "Invalid photon polarization: vPol=%i but vPID=%i (should never be here!)" % (vPol,vPID)
+            return self.get_eva_stripped_pdf_v0(muf,vPID,fPID,xx,beam,ievo_eva,evaorder)
+        elif(vPol==+1):
+            return self.get_eva_stripped_pdf_vp(muf,vPID,fPID,xx,beam,ievo_eva,evaorder)
+        elif(vPol==-1):
+            return self.get_eva_stripped_pdf_vm(muf,vPID,fPID,xx,beam,ievo_eva,evaorder)
         else:
-            raise SystematicsError("unknow EVA vPol %s " % vPol)
+            raise SystematicsError("unknow EVA vPol: %s " % vPol)
+        
+    # scale dependence of f_V+ according to EVA accuracy
+    def get_eva_stripped_pdf_vp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0, evaorder=0):
+        assert (evaorder in [0,1,2]), "Invalid evaorder: evaorder = %i (should never be here!)" % evaorder
+        if(vPID==22):       # only LLA supported for photon
+            return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        if(evaorder==2):    # next-to-leading power
+            return self.calc_eva_stripped_pdf_vm_nlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_vt_xlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, fPID, xx, ebeam, ievo_eva)
+    
+    # scale dependence of f_V- according to EVA accuracy
+    def get_eva_stripped_pdf_vm(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0, evaorder=0):
+        assert (evaorder in [0,1,2]), "Invalid evaorder: evaorder = %i (should never be here!)" % evaorder
+        if(vPID==22):       # only LLA supported for photon
+            return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        if(evaorder==2):    # next-to-leading power
+            return self.calc_eva_stripped_pdf_vp_nlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_vt_xlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_vt_lla(muf, vPID, fPID, xx, ebeam, ievo_eva)
+    
+    # scale dependence of f_V0 according to EVA accuracy
+    def get_eva_stripped_pdf_v0(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0, evaorder=0):
+        assert (evaorder in [0,1,2]), "Invalid evaorder: evaorder = %i (should never be here!)" % evaorder
+        if(evaorder==2):    # next-to-leading power
+            return self.calc_eva_stripped_pdf_v0_nlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        elif(evaorder==1):  # full leading power
+            return self.calc_eva_stripped_pdf_v0_xlp(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        else:               # leading log approximation (default)
+            return self.calc_eva_stripped_pdf_v0_lla(muf, vPID, fPID, xx, ebeam, ievo_eva)
+        
+    # scale dependence of f_V0 at LLA
+    def calc_eva_stripped_pdf_v0_lla(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV0^LLA * [4pi^2 z / g^2 gL^2 (1-z)]
+            # prefactor - none
+            # O(1) term - none
+            # log term - none
+            tmpOut = 1.0
+            return tmpOut
+    
+    # scale dependence of f_V0 at full LP
+    def calc_eva_stripped_pdf_v0_xlp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV0^LP * [4pi^2 z / g^2 gL^2] * 1/(1-z)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor - none
+            # O(1) term
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            # log term - none
+            # return
+            tmpOut = muOmumv
+            return tmpOut
+    
+    # scale dependence of f_V0 at full NLP
+    def calc_eva_stripped_pdf_v0_nlp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV0^NLP * [4pi^2 z / g^2 gL^2] * 1/(1-z)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            # prefactor
+            split = (2.0 - 2.0*xx + xx**2) / (1.0-xx) / 4 # = [1 + (1-z)^2]/4(1-z)
+            # O(1) term
+            mvOev   = mv2 / ev2
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            # log term
+            xxlog = math.log(mumvOmv)
+            # return
+            tmpOut = muOmumv - split*mvOev*(xxlog-muOmumv)
+            return tmpOut
+        
+    # scale dependence of f_V+ and f_V- at LLA
+    def calc_eva_stripped_pdf_vt_lla(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV+^LLA * (4pi^2 z / g^2 gL^2) * 2/(1-z)^2
+            # = fV-^LLA * (4pi^2 z / g^2 gL^2) * 2
+            mu2 = muf*muf
+            mu2Min = self.get_eva_mufMin_byPID(vPID, fPID)**2
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # evolution by q (ievo_eva=0) or pT (ievo_eva=1)
+            mu2Min = self.get_eva_mufMin_byPID(vPID,fPID)
+            mu2Min = mu2Min**2 if (ievo_eva==0) else (1.0-xx)*mu2Min**2
+            # prefactor - none
+            # O(1) term - none
+            # log term
+            try:
+                muOmv = mu2/mu2Min
+            except:
+                print('muf, vPID, xx, ebeam, ievo_eva',muf, vPID, xx, ebeam, ievo_eva)
+                print()
 
-    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        return 1e0
+                exit()
+            # return
+            tmpOut = math.log(muOmv)
+            return tmpOut
+    
 
-    def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
-        if ievo != 0:
-            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
-        if(mufMin<0):
-            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-        elif(muf < mufMin*1.001):
-            return 0e0
-        else:
-            return math.log(muf/mufMin) 
+    # scale dependence of f_V+ and f_V- at full LP
+    def calc_eva_stripped_pdf_vt_xlp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV+^LP * (4pi^2 z / g^2 gL^2) * 2/(1-z)^2
+            # = fV-^LP * (4pi^2 z / g^2 gL^2) * 2
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            # prefactor - none
+            # O(1) term
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            # return
+            tmpOut = math.log(mumvOmv) - muOmumv
+            return tmpOut
 
-    def call_eva_get_mufMin_byPID(self, vPID, fPID):
+
+    # scale dependence of f_V+ at full NLP
+    def calc_eva_stripped_pdf_vp_nlp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV+^NLP * [4pi^2 z / g^2 gL^2] * 2/(1-z)
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            # O(1) term
+            mvOev   = mv2 / ev2
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            muO2ev  = mu2 / ev2 / 2.0
+            # prefactor
+            tmpXLP1 = (1.0 - xx)    # this is the difference w.r.t. V-@nlp
+            tmpXLP2 = tmpXLP1
+            tmpNLP1 = (2.0 - xx)*mvOev
+            tmpNLP2 = tmpNLP1 + (2.0 - xx)*muO2ev
+            # log term
+            xxlog = math.log(mumvOmv)        
+            # return
+            tmpOut = (tmpXLP1 + tmpNLP1)*xxlog - muOmumv*(tmpXLP2 + tmpNLP2)
+            return tmpOut
+    
+    # scale dependence of f_V- at full NLP
+    def calc_eva_stripped_pdf_vm_nlp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0):
+            # = fV-^NLP * [4pi^2 z / g^2 gL^2] * 2
+            mu2 = muf*muf
+            mv2 = (self.get_eva_mv_by_PID(vPID))**2
+            ev2 = (xx*ebeam)**2
+            # O(1) term
+            mvOev   = mv2 / ev2
+            muOmumv = 1.0/(1.0 + mv2/mu2)
+            mumvOmv = 1.0 + mu2/mv2
+            muO2ev  = mu2 / ev2 / 2.0
+            # prefactor
+            tmpXLP1 = 1.0       # this is the difference w.r.t. V+@nlp
+            tmpXLP2 = tmpXLP1
+            tmpNLP1 = (2.0 - xx)*mvOev
+            tmpNLP2 = tmpNLP1 + (2.0 - xx)*muO2ev
+            # log term
+            xxlog = math.log(mumvOmv)        
+            # return
+            tmpOut = (tmpXLP1 + tmpNLP1)*xxlog - muOmumv*(tmpXLP2 + tmpNLP2)
+            return tmpOut
+         
+
+    def get_eva_mufMin_byPID(self, vPID, fPID):
         return {
-            7:  self.call_eva_get_mf_by_PID(fPID),
-            22: self.call_eva_get_mf_by_PID(fPID),
-            23: self.call_eva_get_mv_by_PID(vPID),
-            24: self.call_eva_get_mv_by_PID(vPID)
+            7:  self.get_eva_mf_by_PID(fPID),
+            22: self.get_eva_mf_by_PID(fPID),
+            23: self.get_eva_mv_by_PID(vPID),
+            24: self.get_eva_mv_by_PID(vPID)
         }.get(abs(vPID),-1)
 
-    def call_eva_get_mf_by_PID(self, fPID):
+    def get_eva_mf_by_PID(self, fPID):
         # these must be the same as in ElectroweakFlux.inc
         return {
             1:  4.67e-3,
@@ -1145,7 +1297,7 @@ class Systematics(object):
             15: 1.77686e0
         }.get(abs(fPID),-1)
 
-    def call_eva_get_mv_by_PID(self, vPID):
+    def get_eva_mv_by_PID(self, vPID):
         # these must be the same as in ElectroweakFlux.inc
          return {
             7:      0e0,

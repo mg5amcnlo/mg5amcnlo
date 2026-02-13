@@ -7,6 +7,13 @@ c to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      integer i
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
       integer orders(nsplitorders)
       integer iamp
 
@@ -37,6 +44,12 @@ c to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
+c     For UPC processes, we only need to fill the Born contribution for
+c     photon-photon initial state
+        if ((abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) 
+     &   .and. .not. (idup(1,1).eq.22 .and. idup(2,1).eq.22)) then
+          cycle
+        endif
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
 
@@ -1987,6 +2000,10 @@ C schemes; it is needed when there are tagged photons around
       scales2(1,icontr)=QES2
       scales2(2,icontr)=scale**2
       scales2(3,icontr)=q2fact(1)
+C for UPC processes set scale to Ellis-Sexton scale      
+      if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
+        scales2(3,icontr)=QES2
+      endif
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
@@ -2094,6 +2111,7 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
+      include 'q_es.inc'
       integer orders(nsplitorders)
       integer i,j,k,iamp,icontr_orig
       logical virt_found
@@ -2125,6 +2143,11 @@ c call to separate_flavour_config().
          mu2_f=scales2(3,i)
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
+c for UPC processes set scale to Ellis-Sexton scale      
+         if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
+            q2fact(1)=QES2
+            q2fact(2)=QES2
+         endif
 c call the PDFs
          xlum = dlum()
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
@@ -5055,6 +5078,11 @@ C the first entry in xkk is for QCD splittings, the second QED
       parameter (vca=3.d0)
       parameter (xnc=3.d0)
 
+      integer i_fks, j_fks
+      common/fks_indices/i_fks, j_fks
+      include "run.inc"
+      include "q_es.inc"
+
       include "coupl.inc"
 c
       if (PDFscheme.eq.0) then
@@ -5123,6 +5151,18 @@ c
           xkk(2)=ch2**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
         else
           xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.7) then
+        ! scheme for UPC photons (need to multiply 1-x in addition)
+        if (j_fks.gt.2) then
+          write(6,*)'Error in xkplus: wrong j_fks', j_fks
+          stop
+        endif
+        xkk(1)=0d0
+        if(dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0
+     $      .and.dabs(ch1).eq.dabs(ch2)) then ! gamma -> f^* (ch1) fbar (ch2)
+          xkk(2)=-abs(col1)*ch1**2*(1d0-x)*(x**2+(1d0-x)**2)
+     $        *dlog(QES2*xiAI(j_fks)**2*RAI(j_fks)**2)
         endif
       else
         write(6,*)'Error in xkplus: wrong PDF scheme', PDFscheme
@@ -5222,6 +5262,9 @@ c
         else
           xkk(:) = 0d0
         endif
+      elseif(PDFscheme.eq.7)then
+        ! scheme for UPC photons (NO need to multiply 1-x in addition)
+        xkk(:)=0d0
       else
         write(6,*)'Error in xklog: wrong PDF scheme', PDFscheme
         stop
@@ -5319,6 +5362,9 @@ c
         else
           xkk(:) = 0d0
         endif
+      elseif(PDFscheme.eq.7) then
+        ! scheme for UPC photons
+        xkk(:)=0d0
       else
         write(6,*)'Error in xkdelta: wrong PDF scheme', PDFscheme
         stop
@@ -5885,6 +5931,7 @@ C keep track of each split orders
       ! 4 -> mixed (leptonic)
       ! 5 -> nobeta (leptonic)
       ! 6 -> delta (leptonic)
+      ! 7 -> UPC
       if(firsttime_pdf) then
         write(*,*) 'PDFscheme' , pdfscheme
         firsttime_pdf = .false.
@@ -6068,7 +6115,7 @@ c       y(k)_lab = y(k)_tilde - ybst_til_tolab
 c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
 c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
 c c.m. frame respectively
-      ybst_til_tolab=-ycm_cnt(0)
+      ybst_til_tolab=-ycm_cnt(0)-0.5d0*log(ebeam(1)/ebeam(2))
       if(icountevts.eq.-100)then
 c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
         xbk(1)=xbjrk_ev(1)
@@ -7363,7 +7410,12 @@ c 1+2+3+4
           arg2=arg1*betai
           arg3=Ej
           arg4=arg3*betaj
+          if(vij.lt.1d0)then
           xi0=1/vij*log((1+vij)/(1-vij))
+          else
+             xi0=dlog(4d0*kikj**2/(xmi2*xmj2))
+          endif
+c          xi0=1/vij*log((1+vij)/(1-vij))
           xi1a=kikj**2*(1+vij)/xmi2*( xj1a(arg1,arg2,tHVv,tHVvl)-
      #                                xj1a(arg3,arg4,tHVv,tHVvl) )
 

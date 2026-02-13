@@ -1726,7 +1726,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
 
 
-    findcoupling = re.compile('pars->([-]*[\d\w_]+)\s*,')
+    findcoupling = re.compile(r'pars->([-]*[\d\w_]+)\s*,')
     usepointerforvertex = True
 
     def format_coupling(self, call):

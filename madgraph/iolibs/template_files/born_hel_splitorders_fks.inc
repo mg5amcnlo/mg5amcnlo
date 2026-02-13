@@ -200,9 +200,7 @@ C ----------
       enddo
       endif
 %(jamp_lines)s
-    DO I = 1, NSQAMPSO
-    ANS(I) = 0d0
-    ENDDO
+    ANS(:) = 0d0
     DO M = 1, NAMPSO
       CF_INDEX = 0 
       DO I = 1, NCOLOR
@@ -213,8 +211,8 @@ C ----------
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP*DCONJG(JAMP(I,M))
       ENDDO
-          ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))/DENOM
     ENDDO
+    ANS(:) = ANS(:)/DENOM
     END
        
        

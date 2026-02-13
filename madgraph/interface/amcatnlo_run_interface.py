@@ -126,6 +126,9 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
+            # skip check_poles for no virtual
+            if test == 'check_poles' and len(misc.glob(pjoin(this_dir, 'V*'))) == 0:
+                continue
             if test == 'test_ME' or test == 'test_MC':
                 test_exe='test_soft_col_limits'
             else:
@@ -1100,6 +1103,12 @@ class AskRunNLO(cmd.ControlSwitch):
         else:
             return self.print_options('fixed_order', keep_default=True)
     
+    def print_options_madspin(self):
+        if 'QED' in self.proc_characteristics['splitting_types']:
+            return "No madspin for EW correction"
+        else:
+            return self.print_options('madspin', keep_default=True)
+
     def color_for_shower(self, switch_value):
          
         if switch_value in ['ON']:
@@ -1119,7 +1128,7 @@ class AskRunNLO(cmd.ControlSwitch):
             to_check ={'fixed_order': ['ON'],
                        'shower': ['OFF'],
                        'madanalysis': ['OFF'],
-                       'madspin': ['OFF','onshell','none'],
+                       'madspin': ['OFF','none'],
                        'reweight': ['OFF']}
             for key, allowed  in to_check.items():        
                 if switch[key] not in allowed:
@@ -1310,7 +1319,7 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.allowed_madspin
         else:        
             if 'QED' in self.proc_characteristics['splitting_types']:
-                self.allowed_madspin = ['OFF', 'onshell']
+                self.allowed_madspin = ['OFF']
             else:
                 self.allowed_madspin = ['OFF', 'ON', 'onshell']
             return  self.allowed_madspin
@@ -2770,6 +2779,55 @@ RESTART = %(mint_mode)s
                                 '\n'.join(error_log)+'\n')
 
 
+    def getSysSummaryFromLog(self, kpath=None,knext_name=None):
+        '''extracts and returns MUF and PDF scale uncertainties as lists [Hi,Lo]
+              from  summary.txt log files for MC@NLO type events'''
+        # summary.txt files have the following format:
+        #--------------------------------------------------------------
+        #Summary:
+        #Process p p > t t~ QCD=2 QED=0 [QCD]
+        #Run at p-p collider (6500.0 + 6500.0 GeV)
+        #Number of events generated: 10000
+        #Total cross section: 4.580e+02 +- 2.2e+00 pb
+        #--------------------------------------------------------------
+        #  Scale variation (computed from LHE events):
+        #      Dynamical_scale_choice -1 (envelope of 9 values):
+        #          4.578e+02 pb  +28.9% -20.9%
+        #  PDF variation (computed from LHE events):
+        #      NNPDF23_nlo_as_0118_qed (101 members; using replicas method):
+        #          4.578e+02 pb  + 1.8% -1.8%
+        # note possible space between sign and number
+        # define output
+        tmpMUX = []
+        tmpPDF = []
+
+        # open, read, and implicitly close it
+        sys_log = pjoin(kpath.rsplit("/", 2)[0],"Events",knext_name,"summary.txt")
+        with open(sys_log,'r') as sys_out:
+            sys_lst = list(sys_out.readlines())
+
+        # parse the list for...
+        for kk, line in enumerate(sys_lst):
+            tmpLine=line.replace(" ","")
+
+            # 'Scale variation'
+            if(tmpLine.startswith("Scalevariation")):
+                sysLine = sys_lst[kk+2]
+                varHi=sysLine.split("pb")[1].split("%")[0].replace(" ","")
+                varLo=sysLine.split("pb")[1].split("%")[1].replace(" ","")
+                tmpMUX = [varHi,varLo]
+                continue
+
+            # 'PDF variation'
+            if(tmpLine.startswith("PDFvariation")):
+                sysLine = sys_lst[kk+2]
+                varHi=sysLine.split("pb")[1].split("%")[0].replace(" ","")
+                varLo=sysLine.split("pb")[1].split("%")[1].replace(" ","")
+                tmpPDF = [varHi,varLo]
+                continue
+
+        # done!
+        return tmpMUX, tmpPDF
 
     def write_res_txt_file(self,jobs,integration_step):
         """writes the res.txt files in the SubProcess dir"""
@@ -3922,7 +3980,9 @@ RESTART = %(mint_mode)s
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
-            extrapaths.append(hepmc.split()[1].replace('-L', '')) 
+            for token in hepmc.split():
+                if token.startswith('-L'):
+                    extrapaths.append(token[2:])
 
         # check that if FxFx is activated the correct shower plugin is present
         if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
@@ -4378,7 +4438,7 @@ RESTART = %(mint_mode)s
                     result_name = '%s_LO' % name
                 else:
                     result_name = name
-                
+
                 for tag in upgrade_tag[level]:                    
                     if getattr(self.results[result_name][-1], tag):
                         tag = self.get_available_tag()
@@ -4387,7 +4447,7 @@ RESTART = %(mint_mode)s
                         self.results.add_run(result_name, self.run_card)                        
                         break
             return # Nothing to do anymore
-        
+
         # save/clean previous run
         if self.run_name:
             self.store_result()
@@ -5004,6 +5064,12 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(pjoin(cwd, os.path.pardir, 'orderstags_glob.dat'))
             input_files.append(args[0])
+            open('%s.rwgt' % os.path.basename(args[0]), "a").close()
+            open('reweight_xsec_events.output', "a").close()
+            open('scale_pdf_dependence.dat', "a").close()
+            input_files.append('%s.rwgt' % os.path.basename(args[0]))
+            input_files.append('reweight_xsec_events.output')
+            input_files.append('scale_pdf_dependence.dat')
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
             output_files.append('scale_pdf_dependence.dat')
@@ -5464,6 +5530,11 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
 
+            elif self.run_card['lpp1'] == 2 == self.run_card['lpp2']:
+                if self.run_card['pdlabel'] in ['edff', 'chff']:
+                    logger.info('Using '+self.run_card['pdlabel'].upper()+' in gamma-UPC')
+                    self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
+
             self.make_opts_var['lhapdf'] = ""
 
         # create param_card.inc and run_card.inc
@@ -5622,10 +5693,8 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             compile_cluster.wait(self.me_dir, update_status)
         except Exception as  error:
             logger.warning("Compilation of the Subprocesses failed")
-            if __debug__:
-                raise
             compile_cluster.remove()
-            self.do_quit('')
+            raise aMCatNLOError(error)
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
@@ -5647,7 +5716,9 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
+        # we must ensure there is virtual. Otherwise, we skip the pole checks
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')) \
+          and len(misc.glob(pjoin(dir,'V*'))) > 0:
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 

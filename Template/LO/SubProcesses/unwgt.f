@@ -733,7 +733,8 @@ c        Note that in this context isym(1,jsym) should never be "2" since the ma
 
 c
 c     Add info on resonant mothers
-c
+c     recall onbw since that might have configured onBW for the wrong config (check tt~a ,t >... for checking impact 
+      call cut_bw(p)
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc,flip, icol, ivec)
 

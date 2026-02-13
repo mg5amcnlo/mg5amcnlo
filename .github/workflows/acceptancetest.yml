@@ -724,14 +724,23 @@ jobs:
             ./tests/test_manager.py test_mass_reweighting -pA -t0 -l INFO
 
 
-  acceptancetest_41:
+  test_oneloop_reweighting:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
+
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_oneloop_reweighting
@@ -742,6 +751,15 @@ jobs:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+      #- name: Breakpoint
+      #  uses: namespacelabs/breakpoint-action@v0
+      #  with:
+      #    duration: 30m
+      #    authorized-users: oliviermattelaer
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_oneloop_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_oneloop_reweighting -pA -t0 -l INFO
 
 
@@ -1090,12 +1108,19 @@ jobs:
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             sudo pip install numpy
             sudo apt install python3-pip
+            pip install matplotlib
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             echo "install pythia8" > cmd
             echo "install rivet" >> cmd
             echo "install contur" >> cmd
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_contur_from_file
+        run: |
             ./bin/mg5_aMC cmd
+      - name: run the test
+        run: |
             ls /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/
             #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1488,7 +1513,10 @@ jobs:
 
   acceptancetest_80:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1882,6 +1910,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             #sudo pip install numpy
+            sudo apt install pigz
             #which f2py
             #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1923,12 +1952,21 @@ jobs:
 
   acceptancetest_102:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_loop_improved_reweighting

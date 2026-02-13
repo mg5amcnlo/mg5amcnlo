@@ -186,9 +186,7 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-    DO I = 1, NSQAMPSO
-    ANS(I) = 0d0
-    ENDDO
+    ANS(:) = 0d0
     DO M = 1, NAMPSO
       CF_INDEX = 0 
       DO I = 1, NCOLOR
@@ -198,10 +196,11 @@ C ----------
               ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXSDKG%(ime)d(M,N))=ANS(SQSOINDEXSDKG%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM
+              ANS(SQSOINDEXSDKG%(ime)d(M,N))=ANS(SQSOINDEXSDKG%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
       ENDDO
     ENDDO
+    ANS(:) = ANS(:)/DENOM
     END
        
        

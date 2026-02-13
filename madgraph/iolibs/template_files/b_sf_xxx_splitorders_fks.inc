@@ -225,10 +225,11 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))
           ENDDO
       ENDDO
     ENDDO
+    ANS(:) = ANS(:)/DENOM
     END
        
        
