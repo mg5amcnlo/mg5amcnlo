@@ -1,4 +1,4 @@
-C MadSons
+C MadSONS
       SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C
 %(info_lines)s
@@ -70,7 +70,7 @@ C
       EXTERNAL GET_CHANNEL_CUT
 
 C
-C MADONIA VARIABLES
+C MadSONS VARIABLES
 C
       INCLUDE 'onia.inc'
 
@@ -317,7 +317,7 @@ C FUNCTION
 C
       INTEGER SQSOINDEX%(proc_id)s
 C
-C MADONIA VAIABLES
+C MadSONS VAIABLES
 C
       INCLUDE 'onia.inc'
       INCLUDE 'ldme.inc'

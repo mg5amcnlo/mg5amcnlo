@@ -1,4 +1,4 @@
-C MadOnia
+C MadSONS
       SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
       IMPLICIT NONE
 C
@@ -97,7 +97,7 @@ C
       COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
       DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
 C
-C MADONIA VARIABLES
+C MadSONS VARIABLES
 C
       INCLUDE 'onia.inc'
 
@@ -216,7 +216,7 @@ C
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C
-C MADONIA VAIABLES
+C MadSONS VAIABLES
 C
       INCLUDE 'onia.inc'
       INCLUDE 'ldme.inc'
