@@ -4874,6 +4874,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
 
         # Add the driver.f
         ncomb = matrix_element.get_helicity_combinations()
@@ -4919,7 +4920,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         filename = pjoin(Ppath, 'decayBW.inc')
         self.write_decayBW_file(writers.FortranWriter(filename),
-                           s_and_t_channels)
+                           s_and_t_channels,nexternal,nonia)
 
         filename = pjoin(Ppath, 'dname.mg')
         self.write_dname_file(writers.FileWriter(filename),
@@ -6461,22 +6462,12 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_decayBW_file
     #===========================================================================
-    def write_decayBW_file(self, writer, s_and_t_channels):
+    def write_decayBW_file(self, writer, s_and_t_channels, nexternal, nonia):
         """Write the decayBW.inc file for MadEvent"""
 
         lines = []
 
         booldict = {None: "0", True: "1", False: "2"}
-
-        nexternal = 0
-        nonia = 0
-        for leg in self.proc_defs[0].get('legs'):
-            nexternal += 1
-            if leg.get('onium'):
-                nonia += 1
-        nonia /= 2
-        nonia = int(nonia)
-        nexternal -= nonia
 
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]
@@ -6484,7 +6475,7 @@ c           This is dummy particle used in multiparticle vertices
                 # For the resulting leg, pick out whether it comes from
                 # decay or not, as given by the onshell flag
                 leg = vertex.get('legs')[-1]
-                if (nonia == 0) or (-leg.get('number') < nexternal):
+                if (nonia == 0) or (-leg.get('number') < (nexternal-nonia)):
                     lines.append("data gForceBW(%d,%d)/%s/" % \
                                  (leg.get('number'), iconf + 1,
                                   booldict[leg.get('onshell')]))
@@ -6977,6 +6968,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
 
         # Generate a list of diagrams corresponding to each configuration
         # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
@@ -7013,7 +7005,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
-                           s_and_t_channels)
+                           s_and_t_channels,nexternal,nonia)
 
         filename = 'dname.mg'
         self.write_dname_file(writers.FortranWriter(filename),
