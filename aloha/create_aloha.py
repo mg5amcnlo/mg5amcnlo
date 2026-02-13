@@ -447,37 +447,39 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
+        basicPole = "P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
         if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
             denominator = propagator.denominator      
-        elif propa == "1L":
+        elif propa == "1L": # (pol=0) longitudinal = Theta + qq/Q2
             numerator = "EPSL(1,id) * EPSL(2,id)"
-            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1T":
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * " + basicPole
+        elif propa == "1T": # (pol=-1,1) transverse = -metric + -Theta
             numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
-            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1A":
-            numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
-            denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1S":
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1A": # (pol=99) auxiliary
+            numerator = "(P(-2,id)*P(-2,id) - Mass(id)**2) * P(1,id) * P(2,id)"
+            denominator = "P(-2,id)*P(-2,id) * Mass(id)**2 * " + basicPole
+        elif propa == "1S": # (pol=9) scalar (aux + finite-width correction)
             numerator = "P(1,id) * P(2,id)"
-            denominator = "P(-2,id)**2 * (Mass(id) * Mass(id) - complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1AL":
-            numerator = "(Mass(id)**2 * EPSL(1,id) * EPSL(2,id)+ (P(-2,id)**2 - Mass(id)**2) * PVec(-1,id)**2 * P(1,id) * P(2,id))"
-            denominator = "Mass(id)**2 * PVec(-2,id)**2 * P(-3,id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1G":
+            denominator = "P(-2,id)*P(-2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id))"
+        elif propa == "1LS": # (pol=0,9) long + scalar
+            numerator = "EPSL(1,id)*EPSL(2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " \
+            "-1*PVec(-1,id)*PVec(-1,id)*P(1,id)*P(2,id) * " + basicPole
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " + basicPole
+        elif propa == "1G": # (pol=4) metric
             numerator = "-1*Metric(1, 2)"
-            denominator = "P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
-        elif propa == "1H":
-            numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id) + PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * Metric(1, 2)"
-            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1Q":
+            denominator = basicPole
+        elif propa == "1H": # (pol=5) Theta = -transverse + -metric
+            numerator = "PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id) - PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * Metric(1, 2)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1Q": # (pol=6) qq/Q2 tensor
             numerator = "P(1,id) * P(2,id)"
-            denominator = "P(-3,id)*P(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1W":
-            numerator = "P(1,id) * P(2,id)"
-            denominator = "Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominator = "P(-3,id)*P(-3,id) * " + basicPole
+        elif propa == "1W": # (pol=7) -metric + qq/(M2-iM*W)
+            numerator = "-1*Metric(1, 2)*(Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) + P(1,id)*P(2,id)"
+            denominator = "(Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) * " + basicPole
 
         elif propa in ["1P"]:
             # shift and flip the tag if we multiply by C matrices
