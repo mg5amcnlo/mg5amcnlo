@@ -6116,7 +6116,7 @@ This implies that with decay chains:
                     if 'onia' in self._curr_model.get('name'):
                         multi.remove(4)
                         multi.remove(-4)
-                    scheme = 3
+                        scheme = 3
             elif c['mass'] == 'ZERO':
                 multi.append(4)
                 multi.append(-4)
