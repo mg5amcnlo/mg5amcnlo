@@ -82,11 +82,11 @@ contains
     call boost_1_to_its_cms(p,p(0,i_fks),p_cm)
     get_xi_from_p=sqrt(2d0)*p_cm(0)/sqrt(dot(p(0,1),p(0,2)))
   end function get_xi_from_p
-  subroutine boost_n1_to_its_cms(p,p_cm)
+  subroutine boost_n1_to_its_cms(p,p_cm,y)
     implicit none
     double precision,dimension(0:3,next_n1),intent(in) :: p
     double precision,dimension(0:3,next_n1),intent(out) :: p_cm
-    double precision :: y
+    double precision,intent(out) :: y
     integer :: i
     y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
     do i=1,next_n1

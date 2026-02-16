@@ -836,7 +836,7 @@ c$$$  include 'madfks_mcatnlo.inc'
       include 'born_nhel.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nofpartners,i,k_fks,l_fks,iconnect,iFKS,n_connect
+      integer nofpartners,i,iconnect,iFKS,n_connect
      $     ,nFKSprocess_save
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
@@ -845,7 +845,7 @@ c$$$  include 'madfks_mcatnlo.inc'
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $     ,p_i_fks_cnt(0:3,-2:2)
+     $     ,p_i_fks_cnt(0:3,-2:2),ybst
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
@@ -877,13 +877,14 @@ c$$$  else
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
 c$$$  endif
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
-      call boost_n1_to_its_cms(p,p_cm)
+      call boost_n1_to_its_cms(p,p_cm,ybst)
       nFKSprocess_save=nFKSprocess
       do iFKS=1,fks_configs
          nFKSprocess=iFKS
          ! This sets i_fks and j_fks to correspond to the ones in
          ! nFKSprocess (which here is iFKS).
          call fks_inc_chooser()
+         call leshouche_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
      &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
@@ -897,12 +898,12 @@ c$$$  endif
          call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
-            if (any(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
-            call get_mc_lum(l_fks,z(iconnect),xi,xlum_mc_fact)
+            if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
+            call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
                if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
 !     re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
-               amp_split_xmcxsec(iamp,iconnect)= amp_split_xmcxsec(iamp
+               amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
      $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
@@ -924,6 +925,7 @@ c$$$  endif
       enddo
       nFKSprocess=nFKSprocess_save
       call fks_inc_chooser()
+      call leshouche_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
       
 c$$$  call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
@@ -1860,7 +1862,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
-
+      
 C Apply user-defined (in FKS_params.dat) contribution type filters if necessary
       if (VetoedContributionTypes(0).gt.0) then
         do i=1,VetoedContributionTypes(0)
@@ -1915,6 +1917,14 @@ C Secondly, the more advanced filter
         endif
       endif
 
+c$$$      if (type.eq.1 .or. type.eq.13 .or. (type.ge.8 .and. type.le.10))
+c$$$     $     then
+c$$$         write (*,*) 'AAAAAAAAAAA',type,wgt1
+c$$$         do i=1,5
+c$$$            write (*,*) p_ev(0:3,i)
+c$$$         enddo
+c$$$      endif
+      
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
@@ -2370,7 +2380,11 @@ c           Keep GeV's for decay processes (no conv. factor needed)
                  parton_pdg_uborn(k,j,ict)=-idup_d(iFKS,fks_i_d(iFKS),j)
                else
                  write (*,*) 'set_pdg_codes ',
-     &                'ERROR#3 in PDG assigment for underlying Born'
+     &                 'ERROR#3 in PDG assigment for underlying Born'
+                 write (*,*) iFKS,j,k
+                 write (*,*) idup_d(iFKS,:,j)
+                 write (*,*) fks_i_d(iFKS),fks_j_d(iFKS)
+                 write (*,*) pdg(:,ict)
                  stop 1
                endif
             elseif(k.lt.fks_i_d(iFKS)) then

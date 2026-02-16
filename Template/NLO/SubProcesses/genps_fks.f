@@ -1219,6 +1219,9 @@ c is correct; put i_fks momenta equal to zero.
             m(i)=m_born(i-1)
          endif
       enddo
+
+c$$$      write (*,*) 'regular born', p_born_l(0:3,1:nexternal-1)
+      
       
 c
 c set-up phi_i_fks
@@ -4753,8 +4756,9 @@ c     Jacobian due to delta() of tau_born
       double precision pmass(nexternal)
       common /to_mass/pmass
       integer ixEi,ixyij,ixpi,imother
+      integer i
       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
-     $     ,sqrtshat,tau,ycm
+     $     ,sqrtshat,tau,ycm,x1,x2,chy_bst,shy_bst,chy_bstmo,y_lab_to_cms
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
 
@@ -4762,7 +4766,7 @@ c     Jacobian due to delta() of tau_born
 
       write (*,*) 'bjorken',xbjrk
       
-      call boost_n1_to_its_cms(plab,p)
+      call boost_n1_to_its_cms(plab,p,y_lab_to_cms)
       
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
@@ -4792,13 +4796,13 @@ c     Jacobian due to delta() of tau_born
          call generate_momenta_initial_inverse(p,xi_i_fks,y_ij_fks
      $        ,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0,shat,sqrtshat
      $        ,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born
-     $        ,xbjrk_born)
+     $        ,xbjrk_born,y_lab_to_cms)
       endif
       end
 
       subroutine generate_momenta_initial_inverse(xp,xi_i_fks ,y_ij_fks
      $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
+     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
       implicit none
       double precision pi,stiny,qtiny,zero,ctiny
       parameter (pi=3.1415926535897932d0,stiny=1d-6,qtiny=1d-7,zero=0d0
@@ -4810,12 +4814,13 @@ c     Jacobian due to delta() of tau_born
       double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
      $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
+     $     ,x1,x2,y_lab_to_cms
       integer i_fks,j_fks
       double precision yijdir,costh_i_fks,omega,ltau_born ,e2ycm_born
      $     ,em2ycm_born,yij_upp,yij_low ,y_ij_fks_upp ,y_ij_fks_low
      $     ,x1bar2,omx1bar2,x2bar2,omx2bar2 ,yij_sol ,ximaxtmp,xi1,xi2
-     $     ,xiimax,xiimin,xinorm,bstfact ,shy_tbst ,chy_tbst,chy_tbstmo
-     $     ,cosphi_i_fks,sinphi_i_fks ,xdir_t(1:3)
+     $     ,xiimax,xiimin,xinorm,bstfact ,shy_bst ,chy_bst,chy_bstmo
+     $     ,cosphi_i_fks,sinphi_i_fks ,xdir_t(1:3),ybst
       integer idir,i
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
@@ -4844,6 +4849,31 @@ c     Jacobian due to delta() of tau_born
       xbjrk_born(1)=xbjrk(1)*(sqrt(1-xi_i_fks)*omega)
       xbjrk_born(2)=xbjrk(2)/omega*sqrt(1-xi_i_fks)   
 
+! boost n+1 body from cms to tilde frame
+      ybst=0.5*log(xbjrk_born(1)/xbjrk_born(2))-y_lab_to_cms
+      chy_bst=(exp(ybst)+exp(-ybst))/2d0
+      shy_bst=(exp(ybst)-exp(-ybst))/2d0
+      chy_bstmo=chy_bst-1d0
+      do i=1,nexternal
+         call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
+     &        xp(0,i),xp(0,i))
+      enddo
+      
+c$$$      write (*,*) 'real incoming',xp(0:3,1:2)
+
+! boost n+1-body kinematics to the tilde frame (defined such that the
+! boost from CMS to lab for Born is the same as from tilde to lab for
+! n+1).
+c$$$      x1=xbjrk_born(1)
+c$$$      x2=xbjrk_born(2)
+c$$$      chy_bst=(sqrt(x1/x2)+sqrt(x2/x1))/2d0
+c$$$      shy_bst=(sqrt(x1/x2)-sqrt(x2/x1))/2d0
+c$$$      chy_bstmo=chy_bst-1d0
+c$$$      do i=1,nexternal
+c$$$         call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
+c$$$     &        xp(0,i),xp(0,i))
+c$$$      enddo
+      
       
 ! this is to overcome numerical instabilities in ee collisions
       if (1d0-tau_born.gt.stiny) then
@@ -4981,9 +5011,9 @@ c Lower bound on xi_i_fks
       xjac=xjac*2d0*pi
       
       bstfact=sqrt( (2-xi_i_fks*(1-yijdir))*(2-xi_i_fks*(1+yijdir)) )
-      shy_tbst=-xi_i_fks*sqrt(1-yijdir**2)/(2*sqrt(1-xi_i_fks))
-      chy_tbst=bstfact/(2*sqrt(1-xi_i_fks))
-      chy_tbstmo=chy_tbst-1.d0
+      shy_bst=-xi_i_fks*sqrt(1-yijdir**2)/(2*sqrt(1-xi_i_fks))
+      chy_bst=bstfact/(2*sqrt(1-xi_i_fks))
+      chy_bstmo=chy_bst-1.d0
       cosphi_i_fks=cos(phi_i_fks)
       sinphi_i_fks=sin(phi_i_fks)
       xdir_t(1)=cosphi_i_fks
@@ -4992,10 +5022,18 @@ c Lower bound on xi_i_fks
 
 c Boost the momenta
       do i=3,nexternal
-         if(i.ne.i_fks.and.shy_tbst.ne.0.d0)
-     &        call boostwdir2(chy_tbst,shy_tbst,chy_tbstmo,xdir_t,
+         if(i.ne.i_fks.and.shy_bst.ne.0.d0)
+     &        call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
      &        xp(0,i),p_born(0,i))
       enddo
+      p_born(1:2,1:2)=0d0
+c$$$      p_born(0,1)=sqrt(xbjrk_born(1)*xbjrk_born(2)*stot)/2d0
+      p_born(0,1)=sum(p_born(0,3:nexternal-1))/2d0
+      p_born(3,1)=p_born(0,1)
+      p_born(0,2)=p_born(0,1)
+      p_born(3,2)=-p_born(0,1)
+c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
+      
 
       xpswgt=xpswgt*shat
       xpswgt=xpswgt/(4*pi)**3/(1-xi_i_fks)

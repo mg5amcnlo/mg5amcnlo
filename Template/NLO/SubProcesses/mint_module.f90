@@ -825,7 +825,7 @@ contains
     do kdim=1,ndim
        ! determine the cell
        icell=1
-       do while (xgrid(icell,kdim,ichan).lt.x)
+       do while (xgrid(icell,kdim,ichan).lt.x(kdim))
           icell=icell+1
        enddo
        ! compute wgt
