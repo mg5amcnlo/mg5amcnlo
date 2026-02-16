@@ -2096,7 +2096,10 @@ c or to fill histograms.
       COMMON /SUBPROC/ PD, IPROC
       parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
-      if (icontr.eq.0) return
+      if (icontr.eq.0) then 
+          if (imode.eq.1) write(69,*) 'ENDPS'
+          return
+      endif
       virt_found=.false.
 c number of contributions before they are (possibly) increased through a
 c call to separate_flavour_config().
