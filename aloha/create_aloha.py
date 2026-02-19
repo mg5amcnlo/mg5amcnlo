@@ -447,7 +447,7 @@ in presence of majorana particle/flow violation"""
     def get_custom_propa(self, propa, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
-        basicPole = "P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id)"
+        basicPole = "(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
         if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
@@ -467,7 +467,7 @@ in presence of majorana particle/flow violation"""
         elif propa == "1LS": # (pol=0,9) long + scalar
             numerator = "EPSL(1,id)*EPSL(2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " \
             "-1*PVec(-1,id)*PVec(-1,id)*P(1,id)*P(2,id) * " + basicPole
-            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " + basicPole
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) * " + basicPole
         elif propa == "1G": # (pol=4) metric
             numerator = "-1*Metric(1, 2)"
             denominator = basicPole
