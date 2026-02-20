@@ -210,7 +210,9 @@ C
       INTEGER I, J, K, QQ, Q1, Q2
       REAL*8 FRAC
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF_INDEX
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -339,13 +341,16 @@ C           Store amplitudes for reuse
       ENDDO
 
       %(proc_prefix)sMATRIX = 0.D0
+      CF_INDEX = 0
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX + 1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
           ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))*LDME
+          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+REAL(ZTEMP*DCONJG(JAMP(I))*LDME)
       ENDDO
+      %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX / DENOM
       %(amp2_lines)s
       END
 
