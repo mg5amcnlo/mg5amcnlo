@@ -65,7 +65,7 @@
          endif
          call generate_valid_momenta(wgt,x,p)
 
-         if (ilim.ne.2) then
+         if (ilim.eq.1) then
             call sborn(p_born,wgt1)
             call get_born_flow(born_flow_picked,born_flow_factor)
             call determine_partner(born_flow_picked,partner_picked)
@@ -330,8 +330,6 @@ c dump momenta in a fort.80 file
                amp(iamp) = 1d0
             endif
          enddo
-      elseif (ilim.eq.0) then
-         call compute_MC_subt_term_test(p,born_flow_factor)
       else
          write (*,*) 'to implement'
       endif
@@ -339,7 +337,7 @@ c dump momenta in a fort.80 file
       wgt_PS = wgt
 
       ! save amplitudes (and PS weight) towards limit
-      if (ilim.eq.0 .or. ilim.eq.2) then
+      if (ilim.eq.2) then
          do iamp=1,amp_split_size
             amp(iamp) = amp_split(iamp)*wgt
          enddo
@@ -386,15 +384,11 @@ c dump momenta in a fort.80 file
          call set_cms_stuff(0)
          if (ilim.eq.2) then
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-         elseif (ilim.eq.0) then
-            call compute_MC_subt_term_test(p1_cnt(0,1,0),born_flow_factor)
          endif
       elseif(colltest) then
          call set_cms_stuff(1)
          if (ilim.eq.2) then
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
-         elseif (ilim.eq.0) then
-            call compute_MC_subt_term_test(p1_cnt(0,1,1),born_flow_factor)
          endif
       endif
       
@@ -405,7 +399,7 @@ c dump momenta in a fort.80 file
       endif
       
 ! save amplitudes (and PS weight) in the limit
-      if (ilim.eq.0 .or. ilim.eq.2) then
+      if (ilim.eq.2) then
          do iamp=1,amp_split_size
             limit_split(iamp) = amp_split(iamp)*limit_PS_wgt
          enddo
@@ -744,7 +738,7 @@ c$$$      common/cMonteCarloType/MonteCarlo
       double precision alazi,beazi
       common /cgfunazi/alazi,beazi
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input
-      write(*,*) 'Enter 0 to compute MC/MC(limit)'
+      write(*,*) 'Enter 0 to compute MC/MC(limit) (no longer available)'
       write(*,*) '      1 to compute MC/ME(limit)'
       write(*,*) '      2 to compute ME/ME(limit)'
       read (*,*) ilim
@@ -752,7 +746,12 @@ c$$$      common/cMonteCarloType/MonteCarlo
          write (*,*) 'ERROR: not a valid choice'
          stop 1
       endif
-      if (ilim.eq.0 .or. ilim.eq.1) then
+      if (ilim.eq.0) then
+         write (*,*) 'ERROR: MC/MC(limit) is no longer available. '//
+     &        '(This test was kind of irrelevant anyway)'
+         stop 1
+      endif
+      if (ilim.eq.1) then
 c$$$         write(*,*) 'Enter the Monte Carlo name: possible choices are'
 c$$$         write(*,*) 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
 c$$$         read (*,*) MonteCarlo

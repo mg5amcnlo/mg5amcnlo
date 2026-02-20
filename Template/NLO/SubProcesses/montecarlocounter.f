@@ -643,7 +643,6 @@ c$$$
 
       call fill_kinematics_module(p_cm,k_fks,l_fks,xi,y,mass
      $     ,include_gfun)
-      
 !     compute MC subtraction term for the 'kl' configuration
 
 !     find to which particle(s) fksfather connects in the colour flow
@@ -1001,7 +1000,6 @@ c     Initialise if first time
       ztmp     = 0d0
       xitmp    = 0d0
       xjactmp  = 0d0
-      gfactazi = 0d0
 
       qMC=get_qMC(xi_i_fks,y_ij_fks)
 
