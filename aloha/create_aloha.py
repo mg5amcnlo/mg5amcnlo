@@ -466,7 +466,7 @@ in presence of majorana particle/flow violation"""
             denominator = "P(-2,id)*P(-2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id))"
         elif propa == "1LS": # (pol=0,9) long + scalar
             numerator = "EPSL(1,id)*EPSL(2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " \
-            "-1*PVec(-1,id)*PVec(-1,id)*P(1,id)*P(2,id) * " + basicPole
+            "-1*PVec(-2,id)*PVec(-2,id)*P(1,id)*P(2,id) * " + basicPole
             denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) * " + basicPole
         elif propa == "1G": # (pol=4) metric
             numerator = "-1*Metric(1, 2)"
