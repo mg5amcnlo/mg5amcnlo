@@ -658,7 +658,7 @@ c Conflicting BW stuff
      &     .not.(softtest.or.colltest)) then
          if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collisions
 c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
-C  rndx(1) -> tau; rndx(2) -> ycm
+C rndx(1) -> tau; rndx(2) -> ycm
            if (one_body) then
 c tau is fixed by the mass of the final state particle
               call compute_tau_one_body(totmass,stot,tau_born,xjac)
@@ -1010,11 +1010,10 @@ c Trivial, but prevents loss of accuracy
         ! standard mapping with event-projection
         call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
      $      m,s,
-     $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+     $        qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
         call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
      $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
      $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
-
       else
         ! new mapping without event-projection, suitable for e+e-
         ! collisions with ISR(+beamstrahlung)
@@ -1221,7 +1220,6 @@ c is correct; put i_fks momenta equal to zero.
       enddo
 
 c$$$      write (*,*) 'regular born', p_born_l(0:3,1:nexternal-1)
-      
       
 c
 c set-up phi_i_fks
@@ -2807,7 +2805,7 @@ c
      &           ( (tau_lower_bound-tau_born)*
      &           (1+em2ycm_born*tau_lower_bound) )
          else
-            yij_low=1.d0
+            yij_low=-1.d0
          endif
       else
          yij_low=-1.d0
@@ -4604,7 +4602,6 @@ C dressed lepton stuff
       shat=sumdot(p(0,1),p(0,2),1d0)
       sqrtshat=sqrt(shat)
       call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt0,xjac0)
-      
       jac=xjac0
       return
  222  continue
@@ -4908,7 +4905,7 @@ c$$$      enddo
      &           ( (tau_lower_bound-tau_born)*
      &           (1+em2ycm_born*tau_lower_bound) )
          else
-            yij_low=1.d0
+            yij_low=-1.d0
          endif
       else
          yij_low=-1.d0
@@ -5005,7 +5002,6 @@ c Lower bound on xi_i_fks
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       xjac=xjac*2d0*x(1)
-
 
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
@@ -5616,7 +5612,7 @@ c-----
          endif
       enddo
       if (one_body) then
-         xpswgt0=pi/m(ionebody)
+         xpswgt0=xpswgt0*pi/m(ionebody)
          xpswgt0=xpswgt0/(2*pi)
       endif
       return
