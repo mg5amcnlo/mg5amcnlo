@@ -301,7 +301,8 @@ C
       INTEGER I,J,K,M,N,QQ,Q1,Q2
       REAL*8 FRAC
       COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
       COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
@@ -476,10 +477,12 @@ C           Store amplitudes for reuse
 
       MATRIX%(proc_id)s = 0.D0
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX + 1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             %(select_configs_if)s
@@ -488,6 +491,7 @@ C           Store amplitudes for reuse
           ENDDO
         ENDDO
       ENDDO
+      MATRIX%(proc_id)s = MATRIX%(proc_id)s/DENOM
 
       IF(SDE_STRAT.EQ.1)THEN
         %(amp2_lines)s
