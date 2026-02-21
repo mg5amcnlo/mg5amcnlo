@@ -1149,11 +1149,8 @@ class HwU(Histogram):
             boundaries = [0.0,0.0]
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
-                if (j == len(weight_header)):
-                    continue
-                if j == len(all_weight_header):
-                    raise HwU.ParseError("There is more bin weights"+\
-                              " specified than expected (%i)"%len(weight_header))
+                #if (j == len(weight_header)):
+                #    continue
                 if selected_central_weight == all_weight_header[j]:
                     bin_weights['central'] = float(weight.group('weight'))
                 if all_weight_header[j] == 'boundary_xmin':
@@ -1858,6 +1855,8 @@ class HwUList(histograms_PhysicsObjectList):
         # If merging cut is negative, then pick only the one of the central scale
         # If not specified, then take them all but use the PDF and scale weight
         # of the central merging_scale for the variation.
+        if not all_weights:
+            raise MadGraph5Error('No weights were found in the HwU XML source.')
         if merging_scale is None or merging_scale < 0.0:
             merging_scale_chosen = all_weights[2]['MERGING']
         else:
@@ -2405,10 +2404,10 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            output.decode(errors='ignore')
+            output = output.decode(errors='ignore')
             if not output:
                 gnuplot_output_list=gnuplot_output_list_v5
-            elif float(output.split()[1]) < 5. :
+            elif int(output.split()[1].split('.')[0]) < 5 :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5
@@ -2480,14 +2479,14 @@ set key invert
             # return [template_no_stat%rep_dic]+\
             #               ([template%rep_dic] if show_mc_uncertainties else [])
             
-            # The use of sqrt(-1) is just a trick to prevent the line to display
+            # The use of 1/0 is just a trick to prevent the line to display
             res = []
-            rep_dic['data'] = '($3 < 0 ? sqrt(-1) : $3)'
+            rep_dic['data'] = '($3 < 0 ? 1/0 : $3)'
             res.append(template_no_stat%rep_dic)
             rep_dic['title'] = " title ''"
             if show_mc_uncertainties:
                 res.append(template%rep_dic)                
-            rep_dic['data'] = '($3 >= 0 ? sqrt(-1) : abs($3))'
+            rep_dic['data'] = '($3 >= 0 ? 1/0 : abs($3))'
             rep_dic['ls']  = ' ls %d'%(100+color_index)            
             res.append(template_no_stat%rep_dic)
             if show_mc_uncertainties:
@@ -2739,13 +2738,13 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 """#-- rendering subhistograms '%(subhistogram_type)s'
 %(unset label)s
 %(set_format_y)s
+%(set_yscale)s
 set yrange [%(ymin).4e:%(ymax).4e]
 set origin %(origin_x).4e, %(origin_y).4e
 set size %(size_x).4e, %(size_y).4e
 set mytics %(mytics)d
 %(set_ytics)s
 %(set_format_x)s
-%(set_yscale)s
 %(set_ylabel)s
 %(set_histo_label)s
 plot \\"""
@@ -2878,7 +2877,7 @@ plot \\"""
                 
                 # We decide to show uncertainties in the main plot only if they
                 # are part of a monocolor band. Otherwise, they will only be 
-                # shown in the first subplot. Notice that plotting 'sqrt(-1)' 
+                # shown in the first subplot. Notice that plotting '1/0'
                 # is just a trick so as to have only the key printed with no
                 # line
                 
@@ -2890,7 +2889,7 @@ plot \\"""
                         '%s, scale variation'%title, band='scale' in use_band)
                     else:
                       uncertainty_plot_lines[-1]['scale'] = \
-      ["sqrt(-1) ls %d title '%s'"%(color_index+10,'%s, scale variation'%title)]
+      ["1/0 ls %d title '%s'"%(color_index+10,'%s, scale variation'%title)]
                 # And now PDF_variation if available
                 if not PDF_var_pos is None and len(PDF_var_pos)>0:
                     if 'pdf' in use_band:
@@ -2899,7 +2898,7 @@ plot \\"""
                              '%s, PDF variation'%title, band='pdf' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['pdf'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
+        ["1/0 ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
                 # And now merging variation if available
                 if not merging_var_pos is None and len(merging_var_pos)>0:
                     if 'merging_scale' in use_band:
@@ -2908,7 +2907,7 @@ plot \\"""
                 '%s, merging scale variation'%title, band='merging_scale' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['merging_scale'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+30,'%s, merging scale variation'%title)]                        
+        ["1/0 ls %d title '%s'"%(color_index+30,'%s, merging scale variation'%title)]
                 # And now alpsfact variation if available
                 if not alpsfact_var_pos is None and len(alpsfact_var_pos)>0:
                     if 'alpsfact' in use_band:
@@ -2917,7 +2916,7 @@ plot \\"""
                     '%s, alpsfact variation'%title, band='alpsfact' in use_band)
                     else:
                         uncertainty_plot_lines[-1]['alpsfact'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
+        ["1/0 ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
 
 #            plot_lines.append(
 # "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\

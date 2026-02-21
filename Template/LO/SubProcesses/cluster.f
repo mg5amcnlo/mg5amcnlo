@@ -383,7 +383,7 @@ c         write (*,*) ' at graph ',i
       end
 
 
-      subroutine checkbw(nbw,ibwlist,isbw)
+      subroutine checkbw(nbw,ibwlist,isbw,p)
 c**************************************************************************
 c      Checks if any resonances are on the BW for this configuration
 c**************************************************************************
@@ -391,6 +391,7 @@ c**************************************************************************
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      real*8 p(0:3,nexternal)
 C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 
 c     ibwlist has ijid, propid
@@ -419,6 +420,7 @@ C $B$ DECAYBW $E$ !this is a tag for MadWeight
      $     icl(iforest(2,i,this_config))
         isbw(icl(i))=.false.
 C $B$ ONBW $B$ !this is a tag for MadWeight
+        call cut_bw(p)
         if(OnBW(i))then
 C $E$ ONBW $E$ !this is a tag for MadWeight
           nbw=nbw+1
@@ -556,11 +558,13 @@ c**************************************************************************
       jwin = 0
       cluster=.false.
       clustered=.false.
+      iwin =0
+      jwin =0
       do i=0,3
         pcmsp(i)=0
       enddo
 c     Check if any resonances are on the BW, store results in to_checkbw
-      call checkbw(nbw,ibwlist,isbw)
+      call checkbw(nbw,ibwlist,isbw,p)
       if(btest(mlevel,4).and.nbw.gt.0)
      $     write(*,*) 'Found BWs: ',(ibwlist(1,i),i=1,nbw)
 
@@ -665,8 +669,11 @@ c        Set info for LH clustering output
 c     initialize graph storage
       igraphs(0)=0
       nleft=nexternal
-c     cluster
-      if (iwin.eq.0.or.jwin.eq.0) stop 21
+      if(iwin.eq.0.or.jwin.eq.0)then
+          cluster=.false.
+          return
+      endif
+c     cluster 
       do n=1,nexternal-2
 c     combine winner
          imocl(n)=imap(iwin,2)+imap(jwin,2)

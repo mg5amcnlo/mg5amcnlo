@@ -1369,6 +1369,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,2)/0,0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
         # Test config_subproc_map.inc
@@ -2036,6 +2038,8 @@ C     Diagram 12
       DATA TPRID(-5,12)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/12/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
 
@@ -2330,6 +2334,8 @@ C     Diagram 6
       DATA (SPROP(I,-5,6),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         symmetry, perms, ident_perms = \
@@ -2840,7 +2846,7 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
                      [3,    9,    9,   27,    3,    9],
                      [3,    9,    9,    3,   27,    9],
                      [9,    3,    3,    9,    9,   27]]
-        denom = [1]*6
+        denom = 1
 
         i = 0
         for data in exporter.get_color_data_lines(\
@@ -2848,10 +2854,16 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
             #misc.sprint(data)
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/')
+                self.assertEqual(int(data), denom) 
+                continue 
+            else:   
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
             for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
+                coeff = 1 if j ==0 else 2 # symmetry factor
+                self.assertAlmostEqual((coeff*numerator[i][i+j]), val)
             i+=1 
 
 
@@ -3476,6 +3488,8 @@ C     Diagram 42
       DATA (SPROP(I,-4,42),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/42/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -3765,19 +3779,28 @@ CALL VVVXXX(W(1,2),W(1,3),W(1,5),GG,AMP(6))""")
                      [-2,    4,   -2,   19,   -2,   -2],
                      [-2,   -2,    4,   -2,   19,   -2],
                      [4,   -2,   -2,   -2,   -2,   19]]
-        denom = [6,6,6,6,6,6]
+        denom = 6
 
         i = 0
         for data in exporter.get_color_data_lines(\
                          matrix_element):
-            #misc.sprint(data)
+
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
-            for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
-            i+=1 
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/') 
+                self.assertEqual(int(data), denom) 
+                continue
+            else:
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
+                for j,val in enumerate(number):
+                    if j ==0: 
+                        self.assertEqual((numerator[i][i+j]), val)
+                    else:
+                       # factor 2 due to symmetry
+                       self.assertEqual((2*numerator[i][i+j]), val) 
+                i+=1 
 
         # Test JAMP (color amplitude) output
         out, nb = exporter.get_JAMP_lines(matrix_element)
@@ -3828,6 +3851,8 @@ C     Diagram 4
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -5554,6 +5579,8 @@ C     Diagram 3
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
@@ -5968,6 +5995,8 @@ C     Diagram 4
       DATA (SPROP(I,-3,4),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/4/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -7838,6 +7867,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -9280,6 +9311,8 @@ C     Diagram 10
       DATA (SPROP(I,-4,10),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/10/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test maxconfigs.inc
@@ -9502,6 +9535,8 @@ C     Number of configs
       DATA TPRID(-7,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
     def test_configs_long_decay(self):
@@ -9737,6 +9772,8 @@ C     Diagram 6
       DATA TPRID(-3,6)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_configs_8fs(self):
@@ -9939,6 +9976,8 @@ C     Number of configs
       DATA (SPROP(I,-2,1),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test get_color.f output

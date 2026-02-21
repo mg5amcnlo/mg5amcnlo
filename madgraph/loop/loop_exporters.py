@@ -1348,7 +1348,7 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
 
         file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
         file_mp=file_mp%replace_dict
-        #
+        
         writer.writelines(file_mp)
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
@@ -2411,6 +2411,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
         else:
             replace_dict['loop_induced_sqsoindex']=''
+
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
  

@@ -1111,16 +1111,60 @@ c
         run_card = bannermod.RunCardLO()
         run_card['dsqrt_q2fact1'] = 10
         run_card['dsqrt_q2fact2'] = 20
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+
 
         run_card.set('fixed_fac_scale', True, user=True)
-        #self.assertNotIn('fixed_fact_scale', run_card.display_block)
-        self.assertEqual(run_card['fixed_fac_scale2'], False) #check that this is default value
+        self.assertEqual(run_card['fixed_fac_scale1'], True)
+        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertIn('fixed_fac_scale', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale1', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale2', run_card.user_set)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertIn("True = fixed_fac_scale ", f.getvalue())
+
+
+        f = StringIO.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+
 
         run_card.set('fixed_fac_scale1', False, user=True)
-        #self.assertIn('fixed_fact_scale', run_card.display_)
-        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
         self.assertNotIn('fixed_fac_scale', run_card.user_set)
         self.assertNotIn('fixed_fac_scale2', run_card.user_set)    
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("False = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
+        # check that if  'fixed_fact_scale' is set within display_block
+        # the mode is to keep the value of fixed_fac_scale1/2 within the card even if
+        # both are identical
+        run_card.display_block.append('fixed_fact_scale')
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
+        run_card.set('fixed_fac_scale', True, user=True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card)) 
+
+        f = StringIO.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("True = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):

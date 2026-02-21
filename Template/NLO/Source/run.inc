@@ -102,3 +102,8 @@ C stuff for alpha running in lepton collisions
       common /to_afromee/ photons_from_lepton
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       common /to_has_bs/ has_bstrahl
+
+
+c for biassed generation based on the particle flavours of the processes
+      integer flavour_bias(0:2)
+      common /c_flavour_bias/ flavour_bias

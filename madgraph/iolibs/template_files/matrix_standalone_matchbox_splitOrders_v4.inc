@@ -211,7 +211,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
@@ -239,15 +240,20 @@ C ----------
 
       RES = 0.D0 
 	  DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 		  DO N = 1, NAMPSO
             RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))
 		  ENDDO
         ENDDO
+		DO N = 1, NAMPSO
+            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N))/DENOM
+		ENDDO
 	  ENDDO
 
       END
@@ -320,7 +326,7 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+c      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP

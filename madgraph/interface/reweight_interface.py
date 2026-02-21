@@ -301,6 +301,7 @@ class ReweightInterface(extended_cmd.Cmd):
         negative_event = 0
         positive_event = 0
         
+        bannerfile = banner.Banner(self.lhe_input.banner)
         start = time.time()
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
@@ -314,6 +315,16 @@ class ReweightInterface(extended_cmd.Cmd):
             except Exception as error:
                 print(event)
                 raise error
+            
+            # check that event does not have more energy than the beam
+            if event[1].status == -1:
+                if event[0].E > bannerfile.get('run_card', 'ebeam1'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+                if event[1].E > bannerfile.get('run_card', 'ebeam2'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
             if event.wgt < 0 :

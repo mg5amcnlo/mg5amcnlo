@@ -158,7 +158,7 @@ c
                    par=first_ref
                    val=first_line ! If found set param name & value
                    found=.true. 
-                   write(23,*) "      ",par,"=",val
+c                   write(23,*) "      ",par,"=",val
                  end if
              end do
         end if
@@ -181,14 +181,14 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       integer maxpara
       parameter (maxpara=1000)
-      character*20 param(maxpara),value(maxpara),val,par
-      character*20 blockname
+      character*40 param(maxpara),value(maxpara),val,par
+      character*40 blockname
       integer npara
       logical fopened,found
       integer iunit,GL,logfile
-      character*20 ctemp
+      character*40 ctemp
       character*132 buff
-      character*20 tag
+      character*40 tag
       character*132 temp
       character*(*) param_name
       data iunit/21/
@@ -276,11 +276,11 @@ c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*40 param(maxpara),value(maxpara)
       character*(*)  name
       real*8 var,def_value_num
-      character*20 c_param,c_name,ctemp
-      character*19 def_value
+      character*40 c_param,c_name,ctemp
+      character*39 def_value
 c
 c     local
 c

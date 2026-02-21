@@ -1265,9 +1265,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-            self.switch['shower'] = self.run_card['parton_shower']  
-            #self.switch['shower'] = 'ON'
-            self.switch['fixed_order'] = "OFF"
+            if 'OFF' in self.get_allowed_fixed_order():
+                self.switch['shower'] = self.run_card['parton_shower']  
+                self.switch['fixed_order'] = "OFF"
 
 
     def consistency_shower_madanalysis(self, vshower, vma5):
@@ -2818,8 +2818,8 @@ RESTART = %(mint_mode)s
             err+= math.pow(job['error'],2)*job['wgt_frac']
         if jobs:
             content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
-                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
-                            tot, math.sqrt(err), math.sqrt(err)/tot *100.))
+                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.  if totABS !=0. else 100.,\
+                            tot, math.sqrt(err), math.sqrt(err)/tot *100. if tot !=0. else 100.))
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
@@ -4372,12 +4372,19 @@ RESTART = %(mint_mode)s
                 self.run_tag = tag
                 self.results.add_run(self.run_name, self.run_card)
             else:
-                for tag in upgrade_tag[level]:
-                    if getattr(self.results[self.run_name][-1], tag):
+                if name in self.results:
+                    result_name = name
+                elif '%s_LO' % name in self.results:
+                    result_name = '%s_LO' % name
+                else:
+                    result_name = name
+                
+                for tag in upgrade_tag[level]:                    
+                    if getattr(self.results[result_name][-1], tag):
                         tag = self.get_available_tag()
                         self.run_card['run_tag'] = tag
                         self.run_tag = tag
-                        self.results.add_run(self.run_name, self.run_card)                        
+                        self.results.add_run(result_name, self.run_card)                        
                         break
             return # Nothing to do anymore
         
@@ -5615,10 +5622,8 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             compile_cluster.wait(self.me_dir, update_status)
         except Exception as  error:
             logger.warning("Compilation of the Subprocesses failed")
-            if __debug__:
-                raise
             compile_cluster.remove()
-            self.do_quit('')
+            raise aMCatNLOError(error)
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:

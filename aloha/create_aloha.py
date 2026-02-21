@@ -63,7 +63,7 @@ class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
     
-    def __init__(self, expr, outgoing, spins, name, infostr, denom=None):
+    def __init__(self, expr, outgoing, spins, name, infostr, model, denom=None):
         """ store the information """
 
         self.spins = spins
@@ -76,7 +76,7 @@ class AbstractRoutine(object):
         self.combined = []
         self.tag = []
         self.contracted = {}
-        
+        self.model = model
 
         
     def add_symmetry(self, outgoing):
@@ -90,10 +90,10 @@ class AbstractRoutine(object):
         
         if lor_list not in self.combined:
             self.combined.append(lor_list)
-        
-    def write(self, output_dir, language='Fortran', mode='self', combine=True,**opt):
+
+    def write(self, output_dir, language='Fortran', mode='self', combine=True, options=None, **opt):
         """ write the content of the object """
-        writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag)
+        writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag, options)
         text = writer.write(mode=mode, **opt)
         if combine:
             for grouped in self.combined:
@@ -167,6 +167,7 @@ class AbstractRoutineBuilder(object):
             if mode == 0:
                 assert not any(t.startswith('L') for t in tag)
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
+
         return self.define_simple_output()
     
     def define_all_conjugate_builder(self, pair_list):
@@ -240,7 +241,7 @@ in presence of majorana particle/flow violation"""
         infostr = str(self.lorentz_expr)
 
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
-                                                    infostr, self.denominator)
+                                                    infostr, self.model, self.denominator)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
                                           for name in aloha_lib.KERNEL.use_tag
                                           if name.startswith('TMP')])
@@ -1116,12 +1117,17 @@ class AbstractALOHAModel(dict):
             self.set(name, outgoing, wavefunction)
 
 
-    def write(self, output_dir, language):
+    def write(self, output_dir, language, options=None):
         """ write the full set of Helicity Routine in output_dir"""
+
+        if options is None:
+            self.options = {'vector.inc':False}
+        else:
+            self.options = options
 
         for abstract_routine in self.values():
             #misc.sprint(abstract_routine.name, abstract_routine.outgoing, abstract_routine.spins, abstract_routine.expr)
-            abstract_routine.write(output_dir, language)
+            abstract_routine.write(output_dir, language, options=self.options)
 
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)

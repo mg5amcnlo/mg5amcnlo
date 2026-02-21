@@ -51,6 +51,7 @@ c
       integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
+      integer fake_id
       include 'configs.inc'
       data use_config/0,lmaxconfigs*0/
 
@@ -232,7 +233,7 @@ c            do j=1,2**nbw
 c               write(*,*) 'mapping',ic,mapconfig(i),icode               
                if (icode .eq. 0) then
 c                 Create format string based on number of digits
-                  write(formstr,'(a,i1,a)') '(I',nconf,'$)'
+                  write(formstr,'(a,i1,a)') '(I',nconf,',$)'
                   write(*,formstr) mapconfig(i)
 c                 Write symmetry factors
                   write(formstr2,'(a,i2,a)') '(2i',nsym,')'
@@ -242,10 +243,10 @@ c                 Create format string based on number of digits
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   if(nconf+ncode+1.lt.10) then
                      write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   else
                      write(formstr,'(a,i2,a,i1,a)') '(F',nconf+ncode+1,
-     $                    '.',ncode,'$)'
+     $                    '.',ncode,',$)'
                   endif
                   write(*,formstr) dconfig
 c                 Write symmetry factors
@@ -260,7 +261,7 @@ c                 Write symmetry factors
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   write(27,formstr2) dconfig,use_config(i)
                endif
-               write(*,'(a$)') ' '
+               write(*,'(a,$)') ' '
  100           call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
@@ -319,6 +320,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       integer ipdg(-nexternal+1:nexternal)
       double precision mtot
+      integer gForceBW(-max_branch:-1,lmaxconfigs)
       include 'leshouche.inc'
 c
 c     Global
@@ -327,12 +329,15 @@ c
       include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
       double precision stot
       common/to_stot/stot
+      double precision bwcutoff
+      common/to_bwcutoff/bwcutoff
 
 c-----
 c  Begin Code
 c-----
       include 'props.inc'   !Propagator mass and width information prmass,prwidth
       include 'pmass.inc'   !External particle masses
+      include 'decayBW.inc'
 c      write(*,*) 'Checking for BW in config number ',iconfig
 c
 c     Reset variables
@@ -382,9 +387,21 @@ c
 c     Mark all daughters of conflicted BW as conflicting
 c
       do j=i,1,-1
-         if (lconflict(-j)) then 
-            lconflict(itree(1,-j)) = .true.
-            lconflict(itree(2,-j)) = .true.
+         if (lconflict(-j)) then
+             if (itree(1,-j).lt.0) then
+                 if( gForceBW(itree(1,-j),iconfig).ne.1) then
+                     lconflict(itree(1,-j)) = .true.
+                 endif
+             else
+                     lconflict(itree(1,-j)) = .true.
+             endif
+             if (itree(2,-j).lt.0) then
+                 if( gForceBW(itree(2,-j),iconfig).ne.1) then
+                     lconflict(itree(2,-j)) = .true.
+                 endif
+             else
+                     lconflict(itree(2,-j)) = .true.
+             endif
 c            write(*,*) 'Adding conflict ',itree(1,-j),itree(2,-j)
          endif
       enddo

@@ -750,8 +750,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.ninitial = self.proc_characteristics['ninitial']
 
-    def make_make_all_html_results(self, folder_names = [], jobs=[]):
-        return sum_html.make_all_html_results(self, folder_names, jobs)
+    def make_make_all_html_results(self, folder_names = [], jobs=[], get_attr=None):
+        return sum_html.make_all_html_results(self, folder_names, jobs, get_attr)
 
 
     def write_RunWeb(self, me_dir):
@@ -1463,11 +1463,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                              self.run_name, '%s_pts.dat' % tag)
                 for observable_name, data_path in [('djr',djr_path),
                                                    ('pt',pt_path)]:
-                    if not self.generate_Pythia8_HwU_plots(
+                    try:
+                        if not self.generate_Pythia8_HwU_plots(
                                     PY8_plots_root_path, merging_scale_name,
                                                      observable_name,data_path):
-                        return False
-
+                            return False
+                    except Exception as error:
+                        if os.path.exists(data_path):
+                            logger.info('plot information present in %s' % data_path)
+                        return True
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
             if not misc.which('gnuplot'):
@@ -1964,12 +1968,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
             except Exception:
                 self.cluster.remove()
+                for i in range(nb_submit):
+                    os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
                 old_run_mode = self.options['run_mode']
                 self.options['run_mode'] =0
+                out =False
                 try:
                     out = self.do_systematics(line)
                 finally:
                     self.options['run_mode']  =  old_run_mode
+                return out
             #collect the data
             all_cross = []
             for i in range(nb_submit):
@@ -1995,18 +2003,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                        self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
                 
-            sys_obj = systematics.call_systematics([input, None] + opts, 
-                                         log=lambda x: logger.info(str(x)),
-                                         result=result_file,
-                                         running=False
-                                         )                    
+
+            sys_obj = systematics.call_systematics([input, None] + opts,
+                                        log=lambda x: logger.info(str(x)),
+                                        result=result_file,
+                                        running=False
+                                        )
+
             sys_obj.print_cross_sections(all_cross, nb_event, result_file)
-            
+
             #concatenate the output file
             subprocess.call(['cat']+\
                             ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
                             stdout=open(output,'w'),
                             cwd=os.path.dirname(output))
+                
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
@@ -3830,8 +3841,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def store_scan_result(self):
         """return the information that need to be kept for the scan summary.
         Auto-width are automatically added."""
-        
-        return {'cross': self.results.current['cross']}
+
+        default = {'cross': self.results.current['cross'], 'error': self.results.current['error']}
+
+        try:
+            custom_scan = misc.plugin_import('custom_scan',
+                                             'custom scan entry can be defined in custom_scan.py via the function custom_store_scan_result',
+                                             fcts=['custom_store_scan_result'])
+        except Exception as e:
+            custom_scan = None
+               
+        if custom_scan:
+            try:
+                default.update(custom_scan(self))
+            except Exception as e:
+                logger.error('Error while adding custom scan results: %s: %s',type(e), e)
+            return  default
+
+        return default 
 
 
     def add_error_log_in_html(self, errortype=None):
@@ -5135,10 +5162,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.special_shortcut.update(
                 {'ebeam':([float],['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s']),
                 'lpp': ([int],['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ]),
-                'lhc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                'lhc': ([float],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
                 'lep': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
                 'ilc': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
-                'lcc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                'lcc': ([float],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
                 'fixed_scale': ([float],['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s']),
                 'no_parton_cut':([],['run_card nocut T']),
                 'cm_velocity':([float], [lambda self :self.set_CM_velocity]),
@@ -6879,8 +6906,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             log_level=20
 
-
-        if run_card:
+        if run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+            # They are likely case like lpp=+-3, where alpas not need reset
+            # but those have dedicated name of pdf avoid the reset
             as_for_pdf = {'cteq6_m': 0.118,
                           'cteq6_d': 0.118, 
                           'cteq6_l': 0.118, 
@@ -7372,7 +7400,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if card in self.modified_card:
                 self.write_card(card)
                 self.modified_card.discard(card)
-                
+            elif os.path.basename(card.replace('_card.dat','')) in self.modified_card:
+                self.write_card(os.path.basename(card.replace('_card.dat','')))
+                self.modified_card.discard(os.path.basename(card.replace('_card.dat','')))
+                card = os.path.basename(card.replace('_card.dat',''))
+
             if card in self.paths:
                 path = self.paths[card]
             elif os.path.exists(card):
@@ -7399,6 +7431,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
@@ -7410,6 +7443,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
                 
@@ -7423,6 +7457,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = posline
                 
@@ -7452,6 +7487,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split[posline] = new_line
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
@@ -7475,6 +7511,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('no line commented (no line matching)')
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
                 self.last_editline_pos = posline               
 
@@ -7493,7 +7530,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                
+                ff.close()
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
@@ -7510,8 +7548,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                                 
                 self.last_editline_pos = posline+1
                                                  
             else:

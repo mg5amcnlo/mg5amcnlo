@@ -21,7 +21,7 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       integer icol ! color selected
 
       integer isym(nexternal,99), jsym
-      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
+      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,ic
       integer mo_color,da_color(2),itmp
       integer ito(-nexternal+3:nexternal),iseed,maxcolor,maxorg
       integer icolalt(2,-nexternal+2:2*nexternal-3)
@@ -113,14 +113,15 @@ c     ...unless the diagram is passed in igraphs(1); then use that diagram
          endif
          lconfig = vec_igraph1(ivec)
       endif
-      
+      is_LC=.true.
+      maxcolor=0
 c
 c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
       if (icol.eq.0) then
       do i=1,nexternal
-	 icolalt(1,i)=0
+         icolalt(1,i)=0
          icolalt(2,i)=0
       enddo
       else
@@ -220,7 +221,7 @@ c            Reverse colors of t-channels to get right color ordering
                 ncolmp=0
              endif
              if(mo_color.gt.1.and.
-     $            mo_color.ne.3.and.mo_color.ne.8)then
+     $            mo_color.ne.3.and.mo_color.ne.8.and.mo_color.ne.6)then
                 da_color(1)=get_color(jpart(1,ida(1)))
                 da_color(2)=get_color(jpart(1,ida(2)))
                 call write_error(da_color(1), da_color(2), mo_color)
@@ -326,8 +327,8 @@ c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           endif
          endif !end of check on LC
 
-c       Just zero helicity info for intermediate states
-          jpart(7,i) = 0
+c       Just No helicity info for intermediate states
+          jpart(7,i) = 9
         enddo                   ! do i
  100    continue
         if (is_LC) call check_pure_internal_flow(icolalt,jpart, maxcolor)
@@ -586,13 +587,13 @@ c     indices remain
             i3=i3+1
 c           color for t-channels needs to be reversed
             if(i3.eq.1) icol(2,ires)=icolmp(1,i)
-            if(i3.eq.2) icol(1,ires)=-icolmp(1,i)
+            if(i3.eq.2.and.icol(1,ires).eq.0) icol(1,ires)=-icolmp(1,i)
          endif
          if(icolmp(2,i).gt.0)then
             i3bar=i3bar+1
 c           color for t-channels needs to be reversed
             if(i3bar.eq.1) icol(1,ires)=icolmp(2,i)
-            if(i3bar.eq.2) icol(2,ires)=-icolmp(2,i)
+            if(i3bar.eq.2.and.icol(2,ires).eq.0) icol(2,ires)=-icolmp(2,i)
          endif
       enddo
 
@@ -764,6 +765,14 @@ c         print *,'Replaced ',maxcol,' by ',mincol
             endif
          endif
 c     print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      elseif(mo_color.eq.6.and.i3.eq.0.and.i3bar.eq.2)then
+c         correct
+c         might consider to undo the identical final state for epsilon/epsilonbar 
+          continue
+      elseif(mo_color.eq.6.and.i3.eq.2.and.i3bar.eq.0)then
+c         correct
+c         might consider to undo the identical final state for epsilon/epsilonbar 
+          continue
       else
 c     Don't know how to deal with this
          call write_error(i3,i3bar,mo_color)
@@ -814,12 +823,12 @@ c     indices remain
          if(icolmp(1,i).gt.0)then
             i3=i3+1
             if(i3.eq.1) icol(1,ires)=icolmp(1,i)
-            if(i3.eq.2) icol(2,ires)=-icolmp(1,i)
+            if(i3.eq.2.and.icol(2,ires).eq.0) icol(2,ires)=-icolmp(1,i)
          endif
          if(icolmp(2,i).gt.0)then
             i3bar=i3bar+1
             if(i3bar.eq.1) icol(2,ires)=icolmp(2,i)
-            if(i3bar.eq.2) icol(1,ires)=-icolmp(2,i)
+            if(i3bar.eq.2.and.icol(1,ires).eq.0) icol(1,ires)=-icolmp(2,i)
          endif
       enddo
 
@@ -830,21 +839,31 @@ c      print *,'icol(1,ires),icol(2,ires): ',icol(1,ires),icol(2,ires)
       if(n3.le.1.and.n3bar.eq.0) icol(2,ires)=0
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
-         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0.and.i3.eq.0)then
+         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.i3)then
 c        This is an epsilon index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
-            maxcolor=maxcolor+1
-            icol(1,ires)=maxcolor
+            if(i3.eq.0) then
+               maxcolor=maxcolor+1
+               icol(1,ires)=maxcolor
+           endif
             if(n3.eq.2)then
                maxcolor=maxcolor+1
                icol(2,ires)=-maxcolor
+           elseif(n3bar.eq.2)then
+               maxcolor=maxcolor+1
+               icol(2,ires)=-maxcolor
             endif
-         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0.and.i3bar.eq.0)then
+         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.i3bar)then
 c        This is an epsilonbar index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
-            maxcolor=maxcolor+1
-            icol(2,ires)=maxcolor
+            if(i3bar.eq.0)then
+                maxcolor=maxcolor+1
+                icol(2,ires)=maxcolor
+            endif
             if(n3.eq.2)then
+               maxcolor=maxcolor+1
+               icol(1,ires)=-maxcolor
+           elseif(n3bar.eq.2)then
                maxcolor=maxcolor+1
                icol(1,ires)=-maxcolor
             endif
@@ -961,6 +980,12 @@ c         print *,'Replaced ',maxcol,' with ',mincol
             if(n3.eq.1) icol(1,ires)=max_n3
             if(n3bar.eq.1) icol(2,ires)=min_n3bar
          endif
+          do i=ires,-1
+               if (icol(1,i).eq.maxcol) icol(1,i)=mincol
+               if (icol(1,i).eq.-maxcol) icol(1,i)=-mincol
+               if (icol(2,i).eq.maxcol) icol(2,i)=mincol
+               if (icol(2,i).eq.-maxcol) icol(2,i)=-mincol
+          enddo         
 c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       endif
       else

@@ -257,7 +257,11 @@ C
       include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars_vec)s
-      integer i_ee      
+      integer i_ee
+C
+C     STUFF FOR UPC
+C
+      double precision photonpdfsquare    
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -367,7 +371,16 @@ C     Select a flavor combination (need to do here for right sign)
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
-	 DO IVEC=1,VECSIZE_USED
+	 DO CURR_WARP=1, NB_WARP_USED
+	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
+	     IB(1) = 1
+	     IB(2) = 2
+	   else
+	     IB(1) = 2
+	     IB(2) = 1	   
+	   endif
+	   DO IWARP=1, WARP_SIZE
+       IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
 	 DSIGUU = ALL_OUT(IVEC)
 	 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -407,9 +420,11 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
+           ICONFIG = SYMCONF(ICONF_VEC(CURR_WARP))
            CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, selected_hel(IVEC), selected_col(IVEC), IVEC)
         ENDIF
 	ENDDO
+    ENDDO
 %(passcuts_end)s
       END
 

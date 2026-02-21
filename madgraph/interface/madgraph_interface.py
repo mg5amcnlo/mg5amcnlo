@@ -201,23 +201,36 @@ class CmdExtended(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
-        if os.path.exists(pjoin(MG5DIR, '.bzr')):
+        if os.path.exists(pjoin(MG5DIR, '.git')):
             try: 
-                proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                proc = subprocess.Popen(['git', 'tag', '--points-at', 'HEAD'], stdout=subprocess.PIPE,cwd=MG5DIR)
             except OSError:
+                # user does not have git installed
                 logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
                 info_line += "#*     UNKNOWN DEVELOPMENT VERSION. NOT FOR PRODUCTION      *\n"
             else:
-                bzrname,_ = proc.communicate()
-                proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
-                bzrversion,_ = proc.communicate() 
-                bzrname, bzrversion = bzrname.decode(errors='ignore').strip(), bzrversion.decode(errors='ignore').strip() 
-                len_name = len(bzrname)
-                len_version = len(bzrversion)            
-                info_line += "#*         BZR %s %s %s         *\n" % \
-                                (bzrname,
-                                (34 - len_name - len_version) * ' ',
-                                bzrversion)
+                # check if the version corresponds to a tag
+                #
+                alltag,_ = proc.communicate() 
+                alltag = alltag.decode(errors='ignore').strip().split()
+                misc.sprint(alltag)
+                if not alltag:
+                    proc = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                    tag,_ = proc.communicate()
+                    tag = tag.decode(errors='ignore').strip()
+                    
+                elif len(alltag) == 1:
+                    tag = alltag[0]
+                else:
+                    tag = [name for name in alltag if name.startswith('v')][0]
+                branch,_ = subprocess.Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=subprocess.PIPE,cwd=MG5DIR).communicate()
+                branch = branch.decode(errors='ignore').strip()
+                
+
+                info_line += "#*         GIT %s %s %s         *\n" % \
+                                (tag,
+                                (34 - len(tag) - len(branch)) * ' ',
+                                branch)
         elif os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
             logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
             info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
@@ -2512,7 +2525,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                  '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1']):
         "Complete the output command"
 
-        possible_format = self._export_formats
+        possible_format = list(self._export_formats)
+        possible_format += misc.from_plugin_import(self.plugin_path, 'new_output', keyname=None, warning=False,
+                       info=None)
         #don't propose directory use by MG_ME
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
@@ -2930,7 +2945,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
                               'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA',
-                              'cudacpp']
+                              'cudacpp', 'hepmc3', 'pythia8_hepmc3']
 
     _install_opts.extend(_advanced_install_opts)
 
