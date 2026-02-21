@@ -498,6 +498,15 @@ class L_Scalar(aloha_lib.LorentzObject):
         rep = aloha_lib.Variable('S%s_1' % self.particle)
         self.representation= aloha_lib.LorentzObjectRepresentation(        
                                                                     rep, [], [])        
+    def to_spenso(self):
+        dico = {'i': self.particle}
+        #index = ['i%(i)s=Slot("bis", 4, %(i)s)' % dico]
+        obj = ['Scalar%(i)s = TensorIndices(S("Scalar%(i)s"), [])' % dico]
+        raise Exception('Lucien needs to Validate this expression...')
+        return [], obj,"Scalar%(i)s.to_expression()" % dico
+
+
+
 
 class Scalar(aloha_lib.FactoryLorentz):
     

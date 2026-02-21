@@ -587,7 +587,6 @@ class TestDemo(unittest.TestCase):
         self.assertEqual(new, old)
 
 
-    
 
 
 
@@ -2836,7 +2835,26 @@ class test_aloha_creation(unittest.TestCase):
         
         self.assertEqual(abstract.expr.nb_lor, 0)
         self.assertEqual(abstract.expr.nb_spin, 0)
+    
+    def test_spenso(self):
+        """test for creating FFV routine with spenso"""
+
+        aloha_lib.KERNEL.clean()
+        VVS1 = self.Lorentz(name = 'VVS1',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'Metric(1,2)')
         
+        abstract = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1, [], abstract_only=True)
+
+        misc.sprint(abstract.expr)
+        misc.sprint(abstract.denominator)
+        text = abstract.expr.to_spenso()
+        misc.sprint(text)
+        
+
+    
+
+
     def test_short_aloha_ZPZZ(self):
         """ Check the validity of Funny Zp coupling to z z """
                 

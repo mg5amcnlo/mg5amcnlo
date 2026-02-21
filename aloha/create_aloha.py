@@ -159,14 +159,17 @@ class AbstractRoutineBuilder(object):
                 pat = re.compile(r'\b%s\b' % formf.name)
                 self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
             
-    def compute_routine(self, mode, tag=[], factorize=True):
+    def compute_routine(self, mode, tag=[], factorize=True, abstract_only=False):
         """compute the expression and return it"""
         self.outgoing = mode
         self.tag = tag
         if __debug__:
             if mode == 0:
                 assert not any(t.startswith('L') for t in tag)
-        self.expr = self.compute_aloha_high_kernel(mode, factorize)
+        self.expr = self.compute_aloha_high_kernel(mode, factorize, abstract_only=abstract_only)
+
+        if abstract_only:
+            return self
 
         return self.define_simple_output()
     
@@ -269,7 +272,7 @@ in presence of majorana particle/flow violation"""
         lorentz_expr = calc.parse(expr)
         return lorentz_expr
                 
-    def compute_aloha_high_kernel(self, mode, factorize=True):
+    def compute_aloha_high_kernel(self, mode, factorize=True, abstract_only=False):
         """compute the abstract routine associate to this mode """
 
         # reset tag for particles
@@ -407,13 +410,9 @@ in presence of majorana particle/flow violation"""
             # Propagator are taken care separately
 
         misc.sprint(str(lorentz))
-        try:
-            index, obj, expr = lorentz.to_spenso()
-            misc.sprint( '\n'.join(index)+'\n'+'\n'.join(obj)+'\nexpr='+expr)
-        except Exception as error:
-            misc.sprint( str(error))
-            misc.sprint( 'no spenso')
-            raise
+        if abstract_only:
+            return lorentz
+        
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini

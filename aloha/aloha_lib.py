@@ -483,7 +483,7 @@ class AddVariable(list):
 
     def to_spenso(self):
         """ String representation in the spenso convention"""
-        t = [KERNEL.objs[n].to_spenso() for n in self]
+        t = [n.to_spenso() for n in self]
         index = set(sum([n[0] for n in t],[]))
         obj_def = set(sum([n[1] for n in t],[]))
         t = ['%s' % n[2] for n in t] 
