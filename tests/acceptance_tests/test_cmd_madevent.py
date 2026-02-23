@@ -663,6 +663,9 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
 
         target = 1.368e-05 # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
+        # 0.93008 ± 0.000387
+        # 1.3681e-05 ± 2.56e-08
+        # 3.9364e-12 ± 5.87e-15
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
@@ -1400,6 +1403,57 @@ class TestMEfromfile(unittest.TestCase):
         
         #a=rwa_input('freeze')
         self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
+
+    def test_generation_polarization(self):
+        """check that t > w+{X} b, w+ > ta+ vt gives the correct results
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+\{0\} b, w+ > ta+ vt
+        add process t > w+\{T\} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 4k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        self.check_parton_output(cross= 0.93008, error=0.000387,target_event=1000)
+        # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
+        # 0.93008 ± 0.000387
+        # 1.3681e-05 ± 2.56e-08
+        # 3.9364e-12 ± 5.87e-15
 
 
     def test_generation_from_file_1(self):
