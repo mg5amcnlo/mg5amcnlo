@@ -1424,20 +1424,28 @@ class TestMEfromfile(unittest.TestCase):
             stdout= None
 
         #
-        #  START REAL CODE
+        #  START REAL CODE (1/3)
         #
         command = open(pjoin(self.path, 'cmd'), 'w')
         command.write("""set group_subprocesses False
         import model loop_sm
         set automatic_html_opening False --no_save
         set notification_center False --no_save
-        generate    t > w+\{0\} b, w+ > ta+ vt
-        add process t > w+\{T\} b, w+ > ta+ vt
+        generate    t{L} > w+{0} b{R}, w+ > ta+ vt
+        add process t{L} > w+{T} b{L}, w+ > ta+ vt
+        add process t{L} > w+{A} b{R}, w+ > ta+ vt
+        add process t{R} > w+{S} b{L}, w+ > ta+ vt
+        add process t{R} > w+{0S} b{R}, w+ > ta+ vt
+        add process t{L} > w+{S0} b{L}, w+ > ta+ vt
+        add process t{L} > w+{G} b{R}, w+ > ta+ vt
+        add process t{L} > w+{H} b{L}, w+ > ta+ vt
+        add process t{R} > w+{Q} b{R}, w+ > ta+ vt
+        add process t{R} > w+{W} b{L}, w+ > ta+ vt
         output %(path)s
         launch
         analysis=off
         set no_parton_cut
-        set nevents 4k
+        set nevents 10k
         set me_frame [1]
         set nhel 1
         set bwcutoff 100
@@ -1449,11 +1457,70 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        self.check_parton_output(cross= 0.5393, error=0.0007506,target_event=1000)
-        # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
-        # 0.93008 ± 0.000387
-        # 1.3681e-05 ± 2.56e-08
-        # 3.9364e-12 ± 5.87e-15
+        self.check_parton_output(cross= 0.53881, error=0.000343,target_event=10000)
+
+        #
+        #  START REAL CODE (2/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 10k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        self.check_parton_output(cross= 1.3303e-05, error=2.1e-08,target_event=10000)
+
+        #
+        #  START REAL CODE (3/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set mta 1e-3
+        set no_parton_cut
+        set nevents 10k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        set mmnl 5.0
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        self.check_parton_output(cross=3.9311e-12, error=6.86e-15,target_event=10000)
+
+        # Width : 0.53881 ± 0.000343 (GeV) for 40k events
+        # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
+        # Width : 3.9311e-12 ± 6.86e-15  (GeV) for 40k events
+
 
 
     def test_generation_from_file_1(self):

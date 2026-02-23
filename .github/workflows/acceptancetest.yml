@@ -1986,7 +1986,7 @@ jobs:
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
             ./tests/test_manager.py  test_nlo_reweighting -pA -t0 -l INFO
 
-  acceptancetest_102_polarization:
+  acceptancetest_103_polarization:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
 
