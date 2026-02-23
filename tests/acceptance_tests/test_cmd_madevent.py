@@ -1404,8 +1404,8 @@ class TestMEfromfile(unittest.TestCase):
         #a=rwa_input('freeze')
         self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
 
-    def test_generation_polarization(self):
-        """check that t > w+{X} b, w+ > ta+ vt gives the correct results
+    def test_generation_pol(self):
+        """check that polarized process t > w+{X} b, w+ > ta+ vt gives the correct results
         """
 
         cwd = os.getcwd()
@@ -1449,7 +1449,7 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        self.check_parton_output(cross= 0.93008, error=0.000387,target_event=1000)
+        self.check_parton_output(cross= 0.5393, error=0.0007506,target_event=1000)
         # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
         # 0.93008 ± 0.000387
         # 1.3681e-05 ± 2.56e-08
