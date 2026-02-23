@@ -1604,7 +1604,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self.get('spin') != 3:
                     raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1L' 
-            elif self.get('polarization') == [1,-1]:
+            elif sorted(self.get('polarization')) == [-1,1]:
                 if self.get('spin') != 3:
                     raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1T'
@@ -1612,7 +1612,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self.get('spin') != 3:
                     raise InvalidCmd('polarization not supported for decay particle')
                 output['propa'] = 'P1A'
-            elif self.get('polarization') == [0,9]:
+            elif sorted(self.get('polarization')) == [0,9]:
                 if self.get('spin') != 3:
                     raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1LS'
@@ -1864,7 +1864,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 tags.append('P1L') 
-            elif self.get('polarization') == [1,-1]: # = 4+5
+            elif sorted(self.get('polarization')) == [-1,1]: # = 4+5
                 tags.append('P1T')
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
@@ -1872,7 +1872,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1P')
             elif self.get('polarization') == [-1]:
                 tags.append('P1M')
-            elif self.get('polarization') == [0,9]: # = 0+9
+            elif sorted(self.get('polarization')) == [0,9]: # = 0+9
                 tags.append('P1LS')
             elif self.get('polarization') == [4]: # = T-5
                 tags.append('P1G')
