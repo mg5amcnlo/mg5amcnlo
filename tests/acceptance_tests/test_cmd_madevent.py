@@ -624,6 +624,48 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
+    def test_polarization_top_decay(self):
+        """check that t > w+{X} b, w+ > ta+ vt gives the correct results"""
+
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd('import model loop_sm')
+        mg_cmd.run_cmd('generate t > w+\{0\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{T\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{A\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{S\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{0S\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{S0\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{G\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{H\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{Q\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('add process t > w+\{W\} b, w+ > ta+ vt')
+        #mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertEqual(run_card['nevents'], 10)
+        self.assertEqual(run_card['me_frame'], 1)
+        self.assertEqual(run_card['nhel'], 1)
+        self.assertEqual(run_card['bwcutoff'], 100)
+        self.assertEqual(run_card['mmnl'], 5)
+
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 1.368e-05 # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))
+
 
     def test_customised_madevent_via_run_card(self):
         """checking various advanced functionality of customization
