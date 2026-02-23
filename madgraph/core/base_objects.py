@@ -2099,7 +2099,7 @@ class Leg(PhysicsObject):
     # List of allowed helicity polarizations for a fermion or vector boson.
     # See [arXiv:1912.01725] for definitions (fermions,vectors) and
     # [arXiv:2512.10015] for extensions (vectors)
-    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 4, 5, 6, 7, 9, 99]
+    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
 
     def default_setup(self):
         """Default values for all properties"""
