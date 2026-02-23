@@ -42,7 +42,7 @@ $frame
 # PDF CHOICE: this automatically fixes alpha_s and its evol.         *
 # pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
 #          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
-#          eva=Effective W/Z/A Approx.       [2111.02442]            *
+#          eva=Effective W/Z/A Approx.       [2111.02442, 2502.07878]*
 #          edff=EDFF in gamma-UPC            [eq.(11) in 2207.03012] *
 #          chff=ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
 #          none=No PDF, same as lhapdf with lppx=0                   *
@@ -50,6 +50,7 @@ $frame
 $pdlabel
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 $ion_pdf
+$eva_pdf
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
@@ -61,7 +62,6 @@ $fixed_fact_scale
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 $RUNNING
- $eva_scale
 #*********************************************************************
 # Type and output format
 #*********************************************************************
@@ -90,6 +90,7 @@ $psoptim
 # Parton level cuts definition *
 #*******************************
   %(dsqrt_shat)s  = dsqrt_shat ! minimal shat for full process
+  %(dsqrt_shatmax)s  = dsqrt_shatmax ! maximum shat for full process
 #                                                                    
 #
 #*********************************************************************

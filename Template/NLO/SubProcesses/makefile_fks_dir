@@ -3,8 +3,11 @@ include ../../Source/make_opts
 include ../analyse_opts
 include ../pythia8_opts
 
-LIBDIR = ../../lib/
+LIBDIR = $(abspath ../../lib/)/
 ANADIR = ../../FixedOrderAnalysis/
+HERE := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+PDIR := $(strip $(notdir $(patsubst %/,%,$(strip $(HERE)))))
+
 
 #check if fastjet-config is set
 ifdef fastjet_config
@@ -22,7 +25,7 @@ NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # Uncomment the line below to compile with MadLoop without setting the environnement 
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
-LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(llhapdf)
+LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lgammaUPC -lcernlib $(llhapdf)
 LINKLIBSSUD = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lcernlib 
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
@@ -57,7 +60,8 @@ FILESSUD= \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
          $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
 	 born.o born_hel.o momentum_reshuffling.o			\
- 	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o
+ 	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o 
+
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
@@ -134,11 +138,18 @@ ewsudakov_sa: $(EWSUDSA)
 	$(FC) -o ewsudakov_sa $(EWSUDSA) $(LINKLIBS)  $(LDFLAGS)
 	strip ewsudakov_sa
 
-libsudpy: $(EWSUDLIB)
-	touch __init__.py
-	ar rcs libewsud.$(libext) $(EWSUDLIB)
-	$(F2PY) libewsud.$(libext) -m ewsudpy -c sub_f2py_ewsudakov.f --f77exec=$(FC) --f77flags="-ffixed-line-length-132"  $(LINKLIBSSUD)
+$(LIBDIR)/libdhelas.$(dylibext):
+	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS" shared
+$(LIBDIR)/libmodel.$(dylibext):
+	$(MAKE) -C "$(LIBDIR)/../Source/MODEL" shared
 
+libewsud_$(PDIR).$(dylibext): $(LIBDIR)/libdhelas.$(dylibext) $(LIBDIR)/libmodel.$(dylibext) sub_f2py_ewsudakov.o ../../Source/MODEL/*.o            $(LIBDIR)/../Source/kin_functions.o $(LIBDIR)/../Source/ranmar.o
+	gfortran $(DYNLIBFLAG) -o libewsud_$(PDIR).$(dylibext) $(FILESSUD) ../../Source/DHELAS/*.o ../../Source/MODEL/*.o            $(LIBDIR)/../Source/kin_functions.o $(LIBDIR)/../Source/ranmar.o
+
+libsudpy: $(EWSUDLIB) libewsud_$(PDIR).$(dylibext) $(LIBDIR)/libmodel.$(dylibext) $(LIBDIR)/libdhelas.$(dylibext)
+	touch __init__.py
+	#ar rcs libewsud.$(libext) $(EWSUDLIB)
+	LDFLAGS="-Wl,-rpath,$(HERE)" $(F2PY)  -c sub_f2py_ewsudakov.f -L$(HERE) -lewsud_$(PDIR) $(LINKLIBS) -m ewsudpy_$(PDIR)
 
 check_sudakov_angle2: $(EWSUD2) $(libmadloop)
 	$(FC) -o check_sudakov_angle2 $(EWSUD2) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)

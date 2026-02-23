@@ -165,8 +165,9 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      REAL*8 CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS),JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C GLOBAL VARIABLES
@@ -185,20 +186,21 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-    DO I = 1, NSQAMPSO
-    ANS(I) = 0d0
-    ENDDO
+    ANS(:) = 0d0
     DO M = 1, NAMPSO
+      CF_INDEX = 0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
               ANS(SQSOINDEXSDKG%(ime)d(M,N))=ANS(SQSOINDEXSDKG%(ime)d(M,N))+ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
       ENDDO
     ENDDO
+    ANS(:) = ANS(:)/DENOM
     END
        
        

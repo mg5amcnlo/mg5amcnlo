@@ -204,7 +204,8 @@ C
     INTEGER I,J,M,N,K
     COMPLEX*16 ZTEMP,TMP_JAMP(%(nb_temp_jamp)i)
     COMPLEX*16 TMP(%(wavefunctionsize)d)
-    REAL*8 CF(NCOLOR,NCOLOR)
+    INTEGER CF(NCOLOR*(NCOLOR+1))
+    INTEGER DENOM, CF_INDEX
     COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
@@ -253,18 +254,21 @@ ${helas_calls}
 ${jamp_lines}
         TS(K) = 0.D0 
     	DO M = 1, NAMPSO
+          CF_INDEX = 0
           DO I = 1, NCOLOR
             ZTEMP = (0.D0,0.D0)
-            DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-            ENDDO
+            DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX + 1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
+            ENDDO ! J
     		DO N = 1, NAMPSO
 			%(select_configs_if)s
-    		     TS(K) = TS(K) + ZTEMP*DCONJG(JAMP(I,N))
+    		     TS(K) = TS(K) + REAL(ZTEMP*DCONJG(JAMP(I,N)))
 			  %(select_configs_endif)s
-    		ENDDO
-          ENDDO
-    	ENDDO
+    		ENDDO ! N
+        ENDDO ! I
+    ENDDO ! M
+    TS(K) = TS(K) / DENOM
 	if(sde_strat.eq.1) then
         ${amp2_lines}
 	endif
@@ -277,7 +281,7 @@ ${jamp_lines}
     		enddo
     	  enddo
         Enddo
-    ENDDO
+    ENDDO ! K
 
     END
 

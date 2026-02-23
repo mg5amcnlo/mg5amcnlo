@@ -279,7 +279,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertIn('#change include_sudakov True', card)
         card = card.replace('#change include_sudakov True', 'change include_sudakov True')
         open('%s/Cards/reweight_card.dat' % self.path, 'w').write(card)
-        self.do('reweight run_01 -f')
+        self.do('reweight run_01 -from_cards')
 
 
 

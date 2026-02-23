@@ -30,7 +30,7 @@ MadGraph5_aMC@NLO requires:
 ### Guide
 1. Download the desired release from [Launchpad](http://launchpad.net/madgraph5).
 2. Unpack the tar.gz by running `tar -xzpvf [TARBALL]`
-3. [optional] Add the bin directory to your `PATH`, for example if the unpacked tar is in `~/MG5_aMC`, this could be achieved by including `export PATH="PATH:$HOME/MG5_aMC"` in `~/.bashrc`
+3. [optional] Add the bin directory to your `PATH`, for example if the unpacked tar is in `~/MG5_aMC`, this could be achieved by including `export PATH="$PATH:$HOME/MG5_aMC/bin" in `~/.bashrc`
 4. Run `mg5_aMC`
 5. Type:
     - `help` for list of commands

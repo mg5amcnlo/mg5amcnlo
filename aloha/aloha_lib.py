@@ -357,7 +357,10 @@ class AddVariable(list):
                     new = new + item
                 
             else:
-                new += (self.prefactor) * item.expand(veto)
+                try: 
+                    new += (self.prefactor) * item.expand(veto)
+                except AttributeError:
+                    new = new + (self.prefactor) * item
         return new
 
     def __mul__(self, obj):
