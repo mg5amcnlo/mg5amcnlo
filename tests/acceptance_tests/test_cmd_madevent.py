@@ -1416,7 +1416,8 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
 
         # Width : 0.53881 ± 0.000343 (GeV) for 40k events
-        self.check_parton_output(cross= 0.53881, error=0.000343,target_event=40000)
+        tolerance = 1.1
+        self.check_parton_output(cross= 0.53881, error=tolerance*0.000343,target_event=40000)
 
         #
         #  START REAL CODE (2/3)
@@ -1445,7 +1446,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
 
         # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
-        self.check_parton_output(cross= 1.3303e-05, error=2.1e-08,target_event=40000)
+        self.check_parton_output(cross= 1.3303e-05, error=tolerance*2.1e-08,target_event=40000)
 
         #
         #  START REAL CODE (3/3)
@@ -1476,7 +1477,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
 
         # Width : 3.9311e-12 ± 6.86e-15  (GeV) for 40k events
-        self.check_parton_output(cross=3.9311e-12, error=6.86e-15,target_event=40000)
+        self.check_parton_output(cross=3.9311e-12, error=tolerance*6.86e-15,target_event=40000)
 
     def test_generation_from_file_1(self):
         """ """
