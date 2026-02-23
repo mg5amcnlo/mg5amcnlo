@@ -624,51 +624,6 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
-    def test_polarization_top_decay(self):
-        """check that t > w+{X} b, w+ > ta+ vt gives the correct results"""
-
-
-        mg_cmd = MGCmd.MasterCmd()
-        mg_cmd.no_notification()
-        mg_cmd.run_cmd('set group_subprocesses false')
-        mg_cmd.run_cmd('set automatic_html_opening False --save')
-        mg_cmd.run_cmd('import model loop_sm')
-        mg_cmd.run_cmd('generate t > w+\{0\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{T\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{A\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{S\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{0S\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{S0\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{G\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{H\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{Q\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('add process t > w+\{W\} b, w+ > ta+ vt')
-        #mg_cmd.run_cmd('output %s/'% self.run_dir)
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
-        self.cmd_line.no_notification()
-        self.cmd_line.exec_cmd('set automatic_html_opening False')
-
-        #check validity of the default run_card
-        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
-
-        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
-        self.assertEqual(run_card['nevents'], 10)
-        self.assertEqual(run_card['me_frame'], 1)
-        self.assertEqual(run_card['nhel'], 1)
-        self.assertEqual(run_card['bwcutoff'], 100)
-        self.assertEqual(run_card['mmnl'], 5)
-
-        self.do('generate_events -f')
-        val1 = self.cmd_line.results.current['cross']
-        err1 = self.cmd_line.results.current['error']
-
-        target = 1.368e-05 # Width : 1.368e-05 +- 2.564e-08 GeV for 40k events
-        # 0.93008 ± 0.000387
-        # 1.3681e-05 ± 2.56e-08
-        # 3.9364e-12 ± 5.87e-15
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
-                        (target, val1, err1, abs(val1 - target) / err1))
-
 
     def test_customised_madevent_via_run_card(self):
         """checking various advanced functionality of customization
@@ -1404,8 +1359,11 @@ class TestMEfromfile(unittest.TestCase):
         #a=rwa_input('freeze')
         self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
 
-    def test_generation_pol(self):
-        """check that polarized process t > w+{X} b, w+ > ta+ vt gives the correct results
+    def test_polarization_top_decay(self):
+        """check that polarized process t{X} > w+{Y} b{Z}, w+ > ta+ vt gives the correct results
+        Test 1: check that various permutations can be called
+        Test 2: check helicity-flipping process (massive limit)
+        Test 3: check helicity-flipping process (massless limit)
         """
 
         cwd = os.getcwd()
@@ -1445,7 +1403,7 @@ class TestMEfromfile(unittest.TestCase):
         launch
         analysis=off
         set no_parton_cut
-        set nevents 10k
+        set nevents 40k
         set me_frame [1]
         set nhel 1
         set bwcutoff 100
@@ -1457,7 +1415,8 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        self.check_parton_output(cross= 0.53881, error=0.000343,target_event=10000)
+        # Width : 0.53881 ± 0.000343 (GeV) for 40k events
+        self.check_parton_output(cross= 0.53881, error=0.000343,target_event=40000)
 
         #
         #  START REAL CODE (2/3)
@@ -1473,7 +1432,7 @@ class TestMEfromfile(unittest.TestCase):
         launch
         analysis=off
         set no_parton_cut
-        set nevents 10k
+        set nevents 40k
         set me_frame [1]
         set nhel 1
         set bwcutoff 100
@@ -1485,7 +1444,8 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        self.check_parton_output(cross= 1.3303e-05, error=2.1e-08,target_event=10000)
+        # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
+        self.check_parton_output(cross= 1.3303e-05, error=2.1e-08,target_event=40000)
 
         #
         #  START REAL CODE (3/3)
@@ -1502,7 +1462,7 @@ class TestMEfromfile(unittest.TestCase):
         analysis=off
         set mta 1e-3
         set no_parton_cut
-        set nevents 10k
+        set nevents 40k
         set me_frame [1]
         set nhel 1
         set bwcutoff 100
@@ -1515,13 +1475,8 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        self.check_parton_output(cross=3.9311e-12, error=6.86e-15,target_event=10000)
-
-        # Width : 0.53881 ± 0.000343 (GeV) for 40k events
-        # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
         # Width : 3.9311e-12 ± 6.86e-15  (GeV) for 40k events
-
-
+        self.check_parton_output(cross=3.9311e-12, error=6.86e-15,target_event=40000)
 
     def test_generation_from_file_1(self):
         """ """

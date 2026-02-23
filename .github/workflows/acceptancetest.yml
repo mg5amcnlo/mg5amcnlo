@@ -2000,7 +2000,7 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            ./tests/test_manager.py test_generation_pol -pA -t0 -l INFO
+            ./tests/test_manager.py test_polarization_top_decay -pA -t0 -l INFO
 
   acceptancetest_ewsudakov:
     # The type of runner that the job will run on
