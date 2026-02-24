@@ -767,8 +767,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Example: generate p p > z{0} z{T}, z > e+ e-, z > mu+ mu-",'$MG:color:GREEN')
         logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
         logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
-        logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015].")
-        logger.info("   For possibilities with loop-induced processes, see [2401.17365].")
+        logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
+        logger.info("   and for possibilities with loop-induced processes, see [2401.17365].")
     
     def help_polarisation(self):
         logger.info("Polarized process syntax:",'$MG:BOLD')
