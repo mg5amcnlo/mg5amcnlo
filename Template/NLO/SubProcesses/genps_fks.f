@@ -789,6 +789,7 @@ c Start by generating all the invariant masses of the s-channels
      $        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
      $        ,pass)
       endif
+      
       if (.not.pass) then
          xjac0=-139
          return
@@ -4593,7 +4594,7 @@ C dressed lepton stuff
 
       call fill_intermediate_momenta_inverse(ns_channel,nt_channel
      $     ,nbranch,pb,itree,m,s)
-      
+
 ! given Born momenta, return all other x's and jac
       call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
      $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
@@ -5151,9 +5152,14 @@ c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
       xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c Boost the momenta
       do i=nincoming+1,nexternal
-         if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
-     &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
-     &        p_born(0,i))
+         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle
+         if (i.lt.i_fks) then
+            call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &           p_born(0,i))
+         elseif (i.gt.i_fks) then
+            call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &           p_born(0,i-1))
+         endif
       enddo
       p_born(0:3,1:2)=xp(0:3,1:2)
       p_born(0:3,j_fks)=p_born(0:3,1)+p_born(0:3,2)
@@ -5210,9 +5216,14 @@ c     cosh(y) is very often close to one, so define cosh(y)-1 as well
       xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c     Perform the boost here
       do i=nincoming+1,nexternal
-         if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
-     &        call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
-     &        p_born(0,i))
+         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle
+         if (i.lt.i_fks) then
+            call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &           p_born(0,i))
+         elseif (i.gt.i_fks) then
+            call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
+     &           p_born(0,i-1))
+         endif
       enddo
       p_born(0:3,1:2)=xp(0:3,1:2)
       p_born(0:3,j_fks)=p_born(0:3,1)+p_born(0:3,2)
@@ -5312,11 +5323,13 @@ c     Phase-space factor for (xii,yij,phii)
          s(i)=dot(pb(0,i),pb(0,i))
          m(i)=sqrt(s(i))
       enddo
-      do i=-ns_channel-1,-nbranch+2,-1
-         pb(0:3,i)=pb(0:3,itree(1,i))-pb(0:3,itree(2,i))
-         s(i)=dot(pb(0,i),pb(0,i))
-         m(i)=sqrt(s(i))
-      enddo
+      if (nt_channel.ne.0) then
+         do i=-ns_channel-1,-nbranch+1,-1
+            pb(0:3,i)=pb(0:3,itree(1,i))-pb(0:3,itree(2,i))
+            s(i)=dot(pb(0,i),pb(0,i))
+            m(i)=sqrt(s(i))
+         enddo
+      endif
       end
       
       subroutine generate_inv_mass_sch_inverse(ns_channel,itree,m
