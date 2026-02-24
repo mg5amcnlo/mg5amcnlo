@@ -5018,9 +5018,14 @@ c Lower bound on xi_i_fks
 
 c Boost the momenta
       do i=3,nexternal
-         if(i.ne.i_fks.and.shy_bst.ne.0.d0)
-     &        call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
-     &        xp(0,i),p_born(0,i))
+         if (shy_bst.eq.0d0) cycle
+         if (i.lt.i_fks) then
+            call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
+     $           xp(0,i),p_born(0,i))
+         elseif (i.gt.i_fks) then
+            call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
+     $           xp(0,i),p_born(0,i-1))
+         endif
       enddo
       p_born(1:2,1:2)=0d0
 c$$$      p_born(0,1)=sqrt(xbjrk_born(1)*xbjrk_born(2)*stot)/2d0
