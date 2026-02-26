@@ -36,6 +36,10 @@ import aloha
 import cmath
 from six.moves import range
 
+from symbolica import E, S
+from symbolica.community.spenso import Representation
+from symbolica.community.spenso import TensorName as N
+
 #===============================================================================
 # P (Momenta)
 #===============================================================================
@@ -59,6 +63,11 @@ class L_P(aloha_lib.LorentzObject):
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},
                                     self.lorentz_ind, [])
+
+    def to_spenso(self):
+        mink = Representation.mink(4)
+        spinor = N("P")
+        return spinor(E(str(self.particle)), mink(self.lorentz_ind[0]))
 
 
 class P(aloha_lib.FactoryLorentz):
@@ -382,6 +391,9 @@ class L_OverMass2(aloha_lib.LorentzObject):
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
 
+    def to_spenso(self):
+        return E("1/(M_%s)^2" % self.particle)
+
 class OverMass2(aloha_lib.FactoryLorentz):
 
     object_class = L_OverMass2
@@ -499,11 +511,8 @@ class L_Scalar(aloha_lib.LorentzObject):
         self.representation= aloha_lib.LorentzObjectRepresentation(
                                                                     rep, [], [])
     def to_spenso(self):
-        dico = {'i': self.particle}
-        #index = ['i%(i)s=Slot("bis", 4, %(i)s)' % dico]
-        obj = ['Scalar%(i)s = TensorIndices(S("Scalar%(i)s"), [])' % dico]
-        raise Exception('Lucien needs to Validate this expression...')
-        return [], obj,"Scalar%(i)s.to_expression()" % dico
+        scalar = S("Scalar")
+        return scalar(self.particle)
 
 
 
@@ -539,10 +548,9 @@ class L_Spinor(aloha_lib.LorentzObject):
                                     [],self.spin_ind)
 
     def to_spenso(self):
-        dico = {'i': self.particle}
-        index = ['i%(i)s=Slot("bis", 4, %(i)s)' % dico]
-        obj = ['F%(i)s = TensorIndices(S("F%(i)s"), i%(i)s)' % dico]
-        return index, obj,"F%(i)s.to_expression()" % dico
+        bis = Representation.bis(4)
+        spinor = N("Spinor")
+        return spinor(E(str(self.particle)), bis(self.spin_ind[0]))
 
 
 
@@ -581,10 +589,9 @@ class L_Vector(aloha_lib.LorentzObject):
                                     self.lorentz_ind, [])
 
     def to_spenso(self):
-        dico = {'i': self.particle}
-        index = ['nu%(i)s=Slot("mink", 4, %(i)s)' % dico]
-        obj = ['V%(i)s = TensorIndices(S("V%(i)s"), nu%(i)s)' % dico]
-        return index, obj,"V%(i)s.to_expression()" % dico
+        mink = Representation.mink(4)
+        spinor = N("Vector")
+        return spinor(E(str(self.particle)), mink(self.lorentz_ind[0]))
 
 class Vector(aloha_lib.FactoryLorentz):
 
@@ -740,18 +747,13 @@ class L_Gamma(aloha_lib.LorentzObject):
                                 self.lorentz_ind,self.spin_ind)
 
     def to_spenso(self):
+        mink = Representation.mink(4)
+        bis = Representation.bis(4)
+        gamma = N("gamma")
+        gamma_ind = gamma(mink, bis, bis)
 
-        dico = {'lor': self.lorentz_ind[0], 'spin1': self.spin_ind[0], 'spin2': self.spin_ind[1]}
-        index = ['nu%(lor)s=Slot("mink", 4, %(lor)s)' % dico,
-                 'i%(spin1)s=Slot("bis", 4, %(spin1)s)' % dico,
-                 'i%(spin2)s=Slot("bis", 4, %(spin2)s)' % dico]
-        obj = ['gamma_%(lor)s%(spin1)s%(spin2)s = TensorIndices(S("γ"), nu%(lor)s, i%(spin1)s, i%(spin2)s)'
-               % dico]
+        return gamma_ind(self.lorentz_ind[0], self.spin_ind[0], self.spin_ind[1])
 
-        return index, obj, 'gamma_%(lor)s%(spin1)s%(spin2)s.to_expression()' % dico
-
-
-        return 'Gamma(lor(4,%s),bis(4,%s),bis(4,%s))' % (self.lorentz_ind[0], self.spin_ind[0], self.spin_ind[1])
 
 
 class Gamma(aloha_lib.FactoryLorentz):
@@ -1056,15 +1058,9 @@ class L_Metric(aloha_lib.LorentzObject):
 
 
     def to_spenso(self):
+        mink = Representation.mink(4)
+        return mink.g(self.lorentz_ind[0], self.lorentz_ind[1])
 
-        dico = {'lor1': self.lorentz_ind[0], 'lor2': self.lorentz_ind[1]}
-        index = ['nu%(lor1)s=Slot("mink", 4, %(lor1)s)' % dico,
-                 'nu%(lor2)s=Slot("mink", 4, %(lor2)s)' % dico,
-                 ]
-        obj = ['metricl_%(lor1)s%(lor2)s = TensorIndices(S("eta"), nu%(lor1)s, nu%(lor2)s)'
-               % dico]
-
-        return index, obj, 'metricl_%(lor1)s%(lor2)s.to_expression()' % dico
 
 class Metric(aloha_lib.FactoryLorentz):
 
@@ -1128,15 +1124,8 @@ class L_IdentityL(aloha_lib.LorentzObject):
                                              self.lorentz_ind,self.spin_ind)
 
     def to_spenso(self):
-
-        dico = {'lor1': self.lorentz_ind[0], 'lor2': self.lorentz_ind[1]}
-        index = ['nu%(lor1)s=Slot("mink", 4, %(lor1)s)' % dico,
-                 'nu%(lor2)s=Slot("mink", 4, %(lor2)s)' % dico,
-                 ]
-        obj = ['identityl_%(lor1)s%(lor2)s = TensorIndices(S("identityl"), nu%(lor1)s, nu%(lor2)s)'
-               % dico]
-
-        return index, obj, 'identityl_%(lor1)s%(lor2)s.to_expression()' % dico
+        mink = Representation.mink(4)
+        return mink.g(self.lorentz_ind[0], self.lorentz_ind[1])
 
 
 class IdentityL(aloha_lib.FactoryLorentz):

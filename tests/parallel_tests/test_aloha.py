@@ -36,7 +36,7 @@ import madgraph.various.misc as misc
 from six.moves import range
 from six.moves import zip
 
-
+from symbolica.community.spenso import TensorNetwork
 set_global = misc.set_global
 
 
@@ -2838,18 +2838,21 @@ class test_aloha_creation(unittest.TestCase):
 
     def test_spenso(self):
         """test for creating FFV routine with spenso"""
-
         aloha_lib.KERNEL.clean()
+
         VVS1 = self.Lorentz(name = 'VVS1',
-                 spins = [ 3, 3, 1 ],
-                 structure = 'Metric(1,2)')
+                  spins = [ 3, 3, 1 ],
+                  structure = 'Metric(1,2)')
 
         abstract = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1, [], abstract_only=True)
+
 
         misc.sprint(abstract.expr)
         misc.sprint(abstract.denominator)
         text = abstract.expr.to_spenso()
+
         misc.sprint(text)
+        misc.sprint(TensorNetwork(text))
 
 
 

@@ -51,7 +51,7 @@ import numbers
 import re
 import aloha # define mode of writting
 from six.moves import range
-
+from symbolica import E, S
 try:
     import madgraph.various.misc as misc
 except Exception:
@@ -483,19 +483,19 @@ class AddVariable(list):
 
     def to_spenso(self):
         """ String representation in the spenso convention"""
-        t = [n.to_spenso() for n in self]
-        index = set(sum([n[0] for n in t],[]))
-        obj_def = set(sum([n[1] for n in t],[]))
-        t = ['%s' % n[2] for n in t]
-        if self.prefactor != 1:
-            str_pref = '%s' % self.prefactor
-            if 'j' in str_pref:
-                str_pref = str_pref.replace('j','*Expression.I')
-            text = '(%s *( %s))' % (str_pref,' + '.join(t))
-        else:
-            text = '(%s)' % (' + '.join(t))
+        sum = 0
 
-        return index, obj_def, text
+        for n in self:
+            try:
+                # print("try to spenso", n.to_spenso())
+                sum += n.to_spenso()
+            except:
+                print("sum with", type(n))
+                print("except spenso", str(n))
+                sum += E(str(n))
+
+        return sum * E(str(self.prefactor))
+
 
 
     def __repr__(self):
@@ -837,19 +837,19 @@ class MultVariable(array):
 
     def to_spenso(self):
         """ String representation in the spenso convention"""
-        t = [KERNEL.objs[n].to_spenso() for n in self]
-        index = set(sum([n[0] for n in t],[]))
-        obj_def = set(sum([n[1] for n in t],[]))
-        t = ['%s' % n[2] for n in t]
-        if self.prefactor != 1:
-            str_pref = '%s' % self.prefactor
-            if 'j' in str_pref:
-                str_pref = str_pref.replace('j','*Expression.I')
-            text = '(%s * %s)' % (str_pref,' * '.join(t))
-        else:
-            text = '(%s)' % (' * '.join(t))
+        product = E(str(self.prefactor))
+        for n in self:
+            t = KERNEL.objs[n]
+            try:
+                product *= t.to_spenso()
+                product *= t.to_spenso()
+            except:
+                print("product with", type(t))
+                print("except spenso", str(t))
+                product *= E(str(t))
 
-        return index, obj_def, text
+        return product
+
 
 
     def factorize(self):
