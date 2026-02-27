@@ -5412,6 +5412,7 @@ c
       include 'nexternal.inc'
       double precision xjac0,xpswgt0,m(-max_branch:max_particles),x(99)
      $     ,s(-max_branch:max_particles),pb(0:3,-max_branch:nexternal-1)
+     $     ,pr(0:3)
       integer itree(2,-max_branch:-1),ns_channel,nbranch
       logical pass
       double precision s_mass(-nexternal:nexternal)
@@ -5440,8 +5441,9 @@ c
          endif
          idim=(nbranch-1+(-ibranch)*2)
          s_m=s_m-sqrt(s_mass(itree(2,ibranch)))
-         s1 = pb(0,ibranch)**2-pb(1,ibranch)**2-pb(2,ibranch)**2-pb(3
-     $        ,ibranch)**2
+         pr(0:3)=pb(0:3,itree(1,ibranch))+pb(0:3,2)-pb(0:3,itree(2
+     $        ,ibranch))
+         s1=dot(pr,pr)
          if (abs(smin-s_m**2).lt.tiny) then
             call trans_x_inverse(1,idim,x(idim),smin,smax,s_m**2,dum
      $           ,dum,dum3(-1),dum3(-1),xjac0,s1)
@@ -5475,7 +5477,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mnq = m(ibranch-1)**2
          call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
-! get t and phi from momenta
+!     get t and phi from momenta
          call gentcms_inverse(pb(0,itree(1,ibranch)),pb(0,2),t,phi,
      &        m(itree(2,ibranch)),m(ibranch-1),pb(0,itree(2,ibranch)),
      &        pb(0,ibranch),xjac0)
