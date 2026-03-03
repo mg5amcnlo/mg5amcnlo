@@ -1,200 +1,592 @@
       program test_soft_col_limits
-c*****************************************************************************
-c     Given identical particles, and the configurations. This program identifies
-c     identical configurations and specifies which ones can be skipped
-c*****************************************************************************
       use mint_module
-      use process_module
+      implicit none
+      integer ilim,nsofttests,ncolltests,fks_loop_min
+     $     ,fks_loop_max,fks_loop,bs_min,bs_max,nstep,ntests
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
+      logical is_massive_jfks
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      
+      call read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
+     $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
+
+      call init_test_limits(ilim,nstep)
+      
+      do fks_loop=fks_loop_min,fks_loop_max
+         call init_new_loop(fks_loop,bs_min,bs_max,is_massive_jfks)
+         do iconfig=bs_min,bs_max
+            call init_iconfig_loop(ilim)
+            softtest=.true.
+            colltest=.false.
+            ntests=nsofttests
+            call test_limits(ilim,ntests,xi_i_fks_fix_input
+     $           ,y_ij_fks_fix_input,nstep)
+            if (is_massive_jfks) then
+               write (*,*) 'No collinear test for massive j_fks'
+               cycle
+            endif
+            softtest=.false.
+            colltest=.true.
+            ntests=ncolltests
+            call test_limits(ilim,ntests,xi_i_fks_fix_input
+     $           ,y_ij_fks_fix_input,nstep)
+         enddo
+      enddo
+      end
+
+      subroutine test_limits(ilim,ntests,xi_i_fks_fix_input
+     $     ,y_ij_fks_fix_input,nstep)
+      use mint_module
       use scale_module
       implicit none
-      include 'genps.inc'      
       include 'nexternal.inc'
-      include 'nFKSconfigs.inc'
-      include 'fks_info.inc'
-      include 'run.inc'
-      include 'cuts.inc'
-      include 'coupl.inc'
-      include 'born_conf.inc'   ! needed for mapconfig
-      include 'born_nhel.inc'
-      double precision ZERO,    one
-      parameter       (ZERO=0d0,one=1d0)
-      double precision max_fail
-      parameter       (max_fail=0.3d0)
-      integer i,j,k,n,l,jj,bs_min,bs_max,iconfig_in,nsofttests
-     $     ,ncolltests,imax,iflag,iret,ntry,fks_conf_number
-     $     ,fks_loop_min,fks_loop_max,fks_loop,ilim,flow_picked
-     $     ,partner_picked
-      double precision fxl(15),wfxl(15),limit(15),wlimit(15),lxp(0:3
-     $     ,nexternal+1),xp(15,0:3,nexternal+1),p(0:3,nexternal),wgt
-     $     ,x(99),fx,totmass,xi_i_fks_fix_save,y_ij_fks_fix_save
-     $     ,pmass(nexternal)
+      include 'orders.inc'
+      integer nstep,ntests,i,ilim,jtest,partner_picked
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input,wgt,x(99)
+     $     ,p(0:3,nexternal),towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1),born_flow_factor
       double complex wgt1(2)
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer         nndim
-      common/tosigint/nndim
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      do jtest=1,ntests
+         if (colltest) then
+            xi_i_fks_fix=xi_i_fks_fix_input
+            y_ij_fks_fix=0.9d0
+         elseif (softtest) then
+            xi_i_fks_fix=0.1d0
+            y_ij_fks_fix=y_ij_fks_fix_input
+         endif
+         call generate_valid_momenta(wgt,x,p)
+
+         if (ilim.eq.1) then
+            call sborn(p_born,wgt1)
+            call get_born_flow(born_flow_picked,born_flow_factor)
+            call determine_partner(born_flow_picked,partner_picked)
+            call init_process_module_n1body_wrapper(born_flow_picked)
+            call compute_shower_scale_nbody(p_born,born_flow_picked)
+         endif
+         
+         do i=1,nstep
+            if (softtest) xi_i_fks_fix=0.1d0**i
+            if (colltest) y_ij_fks_fix=1-0.1d0**i
+            call compute_towards_limit(ilim,x,born_flow_factor
+     $           ,towards_amp_split(1,i),towards_wgt_PS(i),towards_p(0,1
+     $           ,i))
+         enddo
+         ! reset xi and y to input values
+         if (colltest) then
+            xi_i_fks_fix=xi_i_fks_fix_input
+            y_ij_fks_fix=1.0d0
+         elseif (softtest) then
+            xi_i_fks_fix=0.0d0
+            y_ij_fks_fix=y_ij_fks_fix_input
+         endif
+         call compute_in_the_limit(ilim,x,born_flow_factor
+     $        ,limit_amp_split,limit_wgt_PS,limit_p(0,1))
+         call check_limit_and_print_result(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,ntests,jtest)
+      enddo
+      if (ntests.gt.10) then
+         call print_summary(iconfig,ntests)
+      endif
+      end
+
+      subroutine print_summary(iconfig,ntests)
+      implicit none
+      include 'orders.inc'
+      double precision max_fail
+      parameter       (max_fail=0.3d0)
+      integer iamp,i,orders(nsplitorders),ntests ,iconfig
+      double precision fail_frac
+      character*9 print_string
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      if (softtest) then
+         print_string='     Soft'
+      elseif (colltest) then
+         print_string='Collinear'
+      endif
+      write(*,*)print_string//' tests done for (Born) config',iconfig
+      write(*,*)'Failures:',nerr
+      do iamp = 0, amp_split_size
+         if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+         fail_frac= nerr(iamp)/dble(ntests)
+         if (iamp.ne.0) then
+            write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+            call amp_split_pos_to_orders(iamp,orders)
+            do i = 1, nsplitorders
+               write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':'
+     $              ,orders(i),'; '
+            enddo
+         else
+            write(*,fmt="(a)", advance="no")'Sum of all orders: '
+         endif
+         if (fail_frac.lt.max_fail) then
+            write(*,401) print_string,nFKSprocess,fail_frac
+         else
+            write(*,402) print_string,nFKSprocess,fail_frac
+         endif
+      enddo
+ 401  format(a9,'test ',i2,' PASSED. Fraction of failures: ', f4.2) 
+ 402  format(a9,'test ',i2,' FAILED. Fraction of failures: ', f4.2) 
+      end
+
+      subroutine check_limit_and_print_result(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,ntests,jtest)
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,ntests,jtest
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1)
+      if (ntests.le.10) then
+         call check_and_print_to_screen(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      else
+         call check_limits(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      endif
+      end
+
+      subroutine check_limits(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,jtest,iamp,iflag,iret
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1),amp(1:nstep),limit
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+      if (softtest) then
+         iflag=0
+      endif
+      if (colltest) then
+         iflag=1
+      endif
+      
+! check limit summed over orders
+      amp(1:nstep)=sum(towards_amp_split(1:amp_split_size,1:nstep),dim
+     $     =1)
+      limit=sum(limit_amp_split(1:amp_split_size),dim=1)
+
+      call checkres(amp(1:nstep) ,limit,towards_wgt_PS(1:nstep)
+     $     ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest,nexternal
+     $     ,i_fks,j_fks,iret)
+      nerr(0)=nerr(0)+iret
+! check limit order-by-order
+      do iamp=1, amp_split_size
+         if (towards_amp_split(iamp ,1).ne.0d0 .or.
+     $        limit_amp_split(iamp).ne.0d0) then
+            call checkres(towards_amp_split(iamp,1:nstep)
+     $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
+     $           ,limit_wgt_PS,towards_p,limit_p,iflag,nstep,jtest
+     $           ,nexternal,i_fks,j_fks,iret)
+            nerr(iamp)=nerr(iamp)+iret
+         endif
+      enddo
+      
+      end
+
+      subroutine check_and_print_to_screen(nstep,towards_amp_split
+     $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
+     $        ,limit_p,jtest)
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer nstep,iret,jtest,iflag,iamp,i,k,l,orders(nsplitorders)
+      double precision towards_amp_split(1:amp_split_size,1:nstep)
+     $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
+     $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
+     $     ,nexternal+1),amp(1:nstep),limit
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      if (softtest) then
+         write (*,*) 'Soft limit:'
+         iflag=0
+      endif
+      if (colltest) then
+         write (*,*) 'Collinear limit:'
+         iflag=1
+      endif
+! print amplitudes summed over orders:
+      amp(1:nstep)=sum(towards_amp_split(1:amp_split_size,1:nstep),dim
+     $     =1)
+      limit=sum(limit_amp_split(1:amp_split_size),dim=1)
+      do i=1,nstep
+         call xprintout(6,amp(i),limit)
+      enddo
+! print amplitude order-by-order, and check that they approach limit correctly.
+      do iamp=1, amp_split_size
+         if (limit_amp_split(iamp).ne.0d0 .or. towards_amp_split(iamp
+     $        ,1).ne.0d0) then
+            write(*,*) '   Split-order', iamp
+            call amp_split_pos_to_orders(iamp,orders)
+            do i=1,nsplitorders
+               write(*,*) '      ',ordernames(i), ':',orders(i)
+            enddo
+            do i=1,nstep
+               call xprintout(6,towards_amp_split(iamp,i)
+     $              ,limit_amp_split(iamp))
+            enddo
+            call checkres(towards_amp_split(iamp,1:nstep)
+     $           ,limit_amp_split(iamp),towards_wgt_PS(1:nstep)
+     $           ,limit_wgt_PS ,towards_p,limit_p,iflag,nstep,jtest
+     $           ,nexternal,i_fks,j_fks,iret)
+            write(*,*) 'RETURN CODE', iret
+         endif
+      enddo
+c dump momenta in a fort.80 file
+      write(80,*)'  '
+      write(80,*)'****************************'
+      write(80,*)'  '
+      do k=1,nexternal+1
+         write(80,*)''
+         write(80,*)'part:',k
+         do l=0,3
+            write(80,*)'comp:',l
+            do i=1,nstep
+               call xprintout(80,towards_p(l,k,i),limit_p(l,k))
+            enddo
+         enddo
+      enddo
+      end
+      
+      subroutine compute_towards_limit(ilim,x,born_flow_factor,amp
+     $     ,wgt_PS,xp)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      integer ilim,iamp,idum,nFKSprocess_save,iFKS
+      double precision wgt,x(99),born_flow_factor,p(0:3,nexternal),fx
+     $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1)
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      calculatedBorn=.false.
+      call set_cms_stuff(-100)
+      if (ilim.eq.2) then
+         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+      elseif (ilim.eq.1) then
+         amp=0d0
+         nFKSprocess_save=nFKSprocess
+         do iFKS=1,fks_configs
+            nFKSprocess=iFKS
+            call fks_inc_chooser()
+            call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+            if ( i_fks.ne.FKS_I_D(nFKSprocess_save) .or.
+     &           j_fks.ne.FKS_J_D(nFKSprocess_save) ) cycle
+            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+            do iamp=1,amp_split_size
+               amp(iamp) = amp(iamp)+amp_split(iamp)*born_flow_factor
+            enddo
+         enddo
+         nFKSprocess=nFKSprocess_save
+         call fks_inc_chooser()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+         call compute_MC_subt_term_test(p,born_flow_factor)
+         do iamp=1,amp_split_size
+            if (amp_split(iamp).ne.0d0) then
+               amp(iamp) = amp(iamp)/amp_split(iamp)
+            else
+               amp(iamp) = 1d0
+            endif
+         enddo
+      else
+         write (*,*) 'to implement'
+      endif
+
+      wgt_PS = wgt
+
+      ! save amplitudes (and PS weight) towards limit
+      if (ilim.eq.2) then
+         do iamp=1,amp_split_size
+            amp(iamp) = amp_split(iamp)*wgt
+         enddo
+      endif
+      ! save momenta
+      xp(0:3,1:nexternal)=p(0:3,1:nexternal)
+      xp(0:3,nexternal+1)=p_i_fks_ev(0:3)
+      
+      end
+      
+      
+      
+      subroutine compute_in_the_limit(ilim,x,born_flow_factor
+     $     ,limit_split,limit_PS_wgt,lxp)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      double precision zero,    one
+      parameter       (zero=0d0,one=1d0)
+      integer ilim,iamp,idum
+      double precision wgt,x(99),p(0:3,nexternal),fx,born_flow_factor
+     $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
+     $     +1)
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
-      logical        softtest,colltest
-      common/sctests/softtest,colltest
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      
+      calculatedBorn=.false.
+      if (softtest) then
+         call set_cms_stuff(0)
+         if (ilim.eq.2) then
+            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+         endif
+      elseif(colltest) then
+         call set_cms_stuff(1)
+         if (ilim.eq.2) then
+            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
+         endif
+      endif
+      
+      if (softtest) then
+         limit_PS_wgt = jac_cnt(0)
+      elseif (colltest) then
+         limit_PS_wgt = jac_cnt(1)
+      endif
+      
+! save amplitudes (and PS weight) in the limit
+      if (ilim.eq.2) then
+         do iamp=1,amp_split_size
+            limit_split(iamp) = amp_split(iamp)*limit_PS_wgt
+         enddo
+      elseif (ilim.eq.1) then
+         do iamp=1,amp_split_size
+            limit_split(iamp) = 1d0
+         enddo
+      endif
+      
+! save momenta
+      if (softtest) then
+         lxp(0:3,1:nexternal)=p1_cnt(0:3,1:nexternal,0)
+         lxp(0:3,nexternal+1)=p_i_fks_cnt(0:3,0)
+      elseif (colltest) then
+         lxp(0:3,1:nexternal)=p1_cnt(0:3,1:nexternal,1)
+         lxp(0:3,nexternal+1)=p_i_fks_cnt(0:3,1)
+      endif
+      
+      end
+
+
+
+      subroutine compute_MC_subt_term_test(p,born_flow_factor)
+      use kinematics_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      logical include_gfun
+      integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp,nFKSprocess_save
+      double precision p(0:3,nexternal),xi,y,z(2),born_flow_factor
+     $     ,amp_split_gfunc(amp_split_size)
+     $     ,amp_split_xmcxsec(amp_split_size,2),p_cm(0:3,nexternal)
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision amp_split_mc(1:amp_split_size)
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      double precision etmin(nincoming+1:nexternal-1)
-      double precision etmax(nincoming+1:nexternal-1)
-      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
-      common /to_cuts/etmin,etmax, mxxmin
-      double precision alsf,besf
-      common /cgfunsfp/alsf,besf
-      double precision alazi,beazi
-      common /cgfunazi/alazi,beazi
-      logical         Hevents
-      common/SHevents/Hevents
-      character*10           MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-      double precision shower_S_scale(fks_configs*2)
-     $     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
-     $     ,pt_hardness
-      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
-     &     ,pt_hardness
-C split orders stuff
-      include 'orders.inc'
-      integer iamp
-      integer orders(nsplitorders)
-      integer nerr(0:amp_split_size)
-      double precision fail_frac(0:amp_split_size)
-      double precision fxl_split(15,amp_split_size),wfxl_split(15
-     $     ,amp_split_size)
-      double precision limit_split(15,amp_split_size), wlimit_split(15
-     $     ,amp_split_size)
-      double precision amp_split_mc(amp_split_size)
-      common /to_amp_split_mc/amp_split_mc
-      double precision ran2
-      external         ran2
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      character*4 abrv
-      integer fks_father
-      double precision born_flow_factor
-c     
-c     Properly initialize PY8 controls
-c
-      include 'pythia8_control.inc'
-      include 'pythia8_control_setup.inc'
-c-----
-c  Begin Code
-c-----
-      abrv(1:3)='all'
-      if (fks_configs.eq.1) then
-         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
-            write (*,*) 'Process generated with [LOonly=QCD]. '/
-     $           /'No tests to do.'
-            return
+      call boost_n1_to_its_cms(p,p_cm)
+      ! use local amp_split_mc, since, compute_MCsubtraction_kl will overwrite amp_split:
+      amp_split_mc(1:amp_split_size)=0d0
+      nFKSprocess_save=nFKSprocess
+      do iFKS=1,fks_configs
+         nFKSprocess=iFKS
+         ! This sets i_fks and j_fks to correspond to the ones in
+         ! nFKSprocess (which here is iFKS).
+         call fks_inc_chooser()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+         if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
+     &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
+c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
+            include_gfun=.true.
+         else
+            include_gfun=.false.
          endif
-      endif
-      write(*,*) 'Enter 0 to compute MC/MC(limit)'
-      write(*,*) '      1 to compute MC/ME(limit)'
-      write(*,*) '      2 to compute ME/ME(limit)'
-      read (*,*) ilim
+!     compute kinematic variables
+         xi=get_xi_from_p(i_fks,j_fks,p_cm)
+         y=get_yij_from_p(i_fks,j_fks,p_cm)
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
+     $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
+         amp_split_gfunc=0d0
+         if (include_gfun) then
+            call compute_MCsubtraction_from_gfun(xi,y,amp_split_gfunc)
+            amp_split_mc(1:amp_split_size)=amp_split_mc(1:amp_split_size)
+     $           +amp_split_gfunc(1:amp_split_size)*born_flow_factor
+         endif
+         do iconnect=1,n_connect
+            amp_split_mc(1:amp_split_size)=amp_split_mc(1:amp_split_size)
+     $           +amp_split_xmcxsec(1:amp_split_size,iconnect)
+         enddo
+      enddo
+      nFKSprocess=nFKSprocess_save
+      call fks_inc_chooser()
+      call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+      ! Set amp_split to amp_split_mc (see comment above)
+      xi=get_xi_from_p(i_fks,j_fks,p_cm) ! these correspond to ij, not kl
+      y=get_yij_from_p(i_fks,j_fks,p_cm)
+      amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
+      end
+      
 
-      if (ilim.ne.0 .and. ilim.ne.1 .and. ilim.ne.2) then
-         write (*,*) 'ERROR: not a valid choice'
+      subroutine generate_valid_momenta(wgt,x,p)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      double precision wgt,x(99),p(0:3,nexternal)
+      integer jj,ntry
+      double precision ran2
+      external ran2
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      do jj=1,ndim
+         x(jj)=ran2()
+      enddo
+      new_point=.true.
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+      calculatedBorn=.false.
+      do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
+     &     ) .and. ntry .lt. 1000)
+         do jj=1,ndim
+            x(jj)=ran2()
+         enddo
+         new_point=.true.
+         wgt=1d0
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         calculatedBorn=.false.
+         ntry=ntry+1
+      enddo
+      if (ntry.ge.1000) then
+         write (*,*) 'No valid phase-space points...'
+         write (12,*) 'ERROR: no valid phase-space points...'/
+     $        /' Cannot perform ME tests properly for config',iconfig
          stop 1
       endif
-
-      if (ilim.eq.0 .or. ilim.eq.1) then
-         write(*,*) 'Enter the Monte Carlo name: possible choices are'
-         write(*,*) 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
-         read (*,*) MonteCarlo
-         if(MonteCarlo.ne.'HERWIG6'.and.MonteCarlo.ne.'HERWIGPP'.and.
-     &        MonteCarlo.ne.'PYTHIA6Q'.and.MonteCarlo.ne.'PYTHIA6PT'.and.
-     &        MonteCarlo.ne.'PYTHIA8')then
-            write(*,*)'Wrong name ',MonteCarlo,' during the tests'
-            stop
-         endif
-
-         write(*,*) 'Enter alpha, beta for G_soft'
-         write(*,*) '  Enter alpha<0 to set G_soft=1 (no ME soft)'
-         read (*,*) alsf,besf
-         
-         write(*,*) 'Enter alpha, beta for G_azi'
-         write(*,*) '  Enter alpha>0 to set G_azi=0 (no azi corr)'
-         read (*,*) alazi,beazi
-      endif
-
-      write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
-      write(*,*) ' Enter -2 to generate them randomly'
-      read (*,*) xi_i_fks_fix_save,y_ij_fks_fix_save
-
-      write(*,*) 'Enter number of tests for soft and collinear limits'
-      read (*,*) nsofttests,ncolltests
-
+      end
       
-      if (ilim.eq.0 .or. ilim.eq.1) then
-         write(*,*) '  '
-         write(*,*) '  '
-         write(*,*) '**************************************************'
-         write(*,*) '**************************************************'
-         write(*,*) '            Testing limits for ',MonteCarlo
-         write(*,*) '**************************************************'
-         write(*,*) '**************************************************'
-         write(*,*) '  '
-         write(*,*) '  '
-         nlo_ps=.true.
-         fixed_order=.false.
+      subroutine init_iconfig_loop(ilim)
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      integer ilim
+      double precision x(99),wgt,p(0:3,nexternal)
+      double complex wgt1(2)
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+      ichan=1
+      iconfigs(1)=iconfig
+      if (ilim.eq.2) then
+         call setfksfactor(.false.)
       else
-         nlo_ps=.false.
-         fixed_order=.true.
+         call setfksfactor(.true.)
       endif
-
-      call setrun               !Sets up run parameters
-      call setpara('param_card.dat') !Sets up couplings and masses
-      call fill_configurations_common
-
-      ! initialise the global, but process dependent, information in the process module.
-      call init_process_module_global(shower_mc,abrv,nexternal,nincoming
-     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow,ickkw)
-      ! Also put all the n-body process dependent stuff here. It does
-      ! not depend on PS point or FKS config, so all global information.
-      call init_process_module_nbody_wrapper()
-      call init_scale_module(nexternal,shower_scale_factor,fks_configs
-     $     ,1)
-
+      call setcuts
       
-      write (*,*) 'Give FKS configuration number ("0" loops over all)'
-      read (*,*) fks_conf_number
+      softtest=.false.
+      colltest=.false.
 
-      if (fks_conf_number.eq.0) then
-         fks_loop_min=1
-         fks_loop_max=fks_configs
-      else
-         fks_loop_min=fks_conf_number
-         fks_loop_max=fks_conf_number
-      endif
+      call generate_valid_momenta(wgt,x,p)
+      
+      call sborn(p_born,wgt1)
+      write (*,*) ''
+      write (*,*) ''
+      write (*,*) ''
+      nerr(0:amp_split_size)=0
+      end
 
-      do fks_loop=fks_loop_min,fks_loop_max
+      subroutine init_new_loop(fks_loop,bs_min,bs_max,is_massive_jfks)
+      use process_module
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'run.inc'
+      include 'born_nhel.inc'
+      include 'born_maxamps.inc'
+      include 'born_conf.inc'
+      include 'coupl.inc'
+      include 'leshouche_decl.inc'
+      double precision ZERO,    one
+      parameter       (ZERO=0d0,one=1d0)
+      integer iconfig_in,bs_min,bs_max,fks_loop
+      logical is_massive_jfks
+      double precision pmass(nexternal)
+      integer         nndim
+      common/tosigint/nndim
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
       nFKSprocess=fks_loop
       call fks_inc_chooser()
       call leshouche_inc_chooser()
+
       write (*,*) ''
       write (*,*) '================================================='
       write (*,*) ''
@@ -209,12 +601,57 @@ c
       if (abs(lpp(2)).ge.1) ndim=ndim+1
       nndim=ndim
 
+      call set_ebeam()
+      
+      include 'pmass.inc' ! this is filled by setcuts (which is in set_ebeam())
+      is_massive_jfks=pmass(j_fks).gt.0d0
 
+!     update shat
+      call init_process_module_global(shower_mc,'all ',nexternal
+     $     ,nincoming,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol
+     $     ,maxflow_used,ickkw)
+      
+      write(*,*)'  '
+      write(*,*)'  '
+      write(*,*)"Enter graph number (iconfig), "
+     &     //"'0' loops over all graphs, '-1' takes the first non-zero"
+      read(*,*) iconfig_in
+      
+      if (iconfig_in.eq.0) then
+         bs_min=1
+         bs_max=mapconfig(0)
+      elseif (iconfig_in.eq.-1) then
+         bs_min=1
+         bs_max=1
+      else
+         bs_min=iconfig_in
+         bs_max=iconfig_in
+      endif
+      
+      end
+
+      subroutine set_ebeam()
+      implicit none
+      include 'nexternal.inc'
+      include 'cuts.inc'
+      include 'run.inc'
+      include 'coupl.inc'
+      double precision ZERO,    one
+      parameter       (ZERO=0d0,one=1d0)
+      integer i,k
+      double precision totmass,pmass(nexternal)
+      LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
       call setcuts              !Sets up cuts 
 c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
       totmass = 0.0d0
-      include 'pmass.inc' ! make sure to set the masses after the model has been included
+      include 'pmass.inc'       ! make sure to set the masses after the model has been included
       do i=nincoming+1,nexternal-1
          if (is_a_j(i)) then
             totmass = totmass + max(ptj,pmass(i))
@@ -238,562 +675,122 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
       enddo
       if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
       if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
+      end
 
       
-      write(*,*)'  '
-      write(*,*)'  '
-      write(*,*)"Enter graph number (iconfig), "
-     &     //"'0' loops over all graphs"
-      read(*,*) iconfig_in
-      
-      if (iconfig_in.eq.0) then
-         bs_min=1
-         bs_max=mapconfig(0)
-      elseif (iconfig_in.eq.-1) then
-         bs_min=1
-         bs_max=1
+
+      subroutine init_test_limits(ilim,nstep)
+      use mint_module
+      use process_module
+      use scale_module
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
+      include 'born_nhel.inc'
+      include 'genps.inc'
+      integer ilim,nstep
+      logical         Hevents
+      common/SHevents/Hevents
+c-----
+      if (fks_configs.eq.1) then
+         if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
+            write (*,*) 'Process generated with [LOonly=QCD]. '/
+     $           /'No tests to do.'
+            return
+         endif
+      endif
+      if (ilim.eq.2) then
+         nlo_ps=.false.
+         fixed_order=.true.
       else
-         bs_min=iconfig_in
-         bs_max=iconfig_in
+         nlo_ps=.true.
+         fixed_order=.false.
+      endif
+      call setrun               !Sets up run parameters
+      call setpara('param_card.dat') !Sets up couplings and masses
+      call fill_configurations_common
+      ! initialise the global, but process dependent, information in the process module.
+      call init_process_module_global(shower_mc,'all ',nexternal
+     $     ,nincoming,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow
+     $     ,ickkw)
+      ! Also put all the n-body process dependent stuff here. It does
+      ! not depend on PS point or FKS config, so all global information.
+      call init_process_module_nbody_wrapper()
+      call init_scale_module(nexternal,shower_scale_factor,fks_configs
+     $     ,1)
+      Hevents=.true.
+      nstep=10  ! take 10 steps towards the limit
+      end
+
+
+      subroutine read_input_file(ilim,nsofttests,ncolltests,fks_loop_min
+     $     ,fks_loop_max,xi_i_fks_fix_input,y_ij_fks_fix_input)
+      implicit none
+      include 'nFKSconfigs.inc'
+      integer ilim,nsofttests,ncolltests,fks_conf_number,fks_loop_min
+     $     ,fks_loop_max
+c$$$      character*10           MonteCarlo
+c$$$      common/cMonteCarloType/MonteCarlo
+      double precision alsf,besf
+      common /cgfunsfp/alsf,besf
+      double precision alazi,beazi
+      common /cgfunazi/alazi,beazi
+      double precision xi_i_fks_fix_input,y_ij_fks_fix_input
+      write(*,*) 'Enter 0 to compute MC/MC(limit) (no longer available)'
+      write(*,*) '      1 to compute MC/ME(limit)'
+      write(*,*) '      2 to compute ME/ME(limit)'
+      read (*,*) ilim
+      if (ilim.ne.0 .and. ilim.ne.1 .and. ilim.ne.2) then
+         write (*,*) 'ERROR: not a valid choice'
+         stop 1
+      endif
+      if (ilim.eq.0) then
+         write (*,*) 'ERROR: MC/MC(limit) is no longer available. '//
+     &        '(This test was kind of irrelevant anyway)'
+         stop 1
+      endif
+      if (ilim.eq.1) then
+c$$$         write(*,*) 'Enter the Monte Carlo name: possible choices are'
+c$$$         write(*,*) 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
+c$$$         read (*,*) MonteCarlo
+c$$$         if ( MonteCarlo(1:7).ne.'HERWIG6'.and.
+c$$$     &        MonteCarlo(1:8).ne.'HERWIGPP'.and.
+c$$$     $        MonteCarlo(1:8).ne.'PYTHIA6Q'.and.
+c$$$     &        MonteCarlo(1:9).ne.'PYTHIA6PT'.and.
+c$$$     $        MonteCarlo(1:7).ne.'PYTHIA8' )then
+c$$$            write(*,*)'Wrong name ',MonteCarlo,' during the tests'
+c$$$            stop 1
+c$$$         endif
+         write(*,*) 'Enter alpha, beta for G_soft'
+         write(*,*) '  Enter alpha<0 to set G_soft=1 (no ME soft)'
+         read (*,*) alsf,besf
+         write(*,*) 'Enter alpha, beta for G_azi'
+         write(*,*) '  Enter alpha>0 to set G_azi=0 (no azi corr)'
+         read (*,*) alazi,beazi
+      endif
+      write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
+      write(*,*) ' Enter -2 to generate them randomly'
+      read (*,*) xi_i_fks_fix_input,y_ij_fks_fix_input
+
+      write(*,*) 'Enter number of tests for soft and collinear limits'
+      read (*,*) nsofttests,ncolltests
+      
+      write (*,*) 'Give FKS configuration number ("0" loops over all)'
+      read (*,*) fks_conf_number
+
+      if (fks_conf_number.eq.0) then
+         fks_loop_min=1
+         fks_loop_max=fks_configs
+      else
+         fks_loop_min=fks_conf_number
+         fks_loop_max=fks_conf_number
       endif
       
-      do iconfig=bs_min,bs_max  ! Born configurations
-         ichan=1
-         iconfigs(1)=iconfig
-         if (ilim.eq.2) then
-            call setfksfactor(.false.)
-         else
-            call setfksfactor(.true.)
-         endif
-         call setcuts
-         ntry=1
-
-         softtest=.false.
-         colltest=.false.
-
-         do jj=1,ndim
-            x(jj)=ran2()
-         enddo
-         new_point=.true.
-         wgt=1d0
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         calculatedBorn=.false.
-         do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
-     &        ) .and. ntry .lt. 1000)
-            do jj=1,ndim
-               x(jj)=ran2()
-            enddo
-            new_point=.true.
-            wgt=1d0
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            calculatedBorn=.false.
-            ntry=ntry+1
-         enddo
-         if (ntry.ge.1000) then
-            write (*,*) 'No points passed cuts...'
-            write (12,*) 'ERROR: no points passed cuts...'/
-     $           /' Cannot perform ME tests properly for config',iconfig
-            cycle
-         endif
-         call sborn(p_born,wgt1)
-      
-         write (*,*) ''
-         write (*,*) ''
-         write (*,*) ''
-
-         Hevents=.true.
-         softtest=.true.
-         colltest=.false.
-         nerr(:)=0
-         imax=10
-         do j=1,nsofttests
-            do iamp=1,amp_split_size
-               do i = 1,imax
-                  fxl_split(i,iamp) = 0d0
-                  wfxl_split(i,iamp) = 0d0
-                  limit_split(i,iamp) = 0d0
-                  wlimit_split(i,iamp) = 0d0
-               enddo
-            enddo
-            if(nsofttests.le.10)then
-               write (*,*) ' '
-               write (*,*) ' '
-            endif
-            y_ij_fks_fix=y_ij_fks_fix_save
-            xi_i_fks_fix=0.1d0
-            ntry=1
-            wgt=1d0
-            do jj=1,ndim
-               x(jj)=ran2()
-            enddo
-            new_point=.true.
-            MCcntcalled=0
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
-               wgt=1d0
-               do jj=1,ndim
-                  x(jj)=ran2()
-               enddo
-               new_point=.true.
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               ntry=ntry+1
-            enddo
-
-            if (ilim.ne.2) then
-               fks_father=min(i_fks,j_fks)
-               call compute_shower_scale_nbody(p_born,-fks_father) 
-               call get_born_flow(flow_picked,born_flow_factor)
-               call determine_partner(flow_picked,partner_picked)
-               call init_process_module_n1body_wrapper(flow_picked)
-               call compute_shower_scale_n1body(p,i_fks,j_fks)
-            endif
-            
-            if(nsofttests.le.10)write (*,*) 'ntry',ntry
-            if (ilim.eq.2) then
-               calculatedBorn=.false.
-               call set_cms_stuff(0)
-               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-            else
-c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
-c configurations close to the soft-collinear limit
-               xi_i_fks_fix=0.d0
-               wgt=1d0
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
-               call set_cms_stuff(0)
-               calculatedBorn=.false.
-c Initialise shower_S_scale to a large value, not to get spurious dead zones
-               shower_S_scale=1d10*ebeam(1)
-               if(ilim.eq.0)then
-                  ! TODO: rewrite these checks (also below)!
-c$$$                  call compute_xmcsubt_for_checks(p1_cnt(0,1,0),zero
-c$$$     $                 ,y_ij_fks_ev,fx)
-               else
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-               endif
-            endif
-            fxl(1)=fx*wgt
-            wfxl(1)=jac_cnt(0)
-            do iamp=1,amp_split_size
-               if(ilim.eq.0)then
-                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0)
-               else
-                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
-               endif
-               wfxl_split(1,iamp)=jac_cnt(0)
-            enddo
-            if (ilim.eq.2) then
-               call set_cms_stuff(-100)
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-            else
-c Now generate the momenta for the original xi_i_fks=0.1, slightly shifted,
-c because otherwise fresh random will be used...
-               xi_i_fks_fix=0.100001d0
-               wgt=1d0
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
-               call set_cms_stuff(-100)
-c$$$               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
-c$$$     $              ,fx)
-            endif
-            limit(1)=fx*wgt
-            wlimit(1)=wgt
-            do iamp=1,amp_split_size
-               if (ilim.eq.2) then
-                 limit_split(1,iamp) = amp_split(iamp)*wgt
-               else
-                 limit_split(1,iamp) = amp_split_mc(iamp)*wgt
-               endif
-               wlimit_split(1,iamp) = wgt
-            enddo
-
-            do k=1,nexternal
-               do l=0,3
-                  lxp(l,k)=p1_cnt(l,k,0)
-                  xp(1,l,k)=p(l,k)
-               enddo
-            enddo
-            do l=0,3
-               lxp(l,nexternal+1)=p_i_fks_cnt(l,0)
-               xp(1,l,nexternal+1)=p_i_fks_ev(l)
-            enddo
-
-            do i=2,imax
-               xi_i_fks_fix=xi_i_fks_fix/10d0
-               wgt=1d0
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               if (ilim.eq.2) then
-                  calculatedBorn=.false.
-                  call set_cms_stuff(0)
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-                  fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
-                  do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0)
-                     wfxl_split(i,iamp)=jac_cnt(0)
-                  enddo
-                  calculatedBorn=.false.
-                  call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-              else
-                  calculatedBorn=.false.
-                  call set_cms_stuff(-100)
-c$$$                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
-c$$$     $                 ,y_ij_fks_ev,fx)
-                  fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
-                  do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(0)
-                     wfxl_split(i,iamp)=jac_cnt(0)
-                  enddo
-               endif
-               limit(i)=fx*wgt
-               wlimit(i)=wgt
-               do iamp=1,amp_split_size
-                  if (ilim.eq.2) then
-                    limit_split(i,iamp) = amp_split(iamp)*wgt
-                  else
-                    limit_split(i,iamp) = amp_split_mc(iamp)*wgt
-                  endif
-                  wlimit_split(i,iamp) = wgt
-               enddo
-               do k=1,nexternal
-                  do l=0,3
-                     xp(i,l,k)=p(l,k)
-                  enddo
-               enddo
-               do l=0,3
-                  xp(i,l,nexternal+1)=p_i_fks_ev(l)
-               enddo
-            enddo
-
-            if(nsofttests.le.10)then
-               write (*,*) 'Soft limit:'
-               do i=1,imax
-                  call xprintout(6,limit(i),fxl(i))
-               enddo
-               do iamp=1, amp_split_size
-                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
-     $                 ,iamp).ne.0d0) then
-                     write(*,*) '   Split-order', iamp
-                     call amp_split_pos_to_orders(iamp,orders)
-                     do i = 1, nsplitorders
-                        write(*,*) '      ',ordernames(i), ':',orders(i)
-                     enddo
-                     do i=1,imax
-                        call xprintout(6,limit_split(i,iamp),fxl_split(i
-     $                       ,iamp))
-                     enddo
-                     iflag=0
-                     call checkres2(limit_split(1,iamp),fxl_split(1
-     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
-     $                    ,iret)
-                     write(*,*) 'RETURN CODE', iret
-                  endif
-               enddo
-c
-               write(80,*)'  '
-               write(80,*)'****************************'
-               write(80,*)'  '
-               do k=1,nexternal+1
-                  write(80,*)''
-                  write(80,*)'part:',k
-                  do l=0,3
-                     write(80,*)'comp:',l
-                     do i=1,10
-                        call xprintout(80,xp(i,l,k),lxp(l,k))
-                     enddo
-                  enddo
-               enddo
-            else
-               iflag=0
-               call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
-     &              iflag,imax,j,i_fks,j_fks,iret)
-               nerr(0)=nerr(0)+iret
-           ! check the contributions coming from each splitorders
-           ! only look at the non vanishing ones
-               do iamp=1, amp_split_size
-                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
-     $                 ,iamp).ne.0d0) then
-                     call checkres2(limit_split(1,iamp),fxl_split(1
-     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
-     $                    ,iret)
-                     nerr(iamp)=nerr(iamp)+iret
-                  endif
-               enddo
-            endif
-         enddo
-         if(nsofttests.gt.10)then
-            write(*,*)'Soft tests done for (Born) config',iconfig
-            write(*,*)'Failures:',nerr
-            do iamp = 0, amp_split_size
-                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
-                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
-                if (iamp.ne.0) then
-                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
-                   call amp_split_pos_to_orders(iamp,orders)
-                   do i = 1, nsplitorders
-                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
-                   enddo
-                else
-                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
-                endif
-                if (fail_frac(iamp).lt.max_fail) then
-                   write(*,401) nFKSprocess, fail_frac(iamp)
-                else
-                   write(*,402) nFKSprocess, fail_frac(iamp)
-                endif
-            enddo
-         endif
-
-         write (*,*) ''
-         write (*,*) ''
-         write (*,*) ''
-
-         if (pmass(j_fks).ne.0d0) then
-            write (*,*) 'No collinear test for massive j_fks'
-            goto 123
-         endif
-         
-         softtest=.false.
-         colltest=.true.
-
-         nerr(:)=0
-         imax=10
-         do j=1,ncolltests
-            do iamp=1,amp_split_size
-               do i = 1,imax
-                  fxl_split(i,iamp) = 0d0
-                  wfxl_split(i,iamp) = 0d0
-                  limit_split(i,iamp) = 0d0
-                  wlimit_split(i,iamp) = 0d0
-               enddo
-            enddo
-            if(ncolltests.le.10)then
-               write (*,*) ' '
-               write (*,*) ' '
-            endif
-
-            y_ij_fks_fix=0.9d0
-            xi_i_fks_fix=xi_i_fks_fix_save
-            ntry=1
-            wgt=1d0
-            do jj=1,ndim
-               x(jj)=ran2()
-            enddo
-            new_point=.true.
-            MCcntcalled=0
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
-               wgt=1d0
-               do jj=1,ndim
-                  x(jj)=ran2()
-               enddo
-               new_point=.true.
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               ntry=ntry+1
-            enddo
-            if(ncolltests.le.10)write (*,*) 'ntry',ntry
-            calculatedBorn=.false.
-            call set_cms_stuff(1)
-            if(ilim.eq.0)then
-c$$$               call compute_xmcsubt_for_checks(p1_cnt(0,1,1)
-c$$$     $              ,xi_i_fks_cnt(1),one,fx)
-            else
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
-            endif
-            fxl(1)=fx*jac_cnt(1)
-            wfxl(1)=jac_cnt(1)
-            do iamp=1,amp_split_size
-              if(ilim.eq.0)then
-                fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1)
-              else
-                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
-              endif
-               wfxl_split(1,iamp) = jac_cnt(1)
-            enddo
-
-            call set_cms_stuff(-100)
-            if (ilim.eq.2) then
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-            else
-c$$$               call compute_xmcsubt_for_checks(p,xi_i_fks_ev,y_ij_fks_ev
-c$$$     $              ,fx)
-            endif
-            limit(1)=fx*wgt
-            wlimit(1)=wgt
-            do iamp=1,amp_split_size
-              if (ilim.eq.2) then
-                limit_split(1,iamp) = amp_split(iamp)*wgt
-              else
-                limit_split(1,iamp) = amp_split_mc(iamp)*wgt
-              endif
-              wlimit_split(1,iamp) = wgt
-            enddo
-
-            do k=1,nexternal
-               do l=0,3
-                  lxp(l,k)=p1_cnt(l,k,1)
-                  xp(1,l,k)=p(l,k)
-               enddo
-            enddo
-            do l=0,3
-               lxp(l,nexternal+1)=p_i_fks_cnt(l,1)
-               xp(1,l,nexternal+1)=p_i_fks_ev(l)
-            enddo
-            
-            do i=2,imax
-               y_ij_fks_fix=1-0.1d0**i
-               wgt=1d0
-               MCcntcalled=0
-               call generate_momenta(ndim,iconfig,wgt,x,p)
-               if (ilim.eq.2) then
-                  calculatedBorn=.false.
-                  call set_cms_stuff(1)
-                  call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
-                  fxl(i)=fx*jac_cnt(1)
-                  wfxl(i)=jac_cnt(1)
-                  do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1)
-                     wfxl_split(i,iamp) = jac_cnt(1)
-                  enddo
-                  calculatedBorn=.false.
-                  call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-               else
-                  calculatedBorn=.false.
-                  call set_cms_stuff(-100)
-c$$$                  call compute_xmcsubt_for_checks(p,xi_i_fks_ev
-c$$$     $                 ,y_ij_fks_ev,fx)
-                  fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
-                  do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(1)
-                     wfxl_split(i,iamp) = jac_cnt(1)
-                  enddo
-               endif
-               limit(i)=fx*wgt
-               wlimit(i)=wgt
-               do iamp=1,amp_split_size
-                 if (ilim.eq.2) then
-                   limit_split(i,iamp) = amp_split(iamp)*wgt
-                 else
-                   limit_split(i,iamp) = amp_split_mc(iamp)*wgt
-                 endif
-                 wlimit_split(i,iamp) = wgt
-               enddo
-               do k=1,nexternal
-                  do l=0,3
-                     xp(i,l,k)=p(l,k)
-                  enddo
-               enddo
-               do l=0,3
-                  xp(i,l,nexternal+1)=p_i_fks_ev(l)
-               enddo
-            enddo
-            if(ncolltests.le.10)then
-               write (*,*) 'Collinear limit:'
-               do i=1,imax
-                  call xprintout(6,limit(i),fxl(i))
-               enddo
-               do iamp=1, amp_split_size
-                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
-     $                 ,iamp).ne.0d0) then
-                     write(*,*) '   Split-order', iamp
-                     call amp_split_pos_to_orders(iamp,orders)
-                     do i = 1, nsplitorders
-                        write(*,*) '      ',ordernames(i), ':',orders(i)
-                     enddo
-                     do i=1,imax
-                        call xprintout(6,limit_split(i,iamp),fxl_split(i
-     $                       ,iamp))
-                     enddo
-                     iflag=1
-                     call checkres2(limit_split(1,iamp),fxl_split(1
-     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
-     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
-     $                    ,iret)
-                     write(*,*) 'RETURN CODE', iret
-                  endif
-               enddo
-c     
-               write(80,*)'  '
-               write(80,*)'****************************'
-               write(80,*)'  '
-               do k=1,nexternal+1
-                  write(80,*)''
-                  write(80,*)'part:',k
-                  do l=0,3
-                     write(80,*)'comp:',l
-                     do i=1,10
-                        call xprintout(80,xp(i,l,k),lxp(l,k))
-                     enddo
-                  enddo
-               enddo
-            else
-               iflag=1
-               call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
-     &              iflag,imax,j,i_fks,j_fks,iret)
-               nerr(0)=nerr(0)+iret
-           ! check the contributions coming from each splitorders
-           ! only look at the non vanishing ones
-               do iamp=1, amp_split_size
-                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
-     $                 ,iamp).ne.0d0) then
-                     call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
-     &                    wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
-     &                    iflag,imax,j,i_fks,j_fks,iret)
-                     nerr(iamp)=nerr(iamp)+iret
-                  endif
-               enddo
-            endif
-         enddo
-         if(ncolltests.gt.10)then
-            write(*,*)'Collinear tests done for (Born) config', iconfig
-            write(*,*)'Failures:',nerr
-            do iamp = 0, amp_split_size
-                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
-                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
-                if (iamp.ne.0) then
-                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
-                   call amp_split_pos_to_orders(iamp,orders)
-                   do i = 1, nsplitorders
-                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
-                   enddo
-                else
-                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
-                endif
-                if (fail_frac(iamp).lt.max_fail) then
-                   write(*,501) nFKSprocess, fail_frac(iamp)
-                else
-                   write(*,502) nFKSprocess, fail_frac(iamp)
-                endif
-            enddo
-         endif
-         
- 123     continue
-         
-      enddo                     ! Loop over Born configurations
-      enddo                     ! Loop over nFKSprocess
-
-
-      return
- 401  format('     Soft test ',i2,' PASSED. Fraction of failures: ',
-     & f4.2) 
- 402  format('     Soft test ',I2,' FAILED. Fraction of failures: ',
-     & f4.2) 
- 501  format('Collinear test ',i2,' PASSED. Fraction of failures: ',
-     & f4.2) 
- 502  format('Collinear test ',I2,' FAILED. Fraction of failures: ',
-     & f4.2) 
       end
+     
+
 
       subroutine init_process_module_nbody_wrapper()
       use process_module
@@ -884,3 +881,4 @@ c
      $     ,maxflow,valid_dipole)
       
       end
+      
