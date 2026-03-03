@@ -615,7 +615,7 @@ c$$$
 !     and j_fks configuration. (Same as original code).
 
       
-      subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,pborn
+      subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,p_born
      $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
       use process_module
       use kinematics_module
@@ -626,7 +626,7 @@ c$$$
       include 'orders.inc'
       integer k_fks,l_fks,i
       logical lzone(2)
-      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),xi,y,mass ,z(2)
+      double precision p(0:3,nexternal),p_born(0:3,nexternal-1),xi,y,mass ,z(2)
      $     ,amp_split_xmcxsec(1:amp_split_size,2),probne
      $     ,bogus_probne_fun,p_cm(0:3,nexternal)
       external bogus_probne_fun
@@ -638,7 +638,7 @@ c$$$
       logical include_gfun
       mass=pmass(l_fks)
       veckn_ev=rho(p_cm(0,l_fks))
-      veckbarn_ev=rho(pborn(0,min(k_fks,l_fks)))
+      veckbarn_ev=rho(p_born(0,min(k_fks,l_fks)))
       xp0jfks=p_cm(0,l_fks)
 
       call fill_kinematics_module(p_cm,k_fks,l_fks,xi,y,mass
@@ -653,7 +653,7 @@ c$$$
 !     fks-father.
 
       do iconnect=1,n_connect
-         call xmcsubt_connection(p,xi,y,i_connect(iconnect)
+         call xmcsubt_connection(p,xi,y,p_born,i_connect(iconnect)
      $        ,include_gfun,lzone(iconnect),z(iconnect)
      $        ,amp_split_xmcxsec(1,iconnect))
       enddo
@@ -937,8 +937,8 @@ c     positivity check
 
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
-      subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,i_connect
-     $     ,include_gfun,lzone,z,amp_split_xmcxsec)
+      subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,p_born
+     $     ,i_connect,include_gfun,lzone,z,amp_split_xmcxsec)
       use process_module
       use kinematics_module
       use scale_module
@@ -949,10 +949,10 @@ c over colour partners
       include 'fks_powers.inc'
       include 'coupl.inc'
 !     arguments:
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks ,probne ,z
-     $     ,xkern(2),xkernazi(2),bornbars(max_bcol ,nsplitorders)
-     $     ,bornbarstilde(max_bcol,nsplitorders)
-     $     ,amp_split_xmcxsec(1:amp_split_size)
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,p_born(0:3
+     $     ,nexternal-1) ,probne ,z,xkern(2),xkernazi(2)
+     $     ,bornbars(max_bcol ,nsplitorders),bornbarstilde(max_bcol
+     $     ,nsplitorders),amp_split_xmcxsec(1:amp_split_size)
       integer i_connect,ione,iord,iord_val
       logical lzone,include_gfun
 !     local
@@ -980,8 +980,6 @@ c over colour partners
      &                       i_type,j_type,m_type,j_pdg
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
      $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
       common /to_amp_split_bornbars/amp_split_bornbars,
@@ -1007,7 +1005,7 @@ c     New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
 
 c     Call barred Born and assign shower scale
-      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
+      call get_mbar(pp,y_ij_fks,p_born,ileg,bornbars,bornbarstilde)
       
 c$$$  c     Distinguish ISR and FSR
 c$$$  if(ileg.le.2)then
@@ -1035,7 +1033,7 @@ c     Shower variables
       call get_shower_variables(E0sq,z,xi,xjac)
       
 c     Compute dead zones
-      call get_dead_zone(z,xi,qMC,i_connect,lzone,PY6PTweight)
+      call get_dead_zone(z,xi,p_born,qMC,i_connect,lzone,PY6PTweight)
       
 c     Compute MC subtraction terms
       if (lzone) then
@@ -2605,7 +2603,7 @@ c
       end
 
 
-      subroutine get_mbar(p,y_ij_fks,ileg,bornbars,bornbarstilde)
+      subroutine get_mbar(p,y_ij_fks,p_born,ileg,bornbars,bornbarstilde)
 c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).
 c Computes barred azimuthal amplitudes (bornbarstilde) with
@@ -2617,7 +2615,7 @@ c the same method
       include "born_nhel.inc"
       include "orders.inc"
 
-      double precision p(0:3,nexternal)
+      double precision p(0:3,nexternal),p_born(0:3,nexternal-1)
       double precision y_ij_fks,bornbars(max_bcol,nsplitorders),
      &                          bornbarstilde(max_bcol,nsplitorders)
 
@@ -2628,9 +2626,6 @@ c the same method
       double precision p_born_rot(0:3,nexternal-1)
 
       integer imother_fks,ileg
-
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
 
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
@@ -3883,7 +3878,7 @@ c
 
 
 
-      subroutine get_dead_zone(z,xi,qMC,ipartner,lzone,PY6PTweight)
+      subroutine get_dead_zone(z,xi,p_born,qMC,ipartner,lzone,PY6PTweight)
       use process_module
       use kinematics_module
       use scale_module
@@ -3893,13 +3888,12 @@ c
       double precision z,xi,qMC,PY6PTweight
       logical lzone
 
+      double precision p_born(0:3,nexternal-1)
       double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda
      $     ,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,get_angle
      $     ,theta2p,max_scale
       external get_angle
 
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision ppartner(0:3),pfather(0:3)
 
       ! PYTHIA6 variables

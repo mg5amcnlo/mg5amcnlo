@@ -4519,6 +4519,8 @@ C dressed lepton stuff
       double precision sumdot,dot
       external sumdot,dot
       integer i,iconfigsave
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
       save m,stot,totmassin,totmass,fksmass
       pass=.true.
       do i=1,nexternal-1
@@ -4600,6 +4602,10 @@ C dressed lepton stuff
      $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
       if(.not.pass.or.xjac0.lt.0d0)goto 222
 
+
+      ! fill the pborn common block:
+      p_born(0:3,1:nexternal-1)=pb(0:3,1:nexternal-1)
+      
       shat=sumdot(p(0,1),p(0,2),1d0)
       sqrtshat=sqrt(shat)
       call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt0,xjac0)
@@ -4762,8 +4768,6 @@ c     Jacobian due to delta() of tau_born
 
       xbjrk(1:2)=plab(0,1:2)/(sqrt(stot)/2d0)
 
-      write (*,*) 'bjorken',xbjrk
-      
       call boost_n1_to_its_cms(plab,p,y_lab_to_cms)
       
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
