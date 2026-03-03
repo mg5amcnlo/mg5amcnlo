@@ -1,6 +1,6 @@
       module extra_weights
       
-         integer,parameter :: iwgtinfo=-5,maxscales=9,maxPDFs=200
+         integer,parameter :: iwgtinfo=-5,maxscales=9,maxPDFs=2500
      $     ,maxPDFsets=25,maxdynscales=10,maxorders=10
          integer :: max_mom_str=1,max_mext=1,max_n_ctr=1
          logical :: doreweight,lscalevar(maxdynscales)

@@ -4024,16 +4024,30 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
         sqrtS=0
         Energy1=0
         Energy2=0
+        #if os.path.exists('Cards/run_card.dat'):
+            #path_to_card = os.path.abspath('Cards/run_card.dat')
+            #sub_string = 'True = asymm_choice'
+            #with open(str(path_to_card)) as file:
+                #lines = file.readlines()
+                #for line in lines:
+                    #if sub_string in line:
+                        #Reg=Reg+1
+                    #else:
+                        #Reg=Reg+0
+                        
+                        
+        # try to find regular expression
+        pattern = re.compile(r'^\s*True\s*=\s*asymm_choice\b', re.IGNORECASE)
+
         if os.path.exists('Cards/run_card.dat'):
             path_to_card = os.path.abspath('Cards/run_card.dat')
-            sub_string = 'True = asymm_choice'
-            with open(str(path_to_card)) as file:
-                lines = file.readlines()
-                for line in lines:
-                    if sub_string in line:
-                        Reg=Reg+1
-                    else:
-                        Reg=Reg+0
+            with open(path_to_card) as file:
+                for line in file:
+                    # remove comments — everything after "!" or "#"
+                    clean_line = re.split(r'[!#]', line)[0].strip()
+                    # check
+                    if pattern.match(clean_line):
+                        Reg += 1
              
             
         #import numpy as np
