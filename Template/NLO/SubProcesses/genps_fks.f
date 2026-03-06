@@ -2037,7 +2037,7 @@ c Changed in the context of granny stuff
 c remove the following if no importance sampling towards soft
 c singularity is performed when integrating over xi_i_hat
       xjac=xjac*2d0*x(1)
-
+      
 c
 c Update the variables here.
 c
@@ -2838,7 +2838,7 @@ c insert here further importance sampling towards y_ij_fks->1
      &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
       elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
      &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
-     &          colltest)  )then
+     &        colltest)  )then
          y_ij_fks = y_ij_fks_fix
          if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
      &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
@@ -2982,26 +2982,51 @@ c
 c
 c Define xi_i_fks
 c
-      if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &     ((.not.colltest) .or. 
-     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
-     &     (.not.softtest)  )then
-         if(icountevts.eq.-100)then
-c importance sampling towards soft singularity
-c insert here further importance sampling towards xi_i_hat->0
-            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
-         endif
-         xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
-      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
-     &        (.not.softtest)  )then
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
-         else
-            xi_i_fks=xi_i_fks_fix*xiimax
-         endif
-      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &        softtest )then
+c$$$      if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &     ((.not.colltest) .or. 
+c$$$     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
+c$$$     &     (.not.softtest)  )then
+c$$$         if(icountevts.eq.-100)then
+c$$$c importance sampling towards soft singularity
+c$$$c insert here further importance sampling towards xi_i_hat->0
+c$$$            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
+c$$$         endif
+c$$$         xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
+c$$$      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
+c$$$     &        (.not.softtest)  )then
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix
+c$$$         else
+c$$$            xi_i_fks=xi_i_fks_fix*xiimax
+c$$$         endif
+c$$$      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &        softtest )then
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix
+c$$$         else
+c$$$            xjac=-102
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
+c$$$         xi_i_fks=xi_i_fks_matrix(icountevts)
+c$$$c Check that xi_i_fks is in the allowed range. If not, counter events
+c$$$c cannot be generated
+c$$$         if ( xi_i_fks.gt.xiimax+1d-12 .or.
+c$$$     &        xi_i_fks.lt.xiimin-1d-12 ) then
+c$$$            xjac=-34d0
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$      else
+c$$$         write(*,*)'Error #11 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+
+      if(abs(icountevts).eq.2.or.icountevts.eq.0)then
+         xi_i_fks=0d0
+      elseif (softtest) then
          if(xi_i_fks_fix.lt.xiimax)then
             xi_i_fks=xi_i_fks_fix
          else
@@ -3009,26 +3034,15 @@ c insert here further importance sampling towards xi_i_hat->0
             pass=.false.
             return
          endif
-      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
-         xi_i_fks=xi_i_fks_matrix(icountevts)
-c Check that xi_i_fks is in the allowed range. If not, counter events
-c cannot be generated
-         if ( xi_i_fks.gt.xiimax+1d-12 .or.
-     &        xi_i_fks.lt.xiimin-1d-12 ) then
-            xjac=-34d0
-            pass=.false.
-            return
-         endif
       else
-         write(*,*)'Error #11 in genps_fks.f',icountevts
-         stop
+         xi_i_hat=x(1)**2
+         xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
+         xjac=xjac*2d0*x(1)
       endif
-c remove the following if no importance sampling towards soft
-c singularity is performed when integrating over xi_i_hat
-      xjac=xjac*2d0*x(1)
 c
 c Initial state variables are different for events and counterevents. Update them here.
 c
+     
       omega=sqrt( (2-xi_i_fks*(1+yijdir))/
      &     (2-xi_i_fks*(1-yijdir)) )
       if (icountevts.ne.0) then
@@ -4563,7 +4577,7 @@ C dressed lepton stuff
      $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
 
 ! given Born momenta, return x's and jac corresponding to tau_born and y_born.
-      call generate_tau_y_wrapper_inverse(qmass,qwidth,totmass,stot
+      call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot
      $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
 
       pb(0,1)=sqrt(tau_born*stot)/2d0
@@ -4616,7 +4630,7 @@ C dressed lepton stuff
       return
       end
 
-      subroutine generate_tau_y_wrapper_inverse(
+      subroutine generate_tau_y_wrapper_inverse(j_fks,
      $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
       implicit none
       include 'nexternal.inc'
@@ -4624,7 +4638,7 @@ C dressed lepton stuff
       include 'run.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),totmass
      $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac
-      integer itree_c(2,-max_branch:-1)
+      integer itree_c(2,-max_branch:-1),j_fks
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
       common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
@@ -4634,35 +4648,60 @@ C dressed lepton stuff
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
       integer ndim_dummy
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       ndim_dummy=1
-      if (abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) then
-         if (one_body) then
+      if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
+     &     .not.(softtest.or.colltest)) then
+         if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collision      if (abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) then
+            if (one_body) then
 c     tau is fixed by the mass of the final state particle
-            call compute_tau_one_body_inverse(totmass,stot,xjac)
-         else
-            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
-     $           cBW(-ns_channel-1).ne.2)then
+               call compute_tau_one_body_inverse(totmass,stot,xjac)
+            else
+               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+     $              cBW(-ns_channel-1).ne.2)then
 c     Generate tau according to a Breit-Wiger function
-               call generate_tau_BW_inverse(stot,ndim_dummy,rndx(1)
-     $              ,qmass(-ns_channel-1),qwidth(-ns_channel-1),cBW(
-     $              -ns_channel-1),cBW_mass(-1, -ns_channel-1)
-     $              ,cBW_width(-1,-ns_channel-1),tau_born,xjac)
-            else 
+                  call generate_tau_BW_inverse(stot,ndim_dummy,rndx(1)
+     $                 ,qmass(-ns_channel-1),qwidth(-ns_channel-1),cBW(
+     $                 -ns_channel-1),cBW_mass(-1, -ns_channel-1)
+     $                 ,cBW_width(-1,-ns_channel-1),tau_born,xjac)
+               else 
 c     not a Breit Wigner
-               call generate_tau_inverse(stot,ndim_dummy,rndx(1)
-     $              ,tau_born,xjac)
+                  call generate_tau_inverse(stot,ndim_dummy,rndx(1)
+     $                 ,tau_born,xjac)
+               endif
             endif
+            call generate_y_inverse(tau_born,rndx(2),ycm_born,ycmhat,xjac)
+         else
+            write (*,*) 'Inverse phase-space not '/
+     $           /'implemented for e+e- with PDF'
          endif
-         
 c     Generate the rapditity of the Born system (tau and ycm input)
-         call generate_y_inverse(tau_born,rndx(2),ycm_born,ycmhat,xjac)
       else
-         write (*,*) 'Inverted phase-space only implemented'/
-     $        /' for hadron-hadron collisions.'
-         stop 1
+         call compute_tau_y_epem_inverse(j_fks,one_body,totmass,stot,
+     &        tau_born)
       endif
       end
 
+      subroutine compute_tau_y_epem_inverse(j_fks,one_body,fksmass,stot,
+     &     tau)
+      implicit none
+      include 'nexternal.inc'
+      integer j_fks
+      logical one_body
+      double precision fksmass,stot,tau,ycm,ycmhat
+      if (j_fks.le.nincoming) then
+         if(one_body)then
+            tau=fksmass**2/stot
+         else
+            tau=max((0.85d0)**2,fksmass**2/stot)
+         endif
+      else
+c     For e+e- collisions, set tau to one and y to zero
+         tau=1.d0
+      endif
+      end
+      
       subroutine generate_tau_inverse(stot,idim,x,tau,jac)
       implicit none
       integer idim
@@ -4773,7 +4812,7 @@ c     Jacobian due to delta() of tau_born
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
-
+      
       ! FIX THIS: momenta are in CMS frame, but need to have bjorken x
       ! which are defined in lab frame.
       call set_cms_stuff(-100)
@@ -4828,6 +4867,10 @@ c     Jacobian due to delta() of tau_born
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
      &     ,tau_lower_bound_resonance,tau_lower_bound
+      double precision xi_i_fks_fix,y_ij_fks_fix
+      common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       idir=0
       if(.not.fks_as_is)then
          if(j_fks.eq.1)then
@@ -4850,7 +4893,7 @@ c     Jacobian due to delta() of tau_born
       sqrtshat=sqrt(shat)
       xbjrk_born(1)=xbjrk(1)*(sqrt(1-xi_i_fks)*omega)
       xbjrk_born(2)=xbjrk(2)/omega*sqrt(1-xi_i_fks)   
-
+      
 ! boost n+1 body from cms to tilde frame
       ybst=0.5*log(xbjrk_born(1)/xbjrk_born(2))-y_lab_to_cms
       chy_bst=(exp(ybst)+exp(-ybst))/2d0
@@ -4860,7 +4903,7 @@ c     Jacobian due to delta() of tau_born
          call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
      &        xp(0,i),xp(0,i))
       enddo
-      
+
 c$$$      write (*,*) 'real incoming',xp(0:3,1:2)
 
 ! boost n+1-body kinematics to the tilde frame (defined such that the
@@ -5003,10 +5046,18 @@ c Lower bound on xi_i_fks
          return
       endif
 
-      
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
-      xjac=xjac*2d0*x(1)
+      if (softtest) then
+         if(xi_i_fks_fix.lt.xiimax)then
+            continue
+         else
+            xjac=-102
+            return
+         endif
+      else
+         xjac=xjac*2d0*x(1)
+      endif
 
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
