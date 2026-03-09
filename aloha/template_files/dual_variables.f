@@ -5,14 +5,15 @@
       public :: operator(+), operator(-)
       public :: operator(*), operator(/)
       public :: operator(**), sqrt, log
-      public :: CONJG, DCONJG, DUALCONJG
+      public :: CONJG, DCONJG
       public :: DBLE, DIMAG
       public :: size
    
       include "onia.inc"
    
       type :: Dual
-         complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: comp = (0d0,0d0) ! npwave taken from onia.inc
+         complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: 
+     &   comp = (0d0,0d0) ! npwave taken from onia.inc
    
       ! Printing routine used for constitency checks
       contains
@@ -88,10 +89,6 @@
             module procedure Imaginary_Conjugation
       end interface DCONJG
 
-      interface DUALCONJG
-            module procedure Dual_Conjugation
-      end interface DUALCONJG
-
       interface size
             module procedure dual_length
       end interface size
@@ -101,23 +98,6 @@
      &115975/)
    
       contains
-
-      !subroutine get_lenght(DV)
-      !  class(Dual),intent(in)::DV
-      !  integer,intent(out)::n
-
-      !  n = size(DV%compoennts)
-      !  return
-      !end subroutine get_lenght
-
-      ! logical function compare(self, other) result(res)
-      !   class(Dual), intent(in) :: self
-      !   class(Dual), intent(in) :: other   ! accepts any type
-      !   res = .false.
-      !      
-      !   ! res = (self%length() == other_var%length())
-      !   res = (size(self%comp) .eq. size(other%comp))
-      ! end function compare
 
       ! Array size
       pure function Dual_Length(a) result(res)
@@ -179,15 +159,8 @@
       function add_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
-         integer::i,nn
-
-         if(size(a).ne.size(b))then
-         WRITE(*,*)"Error: cannot add two different type of dual"//
-     1            " variables"
-         stop
-         endif
-         nn=size(a)
-         do i=0,2**nn-1
+         integer::i
+         do i=0,2**npwave-1
          res%comp(i) = a%comp(i) + b%comp(i)
          enddo
       end function add_DualVariable
@@ -196,17 +169,9 @@
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1            " in add"
-            stop
-         endif
-
+         integer::i
          res%comp(0) = cn+a%comp(0)
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = a%comp(i)
          enddo
       end function add_CN_DualVariable
@@ -223,17 +188,9 @@
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-         nn=size(a)
-
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1            " in add"
-            stop
-         endif
-
+         integer::i
          res%comp(0) = dcmplx(rn,0d0)+a%comp(0)
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = a%comp(i)
          enddo
       end function add_RN_DualVariable
@@ -249,16 +206,9 @@
       function add_NON_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
+         integer::i
 
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1            " in add"
-            stop
-         endif
-
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i) = a%comp(i)
          enddo
       end function add_NON_DualVariable
@@ -268,24 +218,9 @@
       function minus_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
-         integer::i,nn
+         integer::i
 
-         if(size(a).ne.size(b))then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1            " in add"
-            WRITE(*,*)"Error: cannot minus two different type of dual"//
-     1            " variables"
-            stop
-         endif
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1               " in minus"
-            stop
-         endif
-
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i) = a%comp(i) - b%comp(i)
          enddo
       end function minus_DualVariable
@@ -294,17 +229,10 @@
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1              " in minus"
-            stop
-         endif
+         integer::i
 
          res%comp(0)=cn-a%comp(0)
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = -a%comp(i)
          enddo
       end function minus_CN_DualVariable
@@ -313,16 +241,10 @@
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1              " in minus"
-            stop
-         endif
+         integer::i
 
          res%comp(0)=a%comp(0)-cn
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = a%comp(i)
          enddo
       end function minus_DualVariable_CN
@@ -331,17 +253,10 @@
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                 " in minus"
-            stop
-         endif
+         integer::i
 
          res%comp(0)=dcmplx(rn,0d0)-a%comp(0)
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = -a%comp(i)
          enddo
       end function minus_RN_DualVariable
@@ -350,17 +265,10 @@
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in minus"
-            stop
-         endif
+         integer::i
 
          res%comp(0)=a%comp(0)-dcmplx(rn,0d0)
-         do i=1,2**nn-1
+         do i=1,2**npwave-1
             res%comp(i) = a%comp(i)
          enddo
       end function minus_DualVariable_RN
@@ -368,15 +276,8 @@
       function minus_NON_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                   " in minus"
-            stop
-         endif
-         do i=0,2**nn-1
+         integer::i
+         do i=0,2**npwave-1
             res%comp(i) = -a%comp(i)
          enddo
       end function minus_NON_DualVariable
@@ -384,33 +285,16 @@
 
       ! Multiplication rules
       function multiply_DualVariable(a, b) result(res)
-         type(Dual), intent(in) :: a, b
-         type(Dual) :: res
-         integer::i,j,nn,n_ones,ii
-         integer,dimension(2**size(a),2)::c12
+         type(Dual),intent(in)::a,b
+         type(Dual)::res
+         integer::i,j
 
-         if(size(a).ne.size(b))then
-            WRITE(*,*)"Error: cannot multiply two different type of "//
-     1                "dual variables"
-            stop
-         endif
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                   " in multiply"
-            stop
-         endif    
-         do i=0,2**nn-1
-            if(i.eq.0)then
-               res%comp(0) = a%comp(0)*b%comp(0)
-               cycle
-            endif
-            call count_binary_ones(i,n_ones)
-            call split_binary(i,n_ones,c12(1:2**n_ones,1:2))
-               res%comp(i) = dcmplx(0d0,0d0)
-            do j=1,2**n_ones
-                  res%comp(i)=res%comp(i)+a%comp(c12(j,1))*
-     &            b%comp(c12(j,2))
+         do i=0,2**npwave-1
+            j=i
+            do 
+               res%comp(i) = res%comp(i) + a%comp(j)*b%comp(i - j)
+            if (j.eq.0) exit
+            j = iand(j - 1, i)
             enddo
          enddo
       end function multiply_DualVariable
@@ -419,16 +303,9 @@
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
+         integer::i
 
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in multiply"
-            stop
-         endif
-
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i)=cn*a%comp(i)
          enddo
       end function multiply_CN_DualVariable
@@ -444,14 +321,8 @@
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in multiply"
-            stop
-         endif
-         do i=0,2**nn-1
+         integer::i
+         do i=0,2**npwave-1
             res%comp(i)=dcmplx(rn,0d0)*a%comp(i)
          enddo
       end function multiply_RN_DualVariable
@@ -467,14 +338,8 @@
          integer,intent(in)::jn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in multiply"
-            stop
-         endif
-         do i=0,2**nn-1
+         integer::i
+         do i=0,2**npwave-1
          res%comp(i)=dcmplx(jn,0d0)*a%comp(i)
          enddo
       end function multiply_IN_DualVariable
@@ -492,60 +357,48 @@
          type(Dual),intent(in)::a
          integer,intent(in)::np
          type(Dual)::res
-         integer::i,j,k,nn,bn,ng,n_ones
+         integer::i,j,k,bn,ng,n_ones
          integer::pref
          ! bnmax means we can have at maximum size(a)=nmax
          ! otherwise, please increase the dimension
          integer,dimension(bnarray(size(a)),0:size(a))::c_split
          complex(kind(1d0))::cterm
 
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match in power"
+         if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.(np.lt.0))then
+            print*, "Error in power_DualVariable_int: 0 cannot be "//
+     1               "raised to a non-positive power"
             stop
          endif
 
          if(np.eq.0)then
-         res%comp(0)=dcmplx(1d0,0d0)
-         do i=1,2**nn-1
-            res%comp(i)=dcmplx(0d0,0d0)
-         enddo
-         return
+           res%comp(0)=dcmplx(1d0,0d0)
+           do i=1,2**npwave-1
+              res%comp(i)=dcmplx(0d0,0d0)
+           enddo
+           return
          endif
 
-         if(a%comp(0).eq.0d0)then
-         do i=0,2**nn-1
-            res%comp(i)=dcmplx(0d0,0d0)
-         enddo
-         return
-         endif
-
-         if(nn.gt.nmax)then
-         write(*,*)"Error: please increase nmax and bnarray in"//
-     1                " power_DualVariable_int"
-         stop
-         endif
-
-         do i=0,2**nn-1
-         if(i.eq.0)then
-            res%comp(0) = (a%comp(0))**np
-            cycle
-         endif
-         call count_binary_ones(i,n_ones)
-         bn=bell(n_ones)
-         call generate_binary_partitions(i,n_ones,bn,c_split(1:bn,
-     &   0:n_ones))
-         res%comp(i) = dcmplx(0d0,0d0)
-         do j=1,bn
-            ng=c_split(j,0)
-            pref=falling_factorial(np,ng)
-            cterm=pref*(a%comp(0))**(np-ng)
-            do k=1,ng
-            cterm=cterm*a%comp(c_split(j,k))
+         res%comp(0) = (a%comp(0))**np
+         do i=1,2**npwave-1
+            call count_binary_ones(i,n_ones)
+            bn=bell(n_ones)
+            call generate_binary_partitions(i,n_ones,bn,c_split(1:bn,
+     &      0:n_ones))
+            res%comp(i) = dcmplx(0d0,0d0)
+            do j=1,bn
+               ng=c_split(j,0)
+               if ((np.gt.0).and.(ng.gt.np)) cycle
+               pref=falling_factorial(np,ng)
+               if (ng.eq.np) then
+                 cterm=pref
+               else
+                 cterm=pref*(a%comp(0))**(np-ng)
+               endif
+               do k=1,ng
+                  cterm=cterm*a%comp(c_split(j,k))
+               enddo
+               res%comp(i)=res%comp(i)+cterm
             enddo
-            res%comp(i)=res%comp(i)+cterm
-         enddo
          enddo
          return
       end function power_DualVariable_int
@@ -554,46 +407,36 @@
          type(Dual),intent(in)::a
          real(kind(1d0)),intent(in)::np
          type(Dual)::res
-         integer::i,j,k,nn,bn,ng,n_ones
+         integer::i,j,k,bn,ng,n_ones
          real(kind(1d0))::pref
          ! bnmax means we can have at maximum size(a)=nmax
          ! otherwise, please increase the dimension
          integer,dimension(bnarray(size(a)),0:size(a))::c_split
          complex(kind(1d0))::cterm
 
-         nn=size(a)
-         if(size(res).ne.nn)then
-         WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match in power"
-         stop
+         if (abs(dble(nint(np))-np).lt.1d-12) then
+            !If np is an integer, it calls power_DualVariable_int directly
+            res=power_DualVariable_int(a,nint(np))
+            return
          endif
 
-         if(np.eq.0d0)then
-         res%comp(0)=dcmplx(1d0,0d0)
-         do i=1,2**nn-1
-               res%comp(i)=dcmplx(0d0,0d0)
-         enddo
-         return
-         endif
 
-         if(a%comp(0).eq.0d0)then
-         do i=0,2**nn-1
-            res%comp(i)=dcmplx(0d0,0d0)
-         enddo
-         return
-         endif
+c         if (a%comp(0).ne.dcmplx(0d0,0d0)) then
+c            res%comp(0) = a%comp(0)**np
+c         elseif (np.lt.0d0) then
+c            print*, "Error in power_DualVariable_real: 0 cannot be"//
+c     1              " raised to a non-positive power"
+c            stop
+c         endif
 
-         if(nn.gt.nmax)then
-         write(*,*)"Error: please increase nmax and bnarray in "//
-     1            "power_DualVariable_real"
-         stop
-         endif
+         if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.(np.le.0d0)) then
+            print*, "Error in power_DualVariable_real: 0 cannot be "//
+     1               "raised to a non-positive power"
+            stop
+         end if
 
-         do i=0,2**nn-1
-            if(i.eq.0)then
-               res%comp(0) = (a%comp(0))**np
-               cycle
-            endif
+         res%comp(0) = (a%comp(0))**np 
+         do i=1,2**npwave-1
             call count_binary_ones(i,n_ones)
             bn=bell(n_ones)
             call generate_binary_partitions(i,n_ones,bn,c_split(1:bn,
@@ -601,6 +444,23 @@
             res%comp(i) = dcmplx(0d0,0d0)
             do j=1,bn
                ng=c_split(j,0)
+               if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.
+     &             (dble(ng).gt.np)) then
+               !if ((abs(a%comp(0)).lt.1d-13).and.(dble(ng).gt.np)) then
+                  cterm=1
+                  do k=1,ng
+                     cterm=cterm*a%comp(c_split(j,k))
+                  enddo
+                  if (cterm.eq.dcmplx(0d0,0d0)) cycle 
+                  !if (abs(cterm).lt.1d-13) cycle 
+                  if ((np.gt.0d0).and.
+     &                    (abs(dble(nint(np))-np).lt.5d-11)) cycle
+                  print*, "Error in power_DualVariable_real: "//
+     1                    "derivative in an special point; "//
+     2                    "a proper limit must be taken "//
+     3                    "and not yet implemented"
+                  stop
+               endif
                pref=falling_factorial_r(np,ng)
                cterm=pref*(a%comp(0))**(np-dble(ng))
                do k=1,ng
@@ -618,18 +478,6 @@
          type(Dual), intent(in) :: a, b
          type(Dual)::oneoverb
          type(Dual) :: res
-         integer::nn
-         if(size(a).ne.size(b))then
-            WRITE(*,*)"Error: cannot division two different type of"//
-     1                   " dual variables"
-            stop
-         endif
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                   " in division"
-            stop
-         endif
          oneoverb=power_DualVariable_int(b,-1)
          res=multiply_DualVariable(a,oneoverb)
          return
@@ -640,13 +488,6 @@
          type(Dual), intent(in) :: a
          type(Dual)::oneovera
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-            stop
-         endif
          oneovera=power_DualVariable_int(a,-1)
          res=multiply_CN_DualVariable(cn,oneovera)
          return
@@ -656,13 +497,6 @@
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-            stop
-         endif
          res=multiply_CN_DualVariable(dcmplx(1d0,0d0)/cn,a)
          return
       end function division_DualVariable_CN
@@ -672,13 +506,6 @@
          type(Dual), intent(in) :: a
          type(Dual)::oneovera
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-            stop
-         endif
          oneovera=power_DualVariable_int(a,-1)
          res=multiply_RN_DualVariable(rn,oneovera)
          return
@@ -688,13 +515,6 @@
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-            stop
-         endif
          res=multiply_RN_DualVariable(1d0/rn,a)
          return
       end function division_DualVariable_RN
@@ -704,13 +524,6 @@
          type(Dual), intent(in) :: a
          type(Dual)::oneovera
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-            stop
-         endif
          oneovera=power_DualVariable_int(a,-1)
          res=multiply_IN_DualVariable(jn,oneovera)
          return
@@ -720,13 +533,6 @@
          integer,intent(in)::jn
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-           WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in division"
-           stop
-         endif
          res=multiply_RN_DualVariable(1d0/jn,a)
          return
       end function division_DualVariable_IN
@@ -736,41 +542,23 @@
       function sqrt_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::nn
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in sqrt"
-            stop
-         endif
          res=power_DualVariable_real(a,0.5d0)
          return
       end function sqrt_DualVariable
+
 
       ! Natural-logarithmic rule
       function log_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
-         integer::i,j,k,nn,bn,ng,n_ones
+         integer::i,j,k,bn,ng,n_ones
          integer::pref
          ! bnmax means we can have at maximum size(a)=nmax
          ! otherwise, please increase the dimension
          integer,dimension(bnarray(size(a)),0:size(a))::c_split
          complex(kind(1d0))::cterm
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not match"//
-     1                " in log"
-            stop
-         endif
 
-         if(nn.gt.nmax)then
-            write(*,*)"Error: please increase nmax and bnarray in"//
-     1                " log_DualVariable"
-            stop
-         endif
-
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             if(i.eq.0)then
                res%comp(0) = LOG(a%comp(0))
                cycle
@@ -799,16 +587,9 @@
       function DBLE_DualVariable(a) result(res)
          type(Dual),intent(in)::a
          type(Dual)::res
-         integer::i,nn
+         integer::i
 
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match the original one"
-            stop
-         endif
-
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i) = dcmplx(a%comp(i)%re, 0d0)
          enddo
          return
@@ -818,16 +599,9 @@
       function DIMAG_DualVariable(a) result(res)
          type(Dual),intent(in)::a
          type(Dual)::res
-         integer::i,nn
-            
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match the original one"
-            stop
-         endif
+         integer::i
 
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i) = dcmplx(a%comp(i)%im, 0d0)
          enddo
          return
@@ -837,73 +611,13 @@
       function Imaginary_Conjugation(a) result(res)
          type(Dual),intent(in)::a
          type(Dual)::res
-         integer::i,nn
-            
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match the original one"
-            stop
-         endif
+         integer::i
 
-         do i=0,2**nn-1
+         do i=0,2**npwave-1
             res%comp(i) = DCONJG(a%comp(i))
          enddo
          return
       end function Imaginary_Conjugation
-
-      function Dual_Conjugation(a, j) result(res)
-         type(Dual),intent(in)::a
-         integer,intent(in),dimension(:),optional::j
-         type(Dual)::res
-         integer,allocatable::indices(:)
-         integer::i,nn,idx
-         integer::min_idx, max_idx
-         
-         nn=size(a)
-         if(size(res).ne.nn)then
-            WRITE(*,*)"Error: the output dual variable does not"//
-     1                " match the original one"
-            stop
-         endif
-            
-         if (present(j)) then
-            allocate(indices(size(j)))
-            indices = j
-         else
-            allocate(indices(size(a)))
-            indices = [(i, i = 1, size(a))]
-         end if
-
-         min_idx = indices(1)
-         max_idx = indices(1)
-         if (size(indices).GT.1) Then
-            do i = 2, size(indices)
-               if (indices(i) < min_idx) min_idx = indices(i)
-               if (indices(i) > max_idx) max_idx = indices(i)
-            enddo
-         endif
-
-         if (min_idx.LE.0) then
-            write(*,*) "Error: index of dual conjugation cannot be "//
-     1                "less or equal than 0"
-            stop
-         end if
-
-         if (max_idx.GT.nn) then
-            write(*,'(A,I0,A,I0,A)') ""//
-     1            "Error: index of dual conjugation (", j, ") "//    
-     2            "exceed dual variable dimension (", nn, ")"
-            stop
-         end if
-            
-
-         do i=1, size(indices)
-            idx = indices(i)
-            res%comp(idx) = -a%comp(idx)
-         enddo
-         return
-      end function Dual_Conjugation
 
 
 
@@ -1156,3 +870,9 @@
       end function falling_factorial_r
       
       end module dual_variables
+
+
+      module global_duals
+      
+
+      end module global_duals

@@ -65,19 +65,19 @@ c     Convention for dual computations (same as loop)
             fi(7)%comp(0) = ip*nsf * sqm(im)
             fi(8)%comp(0) = im     * sqm(im)
             do i = 1, size(p(0))
-               fi(3)%comp(i) = oHsqm(ip)*
+               fi(5)%comp(i) = oHsqm(ip)*
      &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
      &             -im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))) 
 
-               fi(4)%comp(i) = oHsqm(ip)*
+               fi(6)%comp(i) = oHsqm(ip)*
      &            (-ip*    (p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*nsf*(p(0)%comp(i) +    p(3)%comp(i)))
 
-               fi(5)%comp(i) = oHsqm(im)*
+               fi(7)%comp(i) = oHsqm(im)*
      &            (+ip*nsf*(p(0)%comp(i) +    p(3)%comp(i))
      &             +im*    (p(1)%comp(i) - ci*p(2)%comp(i))) 
 
-               fi(6)%comp(i) = oHsqm(im)*
+               fi(8)%comp(i) = oHsqm(im)*
      &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
             enddo
@@ -95,23 +95,39 @@ c     Convention for dual computations (same as loop)
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
-            chi(1) = sqrt(rHalf*pp3/pp)
+            !chi(1) = sqrt(rHalf*pp3/pp)
 
-            if (pp3%comp(0).eq.rZero) then
+            !if (pp3%comp(0).eq.rZero) then
+c           LM:: the method below should be more numerically safe.           
+            if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
+     &          .and.(p(3)%comp(0)%re.lt.0d0)) then
+               oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
+               oHsqm(1) = rHalf*sfomeg(2)%comp(0)/pp%comp(0)
                chi(2)%comp(0) = dcmplx(-nh)
             else
+               oHsqm(0:1) = (/0d0,0d0/)
+               chi(1) = sqrt(rHalf*pp3/pp)
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            fi(3) = sfomeg(1)*chi(im)
-            fi(4) = sfomeg(1)*chi(ip)
-            fi(5) = sfomeg(2)*chi(im)
-            fi(6) = sfomeg(2)*chi(ip)
+            fi(5) = sfomeg(1)*chi(im) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(ip)
+            fi(6) = sfomeg(1)*chi(ip) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(im)
+            fi(7) = sfomeg(2)*chi(im) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(ip)
+            fi(8) = sfomeg(2)*chi(ip) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
+
+            !fi(5) = sfomeg(1)*chi(im)
+            !fi(6) = sfomeg(1)*chi(ip)
+            !fi(7) = sfomeg(2)*chi(im)
+            !fi(8) = sfomeg(2)*chi(ip)
          endif
       else
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+            sqp0p3%comp(0) = sqrt(max(p(0)%comp(0)%re+
      &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
@@ -231,7 +247,7 @@ c
       else
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+            sqp0p3%comp(0) = sqrt(max(p(0)%comp(0)%re+
      &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
@@ -341,19 +357,35 @@ c     Convention for dual computations (same as loop)
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
-            chi(1) = sqrt(rHalf*pp3/pp)
+            !chi(1) = sqrt(rHalf*pp3/pp)
          
 
-            if (pp3%comp(0)%re.eq.rZero) then
+            !if (pp3%comp(0)%re.eq.rZero) then
+c           LM:: the method below should be more numerically safe.           
+            if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
+     &          .and.(p(3)%comp(0)%re.lt.0d0)) then
+               oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
+               oHsqm(1) = rHalf*sfomeg(2)%comp(0)/pp%comp(0)
                chi(2)%comp(0) = dcmplx(-nh)
             else
+               oHsqm(0:1) = (/0d0,0d0/)
+               chi(1) = sqrt(rHalf*pp3/pp)
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            fo(3) = sfomeg(2)*chi(im)
-            fo(4) = sfomeg(2)*chi(ip)
-            fo(5) = sfomeg(1)*chi(im)
-            fo(6) = sfomeg(1)*chi(ip)
+            fo(5) = sfomeg(2)*chi(im)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(ip)
+            fo(6) = sfomeg(2)*chi(ip)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(im)
+            fo(7) = sfomeg(1)*chi(im)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(ip)
+            fo(8) = sfomeg(1)*chi(ip)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
+
+            !fo(5) = sfomeg(2)*chi(im)
+            !fo(6) = sfomeg(2)*chi(ip)
+            !fo(7) = sfomeg(1)*chi(im)
+            !fo(8) = sfomeg(1)*chi(ip)
 
          endif
 
@@ -361,7 +393,7 @@ c     Convention for dual computations (same as loop)
 
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
-            sqp0p3%comp(0) = dsqrt(max(p(0)%comp(0)%re+
+            sqp0p3%comp(0) = sqrt(max(p(0)%comp(0)%re+
      &                        p(3)%comp(0)%re,rZero))*nsf
          end if
          chi(1) = sqp0p3
@@ -837,7 +869,7 @@ c output:
 c       double precision cg   : value of the Clebsch-Gordan coefficient
 c
       implicit none
-      real L, Lz, S, Sz, J, Jz
+      integer L, Lz, S, Sz, J, Jz
       double precision cg
 
       if (J.gt.(L + S)) then
@@ -882,7 +914,7 @@ c
                cg = 0.0d0
             end if
          elseif (J.eq.0) then
-            if ((Lz.eq.0).and.(S.eq.0)) then
+            if ((Lz.eq.0).and.(Sz.eq.0)) then
                cg = -1/dsqrt(3.0d0)
             else
                cg = 1/dsqrt(3.0d0)
@@ -902,7 +934,7 @@ c
       return
       end subroutine clebsch_gordan
 
-      subroutine onia_proj_dual(fq, fqb, masses, p, m, nhel, spin
+      subroutine onia_proj_dual(fq, fqb, masses, p, m, sz, spin
      &, proj)
       use dual_variables
 c
@@ -913,17 +945,17 @@ c       dual    fq(1:8)        : spinor of first consituent (particle)
 c       dual    fqb(1:8)       : spinor of second consituent (anti-particle)
 c       real    p(0:3)         : four-momentum of bound state
 c       real    m(0:3)         : mass          of bound state
-c       integer nhel           : helicity      of bound state
+c       integer sz             : z component of the spin
 c       integer spin           : spin          of the bound state
 c LM:: can I use optional inputs?->      complex vc(1:6)        : polarization vector of physical particle (optional)
 c
 c output:
-c       complex proj           : value of the projector
+c       dual    proj           : value of the projector
 c
       implicit none
       type(Dual)::fq(1:8),fqb(1:8),vc(1:8),p(0:3),tmp
       double precision masses(1:2),m
-      integer nhel,spin
+      integer sz,spin
       type(Dual)::proj
       
       double complex ci
@@ -936,11 +968,11 @@ c     spin singlet
 
       elseif (spin.eq.1) then
 c     spin triplet
-         call vxxxxx(p,m,nhel,+1,vc)
-         tmp = (fq(5)*fqb(8)-fq(7)*fqb(6))*(vc(4)+ci*vc(5))+
-     &         (fq(6)*fqb(7)-fq(8)*fqb(5))*(vc(4)-ci*vc(5))+
-     &         (fq(5)*fqb(7)+fq(8)*fqb(6))*(vc(3)+vc(6))+
-     &         (fq(6)*fqb(8)+fq(7)*fqb(5))*(vc(3)-vc(6))
+         call vxxxxx(p,m,sz,+1,vc)
+         tmp = (fq(5)*fqb(8)-fq(7)*fqb(6))*(vc(6)+ci*vc(7))+
+     &         (fq(6)*fqb(7)-fq(8)*fqb(5))*(vc(6)-ci*vc(7))+
+     &         (fq(5)*fqb(7)+fq(8)*fqb(6))*(vc(5)+vc(8))+
+     &         (fq(6)*fqb(8)+fq(7)*fqb(5))*(vc(5)-vc(8))
       else
          print *,"spin projector not yet implemented"
          stop

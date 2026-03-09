@@ -4880,7 +4880,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             constituent = []
             external_wavefunctions = self.get_external_wavefunctions()
             for pair in onia_pairs:
-                hel_per_part[pair[0]-1] = int(2*external_wavefunctions[pair[0]-1].get('onium').get('S')+1)
+                hel_per_part[pair[0]-1] = int(2*external_wavefunctions[pair[0]-1].get('onium').get('J')+1)
                 constituent.append(pair[1])
             for i in sorted(constituent, reverse=True):
                 del hel_per_part[i-1]
@@ -4906,8 +4906,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             constituent = []
             external_wavefunctions = self.get_external_wavefunctions()
             for pair in onia_pairs:
-                s = external_wavefunctions[pair[0]-1].get('onium').get('S')
-                hel = [i for i in range(-s,s+1,1)]
+                j = external_wavefunctions[pair[0]-1].get('onium').get('J')
+                hel = [i for i in range(-j,j+1,1)]
                 hel_per_part[pair[0]-1] = hel
                 constituent.append(pair[1])
             for i in sorted(constituent, reverse=True):
