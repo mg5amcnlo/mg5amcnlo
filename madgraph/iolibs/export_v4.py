@@ -2524,7 +2524,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # create onia_card
         for card in ['onia_card']:
             ldme_default = {}
-            with open(pjoin(self.mgme_dir, 'models', 'ldme.dat')) as f:
+            modelname = self.model.get('name').split('-')[0]
+            with open(pjoin(self.mgme_dir, 'models', modelname, 'ldme.dat')) as f:
                 for line in f:
                     if line.startswith('#'):
                         continue
