@@ -57,6 +57,7 @@ class Systematics(object):
                  muf=[0.5,1,2],
                  alps=[1],
                  pdf='errorset', #[(id, subset)]
+                 multiID=[0],
                  dyn=[-1,1,2,3,4],
                  together=[('mur', 'muf', 'dyn')],
                  remove_wgts=[],
@@ -69,7 +70,6 @@ class Systematics(object):
                  weight_format=None,
                  weight_info=None,
                  ):
-
 
         # INPUT/OUTPUT FILE
         if isinstance(input_file, str):
@@ -90,7 +90,7 @@ class Systematics(object):
             else:
                 self.output = output_file
         self.log = log
-        
+
         #get some information from the run_card.
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
@@ -105,7 +105,7 @@ class Systematics(object):
             if over1 != 1 or over2 !=1:
                 self.orig_dyn = -1
 
-        self.orig_pdf = self.banner.run_card.get_lhapdf_id()
+        self.orig_pdf = self.banner.run_card.get_lhapdf_id_multi()
         matching_mode = self.banner.get('run_card', 'ickkw')
 
         #check for beam
@@ -184,7 +184,7 @@ class Systematics(object):
             if not self.banner.run_card['store_rwgt_info']:
                 raise SystematicsError('The events have not been generated with store_rwgt_info=True. Cannot evaluate systematics error on these events.')
 
-        # MUR/MUF/ALPS PARSING
+        # MUR/MUF/ALPS/MULTIID PARSING
         if isinstance(mur, str):
             mur = mur.split(',')
         self.mur=[float(i) for i in mur]   
@@ -195,6 +195,10 @@ class Systematics(object):
         if isinstance(alps, str):
             alps = alps.split(',')
         self.alps=[float(i) for i in alps]
+
+        if isinstance(multiID, str):
+            multiID = multiID.split(',')
+        self.multiID=[int(i) for i in multiID]
 
         # DYNAMICAL SCALE PARSING + together
         if isinstance(dyn, str):
@@ -233,52 +237,59 @@ class Systematics(object):
             pass
         self.pdfsets = {}  
         if isinstance(pdf, str):
-            pdf = pdf.split(',')
-            
+            pdf = pdf.split(',') # 'errorset', 'central', or something like that
+
         if isinstance(pdf,list) and isinstance(pdf[0],(str,int)) and not isEVA:
             self.pdf = []
             for data in pdf:
                 if data == 'errorset':
-                    data = '%s' % self.orig_pdf
+                    data = ['%s' % pp for pp in self.orig_pdf]
                 if data == 'central':
-                    data = '%s@0' % self.orig_pdf
-                if '@' in data:
-                    #one particular dataset
-                    name, arg = data.rsplit('@',1)
-                    if int(arg) == 0:
-                        if name.isdigit():
-                            self.pdf.append(lhapdf.mkPDF(int(name)))
+                    data = ['%s@0' % pp for pp in self.orig_pdf]
+                if isinstance(data,str):
+                    data = [data] # nest pdf[k] into a list for the following step
+                for kk in data:
+                    if '@' in kk:
+                        #one particular dataset
+                        name, arg = kk.rsplit('@',1)
+                        if int(arg) == 0:
+                            if name.isdigit():
+                                self.pdf.append(lhapdf.mkPDF(int(name)))
+                            else:
+                                self.pdf.append(lhapdf.mkPDF(name))
+                        elif name.isdigit():
+                            try:
+                                self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
+                            except:
+                                raise Exception('Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER. Problem when trying %s' % kk)
                         else:
-                            self.pdf.append(lhapdf.mkPDF(name))
-                    elif name.isdigit():
-                        try:
-                            self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
-                        except:
-                            raise Exception('Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER')
+                            self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                     else:
-                        self.pdf.append(lhapdf.mkPDF(name, int(arg)))
-                else:
-                    if data.isdigit():
-                        pdfset = lhapdf.mkPDF(int(data)).set()
-                    else:
-                        pdfset = lhapdf.mkPDF(data).set()
-                    self.pdfsets[pdfset.lhapdfID] = pdfset 
-                    self.pdf += pdfset.mkPDFs()
+                        if kk.isdigit():
+                            pdfset = lhapdf.mkPDF(int(kk)).set()
+                        else:
+                            pdfset = lhapdf.mkPDF(kk).set()
+                        self.pdfsets[pdfset.lhapdfID] = pdfset  # increment dict of PDFs
+                        self.pdf += pdfset.mkPDFs()             # increment list of PDFs
         else:
             self.pdf = pdf
             
-        for p in self.pdf:
-            if isEVA:
-                break
-            elif p.lhapdfID == self.orig_pdf:
-                self.orig_pdf = p
-                break
-            else:  
-                self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
+        # pdfsets (dict) contains the identities of the pdf sets
+        # pdf (list) contains the membersets / replicas
+        for kk, arg in enumerate(self.orig_pdf):
+            for p in self.pdf: # len(self.pdf) has multiple cases; brute force, run through everything
+                if isEVA:
+                    break
+                elif p.lhapdfID == arg:
+                    self.orig_pdf[kk] = p
+                    break
+                else:
+                    self.orig_pdf[kk] = lhapdf.mkPDF(self.orig_pdf[kk])
         if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
-            self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+            for kk, pset in enumerate(self.orig_pdf):
+                self.log( "# Events generated with PDF(beam%s): %s (%s)" %(kk+1,pset.set().name,pset.lhapdfID ))
         elif isEVAxDIS:
-            self.log( "# Events generated with EVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+            self.log( "# Events generated with EVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf[0].set().name,self.orig_pdf[0].lhapdfID ))
         elif isEVA:
             self.log( "# Events generated with EVA PDF.")
         # create all the function that need to be called
@@ -485,18 +496,32 @@ class Systematics(object):
             norm = 1
             
         all_cross = [c*norm for c in all_cross]
-        stdout.write("# mur\t\tmuf\t\talpsfact\tdynamical_scale\tpdf\t\tcross-section\n")
+        stdout.write("# mur\t\tmuf\t\talpsfact\tdynamical_scale\tpdf1\t\tpdf2\t\tcross-section\n")
         for i,arg in enumerate(self.args):
             
             to_print = list(arg)
-            if self.banner.run_card['pdlabel']=='eva':
-                to_print[4] = 0
-            else:
-                to_print[4] = to_print[4].lhapdfID
+            to_printIDs = [None,None]
+            for beam in [1,2]:
+                if self.banner.run_card['pdlabel%s' % beam]=='eva':
+                    to_printIDs[beam-1] = 0
+                else:
+                    to_printIDs[beam-1] = to_print[4][beam-1].lhapdfID
+            to_print[4] = to_printIDs
 
             to_print.append(all_cross[i])  
-            to_report = []  
-            stdout.write('%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s\n' % tuple(to_print)) 
+            to_report = []
+            #outline = '%s\t\t%s\t\t%s\t\t%s\t\t%s\t%s\t%s\n'
+            #adjust outline spacing according to length of LHAIDs
+            outline = '%s\t\t%s\t\t%s\t\t%s\t\t%s'
+            if len(str(to_printIDs[0])) > len('\t'.expandtabs())-1:
+                outline += '\t%s'
+            else:
+                outline += '\t\t%s'
+            if len(str(to_printIDs[1])) > len('\t'.expandtabs())-1:
+                outline += '\t%s\n'
+            else:
+                outline += '\t\t%s\n'
+            stdout.write(outline % tuple(to_print[:4]+to_print[4]+to_print[5:]))
             
             mur, muf, alps, dyn, pdf = arg[:5]
             if pdf == self.orig_pdf and (dyn==self.orig_dyn or dyn==-1)\
@@ -526,14 +551,15 @@ class Systematics(object):
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
+            pindex = max(0,self.multiID[0]-1)
             if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and self.banner.run_card['pdlabel']!='eva':
-                pdfset = pdf.set()
+                pdfset = pdf[pindex].set()
                 if pdfset.lhapdfID in self.pdfsets:
                     if pdfset.lhapdfID not in pdfs :
                         pdfs[pdfset.lhapdfID] = [0] * pdfset.size
-                    pdfs[pdfset.lhapdfID][pdf.memberID] = all_cross[i]
+                    pdfs[pdfset.lhapdfID][pdf[pindex].memberID] = all_cross[i]
                 else:
-                    to_report.append('# PDF %s : %s\n' % (pdf.lhapdfID, all_cross[i]))
+                    to_report.append('# PDF %s : %s\n' % (pdf[pindex].lhapdfID, all_cross[i]))
   
         stdout.write('\n') 
                 
@@ -550,8 +576,8 @@ class Systematics(object):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
         if self.banner.run_card['pdlabel']=='eva':
             resume.write( '# PDF variation not available for EVA.\n')
-        elif self.orig_pdf.lhapdfID in pdfs:
-            lhapdfid = self.orig_pdf.lhapdfID
+        elif self.orig_pdf[pindex].lhapdfID in pdfs:
+            lhapdfid = self.orig_pdf[pindex].lhapdfID
             values = pdfs[lhapdfid]
             pdfset = self.pdfsets[lhapdfid]
             try:
@@ -563,11 +589,11 @@ class Systematics(object):
         # report error/central not directly linked to the central
         resume.write( "#\n")        
         for lhapdfid,values in pdfs.items():
-            if lhapdfid == self.orig_pdf.lhapdfID:
+            if lhapdfid == self.orig_pdf[pindex].lhapdfID:
                 continue
             if len(values) == 1 :
                 continue
-            pdfset = self.pdfsets[lhapdfid]
+            pdfset = self.pdfsets[pindex][lhapdfid]
 
             if pdfset.errorType == 'unknown' :
                 # Don't know how to determine uncertainty for 'unknown' errorType :
@@ -614,6 +640,10 @@ class Systematics(object):
         
         text = ''
 
+        # for case of multiple LHAIDs, assume the user knows what they are doing
+        # in general, scale variation with multiple LHAIDs is ill-defined
+        pindex = max(0,self.multiID[0]-1)
+
         default = self.args[0]
         for arg in self.args[1:]:
             mur, muf, alps, dyn, pdf = arg[:5]
@@ -637,23 +667,23 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
-                if pdf.lhapdfID in self.pdfsets:
+                if pdf[pindex].lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
-                    pdfset = self.pdfsets[pdf.lhapdfID]
+                    pdfset = self.pdfsets[pdf[pindex].lhapdfID]
                     descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
-                    in_pdf=pdf.lhapdfID 
-                elif pdf.memberID == 0 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
+                    in_pdf=pdf[pindex].lhapdfID
+                elif pdf[pindex].memberID == 0 and (pdf[pindex].lhapdfID - pdf[pindex].memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
-                    pdfset = self.pdfsets[pdf.lhapdfID - 1]
+                    pdfset = self.pdfsets[pdf[pindex].lhapdfID - 1]
                     descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
-                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
+                elif in_pdf and pdf[pindex].lhapdfID - pdf[pindex].memberID != in_pdf:
                     text += "</weightgroup> # PDFSET to PDF\n"
                     in_pdf = False 
             elif in_pdf:
@@ -683,10 +713,10 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 tag += 'PDF="%s" ' % 0                
             elif pdf != self.orig_pdf:
-                tag += 'PDF="%s" ' % pdf.lhapdfID
-                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                tag += 'PDF="%s" ' % pdf[pindex].lhapdfID
+                info += 'PDF=%s MemberID=%s' % (pdf[pindex].lhapdfID-pdf[pindex].memberID, pdf[pindex].memberID)
             else:
-                tag += 'PDF="%s" ' % pdf.lhapdfID
+                tag += 'PDF="%s" ' % pdf[pindex].lhapdfID
             
             wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
             tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
@@ -740,16 +770,16 @@ class Systematics(object):
         return lowest_id
         
     def get_wgt_name(self, mur, muf, alps, dyn, pdf, cid=0):
-        
+        pindex = max(0,self.multiID[0]-1)
         if self.weight_format:            
-            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid}
+            wgt_name =  self.weight_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf[pindex].lhapdfID, 'dyn':dyn, 'id': cid}
         else:
             wgt_name = cid
         return wgt_name
     
     def get_wgt_info(self, mur, muf, alps, dyn, pdf, cid=0):
-        
-        if self.weight_info_format:            
+        pindex = max(0,self.multiID[0]-1)
+        if self.weight_info_format:
             info =  self.weight_info_format[0] % {'mur': mur, 'muf':muf, 'alps': alps, 'pdf':pdf.lhapdfID, 'dyn':dyn, 'id': cid, 's':' ', 'n':'\n'}
         else:
             info = ''
@@ -764,11 +794,12 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 info += 'PDF=%s MemberID=%s' % (0,0)
             elif pdf != self.orig_pdf:
-                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                info += 'PDF=%s MemberID=%s' % (pdf[pindex].lhapdfID-pdf[pindex].memberID, pdf[pindex].memberID)
 
         return info
 
     def get_wgt_tag (self, mur, muf, alps, dyn, pdf, cid=0):
+            pindex = max(0,self.multiID[0]-1)
             tags = []
             tags.append('MUR="%s" ' % mur)
             tags.append('MUF="%s" ' % muf)
@@ -779,7 +810,7 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 tags.append('PDF="%s" ' % 0)
             else:
-                tags.append('PDF="%s" ' % pdf.lhapdfID)
+                tags.append('PDF="%s" ' % pdf[pindex].lhapdfID)
             return " ".join(tags)
      
 
@@ -815,6 +846,47 @@ class Systematics(object):
         for name in pos:
             if name in done:
                 continue
+            if name == 'pdf':
+                nrSets = [0,0]
+                beam1PDFsets = []
+                beam2PDFsets = []
+                # how many pdf sets do we have? ('pdfsets' is dict-type)
+                for kk, key in enumerate(self.pdfsets):
+                    nrSets[kk] = self.pdfsets[key].size
+                # split 'pdf' into two; there is probably a better way to do this
+                for kk, value in enumerate(getattr(self,'pdf')):
+                    if kk < nrSets[0]:
+                        beam1PDFsets.append(value)
+                    else:
+                        beam2PDFsets.append(value)
+                # build pairs of lhaids
+                # the following is a key step when calling multiple LHAIDs
+                # multiID fixes the collection of PDF members that will be called
+                #       e.g., fix beam1 to be the central PDF while beam2 is varied
+                # for PDF sets of different sizes (e.g., 50 vs 100 replicas),
+                #       always go with the smaller set
+                # match-case is used so alternative schemes can be implemented later
+                # trust the user to do something reasonable
+                # remove the following assert line before release
+                assert (nrSets[0]+nrSets[1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
+                match self.multiID[0]:
+                    case 1: # vary 1, fix 2
+                        pairs_of_lhaids = list(zip(beam1PDFsets,itertools.repeat(beam2PDFsets[0])))
+                    case 2: # fix 1, vary 2
+                        pairs_of_lhaids = list(zip(itertools.repeat(beam1PDFsets[0]),beam2PDFsets))
+                    case _: # default, vary 1 and 2 together
+                        pairs_of_lhaids = list(zip(beam1PDFsets,beam2PDFsets))
+                pairs_of_lhaids = [list(pair) for pair in pairs_of_lhaids] # convert
+
+                # add sets of (mur,muf,alps,dyn,pdf) configurations
+                for lhaid_pairs in pairs_of_lhaids:
+                    new_args = list(default)
+                    new_args[pos['pdf']] = lhaid_pairs
+                    all_args.append(new_args)
+
+                done.add('pdf')
+                continue
+
             for value in getattr(self, name):
                 new_args = list(default)
                 new_args[pos[name]] = value
@@ -823,12 +895,30 @@ class Systematics(object):
         self.args = [default] + [arg for arg in all_args if arg!= default]
 
         # add the default before the pdf scan to have a full grouping
-        if self.banner.run_card['pdlabel']!='eva': 
-            pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
+        if self.banner.run_card['pdlabel'] not in ['eva']:
+            match self.multiID[0]:
+                    case 1: # vary 1, fix 2
+                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID]
+                    case 2: # fix 1, vary 2
+                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID]
+                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+                    case _: # default, vary 1 and 2 together
+                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+            pdfplusone = [[pdfplusone1[0],pdfplusone2[0]]]
+            #pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
+            #for kk, pair in enumerate(self.args):
+            #    if pair==default:
+            #        print(f"found one at {kk=}")
+
             if pdfplusone:
                 pdfplusone = default[:-1] + [pdfplusone[0]] 
-                index = self.args.index(pdfplusone)
-                self.args.insert(index, default)
+                print("WARNING: BUG HERE. NOT OBVIOUS HOW TO REMOVE REDUNDANT CONFIGURATION")
+                print("WARNING: COMPARING ENTRIES IN pdfplusone1/2 NOT WORKING")
+                print("WARNING: PROBABLY ISSUE COMPARING tuple AND ZIP")
+                #index = self.args.index(pdfplusone)
+                #self.args.insert(index, default)
 
         self.log( "# Will Compute %s weights per event." % (len(self.args)-1))
         return
@@ -845,34 +935,34 @@ class Systematics(object):
         elif pdg == 0:
             return 1
 
-        if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
-            return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
+        if self.only_beam and self.only_beam!= beam and pdf[beam-1].lhapdfID != self.orig_pdf[beam-1]:
+            return self.getpdfQ(self.pdfsets[self.orig_pdf[beam-1]], pdg, x, scale, beam)
         
-        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+        if self.orig_ion_pdf and (self.ion_scaling or pdf[beam-1].lhapdfID == self.orig_pdf):
             nb_p = self.banner.run_card["nb_proton%s" % beam]
             nb_n = self.banner.run_card["nb_neutron%s" % beam]
 
 
             if pdg in [1,2]:
-                pdf1 =  pdf.xfxQ(1, x, scale)/x
-                pdf2 =  pdf.xfxQ(2, x, scale)/x
+                pdf1 =  pdf[beam-1].xfxQ(1, x, scale)/x
+                pdf2 =  pdf[beam-1].xfxQ(2, x, scale)/x
                 if pdg == 1:
                     f = nb_p * pdf1 + nb_n * pdf2
                 else:
                     f = nb_p * pdf2 + nb_n * pdf1
             elif pdg in [-1,-2]:
-                pdf1 =  pdf.xfxQ(-1, x, scale)/x
-                pdf2 =  pdf.xfxQ(-2, x, scale)/x
+                pdf1 =  pdf[beam-1].xfxQ(-1, x, scale)/x
+                pdf2 =  pdf[beam-1].xfxQ(-2, x, scale)/x
                 if pdg == -1:
                     f = nb_p * pdf1 + nb_n * pdf2
                 else:
                     f = nb_p * pdf2 + nb_n * pdf1                    
             else: 
-                f = (nb_p + nb_n) * pdf.xfxQ(pdg, x, scale)/x
+                f = (nb_p + nb_n) * pdf[beam-1].xfxQ(pdg, x, scale)/x
                 
             f = f * (nb_p+nb_n) 
         else:
-            f = pdf.xfxQ(pdg, x, scale)/x
+            f = pdf[beam-1].xfxQ(pdg, x, scale)/x
 #        if f == 0 and pdf.memberID ==0:
 #            pdfset = pdf.set()
 #            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
@@ -886,35 +976,35 @@ class Systematics(object):
         elif pdg == 0:
             return 1
       
-        if (pdf, pdg,x,scale, beam) in self.pdfQ2:
-            return self.pdfQ2[(pdf, pdg,x,scale,beam)]
+        if (pdf[beam-1], pdg,x,scale, beam) in self.pdfQ2:
+            return self.pdfQ2[(pdf[beam-1], pdg,x,scale,beam)]
 
-        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+        if self.orig_ion_pdf and (self.ion_scaling or pdf[beam-1].lhapdfID == self.orig_pdf):
             nb_p = self.banner.run_card["nb_proton%s" % beam]
             nb_n = self.banner.run_card["nb_neutron%s" % beam]
 
 
             if pdg in [1,2]:
-                pdf1 =  pdf.xfxQ2(1, x, scale)/x
-                pdf2 =  pdf.xfxQ2(2, x, scale)/x
+                pdf1 =  pdf[beam-1].xfxQ2(1, x, scale)/x
+                pdf2 =  pdf[beam-1].xfxQ2(2, x, scale)/x
                 if pdg == 1:
                     f = nb_p * pdf1 + nb_n * pdf2
                 else:
                     f = nb_p * pdf2 + nb_n * pdf1
             elif pdg in [-1,-2]:
-                pdf1 =  pdf.xfxQ2(-1, x, scale)/x
-                pdf2 =  pdf.xfxQ2(-2, x, scale)/x
+                pdf1 =  pdf[beam-1].xfxQ2(-1, x, scale)/x
+                pdf2 =  pdf[beam-1].xfxQ2(-2, x, scale)/x
                 if pdg == -1:
                     f = nb_p * pdf1 + nb_n * pdf2
                 else:
                     f = nb_p * pdf2 + nb_n * pdf1                    
             else: 
-                f = (nb_p + nb_n) * pdf.xfxQ2(pdg, x, scale)/x
+                f = (nb_p + nb_n) * pdf[beam-1].xfxQ2(pdg, x, scale)/x
                 
             f = f * (nb_p+nb_n)      
         else:
-            f = pdf.xfxQ2(pdg, x, scale)/x
-        self.pdfQ2[(pdf, pdg,x,scale,beam)] = f
+            f = pdf[beam-1].xfxQ2(pdg, x, scale)/x
+        self.pdfQ2[(pdf[beam-1], pdg,x,scale,beam)] = f
         return f        
         
         
@@ -934,6 +1024,7 @@ class Systematics(object):
         """ 
         pdf is a lhapdf object!"""
         
+        pindex = max(0,self.multiID[0]-1)
         loinfo = event.parse_lo_weight()
         if dyn == -1:
             mur = loinfo['ren_scale']
@@ -981,7 +1072,7 @@ class Systematics(object):
             else:
                 wgt = 1.0
         else:
-            wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
+            wgt = pdf[pindex].alphasQ(Dmur*mur)**loinfo['n_qcd']
 
         # MUF/PDF part
         if self.b1 and muf1 :

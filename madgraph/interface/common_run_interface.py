@@ -1770,6 +1770,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             --alps=1
             --dyn=-1
             --together=mur,muf #can be repeated
+            --multiID=0 # or 1 or 2
             
             #special options
             --from_card=
@@ -1803,7 +1804,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #check sanity of options
         if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf=',
                                  '--remove_wgts=', '--keep_wgts','--start_id=', '--weight_format=',
-                                 '--weight_info='))
+                                 '--weight_info=', '--multiID='))
                 for o in opts):
             raise self.InvalidCmd("command systematics called with invalid option syntax. Please retry.")
         
