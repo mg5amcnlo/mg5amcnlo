@@ -847,12 +847,12 @@ class Systematics(object):
             if name in done:
                 continue
             if name == 'pdf':
-                nrSets = [0,0]
+                nrSets = []
                 beam1PDFsets = []
                 beam2PDFsets = []
                 # how many pdf sets do we have? ('pdfsets' is dict-type)
                 for kk, key in enumerate(self.pdfsets):
-                    nrSets[kk] = self.pdfsets[key].size
+                    nrSets.append(self.pdfsets[key].size)
                 # split 'pdf' into two; there is probably a better way to do this
                 for kk, value in enumerate(getattr(self,'pdf')):
                     if kk < nrSets[0]:
@@ -868,7 +868,7 @@ class Systematics(object):
                 # match-case is used so alternative schemes can be implemented later
                 # trust the user to do something reasonable
                 # remove the following assert line before release
-                assert (nrSets[0]+nrSets[1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
+                assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
                 match self.multiID[0]:
                     case 1: # vary 1, fix 2
                         pairs_of_lhaids = list(zip(beam1PDFsets,itertools.repeat(beam2PDFsets[0])))
