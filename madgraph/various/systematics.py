@@ -199,6 +199,12 @@ class Systematics(object):
         if isinstance(multiID, str):
             multiID = multiID.split(',')
         self.multiID=[int(i) for i in multiID]
+        if len(self.multiID) > 1:
+            self.log('multiID is too large. Using the first entry: %s' % self.multiID[0])
+            self.multiID = self.multiID[:1]
+        if self.multiID[0] not in [0,1,2]:
+            self.log('multiID outside allowed range: %s. Using multiID=0.' % self.multiID[0])
+            self.multiID[0] = 0
 
         # DYNAMICAL SCALE PARSING + together
         if isinstance(dyn, str):
