@@ -301,8 +301,22 @@ c dump momenta in a fort.80 file
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+      integer i
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
+c$$$      write (*,*) wgt,x(1:ndim)
+c$$$      write (*,*) xbjrk_ev
+c$$$      do i=1,nexternal
+c$$$         write (*,*) p(0:3,i)
+c$$$      enddo
+c$$$      wgt=1d0
+c$$$      call generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p)
+c$$$      write (*,*) wgt,x(1:ndim)
+c$$$      stop 1
+c$$$      
       calculatedBorn=.false.
       call set_cms_stuff(-100)
       if (ilim.eq.2) then
@@ -452,6 +466,9 @@ c dump momenta in a fort.80 file
       amp_split_mc(1:amp_split_size)=0d0
       nFKSprocess_save=nFKSprocess
       do iFKS=1,fks_configs
+
+         ! TODO: check if we should skip massive j-fks in collinear test.
+         
          nFKSprocess=iFKS
          ! This sets i_fks and j_fks to correspond to the ones in
          ! nFKSprocess (which here is iFKS).
@@ -478,7 +495,6 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
          !     inputs are: ndim,iconfig,p
          !     outputs are: xx,jac (also updates pborn common block)
          call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p)
-         
          call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
@@ -788,9 +804,17 @@ c$$$         endif
          write(*,*) '  Enter alpha>0 to set G_azi=0 (no azi corr)'
          read (*,*) alazi,beazi
       endif
+      ! TODO : remove this option
       write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
       write(*,*) ' Enter -2 to generate them randomly'
       read (*,*) xi_i_fks_fix_input,y_ij_fks_fix_input
+
+      if (xi_i_fks_fix_input.ne.-2d0 .or. y_ij_fks_fix_input.ne.-2d0)
+     $     then
+         write (*,*) 'Cannot use fixed inputs'
+         stop 1
+      endif
+      
 
       write(*,*) 'Enter number of tests for soft and collinear limits'
       read (*,*) nsofttests,ncolltests

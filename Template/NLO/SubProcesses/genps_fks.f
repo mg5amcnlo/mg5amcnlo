@@ -2149,37 +2149,48 @@ c parameters
 c
       pass=.true.
 c$$$      if(softtest)then
-        sstiny=0.d0
+c$$$        sstiny=0.d0
 c$$$      else
 c$$$        sstiny=stiny
 c$$$      endif
 c$$$      if(colltest)then
-        cctiny=0.d0
+c$$$        cctiny=0.d0
 c$$$      else
 c$$$        cctiny=ctiny
 c$$$      endif
 c
 c set-up y_ij_fks
 c
-      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &     ((.not.softtest) .or. 
-     &             (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
-     &     (.not.colltest)  )then
-c importance sampling towards collinear singularity
-c insert here further importance sampling towards y_ij_fks->1
-         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
-      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
-     &          colltest)  )then
-         y_ij_fks=y_ij_fks_fix
-      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
-         y_ij_fks=y_ij_fks_matrix(icountevts)
+c$$$      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &     ((.not.softtest) .or. 
+c$$$     &             (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
+c$$$     &     (.not.colltest)  )then
+c$$$c importance sampling towards collinear singularity
+c$$$c insert here further importance sampling towards y_ij_fks->1
+c$$$         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+c$$$      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
+c$$$     &          colltest)  )then
+c$$$         y_ij_fks=y_ij_fks_fix
+c$$$      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+c$$$         y_ij_fks=y_ij_fks_matrix(icountevts)
+c$$$      else
+c$$$         write(*,*)'Error #3 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+c$$$c importance sampling towards collinear singularity
+c$$$      xjac=xjac*2d0*x(2)*2d0
+c$$$
+c$$$
+      if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+         y_ij_fks=dble(sign(1,icountevts))
+      elseif (colltest) then
+         y_ij_fks = y_ij_fks_fix
       else
-         write(*,*)'Error #3 in genps_fks.f',icountevts
-         stop
+         y_ij_fks = 1d0-2d0*x(2)**2
+         xjac=xjac*2d0*x(2)*2d0
       endif
-c importance sampling towards collinear singularity
-      xjac=xjac*2d0*x(2)*2d0
+      
 
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
@@ -2191,46 +2202,58 @@ c Compute maximum allowed xi_i_fks
 c
 c Define xi_i_fks
 c
-      if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &     ((.not.colltest) .or. 
-     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
-     &     (.not.softtest)  )then
-         if(icountevts.eq.-100)then
-c importance sampling towards soft singularity
-c insert here further importance sampling towards xi_i_hat->0
-            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
-         endif
-c in the case of counter events, xi_i_hat is an input to this function
-         xi_i_fks=xi_i_hat*xiimax
-      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
-     &        (.not.softtest)  )then
-c This is to keep xi_i_hat, rather than xi_i, fixed in the tests.
-c Changed in the context of granny stuff       
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix*xiimax
-         else
-            xi_i_fks=xi_i_fks_fix*xiimax
-         endif
-      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
-     &        softtest )then
-         if(xi_i_fks_fix.lt.1d0)then
-            xi_i_fks=xi_i_fks_fix*xiimax
-         else
-            xjac=-102
-            pass=.false.
-            return
-         endif
-      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
-         xi_i_fks=xi_i_fks_matrix(icountevts)
+c$$$      if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &     ((.not.colltest) .or. 
+c$$$     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
+c$$$     &     (.not.softtest)  )then
+c$$$         if(icountevts.eq.-100)then
+c$$$c importance sampling towards soft singularity
+c$$$c insert here further importance sampling towards xi_i_hat->0
+c$$$            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
+c$$$         endif
+c$$$c in the case of counter events, xi_i_hat is an input to this function
+c$$$         xi_i_fks=xi_i_hat*xiimax
+c$$$      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
+c$$$     &        (.not.softtest)  )then
+c$$$c This is to keep xi_i_hat, rather than xi_i, fixed in the tests.
+c$$$c Changed in the context of granny stuff       
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix*xiimax
+c$$$         else
+c$$$            xi_i_fks=xi_i_fks_fix*xiimax
+c$$$         endif
+c$$$      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+c$$$     &        softtest )then
+c$$$         if(xi_i_fks_fix.lt.1d0)then
+c$$$            xi_i_fks=xi_i_fks_fix*xiimax
+c$$$         else
+c$$$            xjac=-102
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
+c$$$         xi_i_fks=xi_i_fks_matrix(icountevts)
+c$$$      else
+c$$$         write(*,*)'Error #4 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+c$$$c remove the following if no importance sampling towards soft
+c$$$c singularity is performed when integrating over xi_i_hat
+c$$$      xjac=xjac*2d0*x(1)
+c$$$
+      if(abs(icountevts).eq.2.or.icountevts.eq.0)then
+         xi_i_fks=0d0
+      elseif (softtest) then
+         xi_i_fks=xi_i_fks_fix*xiimax
       else
-         write(*,*)'Error #4 in genps_fks.f',icountevts
-         stop
+         xi_i_hat=x(1)**2
+         xi_i_fks=xi_i_hat*xiimax
+         xjac=xjac*2d0*x(1)
       endif
-c remove the following if no importance sampling towards soft
-c singularity is performed when integrating over xi_i_hat
-      xjac=xjac*2d0*x(1)
 
+
+      
 c Check that xii is in the allowed range
       if( icountevts.eq.-100 .or. abs(icountevts).eq.1 )then
          if(xi_i_fks.gt.(1-xmrec2/shat))then
@@ -2432,26 +2455,41 @@ c$$$      endif
 c
 c set-up y_ij_fks
 c
-      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &     ((.not.softtest) .or. 
-     &             (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
-     &     (.not.colltest)  )then
-c importance sampling towards collinear singularity
-c insert here further importance sampling towards y_ij_fks->1
-         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
-      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
-     &          colltest)  )then
-         y_ij_fks=y_ij_fks_fix
-      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
-         y_ij_fks=y_ij_fks_matrix(icountevts)
-      else
-         write(*,*)'Error #6 in genps_fks.f',icountevts
-         stop
-      endif
-c importance sampling towards collinear singularity
-      xjac=xjac*2d0*x(2)*2d0
+c$$$      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &     ((.not.softtest) .or. 
+c$$$     &             (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
+c$$$     &     (.not.colltest)  )then
+c$$$c importance sampling towards collinear singularity
+c$$$c insert here further importance sampling towards y_ij_fks->1
+c$$$         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+c$$$      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
+c$$$     &          colltest)  )then
+c$$$         y_ij_fks=y_ij_fks_fix
+c$$$      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+c$$$         y_ij_fks=y_ij_fks_matrix(icountevts)
+c$$$      else
+c$$$         write(*,*)'Error #6 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+c$$$c importance sampling towards collinear singularity
+c$$$      xjac=xjac*2d0*x(2)*2d0
 
+      if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+         y_ij_fks=dble(sign(1,icountevts))
+         write (*,*) 'Massive j_fks: should have no '/
+     $        /'(soft-)collinear contribution'
+         stop 1
+      elseif (colltest) then
+         y_ij_fks = y_ij_fks_fix
+         write (*,*) 'Massive j_fks: should not do collinear tests'
+         stop 1
+      else
+         y_ij_fks = 1d0-2d0*x(2)**2
+         xjac=xjac*2d0*x(2)*2d0
+      endif
+
+      
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
      &     phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
@@ -2493,64 +2531,95 @@ c inputted rat_xi instead.
 c
 c Generate xi_i_fks
 c
-      if( icountevts.eq.-100 .and.
-     &     ((.not.colltest) .or. 
-     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
-     &      (.not.softtest)  )then
-         xjactmp=1.d0
-         xitmp1=x(1)
-c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
-c in xi_i_hat respectively. The parameter A is free, but it appears to be 
-c convenient to choose A=rat_xi
-         if(xitmp1.le.rat_xi)then
-            xitmp1=xitmp1/rat_xi
-            xjactmp=xjactmp/rat_xi
-c importance sampling towards soft singularity
-c insert here further importance samplings
-            xitmp2=sstiny+(1-sstiny)*xitmp1**2
-            xjactmp=xjactmp*2*xitmp1
-            xi_i_hat=xitmp2*rat_xi
-            xjactmp=xjactmp*rat_xi
-            xi_i_fks=xinorm*xi_i_hat
-            isolsign=1
-         else
-c insert here further importance samplings
-            xi_i_hat=xitmp1
-            xi_i_fks=-xinorm*xi_i_hat+2*xiimax
-            isolsign=-1
-         endif
-      elseif( icountevts.eq.-100 .and.
-     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
-     &        (.not.softtest)  )then
-         xjactmp=1.d0
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
-         else
-            xi_i_fks=xi_i_fks_fix*xiimax
-         endif
+c$$$      if( icountevts.eq.-100 .and.
+c$$$     &     ((.not.colltest) .or. 
+c$$$     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
+c$$$     &      (.not.softtest)  )then
+c$$$         xjactmp=1.d0
+c$$$         xitmp1=x(1)
+c$$$c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
+c$$$c in xi_i_hat respectively. The parameter A is free, but it appears to be 
+c$$$c convenient to choose A=rat_xi
+c$$$         if(xitmp1.le.rat_xi)then
+c$$$            xitmp1=xitmp1/rat_xi
+c$$$            xjactmp=xjactmp/rat_xi
+c$$$c importance sampling towards soft singularity
+c$$$c insert here further importance samplings
+c$$$            xitmp2=sstiny+(1-sstiny)*xitmp1**2
+c$$$            xjactmp=xjactmp*2*xitmp1
+c$$$            xi_i_hat=xitmp2*rat_xi
+c$$$            xjactmp=xjactmp*rat_xi
+c$$$            xi_i_fks=xinorm*xi_i_hat
+c$$$            isolsign=1
+c$$$         else
+c$$$c insert here further importance samplings
+c$$$            xi_i_hat=xitmp1
+c$$$            xi_i_fks=-xinorm*xi_i_hat+2*xiimax
+c$$$            isolsign=-1
+c$$$         endif
+c$$$      elseif( icountevts.eq.-100 .and.
+c$$$     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
+c$$$     &        (.not.softtest)  )then
+c$$$         xjactmp=1.d0
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix
+c$$$         else
+c$$$            xi_i_fks=xi_i_fks_fix*xiimax
+c$$$         endif
+c$$$         isolsign=1
+c$$$      elseif( (icountevts.eq.-100) .and.
+c$$$     &        softtest )then
+c$$$         xjactmp=1.d0
+c$$$         if(xi_i_fks_fix.lt.xiimax)then
+c$$$            xi_i_fks=xi_i_fks_fix
+c$$$         else
+c$$$            xjac=-102
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$         isolsign=1
+c$$$      elseif(icountevts.eq.0)then
+c$$$c Don't set xjactmp here, because we should use the same as what was
+c$$$c used for the (real-emission) event
+c$$$         xi_i_fks=xi_i_fks_matrix(icountevts)
+c$$$         isolsign=1
+c$$$      else
+c$$$         write(*,*)'Error #7 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+c$$$      xjac=xjac*xjactmp
+c
+      
+      
+
+      if(icountevts.eq.0)then
+         xi_i_fks=0d0
          isolsign=1
-      elseif( (icountevts.eq.-100) .and.
-     &        softtest )then
-         xjactmp=1.d0
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
-         else
+      elseif (softtest) then
+         if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
             pass=.false.
             return
          endif
-         isolsign=1
-      elseif(icountevts.eq.0)then
-c Don't set xjactmp here, because we should use the same as what was
-c used for the (real-emission) event
-         xi_i_fks=xi_i_fks_matrix(icountevts)
+         xi_i_fks=xi_i_fks_fix
          isolsign=1
       else
-         write(*,*)'Error #7 in genps_fks.f',icountevts
-         stop
+c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
+c in xi_i_hat respectively. The parameter A is free, but it appears to be 
+c convenient to choose A=rat_xi
+         if(x(1).le.rat_xi)then
+            xi_i_hat=x(1)**2/rat_xi
+            xi_i_fks=xinorm*xi_i_hat
+            isolsign=1
+            xjac=xjac*2d0*x(1)/rat_xi
+         else
+            xi_i_hat=x(1)
+            xi_i_fks=-xinorm*xi_i_hat+2*xiimax
+            isolsign=-1
+         endif
       endif
-      xjac=xjac*xjactmp
-c
+
+      
       if(isolsign.eq.0)then
          write(*,*)'Fatal error #11 in one_tree',isolsign
          stop
@@ -2824,44 +2893,58 @@ c
 c set-up y_ij_fks
 c
 c$$$      if(colltest)then
-        cctiny=0.d0
 c$$$      else
 c$$$        cctiny=ctiny
 c$$$      endif
-      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &     ((.not.softtest) .or. 
-     &            (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
-     &     (.not.colltest)  )then
-c importance sampling towards collinear singularity
-c insert here further importance sampling towards y_ij_fks->1
-         y_ij_fks = y_ij_fks_upp -
-     &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
-      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
-     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
-     &        colltest)  )then
+c$$$      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &     ((.not.softtest) .or. 
+c$$$     &            (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
+c$$$     &     (.not.colltest)  )then
+c$$$c importance sampling towards collinear singularity
+c$$$c insert here further importance sampling towards y_ij_fks->1
+c$$$         y_ij_fks = y_ij_fks_upp -
+c$$$     &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
+c$$$      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+c$$$     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
+c$$$     &        colltest)  )then
+c$$$         y_ij_fks = y_ij_fks_fix
+c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
+c$$$     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
+c$$$            xjac=-33d0
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+c$$$         y_ij_fks=y_ij_fks_matrix(icountevts)
+c$$$c Check that y_ij_fks is in the allowed range. If not, counter events
+c$$$c cannot be generated
+c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
+c$$$     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
+c$$$            xjac=-33d0
+c$$$            pass=.false.
+c$$$            return
+c$$$         endif
+c$$$      else
+c$$$         write(*,*)'Error #8 in genps_fks.f',icountevts
+c$$$         stop
+c$$$      endif
+
+      if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+         y_ij_fks=dble(sign(1,icountevts))
+      elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
-         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
-     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
-            xjac=-33d0
-            pass=.false.
-            return
-         endif
-      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
-         y_ij_fks=y_ij_fks_matrix(icountevts)
-c Check that y_ij_fks is in the allowed range. If not, counter events
-c cannot be generated
-         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
-     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
+         if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
+     &        y_ij_fks_fix.lt.y_ij_fks_low) then
             xjac=-33d0
             pass=.false.
             return
          endif
       else
-         write(*,*)'Error #8 in genps_fks.f',icountevts
-         stop
+         y_ij_fks = y_ij_fks_upp -
+     &        (y_ij_fks_upp-y_ij_fks_low)*x(2)**2
+         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       endif
-c importance sampling towards collinear singularity
-      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+      
 c
 c Compute costh_i_fks
 c
@@ -3027,9 +3110,8 @@ c$$$      endif
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
       elseif (softtest) then
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
-         else
+         xi_i_fks=xi_i_fks_fix
+         if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
             pass=.false.
             return
@@ -4966,7 +5048,16 @@ c$$$      enddo
          y_ij_fks_low=-yij_upp
       endif
       x(2)=sqrt((y_ij_fks_upp-y_ij_fks)/(y_ij_fks_upp-y_ij_fks_low))
-      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+
+      if (colltest) then
+         if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
+     &        y_ij_fks_fix.lt.y_ij_fks_low) then
+            xjac=-33d0
+            return
+         endif
+      else
+         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+      endif
 
       x1bar2 = xbjrk_born(1)**2
       omx1bar2 = 1d0-x1bar2
@@ -5049,9 +5140,7 @@ c Lower bound on xi_i_fks
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       if (softtest) then
-         if(xi_i_fks_fix.lt.xiimax)then
-            continue
-         else
+         if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
             return
          endif
@@ -5120,9 +5209,11 @@ c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
       logical valid1,valid2
       double precision rho,dot,ran2
       external rho,dot,ran2
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
       ! y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
-      xjac=xjac*2d0*x(2)*2d0
+      if (.not. colltest) xjac=xjac*2d0*x(2)*2d0
 
       ! x_i_fks
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
@@ -5157,29 +5248,21 @@ c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
       x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
       x1_2=(2*xiimax-xi_i_fks)/xinorm
 
-      if (x1_1.gt.0d0.and.x1_1.lt.rat_xi) then
-         valid1=.true.
-      else
-         valid1=.false.
-      endif
-      if (x1_2.gt.rat_xi.and.x1_2.lt.1d0) then
-         valid2=.true.
-      else
-         valid2=.false.
-      endif
+      valid1=x1_1.gt.0d0 .and. x1_1.lt.rat_xi
+      valid2=x1_2.gt.rat_xi .and. x1_2.lt.1d0
       if (valid1.and. (.not.valid2)) then
          x(1)=x1_1
-         xjac=xjac*2*x(1)/rat_xi
+         if (.not. softtest) xjac=xjac*2*x(1)/rat_xi
       elseif((.not.valid1).and.valid2) then
          x(1)=x1_2
       elseif(valid1.and.valid2) then
          if (ran2().gt.0.5d0) then
             x(1)=x1_1
-            xjac=xjac*2*x(1)/rat_xi
+            if (.not. softtest) xjac=xjac*2*x(1)/rat_xi
          else
             x(1)=x1_2
          endif
-         xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
+         if (.not. softtest) xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
       else
          write (*,*) 'No valid xi_i_fks in inverse '/
      $        /'massive final phase-space.'
@@ -5248,6 +5331,8 @@ c Phase-space factor for (xii,yij,phii)
       double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
      $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
      $     ,xiimax,xmrec2
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
       logical pass
       integer i
       double precision rho
@@ -5298,11 +5383,11 @@ c     Phase-space factor for (xii,yij,phii)
       call get_recoil(p_born(0,1),j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
       x(1)=sqrt(xi_i_fks/xiimax)
-      xjac=xjac*2d0*x(1)
+      if (.not.softtest) xjac=xjac*2d0*x(1)
 
 !     random number associated with y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
-      xjac=xjac*2d0*x(2)*2d0
+      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
 
 !     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)
