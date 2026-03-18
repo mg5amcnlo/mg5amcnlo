@@ -7370,7 +7370,7 @@ C
             if c_list:
                 fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
-        if self.vector_size:
+        if self.vector_size and not self.opt['loop_induced']:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
@@ -8425,6 +8425,9 @@ C
         If mp is True and dp is False, then the prefix 'MP_' is appended to the
         filename and subroutine name.
         """
+
+        if self.opt['loop_induced']:
+            vec = False
         
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')

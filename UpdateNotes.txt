@@ -1,6 +1,18 @@
     Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+3.7.1 ():
+    OM: Allow easier syntax in the run_card. 
+        You can now use "set lpp1 e-" instead of "set lpp1 3"
+        You can now use "set fixed_scale mz" instead of "set fixed_scale 91.1880"
+        You can now use "set dynamical_scale_choice ht/2" instead of "set dynamical_scale_choice 3"
+    OM: Change the implementation of the "$" syntax such that the implementation moves at the amplitude level
+        This means that the syntax is now also supported at standalone level (bwcutoff hardcoded to 15)
+        This has no impact if sde_strategy=1 but avoids issue with sde_strategy=2.
+        We still recomend sde_strategy=1 when using $ syntax since you can have spurious writting of resonances
+        in the lhef with sde_stragegy=2.
+
+
 3.7.0 (05/01/26):
     RR: When carrying out parameter scans in MadGraph/MadEvent or MG5aMC@NLO with systematics (use_syst True or reweight_scale/pdf True), then the uncertain information is also recorded in the scan summary.
     RR: Enhance the equivalent vector approximation (EVA) implementation by adding full leading-power and next-to-leading-power accuracy modes, plus an optional xcut kinematic restriction, refactor core routines in both Fortran and Python, and introduce new (hidden by default) run_card parameters 'eva_xcut'to enable or disable the kinematic restriction x>MV/Ebeam in EVA.

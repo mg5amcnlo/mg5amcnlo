@@ -2076,6 +2076,21 @@ c spin-3/2 fermion wavefunction
       return
       end
 
+      complex*16 function THETA_FUNCTIONR(cond, out_true, out_false)
+
+      double precision cond
+      double precision  out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTIONR = dcmplx(out_true)
+      else
+        THETA_FUNCTIONR = dcmplx(out_false)
+      endif
+
+      return
+      end
+
+
       subroutine CombineAmp(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors

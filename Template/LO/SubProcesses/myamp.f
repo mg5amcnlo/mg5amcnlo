@@ -139,7 +139,7 @@ c
      $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
-              if(gForceBW(i,iconfig).eq.2) then
+              if(gForceBW(i,iconfig).eq.2.and.sde_strat.eq.1) then
                  cut_bw = .true.
                  return               
               endif

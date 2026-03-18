@@ -220,6 +220,8 @@ C
 	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
 	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
 	SAVE CHOSEN_SO_CONFIGS
+    double precision bwcutoff
+    common/to_bwcutoff/ bwcutoff
 C  
 C ARGUMENTS 
 C  

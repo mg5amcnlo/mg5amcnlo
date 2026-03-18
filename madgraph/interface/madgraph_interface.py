@@ -34,6 +34,7 @@ import subprocess
 import copy
 import sys
 import shutil
+import tempfile
 
 import traceback
 import time
@@ -46,6 +47,9 @@ from six.moves import range
 
 #useful shortcut
 pjoin = os.path.join
+
+# define a temporary directory for drawing diagrams
+tempdir = tempfile.TemporaryDirectory()
 
 try:
     import readline
@@ -986,7 +990,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         """
 
         if len(args) < 1:
-            args.append('/tmp')
+            args.append(tempdir.name)
 
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
@@ -6327,8 +6331,7 @@ This implies that with decay chains:
                               additional_options=add_options+['--force'])            
         else:
             if tool=='madanalysis5' and '--update' not in add_options and \
-                                 ('--no_MA5_further_install' not in add_options or
-                                                        '--no_root_in_MA5' in add_options):
+                                 ('--no_MA5_further_install' not in add_options):
                 if not __debug__:
                     logger.warning('Default installation of Madanalys5 failed.')
                     logger.warning("MG5aMC will now attempt to reinstall it with the options '--no_MA5_further_install --no_root_in_MA5'.")
@@ -7406,11 +7409,11 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             else:
                 name = name.strip()
                 value = value.strip()
-                if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3']:
+                if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3', 'lhapdf']:
                     self.options[name] = value
-                elif hasattr(self, 'set_%s' % name):
+                elif hasattr(self, 'set2_%s' % name):
                     misc.sprint('set configuration option %s to %s' % (name, value) )
-                    func = getattr(self, 'set_%s' % name)
+                    func = getattr(self, 'set2_%s' % name)
                     func(value.split())
                 if value.lower() == "none" or value=="":
                     self.options[name] = None

@@ -321,11 +321,16 @@ in presence of majorana particle/flow violation"""
                     else:
                         massless = True
                         self.denominator = None
-                elif propa == []:
+                # 1D is a multiplication of standar propagator -> later
+                elif propa in [[],['1D']]:
                     massless = False
                     self.denominator = None
                 else:
-                    lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
+                    if '1D' in propa:
+                        lorentz *= self.get_custom_propa('1D', spin, id)
+                        if propa[0] == '1D':
+                            propa = propa[1:] + ['1D']
+                    lorentz *= complex(0,1) * self.get_custom_propa(propa, spin, id)
                     continue
                 
                 
@@ -374,6 +379,10 @@ in presence of majorana particle/flow violation"""
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s (2s+1) is not supported yet' % spin)
+                
+                if '1D' in propa:
+                    # add the bwcutoff condition
+                    lorentz *= self.get_custom_propa('1D', spin, id)
             else:
                 # This is an incoming particle
                 if spin in [1,-1]:
@@ -444,10 +453,15 @@ in presence of majorana particle/flow violation"""
         text=''.join(data)
         return text
 
-    def get_custom_propa(self, propa, spin, id):
+    def get_custom_propa(self, propas, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
 
         basicPole = "(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        if isinstance(propas, str):
+            propa = propas
+        else:
+            propa = propas[0]
+
         if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
@@ -513,6 +527,10 @@ in presence of majorana particle/flow violation"""
             else:
                 numerator = "-1"
             denominator = "1"
+        elif propa == "1D": # For $ DOLLAR propagator
+            # only the multiplicative factor for offshell veto -> the real propagator is handle like normal
+            numerator = "theta_functionr( (P(-1,id)**2 -(Mass(id)-BWCUTOFF*Width(id))**2 ) *( P(-1,id)**2 - (Mass(id)+BWCUTOFF*Width(id))**2),1,0)"
+            denominator = None
         else:
             raise Exception
 
