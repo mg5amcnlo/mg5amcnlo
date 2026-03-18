@@ -2308,6 +2308,7 @@ class Event(list):
             )
         if hasattr(decay_particle, 'new_mass'):
             this_particle.new_mass = decay_particle.new_mass
+            this_particle.reshuffle_info = decay_particle.reshuffle_info
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
@@ -2929,6 +2930,8 @@ class Event(list):
             new_momenta[i] = m.apply_lorentzmap(back_lor) 
 
         new_tot2 = sum(new_momenta, FourMomentum())
+        for i,m in enumerate(new_momenta):
+            new_momenta[i] = m.apply_lorentzmap(back_lorlor) 
         return new_momenta, jac
         
         
@@ -3098,6 +3101,7 @@ class Event(list):
         misc.sprint(mod , 0 in mod)
    
 
+    nb_reshuffle_issue=0
     def reshuffle_production(self):
         """ particle that need new mass have the "new_mass" attribute
         """
@@ -3109,18 +3113,28 @@ class Event(list):
         production = [p for p in subdiags if not isinstance(p, list)]
 
         old_momenta = [FourMomentum(p) for p in production if p.status!=-1]
-        if all( [not hasattr(p, 'new_mass') for p in production if p.status!=-1]):
-            raise Exception
-            return 
         new_masses = [getattr(p, 'new_mass', p.mass) for p in production if p.status!=-1]
         sqrts = self.sqrts
+        
+        if sum(new_masses,0) <=  sqrts:
+            # apply the RAMBO algo
+            new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)
+        else:
+            jac = -1
+        #if __debug__:
+        #    sum_mom = sum([FourMomentum(p) for p in new_mom], FourMomentum())
+        #    sum_old = sum([FourMomentum(p) for p in old_momenta], FourMomentum()) 
+        #    sum2 = FourMomentum(production[0]) + FourMomentum(production[1])
+        if jac in [0,-1]: 
+            #reshuffle momenta if 
+            for p in production:
+                if p.status !=-1 and hasattr(p, 'new_mass'):
+                    p.new_mass = Event.generate_random_mass(*p.reshuffle_info)
+            Event.nb_reshuffle_issue +=1 
+            if jac != -1:
+                misc.sprint('jac was 0 -> retry', Event.nb_reshuffle_issue)
+            return self.reshuffle_production()
 
-        # apply the RAMBO algo
-        new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)
-        if __debug__:
-            sum_mom = sum([FourMomentum(p) for p in new_mom], FourMomentum())
-            sum_old = sum([FourMomentum(p) for p in old_momenta], FourMomentum()) 
-            sum2 = FourMomentum(production[0]) + FourMomentum(production[1])
         
         #modify the momenta of the particles:
         ind =0
@@ -3146,6 +3160,24 @@ class Event(list):
                 ind+=1
 
         return jac
+    
+    def reshuffle_decayevt(self):
+        """ particle that need new mass have the "new_mass" attribute
+        """
+
+        # create a nice data structure for the reshuffling
+        subdiags, mapping = self.split_event_by_onshell_propagator()
+
+        #filter outsubdecay
+        main_decay = [p for p in subdiags if not isinstance(p, list)]
+        new_mass = main_decay[0].new_mass
+        new_mom = FourMomentum(new_mass, 0 , 0, 0)
+
+        jac = self.reshuffle_decay(main_decay, new_mom, new_mass, mapping)
+        return jac
+
+  
+
 
     @staticmethod
     def reshuffle_decay(subdiag, new_incoming, offshellmass, mapping):
@@ -3763,7 +3795,6 @@ class Event(list):
         R = min_R + (max_R-min_R)*random.random()
         m2 = pole**2 + pole * width * math.tan(R)
         return math.sqrt(m2)
-
     
     
     def get_momenta_str(self, get_order, allow_reversed=True):

@@ -555,18 +555,18 @@ C
       DO M = 1, NAMPSO
         CF_INDEX= 0
         DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
           DO J = I, NCOLOR
             CF_INDEX = CF_INDEX +1
-            ZTEMP = ZTEMP + ML5_0_CF(CF_INDEX)*JAMP_1(J,M)
-          ENDDO
-          DO N = 1, NAMPSO
-            INTER(ML5_0_SQSOINDEX(M,N)) = INTER(ML5_0_SQSOINDEX(M,N)) 
-     $       + REAL(ZTEMP*DCONJG(JAMP_2(I,N)))
+            DO N = 1, NAMPSO
+              INTER(ML5_0_SQSOINDEX(M,N)) =
+     $            INTER(ML5_0_SQSOINDEX(M,N)) + 
+     $            ML5_0_CF(CF_INDEX)*(DCONJG(JAMP_2(I,N))*
+     $            JAMP_1(J,M)+DCONJG(JAMP_2(J,N))*JAMP_1(I,M))             
+            ENDDO
           ENDDO
         ENDDO
       ENDDO
-      INTER(:) = INTER(:)/ML5_0_DENOM
+      INTER(:) = INTER(:)/(2D0*ML5_0_DENOM)
       RETURN
       END
 
@@ -602,11 +602,12 @@ C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER THISNHEL(NEXTERNAL)
       INTEGER N_CHANGING, N_COMB
+      INTEGER NINTER
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
+      DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:,:)
       DOUBLE PRECISION ALPHAS
-      DOUBLE COMPLEX INTER_SUM(99)
-      DOUBLE COMPLEX TMP_INTER(NSQAMPSO,99)
+      DOUBLE COMPLEX INTER_SUM(*)
 C     LOCAL
       INTEGER I,IHEL,IPART
       INTEGER J
@@ -624,6 +625,11 @@ C
 C     include coupling definition to update the value of alphas
 C     
       INCLUDE 'coupl.inc'
+
+      NINTER = N_COMB*(N_COMB+1)/2
+      ALLOCATE(TMP_INTER(NSQAMPSO, NINTER))
+      TMP_INTER(:,:) = (0D0, 0D0)
+
       DO I = 1,  N_COMB*(N_COMB+1)/2
         INTER_SUM(I) = 0D0
       ENDDO
@@ -651,6 +657,7 @@ C
         ENDDO
  10   ENDDO
       RETURN
+      DEALLOCATE(TMP_INTER)
       END
 
 
@@ -686,7 +693,7 @@ C
       INTEGER N_CHANGING, N_COMB
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
-      DOUBLE COMPLEX INTER(NSQAMPSO,99)
+      DOUBLE COMPLEX INTER(NSQAMPSO,*)
 C     
 C     Intermediate array
 C     
@@ -697,7 +704,8 @@ C
       INTEGER IC(NEXTERNAL)
 
       DOUBLE COMPLEX AMP(NGRAPHS)
-      DOUBLE COMPLEX JAMP(NCOLOR, NAMPSO, 3*NEXTERNAL)
+      DOUBLE COMPLEX, ALLOCATABLE:: JAMP(:,:,:)
+      INTEGER, SAVE :: S_NCOMB = -1
 C     
 C     LOCAL
 C     
@@ -706,6 +714,13 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+      IF (ALLOCATED(JAMP).AND. N_COMB.NE.S_NCOMB)THEN
+        DEALLOCATE(JAMP)
+      ENDIF
+      IF (.NOT.ALLOCATED(JAMP))THEN
+        ALLOCATE(JAMP(NCOLOR, NAMPSO, N_COMB))
+        S_NCOMB=N_COMB
+      ENDIF
       IC(:)=1
       DO I = 1, N_COMB
         DO N = 1, N_CHANGING

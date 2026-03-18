@@ -5389,11 +5389,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         self.special_shortcut.update({
             'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s']),
-            'nodecay':([], ['edit madspin_card --comment_line="decay"'])
+            'nodecay':([], ['edit madspin_card --comment_line="decay"'],),
+            'no_madspin_options':([], ['edit madspin_card --comment_line="set"'],),
             })
+        
         self.special_shortcut_help.update({
             'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
             'nodecay': 'remove all decay previously defined in madspin',
+            'no_madspin_options': 'remove all options previously defined in madspin',
              })
         return []
     
@@ -7370,7 +7373,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-    
+    def do_set_madspin(self, line):
+        """edit the madspin_card to define the decay of the associate particle"""
+        signal.alarm(0) # avoid timer if any
+        path = self.paths['madspin']
+        args = line.split()
+        if '=' == args[1]:
+            del args[1]
+        opt = args[0]
+        value = ' '.join(args[1:])
+
+        cmd = f'madspin --replace_line="set {opt}.*" --after_line=banner set {opt} {value}'
+        self.do_edit(cmd)
+
+         
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
@@ -7616,9 +7632,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # found the line position "posline"
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
-                if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
-                    new_line = re.split(search_pattern,new_line)[-1]
+                # Matches (optional leading ws) + --before_line=VALUE or --after_line=VALUE + (trailing ws)
+                drop_first_before_after = re.compile(r'''
+                    ^\s*                               # optional leading whitespace
+                    --                                # optional single dash or literal double dash (usually "--")
+                    (?:before|after)_line=             # the option name
+                    (                                  # VALUE:
+                    "(?:\\.|[^"])*"                #   double-quoted value, with escapes
+                  | '(?:\\.|[^'])*'                #   single-quoted value, with escapes
+                  | [^ \t\r\n'"#]+                 #   unquoted value until whitespace or delimiter
+                    )
+                    \s*                                # optional whitespace after the argument
+                ''', re.VERBOSE)
+                new_line = drop_first_before_after.sub('', new_line, count=1)
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line

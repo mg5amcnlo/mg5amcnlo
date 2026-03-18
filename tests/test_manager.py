@@ -172,7 +172,22 @@ class MyTextTestRunner(unittest.TextTestRunner):
         #    self.stream.writeln(" ".join(self.bypassed))
         return result 
 
+def find_test_in_file(path):
 
+    all = []
+    import re
+    regex = r"\./tests/test_manager\.py\s+(.*)"
+
+    text = open(path).read()
+
+    for line in text.splitlines():
+        m = re.search(regex, line)
+        if m:
+            for arg in m.group(1).split():
+                if arg.startswith('-'):
+                    continue
+                all.append(arg)
+    return all
             
 #===============================================================================
 # run
@@ -191,8 +206,22 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
     TestSuiteModified.time_limit =  float(timelimit[1])
     TestSuiteModified.mintime_limit =  float(timelimit[0])
 
+    if options.exclude:
+        exclude = misc.make_unique(options.exclude[:])
+        for path in options.exclude:
+            if os.path.exists(path):
+                exclude.remove(path)
+                exclude += find_test_in_file(path)
+        exclude = misc.make_unique(exclude)
+        for expr in expression:
+            if expr in exclude:
+                exclude.remove(expr)
+    else:
+        exclude = []
+
+
     for test_fct in TestFinder(package=package, expression=expression, \
-                                   re_opt=re_opt, excluded=options.exclude):
+                                   re_opt=re_opt, excluded=exclude):
         data = collect.loadTestsFromName(test_fct)        
         assert(isinstance(data,unittest.TestSuite))        
         data.__class__ = TestSuiteModified
