@@ -74,3 +74,20 @@ check_sa_born_splitOrders.f
 models/*.tgz
 tests/status
 nsqso_born.inc
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+devenv.*
+.envrc
+pyproject.toml
+uv.lock
+devenv.lock
+.python-version
+# direnv
+.direnv
+.zed/*
+
+# pre-commit
+.pre-commit-config.yaml
