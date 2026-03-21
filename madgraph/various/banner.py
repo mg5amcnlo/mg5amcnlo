@@ -4025,10 +4025,10 @@ class PDLabelBlock(RunBlock):
             if card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
                 if card['pdlabel1'] != card['pdlabel2']:
                     if card['pdlabel1'] in ['edff','chff']:
-                        dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
+                        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
                         dict.__setitem__(card, 'pdlabel2',card['pdlabel1'])
                     else:
-                        dict.__setitem__(card, 'pdlabel',card['pdlabel2'])
+                        dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
                         dict.__setitem__(card, 'pdlabel1',card['pdlabel2'])
                 else:
                     dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
@@ -4092,6 +4092,47 @@ template_off = \
 """     %(pdlabel)s    = pdlabel     ! PDF set """
 
 pdlabel_block = PDLabelBlock('pdlabel', template_on=template_on, template_off=template_off)
+
+# LHALABEL ------------------------------------------------------------------------------------
+class LHALabelBlock(RunBlock):
+
+    def check_validity(self, card):
+        """check which template is active and fill accordingly."""
+        return
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used"""
+        return super(LHALabelBlock, self).status(card)
+
+    @staticmethod
+    def post_set_lhaid(card, value, change_userdefine, raiseerror, **opt):
+        """if lhaid is set, remove lhaid1 and lhaid2 from run_card"""
+
+        dict.__setitem__(card,'lhaid1',card['lhaid'])
+        dict.__setitem__(card,'lhaid2',card['lhaid'])
+
+        if 'lhaid1' in card.user_set:
+            card.user_set.remove('lhaid1')
+        if 'lhaid2' in card.user_set:
+            card.user_set.remove('lhaid2')
+        if 'multi_lhaid_alphas_scheme' in card.user_set:
+            card.user_set.remove('multi_lhaid_alphas_scheme')
+
+    @staticmethod
+    def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
+        """if lhaid1 or lhaid2 is set, remove lhaid from run_card"""
+
+        if 'lhaid' in card.user_set:
+            card.user_set.remove('lhaid')
+
+template_on = \
+"""     %(lhaid1)s    = lhaid1     ! lhapdf number for beam #1
+     %(lhaid2)s    = lhaid2     ! lhapdf number for beam #2
+     %(multi_lhaid_alphas_scheme)s = multi_lhaid_alphas_scheme ! 1(2) = alphas from lhaid1(2), 0 = geometric avg"""
+template_off = \
+"""     %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number """
+
+lhalabel_block = LHALabelBlock('lhalabel', template_on=template_on, template_off=template_off)
 
 # FIXED_FAC_SCALE ------------------------------------------------------------------------------------
 class FixedfacscaleBlock(RunBlock):
@@ -4157,7 +4198,7 @@ class RunCardLO(RunCard):
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
-              pdlabel_block, fixedfacscale, running_block]
+              pdlabel_block, lhalabel_block, fixedfacscale, running_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
