@@ -51,7 +51,11 @@ import numbers
 import re
 import aloha # define mode of writting
 from six.moves import range
-from symbolica import E, S
+try:
+    from symbolica import E, S
+except ImportError:
+    symbolica = None
+    pass
 try:
     import madgraph.various.misc as misc
 except Exception:

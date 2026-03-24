@@ -136,6 +136,7 @@ class AbstractRoutineBuilder(object):
         modes: 0 for  all incoming particles 
               >0 defines the outgoing part (start to count at 1)
         """
+        misc.sprint(lorentz)
 
         self.spins = [s for s  in lorentz.spins]
         self.name = lorentz.name
@@ -159,17 +160,25 @@ class AbstractRoutineBuilder(object):
                 pat = re.compile(r'\b%s\b' % formf.name)
                 self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
             
-    def compute_routine(self, mode, tag=[], factorize=True, abstract_only=False):
+    def compute_routine(self, mode, tag=[], factorize=True, abstract_only=False,
+                        keep_abstract=False):
         """compute the expression and return it"""
         self.outgoing = mode
         self.tag = tag
         if __debug__:
             if mode == 0:
                 assert not any(t.startswith('L') for t in tag)
-        self.expr = self.compute_aloha_high_kernel(mode, factorize, abstract_only=abstract_only)
-
-        if abstract_only:
-            return self
+        misc.sprint(keep_abstract, abstract_only, keep_abstract or abstract_only)
+        if (keep_abstract or abstract_only):
+            self.abstract = self.compute_aloha_high_kernel(mode, factorize, abstract_only=True)
+            misc.sprint(self.abstract   )
+            if abstract_only:
+                self.expr = self.abstract   
+                misc.sprint('abstract expr', self.expr)
+                return self
+        else:
+            raise Exception
+        self.expr = self.compute_aloha_high_kernel(mode, factorize, abstract_only=False)
 
         return self.define_simple_output()
     
@@ -256,6 +265,8 @@ in presence of majorana particle/flow violation"""
 
         output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
+        if hasattr(self, 'abstract'):
+            output.abstract = self.abstract
         return output
 
     def parse_expression(self, expr=None, need_P_sign=False):

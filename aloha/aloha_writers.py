@@ -2575,6 +2575,8 @@ class WriterFactory(object):
             return ALOHAWriterForCPP(data, outputdir, options=options)
         elif language in ['gpu','cudac']:
             return ALOHAWriterForGPU(data, outputdir, options=options)
+        elif language == 'spenso':
+            return ALOHAWriterForGPU(data, outputdir, options=options) 
         elif issubclass(language, WriteALOHA):
             return language(data, outputdir, options=options)
         else:

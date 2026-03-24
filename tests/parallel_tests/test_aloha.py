@@ -35,8 +35,11 @@ import tests.unit_tests as unittest
 import madgraph.various.misc as misc
 from six.moves import range
 from six.moves import zip
-
-from symbolica.community.spenso import TensorNetwork
+try:
+    from symbolica.community.spenso import TensorNetwork
+except ImportError:
+    symbolica = None
+    
 set_global = misc.set_global
 
 
@@ -5143,6 +5146,52 @@ P1(3) = -dimag(F1(1))
         split_routine = routine.split('\n')[12:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+    def test_short_spenso_C(self):
+        """ test that python writer works """
+
+        solution_h = """
+"""
+        solution_c="""
+"""
+
+        VVS1 = UFOLorentz(name = 'VVS1',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'Metric(1,2)')
+        aloha_rout = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1, [], keep_abstract=True)
+        misc.sprint(dir(aloha_rout))
+        text = aloha_rout.abstract.to_spenso()
+        misc.sprint(text)
+
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')
+
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1, keep_abstract=True)
+        routine = amp.write(output_dir=None, language='spenso')
+
+        split_solution = solution_h.split('\n')
+        split_routine = routine[0].split('\n')
+
+
+
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        split_solution = solution_c.split('\n')
+        #split_solution2 = solution2_c.split('\n')
+        split_routine = routine[1].split('\n')
+        for i in range(len(split_routine)):
+            try:
+                self.assertEqual(split_solution[i], split_routine[i])
+            except:
+                raise
+                self.assertEqual(split_solution2[i], split_routine[i])
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
 
     def test_short_Cppwriter_C(self):
         """ test that python writer works """

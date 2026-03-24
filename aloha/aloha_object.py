@@ -35,11 +35,13 @@ import aloha.aloha_lib as aloha_lib
 import aloha
 import cmath
 from six.moves import range
-
-from symbolica import E, S
-from symbolica.community.spenso import Representation
-from symbolica.community.spenso import TensorName as N
-
+try:
+    from symbolica import E, S
+    from symbolica.community.spenso import Representation
+    from symbolica.community.spenso import TensorName as N
+except ImportError:
+    symbolica = None
+    pass
 #===============================================================================
 # P (Momenta)
 #===============================================================================
