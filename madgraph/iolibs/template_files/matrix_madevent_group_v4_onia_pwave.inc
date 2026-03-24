@@ -1,4 +1,4 @@
-C Onia P-state matrix elements
+C MadSONS
       SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C
 %(info_lines)s
@@ -70,14 +70,14 @@ C
       EXTERNAL GET_CHANNEL_CUT
 
 C
-C ONIA (DUAL)VARIABLES
+C ONIA VARIABLES
 C
       INCLUDE 'onia.inc'
 
-      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1)
+      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1,-1:1)
       COMMON/IS_PROJ_COMPUTED_%(proc_id)s/IS_PROJ_COMPUTED%(proc_id)s
 
-      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA))
+      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA),-(3**(NPWAVE)-1)/2:(3**(NPWAVE)-1)/2)
       COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
 
 c
@@ -258,6 +258,7 @@ c           Set right sign for ANS, based on sign of chosen helicity
 
 
       REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
+      USE DUAL_VARIABLES
 C
 %(info_lines)s
 C
@@ -299,11 +300,15 @@ C
 C LOCAL VARIABLES
 C
       INTEGER I,J,K,M,N,QQ,Q1,Q2
+      INTEGER II,JJ,H,HRUN
       REAL*8 FRAC
-      COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
-      REAL*8 CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
-      COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
+      TYPE(DUAL) AMP(NGRAPHS) 
+C     LM::This should not be dual in the end, but for the time being it will be
+      COMPLEX*16 JAMP(NCOLOR,NAMPSO), TMP_JAMP(%(nb_temp_jamp)i)
+      TYPE(DUAL) W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -317,27 +322,32 @@ C FUNCTION
 C
       INTEGER SQSOINDEX%(proc_id)s
 C
-C ONIA (DUAL)VARIABLES
+C MadSONS VAIABLES
 C
       INCLUDE 'onia.inc'
       INCLUDE 'ldme.inc'
       REAL*8 NORM, LDME
-      REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA)
-      COMPLEX*16 PROJ(4**NONIA)
+      TYPE(DUAL) P_ONIA(0:3,NEXTERNAL+NONIA)
+      TYPE(DUAL) EPS_L(8), PQQ(0:3)
+      TYPE(DUAL) FQ(8), FQB(8)
+      TYPE(DUAL) PROJ(4**NONIA,-(3**(NPWAVE)-1)/2:(3**(NPWAVE)-1)/2)
+      REAL*8 CG_COEFF
       INTEGER NHEL_ONIA(NEXTERNAL+NONIA), IC_ONIA(NEXTERNAL+NONIA)
       INTEGER HELQ1(2), HELQ2(2)
+      INTEGER LZ, SZ
+      INTEGER LZ_LIST(NPWAVE)
       DATA HELQ1/-1, 1/
       DATA HELQ2/-1, 1/
 
-      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1)
-      COMPLEX*16 PROJ_SAVED%(proc_id)s(NONIA,-1:1,-1:1,-1:1)
+      LOGICAL IS_PROJ_COMPUTED%(proc_id)s(NONIA,-1:1,-1:1)
+      LOGICAL IS_LZCOMB_ACCEPTED%(proc_id)s(-(3**(NPWAVE)-1)/2:(3**(NPWAVE)-1)/2)
+      TYPE(DUAL),SAVE::PROJ_SAVED%(proc_id)s(NONIA,-1:1,-1:1,-1:1,-1:1)
+      REAL*8 CG_SAVED(NONIA,-1:1,-1:1,-2:2)
       COMMON/IS_PROJ_COMPUTED_%(proc_id)s/IS_PROJ_COMPUTED%(proc_id)s
-      COMMON/PROJ_SAVED_%(proc_id)s/PROJ_SAVED%(proc_id)s
 
-      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA))
-      COMPLEX*16 AMP_SAVED%(proc_id)s(NGRAPHS,4**NONIA,3**(NEXTERNAL-NONIA))
+      LOGICAL IS_AMP_COMPUTED%(proc_id)s(4**NONIA,3**(NEXTERNAL-NONIA),-(3**(NPWAVE)-1)/2:(3**(NPWAVE)-1)/2)
+      TYPE(DUAL),SAVE::AMP_SAVED%(proc_id)s(NGRAPHS,4**NONIA,3**(NEXTERNAL-NONIA),-(3**(NPWAVE)-1)/2:(3**(NPWAVE)-1)/2)
       COMMON/IS_AMP_COMPUTED_%(proc_id)s/IS_AMP_COMPUTED%(proc_id)s
-      COMMON/AMP_SAVED_%(proc_id)s/AMP_SAVED%(proc_id)s
 C
 C GLOBAL VARIABLES
 C
@@ -385,7 +395,7 @@ C ----------
         ELSE
           FRAC = 1.D0
         ENDIF
-        P_ONIA(:,I) = FRAC*P(:,MAPPING(I))
+        P_ONIA(:,I)%%COMP(0) = FRAC*P(:,MAPPING(I))
         NHEL_ONIA(I) = NHEL(MAPPING(I))
         IC_ONIA(I) = IC(MAPPING(I))
       ENDDO
@@ -396,24 +406,47 @@ C ----------
         QQ = ONIA(I)
         Q1 = FINDLOC(PAIRS, I, DIM=1)
         Q2 = FINDLOC(PAIRS,-I, DIM=1)
+        PQQ%%COMP(0) = P(:,QQ)
+        
 C       Computing the projectors
-        IF (.NOT.IS_PROJ_COMPUTED%(proc_id)s(I,NHEL(QQ))) THEN
-          DO J = 1, SIZE(HELQ1)
-            DO K = 1, SIZE(HELQ2)
-              NHEL_ONIA(Q1) = HELQ1(J)
-              NHEL_ONIA(Q2) = HELQ2(K)
-              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
-              PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
+        DO LZ = -L_ONIA(I), L_ONIA(I)
+C         SZ = JZ - LZ with the physical condition |SZ| < S 
+          SZ = NHEL(QQ)-LZ 
+          IF (ABS(SZ).GT.S_ONIA(I)) CYCLE
+
+C         Computing the spin projector
+          IF (.NOT.IS_PROJ_COMPUTED%(proc_id)s(I,LZ,SZ)) THEN
+C           Inserting the dual component of momenta (only for L>0)
+            IF (L_ONIA(I).EQ.1) THEN
+              CALL VXXXXX(PQQ,PMASS(QQ),LZ,+1,EPS_L)
+              P_ONIA(:,Q1)%%COMP(2**(SUM(L_ONIA(1:I))-1)) = +EPS_L(5:8)%%COMP(0)
+              P_ONIA(:,Q2)%%COMP(2**(SUM(L_ONIA(1:I))-1)) = -EPS_L(5:8)%%COMP(0)
+            ENDIF
+            DO J = 1, SIZE(HELQ1)
+              DO K = 1, SIZE(HELQ2)
+                NHEL_ONIA(Q1) = HELQ1(J)
+                NHEL_ONIA(Q2) = HELQ2(K)
+                CALL IXXXXX(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),+1,FQ )
+                CALL OXXXXX(P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),-1,FQB)
+                CALL ONIA_PROJ_DUAL(FQ,FQB,(/PMASS_ONIA(Q1),PMASS_ONIA(Q2)/),PQQ,PMASS(QQ),SZ,S_ONIA(I),PROJ(1,0))
+                PROJ_SAVED%(proc_id)s(I,LZ,SZ,NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1,0)
+              ENDDO
             ENDDO
-          ENDDO
-          IS_PROJ_COMPUTED%(proc_id)s(I,NHEL(QQ)) = .TRUE.
-        ENDIF
+            IS_PROJ_COMPUTED%(proc_id)s(I,LZ,SZ) = .TRUE.
+          ENDIF
+
+C         Computing the Jz projector (Clebsch-Gordan coefficient table)
+          CALL CLEBSCH_GORDAN(L_ONIA(I),LZ,S_ONIA(I),SZ,J_ONIA(I),NHEL(QQ),CG_COEFF)
+          CG_SAVED(I,LZ,SZ,NHEL(QQ)) = CG_COEFF
+        ENDDO
+
 C       Computing normalisation factor from color projector
         IF (C_ONIA(I).EQ.1) THEN
           NORM = NORM/3D0
         ELSE IF (C_ONIA(I).EQ.8) THEN
           NORM = NORM*2D0
         ENDIF
+
 C       Computing normalisation factor for LDME convention
         LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
         IF (C_ONIA(I).EQ.1) THEN
@@ -437,30 +470,89 @@ C     Computing the amplitudes
           J = J+1
         ENDIF
       ENDDO
-      DO J = 1, 4**NONIA
-        PROJ(J) = SQRT(NORM)
-        DO I =1, NONIA
-          QQ = ONIA(I)
-          Q1 = FINDLOC(PAIRS, I, DIM=1)
-          Q2 = FINDLOC(PAIRS,-I, DIM=1)
-          NHEL_ONIA(Q1) = HELQ1(IBITS(J-1,2*I-2,1)+1)
-          NHEL_ONIA(Q2) = HELQ2(IBITS(J-1,2*I-1,1)+1)
-          PROJ(J) = PROJ(J) * PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2))
-        ENDDO
-        IF (PROJ(J).NE.(0D0,0D0)) THEN
-          IF (.NOT.IS_AMP_COMPUTED%(proc_id)s(J,K)) THEN
-            %(helas_calls)s
 
-C           Store amplitudes for reuse
-            AMP_SAVED%(proc_id)s(:,J,K) = AMP
-            IS_AMP_COMPUTED%(proc_id)s(J,K) = .TRUE.
+
+      LZ_LOOP: DO H = -(3**(NPWAVE)-1)/2, (3**(NPWAVE)-1)/2
+        HRUN = H
+
+        DO I = 1, NONIA
+          IF (L_ONIA(I).EQ.1) THEN
+            QQ = ONIA(I)
+C           For each L>0 state, retrieving LZ encoded in H
+            IF (MODULO(HRUN,3).EQ.0) THEN
+              LZ_LIST(SUM(L_ONIA(1:I))) = 0
+              LZ = 0
+              HRUN = HRUN/3
+            ELSEIF (MODULO(HRUN,3).EQ.1) THEN
+              LZ_LIST(SUM(L_ONIA(1:I))) = 1
+              LZ = 1
+              HRUN = (HRUN - 1)/3
+            ELSEIF (MODULO(HRUN,3).EQ.2) THEN
+              LZ_LIST(SUM(L_ONIA(1:I))) = -1
+              LZ = -1
+              HRUN = (HRUN + 1)/3
+            ENDIF
+C           Verifying if the current H value is accepted
+            SZ = NHEL(QQ) - LZ
+            IF (ABS(SZ).GT.S_ONIA(I)) THEN
+              IS_LZCOMB_ACCEPTED%(proc_id)s(H) = .FALSE.
+              CYCLE LZ_LOOP
+            ENDIF
           ENDIF
-        ENDIF
+        ENDDO
+        IS_LZCOMB_ACCEPTED%(proc_id)s(H) = .TRUE.
+
+        DO J = 1, 4**NONIA
+          PROJ(J,H)%%COMP(0) = SQRT(NORM)
+          DO I = 1, NONIA
+            QQ = ONIA(I)
+            Q1 = FINDLOC(PAIRS,+I, DIM=1)
+            Q2 = FINDLOC(PAIRS,-I, DIM=1)
+            NHEL_ONIA(Q1) = HELQ1(IBITS(J-1,2*I-2,1)+1)
+            NHEL_ONIA(Q2) = HELQ2(IBITS(J-1,2*I-1,1)+1)
+C           For each L>0 state, retrieving which LZ is encoded in H
+            IF (L_ONIA(I).EQ.1) THEN
+              LZ = LZ_LIST(SUM(L_ONIA(1:I)))
+C             Cross-check SZ physical condition 
+              SZ = NHEL(QQ) - LZ
+              IF (ABS(SZ).GT.S_ONIA(I)) CYCLE LZ_LOOP
+C             Cross-check passed!
+C             Inserting dual components
+              PQQ%%COMP(0) = P(:,QQ)
+              CALL VXXXXX(PQQ,PMASS(QQ),LZ,+1,EPS_L)
+              P_ONIA(:,Q1)%%COMP(2**(SUM(L_ONIA(1:I))-1)) = +EPS_L(5:8)%%COMP(0)
+              P_ONIA(:,Q2)%%COMP(2**(SUM(L_ONIA(1:I))-1)) = -EPS_L(5:8)%%COMP(0)
+            ELSE
+              LZ = 0
+              SZ = NHEL(QQ)
+            ENDIF
+            PROJ(J,H) = PROJ(J,H) * PROJ_SAVED%(proc_id)s(I,LZ,SZ,NHEL_ONIA(Q1),NHEL_ONIA(Q2)) * CG_SAVED(I,LZ,SZ,NHEL(QQ))
+          ENDDO
+          IF (ANY(PROJ(J,H)%%COMP(:).NE.(0D0,0D0))) THEN
+            IF (.NOT.IS_AMP_COMPUTED%(proc_id)s(J,K,H)) THEN
+              %(helas_calls)s
+
+C             Store amplitudes for reuse
+              AMP_SAVED%(proc_id)s(:,J,K,H) = AMP
+              IS_AMP_COMPUTED%(proc_id)s(J,K,H) = .TRUE.
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO LZ_LOOP
+
+      DO J = 1, NGRAPHS
+        DO I = 0, 2**NPWAVE-1
+          AMP(J)%%COMP(I) = (0D0,0D0)
+        ENDDO
       ENDDO
 
-      AMP = (0D0,0D0)
-      DO I = 1, 4**NONIA
-        AMP = AMP + AMP_SAVED%(proc_id)s(:,I,K)*PROJ(I)
+      DO H = -(3**(NPWAVE)-1)/2, (3**(NPWAVE)-1)/2
+        IF (.NOT.IS_LZCOMB_ACCEPTED%(proc_id)s(H)) CYCLE
+        DO J = 1, NGRAPHS
+          DO I = 1, 4**NONIA
+            AMP(J) = AMP(J) + AMP_SAVED%(proc_id)s(J,I,K,H)*PROJ(I,H)
+          ENDDO
+        ENDDO
       ENDDO
 
       JAMP = (0D0,0D0)
@@ -468,7 +560,7 @@ C           Store amplitudes for reuse
 
       IF(INIT_MODE)THEN
         DO I=1, NGRAPHS
-          IF (AMP(I).NE.0) THEN
+          IF (AMP(I)%%COMP(2**NPWAVE-1).NE.0) THEN
             ZEROAMP_%(proc_id)s(IHEL,I) = .FALSE.
          ENDIF
         ENDDO
@@ -476,10 +568,12 @@ C           Store amplitudes for reuse
 
       MATRIX%(proc_id)s = 0.D0
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX + 1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             %(select_configs_if)s
@@ -488,6 +582,7 @@ C           Store amplitudes for reuse
           ENDDO
         ENDDO
       ENDDO
+      MATRIX%(proc_id)s = MATRIX%(proc_id)s/DENOM
 
       IF(SDE_STRAT.EQ.1)THEN
         %(amp2_lines)s

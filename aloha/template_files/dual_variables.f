@@ -8,20 +8,29 @@
       public :: CONJG, DCONJG
       public :: DBLE, DIMAG
       public :: size
-   
-      include "onia.inc"
-   
+
+
+      !=================================================================
+      ! Class initialization
+      !=================================================================
+      include "dual_opts.inc"
+      integer, parameter :: bn_saved_hc(10)=(/1,2,5,15,52,203,877,4140,
+     &21147,115975/)
       type :: Dual
          complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: 
      &   comp = (0d0,0d0) ! npwave taken from onia.inc
    
       ! Printing routine used for constitency checks
       contains
+         procedure :: initZERO
          procedure :: write_formatted
          generic :: write(formatted) => write_formatted
          procedure :: pmath
       end type Dual
 
+      !=================================================================
+      ! Operators Interfaces
+      !=================================================================
       interface operator(+)
          module procedure add_DualVariable
          module procedure add_CN_DualVariable
@@ -92,13 +101,16 @@
       interface size
             module procedure dual_length
       end interface size
-
-      integer,parameter::nmax=10
-      integer,parameter::bnarray(nmax)=(/1,2,5,15,52,203,877,4140,21147,
-     &115975/)
-   
+      
+      
       contains
+      !=================================================================
+      ! Modules
+      !=================================================================
 
+      !=================================================================
+      ! Proprieties
+      !=================================================================
       ! Array size
       pure function Dual_Length(a) result(res)
          type(Dual), intent(in) :: a
@@ -106,6 +118,18 @@
 
          res = size(a%comp) - 1
       end function Dual_Length
+
+
+
+      ! Initialization & Resetting of dual components
+      subroutine initZERO(self)
+         class(Dual) :: self
+         Integer :: i
+
+         do i = 0, size(self)
+            self%comp(i) = (0d0,0d0)
+         enddo
+      end subroutine initZERO
 
 
       ! Printing routine
@@ -154,8 +178,9 @@
          write(*,'(A)') '}'
       end subroutine pmath
 
-
+      !=================================================================
       ! Addition rules
+      !=================================================================
       function add_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
@@ -214,7 +239,9 @@
       end function add_NON_DualVariable
       
 
+      !=================================================================
       ! Subtraction rules
+      !=================================================================
       function minus_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
@@ -283,7 +310,9 @@
       end function minus_NON_DualVariable
 
 
+      !=================================================================
       ! Multiplication rules
+      !=================================================================
       function multiply_DualVariable(a, b) result(res)
          type(Dual),intent(in)::a,b
          type(Dual)::res
@@ -351,129 +380,203 @@
          res = multiply_IN_DualVariable(jn,a)
       end function multiply_DualVariable_IN
 
-
+      
+      !=================================================================
       ! Power rules
+      !=================================================================
       function power_DualVariable_int(a,np) result(res)
          type(Dual),intent(in)::a
          integer,intent(in)::np
          type(Dual)::res
-         integer::i,j,k,bn,ng,n_ones
-         integer::pref
-         ! bnmax means we can have at maximum size(a)=nmax
-         ! otherwise, please increase the dimension
-         integer,dimension(bnarray(size(a)),0:size(a))::c_split
-         complex(kind(1d0))::cterm
+         integer::i,j,k,bn
+         integer:: nd
+         complex(kind(1d0))::cterm,prefact
 
-         if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.(np.lt.0))then
-            print*, "Error in power_DualVariable_int: 0 cannot be "//
+         if (np.gt.1) then       ! positive powers (identiy excluded)
+            res%comp(0) = (a%comp(0))**np
+            do i=1,2**npwave-1
+               res%comp(i) = dcmplx(0d0,0d0)
+               bn = 1
+               ! Different groups are computed independently
+               ! Each group corresponds to a number of derivative nd
+               do nd=1,min(nd_max(i),np)
+                  if (nd.eq.np) then
+                     prefact=1.d0
+                  else
+                     prefact=(a%comp(0))**(np-nd)
+                  endif
+                  ! Determing the prefactor (same for all nd entries)
+                  if (np.le.4) then
+                     prefact = prefact*fallfact_int(np,nd)
+                  else
+                     !write(*,'(G0," is not part of the saved list")') np
+                     prefact = prefact*falling_factorial(np,nd)
+                  endif
+                  ! The number of entries of each group is given by the
+                  ! Stirling number of the second kind (hardcoded)
+                  do j = 1, sn_array(nd_max(i),nd)
+                     cterm = prefact
+                     ! Each entry involves products of nd derivatives
+                     ! The index of the dual component is determined by 
+                     ! a binary splitting (hardcoded)
+                     do k = 1, nd
+                        cterm = cterm*(a%comp(split(i,bn,k)))
+                     enddo
+                     bn = bn+1
+                     res%comp(i)=res%comp(i)+cterm
+                  enddo
+               enddo
+            enddo
+            return
+
+         elseif (np.lt.0) then   ! negative powers
+            if ((a%comp(0).eq.dcmplx(0d0,0d0)))then
+               print*, "Error in power_DualVariable_int: 0 cannot be "//
      1               "raised to a non-positive power"
-            stop
-         endif
+               stop
+            endif
+            res%comp(0) = (a%comp(0))**np
+            do i=1,2**npwave-1
+               res%comp(i) = dcmplx(0d0,0d0)
+               bn = 1
+               ! Different groups are computed independently
+               ! Each group corresponds to a number of derivative nd
+               do nd=1,nd_max(i)
+                  prefact=(a%comp(0))**(np-nd)
+                  ! Determing the prefactor (same for all nd entries)
+                  if (np.ge.-4) then
+                     prefact = prefact*fallfact_int(np,nd)
+                  else
+                     !write(*,'(G0," is not part of the saved list")') np
+                     prefact = prefact*falling_factorial(np,nd)
+                  endif
+                  ! The number of entries of each group is given by the
+                  ! Stirling number of the second kind (hardcoded)
+                  do j = 1, sn_array(nd_max(i),nd)
+                     cterm = prefact
+                     ! Each entry involves products of nd derivatives
+                     ! The index of the dual component is determined by 
+                     ! a binary splitting (hardcoded)
+                     do k = 1, nd
+                        cterm = cterm*(a%comp(split(i,bn,k)))
+                     enddo
+                     bn = bn+1
+                     res%comp(i)=res%comp(i)+cterm
+                  enddo
+               enddo
+            enddo
+            return
 
-         if(np.eq.0)then
+         elseif (np.eq.0) then
            res%comp(0)=dcmplx(1d0,0d0)
            do i=1,2**npwave-1
               res%comp(i)=dcmplx(0d0,0d0)
            enddo
            return
+         else  ! np.eq.1
+            res = a
+            return
          endif
-
-         res%comp(0) = (a%comp(0))**np
-         do i=1,2**npwave-1
-            call count_binary_ones(i,n_ones)
-            bn=bell(n_ones)
-            call generate_binary_partitions(i,n_ones,bn,c_split(1:bn,
-     &      0:n_ones))
-            res%comp(i) = dcmplx(0d0,0d0)
-            do j=1,bn
-               ng=c_split(j,0)
-               if ((np.gt.0).and.(ng.gt.np)) cycle
-               pref=falling_factorial(np,ng)
-               if (ng.eq.np) then
-                 cterm=pref
-               else
-                 cterm=pref*(a%comp(0))**(np-ng)
-               endif
-               do k=1,ng
-                  cterm=cterm*a%comp(c_split(j,k))
-               enddo
-               res%comp(i)=res%comp(i)+cterm
-            enddo
-         enddo
-         return
       end function power_DualVariable_int
 
       function power_DualVariable_real(a,np) result(res)
          type(Dual),intent(in)::a
          real(kind(1d0)),intent(in)::np
          type(Dual)::res
-         integer::i,j,k,bn,ng,n_ones
-         real(kind(1d0))::pref
-         ! bnmax means we can have at maximum size(a)=nmax
-         ! otherwise, please increase the dimension
-         integer,dimension(bnarray(size(a)),0:size(a))::c_split
-         complex(kind(1d0))::cterm
+         integer::i,j,k,bn
+         integer:: nd
+         complex(kind(1d0))::cterm,prefact
 
          if (abs(dble(nint(np))-np).lt.1d-12) then
-            !If np is an integer, it calls power_DualVariable_int directly
+            ! If np is an integer, power_DualVariable_int is used
             res=power_DualVariable_int(a,nint(np))
             return
          endif
 
-
-c         if (a%comp(0).ne.dcmplx(0d0,0d0)) then
-c            res%comp(0) = a%comp(0)**np
-c         elseif (np.lt.0d0) then
-c            print*, "Error in power_DualVariable_real: 0 cannot be"//
-c     1              " raised to a non-positive power"
-c            stop
-c         endif
-
-         if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.(np.le.0d0)) then
-            print*, "Error in power_DualVariable_real: 0 cannot be "//
-     1               "raised to a non-positive power"
-            stop
-         end if
-
-         res%comp(0) = (a%comp(0))**np 
-         do i=1,2**npwave-1
-            call count_binary_ones(i,n_ones)
-            bn=bell(n_ones)
-            call generate_binary_partitions(i,n_ones,bn,c_split(1:bn,
-     &      0:n_ones))
-            res%comp(i) = dcmplx(0d0,0d0)
-            do j=1,bn
-               ng=c_split(j,0)
-               if ((a%comp(0).eq.dcmplx(0d0,0d0)).and.
-     &             (dble(ng).gt.np)) then
-               !if ((abs(a%comp(0)).lt.1d-13).and.(dble(ng).gt.np)) then
-                  cterm=1
-                  do k=1,ng
-                     cterm=cterm*a%comp(c_split(j,k))
+         if (np.gt.0) then ! positive (non-integer) powers
+            res%comp(0) = (a%comp(0))**np
+            do i=1,2**npwave-1
+               res%comp(i) = dcmplx(0d0,0d0)
+               bn = 1
+               ! Different groups are computed independently
+               ! Each group corresponds to a number of derivative nd
+               do nd=1,nd_max(i)
+                  prefact=(a%comp(0))**(np-nd)
+                  ! Determing the prefactor (same for all nd entries)
+                  if (np.eq.0.5d0 .or. np.eq.1.5d0) then
+                     prefact = prefact*fallfact_real(int(np+0.5),nd)
+                  !elseif (np-0.5d0.lt.1d-12 .or. np-1.5d0.lt.1d-12) then
+                  !   write(*,'("Warning: ",G0," assumed being 0.5")') np
+                  !   prefact = prefact*fallfact_real(int(np+0.5),nd)
+                  else
+                     !write(*,'(G0," is not part of the saved list")') np
+                     prefact = prefact*falling_factorial_r(np,nd)
+                  endif
+                  ! The number of entries of each group is given by the
+                  ! Stirling number of the second kind (hardcoded)
+                  do j = 1, sn_array(nd_max(i),nd)
+                     cterm = prefact
+                     ! Each entry involves products of nd derivatives
+                     ! The index of the dual component is determined by 
+                     ! a binary splitting (hardcoded)
+                     do k = 1, nd
+                        cterm = cterm*(a%comp(split(i,bn,k)))
+                     enddo
+                     bn = bn+1
+                     res%comp(i)=res%comp(i)+cterm
                   enddo
-                  if (cterm.eq.dcmplx(0d0,0d0)) cycle 
-                  !if (abs(cterm).lt.1d-13) cycle 
-                  if ((np.gt.0d0).and.
-     &                    (abs(dble(nint(np))-np).lt.5d-11)) cycle
-                  print*, "Error in power_DualVariable_real: "//
-     1                    "derivative in an special point; "//
-     2                    "a proper limit must be taken "//
-     3                    "and not yet implemented"
-                  stop
-               endif
-               pref=falling_factorial_r(np,ng)
-               cterm=pref*(a%comp(0))**(np-dble(ng))
-               do k=1,ng
-                  cterm=cterm*a%comp(c_split(j,k))
                enddo
-               res%comp(i)=res%comp(i)+cterm
             enddo
-         enddo
-         return
+            return
+
+         else              ! negative (non-integer) powers
+            if ((a%comp(0).eq.dcmplx(0d0,0d0)))then
+               print*, "Error in power_DualVariable_int: 0 cannot be "//
+     1               "raised to a non-positive power"
+               stop
+            endif
+            res%comp(0) = (a%comp(0))**np
+            do i=1,2**npwave-1
+               res%comp(i) = dcmplx(0d0,0d0)
+               bn = 1
+               ! Different groups are computed independently
+               ! Each group corresponds to a number of derivative nd
+               do nd=1,nd_max(i)
+                  prefact=(a%comp(0))**(np-nd)
+                  ! Determing the prefactor (same for all nd entries)
+                  if (np.eq.-0.5d0 .or. np.eq.-1.5d0) then
+                     prefact = prefact*fallfact_real(int(np+0.5),nd)
+                  ! elseif (np+0.5d0.lt.1d-12 .or. np+1.5d0.lt.1d-12) then
+                  !    write(*,'("Warning: ",I0," assumed being 0.5")') np
+                  !    prefact = prefact*fallfact_real(int(np+0.5),nd)
+                  else
+                     !write(*,'(G0," is not part of the saved list")') np
+                     prefact = prefact*falling_factorial_r(np,nd)
+                  endif
+                  ! The number of entries of each group is given by the
+                  ! Stirling number of the second kind (hardcoded)
+                  do j = 1, sn_array(nd_max(i),nd)
+                     cterm = prefact
+                     ! Each entry involves products of nd derivatives
+                     ! The index of the dual component is determined by 
+                     ! a binary splitting (hardcoded)
+                     do k = 1, nd
+                        cterm = cterm*(a%comp(split(i,bn,k)))
+                     enddo
+                     bn = bn+1
+                     res%comp(i)=res%comp(i)+cterm
+                  enddo
+               enddo
+            enddo
+            return
+
+         endif
       end function power_DualVariable_real
 
 
+      !=================================================================
       ! Division rules
+      !=================================================================
       function division_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual)::oneoverb
@@ -538,7 +641,9 @@ c         endif
       end function division_DualVariable_IN
 
 
-      ! Square-root rule
+      !=================================================================
+      ! Sqrt-root rule
+      !=================================================================
       function sqrt_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -547,7 +652,9 @@ c         endif
       end function sqrt_DualVariable
 
 
-      ! Natural-logarithmic rule
+      !=================================================================
+      ! Natural-Logarithm rule
+      !=================================================================
       function log_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -555,7 +662,7 @@ c         endif
          integer::pref
          ! bnmax means we can have at maximum size(a)=nmax
          ! otherwise, please increase the dimension
-         integer,dimension(bnarray(size(a)),0:size(a))::c_split
+         integer,dimension(bn_saved_hc(size(a)),0:size(a))::c_split
          complex(kind(1d0))::cterm
 
          do i=0,2**npwave-1
@@ -583,7 +690,9 @@ c         endif
       end function log_DualVariable
 
 
-      ! Double-real rule
+      !=================================================================
+      ! Double-real conversion rules
+      !=================================================================
       function DBLE_DualVariable(a) result(res)
          type(Dual),intent(in)::a
          type(Dual)::res
@@ -595,7 +704,9 @@ c         endif
          return
       end function DBLE_DualVariable
 
-      ! Double-image rule
+      !=================================================================
+      ! Double-imaginary conversion rules
+      !=================================================================
       function DIMAG_DualVariable(a) result(res)
          type(Dual),intent(in)::a
          type(Dual)::res
@@ -620,8 +731,44 @@ c         endif
       end function Imaginary_Conjugation
 
 
-
+      !=================================================================
       ! Additional functions
+      !=================================================================
+      ! Truncated factorial (n*(n-1)*...*(n-a))
+      ! Used for on-the-fly computations
+      integer(kind=8) function falling_factorial(a, n) result(res)
+         integer, intent(in) :: a, n
+         integer :: i
+         res = 1_8
+         if (n.lt.0) then
+         print *, "Error: n must be >= 0"
+         stop
+         end if
+         do i = 0, n-1
+         res = res*(a-i)
+         end do
+      end function falling_factorial
+
+      real(kind(1d0)) function falling_factorial_r(a, n) result(res)
+         real(kind(1d0)),intent(in)::a
+         integer, intent(in) :: n
+         integer :: i
+         res = 1d0
+         if (n.lt.0) then
+         print *, "Error: n must be >= 0"
+         stop
+         end if
+         do i = 0, n-1
+         res = res*(a-dble(i))
+         end do
+      end function falling_factorial_r
+
+      
+      !=================================================================
+      ! Additional functions (not used)
+      !=================================================================
+      ! These functions are included for self-consistency but unused in
+      ! the MadGraph implementation
       SUBROUTINE convert_to_binary(n1,x,y)
          ! converts to a binary number
          !     y -result
@@ -837,42 +984,5 @@ c         endif
          res = res*i
          end do
       end function factorial
-
-      !-------------------------------------------------------
-      ! Function to compute a*(a-1)*(a-2)*...*(a-n+1)
-      ! Works for integer n >= 0
-      !-------------------------------------------------------
-      integer(kind=8) function falling_factorial(a, n) result(res)
-         integer, intent(in) :: a, n
-         integer :: i
-         res = 1_8
-         if (n.lt.0) then
-         print *, "Error: n must be >= 0"
-         stop
-         end if
-         do i = 0, n-1
-         res = res*(a-i)
-         end do
-      end function falling_factorial
-
-      real(kind(1d0)) function falling_factorial_r(a, n) result(res)
-         real(kind(1d0)),intent(in)::a
-         integer, intent(in) :: n
-         integer :: i
-         res = 1d0
-         if (n.lt.0) then
-         print *, "Error: n must be >= 0"
-         stop
-         end if
-         do i = 0, n-1
-         res = res*(a-dble(i))
-         end do
-      end function falling_factorial_r
       
       end module dual_variables
-
-
-      module global_duals
-      
-
-      end module global_duals

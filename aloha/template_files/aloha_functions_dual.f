@@ -44,6 +44,9 @@ c     Convention for dual computations (same as loop)
       fi(2) = p(1)*(-nsf)
       fi(3) = p(2)*(-nsf)
       fi(4) = p(3)*(-nsf)
+      do i = 5,8
+         CALL fi(i)%initZERO()
+      enddo
 
       nh = nhel*nsf
 
@@ -64,6 +67,7 @@ c     Convention for dual computations (same as loop)
             fi(6)%comp(0) = im*nsf * sqm(ip)
             fi(7)%comp(0) = ip*nsf * sqm(im)
             fi(8)%comp(0) = im     * sqm(im)
+c           LM:: the limit has to be reviewed          
             do i = 1, size(p(0))
                fi(5)%comp(i) = oHsqm(ip)*
      &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
@@ -95,10 +99,9 @@ c     Convention for dual computations (same as loop)
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
-            !chi(1) = sqrt(rHalf*pp3/pp)
-
             !if (pp3%comp(0).eq.rZero) then
-c           LM:: the method below should be more numerically safe.           
+c           LM:: the method below should be more numerically safe. 
+c           LM:: the limit has to be reviewed          
             if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
      &          .and.(p(3)%comp(0)%re.lt.0d0)) then
                oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
@@ -118,15 +121,12 @@ c           LM:: the method below should be more numerically safe.
      &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(ip)
             fi(8) = sfomeg(2)*chi(ip) 
      &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
-
-            !fi(5) = sfomeg(1)*chi(im)
-            !fi(6) = sfomeg(1)*chi(ip)
-            !fi(7) = sfomeg(2)*chi(im)
-            !fi(8) = sfomeg(2)*chi(ip)
          endif
+
       else
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3 = sqrt(p(0)+p(3))*nsf
             sqp0p3%comp(0) = sqrt(max(p(0)%comp(0)%re+
      &                        p(3)%comp(0)%re,rZero))*nsf
          end if
@@ -151,7 +151,7 @@ c
 
 
 
-
+c     LM:: same changes of ixxxxx must be transferred to this function
       subroutine ixxxso(p,fmass,nhel,nsf,fi)
       use dual_variables
 c
@@ -180,6 +180,10 @@ c
       double complex ci
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
       parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      do i = 1,4
+         CALL fi(i)%initZERO()
+      enddo
 
       nh = nhel*nsf
 
@@ -304,10 +308,11 @@ c     Convention for dual computations (same as loop)
       fo(2) = p(1)*(nsf)
       fo(3) = p(2)*(nsf)
       fo(4) = p(3)*(nsf)
+      do i = 5,8
+         CALL fo(i)%initZERO()
+      enddo
 
       nh = nhel*nsf
-
-
 
       if (fmass.ne.rZero) then
          pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
@@ -326,6 +331,7 @@ c     Convention for dual computations (same as loop)
             fo(6)%comp(0) = ip*nsf * sqm(abs(ip))
             fo(7)%comp(0) = im*nsf * sqm(abs(im))
             fo(8)%comp(0) = ip     * sqm(abs(im))
+c           LM:: the limit has to be reviewed          
             do i = 1, size(p(0))
                fo(5)%comp(i) = oHsqm(abs(ip))*
      &            (+im*    (p(0)%comp(i) +    p(3)%comp(i))
@@ -356,12 +362,10 @@ c     Convention for dual computations (same as loop)
 
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
-
-            !chi(1) = sqrt(rHalf*pp3/pp)
          
-
             !if (pp3%comp(0)%re.eq.rZero) then
-c           LM:: the method below should be more numerically safe.           
+c           LM:: the method below should be more numerically safe. 
+c           LM:: the limit has to be reviewed                    
             if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
      &          .and.(p(3)%comp(0)%re.lt.0d0)) then
                oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
@@ -381,18 +385,13 @@ c           LM:: the method below should be more numerically safe.
      &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(ip)
             fo(8) = sfomeg(1)*chi(ip)
      &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
-
-            !fo(5) = sfomeg(2)*chi(im)
-            !fo(6) = sfomeg(2)*chi(ip)
-            !fo(7) = sfomeg(1)*chi(im)
-            !fo(8) = sfomeg(1)*chi(ip)
-
          endif
 
       else
 
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
+            sqp0p3 = sqrt(p(0)+p(3))*nsf
             sqp0p3%comp(0) = sqrt(max(p(0)%comp(0)%re+
      &                        p(3)%comp(0)%re,rZero))*nsf
          end if
@@ -416,6 +415,7 @@ c
       end subroutine oxxxxx
 
 
+c     LM:: same changes of oxxxxx must be transferred to this function
       subroutine oxxxso(p,fmass,nhel,nsf,fo)
       use dual_variables
 c
@@ -443,6 +443,10 @@ c
       double complex ci
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
       parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      do i = 1,4
+         CALL fo(i)%initZERO()
+      enddo
 
       nh = nhel*nsf
 
@@ -552,6 +556,7 @@ c
       type(Dual)::p(0:3),pp,pt,pt2,pzpt,emp
       double precision vmass,hel,hel0,sqh
       integer nhel,nsv,nsvahl
+      integer i
 
       double precision rZero, rHalf, rOne, rTwo
       double complex ci
@@ -564,7 +569,12 @@ c
       nsvahl = nsv*dabs(hel)
       pt2 = p(1)**2+p(2)**2
       pp = sqrt(pt2+p(3)**2)
-      pt = sqrt(pt2)
+      if ((p(1)%comp(0).ne.(0d0,0d0))
+     $     .and.(p(2)%comp(0).ne.(0d0,0d0))) then
+         pt = sqrt(pt2)
+      else
+         CALL pt%initZERO()
+      endif
 
       pp%comp(0) = min(p(0)%comp(0)%re,pp%comp(0)%re)
       pt%comp(0) = min(pp%comp(0)%re,pt%comp(0)%re)
@@ -574,6 +584,9 @@ c     Convention for dual computations (same as loop)
       vc(2) = p(1)*nsv
       vc(3) = p(2)*nsv
       vc(4) = p(3)*nsv
+      do i = 5,8
+         CALL vc(i)%initZERO()
+      enddo
 
       if (vmass.ne.rZero) then
 
@@ -605,8 +618,7 @@ c     Convention for dual computations (same as loop)
 
       else
          pp = p(0)
-         pt = sqrt(p(1)**2+p(2)**2)
-         vc(5)%comp(0) = dcmplx( rZero )
+         CALL vc(5)%initZERO()
          vc(8) = hel*pt/pp*sqh
          if ( pt%comp(0)%re.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
@@ -640,17 +652,20 @@ c
       implicit none
       type(Dual)::sc(5),p(0:3)
       integer nss
+      integer i
 
       double precision rOne
       parameter( rOne = 1.0d0 )
-
-      sc(5)%comp(0) = dcmplx( rOne )
 
 c     Convention for dual computations (same as loop)
       sc(1) = p(0)*nss
       sc(2) = p(1)*nss
       sc(3) = p(2)*nss
       sc(4) = p(3)*nss
+      CALL sc(5)%initZERO()
+
+      sc(5)%comp(0) = dcmplx( rOne )
+
 c
       return
       end subroutine sxxxxx
@@ -701,6 +716,10 @@ c
       integer stdo
       parameter( stdo = 6 )
 
+      do j = 1, 20
+         CALL tc(j)%initZERO()
+      enddo
+      
       sqh = sqrt(rHalf)
       sqs = sqrt(rHalf/3.d0)
 
@@ -873,13 +892,12 @@ c
       double precision cg
 
       if (J.gt.(L + S)) then
-         print*, "ERROR: angular momentum cannot be conserved!"
+         print*, "ERROR: angular momentum is not conserved!"
          print*, "(L, S, J): (", L, ",", S, ",", J, ")"
          stop
       endif
 
       if ((abs(Jz).gt.J).or.(abs(Lz).gt.L).or.(abs(Sz).gt.S)) then
-         ! the previous check should be improve to check that also the values of Lz, Sz and Jz are physically acceptable
          print*, "ERROR: magnetic number overshoots angular number!"
          print*, "(L, Lz): (", L, ",", Lz, ")"
          print*, "(S, Sz): (", S, ",", Sz, ")"

@@ -1034,18 +1034,107 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         writer.writelines(lines)
 
         return True
-    
-    def write_onia_file_short(self, writer, matrix_element):
-        """Write the onia.inc file for MG4"""
 
+    #===========================================================================
+    # write_dual_opts_file
+    #===========================================================================
+    def write_dual_opts_file(self, writer, matrix_element):
+        """Write the dual_opts.inc file for MG4"""
+        
         model = matrix_element.get('processes')[0].get('model')
+
+        # auxilary functions
+        def falling_factorial_int(n, k):
+            if k > n and n > 0:
+                return 0
+            else:
+                prod = 1
+                for i in range(0, k):
+                    prod *= (n - i)
+                return prod
+            
+        def falling_factorial_real(n, k):
+            prod = 1
+            for i in range(0, k):
+                prod *= (n - float(i))
+            return prod
+
+        def stirling_second_kind(n, k):
+            S_table = [[0]*(k+1) for _ in range(n+1)]
+            
+            for i in range(n+1):
+                for j in range(k+1):
+                    if j == 0 or j > i:
+                        S_table[i][j] = 0
+                    elif j == 1 or j == i:
+                        S_table[i][j] = 1
+                    else:
+                        S_table[i][j] = j*S_table[i-1][j] + S_table[i-1][j-1]
+            
+            return S_table[n][k]
+
+        def get_indep_partitions(n):
+            def get_subpartitions(n, max_part):
+                if n == 0: return [[]]
+                result = []
+                for k in range(min(max_part, n), 0, -1): 
+                    for rest in get_subpartitions(n - k, k - 1):
+                        if all((k & r) == 0 for r in rest):
+                            result.append([k] + rest)
+                return result
+            
+            parts = get_subpartitions(n, n)
+            parts = [sorted(p) for p in parts]
+            return sorted(parts, key=lambda x: (len(x), x))
+
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         nonia = matrix_element.get_nonia()
         npwave = matrix_element.get_npwave()
         der_order = matrix_element.get_highest_derivate_order()
+        
+        # These lists collect the hardcoded values used in the dual module
+        nd_list = []                                        # Number of derivatives of the dual number i-th component
+        bn_list = []                                        # bell numbers associated with a group of order nd
+        sn_list = [[] for _ in range(npwave)]               # Stirling numbers that decomposed the dual number i-th component
+                                                            # Note that: b(n) = sum_m s_n(m)
+        split_part_list = [[] for _ in range(2**npwave-1)]  # Independent partitions of the dual number i-th component
+        ffi_list = [[] for _ in range(9)]                   # falling factorials used for integer powers -4<n<4
+        ffr_list = [[] for _ in range(4)]                   # falling factorials used for real powers |n| = 0.5, 1.5
 
+        for k in range(1, 2**npwave):
+            nd_list.append(bin(k).count('1'))
+        
+
+        for k in range(1,npwave+1):
+            T = [[0 for _ in range(k+1)] for _ in range(k+1)]
+            T[0][0] = 1
+            for i in range(1,k+1):
+                T[i][0] = T[i-1][i-1]
+                for j in range(1,k+1):
+                    T[i][j] = T[i-1][j-1] + T[i][j-1]
+
+            bn_list.append(T[k][0])
+
+        for k in range(1,npwave+1):
+            for j in range(1,npwave+1):
+                sn_list[k-1].append(stirling_second_kind(k,j))
+
+        for k in range(2**npwave-1):
+            split_part_list[k] = get_indep_partitions(k+1)
+
+
+        for k in range(1,npwave+1):
+            for j in range(len(ffi_list)):
+                ffi_list[j].append(falling_factorial_int(-4+j,k))
+
+
+        for k in range(1,npwave+1):
+            for j in range(len(ffr_list)):
+                ffr_list[j].append(falling_factorial_real(-1.5+j,k))
+
+        # building document lines
         lines = []
         lines.append("INTEGER    NONIA")
         lines.append("INTEGER    NPWAVE")
@@ -1053,6 +1142,33 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         lines.append("PARAMETER (NONIA=%d)"%nonia)
         lines.append("PARAMETER (NPWAVE=%d)"%npwave)
         lines.append("PARAMETER (DER_ORDER=%d)"%der_order)
+
+        lines.append(f"INTEGER, PARAMETER :: ND_MAX({len(nd_list)}) = (/{",".join(str(int(i)) for i in nd_list)}/)")
+        lines.append(f"INTEGER, PARAMETER :: BN_ARRAY({len(bn_list)}) = (/{",".join(str(int(i)) for i in bn_list)}/)")
+        lines.append(f"INTEGER :: SN_ARRAY(NPWAVE,NPWAVE)")
+        lines.append(f"INTEGER :: SPLIT(1:2**NPWAVE-1,{max(bn_list)},NPWAVE)")
+        lines.append(f"INTEGER :: FALLFACT_INT(-4:6,NPWAVE)")
+        lines.append(f"REAL*8 :: FALLFACT_REAL(-1:2,NPWAVE)")
+
+        lines.append("")
+        lines.append("INTEGER    SN, FF")
+        for i in range(1,npwave+1):
+            lines.append(f"DATA (SN_ARRAY({i}, SN), SN = 1, {npwave}) /{",".join(str(int(j)) for j in sn_list[i-1])}/")
+
+        for i in range(2**npwave-1):
+            bn = 0
+            for j in range(len(split_part_list[i])):
+                bn+=1
+                lines.append(f"DATA (SPLIT({i+1}, {bn}, SN), SN = 1, {len(split_part_list[i][j])}) /{",".join(str(int(n)) for n in split_part_list[i][j])}/")
+
+
+        lines.append("")
+        for i in range(len(ffi_list)):
+            lines.append(f"DATA (FALLFACT_INT({-4+i}, FF), FF = 1, {npwave}) /{",".join(str(int(j)) for j in ffi_list[i])}/")
+
+        for i in range(len(ffr_list)):
+            if i == 0: lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{",".join(str(j) for j in ffr_list[i])}/!POW = {-1.5+i}")
+            else: lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{",".join(str(j) for j in ffr_list[i])}/\t!POW = {-1.5+i}")
 
         # Write the file
         writer.writelines(lines)
@@ -1630,9 +1746,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                        {"num": (config_to_diag_dict[config][0] + 1)}
 
-                amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
-                                  sum([diagrams[idiag].get('amplitudes') for \
-                                       idiag in config_to_diag_dict[config]], [])])
+                if aloha.dual_mode:
+                    amp = "+".join(["AMP(%(num)d)%%COMP(2**NPWAVE-1)" % {"num": a.get('number')} for a in \
+                                    sum([diagrams[idiag].get('amplitudes') for \
+                                        idiag in config_to_diag_dict[config]], [])])
+                else:
+                    amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
+                                    sum([diagrams[idiag].get('amplitudes') for \
+                                        idiag in config_to_diag_dict[config]], [])])
 
                 # Not using \sum |M|^2 anymore since this creates troubles
                 # when ckm is not diagonal due to the JIM mechanism.
@@ -1714,7 +1835,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
     def get_JAMP_lines_split_order(self, col_amps, split_order_amps,
-          split_order_names=None, JAMP_format="JAMP(%s,{0})", AMP_format="AMP(%s)"):
+          split_order_names=None, JAMP_format="JAMP(%s,{0})", AMP_format="AMP(%s)", AMP_format_addon=""):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps
         defined as a matrix element or directly as a color_amplitudes dictionary.
         The split_order_amps specifies the group of amplitudes sharing the same
@@ -1781,15 +1902,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if self.opt['export_format'] in ['madloop_matchbox']:
                 res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format=JAMP_format.format(str(i+1)),
+                                   AMP_format=AMP_format+AMP_format_addon,
                                    JAMP_formatLC="LN"+JAMP_format.format(str(i+1)))[0])
             else:
                 toadd, nb_tmp = self.get_JAMP_lines(col_amps_order,
+                                   AMP_format=AMP_format+AMP_format_addon,
                                    JAMP_format=JAMP_format.format(str(i+1)))
                 res_list.extend(toadd)
                 max_tmp = max(max_tmp, nb_tmp)
 
         return res_list, max_tmp
-
 
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)",
                        split=-1):
@@ -1868,7 +1990,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 if common_factor:
                     res = res + ')'
-                res_list.append(res)
+                res_list.append(res.replace('_percent_', '%'))
 
         if 'jamp_optim' in self.cmd_options:
             jamp_optim = banner_mod.ConfigFile.format_variable(self.cmd_options['jamp_optim'], bool, 'jamp_optim')
@@ -1925,17 +2047,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 amp2 = "TMP_JAMP(%d)" % -amp2
 
             if frac not in  [1., -1]:
-                res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))
+                res_list.append((' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb)).replace('_percent_', '%'))
             elif frac == 1.:
-                res_list.append(' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb))
+                res_list.append((' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb)).replace('_percent_', '%'))
             else:
-                res_list.append(' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb))
+                res_list.append((' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb)).replace('_percent_', '%'))
 
         jamp_res = collections.defaultdict(list)
         max_jamp=0
         for (jamp, var), factor in new_mat.items():
             if var > 0:
-                name = AMP_format % var
+                name = (AMP_format % var).replace('_percent_', '%')
             else:
                 name = "TMP_JAMP(%d)" % -var
             if factor not in [1.]:
@@ -3438,8 +3560,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             self.write_onia_file(writers.FortranWriter(filename),
                          matrix_element)
             if matrix_element.get_npwave()>0:
-                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'onia.inc')
-                self.write_onia_file_short(writers.FortranWriter(filename),
+                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'dual_opts.inc')
+                self.write_dual_opts_file(writers.FortranWriter(filename),
                             matrix_element)
 
             filename = pjoin(dirpath, 'pmassonia.inc')
@@ -5445,9 +5567,15 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
-        jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
-                             matrix_element,amp_orders,split_order_names=
-                        split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
+        if aloha.dual_mode:
+            jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
+                                matrix_element,amp_orders,
+                                AMP_format_addon= "_percent_COMP(2**NPWAVE-1)",
+                                split_order_names=split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
+        else:
+            jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
+                                matrix_element,amp_orders,
+                                split_order_names=split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_temp
 
@@ -6919,7 +7047,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             self.opt['hel_recycling'] = False
             if not contains_onia:
                 if 'onia' not in self.matrix_file:
-                    self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+                    if matrix_elements[0].get_npwave()>0:
+                        self.matrix_file = self.matrix_file.replace('.inc',"_onia_pwave.inc")
+                        print("condition taken: ", self.matrix_file)
+                    else:
+                        self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
                 contains_onia = True
 
         # Add the driver.f, all grouped ME's must share the same number of
@@ -7119,6 +7251,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             filename = 'onia.inc'
             self.write_onia_file(writers.FortranWriter(filename),
                              matrix_element)
+            if matrix_element.get_npwave()>0:
+                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'dual_opts.inc')
+                self.write_dual_opts_file(writers.FortranWriter(filename),
+                            matrix_element)
 
             filename = 'pmassonia.inc'
             self.write_pmassonia_file(writers.FortranWriter(filename),
