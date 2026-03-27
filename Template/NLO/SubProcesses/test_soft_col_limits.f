@@ -316,7 +316,7 @@ c$$$      wgt=1d0
 c$$$      call generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p)
 c$$$      write (*,*) wgt,x(1:ndim)
 c$$$      stop 1
-c$$$      
+      
       calculatedBorn=.false.
       call set_cms_stuff(-100)
       if (ilim.eq.2) then
@@ -461,12 +461,13 @@ c$$$
       common/c_nFKSprocess/nFKSprocess
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
       call boost_n1_to_its_cms(p,p_cm,ybst)
       ! use local amp_split_mc, since, compute_MCsubtraction_kl will overwrite amp_split:
       amp_split_mc(1:amp_split_size)=0d0
       nFKSprocess_save=nFKSprocess
       do iFKS=1,fks_configs
-
          ! TODO: check if we should skip massive j-fks in collinear test.
          
          nFKSprocess=iFKS
@@ -495,6 +496,7 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
          !     inputs are: ndim,iconfig,p
          !     outputs are: xx,jac (also updates pborn common block)
          call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p)
+         CalculatedBorn=.false.
          call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect

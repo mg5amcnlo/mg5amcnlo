@@ -514,8 +514,10 @@ c final state gluon radiation:  X -> Xg
 c initial state gluon splitting (gluon is j_fks):  g -> XX
                pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
             else
-               write (*,*)
-     &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
+               write (*,*) 'set_pdg ERROR#3 in PDG '/
+     $              /'assigment for underlying Born'
+               write (*,*) iFKS,ict,fks_i_d(iFKS),fks_j_d(iFKS)
+     $              ,pdg(fks_i_d(iFKS),ict),pdg(fks_j_d(iFKS),ict)
                stop 1
             endif
          elseif(k.lt.fks_i_d(iFKS)) then

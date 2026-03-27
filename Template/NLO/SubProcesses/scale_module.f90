@@ -246,7 +246,7 @@ contains
     if (n.eq.next_n1) then
        iproc=nFKSprocess
     else
-       iproc=0
+       iproc=-nFKSprocess
     endif
     call cluster_and_reweight(iproc,dummy1 &
             ,dummy2,nFxFx_ren_scales,FxFx_ren_scales(0) &

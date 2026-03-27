@@ -1,14 +1,15 @@
-      subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
-     $     ,for_mcatnlo_scale)
+      subroutine cluster_and_reweight(iproc_input,sudakov
+     $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
+     $     ,need_matching,for_mcatnlo_scale)
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C renormalisation scale setting (to be used to somewhere else to
-C reweight alphaS). Should be called with iproc=0 for n-body
-C contributions and iproc=nFKSprocess for the real-emissions. These
-C routines assume that the c_configuration common block has already been
-C filled with the iforest etc. information, the momenta are given in the
-C pborn and pev common blocks and the current integration channel is
-C given by the to_mconfigs common block.
+C reweight alphaS). Should be called with iproc_input=-nFKSprocess (or
+C iproc_input=0) for n-body contributions and iproc_input=nFKSprocess
+C for the real-emissions. These routines assume that the c_configuration
+C common block has already been filled with the iforest
+C etc. information, the momenta are given in the pborn and pev common
+C blocks and the current integration channel is given by the to_mconfigs
+C common block.
       use weight_lines
       implicit none
       include 'nexternal.inc'
@@ -30,7 +31,7 @@ C given by the to_mconfigs common block.
       common/pev/      p_ev
       integer            this_config
       common/to_mconfigs/this_config
-      integer nfks1,iproc
+      integer nfks1,iproc,iproc_input
       parameter (nfks1=fks_configs+1)
       integer i,j,il_list,il_pdg,next,nbr,ipdg(nexternal,0:fks_configs)
      $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
@@ -44,7 +45,8 @@ C given by the to_mconfigs common block.
       logical firsttime(0:fks_configs),skip_first,for_mcatnlo_scale
       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
       save ipdg,cluster_list,cluster_pdg,cluster_type,firsttime
-      if (iproc.eq.0) then      ! n-body contribution
+      if (iproc_input.le.0) then      ! n-body contribution
+         iproc=0
          next=nexternal-1
          do i=1,next
             do j=0,3
@@ -52,6 +54,7 @@ C given by the to_mconfigs common block.
             enddo
          enddo
       else                      ! n+1-body contribution
+         iproc=iproc_input
          next=nexternal
          do i=1,next
             do j=0,3
@@ -62,8 +65,8 @@ C given by the to_mconfigs common block.
       nbr=next-3 ! number of clusterings to get to a 2->1 process
       if (firsttime(iproc)) then
          cluster_type(1:maskr(nexternal),iproc)=0 ! set to zero
-         call set_pdg(0,max(1,iproc)) ! use max() here to get something for iproc=0
-         if (iproc.eq.0) then
+         call set_pdg(0,max(1,abs(iproc_input))) ! use max() here to get something for iproc=0
+         if (iproc.le.0) then
             do i=1,next
                ipdg(i,iproc)=pdg_uborn(i,0)
             enddo
