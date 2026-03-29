@@ -915,21 +915,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if wf.get('onium'):
                 if onium == -1:
                     onium = wf.get('onium').get('index')
-                    if mass.lower() != "zero":
-                        onium_mass = "abs(%s)" % mass
-                    else:
-                        onium_mass = mass
-                    counter += 1
-                    continue
+                    mass = "mdl_M%i"%wf.get('onium').get('id')
                 elif onium == wf.get('onium').get('index'):
                     onium = -1
-                    if mass.lower() != "zero":
-                        mass = "abs(%s)" % mass
-                    if onium_mass.lower() != "zero":
-                        if mass.lower() != "zero":
-                            mass = onium_mass+"+"+mass
-                        else:
-                            mass = onium_mass
+                    counter += 1
+                    continue
                 else:
                     raise MadGraph5Error("The file 'pmass.inc' cannot be produced.")
             elif mass.lower() != "zero":
@@ -2687,27 +2677,23 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # create onia_card
         for card in ['onia_card']:
-            ldme_default = {}
-            modelname = self.model.get('name').split('-')[0]
-            with open(pjoin(self.mgme_dir, 'models', modelname, 'ldme.dat')) as f:
-                for line in f:
-                    if line.startswith('#'):
-                        continue
-                    if line.split():
-                        ldme_default[int(line.split()[0])] = float(line.split()[1])
-
             if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
                 try:
                     with open(pjoin(self.dir_path, 'Cards',card + '_default.dat'), 'w') as f:
                         with open(pjoin(self.dir_path, 'Cards',card + '.dat'),'r') as source:
                             shutil.copyfileobj(source, f)
+                        f.write('#*********************************************************************\n')
+                        f.write('# Long distance matrix elements (LDME)                               *\n')
+                        f.write('#*********************************************************************\n')
                         f.write('Block ldme\n')
                         for onium_info in onia_info:
-                            try:
-                                default_value = ldme_default[onium_info[0]]
-                            except:
-                                default_value = 1.
-                            f.write('   {id}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=default_value))
+                            f.write('   {id:7}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=onium_info[3]))
+                        f.write('#*********************************************************************\n')
+                        f.write('# Masses                                                             *\n')
+                        f.write('#*********************************************************************\n')
+                        f.write('Block onium_mass\n')
+                        for onium_info in onia_info:
+                            f.write('   {id:7}  {value:.16f}   # mass for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=onium_info[2]))
                     shutil.copy(pjoin(self.dir_path, 'Cards',card + '_default.dat'),
                                    pjoin(self.dir_path, 'Cards', card + '.dat'))
                 except IOError:
@@ -2723,7 +2709,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in me.get('processes'):
                     for leg in proc.get('legs'):
                         if leg.get('onium'):
-                            info += [[abs(leg.get('onium').get('id')),leg.get('onium').get('name').replace('+','').replace('-','')]]
+                            info += [[abs(leg.get('onium').get('id')),leg.get('onium').get('name').replace('+','').replace('-',''),leg.get('onium').get('mass'),leg.get('onium').get('ldme')]]
 
         info = sorted(info, key=lambda x: (x[0]))
         for i in reversed(range(1,len(info))):
@@ -2740,13 +2726,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """ write ldme.inc """
 
         ldmes = ["LDME_%i"%(onium_id) for onium_id in onia_ids]
+        masses = ["mdl_M%i"%(onium_id) for onium_id in onia_ids]
 
         lines = []
         if onia_ids:
             lines.append("DOUBLE PRECISION %s"% \
                             (",".join(str(x) for x in ldmes)))
+            lines.append("DOUBLE PRECISION %s"% \
+                            (",".join(str(x) for x in masses)))
             lines.append("COMMON/LDME/ %s"% \
                             (",".join(str(x) for x in ldmes)))
+            lines.append("COMMON/ONIUM_MASS/ %s"% \
+                            (",".join(str(x) for x in masses)))
 
         # Write the file
         writer.writelines(lines)
@@ -2760,6 +2751,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for onium_id in onia_ids:
             lines.append("CALL LHA_GET_REAL(NONIA,ONIA,VALUE,'LDME_{id}',LDME_{id},1D0)".format(id=onium_id))
 
+        for onium_id in onia_ids:
+            lines.append("CALL LHA_GET_REAL(NONIA,ONIA,VALUE,'mdl_M{id}',mdl_M{id},-1D0)".format(id=onium_id))
+
         # Write the file
         writer.writelines(lines)
 
@@ -2772,6 +2766,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             with open(card, 'a') as f:
                 for onium_id in onia_ids:
                     f.write("\nldme {id} LDME_{id}\n".format(id=onium_id))
+
+                for onium_id in onia_ids:
+                    f.write("\nonium_mass {id} mdl_M{id}\n".format(id=onium_id))
 
         else:
             raise MadGraph5Error("LDMEs cannot be added to 'ident_card.dat'")

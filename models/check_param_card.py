@@ -663,7 +663,7 @@ class ParamCard(dict):
             if len(split) < 3:
                 continue
             block = split[0]
-            if block == 'ldme':
+            if block in ['ldme','onium_mass']:
                 continue
             lhaid = [int(i) for i in split[1:-1]]
             variable = split[-1]

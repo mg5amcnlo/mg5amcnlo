@@ -5237,6 +5237,14 @@ This implies that with decay chains:
                 onium_color = onium_info.get('color')
                 onium_charge = onium_info.get('charge')
                 constituents = onium_info.get('particles')
+                try:
+                    onium_mass = onium_info.get('mass')
+                except AttributeError:
+                    onium_mass = -1.
+                try:
+                    onium_ldme = onium_info.get('ldme')
+                except AttributeError:
+                    onium_ldme = 1.
 
                 # use dual mode for P-wave ONIA
                 if onium_orbit >= 1:
@@ -5251,7 +5259,8 @@ This implies that with decay chains:
                                                                   'N':onium_principal, 'S':onium_spin,
                                                                   'L':onium_orbit, 'J':onium_j,
                                                                   'C':onium_color, 'charge':onium_charge,
-                                                                  'index':onium_index
+                                                                  'index':onium_index, 'mass':onium_mass,
+                                                                  'ldme':onium_ldme
                                                                  }
                                                         	}))
                 onium_index += 1
