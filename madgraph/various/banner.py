@@ -4755,7 +4755,7 @@ class RunCardLO(RunCard):
                     self.display_block.append('pdlabel')
 
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
-                maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+                maxjetflavor = max([3]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
             
