@@ -1571,7 +1571,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["DATA Denom/1/", "DATA CF/1/"]
+            return ["DATA Denom/1/", "DATA CF/0/"]
 
         ret_list = []
         my_cs = color.ColorString()
