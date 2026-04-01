@@ -4040,6 +4040,7 @@ c has soft singularities
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
+      include "nFKSconfigs.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
@@ -4095,8 +4096,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
 
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
 C  
@@ -4214,6 +4215,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
+      include "nFKSconfigs.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
@@ -4273,8 +4275,8 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
 
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
 
       logical use_evpr
       common /to_use_evpr/use_evpr
@@ -5013,6 +5015,7 @@ c q->gq splitting
       implicit none
 
       include "nexternal.inc"
+      include "nFKSconfigs.inc"
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -5043,8 +5046,8 @@ c      include "fks.inc"
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
 
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
 
       include "pmass.inc"
 c
@@ -5178,6 +5181,7 @@ c Calculate the eikonal factor
       include 'q_es.inc'
       include "run.inc"
       include "orders.inc"
+      include "nFKSconfigs.inc"
 
       integer iord, iap
       double precision p(0:3,nexternal),collrem_xi,collrem_lxi
@@ -5219,8 +5223,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision one,pi
       parameter (one=1.d0)
       parameter (pi=3.1415926535897932385d0)
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
 
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
@@ -7101,19 +7105,18 @@ c
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
 
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
-      
       include 'coupl.inc'
       include 'genps.inc'
       include 'nexternal.inc'
       include 'fks_powers.inc'
       include 'nFKSconfigs.inc'
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'run.inc'
-      INTEGER NFKSPROCESS
+      INTEGER NFKSPROCESS,nFKSprocess_save
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
@@ -7225,8 +7228,12 @@ c Beta_0 defined according to (MadFKS.C.5)
 c ren_group_coeff defined accordingly
       ren_group_coeff=ren_group_coeff_in/(2*pi)
 
-      if (firsttime_nFKSprocess(nFKSprocess)) then
-         firsttime_nFKSprocess(nFKSprocess)=.false.
+      
+      if (firsttime) then
+         nFKSprocess_save=nFKSprocess
+         do nFKSprocess=1,fks_configs
+            call leshouche_inc_chooser()
+            call fks_inc_chooser()
 c---------------------------------------------------------------------
 c              Symmetry Factors
 c---------------------------------------------------------------------
@@ -7377,6 +7384,10 @@ c Born matrix elements.
                endif
             enddo
          enddo
+         iden_comp_FKS(nFKSprocess)=dble(iden_born_FKS(nFKSprocess))/
+     $        dble(iden_real_FKS(nFKSprocess))
+      enddo
+         nFKSprocess=nFKSprocess_save
       endif
 
       i_type=i_type_FKS(nFKSprocess)
@@ -7391,8 +7402,7 @@ c Compensating factor needed in the soft & collinear counterterms for
 c the fact that the identical particle symmetry factor in the Born
 c matrix elements is not the one that should be used for those terms
 c (should be the one in the real instead).
-      iden_comp=dble(iden_born_FKS(nFKSprocess))/
-     &          dble(iden_real_FKS(nFKSprocess))
+      iden_comp=iden_comp_FKS(nFKSprocess)
 
       
 c Set matrices used by MC counterterms

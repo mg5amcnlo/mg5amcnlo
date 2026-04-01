@@ -83,6 +83,7 @@ c fks.inc information
       implicit none
       include 'nexternal.inc'
       include 'fks_info.inc'
+      include 'nFKSconfigs.inc'
       integer i,j
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -113,6 +114,8 @@ c fks.inc information
       common /c_is_aorg/is_aorg
       logical is_charged(nexternal)
       common /c_is_charged/is_charged
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
 c
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
@@ -172,6 +175,7 @@ c
       do i = 1, nsplitorders
          split_type(i) = split_type_d(nFKSprocess,i)
       enddo
+      iden_comp=iden_comp_FKS(nFKSprocess)
       return
       end
 

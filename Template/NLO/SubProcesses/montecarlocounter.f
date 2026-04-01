@@ -2614,7 +2614,8 @@ c the same method
       include "nexternal.inc"
       include "born_nhel.inc"
       include "orders.inc"
-
+      include "nFKSconfigs.inc"
+      
       double precision p(0:3,nexternal),p_born(0:3,nexternal-1)
       double precision y_ij_fks,bornbars(max_bcol,nsplitorders),
      &                          bornbarstilde(max_bcol,nsplitorders)
@@ -2657,8 +2658,8 @@ c the same method
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      double precision iden_comp
-      common /c_iden_comp/iden_comp
+      double precision iden_comp,iden_comp_FKS(fks_configs)
+      common /c_iden_comp/iden_comp,iden_comp_FKS
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
@@ -2686,7 +2687,6 @@ c
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-      
 c
 c BORN/BORNTILDE
 C check if momenta have to be rotated
@@ -2854,7 +2854,6 @@ c born is the total born amplitude squared
          if(is_leading_cflow(i))sumborn=sumborn+jamp2(i)
 c sumborn is the sum of the leading-color amplitudes squared
       enddo
-
 
 c BARRED AMPLITUDES
       do i=1,max_bcol
