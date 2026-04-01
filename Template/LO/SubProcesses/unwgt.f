@@ -492,6 +492,7 @@ c
 c
 c     Local
 c
+      logical exists
       integer i,j,k,iini,ifin
       double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
       integer ip, np, ic, nc
@@ -735,6 +736,12 @@ c
 c     Add info on resonant mothers
 c     recall onbw since that might have configured onBW for the wrong config (check tt~a ,t >... for checking impact 
       call cut_bw(p)
+c     check if process contains onia (the file is only created in this case)
+c     if the process contains onia set icol to a negative value to force
+c     the flag 'is_LC' set to be false in the routine addmothers to bypass 
+c     the writing of intermediate particles
+      inquire( file=trim('../onia.inc'), exist=exists )
+      if (exists) icol = -abs(icol)
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc,flip, icol, ivec)
 
