@@ -16,8 +16,8 @@ C
       double precision value(0:19) ! align indices with c++ value[20] for clarity
       integer tmpnloop(2)
       double precision tmpasmz(2)
-      real*8 alphasPDF,alphasPDFM
-      external alphasPDF,alphasPDFM
+      real*8 alphasPDFM
+      external alphasPDFM ! defined in lhapdf62.cc
 
 
 c-------------------
@@ -31,23 +31,24 @@ c     initialize the pdf set
       value(1)=lhasubid(1)
       value(2)=lhasubid(2)
       value(4)=multi_lhaid_alphas_scheme ! = 0,1,2
-      nset = value(multi_lhaid_alphas_scheme)
+      nsetBeam(1) = value(1) ! set for alpha_functions_lhapdf.f
+      nsetBeam(2) = value(2) ! set for alpha_functions_lhapdf.f
 
       parm(0)='DEFAULT'
 
-      if (pdlabel.eq.'lhapdf') then
+      if (pdsublabel(1).eq.'lhapdf'.or.pdsublabel(2).eq.'lhapdf') then
          call pdfset(parm,value) ! initialize PDFs via lhapdf62.cc
 
          select case(multi_lhaid_alphas_scheme) ! initialize alpha_s, etc
 
          case (1,2)     ! pull from PDF1 or PDF2
-         call GetOrderAsM(nset,nloop)     ! set nloop
-         asmz=alphasPDFM(nset,zmass)      ! set asmz
+         call GetOrderAsM(nsetBeam(multi_lhaid_alphas_scheme),nloop)    ! set nloop
+         asmz=alphasPDFM(nsetBeam(multi_lhaid_alphas_scheme),zmass)     ! set asmz
 
          case default   ! pull from PDF1 and PDF2
          call GetOrderAsM(lhasubid(1),tmpnloop(1))
          call GetOrderAsM(lhasubid(2),tmpnloop(2))
-         nloop=minval(tmpnloop) ! go with lower precision
+         nloop=minval(tmpnloop)     ! go with lower precision
          tmpasmz(1)=alphasPDFM(lhasubid(1),zmass)
          tmpasmz(2)=alphasPDFM(lhasubid(2),zmass)
          asmz=sqrt(tmpasmz(1)*tmpasmz(2))
@@ -57,6 +58,8 @@ c     initialize the pdf set
 
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
+          write(*,*) 'Unknown PDLABEL1', pdsublabel(1)
+          write(*,*) 'Unknown PDLABEL2', pdsublabel(2)
           stop 1
       endif
       

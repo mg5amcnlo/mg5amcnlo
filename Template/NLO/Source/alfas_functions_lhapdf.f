@@ -77,8 +77,9 @@ C-----------------------------------------------------------------------------
       IMPLICIT NONE
 c
       include 'alfas.inc'
-      REAL*8 Q,alphasPDF
-      external alphasPDF
+      REAL*8 Q,alphasPDFM
+      REAL*8 tmpAlpha(2)
+      external alphasPDFM     ! defined in lhapdf62.cc
 
 c timing statistics
       include "timing_variables.inc"
@@ -86,7 +87,13 @@ c timing statistics
 c     This function takes 20 micro seconds to run, so it is ok to profile
 c     it with the 0.3 ms function cpu_time.
 c$$$      call cpu_time(tbefore)
-      ALPHAS=alphasPDF(Q)
+      IF(multi_lhaid_alphas_scheme.gt.0) then
+            ALPHAS=alphasPDFM(nsetBeam(multi_lhaid_alphas_scheme),Q)
+      ELSE
+            tmpAlpha(1)=alphasPDFM(nsetBeam(1),Q)
+            tmpAlpha(2)=alphasPDFM(nsetBeam(2),Q)
+            ALPHAS=sqrt(tmpAlpha(1)*tmpAlpha(2))
+      ENDIF
 c$$$      call cpu_time(tAfter)
       
 c$$$      tPDF = tPDF + (tAfter-tBefore)

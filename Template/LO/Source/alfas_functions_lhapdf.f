@@ -78,9 +78,16 @@ C-----------------------------------------------------------------------------
 c
       include 'alfas.inc'
       REAL*8 Q,alphasPDFM
-      external alphasPDFM
+      REAL*8 tmpAlpha(2)
+      external alphasPDFM     ! defined in lhapdf62.cc
 
-      ALPHAS=alphasPDFM(nset,Q)
+      IF(multi_lhaid_alphas_scheme.gt.0) then
+            ALPHAS=alphasPDFM(nsetBeam(multi_lhaid_alphas_scheme),Q)
+      ELSE
+            tmpAlpha(1)=alphasPDFM(nsetBeam(1),Q)
+            tmpAlpha(2)=alphasPDFM(nsetBeam(2),Q)
+            ALPHAS=sqrt(tmpAlpha(1)*tmpAlpha(2))
+      ENDIF
 
       RETURN
       END
