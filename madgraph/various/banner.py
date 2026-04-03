@@ -4020,8 +4020,8 @@ class PDLabelBlock(RunBlock):
         """check which template is active and fill the parameter in the inactive one. """
 
         if self.status(card):
-            #if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
-            #    dict.__setitem__(card, 'pdlabel','lhapdf')
+            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
+                dict.__setitem__(card, 'pdlabel','lhapdf')
             if card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
                 if card['pdlabel1'] != card['pdlabel2']:
                     if card['pdlabel1'] in ['edff','chff']:
@@ -4035,27 +4035,22 @@ class PDLabelBlock(RunBlock):
             elif card['pdlabel1'] == 'emela' or card['pdlabel2'] == 'emela':
                 dict.__setitem__(card, 'pdlabel','emela')
             else:
-                #if card['pdlabel1'] == card['pdlabel2']:
-                #    if card['pdlabel'] != card['pdlabel1']:
-                #        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                if card['pdlabel1'] == card['pdlabel2']:
+                    if card['pdlabel'] != card['pdlabel1']:
+                        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
                 if card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
                     raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option") 
                 elif card['pdlabel2'] in sum(card.allowed_lep_densities.values(),[]):
                     raise InvalidRunCard("Asymmetric beam pdf not supported for e e collision with ISR/bemstralung option")
-                #elif card['pdlabel1'] == 'none':
-                #    dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
-                #elif card['pdlabel2'] == 'none':
-                #    dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
-                #else:
-                #    dict.__setitem__(card, 'pdlabel', 'mixed')
+                elif card['pdlabel1'] == 'none':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
+                elif card['pdlabel2'] == 'none':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                else:
+                    dict.__setitem__(card, 'pdlabel', 'mixed')
         else:
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
-
-        #if isinstance(card['lpp1'],int) and isinstance(card['lpp2'],int) and \
-        #    abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
-        #    raise InvalidRunCard("Asymmetric beam pdf not supported for proton-proton collision") 
-
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""
