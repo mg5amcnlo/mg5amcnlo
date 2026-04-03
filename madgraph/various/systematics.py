@@ -202,7 +202,7 @@ class Systematics(object):
         if len(self.multiID) > 1:
             self.log('multiID is too large. Using the first entry: %s' % self.multiID[0])
             self.multiID = self.multiID[:1]
-        if self.multiID[0] not in [0,1,2]:
+        if self.multiID[0] not in [-1,0,1,2]:
             self.log('multiID outside allowed range: %s. Using multiID=0.' % self.multiID[0])
             self.multiID[0] = 0
 
@@ -865,24 +865,27 @@ class Systematics(object):
                         beam1PDFsets.append(value)
                     else:
                         beam2PDFsets.append(value)
-                # build pairs of lhaids
+                assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
+                # build pairs of pdfs for pdf variation
                 # the following is a key step when calling multiple LHAIDs
                 # multiID fixes the collection of PDF members that will be called
-                #       e.g., fix beam1 to be the central PDF while beam2 is varied
-                # for PDF sets of different sizes (e.g., 50 vs 100 replicas),
-                #       always go with the smaller set
-                # match-case is used so alternative schemes can be implemented later
-                # trust the user to do something reasonable
-                # remove the following assert line before release
-                assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
+                #       e.g., multiID=2: fix beam1 to be the central PDF while beam2 is varied
+                # for multiID=-1, trust the user to do something reasonable
+                # note: pairs_of_lhaids must be converted into lists to match self.orig_pdf
                 match self.multiID[0]:
+                    case -1: # vary 1 and 2 separately
+                        self.log("# Building separate variations for PDF(beam1) and PDF(beam2)")
+                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
                     case 1: # vary 1, fix 2
-                        pairs_of_lhaids = list(zip(beam1PDFsets,itertools.repeat(beam2PDFsets[0])))
+                        self.log("# Building variations for PDF(beam1) but fixing PDF(beam2)")
+                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
                     case 2: # fix 1, vary 2
-                        pairs_of_lhaids = list(zip(itertools.repeat(beam1PDFsets[0]),beam2PDFsets))
+                        self.log("# Building variations for PDF(beam2) but fixing PDF(beam1)")
+                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
                     case _: # default, vary 1 and 2 together
-                        pairs_of_lhaids = list(zip(beam1PDFsets,beam2PDFsets))
-                pairs_of_lhaids = [list(pair) for pair in pairs_of_lhaids] # convert
+                        self.log("# Building joint variations for PDF(beam1) and PDF(beam2)")
+                        minmax = min(len(beam1PDFsets),len(beam2PDFsets))
+                        pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
 
                 # add sets of (mur,muf,alps,dyn,pdf) configurations
                 for lhaid_pairs in pairs_of_lhaids:
@@ -897,36 +900,29 @@ class Systematics(object):
                 new_args = list(default)
                 new_args[pos[name]] = value
                 all_args.append(new_args)
-        
+
         self.args = [default] + [arg for arg in all_args if arg!= default]
 
         # add the default before the pdf scan to have a full grouping
+        # search for lhapdfID+1, then insert default before lhapdfID+1
         if self.banner.run_card['pdlabel'] not in ['eva']:
             match self.multiID[0]:
                     case 1: # vary 1, fix 2
-                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
-                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID]
+                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID]
                     case 2: # fix 1, vary 2
-                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID]
-                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
-                    case _: # default, vary 1 and 2 together
-                        pdfplusone1 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
-                        pdfplusone2 = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
-            pdfplusone = [[pdfplusone1[0],pdfplusone2[0]]]
-            #pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
-            #for kk, pair in enumerate(self.args):
-            #    if pair==default:
-            #        print(f"found one at {kk=}")
-
-            if pdfplusone:
+                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID]
+                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+                    case _: # default, vary 1 and 2
+                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+            if pdf1plusone and pdf2plusone:
+                pdfplusone  = [[pdf1plusone[0],pdf2plusone[0]]]
                 pdfplusone = default[:-1] + [pdfplusone[0]] 
-                print("WARNING: BUG HERE. NOT OBVIOUS HOW TO REMOVE REDUNDANT CONFIGURATION")
-                print("WARNING: COMPARING ENTRIES IN pdfplusone1/2 NOT WORKING")
-                print("WARNING: PROBABLY ISSUE COMPARING tuple AND ZIP")
-                #index = self.args.index(pdfplusone)
-                #self.args.insert(index, default)
+                index = self.args.index(pdfplusone)
+                self.args.insert(index, default)
 
-        self.log( "# Will Compute %s weights per event." % (len(self.args)-1))
+        self.log("# Will Compute %s weights per event." % (len(self.args)-1))
         return
     
     def new_event(self):
