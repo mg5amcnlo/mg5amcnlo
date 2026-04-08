@@ -14,6 +14,9 @@ on:
       full_rebuild:
         type: boolean
         default: false
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
 
   delete-cache:
@@ -23,7 +26,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -79,7 +82,7 @@ jobs:
            path: ~/.cache/UFOMODEL
            key: ufomodel
 
-       - uses: actions/checkout@v4
+       - uses: actions/checkout@v5
 
        - name: Install UFO model
          run: |
@@ -128,7 +131,7 @@ jobs:
            key: lhapdf-${{ env.CACHE_KEY }}
 
        - name: get mg5
-         uses: actions/checkout@v2
+         uses: actions/checkout@v5
          if: steps.cache-lhapdf.outputs.cache-hit != 'true'
 
        - name: Install lhapdf into cache dir
@@ -171,7 +174,7 @@ jobs:
 
        - name: get mg5
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
-         uses: actions/checkout@v2
+         uses: actions/checkout@v5
 
        - name: restore lhapdf cache
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
@@ -214,7 +217,7 @@ jobs:
 
        - name: get mg5
          if: steps.cache-eMELA.outputs.cache-hit != 'true'
-         uses: actions/checkout@v2
+         uses: actions/checkout@v5
        
        - name: restore pythia8 cache
          if: steps.cache-eMELA.outputs.cache-hit != 'true'
@@ -256,7 +259,7 @@ jobs:
 
        - name: get mg5
          if: steps.cache-contur.outputs.cache-hit != 'true'
-         uses: actions/checkout@v2
+         uses: actions/checkout@v5
        
        - name: restore previous cache (eMELA)  
          if: steps.cache-contur.outputs.cache-hit != 'true'
@@ -301,7 +304,7 @@ jobs:
        
        - name: get mg5
          if: steps.cache-nlo.outputs.cache-hit != 'true'
-         uses: actions/checkout@v4
+         uses: actions/checkout@v5
        - name: restore previous cache (contur)
          if: steps.cache-nlo.outputs.cache-hit != 'true'
          uses: ./.github/actions/restore_heptools_contur
