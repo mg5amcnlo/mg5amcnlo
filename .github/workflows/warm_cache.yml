@@ -2,6 +2,8 @@
 name: Warm all caches
 
 on:
+  push:
+    branches: [new_ci]
   schedule:
     - cron: '0 3 * * 0'    # every Sunday 3am
   workflow_dispatch:        # keep manual trigger for convenience
