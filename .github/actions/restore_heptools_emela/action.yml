@@ -4,8 +4,9 @@ description: Restores lhapdf from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
+    - uses: ./.github/actions/restore_heptools_pythia8
     - name: Set cache key
-      run: echo "CACHE_KEY=eMELA-$ImageOS" >> $GITHUB_ENV
+      run: echo "CACHE_KEY=emela-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache/restore@v4
@@ -15,10 +16,5 @@ runs:
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
-        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
         echo "eMELA = /home/runner/.cache/HEPtools/bin/eMELA-config" >>       input/mg5_configuration.txt
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lhapdf6_py3//lib" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lib" >> $GITHUB_ENV
       shell: bash

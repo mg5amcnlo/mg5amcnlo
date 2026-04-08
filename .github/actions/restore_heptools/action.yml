@@ -1,0 +1,26 @@
+name: Restore full heptools cache
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+runs:
+  using: composite
+  steps:
+    # setup other environment of previous level of cache 
+    - uses: ./.github/actions/restore_heptools_contur
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v4
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    # this ignore cuttools/iregi cache ... ok but we should try to fix that
+    - run: |
+        cd $GITHUB_WORKSPACE
+        rm -rf /home/runner/.cache/HEPtools/IREGI
+        rm -rf  /home/runner/.cache/HEPtools/CutTools
+        echo "ninja = /home/runner/.cache/HEPtools/ninja/lib" >>  input/mg5_configuration.txt
+        echo "collier = /home/runner/.cache/HEPtools/collier" >>  input/mg5_configuration.txt
+      shell: bash

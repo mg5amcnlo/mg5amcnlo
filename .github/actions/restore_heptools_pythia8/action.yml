@@ -1,13 +1,18 @@
-name: Restore lhapdf cache
+name: Restore pythia8 cache (if exists and in any case configure even if they do not)
 description: Restores lhapdf from cache and sets MG5 accordingly
 
 runs:
   using: composite
   steps:
+
+    # Call previous cache to ensure that environment is setup correctly
+    - uses: ./.github/actions/restore_heptools_lhapdf
+
     - name: Set cache key
       run: echo "CACHE_KEY=pythia8-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # check if the cache exists (if not an higher level will be called)  
     - uses: actions/cache/restore@v4
       with:
         path: ~/.cache/HEPtools
@@ -15,12 +20,7 @@ runs:
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
-        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
         echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg5_configuration.txt
         echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg5_configuration.txt
         echo " mg5amc_py8_interface_path = /home/runner/.cache/HEPtools/MG5aMC_PY8_interface" >>  input/mg5_configuration.txt
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lhapdf6_py3//lib" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lib" >> $GITHUB_ENV
       shell: bash

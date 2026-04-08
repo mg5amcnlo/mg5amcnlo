@@ -24,290 +24,9 @@ env:
 jobs:
   # This workflow contains a single job called "build"
 
-  pip_cache:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - name: Set cache key
-        run: echo "CACHE_KEY=pip-numpy-$ImageOS" >> $GITHUB_ENV
-      - name: Cache pip packages
-        id: cache-pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip-packages
-          key: ${{ env.CACHE_KEY }} 
-
-      - name: Install numpy into cache dir (if not cached)
-        if: steps.cache-pip.outputs.cache-hit != 'true'
-        run: pip install --target ~/.cache/pip-packages numpy
-
-
-  ufo_cache:
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - name: Cache UFO MODEL
-        id: cache-ufo
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/UFOMODEL
-          key: ufomodel 
-
-      - uses: actions/checkout@v2
-        if: steps.cache-ufo.outputs.cache-hit != 'true'
-
-      - name: Install UFO model
-        if: steps.cache-ufo.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /home/runner/.cache/UFOMODEL
-          echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV          
-          echo "import model_v4 sm" > cmd
-          echo "import model heft" >> cmd
-          echo "import model TopEffTh" >> cmd
-          echo "import model uutt_sch_4fermion" >> cmd
-          echo "import model 2HDM" >> cmd
-          echo "import model uutt_tch_scalar" >> cmd
-          echo "import model DY_SM " >> cmd
-          echo "import model loop_qcd_qed_sm" >> cmd
-          echo "import model loop_qcd_qed_sm_Gmu" >> cmd
-          ./bin/mg5_aMC cmd
-
-      - name: move UFO model to cache
-        if: steps.cache-ufo.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /home/runner/.cache/UFOMODEL
-          cp -r models/2HDM /home/runner/.cache/UFOMODEL
-          cp -r models/heft /home/runner/.cache/UFOMODEL
-          cp -r models/loop_qcd_qed_sm /home/runner/.cache/UFOMODEL
-          cp -r models/loop_qcd_qed_sm_Gmu /home/runner/.cache/UFOMODEL
-          cp -r models/sm_v4 /home/runner/.cache/UFOMODEL
-          cp -r models/uutt_sch_4fermion /home/runner/.cache/UFOMODEL
-          cp -r models/TopEffTh /home/runner/.cache/UFOMODEL
-          cp -r models/uutt_tch_scalar /home/runner/.cache/UFOMODEL
-          cp -r models/DY_SM /home/runner/.cache/UFOMODEL
-
-  lhapdf_cache:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - name: Set cache key
-        run: echo "CACHE_KEY=lhapdf-$ImageOS" >> $GITHUB_ENV
-      
-      - name: Cache lhapdf packages
-        id: cache-lhapdf
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/HEPtools
-          key: ${{ env.CACHE_KEY }} 
-      
-      - name: get mg5
-        uses: actions/checkout@v2
-        if: steps.cache-lhapdf.outputs.cache-hit != 'true'
-
-      - name: Install lhapdf into cache dir (if not cached)
-        if: steps.cache-lhapdf.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools
-              cd $GITHUB_WORKSPACE
-              echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-              cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-              echo "install lhapdf6" > cmd
-              echo "import model sm" >> cmd
-              echo "display options" >> cmd
-              ./bin/mg5_aMC cmd
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
-      - name: get pdf set for NLO
-        if: steps.cache-lhapdf.outputs.cache-hit != 'true'
-        run: |
-              cd /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
-              wget https://lhapdfsets.web.cern.ch/current/NNPDF23_nlo_as_0118_qed.tar.gz
-              tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz
-
-
-
-  pythia8_cache:
-    runs-on: ${{ matrix.os }}
-    needs: lhapdf_cache
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore_heptools_lhapdf
-
-      - name: Set cache key
-        run: echo "CACHE_KEY=pythia8-$ImageOS" >> $GITHUB_ENV
-      - name: Cache pythia8 packages
-        id: cache-pythia8
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/HEPtools
-          key: ${{ env.CACHE_KEY }} 
-      
-      - name: get mg5
-        uses: actions/checkout@v2
-        if: steps.cache-pythia8.outputs.cache-hit != 'true'
-
-      - name: Install lhapdf into cache dir (if not cached)
-        if: steps.cache-pythia8.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools
-              cd $GITHUB_WORKSPACE
-              echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-              cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-              echo "install pythia8" > cmd
-              ./bin/mg5_aMC cmd
-
-
-  emela_cache:
-    runs-on: ${{ matrix.os }}
-    needs: lhapdf_cache
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore_heptools_lhapdf
-
-      - name: Set cache key
-        run: echo "CACHE_KEY=eMELA-$ImageOS" >> $GITHUB_ENV
-      - name: Cache eMELA packages
-        id: cache-eMELA
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/HEPtools
-          key: ${{ env.CACHE_KEY }} 
-      
-      - name: Install eMELA into cache dir (if not cached)
-        if: steps.cache-eMELA.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools
-              cd $GITHUB_WORKSPACE
-              echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-              cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-              echo "install eMELA" > cmd
-              ./bin/mg5_aMC cmd
-
-
-  contur_cache:
-    runs-on: ${{ matrix.os }}
-    needs: pythia8_cache
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore_heptools_pythia8
-
-      - name: Set cache key
-        run: echo "CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV
-      - name: Cache rivet/contur packages
-        id: cache-contur
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/HEPtools
-          key: ${{ env.CACHE_KEY }} 
-      
-      - name: Install contur into cache dir (if not cached)
-        if: steps.cache-contur.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools
-              cd $GITHUB_WORKSPACE
-              echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-              cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-              echo "install rivet" > cmd
-              echo "install contur" >> cmd
-              ./bin/mg5_aMC cmd
-
-
-  nlo_cache:
-    runs-on: ${{ matrix.os }}
-    needs: 
-      - pythia8_cache
-      - ufo_cache
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore_heptools_pythia8
-      - uses: ./.github/actions/restore_ufomodel
-
-      - name: Set cache key
-        run: echo "CACHE_KEY=NLO-$ImageOS" >> $GITHUB_ENV
-      - name: Cache Heptools packages (iregi/cutools)
-        id: cache-nlo
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/HEPtools
-          key: ${{ env.CACHE_KEY }} 
-      
-      - name: Install cuttools/iregi into cache dir (if not cached)
-        if: steps.cache-nlo.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
-              mkdir -p /home/runner/.cache/HEPtools/IREGI/src
-              cd $GITHUB_WORKSPACE
-              echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-              cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-              cd vendor/IREGI/src
-              make
-              cd ../../CutTools
-              make
-
-      - name: Install cuttools/iregi into cache dir (if not cached)
-        if: steps.cache-nlo.outputs.cache-hit != 'true'
-        run: |
-              mkdir -p /home/runner/.cache/HEPtools/IREGI
-              mkdir -p /home/runner/.cache/HEPtools/CutTools/
-              cp -r vendor/IREGI/src/ /home/runner/.cache/HEPtools/IREGI/src
-              cp -r vendor/./CutTools/includects/ /home/runner/.cache/HEPtools/CutTools/lib
-              # default from above command
-              echo "install collier " > cmd
-              echo "install ninja " >> cmd
-              ./bin/mg5_aMC cmd
-
-
- # test_cache:
-
- #   runs-on: ubuntu-22.04
- #   needs: pip_lhapdf
- #   steps:
- #     - uses: actions/checkout@v2
- #     - uses: ./.github/actions/restore_heptools_lhapdf
-
- #     - name: Breakpoint
- #       uses: namespacelabs/breakpoint-action@v0
- #       with:
- #         duration: 30m
- #         authorized-users: oliviermattelaer
-    
   acceptancetest_0:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
      
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -332,9 +51,6 @@ jobs:
   acceptancetest_5:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs:  
-      - pip_cache
-      - ufo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -356,7 +72,6 @@ jobs:
   acceptancetest_10:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -374,7 +89,6 @@ jobs:
   acceptancetest_11:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -393,7 +107,6 @@ jobs:
   acceptancetest_12:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -412,7 +125,6 @@ jobs:
   acceptancetest_13:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -431,7 +143,6 @@ jobs:
   acceptancetest_14:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -451,7 +162,6 @@ jobs:
   acceptancetest_15:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -471,7 +181,6 @@ jobs:
   acceptancetest_16:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -490,7 +199,6 @@ jobs:
   acceptancetest_17:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -510,7 +218,6 @@ jobs:
   acceptancetest_18:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -530,7 +237,6 @@ jobs:
   acceptancetest_19:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -550,7 +256,6 @@ jobs:
   acceptancetest_20:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -569,7 +274,6 @@ jobs:
   acceptancetest_21:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -589,7 +293,6 @@ jobs:
   acceptancetest_22:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -609,7 +312,6 @@ jobs:
   acceptancetest_23:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -629,7 +331,6 @@ jobs:
   acceptancetest_24:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -650,7 +351,6 @@ jobs:
   acceptancetest_25:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -670,7 +370,6 @@ jobs:
   acceptancetest_26:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -690,7 +389,6 @@ jobs:
   acceptancetest_27:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -710,7 +408,6 @@ jobs:
   acceptancetest_28:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -730,7 +427,6 @@ jobs:
   acceptancetest_29:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -750,7 +446,6 @@ jobs:
   acceptancetest_30:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -770,7 +465,6 @@ jobs:
   acceptancetest_31:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -790,7 +484,6 @@ jobs:
   acceptancetest_32:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -810,7 +503,6 @@ jobs:
   acceptancetest_33:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -830,7 +522,6 @@ jobs:
   acceptancetest_34:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -850,7 +541,6 @@ jobs:
   acceptancetest_35:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -870,7 +560,6 @@ jobs:
   acceptancetest_36:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -889,7 +578,6 @@ jobs:
 #  installpy8:
 #    # The type of runner that the job will run on
 #    runs-on: ubuntu-22.04
-#    needs: pip_cache
 #
 #    # Steps represent a sequence of tasks that will be executed as part of the job
 #    steps:
@@ -916,16 +604,13 @@ jobs:
   acceptancetest_37:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - pythia8_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_pythia8
+      - uses: ./.github/actions/restore_heptools
 
       #- name: Breakpoint
       #  uses: namespacelabs/breakpoint-action@v0
@@ -942,7 +627,6 @@ jobs:
   acceptancetest_38:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -961,9 +645,6 @@ jobs:
   test_oneloop_reweighting:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
-    needs: 
-      - pip_cache
-      - nlo_cache
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -973,7 +654,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       - name: Install Meson and Ninja
         run: |
@@ -1002,7 +683,6 @@ jobs:
   acceptancetest_42:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1022,7 +702,6 @@ jobs:
   acceptancetest_43:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1042,7 +721,6 @@ jobs:
   acceptancetest_44:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1062,7 +740,6 @@ jobs:
   acceptancetest_45:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1082,7 +759,6 @@ jobs:
   acceptancetest_46:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1102,7 +778,6 @@ jobs:
   acceptancetest_47:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1143,7 +818,6 @@ jobs:
   acceptancetest_49:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1163,7 +837,6 @@ jobs:
   acceptancetest_50:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1183,7 +856,6 @@ jobs:
   acceptancetest_51:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1203,7 +875,6 @@ jobs:
   acceptancetest_52:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1223,9 +894,6 @@ jobs:
   acceptancetest_53:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - ufo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1246,7 +914,6 @@ jobs:
   acceptancetest_54:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1266,7 +933,6 @@ jobs:
   acceptancetest_55:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1286,7 +952,6 @@ jobs:
   acceptancetest_56:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1305,15 +970,12 @@ jobs:
   acceptancetest_contur:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - contur_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_contur
+      - uses: ./.github/actions/restore_heptools
 
       - name: run the test
         run: |
@@ -1332,15 +994,12 @@ jobs:
   acceptancetest_contur2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - contur_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_contur
+      - uses: ./.github/actions/restore_heptools
 
       - name: run the test
         run: |
@@ -1354,7 +1013,6 @@ jobs:
   acceptancetest_59:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1374,7 +1032,6 @@ jobs:
   acceptancetest_60:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1395,7 +1052,6 @@ jobs:
   acceptancetest_65:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1415,7 +1071,6 @@ jobs:
   acceptancetest_66:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1435,7 +1090,6 @@ jobs:
   acceptancetest_67:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1497,7 +1151,6 @@ jobs:
   acceptancetest_70:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
       - pip_cache
       - nlo_cache
 
@@ -1520,16 +1173,12 @@ jobs:
   acceptancetest_71:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_brs_gd_gd
@@ -1543,15 +1192,11 @@ jobs:
   acceptancetest_72:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_cms_aem_emvevex
@@ -1565,16 +1210,12 @@ jobs:
   acceptancetest_73:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_cms_al_lvlvlx_LO
@@ -1588,15 +1229,11 @@ jobs:
   acceptancetest_74:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_full_epem_ttx
@@ -1610,16 +1247,12 @@ jobs:
   acceptancetest_75:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_profile_epem_ttx
@@ -1633,16 +1266,12 @@ jobs:
   acceptancetest_76:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_timing_epem_ttx
@@ -1656,15 +1285,11 @@ jobs:
   acceptancetest_77:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test testIO_MatchBoxOutput
@@ -1679,7 +1304,6 @@ jobs:
   acceptancetest_78:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1699,16 +1323,12 @@ jobs:
   acceptancetest_79:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_amcantlo_script
@@ -1722,9 +1342,6 @@ jobs:
   acceptancetest_80:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
-    needs: 
-      - pip_cache
-      - nlo_cache
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -1733,8 +1350,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_amcatnlo_from_file
@@ -1754,7 +1370,6 @@ jobs:
   acceptancetest_81:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1774,16 +1389,12 @@ jobs:
   acceptancetest_82:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_calculate_xsect_nlo
@@ -1814,7 +1425,6 @@ jobs:
             #  acceptancetest_85:
             #    # The type of runner that the job will run on
             #    runs-on: ubuntu-22.04
-            #    needs: pip_cache
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1834,18 +1444,12 @@ jobs:
   acceptancetest_emela:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - emela_cache
-      - ufo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_emela
-      - uses: ./.github/actions/restore_ufomodel
+      - uses: ./.github/actions/restore_all
 
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
@@ -1855,18 +1459,12 @@ jobs:
   acceptancetest_emela2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - emela_cache
-      - ufo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_emela
-      - uses: ./.github/actions/restore_ufomodel
+      - uses: ./.github/actions/restore_all
 
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
@@ -1876,18 +1474,12 @@ jobs:
   acceptancetest_emela3:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - emela_cache
-      - ufo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_emela
-      - uses: ./.github/actions/restore_ufomodel
+      - uses: ./.github/actions/restore_all
 
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
@@ -1896,18 +1488,12 @@ jobs:
   acceptancetest_emela4:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - emela_cache
-      - ufo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_emela
-      - uses: ./.github/actions/restore_ufomodel
+      - uses: ./.github/actions/restore_all
 
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
@@ -1916,16 +1502,12 @@ jobs:
   acceptancetest_88:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_generate_eett_nlo_qcd_noisr
@@ -1939,7 +1521,6 @@ jobs:
             #  acceptancetest_91:
             #    # The type of runner that the job will run on
             #    runs-on: ubuntu-22.04
-            #    needs: pip_cache
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1959,7 +1540,6 @@ jobs:
             #  acceptancetest_92:
             #    # The type of runner that the job will run on
             #    runs-on: ubuntu-22.04
-            #    needs: pip_cache
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1979,16 +1559,12 @@ jobs:
   acceptancetest_93:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_generate_events_nlo_hw6_split
@@ -2002,16 +1578,12 @@ jobs:
   acceptancetest_94:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_generate_taggedph_nloew
@@ -2025,7 +1597,6 @@ jobs:
             #  acceptancetest_95:
             #    # The type of runner that the job will run on
             #    runs-on: ubuntu-22.04
-            #    needs: pip_cache
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -2045,15 +1616,11 @@ jobs:
   acceptancetest_96:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_madspin_ON_and_onshell_atNLO
@@ -2067,16 +1634,12 @@ jobs:
   acceptancetest_97:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_raise_invalid_path_hwpp
@@ -2093,7 +1656,6 @@ jobs:
   acceptancetest_98:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -2113,15 +1675,11 @@ jobs:
   acceptancetest_99:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - nlo_cache
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_split_evt_gen
@@ -2135,7 +1693,6 @@ jobs:
   acceptancetest_100:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: pip_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -2154,16 +1711,13 @@ jobs:
   acceptancetest_100_2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-      - pip_cache
-      - lhapdf_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_lhapdf
+      - uses: ./.github/actions/restore_heptools
       
       # Runs a set of commands using the runners shell
       - name: test one of the test test_loop_improved_reweighting
@@ -2174,16 +1728,12 @@ jobs:
   acceptancetest_101:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
-    needs: 
-     - pip_cache
-     - nlo_cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_nlo
+      - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_loop_improved_reweighting
@@ -2195,9 +1745,6 @@ jobs:
     # The type of runner that the job will run on
 
     runs-on: ${{ matrix.os }}
-    needs: 
-      - pip_cache
-      - pythia8_cache
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -2207,7 +1754,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools_pythia8
+      - uses: ./.github/actions/restore_heptools
       - name: Install Meson and Ninja
         run: |
            sudo apt-get update

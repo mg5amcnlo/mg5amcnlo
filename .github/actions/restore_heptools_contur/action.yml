@@ -4,6 +4,7 @@ description: Restores lhapdf from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
+    - uses: ./.github/actions/restore_heptools_emela
     - name: Set cache key
       run: echo "CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV
       shell: bash
@@ -15,17 +16,10 @@ runs:
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
-        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
-        echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg5_configuration.txt
-        echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg5_configuration.txt
         echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg5_configuration.txt
-        echo " mg5amc_py8_interface_path = /home/runner/.cache/HEPtools/MG5aMC_PY8_interface" >>  input/mg5_configuration.txt
         echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt
         echo "yoda_path = /home/runner/.cache/HEPtools/yoda" >>  input/mg5_configuration.txt
         echo "contur_path = /home/runner/.cache/HEPtools/contur" >>  input/mg5_configuration.txt
         echo "fastjet = /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config" >>  input/mg5_configuration.txt
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lhapdf6_py3//lib:/home/runner/.cache/HEPTools/lib" >> $GITHUB_ENV
         echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPTools/contur/python3.10/:/home/runner/.cache/HEPTools/contur/python3.12/:/home/runner/.cache/HEPTools/rivet/python3.10/:/home/runner/.cache/HEPTools/rivet/python3.12/:/home/runner/.cache/HEPTools/rivet/local/python3.10/:/home/runner/.cache/HEPTools/rivet/local/python3.12/:/home/runner/.cache/HEPTools/lhapdf_py3/python3.10/:/home/runner/.cache/HEPTools/lhapdf_py3/python3.12/" >> $GITHUB_ENV 
       shell: bash
