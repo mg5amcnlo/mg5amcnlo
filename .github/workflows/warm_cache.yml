@@ -1,6 +1,9 @@
 # .github/workflows/warm-caches.yml
 name: Warm all caches
 
+permissions:
+  actions: write
+  contents: read
 on:
   push:
     branches: [new_ci]
