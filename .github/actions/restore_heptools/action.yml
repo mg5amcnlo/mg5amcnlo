@@ -1,16 +1,23 @@
 name: Restore full heptools cache
-description: Restores lhapdf from cache and sets MG5 accordingly
+description: Restores heptools from cache and sets MG5 accordingly
 
 runs:
   using: composite
   steps:
     # setup other environment of previous level of cache 
+    - uses: ./.github/actions/restore_heptools_lhapdf
+    - uses: ./.github/actions/restore_heptools_pythia8
+    - uses: ./.github/actions/restore_heptools_emela
     - uses: ./.github/actions/restore_heptools_contur
+    - uses: ./.github/actions/restore_heptools_looptools
 
     - name: Set cache key
       run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    - name: ensure that .cache/HEPtools does not exists
+      run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
+      shell: bash
     - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/HEPtools

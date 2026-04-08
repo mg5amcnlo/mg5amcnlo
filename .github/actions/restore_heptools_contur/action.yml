@@ -4,17 +4,18 @@ description: Restores lhapdf from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/restore_heptools_emela
+    - uses: ./.github/actions/restore_heptools_pythia8
     - name: Set cache key
       run: echo "CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools
+        path: ~/.cache/HEPtools-contur
         key: ${{ env.CACHE_KEY }}
 
     - run: |
+        cp -r ~/.cache/HEPtools-contur/* ~/.cache/HEPtools
         cd $GITHUB_WORKSPACE
         echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg5_configuration.txt
         echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt

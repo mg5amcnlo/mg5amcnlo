@@ -1,0 +1,25 @@
+name: Restore looptools cache
+description: Restores looptools from cache and sets MG5 accordingly
+
+runs:
+  using: composite
+  steps:
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=looptools-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools-looptools
+        key: ${{ env.CACHE_KEY }}
+
+    # this ignore cuttools/iregi cache ... ok but we should try to fix that
+    - run: |
+        cp ~/.cache/HEPtools-looptools/* ~/.cache/HEPtools
+        cd $GITHUB_WORKSPACE
+        #rm -rf /home/runner/.cache/HEPtools/IREGI
+        #rm -rf  /home/runner/.cache/HEPtools/CutTools
+        echo "ninja = /home/runner/.cache/HEPtools/ninja/lib" >>  input/mg5_configuration.txt
+        echo "collier = /home/runner/.cache/HEPtools/collier" >>  input/mg5_configuration.txt
+      shell: bash

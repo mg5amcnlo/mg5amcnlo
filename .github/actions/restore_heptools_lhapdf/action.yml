@@ -10,13 +10,12 @@ runs:
 
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools
+        path: ~/.cache/HEPtools-lhapdf
         key: ${{ env.CACHE_KEY }}
 
     - run: |
+        cp -r ~/.cache/HEPtools-lhapdf/* ~/.cache/HEPtools 
         cd $GITHUB_WORKSPACE
-        rm -rf /home/runner/.cache/HEPtools/CutTools
-        rm -rf /home/runner/.cache/HEPtools/IREGI
         echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
         echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
         echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt

@@ -15,10 +15,11 @@ runs:
     # check if the cache exists (if not an higher level will be called)  
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools
+        path: ~/.cache/HEPtools-pythia8
         key: ${{ env.CACHE_KEY }}
 
     - run: |
+        cp -r ~/.cache/HEPtools-pythia8/* ~/.cache/HEPtools
         cd $GITHUB_WORKSPACE
         echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg5_configuration.txt
         echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg5_configuration.txt
