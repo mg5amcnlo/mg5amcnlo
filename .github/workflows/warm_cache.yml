@@ -226,7 +226,7 @@ jobs:
        - name: Install eMELA into cache dir (if not cached)
          if: steps.cache-eMELA.outputs.cache-hit != 'true'
          run: |
-               mkdir -o /home/runner/.cache/HEPtools
+               mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
                echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
