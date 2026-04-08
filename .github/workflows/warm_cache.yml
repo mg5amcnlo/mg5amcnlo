@@ -19,17 +19,17 @@ env:
 
 jobs:
 
-#  delete-cache:
-#    runs-on: ${{ matrix.os }}
-#    strategy:
-#      matrix:
-#        os: [ubuntu-22.04, ubuntu-24.04]
+  delete-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 #
-#    steps:
-#      - uses: actions/checkout@v5
+    steps:
+      - uses: actions/checkout@v5
 #
-#      - name: Set cache key
-#        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+      - name: Set cache key
+        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #
 #      - name: Delete old cache
 #        run: | 
