@@ -19,36 +19,36 @@ env:
 
 jobs:
 
-  delete-cache:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set cache key
-        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
-
-      - name: Delete old cache
-        run: | 
-          gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Delete intermediate caches (force only)
-        if: github.event_name == 'schedule' || inputs.full_rebuild == true
-        run: |
-          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-        env:
-          GH_TOKEN: ${{ github.token }}
-
+#  delete-cache:
+#    runs-on: ${{ matrix.os }}
+#    strategy:
+#      matrix:
+#        os: [ubuntu-22.04, ubuntu-24.04]
+#
+#    steps:
+#      - uses: actions/checkout@v5
+#
+#      - name: Set cache key
+#        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+#
+#      - name: Delete old cache
+#        run: | 
+#          gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#          gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#          gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#        env:
+#          GH_TOKEN: ${{ github.token }}
+#
+#      - name: Delete intermediate caches (force only)
+#        if: github.event_name == 'schedule' || inputs.full_rebuild == true
+#        run: |
+#          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#          gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#          gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#          gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#        env:
+#          GH_TOKEN: ${{ github.token }}
+#
   rebuild-numpy-cache:
     runs-on: ${{ matrix.os }}
     strategy:
