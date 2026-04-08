@@ -5,9 +5,11 @@ permissions:
   actions: write
   contents: read
 on:
+  push:
+    branches: [new_ci]
   schedule:
     - cron: '0 3 * * 0'    # every Sunday 3am
-  workflow_dispatch:        # keep manual trigger for convenience
+  workflow_dispatch:         
     inputs:
       full_rebuild:
         type: boolean
