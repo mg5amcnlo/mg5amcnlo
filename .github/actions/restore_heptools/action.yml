@@ -11,7 +11,7 @@ runs:
       run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}

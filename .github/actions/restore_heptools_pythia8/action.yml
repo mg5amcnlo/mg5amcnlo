@@ -13,7 +13,7 @@ runs:
       shell: bash
 
     # check if the cache exists (if not an higher level will be called)  
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}

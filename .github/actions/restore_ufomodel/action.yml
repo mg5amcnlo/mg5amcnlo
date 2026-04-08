@@ -4,7 +4,7 @@ description: Restores numpy from cache and sets PYTHONPATH
 runs:
   using: composite
   steps:
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/UFOMODEL
         key: ufomodel 

@@ -5,8 +5,6 @@ permissions:
   actions: write
   contents: read
 on:
-  push:
-    branches: [new_ci]
   schedule:
     - cron: '0 3 * * 0'    # every Sunday 3am
   workflow_dispatch:        # keep manual trigger for convenience
@@ -61,7 +59,7 @@ jobs:
 
       - name: Cache pip packages
         id: cache-pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip-packages
           key: pip-numpy-${{ env.CACHE_KEY }}
@@ -77,7 +75,7 @@ jobs:
      steps:
        - name: Cache UFO MODEL
          id: cache-ufo
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/UFOMODEL
            key: ufomodel
@@ -125,7 +123,7 @@ jobs:
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: Cache lhapdf packages
          id: cache-lhapdf
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
            key: lhapdf-${{ env.CACHE_KEY }}
@@ -167,7 +165,7 @@ jobs:
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: Cache pythia8 packages
          id: cache-pythia8
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
            key: pythia8-${{ env.CACHE_KEY }}
@@ -210,7 +208,7 @@ jobs:
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: Cache eMELA packages
          id: cache-eMELA
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
            key: emela-${{ env.CACHE_KEY }}
@@ -252,7 +250,7 @@ jobs:
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: check Cache rivet/contur packages
          id: cache-contur
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
            key: contur-${{ env.CACHE_KEY }}
@@ -263,7 +261,7 @@ jobs:
        
        - name: restore previous cache (eMELA)  
          if: steps.cache-contur.outputs.cache-hit != 'true'
-         uses: ./.github/actions/restore_heptools_eMELA
+         uses: ./.github/actions/restore_heptools_emela
 
        - name: Install contur into cache dir 
          if: steps.cache-contur.outputs.cache-hit != 'true'
@@ -297,7 +295,7 @@ jobs:
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: Cache loop packages (iregi/cutools)
          id: cache-nlo
-         uses: actions/cache@v4
+         uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
            key: heptools-${{ env.CACHE_KEY }} # key to change if not final step
