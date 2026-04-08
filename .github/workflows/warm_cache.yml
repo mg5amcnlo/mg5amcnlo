@@ -71,6 +71,7 @@ jobs:
           key: pip-numpy-${{ env.CACHE_KEY }}
 
       - name: Install numpy into cache dir (if not cached)
+        if: steps.cache-pip.outputs.cache-hit != 'true'
         run: pip install --target ~/.cache/pip-packages numpy
 
   ufo_cache:
@@ -87,8 +88,10 @@ jobs:
            key: ufomodel
 
        - uses: actions/checkout@v5
+         if: steps.cache-ufo.outputs.cache-hit != 'true'
 
        - name: Install UFO model
+         if: steps.cache-ufo.outputs.cache-hit != 'true'
          run: |
            mkdir -p /home/runner/.cache/UFOMODEL
            echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
@@ -104,6 +107,7 @@ jobs:
            ./bin/mg5_aMC cmd
 
        - name: move UFO model to cache
+         if: steps.cache-ufo.outputs.cache-hit != 'true'
          run: |
            cp -r models/2HDM /home/runner/.cache/UFOMODEL
            cp -r models/heft /home/runner/.cache/UFOMODEL
