@@ -11,11 +11,10 @@ runs:
 
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools-contur
+        path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}
 
     - run: |
-        cp -r ~/.cache/HEPtools-contur/* ~/.cache/HEPtools
         cd $GITHUB_WORKSPACE
         echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg5_configuration.txt
         echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt

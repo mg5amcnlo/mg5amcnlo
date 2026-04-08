@@ -11,12 +11,11 @@ runs:
 
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools-looptools
+        path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}
 
     # this ignore cuttools/iregi cache ... ok but we should try to fix that
     - run: |
-        cp ~/.cache/HEPtools-looptools/* ~/.cache/HEPtools
         cd $GITHUB_WORKSPACE
         #rm -rf /home/runner/.cache/HEPtools/IREGI
         #rm -rf  /home/runner/.cache/HEPtools/CutTools

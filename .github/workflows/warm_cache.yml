@@ -192,12 +192,6 @@ jobs:
                echo "install pythia8" > cmd
                ./bin/mg5_aMC cmd  
 
-#       - name: Delete lhapdf cache (include in py8 cache)
-#         run: |
-#             gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-#         env:
-#            GH_TOKEN: ${{ github.token }}
-
   emela_cache:
      runs-on: ${{ matrix.os }}
      needs: lhapdf_cache
@@ -235,22 +229,22 @@ jobs:
                echo "install eMELA" > cmd
                ./bin/mg5_aMC cmd
             
-  delete_lhapdf_cache:
-     runs-on: ${{ matrix.os }}
-     needs: 
-       - pythia8_cache
-       - emela_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
-     steps:
-       - name: Set cache key                  
-         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
-       - name: Delete lhapdf cache (included both in emela/pythia8 cache)
-         run: |
-             gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-         env:
-             GH_TOKEN: ${{ github.token }}
+#  delete_lhapdf_cache:
+#     runs-on: ${{ matrix.os }}
+#     needs: 
+#       - pythia8_cache
+#       - emela_cache
+#     strategy:
+#       matrix:
+#         os: [ubuntu-22.04, ubuntu-24.04]
+#     steps:
+#       - name: Set cache key                  
+#         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+#       - name: Delete lhapdf cache (included both in emela/pythia8 cache)
+#         run: |
+#             gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#         env:
+#             GH_TOKEN: ${{ github.token }}
 
   contur_cache:
      runs-on: ${{ matrix.os }}
@@ -398,6 +392,7 @@ jobs:
       - name: Cleanup intermediate caches (only if all succeeded)
         if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
         run: |
+          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true

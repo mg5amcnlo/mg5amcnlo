@@ -11,11 +11,10 @@ runs:
 
     - uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/HEPtools-emela
+        path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}
 
     - run: |
-        cp -r ~/.cache/HEPtools-emela/* ~/.cache/HEPtools
         cd $GITHUB_WORKSPACE
         echo "eMELA = /home/runner/.cache/HEPtools/bin/eMELA-config" >>       input/mg5_configuration.txt
       shell: bash
