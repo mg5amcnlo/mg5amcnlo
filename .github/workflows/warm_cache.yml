@@ -289,11 +289,11 @@ jobs:
                echo "install contur" >> cmd
                ./bin/mg5_aMC cmd
 
-       - name: Delete pythia8 cache (include in contur cache)
-         run: |
-             gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-         env:
-            GH_TOKEN: ${{ github.token }}
+       #- name: Delete pythia8 cache (include in contur cache)
+       #  run: |
+       #      gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+       #  env:
+       #     GH_TOKEN: ${{ github.token }}
 
   looptools_cache:
      runs-on: ${{ matrix.os }}
@@ -332,7 +332,7 @@ jobs:
                make
                cd ../../
                cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
-               cp -r vendor/./CutTools/includects/licts.a /home/runner/.cache/HEPtools/CutTools/lib
+               cp -r vendor/./CutTools/includects/libcts.a /home/runner/.cache/HEPtools/CutTools/lib
                cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
 
        - name: Install ninja/collier into cache dir 
