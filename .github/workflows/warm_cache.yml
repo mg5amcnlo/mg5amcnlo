@@ -13,7 +13,7 @@ on:
     inputs:
       reset_heptools:
         type: boolean
-        default: true
+        default: false
       reset_ufo:
         type: boolean
         default: false
@@ -330,6 +330,7 @@ jobs:
                make
                cd ../../CutTools
                make
+               cd ../../
                cp -r vendor/IREGI/src/ /home/runner/.cache/HEPtools/IREGI/src
                cp -r vendor/./CutTools/includects/ /home/runner/.cache/HEPtools/CutTools/lib
 
