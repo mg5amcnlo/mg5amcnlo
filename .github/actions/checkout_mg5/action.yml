@@ -9,4 +9,4 @@ runs:
         cd $GITHUB_WORKSPACE
         cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
         cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-
+      shell: bash
