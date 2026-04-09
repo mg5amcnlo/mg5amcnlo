@@ -1252,6 +1252,12 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
+      - name: Breakpoint
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: oliviermattelaer
+
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_profile_epem_ttx
         run: |
@@ -1449,10 +1455,10 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
-      - name: Breakpoint
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
+      #- name: Breakpoint
+      #  uses: namespacelabs/breakpoint-action@v0
+      #  with:
+      #    duration: 30m
           authorized-users: oliviermattelaer
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
@@ -1629,6 +1635,12 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
+      - name: Breakpoint
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: oliviermattelaer
+        uses: namespacelabs/breakpoint-action@v0
       # Runs a set of commands using the runners shell
       - name: test one of the test test_madspin_ON_and_onshell_atNLO
         run: |
