@@ -17,6 +17,5 @@ runs:
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/pip-packages" >> $GITHUB_ENV
         echo "$HOME/.cache/pip-packages/bin" >> $GITHUB_PATH
         cd $GITHUB_WORKSPACE
-        cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
         echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
       shell: bash
