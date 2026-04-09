@@ -393,13 +393,13 @@ jobs:
           path: ~/.cache/HEPtools
           key: heptools-${{ env.CACHE_KEY }}
 
-      - name: Cleanup intermediate caches (only if all succeeded)
-        if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
-        run: |
-          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete looptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-        env:
-          GH_TOKEN: ${{ github.token }}
+      #- name: Cleanup intermediate caches (only if all succeeded)
+      #  if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
+      #  run: |
+      #    gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+      #    gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+      #    gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+      #    gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+      #    gh cache delete looptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+      #  env:
+      #    GH_TOKEN: ${{ github.token }}
