@@ -1640,7 +1640,6 @@ jobs:
         with:
           duration: 30m
           authorized-users: oliviermattelaer
-        uses: namespacelabs/breakpoint-action@v0
       # Runs a set of commands using the runners shell
       - name: test one of the test test_madspin_ON_and_onshell_atNLO
         run: |
