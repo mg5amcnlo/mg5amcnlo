@@ -31,11 +31,11 @@ runs:
     - name: set pythonpath for ubuntu22
       if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu22' }}
       run: |
-        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf_py3/lib/python3.10/dist-packages" >> $GITHUB_ENV
+        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages" >> $GITHUB_ENV
       shell: bash 
 
     - name: set pythonpath for ubuntu24
       if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu24' }}
       run: |
-        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf_py3/lib/python3.12/dist-packages" >> $GITHUB_ENV
+        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages" >> $GITHUB_ENV
       shell: bash 

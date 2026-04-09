@@ -158,6 +158,8 @@ jobs:
                cd /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
                wget https://lhapdfsets.web.cern.ch/current/NNPDF23_nlo_as_0118_qed.tar.gz
                tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz           
+               wget https://lhapdfsets.web.cern.ch/lhapdfsets/current/cteq6l1.tar.gz
+               tar -xzpvf cteq6l1.tar.gz           
                
   pythia8_cache:
      runs-on: ${{ matrix.os }}
@@ -316,21 +318,21 @@ jobs:
          if: steps.cache-nlo.outputs.cache-hit != 'true'
          uses: actions/checkout@v5
 
-#       - name: Install cuttools/iregi into cache dir
-#         if: steps.cache-nlo.outputs.cache-hit != 'true'
-#         run: |
-#               mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
-#               mkdir -p /home/runner/.cache/HEPtools/IREGI/src
-#               cd $GITHUB_WORKSPACE
-#               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-#               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-#               cd vendor/IREGI/src
-#               make
-#               cd ../../CutTools
-#               make
-#               cp -r vendor/IREGI/src/ /home/runner/.cache/HEPtools/IREGI/src
-#               cp -r vendor/./CutTools/includects/ /home/runner/.cache/HEPtools/CutTools/lib
-#
+       - name: Install cuttools/iregi into cache dir
+         if: steps.cache-nlo.outputs.cache-hit != 'true'
+         run: |
+               mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
+               mkdir -p /home/runner/.cache/HEPtools/IREGI/src
+               cd $GITHUB_WORKSPACE
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+               cd vendor/IREGI/src
+               make
+               cd ../../CutTools
+               make
+               cp -r vendor/IREGI/src/ /home/runner/.cache/HEPtools/IREGI/src
+               cp -r vendor/./CutTools/includects/ /home/runner/.cache/HEPtools/CutTools/lib
+
        - name: Install ninja/collier into cache dir 
          if: steps.cache-nlo.outputs.cache-hit != 'true'
          run: |
