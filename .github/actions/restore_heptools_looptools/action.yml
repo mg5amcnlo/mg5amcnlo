@@ -23,8 +23,6 @@ runs:
     # this ignore cuttools/iregi cache ... ok but we should try to fix that
     - run: |
         cd $GITHUB_WORKSPACE
-        #rm -rf /home/runner/.cache/HEPtools/IREGI
-        #rm -rf  /home/runner/.cache/HEPtools/CutTools
         echo "ninja = /home/runner/.cache/HEPtools/ninja/lib" >>  input/mg5_configuration.txt
         echo "collier = /home/runner/.cache/HEPtools/collier" >>  input/mg5_configuration.txt
       shell: bash
