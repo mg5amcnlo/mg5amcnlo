@@ -5,7 +5,6 @@ runs:
   using: composite
   steps:
     # setup other environment 
-    - uses: actions/checkout@v5
     - run: |
         cd $GITHUB_WORKSPACE
         cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
