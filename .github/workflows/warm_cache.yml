@@ -331,8 +331,9 @@ jobs:
                cd ../../CutTools
                make
                cd ../../
-               cp -r vendor/IREGI/src/ /home/runner/.cache/HEPtools/IREGI/src
-               cp -r vendor/./CutTools/includects/ /home/runner/.cache/HEPtools/CutTools/lib
+               cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
+               cp -r vendor/./CutTools/includects/licts.a /home/runner/.cache/HEPtools/CutTools/lib
+               cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
 
        - name: Install ninja/collier into cache dir 
          if: steps.cache-nlo.outputs.cache-hit != 'true'
