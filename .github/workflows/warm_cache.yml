@@ -35,7 +35,7 @@ jobs:
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #
       - name: Delete heptools related cache
-        if: github.event_name == 'schedule' || inputs.reset_heptools == true
+        if: github.event_name == 'schedule' || inputs.reset_heptools == 'true'
         run: | 
           gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -46,7 +46,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Delete ufo cache
-        if: github.event_name == 'schedule' || inputs.reset_ufo == true
+        if: github.event_name == 'schedule' || inputs.reset_ufo == 'true'
         run: | 
           gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true

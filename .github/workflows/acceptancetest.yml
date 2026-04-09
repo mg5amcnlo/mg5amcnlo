@@ -595,11 +595,6 @@ jobs:
 #            echo "install pythia8" >> cmd
 #            ./bin/mg5_aMC cmd
 #
-#      - name: Breakpoint
-#        uses: namespacelabs/breakpoint-action@v0
-#        with:
-#          duration: 30m
-#          authorized-users: oliviermattelaer
 #      # Runs a set of commands using the runners shell
 
   acceptancetest_37:
@@ -614,11 +609,6 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
       - uses: ./.github/actions/restore_heptools
 
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
       - name: test one of the test test_loop_improved_reweighting
         run: |
             cd $GITHUB_WORKSPACE
@@ -668,11 +658,6 @@ jobs:
       - name: test one of the test test_oneloop_reweighting
         run: |
             cd $GITHUB_WORKSPACE
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
       # Runs a set of commands using the runners shell
       - name: test one of the test test_oneloop_reweighting
         run: |
@@ -981,13 +966,6 @@ jobs:
 
       - name: run the test
         run: |
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
-      - name: run the test
-        run: |
             #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO 
             PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.10:/home/runner/.cache/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/.cache/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO  
             
@@ -1002,8 +980,6 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
       - uses: ./.github/actions/restore_heptools
 
-      - name: run the test
-        run: |
       - name: run the test
         run: |
             PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.10 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPTools/lib ./tests/test_manager.py test_rivet_from_file -pA -t0 -l INFO 
@@ -1252,11 +1228,6 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
-      - name: Breakpoint
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
-          authorized-users: oliviermattelaer
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_ML_check_profile_epem_ttx
@@ -1364,11 +1335,6 @@ jobs:
             ./bin/mg5_aMC cmd
             ./tests/test_manager.py test_amcatnlo_from_file -pA -t0 -l INFO
 
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
 
   acceptancetest_81:
     # The type of runner that the job will run on
@@ -1455,11 +1421,6 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
-      #- name: Breakpoint
-      #  uses: namespacelabs/breakpoint-action@v0
-      #  with:
-      #    duration: 30m
-      #    authorized-users: oliviermattelaer
       - name: test one of the test test_generate_eett_lo_emela_clusterpath
         run: |
             ./tests/test_manager.py test_generate_eett_lo_emela_clusterpath -pA -t0 -l INFO
@@ -1635,11 +1596,6 @@ jobs:
       - uses: ./.github/actions/checkout_mg5 
       - uses: ./.github/actions/restore_all
 
-      - name: Breakpoint
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
-          authorized-users: oliviermattelaer
       # Runs a set of commands using the runners shell
       - name: test one of the test test_madspin_ON_and_onshell_atNLO
         run: |
