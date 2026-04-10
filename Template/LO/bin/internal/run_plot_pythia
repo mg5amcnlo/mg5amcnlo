@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  This runs MadAnalysis on the unweighted_events.lhe
 #

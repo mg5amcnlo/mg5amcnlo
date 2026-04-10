@@ -175,7 +175,7 @@ class Cluster(object):
             prog = os.path.join(cwd, prog)
         temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
 
-        text = """#!/bin/bash
+        text = """#!/usr/bin/env bash
         MYTMP=%(tmpdir)s/run$%(job_id)s
         MYPWD=%(cwd)s
         mkdir -p $MYTMP
@@ -1235,7 +1235,7 @@ class CondorCluster(Cluster):
 
             with tempfile.NamedTemporaryFile(mode="w", dir=cwd, delete=False) as dag_file:
                 dag_text = f'JOB job {submit_filename}\n'
-                dag_text += f'SCRIPT PRE job /bin/bash {preexec} {cwd} {dag_file.name}\n'
+                dag_text += f'SCRIPT PRE job /usr/bin/env bash {preexec} {cwd} {dag_file.name}\n'
                 dag_text += 'RETRY job 100 UNLESS-EXIT 0\n'
                 dag_text += 'VARS job restart_count="$(RETRY)"\n'
 
@@ -2174,7 +2174,7 @@ class HTCaaSCluster(Cluster):
             cwd_arg = cwd+"/arguments"
             temp = ' '.join([str(a) for a in argument])
             temp_file_name = "sub." + os.path.basename(prog)
-            text = """#!/bin/bash
+            text = """#!/usr/bin/env bash
                      MYPWD=%(cwd)s
                      cd $MYPWD
                      input_files=(%(input_files)s )
@@ -2182,7 +2182,7 @@ class HTCaaSCluster(Cluster):
                      do
                         chmod -f +x $i
                      done
-                     /bin/bash %(prog)s %(arguments)s > %(stdout)s
+                     /usr/bin/env bash %(prog)s %(arguments)s > %(stdout)s
                  """
             dico = {'cwd':cwd, 'input_files': ' '.join(input_files + [prog]), 'stdout': stdout, 'prog':prog,
                  'arguments': ' '.join([str(a) for a in argument]),
@@ -2333,7 +2333,7 @@ class HTCaaS2Cluster(Cluster):
 
         else:
             temp_file_name = "sub."+ os.path.basename(prog)
-            text = """#!/bin/bash
+            text = """#!/usr/bin/env bash
          MYPWD=%(cwd)s
          cd $MYPWD
          input_files=(%(input_files)s )
@@ -2341,7 +2341,7 @@ class HTCaaS2Cluster(Cluster):
          do
           chmod -f +x $i
          done
-         /bin/bash %(prog)s %(arguments)s > %(stdout)s
+         /usr/bin/env bash %(prog)s %(arguments)s > %(stdout)s
          """
             dico = {'cwd':cwd, 'input_files': ' '.join(input_files + [prog]), 'stdout': stdout, 'prog':prog,
                  'arguments': ' '.join([str(a) for a in argument]),

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # finds out architecture name, defines system files, and construct
 # the relevant directory for run, if not present. If the architecture
 # cannot be figured out, defines ./Run as working directory, and use 
