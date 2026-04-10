@@ -286,12 +286,16 @@ class UFOModel(object):
                     setattr(obj, data, None)
                 else:
                     raise
+            # Normalize goldstone attribute: if goldstoneboson is being written but is
+            # False, check the alternative attribute names (GoldstoneBoson, goldstone)
+            # used by some UFO models so the output is consistent.
+            if data == 'goldstoneboson' and not expr:
+                if getattr(obj, 'GoldstoneBoson', False) or getattr(obj, 'goldstone', False):
+                    expr = True
             name =str(data)
             if name in self.translate:
                 name = self.translate[name]            
-            #if data == 'lhablock':
-            #    print data, type(self.format_param(getattr(obj, data)))
-            text += '%s%s = %s,\n' % (' ' * nb_space,name, self.format_param(getattr(obj, data)))
+            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(expr))
             nb_space += add_space
 
         if hasattr(obj, 'get_all'):
@@ -312,13 +316,22 @@ class UFOModel(object):
             name =str(data)
             if name in ['partial_widths', 'loop_particles']:
                 continue
+            # Skip alternative goldstone attribute names; goldstoneboson (in args)
+            # is the canonical name and has already been normalized above.
+            if name in ['goldstone', 'GoldstoneBoson']:
+                continue
             if name in self.translate:
                 name = self.translate[name] 
             if not nb_space:
                 add_space = len(text)
             else:
                 add_space = 0
-            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(getattr(obj, data)))
+            val = getattr(obj, data)
+            # Normalize goldstoneboson if it appears in other_attr (not in args)
+            if name == 'goldstoneboson' and not val:
+                if getattr(obj, 'GoldstoneBoson', False) or getattr(obj, 'goldstone', False):
+                    val = True
+            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(val))
             nb_space += add_space
             
         text = text[:-2] + ')\n\n'
