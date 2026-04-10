@@ -522,7 +522,7 @@ QED = CouplingOrder(name = 'QED',
                           'goldstoneboson not True in output for %s' % p.name)
             self.assertNotIn('GoldstoneBoson =', text,
                              'GoldstoneBoson should not appear in output for %s' % p.name)
-            self.assertNotRegex(text, r'(?<!\w)goldstone\s*=',
+            self.assertNotRegex(text, r'(?<!\w)goldstone(?!\w)\s*=',
                              'raw goldstone key should not appear in output for %s' % p.name)
 
         # --- Case B: external model whose require_args_all uses 'goldstone' ---
