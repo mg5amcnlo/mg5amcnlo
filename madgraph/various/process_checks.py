@@ -78,13 +78,9 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
-import six
-StringIO = six
-from six.moves import range
-from six.moves import zip
 import io
-if six.PY3:
-    file = io.FileIO
+import io as StringIO
+file = io.FileIO
 
 
 ADDED_GLOBAL = []
@@ -829,7 +825,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
+        elif isinstance(output,(str)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode(errors='ignore').split('\n')
@@ -5945,8 +5941,8 @@ minimum value of lambda to be considered in the CMS check."""\
             general_error = "\n= Could not produce the cms check plot because of "+\
                                                     "the following error: %s"%str(e)
             try:
-                import six.moves.tkinter
-                if isinstance(e, six.moves.tkinter.TclError):
+                import tkinter
+                if isinstance(e, tkinter.TclError):
                     res_str += "\n= Plots are not generated because your system"+\
                                           " does not support graphical display."
                 else:

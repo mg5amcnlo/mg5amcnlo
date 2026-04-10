@@ -44,9 +44,6 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
-from six.moves import range
-from six.moves import zip
-
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
 pjoin = os.path.join

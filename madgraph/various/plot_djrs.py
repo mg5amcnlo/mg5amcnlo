@@ -20,9 +20,6 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.pylab as pylab
-from six.moves import range
-
-
 ################################################################################
 #  TRY TO LINK TO HISTOGRAMS.PY
 ################################################################################

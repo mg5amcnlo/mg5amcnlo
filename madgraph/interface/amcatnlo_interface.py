@@ -31,7 +31,7 @@ import signal
 import tempfile
 import itertools
 import os
-import six.moves.cPickle
+import pickle
 
 
 import madgraph
@@ -56,8 +56,6 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
-from six.moves import range
-
 #usefull shortcut
 pjoin = os.path.join
 
@@ -80,7 +78,7 @@ def generate_directories_fks_async(i):
     olpopts = arglist[6]
     
     infile = open(mefile,'rb')
-    me = six.moves.cPickle.load(infile)
+    me = pickle.load(infile)
     infile.close()      
     
     calls, splitorders = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
@@ -96,10 +94,7 @@ def generate_directories_fks_async(i):
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-    if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types, splitorders]
-    else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -927,10 +922,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c
                 logger.info('Writing directories...')
-                if six.PY3:
-                    ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
-                else:
-                    ctx = multiprocessing
+                ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
                 original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 if self.ncores_for_proc_gen < 0: # use all cores
                     pool = ctx.Pool(maxtasksperchild=1)
@@ -980,9 +972,6 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     splitorders += [so for so in diroutput[8] if so not in splitorders]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
-                    if six.PY2:
-                        self.born_processes.extend(diroutput[5])
-                        self.born_processes_for_olp.append(diroutput[5][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)

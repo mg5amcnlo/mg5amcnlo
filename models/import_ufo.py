@@ -45,9 +45,6 @@ import aloha.aloha_object as aloha_object
 import aloha.aloha_lib as aloha_lib
 import models as ufomodels
 import models.model_reader as model_reader
-import six
-from six.moves import range
-from six.moves import zip
 logger = logging.getLogger('madgraph.model')
 logger_mod = logging.getLogger('madgraph.model')
 
@@ -110,7 +107,7 @@ def get_model_db():
     data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
                      'http://madgraph.mi.infn.it//models_db.dat']
     import random
-    import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+    import urllib.request, urllib.parse, urllib.error
     r = random.randint(0,1)
     r = [r, (1-r)]
 
@@ -122,7 +119,7 @@ def get_model_db():
     for index in r:
         cluster_path = data_path[index]
         try:
-            data = six.moves.urllib.request.urlopen(cluster_path)
+            data = urllib.request.urlopen(cluster_path)
         except Exception as err:
             misc.sprint(err)
             continue
@@ -363,8 +360,7 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'model_Feynman.pkl'
     if decay:
         pickle_name = 'dec_%s' % pickle_name
-    if six.PY3:
-        pickle_name = 'py3_%s' % pickle_name
+    pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):

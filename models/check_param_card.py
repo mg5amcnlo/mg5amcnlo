@@ -11,10 +11,7 @@ import re
 import shutil
 import logging
 import random
-import six
-StringIO = six
-from six.moves import range
-
+import io
 logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
@@ -138,7 +135,7 @@ class Parameter (object):
         
         self.comment = self.comment.strip()
         if format == 'float':
-            if self.lhablock == 'decay' and not isinstance(self.value,six.string_types):
+            if self.lhablock == 'decay' and not isinstance(self.value,str):
                 return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -343,7 +340,7 @@ class ParamCard(dict):
 
         if isinstance(input_path, str):
             if '\n' in input_path:
-                input = StringIO.StringIO(input_path)
+                input = io.StringIO(input_path)
             else:
                 input = open(input_path)
         else:
@@ -1050,7 +1047,7 @@ class ParamCardIterator(ParamCard):
             identLines = identCard.readlines()
             identCard.close()
         else:
-            ff = StringIO.StringIO()        
+            ff = io.StringIO()        
         if order:
             keys = order
         else:

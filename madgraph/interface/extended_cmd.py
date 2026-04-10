@@ -25,13 +25,8 @@ import signal
 import subprocess
 import sys
 import traceback
-import six
-if six.PY3:
-    import io
-    file = io.IOBase
-from six.moves import map
-from six.moves import range
-from six.moves import input
+import io
+file = io.IOBase
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -1782,7 +1777,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = six.moves.input
+            fct = input
         
         if timeout:
             signal.alarm(timeout)

@@ -33,12 +33,9 @@ import subprocess
 import sys
 import time
 import traceback
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+import urllib.request, urllib.parse, urllib.error
 import glob
-from six.moves import range
-from six.moves import input
-import six
-StringIO = six
+import io
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -2250,8 +2247,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         new_command.append('--multicore=create')
                     else:
                         stdout = devnull
-                        if six.PY3:
-                            stdout = subprocess.DEVNULL
+                        stdout = subprocess.DEVNULL
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
@@ -2631,7 +2627,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         except Exception as e:
             logger.warning("MadAnalysis5 failed to run the commands for task "+
                              "'%s'. Madanalys5 analysis will be skipped."%MA5_runtag)
-            error=StringIO.StringIO()
+            error=io.StringIO()
             traceback.print_exc(file=error)
             logger.debug('MadAnalysis5 error was:')
             logger.debug('-'*60)
@@ -2680,11 +2676,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                      LoggerStream=logstream,forced=forced, 
                                                      no_compilation=not compilation)
         except Exception as e:
-            if six.PY3 and not __debug__:
+            if True and not __debug__:
                 logger.info('MadAnalysis5 instalation not python3 compatible')
                 return None
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
-            error=StringIO.StringIO()
+            error=io.StringIO()
             traceback.print_exc(file=error)
             logger.debug('MadAnalysis5 error was:')
             logger.debug('-'*60)
@@ -3624,9 +3620,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options[args[0]] = tmp 
         elif args[0].startswith('f2py_compiler'):
             to_do = True
-            if args[0].endswith('_py2') and six.PY3:
-                to_do = False
-            elif args[0].endswith('_py3') and six.PY2:
+            if args[0].endswith('_py2'):
                 to_do = False
             if to_do:
                 if args[1] == 'None':
@@ -3636,9 +3630,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     self.options['f2py_compiler'] = args[1]
         elif args[0].startswith('lhapdf'):
             to_do = True
-            if args[0].endswith('_py2') and six.PY3:
-                to_do = False
-            elif args[0].endswith('_py3') and six.PY2:
+            if args[0].endswith('_py2'):
                 to_do = False
             if to_do and args[1] != 'None':
                 self.options['lhapdf'] = args[1]
@@ -5807,7 +5799,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 possibilities['Param Card Block' ] = \
                                        self.list_completion(text, allowed_block)
                 
-            elif isinstance(allowed['block'], six.string_types):
+            elif isinstance(allowed['block'], str):
                 block = self.param_card[allowed['block']].param_dict
                 ids = [str(i[0]) for i in block
                           if (allowed['block'], i) not in self.restricted_value]
@@ -5837,7 +5829,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed_block = [i for i in self.mw_card.keys() if 'comment' not in i]
                 possibilities['MadWeight Block' ] = \
                                        self.list_completion(text, allowed_block)
-            elif isinstance(allowed['mw_block'], six.string_types):
+            elif isinstance(allowed['mw_block'], str):
                 block = self.mw_card[allowed['mw_block']]
                 ids = [str(i[0]) if isinstance(i, tuple) else str(i) for i in block]
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids)
@@ -7220,7 +7212,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             import tempfile
             fsock, path = tempfile.mkstemp()
             try:
-                text = six.moves.urllib.request.urlopen(line.strip())
+                text = urllib.request.urlopen(line.strip())
                 url = line.strip()
             except Exception:
                 logger.error('fail to load the file')

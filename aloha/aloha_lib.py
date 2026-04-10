@@ -50,8 +50,6 @@ from fractions import Fraction
 import numbers
 import re
 import aloha # define mode of writting
-from six.moves import range
-
 try:
     import madgraph.various.misc as misc
 except Exception:

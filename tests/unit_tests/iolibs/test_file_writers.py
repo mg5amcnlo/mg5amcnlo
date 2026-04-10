@@ -23,7 +23,6 @@ import os
 import tests.unit_tests as unittest
 
 import madgraph.iolibs.file_writers as writers
-from six.moves import zip
 import madgraph.various.misc as misc
 from madgraph import MG5DIR
 

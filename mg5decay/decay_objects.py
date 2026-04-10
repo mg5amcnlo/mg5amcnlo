@@ -65,9 +65,6 @@ import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 import models.model_reader as model_reader
-from six.moves import range
-from six.moves import zip
-
 ZERO = 0
 #===============================================================================
 # Logger for decay_module

@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import cmath
 import copy
 import operator
-import six.moves.cPickle
+import pickle
 import glob
 import logging
 import numbers
@@ -27,9 +27,6 @@ import shutil
 import sys
 import time
 from madgraph.interface.tutorial_text import output
-
-from six.moves import range
-from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -751,7 +748,7 @@ class AbstractALOHAModel(dict):
         fsock = open(filepos, 'w')
         t=dict(self)
         try:
-            six.moves.cPickle.dump(dict(self), fsock)
+            pickle.dump(dict(self), fsock)
         except:
             logger.info('aloha not saved')
             
@@ -762,7 +759,7 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
             fsock = open(filepos, 'r')
-            self.update(six.moves.cPickle.load(fsock))        
+            self.update(pickle.load(fsock))        
             return True
         else:
             return False

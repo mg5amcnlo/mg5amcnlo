@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 import sys
 import os
-from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 

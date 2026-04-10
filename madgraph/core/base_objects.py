@@ -23,16 +23,12 @@ import math
 import numbers
 import os
 import re
-import six
-StringIO = six
-
+import io
 import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 
@@ -1751,7 +1747,7 @@ class Model(PhysicsObject):
         
         import models.write_param_card as writer
         if not filepath:
-            out = StringIO.StringIO() # it's suppose to be written in a file
+            out = io.StringIO() # it's suppose to be written in a file
         else:
             out = filepath
         param = writer.ParamCardWriter(self, filepath=out)

@@ -38,10 +38,7 @@ import copy
 import datetime
 import tarfile
 import traceback
-import six
-StringIO = six
-from six.moves import range
-from six.moves import zip
+import io
 try:
     import cpickle as pickle
 except:
@@ -3373,7 +3370,7 @@ RESTART = %(mint_mode)s
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
         except Exception as e:
             debug_msg = 'Advanced statistics collection failed with error "%s"\n'%str(e)
-            err_string = StringIO.StringIO()
+            err_string = io.StringIO()
             traceback.print_exc(limit=4, file=err_string)
             debug_msg += 'Please report this backtrace to a MG5_aMC developer:\n%s'\
                                                           %err_string.getvalue()

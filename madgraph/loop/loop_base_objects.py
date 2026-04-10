@@ -28,9 +28,6 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
-from six.moves import range
-from six.moves import zip
-
 logger = logging.getLogger('madgraph.loop_base_objects')
 
 #===============================================================================

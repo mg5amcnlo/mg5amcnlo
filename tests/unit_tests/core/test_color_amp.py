@@ -27,8 +27,6 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
 import tests.unit_tests as unittest
-from six.moves import range
-
 class ColorAmpTest(unittest.TestCase):
     """Test class for the color_amp module"""
 

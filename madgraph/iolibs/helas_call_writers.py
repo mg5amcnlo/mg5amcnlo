@@ -24,7 +24,6 @@ import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
-from six.moves import range
 if madgraph.ordering:
     set	= misc.OrderedSet
 
