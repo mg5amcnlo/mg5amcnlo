@@ -905,9 +905,20 @@ class Amplitude(base_objects.PhysicsObject):
         """Applies the user specified squared order constraints on the diagram
         list in argument."""
 
-        remove_diag = misc.plugin_import('user_filter', 
+        if True:
+            remove_diag = misc.plugin_import('user_filter', 
                                              'user filter required to be defined in PLUGIN/user_filter.py with the function remove_diag(ONEDIAG) which returns True if the diagram has to be removed',
                                              fcts=['remove_diag'])
+        else:
+            #example and simple tests
+            def remove_diag(diag, model=None):
+                for vertex in diag['vertices']: #last 
+                    if vertex['id'] == 0: #special final vertex
+                        continue 
+                    if vertex['legs'][-1]['number'] < 3: #this means T-channel
+                        if abs(vertex['legs'][-1]['id']) <6:
+                            return True
+                return False                
 
         res = diag_list.__class__()                
         nb_removed = 0 
