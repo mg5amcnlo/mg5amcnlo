@@ -8,10 +8,6 @@ import re
 import string
 import sys
 import xml.sax.handler
-import six
-from six.moves import range
-from six.moves import input
-
 try:
     import madgraph.madweight.Cards as Cards
     import madgraph.madweight.mod_file as mod_file
@@ -450,7 +446,7 @@ class TF_in_SubProcesses:
         external_done=[]
         #add the definition for external function
         for block in self.blockname_list:
-            if isinstance(block, six.string_types):
+            if isinstance(block, str):
                 name_list='width_E_'+block+', width_THETA_'+block+', width_PHI_'+block
             else:
                 continue
@@ -511,7 +507,7 @@ class TF_in_SubProcesses:
         for i in range(0,len(self.blockname_list)):
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, six.string_types):
+            if not isinstance(blockname, str):
                 if met and blockname == -1 and i>2: #invisible particlule but not the initial part
                     text+=' do i=0,3\n p_met_rec(i)=p_met_rec(i)+p(i,%s)\n enddo\n' %(i+1)
                 continue
@@ -543,7 +539,7 @@ class TF_in_SubProcesses:
             text2+='\n'+self.text_tf_E_for_one_part(i)+'\n'
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, six.string_types):
+            if not isinstance(blockname, str):
                 text+=' if(MG_num.eq.%s) then\n tf_E_for_part=1d0\n return\n endif\n' % (i+1)
             else:
                 text+=' if(MG_num.eq.%s) then\n' %(i+1)
@@ -570,7 +566,7 @@ class TF_in_SubProcesses:
         text+='$B$ DEF_TF_E_FOR_ONE_PART $E$\n'
         
         blockname=self.blockname_list[i]            
-        if not isinstance(blockname, six.string_types):        
+        if not isinstance(blockname, str):        
             text+=' tf_E_for_%s=1d0\n' %(i+1) 
         else:
             text+=' tf_E_for_%s=1d0\n' %(i+1)

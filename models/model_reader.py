@@ -33,8 +33,6 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc
-import six
-
 ZERO = 0
 
 #===============================================================================
@@ -81,7 +79,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-            if isinstance(param_card, six.string_types):
+            if isinstance(param_card, str):
                 # Check that param_card exists
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error("No such file %s" % param_card)

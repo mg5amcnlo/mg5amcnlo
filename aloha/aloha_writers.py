@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-from six.moves import range
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
@@ -18,7 +17,7 @@ from numbers import Number
 from collections import defaultdict
 from fractions import Fraction
 # fast way to deal with string
-from six import StringIO
+from io import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
 import itertools

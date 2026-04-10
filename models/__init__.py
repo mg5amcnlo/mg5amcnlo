@@ -19,7 +19,6 @@ import os
 import sys
 import madgraph.various.misc as misc
 from madgraph import MG5DIR
-import six
 import logging
 
 logger = logging.getLogger('madgraph.models')

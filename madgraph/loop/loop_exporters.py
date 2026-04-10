@@ -55,11 +55,6 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
-from six.moves import range
-from six.moves import zip
-
-
-
 pjoin = os.path.join
 
 import aloha.create_aloha as create_aloha

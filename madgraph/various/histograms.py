@@ -32,13 +32,8 @@ import sys
 import subprocess
 import xml.dom.minidom as minidom
 from xml.parsers.expat import ExpatError as XMLParsingError
-import six
-StringIO = six
-from six.moves import range
-from six.moves import zip
 import io
-if six.PY3:
-    file = io.IOBase
+file = io.IOBase
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 

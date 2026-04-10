@@ -2,7 +2,6 @@ from __future__ import division
 
 from __future__ import absolute_import
 import gzip
-from six.moves import range
 import os 
 
 if '__main__' == __name__:

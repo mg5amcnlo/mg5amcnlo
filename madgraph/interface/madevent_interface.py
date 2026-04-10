@@ -34,9 +34,7 @@ import time
 import tarfile
 import shutil
 import copy
-from six.moves import range
-import six
-StringIO = six
+import io
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -4669,7 +4667,7 @@ already exists and is not a fifo file."""%fifo_path)
         # Now write the card.
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
-        cmd_card = StringIO.StringIO()
+        cmd_card = io.StringIO()
         PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                                                        direct_pythia_input=True,
                                                        use_mg5amc_py8_interface=use_mg5amc_py8_interface)

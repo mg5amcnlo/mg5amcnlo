@@ -10,9 +10,6 @@
 from __future__ import absolute_import
 import cmath
 import re
-import six
-
-
 class UFOError(Exception):
         """Exception raised if when inconsistencies are detected in the UFO model."""
         pass
@@ -132,7 +129,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in six.iteritems(self.__dict__):
+        for k,v in self.__dict__.items():
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:

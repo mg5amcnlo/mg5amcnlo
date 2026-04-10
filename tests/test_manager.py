@@ -53,9 +53,6 @@ sys.path.insert(0, root_path)
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
 
-import six
-from six.moves import map
-
 import tests.IOTests
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -733,7 +730,7 @@ class TestFinder(list):
 
         if isinstance(expression, list):
             pass
-        elif isinstance(expression, six.string_types):
+        elif isinstance(expression, str):
             if expression in '':
                 expression = ['.*'] #made an re authorizing all regular name
             else:
@@ -753,7 +750,7 @@ class TestFinder(list):
     def check_valid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise self.TestFinderError('check valid take a string argument')
 
         if self.check_invalid(name):
@@ -768,7 +765,7 @@ class TestFinder(list):
     def check_invalid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise self.TestFinderError('check valid take a string argument')
 
         if any(forbid in name for forbid in self.excluded):
@@ -789,7 +786,7 @@ class TestFinder(list):
     def passin_pyformat(cls, name):
         """ transform a relative position in a python import format """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise cls.TestFinderError('collect_file takes a file position')
 
         name = name.replace('//', '/') #sanity
@@ -923,7 +920,7 @@ class IOTestFinder(TestFinder):
 
 def bypass_for_py3(fct):
 
-    if six.PY3:
+    if True:
         to_bypass.append((fct.__name__, fct.__doc__))
         #global BYPASS
     

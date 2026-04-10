@@ -31,9 +31,6 @@ following actions:
 
 from __future__ import absolute_import
 import sys
-from six.moves import range
-from six.moves import input
-
 if sys.version_info < (3, 7):
     sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
                Please upgrate your version of python.')
@@ -49,7 +46,7 @@ import os.path as path
 import re
 import shutil
 import subprocess
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+import urllib.request, urllib.parse, urllib.error
 
 from datetime import date
 
@@ -184,9 +181,9 @@ if auto_update:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
-            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+            filetext = urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
         elif MG_branch == '3.x':
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
+            filetext = urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         if text[1]:

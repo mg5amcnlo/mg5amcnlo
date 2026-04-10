@@ -32,9 +32,6 @@ import models as ufomodels
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card
 from madgraph import MG5DIR
-import six
-from six.moves import range
-
 pjoin =os.path.join
 logger = logging.getLogger('madgraph.model')
 
@@ -61,7 +58,7 @@ class UFOModel(object):
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR('Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.')
-        if isinstance(model.all_particles[0].mass, six.string_types):
+        if isinstance(model.all_particles[0].mass, str):
             raise USRMODERROR('Base Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.') 
                                  
@@ -216,7 +213,7 @@ class UFOModel(object):
         """convert param to string in order to have it written correctly for the 
         UFO file"""
 
-        if isinstance(param, six.string_types): 
+        if isinstance(param, str): 
             return "'%s'" % param.replace("\\", "\\\\").replace('\'', '\\\'').replace('\"', '\\\"')
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
@@ -960,7 +957,7 @@ from object_library import all_propagators, Propagator
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR('Add-on Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.')
-        if isinstance(model.all_particles[0].mass, six.string_types):
+        if isinstance(model.all_particles[0].mass, str):
             raise USRMODERROR('Add-on Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.') 
     

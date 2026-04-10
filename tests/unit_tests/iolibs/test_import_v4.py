@@ -16,8 +16,7 @@
 """Unit test library for the import v4 format routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
+import io
 import copy
 import os
 
@@ -27,7 +26,6 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
-from six.moves import range
 import re
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -50,7 +48,7 @@ class IOImportV4Test(unittest.TestCase):
                                 1x k- X S ZERO ZERO O K 60
                                 k+ k- S S ZERO ZERO V K 60"""
 
-        fsock = StringIO.StringIO(particles_dat_str)
+        fsock = io.StringIO(particles_dat_str)
 
         goal_part_list = base_objects.ParticleList(\
                                 [base_objects.Particle({'name':'ve',
@@ -133,8 +131,8 @@ class IOImportV4Test(unittest.TestCase):
                                     k+ k- a test QED
                                     g g test QCD"""
 
-        fsock_part = StringIO.StringIO(particles_dat_str)
-        fsock_inter = StringIO.StringIO(interactions_dat_str)
+        fsock_part = io.StringIO(particles_dat_str)
+        fsock_inter = io.StringIO(interactions_dat_str)
 
         myparts = import_v4.read_particles_v4(fsock_part)
 

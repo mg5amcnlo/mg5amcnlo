@@ -41,9 +41,6 @@ import madgraph.core.color_algebra as color
 import madgraph.various.misc as misc
 
 from madgraph import InvalidCmd, MadGraph5Error
-import six
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 if madgraph.ordering:
@@ -924,7 +921,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('antiparticle', model.get('particle_dict')[-value])
                 return True
             else:
-                six.reraise(self.PhysicsObjectError("%s not allowed name for 3-argument set", name))
+                raise self.PhysicsObjectError("%s not allowed name for 3-argument set" % name)
         else:
             return super(HelasWavefunction, self).set(name, value)
 
@@ -2779,7 +2776,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         
                 return True
             else:
-                six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
+                raise self.PhysicsObjectError("%s not allowed name for 3-argument set" % name)
         else:
             return super(HelasAmplitude, self).set(name, value)
 

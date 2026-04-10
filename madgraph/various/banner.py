@@ -25,12 +25,9 @@ import os
 import sys
 import re
 import math
-import six
-StringIO = six
-from six.moves import range
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+import io as StringIO
+file = io.IOBase
 import itertools
 import time
 
@@ -332,7 +329,7 @@ class Banner(dict):
         """set the lha_strategy: how the weight have to be handle by the shower"""
         
         if not (-4 <= int(value) <= 4):
-            six.reraise(Exception, "wrong value for lha_strategy", value)
+            raise Exception("wrong value for lha_strategy")
         if not self["init"]:
             raise Exception("No init block define")
         
@@ -1407,7 +1404,7 @@ class ConfigFile(dict):
             if targettype in ['str', 'int', 'float', 'bool']:
                 targettype = eval(targettype)
 
-        if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
+        if not isinstance(value, str):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
@@ -4617,12 +4614,8 @@ class RunCardLO(RunCard):
                         logger.warning("Since 2.7.1 elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
-        if six.PY2 and self['hel_recycling']:
-            self['hel_recycling'] = False
-            logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
-            In general this optimization speeds up the computation by a factor of two.""")
 
-                
+
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:
             if self['lpp%s' % i ] not in [1,2]:

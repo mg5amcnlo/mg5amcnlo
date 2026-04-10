@@ -21,8 +21,7 @@ import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import six
-StringIO = six
+import io
 import sys
 from madgraph import MG5DIR
 
@@ -386,7 +385,7 @@ class TestMadAnalysis5Card(unittest.TestCase):
         
         MG5aMCtag = bannermod.MadAnalysis5Card._MG5aMC_escape_tag
         
-        input = StringIO.StringIO(
+        input = io.StringIO(
 """%(MG5aMCtag)s inputs = *.hepmc *.stdhep
 %(MG5aMCtag)s stdout_lvl=20
 %(MG5aMCtag)s reconstruction_name = reco1
@@ -433,7 +432,7 @@ etc..."""%{'MG5aMCtag':MG5aMCtag})
         
         myMA5Card = bannermod.MadAnalysis5Card(input)
         input.seek(0)
-        output = StringIO.StringIO()
+        output = io.StringIO()
         myMA5Card.write(output)
         output.seek(0)
         self.assertEqual(myMA5Card,bannermod.MadAnalysis5Card(output))
@@ -453,7 +452,7 @@ class TestPythia8Card(unittest.TestCase):
         """ Basic consistency check of a read-write of the default card."""
         
         pythia8_card_out = bannermod.PY8Card()
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_out.write(out,self.basic_PY8_template)
         #       misc.sprint('WRITTEN:',out.getvalue())
         
@@ -476,10 +475,10 @@ class TestPythia8Card(unittest.TestCase):
               set([k.lower() for k in pythia8_card_read.subruns[subrunID].keys()])
         # ==========
               
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_read.write(out,self.basic_PY8_template)       
         misc.sprint('READ:',out.getvalue())
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_read.write(out,self.basic_PY8_template,print_only_visible=True)       
         misc.sprint('Only visible:',out.getvalue())
 
@@ -521,7 +520,7 @@ Beams:LHEF='events_ouaf.lhe.gz'
         self.assertEqual(default_PY8Card, modified_PY8Card)
 
         # Now write the card
-        out = StringIO.StringIO()
+        out = io.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
         out.seek(0)
         read_PY8Card=bannermod.PY8Card(out)
@@ -534,7 +533,7 @@ Beams:LHEF='events_ouaf.lhe.gz'
         for subrunID in modified_PY8Card.subruns.keys():
             modified_PY8Card.subruns[subrunID].system_set = \
               set([k.lower() for k in modified_PY8Card.subruns[subrunID].keys()])
-        out = StringIO.StringIO()
+        out = io.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
         out.seek(0)        
         read_PY8Card=bannermod.PY8Card(out)
@@ -611,7 +610,7 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            if key == 'hel_recycling' and six.PY2:
+            if key == 'hel_recycling' and False:
                 continue 
             if key in ['pdlabel1', 'pdlabel2']:
                 continue
@@ -825,7 +824,7 @@ class TestRunCard(unittest.TestCase):
 
         run_card = bannermod.RunCardLO()
         run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ", unknow_warning=False)
-        f = StringIO.StringIO()
+        f = io.StringIO()
         f.write("c .   this is a comment to test feature of missing end line ")
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
@@ -900,8 +899,8 @@ class TestRunCard(unittest.TestCase):
         
         LO = bannermod.RunCardLO()
         NLO = bannermod.RunCardNLO()
-        flo = StringIO.StringIO()
-        fnlo = StringIO.StringIO()
+        flo = io.StringIO()
+        fnlo = io.StringIO()
         LO.write(flo)
         NLO.write(fnlo)
         loinput = flo.getvalue().split('\n')
@@ -1098,7 +1097,7 @@ c
         self.assertEqual(run_card['pdlabel2'], 'isronlyll')
         # check that at fortran pdlabel is passed to generic value "dressed"
         # but that invidual value are kept 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write_include_file(None,output_file=f)
         self.assertIn("pdlabel = 'dressed'", f.getvalue())
         self.assertIn("pdsublabel(1) = 'isronlyll'", f.getvalue())
@@ -1122,12 +1121,12 @@ c
         self.assertNotIn('fixed_fac_scale1', run_card.user_set)
         self.assertNotIn('fixed_fac_scale2', run_card.user_set)
         self.assertTrue(bannermod.fixedfacscale.status(run_card))
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write(output_file=f)
         self.assertIn("True = fixed_fac_scale ", f.getvalue())
 
 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write_include_file(None,output_file=f)
         self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
         self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
@@ -1140,7 +1139,7 @@ c
         self.assertNotIn('fixed_fac_scale2', run_card.user_set)    
         self.assertNotIn('fixed_fact_scale', run_card.display_block)
 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write(output_file=f)
         self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
         self.assertIn("False = fixed_fac_scale1", f.getvalue())
@@ -1154,12 +1153,12 @@ c
         run_card.set('fixed_fac_scale', True, user=True)
         self.assertFalse(bannermod.fixedfacscale.status(run_card)) 
 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write_include_file(None,output_file=f)
         self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
         self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write(output_file=f)
         self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
         self.assertIn("True = fixed_fac_scale1", f.getvalue())
@@ -1242,7 +1241,7 @@ class TestMadLoopParam(unittest.TestCase):
         param1 = MadLoopParam(pjoin(MG5DIR,"Template", "loop_material","StandAlone",
                                       "Cards","MadLoopParams.dat"))
         
-        textio = StringIO.StringIO()
+        textio = io.StringIO()
         param1.write(textio)
         text=textio.getvalue()
         

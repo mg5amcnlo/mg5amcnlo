@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import math
 from math import sqrt, pow
 from itertools import product
-from six.moves import range
-
 class WaveFunction(list):
     """a objet for a WaveFunction"""
     

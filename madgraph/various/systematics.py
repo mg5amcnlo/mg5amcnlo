@@ -15,8 +15,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from six.moves import range
-from six.moves import zip
 if __name__ == "__main__":
     import sys
     import os
@@ -41,7 +39,7 @@ import os
 import re
 import sys
 import time
-from six import StringIO
+from io import StringIO
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)

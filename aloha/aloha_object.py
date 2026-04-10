@@ -34,8 +34,6 @@ from __future__ import absolute_import
 import aloha.aloha_lib as aloha_lib
 import aloha
 import cmath
-from six.moves import range
-
 #===============================================================================
 # P (Momenta)
 #===============================================================================

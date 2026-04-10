@@ -18,9 +18,6 @@ import sys
 import tests.unit_tests as unittest
 
 import madgraph.various.FO_analyse_card as FO_analyse_card
-from six.moves import zip
-
-
 class TestFOAnalyseCard(unittest.TestCase):
     """Check the class linked to a block of the param_card"""
 

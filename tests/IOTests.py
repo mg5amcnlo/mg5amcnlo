@@ -30,8 +30,6 @@ from functools import wraps
 
 import aloha
 import aloha.aloha_lib as aloha_lib
-from six.moves import zip
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 

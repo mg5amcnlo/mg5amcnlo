@@ -11,10 +11,6 @@ import copy
 import os
 import shutil
 import sys
-import six
-from six.moves import filter
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 pjoin = os.path.join
@@ -52,9 +48,6 @@ except Exception as error:
 
 
 logger = logging.getLogger("madgraph.lhe_parser")
-
-if six.PY3:
-    six.text_type = str
 
 class Particle(object):
     """ """
@@ -461,7 +454,7 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, (str,six.text_type)):
+        elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -1209,7 +1202,7 @@ class MultiEventFile(EventFile):
         (stop to write event when target is reached)
         """
 
-        if isinstance(get_wgt, (str,six.text_type)):
+        if isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
@@ -1252,11 +1245,7 @@ class MultiEventFile(EventFile):
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
         
-        try:
-            str_type = (str,six.text_type)
-        except NameError:
-            str_type = (str)
-        
+        str_type = str
         if isinstance(path, str_type):
             out = EventFile(path, 'w')
             if self.parsefile and not banner:    
@@ -2655,7 +2644,7 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, (str, six.text_type)):
+                if isinstance(k, str):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
@@ -2929,7 +2918,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, (str, six.text_type)):
+        elif  isinstance(obj, str):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -3241,7 +3230,7 @@ class OneNLOWeight(object):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, (str, six.text_type)):
+        if isinstance(input, str):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -3616,7 +3605,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, (str,six.text_type)):
+        if isinstance(input, str):
             self.parse(input)
         
             

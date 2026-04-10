@@ -30,15 +30,10 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-import six
-from six.moves import zip_longest
-from six.moves import range
-from six.moves import zip
-from six.moves import input
-StringIO = six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+from itertools import zip_longest
+import io as StringIO
+file = io.IOBase
 try:
     # Use in MadGraph
     import madgraph
@@ -1475,8 +1470,8 @@ class open_file(object):
             if not background:
                 subprocess.call(arguments)
             else:
-                import six.moves._thread
-                six.moves._thread.start_new_thread(subprocess.call,(arguments,))
+                import _thread
+                _thread.start_new_thread(subprocess.call,(arguments,))
         else:
             logger.warning('Not able to open file %s since no program configured.' % file_path + \
                                 'Please set one in ./input/mg5_configuration.txt')
@@ -1697,10 +1692,7 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def mmin(iter, default=None):
     
-    if six.PY3:
-        return min(iter, default=default)
-    else:
-        return min(iter, default)
+    return min(iter, default=default)
 
 
 ################################################################################
@@ -2205,10 +2197,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
-    if six.PY2:
-        level = -1
-    else:
-        level = 0
+    level = 0
 
     try:
         _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
@@ -2392,13 +2381,12 @@ def make_unique(input, keepordering=None):
     else:
         return list(dict.fromkeys(input)) 
 
-if six.PY3:
-    try:
-        from collections import MutableSet
-    except ImportError: # this is for python3.10
-        from collections.abc import  MutableSet
+try:
+    from collections import MutableSet
+except ImportError: # this is for python3.10
+    from collections.abc import  MutableSet
     
-    class OrderedSet(collections.OrderedDict, MutableSet):
+class OrderedSet(collections.OrderedDict, MutableSet):
 
         def __init__(self, arg=None):
             super( OrderedSet, self).__init__()
@@ -2459,8 +2447,7 @@ if six.PY3:
         symmetric_difference = property(lambda self: self.__xor__)
         symmetric_difference_update = property(lambda self: self.__ixor__)
         union = property(lambda self: self.__or__)
-else:
-    OrderedSet = set
+
 
 
 def cmp_to_key(mycmp):
@@ -2509,9 +2496,7 @@ def dict_cmp(A, B, level=1):
         return (a > b) - (a < b)
         #return cmp(A[adiff], B[bdiff])
 
-if six.PY3:
-    import io
-    file = io.FileIO
+file = io.FileIO
         
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
