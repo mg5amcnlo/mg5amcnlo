@@ -329,7 +329,7 @@ class Banner(dict):
         """set the lha_strategy: how the weight have to be handle by the shower"""
         
         if not (-4 <= int(value) <= 4):
-            raise Exception("wrong value for lha_strategy")
+            raise Exception("wrong value for lha_strategy: %s" % value)
         if not self["init"]:
             raise Exception("No init block define")
         
