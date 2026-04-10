@@ -1,0 +1,16 @@
+name: Restore ufo cache
+description: Restores numpy from cache and sets PYTHONPATH
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/UFOMODEL
+        key: ufomodel 
+
+    - run: |
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
+        cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        ls $GITHUB_WORKSPACE/models
+      shell: bash

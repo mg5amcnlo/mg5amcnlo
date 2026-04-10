@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  After a survey has been run and created results.dat to determine
 #  which channels in each process are important, this routine can 

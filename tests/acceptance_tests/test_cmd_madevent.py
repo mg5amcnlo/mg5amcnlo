@@ -481,8 +481,8 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        
-        target = 3932.0
+        # 100k value is 3933.1 +- 3 
+        target = 3933.1
         self.assertLess(
             abs(val1 - target) / (err1+1.7),
             2.,
@@ -847,14 +847,17 @@ C
         self.assertIn('mue_ref_fixed', run_card.user_set)
         self.assertIn('mue_over_ref', run_card.user_set)
 
+        run_card['nevents'] = 100000
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
         #target = 166.36114 # value used as reference before changing sde_strategy
-        target = 165.7 # computed with sde_strategy #165.8 +- 0.02099 pb
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s'%
+        # 100k value is 165.84 +- 0.05
+        target = 165.84
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
         
@@ -866,7 +869,8 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 165.7 
+        # 100k value is  165.71 +- 0.06
+        target = 165.71
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -1359,6 +1363,125 @@ class TestMEfromfile(unittest.TestCase):
         #a=rwa_input('freeze')
         self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
 
+    def test_polarization_top_decay(self):
+        """check that polarized process t{X} > w+{Y} b{Z}, w+ > ta+ vt gives the correct results
+        Test 1: check that various permutations can be called
+        Test 2: check helicity-flipping process (massive limit)
+        Test 3: check helicity-flipping process (massless limit)
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE (1/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t{L} > w+{0} b{R}, w+ > ta+ vt
+        add process t{L} > w+{T} b{L}, w+ > ta+ vt
+        add process t{L} > w+{A} b{R}, w+ > ta+ vt
+        add process t{R} > w+{S} b{L}, w+ > ta+ vt
+        add process t{R} > w+{0S} b{R}, w+ > ta+ vt
+        add process t{L} > w+{S0} b{L}, w+ > ta+ vt
+        add process t{L} > w+{G} b{R}, w+ > ta+ vt
+        add process t{L} > w+{H} b{L}, w+ > ta+ vt
+        add process t{R} > w+{Q} b{R}, w+ > ta+ vt
+        add process t{R} > w+{W} b{L}, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 0.53881 ± 0.000343 (GeV) for 40k events
+        tolerance = 1.1
+        self.check_parton_output(cross= 0.53881, error=tolerance*0.000343,target_event=40000)
+
+        #
+        #  START REAL CODE (2/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
+        self.check_parton_output(cross= 1.3303e-05, error=tolerance*2.1e-08,target_event=40000)
+
+        #
+        #  START REAL CODE (3/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set mta 1e-3
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        set mmnl 5.0
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 3.9311e-12 ± 6.86e-15  (GeV) for 40k events
+        self.check_parton_output(cross=3.9311e-12, error=tolerance*6.86e-15,target_event=40000)
 
     def test_generation_from_file_1(self):
         """ """

@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------
 # Run GS to create jpeg files defined as $gs
 #---------------------------------------------------------------------
-system("/bin/bash -c \"rm -f matrix*.jpg born.jpg V*/loop_matrix.jpg\" ");
+system("/usr/bin/env bash -c \"rm -f matrix*.jpg born.jpg V*/loop_matrix.jpg\" ");
 
 $imatrix = "";
 if (! -e "matrix.ps") {$imatrix = 1;}
@@ -26,7 +26,7 @@ while ( -e "matrix_$imatrix.ps"){
   }
   close(OUT);
   close(IN);
-  system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix_$imatrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix-1.ps\"";
+  system "/usr/bin/env bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix_$imatrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix-1.ps\"";
   system "rm -f matrix-1.ps";
 
 # Determine how many jpg files we have
@@ -57,21 +57,21 @@ while ( -e "matrix_$imatrix.ps"){
 #
 #    Delete files which aren't included in diagrams.html
 #
-    system ("/bin/bash -c \"rm -f matrix_$max_jpg.jpg\" ");
+    system ("/usr/bin/env bash -c \"rm -f matrix_$max_jpg.jpg\" ");
   }
 #
 #  Now create jpeg file for card
 #
-    system ("/bin/bash -c \"head -352 matrix_$imatrix.ps >& junk.ps\" ");
+    system ("/usr/bin/env bash -c \"head -352 matrix_$imatrix.ps >& junk.ps\" ");
     open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
 
     print JUNK "-30 -380 translate \n";
     print JUNK "0.7 0.7 scale \n";
     close(JUNK);
 
-    system ("/bin/bash -c \"cat matrix_$imatrix.ps | sed 1,352d >> junk.ps\" ");
+    system ("/usr/bin/env bash -c \"cat matrix_$imatrix.ps | sed 1,352d >> junk.ps\" ");
 
-    system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.jpg ../../HTML/card.jpg\" ";
+    system "/usr/bin/env bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.jpg ../../HTML/card.jpg\" ";
   if ($imatrix eq "") {$imatrix = 0;}
   $imatrix = $imatrix + 1;
 }

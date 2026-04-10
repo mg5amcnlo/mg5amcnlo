@@ -1592,6 +1592,10 @@ c          good parton lines; for FSR, just require one FS particle to be good
 c       alpha_s weight
 
            if(ipdgcl(imocl(n),igraphs(1),iproc).ne.fake_id)then
+              if (q2now.le.4)then
+                  rewgt=0d0
+                  return
+              endif
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
 c             Store information for systematics studies
               if(use_syst)then
