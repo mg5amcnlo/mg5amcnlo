@@ -267,6 +267,9 @@ class UFOModel(object):
             text = """%s = %s(""" % (obj.name, obj.__class__.__name__)
             
             
+        # All three attribute names used across different UFO models for Goldstone bosons
+        goldstone_attrs = ('goldstoneboson', 'GoldstoneBoson', 'goldstone')
+
         for data in args:
             if data in self.translate:
                 data = self.translate[data]
@@ -286,11 +289,13 @@ class UFOModel(object):
                     setattr(obj, data, None)
                 else:
                     raise
-            # Normalize goldstone attribute: if goldstoneboson is being written but is
-            # False, check the alternative attribute names (GoldstoneBoson, goldstone)
-            # used by some UFO models so the output is consistent.
-            if data == 'goldstoneboson' and not expr:
-                if getattr(obj, 'GoldstoneBoson', False) or getattr(obj, 'goldstone', False):
+            # Normalize the goldstone attribute: if the canonical name from
+            # require_args_all is any of the three known goldstone attribute
+            # names (UFO models use different conventions), and it is False,
+            # check the other two alternatives.  This handles external models
+            # regardless of which convention they follow.
+            if data in goldstone_attrs and not expr:
+                if any(getattr(obj, a, False) for a in goldstone_attrs):
                     expr = True
             name =str(data)
             if name in self.translate:
@@ -316,9 +321,11 @@ class UFOModel(object):
             name =str(data)
             if name in ['partial_widths', 'loop_particles']:
                 continue
-            # Skip alternative goldstone attribute names; goldstoneboson (in args)
-            # is the canonical name and has already been normalized above.
-            if name in ['goldstone', 'GoldstoneBoson']:
+            # Skip all goldstone attribute variants.  The canonical one (whichever
+            # name is in require_args_all) has already been normalized and written
+            # by the args loop above; emitting the others would produce duplicate or
+            # contradictory output.
+            if name in goldstone_attrs:
                 continue
             if name in self.translate:
                 name = self.translate[name] 
@@ -327,10 +334,6 @@ class UFOModel(object):
             else:
                 add_space = 0
             val = getattr(obj, data)
-            # Normalize goldstoneboson if it appears in other_attr (not in args)
-            if name == 'goldstoneboson' and not val:
-                if getattr(obj, 'GoldstoneBoson', False) or getattr(obj, 'goldstone', False):
-                    val = True
             text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(val))
             nb_space += add_space
             

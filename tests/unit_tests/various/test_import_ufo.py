@@ -259,12 +259,14 @@ class TestImportUFONoSideEffect(unittest.TestCase):
         original_all_particles = copy.copy(ufo_model.all_particles)
         for part in original_all_particles:
             if part.name.lower() in ['g0','g+']:
-                if hasattr(part,"GoldstoneBoson"):
-                    self.assertEqual(part.GoldstoneBoson,True)
-                elif hasattr(part,"goldstoneboson"):
-                    self.assertEqual(part.goldstoneboson,True)
+                if hasattr(part,"goldstoneboson") and part.goldstoneboson:
+                    pass
+                elif hasattr(part,"GoldstoneBoson") and part.GoldstoneBoson:
+                    pass
+                elif hasattr(part,"goldstone") and part.goldstone:
+                    pass
                 else:
-                    raise import_ufo.UFOImportError("Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name)
+                    raise import_ufo.UFOImportError("Goldstone %s has no goldstone attribute set in loop_qcd_qed_sm"%part.name)
                     
         
     def test_ImportUFONoSideEffectNLO(self):
