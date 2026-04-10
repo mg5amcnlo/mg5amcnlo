@@ -95,12 +95,12 @@ jobs:
          run: |
            mkdir -p /home/runner/.cache/UFOMODEL
            echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-           echo "import model_v4 sm" > cmd
+           #echo "import model_v4 sm" > cmd
            echo "import model heft" >> cmd
            echo "import model TopEffTh" >> cmd
-           echo "import model uutt_sch_4fermion" >> cmd
+           #echo "import model uutt_sch_4fermion" >> cmd
            echo "import model 2HDM" >> cmd
-           echo "import model uutt_tch_scalar" >> cmd
+           #echo "import model uutt_tch_scalar" >> cmd
            echo "import model DY_SM " >> cmd
            echo "import model loop_qcd_qed_sm" >> cmd
            echo "import model loop_qcd_qed_sm_Gmu" >> cmd
@@ -113,10 +113,10 @@ jobs:
            cp -r models/heft /home/runner/.cache/UFOMODEL
            cp -r models/loop_qcd_qed_sm /home/runner/.cache/UFOMODEL
            cp -r models/loop_qcd_qed_sm_Gmu /home/runner/.cache/UFOMODEL
-           cp -r models/sm_v4 /home/runner/.cache/UFOMODEL
-           cp -r models/uutt_sch_4fermion /home/runner/.cache/UFOMODEL
+           #cp -r models/sm_v4 /home/runner/.cache/UFOMODEL
+           #cp -r models/uutt_sch_4fermion /home/runner/.cache/UFOMODEL
            cp -r models/TopEffTh /home/runner/.cache/UFOMODEL
-           cp -r models/uutt_tch_scalar /home/runner/.cache/UFOMODEL
+           #cp -r models/uutt_tch_scalar /home/runner/.cache/UFOMODEL
            cp -r models/DY_SM /home/runner/.cache/UFOMODEL
            
   lhapdf_cache:
