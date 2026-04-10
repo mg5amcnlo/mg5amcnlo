@@ -8538,7 +8538,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """
         args = ['OLP'] + args
         self.check_set(args)
-        if True and self.options['low_mem_multicore_nlo_generation'] and args[1] != "MadLoop":
+        if self.options['low_mem_multicore_nlo_generation'] and args[1] != "MadLoop":
             raise self.InvalidCmd('Not possible to set OLP with both \"low_mem_multicore_nlo_generation\" and python3')
         # Reset the amplitudes, MatrixElements and exporter as they might
         # depend on this option
@@ -8693,7 +8693,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """
         args = ['low_mem_multicore_nlo_generation'] + args
         self.check_set(args)
-        if True and self.options['OLP'] != 'MadLoop':
+        if self.options['OLP'] != 'MadLoop':
             raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
         else:
             self.options[args[0]] = args[1]

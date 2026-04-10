@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import
 import pickle
-import pickle
+cPickle = pickle
 
 from . import files as files
 import os

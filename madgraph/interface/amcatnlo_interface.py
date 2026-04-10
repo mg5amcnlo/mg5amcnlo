@@ -32,6 +32,7 @@ import tempfile
 import itertools
 import os
 import pickle
+cPickle = pickle # alias in case
 
 
 import madgraph

@@ -2676,7 +2676,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                      LoggerStream=logstream,forced=forced, 
                                                      no_compilation=not compilation)
         except Exception as e:
-            if True and not __debug__:
+            if not __debug__:
                 logger.info('MadAnalysis5 instalation not python3 compatible')
                 return None
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')

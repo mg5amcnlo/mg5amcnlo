@@ -610,8 +610,6 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            if key == 'hel_recycling' and False:
-                continue 
             if key in ['pdlabel1', 'pdlabel2']:
                 continue
             self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))

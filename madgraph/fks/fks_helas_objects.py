@@ -36,7 +36,8 @@ import array
 import multiprocessing
 import signal
 import tempfile
-import pickle as cPickle
+import pickle 
+cPickle = pickle # alias in case
 import itertools
 import os
 import sys
