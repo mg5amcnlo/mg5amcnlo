@@ -6,7 +6,7 @@ permissions:
   contents: read
 on:
   push:
-    branches: [new_ci]
+    branches: [new_ci, 3.5.14, LTS2]
   schedule:
     - cron: '0 3 * * 0'    # every Sunday 3am
   workflow_dispatch:         
@@ -357,13 +357,6 @@ jobs:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 
-      - name: Restore lhapdf (fallback if pythia8 or emela failed)
-        if: needs.lhapdf_cache.result == 'success' && (needs.pythia8_cache.result != 'success' || needs.emela_cache.result != 'success')
-        uses: actions/cache/restore@v5
-        with:
-          path: ~/.cache/HEPtools
-          key: lhapdf-${{ env.CACHE_KEY }}
-
       - name: Restore pythia8 (if available)
         if: needs.pythia8_cache.result == 'success'
         uses: actions/cache/restore@v5
@@ -378,6 +371,12 @@ jobs:
           path: ~/.cache/HEPtools
           key: emela-${{ env.CACHE_KEY }}
 
+      - name: Restore lhapdf (fallback when pythia8 and emela failed)
+        if: needs.lhapdf_cache.result == 'success' && (needs.pythia8_cache.result != 'success' || needs.emela_cache.result != 'success')
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: lhapdf-${{ env.CACHE_KEY }}
       - name: Restore contur (if available)
         if: needs.contur_cache.result == 'success'
         uses: actions/cache/restore@v5
