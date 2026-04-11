@@ -1,0 +1,254 @@
+name: Ensure full heptools cache (build if missing)
+description: >
+  Restores the combined heptools cache and validates its content.
+  If the cache is absent or incomplete the action waits briefly for
+  a concurrent build (configurable), then installs every missing tool,
+  saves intermediate sub-caches for use as fallbacks by test jobs, and
+  finally saves a fresh combined cache.
+  Requires the MG5 repository to already be checked out (checkout_mg5).
+
+inputs:
+  wait_minutes:
+    description: >
+      How many minutes to poll for another job that may be building the
+      combined cache before building locally. Set to 0 to skip waiting.
+    required: false
+    default: "3"
+
+runs:
+  using: composite
+  steps:
+
+    # ── 1. Identify the OS suffix used in all cache keys ──────────────────
+    - name: Set OS key
+      run: echo "OS_KEY=$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    # ── 2. Try the combined heptools cache first ──────────────────────────
+    - name: Restore combined heptools cache
+      id: restore-combined
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: heptools-${{ env.OS_KEY }}
+
+    # ── 3. Validate the restored content ─────────────────────────────────
+    - name: Validate cache content
+      id: validate
+      if: steps.restore-combined.outputs.cache-hit == 'true'
+      run: |
+        ok=true
+        test -d ~/.cache/HEPtools/lhapdf6_py3                    || ok=false
+        test -d ~/.cache/HEPtools/pythia8                         || ok=false
+        test -x ~/.cache/HEPtools/bin/eMELA-config               || ok=false
+        test -x ~/.cache/HEPtools/fastjet/bin/fastjet-config     || ok=false
+        test -d ~/.cache/HEPtools/rivet                           || ok=false
+        test -d ~/.cache/HEPtools/ninja                           || ok=false
+        echo "ok=$ok" >> $GITHUB_OUTPUT
+      shell: bash
+
+    # ── 4. Decide whether a (re)build is needed ───────────────────────────
+    - name: Set build flag
+      id: build-needed
+      run: |
+        if [ "${{ steps.restore-combined.outputs.cache-hit }}" = "true" ] \
+        && [ "${{ steps.validate.outputs.ok }}"              = "true" ]; then
+          echo "value=false" >> $GITHUB_OUTPUT
+        else
+          echo "value=true"  >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    # ── 5. Wait for a concurrent build before starting our own ───────────
+    - name: Wait for in-progress cache build
+      if: steps.build-needed.outputs.value == 'true' && inputs.wait_minutes != '0'
+      run: |
+        echo "Cache absent or incomplete — polling for up to ${{ inputs.wait_minutes }} min..."
+        for i in $(seq 1 ${{ inputs.wait_minutes }}); do
+          sleep 60
+          if gh cache list --repo "$GITHUB_REPOSITORY" --key "heptools-${OS_KEY}" \
+              | grep -q "heptools-${OS_KEY}"; then
+            echo "HEPTOOLS_CACHE_FOUND=true" >> $GITHUB_ENV
+            echo "Cache created by another job — will restore it."
+            break
+          fi
+          echo "  still waiting... ($i / ${{ inputs.wait_minutes }})"
+        done
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    # ── 6. Restore the cache that appeared during the wait ────────────────
+    - name: Restore cache after wait
+      if: env.HEPTOOLS_CACHE_FOUND == 'true'
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: heptools-${{ env.OS_KEY }}
+
+    # ── 7a. Build LHAPDF (if missing) ─────────────────────────────────────
+    - name: Build LHAPDF
+      id: build-lhapdf
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      run: |
+        if ! test -x ~/.cache/HEPtools/bin/lhapdf-config; then
+          echo "--- Installing LHAPDF ---"
+          mkdir -p ~/.cache/HEPtools
+          cd "$GITHUB_WORKSPACE"
+          echo "heptools_install_dir=$HOME/.cache/HEPtools" >> input/mg5_configuration.txt
+          echo "install lhapdf6" > cmd
+          ./bin/mg5_aMC cmd
+          cd ~/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
+          wget -q https://lhapdfsets.web.cern.ch/current/NNPDF23_nlo_as_0118_qed.tar.gz
+          tar -xzpf NNPDF23_nlo_as_0118_qed.tar.gz
+          wget -q https://lhapdfsets.web.cern.ch/lhapdfsets/current/cteq6l1.tar.gz
+          tar -xzpf cteq6l1.tar.gz
+          echo "BUILT_LHAPDF=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Save lhapdf sub-cache
+      if: env.BUILT_LHAPDF == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: lhapdf-${{ env.OS_KEY }}
+
+    # ── 7b. Build Pythia8 (needs LHAPDF) ─────────────────────────────────
+    - name: Build Pythia8
+      id: build-pythia8
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      run: |
+        if ! test -d ~/.cache/HEPtools/pythia8; then
+          echo "--- Installing Pythia8 ---"
+          cd "$GITHUB_WORKSPACE"
+          echo "heptools_install_dir=$HOME/.cache/HEPtools" >> input/mg5_configuration.txt
+          echo "install pythia8" > cmd
+          ./bin/mg5_aMC cmd
+          echo "BUILT_PYTHIA8=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Save pythia8 sub-cache
+      if: env.BUILT_PYTHIA8 == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: pythia8-${{ env.OS_KEY }}
+
+    # ── 7c. Build eMELA (needs LHAPDF) ───────────────────────────────────
+    - name: Build eMELA
+      id: build-emela
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      run: |
+        if ! test -x ~/.cache/HEPtools/bin/eMELA-config; then
+          echo "--- Installing eMELA ---"
+          cd "$GITHUB_WORKSPACE"
+          echo "heptools_install_dir=$HOME/.cache/HEPtools" >> input/mg5_configuration.txt
+          echo "install eMELA" > cmd
+          ./bin/mg5_aMC cmd
+          echo "BUILT_EMELA=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Save emela sub-cache
+      if: env.BUILT_EMELA == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: emela-${{ env.OS_KEY }}
+
+    # ── 7d. Build Rivet + Contur + FastJet (needs Pythia8) ───────────────
+    - name: Build Rivet / Contur / FastJet
+      id: build-contur
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      run: |
+        if ! test -x ~/.cache/HEPtools/fastjet/bin/fastjet-config \
+          || ! test -d ~/.cache/HEPtools/rivet; then
+          echo "--- Installing Rivet / Contur / FastJet ---"
+          cd "$GITHUB_WORKSPACE"
+          echo "heptools_install_dir=$HOME/.cache/HEPtools" >> input/mg5_configuration.txt
+          printf "install rivet\ninstall contur\n" > cmd
+          ./bin/mg5_aMC cmd
+          echo "BUILT_CONTUR=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Save contur sub-cache
+      if: env.BUILT_CONTUR == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: contur-${{ env.OS_KEY }}
+
+    # ── 7e. Build Looptools: CutTools, IREGI, Ninja, Collier ─────────────
+    - name: Build Looptools
+      id: build-looptools
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      run: |
+        if ! test -d ~/.cache/HEPtools/ninja; then
+          echo "--- Installing CutTools / IREGI ---"
+          cd "$GITHUB_WORKSPACE"
+          mkdir -p ~/.cache/HEPtools/CutTools/lib ~/.cache/HEPtools/IREGI/src
+          echo "heptools_install_dir=$HOME/.cache/HEPtools" >> input/mg5_configuration.txt
+          ( cd vendor/IREGI/src && make )
+          ( cd vendor/CutTools  && make )
+          cp vendor/IREGI/src/libiregi.a              ~/.cache/HEPtools/IREGI/src/
+          cp vendor/CutTools/includects/libcts.a       ~/.cache/HEPtools/CutTools/lib/
+          cp vendor/CutTools/includects/mpmodule.mod   ~/.cache/HEPtools/CutTools/lib/
+          echo "--- Installing Ninja / Collier ---"
+          printf "install collier\ninstall ninja\n" > cmd
+          ./bin/mg5_aMC cmd
+          echo "BUILT_LOOPTOOLS=true" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Save looptools sub-cache
+      if: env.BUILT_LOOPTOOLS == 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: looptools-${{ env.OS_KEY }}
+
+    # ── 8. Save the fresh combined cache ──────────────────────────────────
+    - name: Save combined heptools cache
+      if: steps.build-needed.outputs.value == 'true' && env.HEPTOOLS_CACHE_FOUND != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: heptools-${{ env.OS_KEY }}
+
+    # ── 9. Configure MG5 paths (always, regardless of cache/build path) ───
+    - name: Write MG5 configuration
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        {
+          echo "heptools_install_dir=$HOME/.cache/HEPtools"
+          echo "lhapdf = $HOME/.cache/HEPtools/bin/lhapdf-config"
+          echo "lhapdf_py3 = $HOME/.cache/HEPtools/bin/lhapdf-config"
+          echo "pythia8_path = $HOME/.cache/HEPtools/pythia8"
+          echo "hepmc_path = $HOME/.cache/HEPtools/hepmc"
+          echo "mg5amc_py8_interface_path = $HOME/.cache/HEPtools/MG5aMC_PY8_interface"
+          echo "eMELA = $HOME/.cache/HEPtools/bin/eMELA-config"
+          echo "hepmc3_path = $HOME/.cache/HEPtools/hepmc3"
+          echo "rivet_path = $HOME/.cache/HEPtools/rivet"
+          echo "yoda_path = $HOME/.cache/HEPtools/yoda"
+          echo "contur_path = $HOME/.cache/HEPtools/contur"
+          echo "fastjet = $HOME/.cache/HEPtools/fastjet/bin/fastjet-config"
+          echo "ninja = $HOME/.cache/HEPtools/ninja/lib"
+          echo "collier = $HOME/.cache/HEPtools/collier"
+        } >> input/mg5_configuration.txt
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.cache/HEPtools/lhapdf6_py3/lib:$HOME/.cache/HEPtools/lib" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Set PYTHONPATH (Ubuntu 22)
+      if: env.OS_KEY == 'ubuntu22'
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages:$HOME/.cache/HEPtools/contur/python3.10/:$HOME/.cache/HEPtools/rivet/python3.10/:$HOME/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Set PYTHONPATH (Ubuntu 24)
+      if: env.OS_KEY == 'ubuntu24'
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages:$HOME/.cache/HEPtools/contur/python3.12/:$HOME/.cache/HEPtools/rivet/python3.12/:$HOME/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
+      shell: bash
