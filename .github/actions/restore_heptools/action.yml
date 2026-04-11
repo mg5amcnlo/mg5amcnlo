@@ -21,12 +21,12 @@ runs:
       run: |
         # Check that all expected HEPtool binaries/directories are present
         VALID=true
-        test -d /home/runner/.cache/HEPtools/lhapdf6_py3                    || VALID=false
-        test -d /home/runner/.cache/HEPtools/pythia8                         || VALID=false
-        test -x /home/runner/.cache/HEPtools/bin/eMELA-config                || VALID=false
-        test -x /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config      || VALID=false
-        test -d /home/runner/.cache/HEPtools/rivet                           || VALID=false
-        test -d /home/runner/.cache/HEPtools/ninja                           || VALID=false
+        test -d $HOME/.cache/HEPtools/lhapdf6_py3                    || VALID=false
+        test -d $HOME/.cache/HEPtools/pythia8                         || VALID=false
+        test -x $HOME/.cache/HEPtools/bin/eMELA-config                || VALID=false
+        test -x $HOME/.cache/HEPtools/fastjet/bin/fastjet-config      || VALID=false
+        test -d $HOME/.cache/HEPtools/rivet                           || VALID=false
+        test -d $HOME/.cache/HEPtools/ninja                           || VALID=false
         echo "cache_valid=$VALID" >> $GITHUB_OUTPUT
         if [ "$VALID" = "false" ]; then
           echo "::warning::heptools cache is incomplete, will restore from sub-caches"

@@ -563,8 +563,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         sizes = {1:1,2:4,3:4,4:16,5:16}
         try:
             return sizes[abs(spin)]
-        except KeyError:
-            raise MadGraph5Error("L-cut particle has spin %d which is not supported."%spin)
+        except KeyError as err:
+            raise MadGraph5Error("L-cut particle has spin %d which is not supported."%spin) from err
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2093,9 +2093,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         try:
             loop_wf_index=\
                        [wf['is_loop'] for wf in self.get('mothers')].index(True)
-        except ValueError:
+        except ValueError as err:
             raise MadGraph5Error("The loop wavefunctions should have exactly"+\
-                                                " one loop wavefunction mother.")
+                                                " one loop wavefunction mother.") from err
 
         if self.find_outgoing_number()-1<=loop_wf_index:
             # If the incoming loop leg is placed after the outgoing one we

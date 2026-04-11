@@ -32,8 +32,6 @@ import traceback
 import gzip as ziplib
 import io
 from itertools import zip_longest
-import io as StringIO
-file = io.IOBase
 try:
     # Use in MadGraph
     import madgraph
@@ -124,7 +122,7 @@ def get_pkg_info(info_str=None):
     global PACKAGE_INFO
 
     if info_str:
-        info_dict = parse_info_str(StringIO.StringIO(info_str))
+        info_dict = parse_info_str(io.StringIO(info_str))
         return info_dict
 
     if PACKAGE_INFO:
