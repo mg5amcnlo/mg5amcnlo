@@ -48,7 +48,6 @@ jobs:
         if: github.event_name == 'schedule' || inputs.reset_ufo == 'true'
         run: | 
           gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -73,50 +72,34 @@ jobs:
         if: steps.cache-pip.outputs.cache-hit != 'true'
         run: pip install --target ~/.cache/pip-packages numpy
 
-  ufo_cache:
-     runs-on: ubuntu-latest
-     needs: delete-cache
+  #ufo_cache:
+  #   runs-on: ubuntu-latest
+  #   needs: delete-cache
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
-       - name: Cache UFO MODEL
-         id: cache-ufo
-         uses: actions/cache@v5
-         with:
-           path: ~/.cache/UFOMODEL
-           key: ufomodel
+  #   steps:
+  #     - name: Cache UFO MODEL
+  #       id: cache-ufo
+  #       uses: actions/cache@v5
+  #       with:
+  #         path: ~/.cache/UFOMODEL
+  #         key: ufomodel
 
-       - uses: actions/checkout@v5
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
+  #     - uses: actions/checkout@v5
+  #       if: steps.cache-ufo.outputs.cache-hit != 'true'
 
-       - name: Install UFO model
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
-         run: |
-           mkdir -p /home/runner/.cache/UFOMODEL
-           echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-           #echo "import model_v4 sm" > cmd
-           echo "import model heft" >> cmd
-           echo "import model TopEffTh" >> cmd
-           #echo "import model uutt_sch_4fermion" >> cmd
-           echo "import model 2HDM" >> cmd
-           #echo "import model uutt_tch_scalar" >> cmd
-           echo "import model DY_SM " >> cmd
-           echo "import model loop_qcd_qed_sm" >> cmd
-           echo "import model loop_qcd_qed_sm_Gmu" >> cmd
-           ./bin/mg5_aMC cmd
+  #     - name: Install UFO model
+  #       if: steps.cache-ufo.outputs.cache-hit != 'true'
+  #       run: |
+  #         mkdir -p /home/runner/.cache/UFOMODEL
+  #         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
+  #         echo "import model heft" >> cmd
+  #         #./bin/mg5_aMC cmd
 
-       - name: move UFO model to cache
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
-         run: |
-           cp -r models/2HDM /home/runner/.cache/UFOMODEL
-           cp -r models/heft /home/runner/.cache/UFOMODEL
-           cp -r models/loop_qcd_qed_sm /home/runner/.cache/UFOMODEL
-           cp -r models/loop_qcd_qed_sm_Gmu /home/runner/.cache/UFOMODEL
-           #cp -r models/sm_v4 /home/runner/.cache/UFOMODEL
-           #cp -r models/uutt_sch_4fermion /home/runner/.cache/UFOMODEL
-           cp -r models/TopEffTh /home/runner/.cache/UFOMODEL
-           #cp -r models/uutt_tch_scalar /home/runner/.cache/UFOMODEL
-           cp -r models/DY_SM /home/runner/.cache/UFOMODEL
+      # - name: move UFO model to cache
+      #   if: steps.cache-ufo.outputs.cache-hit != 'true'
+      #   run: |
+      #     cp -r models/2HDM /home/runner/.cache/UFOMODEL
            
   lhapdf_cache:
      needs: delete-cache

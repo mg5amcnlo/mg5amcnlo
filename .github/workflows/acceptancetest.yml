@@ -38,7 +38,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore-pip-cache 
+      - uses: ./.github/actions/restore_all 
+
 
       # Runs a set of commands using the runners shell
       - name: test one of the test testIO_AcceptanceProcOutputIOTests
@@ -1094,15 +1095,13 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore_ufomodel 
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_sm_equivalence
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            echo "import model_v4 sm_v4" > cmd
-            echo "continue" >> cmd
-            ./bin/mg5_aMC cmd
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             ./tests/test_manager.py test_sm_equivalence -pA -t0 -l INFO
 
@@ -1115,14 +1114,13 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore_ufomodel 
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_sm_equivalence
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            echo "import model_v4 sm_v4" > cmd
-            ./bin/mg5_aMC cmd
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             ./tests/test_manager.py test_all -pA -t0 -l DEBUG --debug
 
