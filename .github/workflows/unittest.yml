@@ -589,6 +589,8 @@ jobs:
   unittest_new_coverage:
     # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
