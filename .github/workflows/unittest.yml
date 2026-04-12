@@ -598,6 +598,6 @@ jobs:
       - name: test q_polynomial and hepmc_parser modules
         run: |
             cd $GITHUB_WORKSPACE
-            python3 -m unittest tests/unit_tests/various/test_q_polynomial.py tests/unit_tests/various/test_hepmc_parser.py -v
+            ./tests/test_manager.py test_q_polynomial test_hepmc_parser -t0
 
 
