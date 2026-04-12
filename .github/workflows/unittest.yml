@@ -586,3 +586,16 @@ jobs:
             ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu  test_startfromalpha0_attribute -t0
 
 
+  unittest_new_coverage:
+    # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: test q_polynomial and hepmc_parser modules
+        run: |
+            cd $GITHUB_WORKSPACE
+            python3 -m unittest tests/unit_tests/various/test_q_polynomial.py tests/unit_tests/various/test_hepmc_parser.py -v
+
+
