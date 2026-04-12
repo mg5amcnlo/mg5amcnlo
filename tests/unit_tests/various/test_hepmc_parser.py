@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 import os
 import tempfile
-import unittest
+import tests.unit_tests as unittest
 
 import madgraph.various.hepmc_parser as hepmc_parser
 
@@ -428,8 +428,7 @@ class TestHEPMCEventFile(unittest.TestCase):
         try:
             ef = HEPMC_EventFile(path)
             next(ef)
-            with self.assertRaises(StopIteration):
-                next(ef)
+            self.assertRaises(StopIteration, next, ef)
         finally:
             os.unlink(path)
 

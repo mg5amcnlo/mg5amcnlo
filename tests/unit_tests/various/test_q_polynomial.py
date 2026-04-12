@@ -15,7 +15,7 @@
 """Unit tests for madgraph/various/q_polynomial.py"""
 
 from __future__ import absolute_import
-import unittest
+import tests.unit_tests as unittest
 
 import madgraph.various.q_polynomial as q_polynomial
 
@@ -78,8 +78,7 @@ class TestPolynomialNaiveOrdering(unittest.TestCase):
 
     def test_negative_rank_raises(self):
         """Negative rank must raise AssertionError."""
-        with self.assertRaises(AssertionError):
-            Polynomial_naive_ordering(-1)
+        self.assertRaises(AssertionError, Polynomial_naive_ordering, -1)
 
     def test_rank_one_indices_cover_all_dimensions(self):
         """Rank-1 coefficients should include each of the 4 dimensions once."""
@@ -113,8 +112,7 @@ class TestPolynomialNaiveOrdering(unittest.TestCase):
     def test_get_coef_position_invalid_index_raises(self):
         """Asking for an index beyond 3 should raise PolynomialError."""
         pno = Polynomial_naive_ordering(1)
-        with self.assertRaises(PolynomialError):
-            pno.get_coef_position([4])
+        self.assertRaises(PolynomialError, pno.get_coef_position, [4])
 
 
 class TestPolynomial(unittest.TestCase):
@@ -142,8 +140,7 @@ class TestPolynomial(unittest.TestCase):
 
     def test_negative_rank_raises(self):
         """Negative rank must raise AssertionError."""
-        with self.assertRaises(AssertionError):
-            Polynomial(-1)
+        self.assertRaises(AssertionError, Polynomial, -1)
 
     def test_scalar_coefficient_at_position_zero(self):
         """Position 0 always holds the scalar (empty index list)."""
@@ -250,13 +247,11 @@ class TestPolynomialRoutines(unittest.TestCase):
 
     def test_polynomial_routines_updater_rank_too_high(self):
         """Setting updater_max_rank above max_rank raises PolynomialError."""
-        with self.assertRaises(PolynomialError):
-            q_polynomial.PolynomialRoutines(2, updater_max_rank=3)
+        self.assertRaises(PolynomialError, q_polynomial.PolynomialRoutines, 2, 3)
 
     def test_polynomial_routines_negative_rank(self):
         """Negative max_rank raises PolynomialError."""
-        with self.assertRaises(PolynomialError):
-            q_polynomial.PolynomialRoutines(-1)
+        self.assertRaises(PolynomialError, q_polynomial.PolynomialRoutines, -1)
 
     def test_fortran_routines_constant_module(self):
         """write_polynomial_constant_module returns a non-empty Fortran string."""
