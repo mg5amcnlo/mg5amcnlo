@@ -1416,6 +1416,7 @@ c     ipart gives external particle number chain
       
       rewgt=1.0d0
       clustered=.false.
+      vec_igraph1(ivec) = 0  ! default: no MLM graph selected for this event
 
       if(ickkw.le.0.and..not.use_syst) return
 
@@ -1467,6 +1468,7 @@ c         stop 1
         rewgt = 0d0
         return
       endif
+      vec_igraph1(ivec) = igraphs(1)  ! save MLM-matched graph for this event
 
 
 c     Store pdf information for systematics studies (initial)
