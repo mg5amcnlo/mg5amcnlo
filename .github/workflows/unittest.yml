@@ -593,7 +593,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: test q_polynomial and hepmc_parser modules
         run: |
