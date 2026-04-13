@@ -351,11 +351,11 @@ C ----------
 
       SUBROUTINE %(proc_prefix)sGET_JAMP(njamp, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=%(ncolor)d) 
       INTEGER NAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 	
 	  ONEJAMP = JAMP(njamp+1, SOINDEX) ! +1 since njamp start at zero (c convention)
@@ -363,7 +363,7 @@ C ----------
 
        SUBROUTINE %(proc_prefix)sGET_LNJAMP(njamp, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=%(ncolor)d) 
       INTEGER NAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
@@ -393,7 +393,7 @@ C ----------
     return 
     end
 
-    subroutine %(proc_prefix)sget_chosen_so_config(M,N, out)
+    subroutine %(proc_prefix)s_get_chosen_so_config(M,N, out)
 
     integer M, N
     logical out
