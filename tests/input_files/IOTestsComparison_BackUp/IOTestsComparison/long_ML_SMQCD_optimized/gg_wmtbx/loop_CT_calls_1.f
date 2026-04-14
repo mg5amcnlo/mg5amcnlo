@@ -1,0 +1,306 @@
+      SUBROUTINE LOOP_CT_CALLS_1(P,NHEL,H,IC)
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER NBORNAMPS
+      PARAMETER (NBORNAMPS=8)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=48)
+      INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
+      PARAMETER (NLOOPS=162, NLOOPGROUPS=77, NCTAMPS=252)
+      INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
+      PARAMETER (NWAVEFUNCS=28,NLOOPWAVEFUNCS=300)
+      INTEGER MAXLWFSIZE
+      PARAMETER (MAXLWFSIZE=4)
+      INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
+      PARAMETER (LOOPMAXCOEFS=70, VERTEXMAXCOEFS=5)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+      REAL*16     MP__ZERO
+      PARAMETER (MP__ZERO=0.0E0_16)
+C     
+C     ARGUMENTS
+C     
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER H
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J,K
+      COMPLEX*16 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'coupl.inc'
+      INCLUDE 'mp_coupl.inc'
+
+      INTEGER HELOFFSET
+      INTEGER GOODHEL(NCOMB)
+      LOGICAL GOODAMP(NLOOPGROUPS)
+      COMMON/FILTERS/GOODAMP,GOODHEL,HELOFFSET
+
+      COMPLEX*16 AMP(NBORNAMPS)
+      COMMON/AMPS/AMP
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMMON/W/W
+
+      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
+     $ UNCS)
+      COMPLEX*16 PL(0:3,0:NLOOPWAVEFUNCS)
+      COMMON/WL/WL,PL
+
+      COMPLEX*16 LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+      COMMON/LCOEFS/LOOPCOEFS
+
+      COMPLEX*16 AMPL(3,NCTAMPS)
+      COMMON/AMPL/AMPL
+
+      COMPLEX*16 LOOPRES(3,NLOOPGROUPS)
+      LOGICAL S(NLOOPGROUPS)
+      COMMON/LOOPRES/LOOPRES,S
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+C     CutTools call for loop numbers 1,2,7,8,13,14,19,20,135,136,157,15
+C     8,151,152,153,154,155,156
+      CALL LOOP_2(1,6,13,DCMPLX(ZERO),DCMPLX(ZERO),2,LOOPRES(1,1),S(1)
+     $ ,1)
+C     CutTools call for loop numbers 3,4,5,6,9,10,11,12,15,16,17,18,21,
+C     22,23,24,137,138,159,160,161,162
+      CALL LOOP_3(3,1,2,13,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),3
+     $ ,LOOPRES(1,2),S(2),2)
+C     CutTools call for loop numbers 25,47,73
+      CALL LOOP_2(25,7,15,DCMPLX(ZERO),DCMPLX(MDL_MB),1,LOOPRES(1,3)
+     $ ,S(3),3)
+C     CutTools call for loop numbers 26,29
+      CALL LOOP_2(26,6,13,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,LOOPRES(1,4)
+     $ ,S(4),4)
+C     CutTools call for loop numbers 27
+      CALL LOOP_3(27,5,6,7,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(ZERO)
+     $ ,2,LOOPRES(1,5),S(5),5)
+C     CutTools call for loop numbers 28,87,88,89
+      CALL LOOP_3(28,5,6,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MB),2
+     $ ,LOOPRES(1,6),S(6),6)
+C     CutTools call for loop numbers 30,50,76
+      CALL LOOP_3(30,3,4,15,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,7),S(7),7)
+C     CutTools call for loop numbers 31
+      CALL LOOP_4(31,3,4,5,6,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MB
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,8),S(8),8)
+C     CutTools call for loop numbers 32
+      CALL LOOP_4(32,3,5,4,6,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MT
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,9),S(9),9)
+C     CutTools call for loop numbers 33,39,69
+      CALL LOOP_3(33,3,5,16,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MT)
+     $ ,2,LOOPRES(1,10),S(10),10)
+C     CutTools call for loop numbers 34,96,97,98
+      CALL LOOP_4(34,3,4,6,5,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(MDL_MB),3,LOOPRES(1,11),S(11),11)
+C     CutTools call for loop numbers 35,74
+      CALL LOOP_2(35,10,17,DCMPLX(ZERO),DCMPLX(MDL_MB),1,LOOPRES(1,12)
+     $ ,S(12),12)
+C     CutTools call for loop numbers 36
+      CALL LOOP_3(36,3,9,10,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,13),S(13),13)
+C     CutTools call for loop numbers 37,79
+      CALL LOOP_3(37,2,5,17,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,14),S(14),14)
+C     CutTools call for loop numbers 38
+      CALL LOOP_4(38,2,3,9,5,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,15),S(15),15)
+C     CutTools call for loop numbers 40
+      CALL LOOP_4(40,2,5,3,9,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(MDL_MT
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,16),S(16),16)
+C     CutTools call for loop numbers 41
+      CALL LOOP_4(41,2,3,5,9,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,17),S(17),17)
+C     CutTools call for loop numbers 42,83
+      CALL LOOP_3(42,2,5,17,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,18),S(18),18)
+C     CutTools call for loop numbers 43,48
+      CALL LOOP_2(43,11,19,DCMPLX(ZERO),DCMPLX(MDL_MB),1,LOOPRES(1,19)
+     $ ,S(19),19)
+C     CutTools call for loop numbers 44
+      CALL LOOP_3(44,3,12,11,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MB
+     $ ),2,LOOPRES(1,20),S(20),20)
+C     CutTools call for loop numbers 45
+      CALL LOOP_3(45,2,7,11,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,21),S(21),21)
+C     CutTools call for loop numbers 46
+      CALL LOOP_4(46,2,3,4,11,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,22),S(22),22)
+C     CutTools call for loop numbers 49
+      CALL LOOP_3(49,2,7,11,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,23),S(23),23)
+C     CutTools call for loop numbers 51
+      CALL LOOP_4(51,2,3,11,4,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,24),S(24),24)
+C     CutTools call for loop numbers 52
+      CALL LOOP_4(52,2,4,3,11,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(MDL_MB
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,25),S(25),25)
+C     CutTools call for loop numbers 53,63
+      CALL LOOP_3(53,1,5,19,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,26),S(26),26)
+C     CutTools call for loop numbers 54
+      CALL LOOP_4(54,1,3,12,5,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,27),S(27),27)
+C     CutTools call for loop numbers 55
+      CALL LOOP_3(55,1,7,10,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,2,LOOPRES(1,28),S(28),28)
+C     CutTools call for loop numbers 56
+      CALL LOOP_4(56,1,3,4,10,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,29),S(29),29)
+C     CutTools call for loop numbers 57
+      CALL LOOP_5(57,1,2,3,4,5,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(MDL
+     $ _MT),DCMPLX(ZERO),DCMPLX(MDL_MB),4,LOOPRES(1,30),S(30),30)
+C     CutTools call for loop numbers 58,60,61,65
+      CALL LOOP_3(58,1,2,13,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(MDL_MB
+     $ ),3,LOOPRES(1,31),S(31),31)
+C     CutTools call for loop numbers 59
+      CALL LOOP_4(59,1,2,7,5,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,32),S(32),32)
+C     CutTools call for loop numbers 62
+      CALL LOOP_4(62,1,2,5,7,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MB),3,LOOPRES(1,33),S(33),33)
+C     CutTools call for loop numbers 64
+      CALL LOOP_4(64,1,5,2,7,DCMPLX(MDL_MB),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(MDL_MB),3,LOOPRES(1,34),S(34),34)
+C     CutTools call for loop numbers 66
+      CALL LOOP_5(66,1,2,5,4,3,DCMPLX(MDL_MB),DCMPLX(MDL_MB),DCMPLX(ZER
+     $ O),DCMPLX(MDL_MT),DCMPLX(MDL_MB),4,LOOPRES(1,35),S(35),35)
+C     CutTools call for loop numbers 67
+      CALL LOOP_5(67,1,3,2,4,5,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(MDL
+     $ _MT),DCMPLX(ZERO),DCMPLX(MDL_MB),4,LOOPRES(1,36),S(36),36)
+C     CutTools call for loop numbers 68
+      CALL LOOP_5(68,1,3,4,2,5,DCMPLX(MDL_MB),DCMPLX(MDL_MT),DCMPLX(ZER
+     $ O),DCMPLX(ZERO),DCMPLX(MDL_MB),4,LOOPRES(1,37),S(37),37)
+C     CutTools call for loop numbers 70
+      CALL LOOP_4(70,1,3,5,12,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,38),S(38),38)
+C     CutTools call for loop numbers 71
+      CALL LOOP_4(71,1,5,3,12,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(MDL_MT
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,39),S(39),39)
+C     CutTools call for loop numbers 72,84
+      CALL LOOP_3(72,1,5,19,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,40),S(40),40)
+C     CutTools call for loop numbers 75
+      CALL LOOP_3(75,1,7,10,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,41),S(41),41)
+C     CutTools call for loop numbers 77
+      CALL LOOP_4(77,1,3,10,4,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,42),S(42),42)
+C     CutTools call for loop numbers 78
+      CALL LOOP_4(78,1,4,3,10,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(MDL_MB
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,43),S(43),43)
+C     CutTools call for loop numbers 80
+      CALL LOOP_4(80,1,5,2,7,DCMPLX(ZERO),DCMPLX(MDL_MB),DCMPLX(MDL_MB
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,44),S(44),44)
+C     CutTools call for loop numbers 81
+      CALL LOOP_5(81,1,3,2,5,4,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(MDL
+     $ _MB),DCMPLX(ZERO),DCMPLX(MDL_MT),4,LOOPRES(1,45),S(45),45)
+C     CutTools call for loop numbers 82
+      CALL LOOP_5(82,1,4,3,2,5,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(MDL_M
+     $ B),DCMPLX(MDL_MB),DCMPLX(ZERO),4,LOOPRES(1,46),S(46),46)
+C     CutTools call for loop numbers 85
+      CALL LOOP_4(85,1,2,7,5,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,DCMPLX(ZERO),3,LOOPRES(1,47),S(47),47)
+C     CutTools call for loop numbers 86
+      CALL LOOP_4(86,1,2,5,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MB)
+     $ ,DCMPLX(ZERO),3,LOOPRES(1,48),S(48),48)
+C     CutTools call for loop numbers 90
+      CALL LOOP_5(90,1,3,5,2,4,DCMPLX(MDL_MT),DCMPLX(MDL_MB),DCMPLX(ZER
+     $ O),DCMPLX(ZERO),DCMPLX(MDL_MT),4,LOOPRES(1,49),S(49),49)
+C     CutTools call for loop numbers 91
+      CALL LOOP_5(91,1,2,4,5,3,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(ZER
+     $ O),DCMPLX(MDL_MB),DCMPLX(MDL_MT),4,LOOPRES(1,50),S(50),50)
+C     CutTools call for loop numbers 92
+      CALL LOOP_5(92,1,4,2,3,5,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(MDL_M
+     $ T),DCMPLX(MDL_MB),DCMPLX(ZERO),4,LOOPRES(1,51),S(51),51)
+C     CutTools call for loop numbers 93
+      CALL LOOP_5(93,1,2,4,3,5,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MT
+     $ ),DCMPLX(MDL_MB),DCMPLX(ZERO),4,LOOPRES(1,52),S(52),52)
+C     CutTools call for loop numbers 94
+      CALL LOOP_5(94,1,2,3,5,4,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(MDL
+     $ _MB),DCMPLX(ZERO),DCMPLX(MDL_MT),4,LOOPRES(1,53),S(53),53)
+C     CutTools call for loop numbers 95
+      CALL LOOP_5(95,1,2,5,3,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MB
+     $ ),DCMPLX(MDL_MT),DCMPLX(ZERO),4,LOOPRES(1,54),S(54),54)
+C     CutTools call for loop numbers 99,101
+      CALL LOOP_2(99,6,13,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,LOOPRES(1
+     $ ,55),S(55),55)
+C     CutTools call for loop numbers 100,106,122
+      CALL LOOP_2(100,8,16,DCMPLX(ZERO),DCMPLX(MDL_MT),1,LOOPRES(1,56)
+     $ ,S(56),56)
+C     CutTools call for loop numbers 102
+      CALL LOOP_3(102,4,6,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(ZERO)
+     $ ,2,LOOPRES(1,57),S(57),57)
+C     CutTools call for loop numbers 103,132,133,134
+      CALL LOOP_3(103,4,6,8,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MT),2
+     $ ,LOOPRES(1,58),S(58),58)
+C     CutTools call for loop numbers 104,107
+      CALL LOOP_2(104,9,25,DCMPLX(ZERO),DCMPLX(MDL_MT),1,LOOPRES(1,59)
+     $ ,S(59),59)
+C     CutTools call for loop numbers 105
+      CALL LOOP_3(105,2,9,8,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MT)
+     $ ,2,LOOPRES(1,60),S(60),60)
+C     CutTools call for loop numbers 108
+      CALL LOOP_3(108,2,9,8,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(ZERO),2
+     $ ,LOOPRES(1,61),S(61),61)
+C     CutTools call for loop numbers 109,123
+      CALL LOOP_2(109,12,27,DCMPLX(ZERO),DCMPLX(MDL_MT),1,LOOPRES(1
+     $ ,62),S(62),62)
+C     CutTools call for loop numbers 110,126
+      CALL LOOP_3(110,2,4,27,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MT
+     $ ),2,LOOPRES(1,63),S(63),63)
+C     CutTools call for loop numbers 111,128
+      CALL LOOP_3(111,2,4,27,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(ZERO)
+     $ ,2,LOOPRES(1,64),S(64),64)
+C     CutTools call for loop numbers 112
+      CALL LOOP_3(112,1,12,8,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MT
+     $ ),2,LOOPRES(1,65),S(65),65)
+C     CutTools call for loop numbers 113,121
+      CALL LOOP_3(113,1,4,25,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(MDL_MT
+     $ ),2,LOOPRES(1,66),S(66),66)
+C     CutTools call for loop numbers 114,115,117,118
+      CALL LOOP_3(114,1,2,13,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(MDL_M
+     $ T),3,LOOPRES(1,67),S(67),67)
+C     CutTools call for loop numbers 116
+      CALL LOOP_4(116,1,2,4,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,68),S(68),68)
+C     CutTools call for loop numbers 119
+      CALL LOOP_4(119,1,2,8,4,DCMPLX(MDL_MT),DCMPLX(MDL_MT),DCMPLX(ZERO
+     $ ),DCMPLX(MDL_MT),3,LOOPRES(1,69),S(69),69)
+C     CutTools call for loop numbers 120
+      CALL LOOP_4(120,1,4,2,8,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(MDL_MT),3,LOOPRES(1,70),S(70),70)
+C     CutTools call for loop numbers 124
+      CALL LOOP_3(124,1,12,8,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(ZERO)
+     $ ,2,LOOPRES(1,71),S(71),71)
+C     CutTools call for loop numbers 125,129
+      CALL LOOP_3(125,1,4,25,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(ZERO)
+     $ ,2,LOOPRES(1,72),S(72),72)
+C     CutTools call for loop numbers 127
+      CALL LOOP_4(127,1,4,2,8,DCMPLX(ZERO),DCMPLX(MDL_MT),DCMPLX(MDL_MT
+     $ ),DCMPLX(ZERO),3,LOOPRES(1,73),S(73),73)
+C     CutTools call for loop numbers 130
+      CALL LOOP_4(130,1,2,8,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MT)
+     $ ,DCMPLX(ZERO),3,LOOPRES(1,74),S(74),74)
+C     CutTools call for loop numbers 131
+      CALL LOOP_4(131,1,2,4,8,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(MDL_MT)
+     $ ,DCMPLX(ZERO),3,LOOPRES(1,75),S(75),75)
+C     CutTools call for loop numbers 139,140,141,142,143,144
+      CALL LOOP_2_3(139,1,2,1,13,2,DCMPLX(ZERO),DCMPLX(ZERO),1
+     $ ,LOOPRES(1,76),S(76),76)
+C     CutTools call for loop numbers 145,146,147,148,149,150
+      CALL LOOP_2_3(145,1,2,2,13,1,DCMPLX(ZERO),DCMPLX(ZERO),1
+     $ ,LOOPRES(1,77),S(77),77)
+
+      END
+

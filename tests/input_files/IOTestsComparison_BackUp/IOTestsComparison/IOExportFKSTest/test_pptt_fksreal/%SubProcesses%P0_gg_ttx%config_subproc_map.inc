@@ -1,0 +1,3 @@
+      DATA CONFSUB(1,1)/1/
+      DATA CONFSUB(1,2)/1/
+      DATA CONFSUB(1,3)/1/
