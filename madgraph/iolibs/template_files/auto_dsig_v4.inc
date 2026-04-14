@@ -305,8 +305,8 @@ c
 	   integer ivec, curr_warp, iwarp, NB_WARP_USED
 	   integer channels(VECSIZE_MEMMAX)
 C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
-	   integer igraph1(VECSIZE_MEMMAX)
-	   common/vec_igraph/igraph1
+	   integer igraph(VECSIZE_MEMMAX)
+	   common/vec_igraph/igraph
 C  
 C DATA
 C  
@@ -316,7 +316,7 @@ C BEGIN CODE
 C ----------
       selected_hel(:) = 0
       selected_col(:) = 0 
-      igraph1(:) = 0
+      igraph(:) = 0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
@@ -372,7 +372,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO ! end loop on IWARP/IVEC	 
 	 ENDDO ! end loop on the CURR_WARP
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph1, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO CURR_WARP=1, NB_WARP_USED
@@ -441,7 +441,7 @@ C       Call UNWGT to unweight and store events
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph1, out, selected_hel, selected_col, VECSIZE_USED)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph, out, selected_hel, selected_col, VECSIZE_USED)
 %(OMP_LIB)s
      implicit none
 
@@ -455,7 +455,7 @@ C       Call UNWGT to unweight and store events
      double precision col_rand(VECSIZE_MEMMAX)
      integer channels(VECSIZE_MEMMAX)
 C    Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
-     integer igraph1(VECSIZE_MEMMAX)
+     integer igraph(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
