@@ -7388,6 +7388,8 @@ c Born matrix elements.
      $        dble(iden_real_FKS(nFKSprocess))
       enddo
          nFKSprocess=nFKSprocess_save
+         call leshouche_inc_chooser()
+         call fks_inc_chooser()
       endif
 
       i_type=i_type_FKS(nFKSprocess)
