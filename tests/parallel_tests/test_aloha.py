@@ -3556,7 +3556,10 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
     def test_short_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
-        helas_suite = create_aloha.AbstractALOHAModel('MSSM_SLHA2')
+        try:
+            helas_suite = create_aloha.AbstractALOHAModel('MSSM_SLHA2')
+        except Exception:
+            self.skipTest('MSSM_SLHA2 model not available')
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
@@ -4211,7 +4214,67 @@ def SSS1_3(S2,S3,COUP,M1,W1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
-    
+    def test_short_pythonwriter_mg5_mode(self):
+        """test that Python writer in mg5 mode generates the correct import.
+        This is the 'new way' prong of the two-prong approach: instead of
+        'import wavefunctions' (standalone), the mg5 mode generates
+        'import aloha.template_files.wavefunctions as wavefunctions' so the
+        routine can be used directly within the MG5 framework without needing
+        a local wavefunctions.py file on the path."""
+
+        aloha_lib.KERNEL.clean()
+        solution_mg5 = """import cmath
+import aloha.template_files.wavefunctions as wavefunctions
+def SSS1_1(S2,S3,COUP,M1,W1):
+    S1 = wavefunctions.WaveFunction(size=3)
+    S1[0] = +S2[0]+S3[0]
+    S1[1] = +S2[1]+S3[1]
+    P1 = [-complex(S1[0]).real, -complex(S1[1]).real, -complex(S1[1]).imag, -complex(S1[0]).imag]
+    denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
+    S1[2]= denom*1j * S3[2]*S2[2]
+    return S1
+
+
+import cmath
+import aloha.template_files.wavefunctions as wavefunctions
+def SSS1_2(S2,S3,COUP,M1,W1):
+
+    return SSS1_1(S2,S3,COUP,M1,W1)
+import cmath
+import aloha.template_files.wavefunctions as wavefunctions
+def SSS1_3(S2,S3,COUP,M1,W1):
+
+    return SSS1_1(S2,S3,COUP,M1,W1)
+"""
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+
+        # standalone mode (old way): import wavefunctions
+        routine_standalone = amp.write(output_dir=None, language='Python')
+        self.assertIn('import wavefunctions\n', routine_standalone)
+        self.assertNotIn('aloha.template_files', routine_standalone)
+
+        aloha_lib.KERNEL.clean()
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+
+        # mg5 mode (new way): import aloha.template_files.wavefunctions as wavefunctions
+        routine_mg5 = amp.write(output_dir=None, language='Python', mode='mg5')
+        self.assertIn('import aloha.template_files.wavefunctions as wavefunctions\n',
+                      routine_mg5)
+        self.assertNotIn('import wavefunctions\n', routine_mg5)
+
+        split_solution = solution_mg5.split('\n')
+        split_routine = routine_mg5.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
     @set_global()
     def test_short_pythonwriter_spin3half(self):
         """ test that python writer works """
@@ -4952,6 +5015,7 @@ P2(3) = -dimag(F2(1))
         self.assertEqual(len(split_routine), len(split_solution))
 
 
+    @set_global()
     def test_short_fortranwriter_drop_fct(self):
         """test a case where a ratio is present in the lorentz but not needed in the 
            writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
@@ -5038,10 +5102,83 @@ P2(3) = -dimag(V2(1))
         #full check
         self.assertEqual(solution.strip(), routine.strip())
 
+    @set_global()
+    def test_short_fortranwriter_drop_fct_with_vector_inc(self):
+        """test the same case as test_short_fortranwriter_drop_fct but with
+           the vector.inc option enabled (old behavior before conditional inclusion).
+           This is the 'old way' prong of the two-prong approach for the
+           has_model_parameter + vector.inc code path."""
 
+        solution = """
+subroutine VVS4PZ1_2(V1, S3, COUP, M2, W2,V2)
+implicit none
+ include "../vector.inc"
+ include "../MODEL/input.inc"
+ include "../MODEL/coupl.inc"
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 FCT1
+ real*8 M2
+ real*8 P1(0:3)
+ real*8 P2(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
+ complex*16 V1(*)
+ complex*16 V2(6)
+ real*8 W2
+ complex*16 denom
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+    V2(1) = +V1(1)+S3(1)
+    V2(2) = +V1(2)+S3(2)
+P2(0) = -dble(V2(1))
+P2(1) = -dble(V2(2))
+P2(2) = -dimag(V2(2))
+P2(3) = -dimag(V2(1))
+ TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
+ TMP1 = (P2(0)*V1(3)-P2(1)*V1(4)-P2(2)*V1(5)-P2(3)*V1(6))
+ TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
+ FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
+    denom = COUP/(FCT1)
+    V2(3)= denom*M2*S3(3)*mdl_dWZ*(-P1(0)*TMP1+V1(3)*TMP2)
+    V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
+    V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
+    V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
+ end
+"""
+        FFV = UFOLorentz(name = 'VVS4',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')
 
+        class Propagators:
+            numV = "(- Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)**2) "
+            denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominatorSq = denominator + "**2"
+            Z1 = UFOPropagator(name = "Z1",
+                   numerator = "-" + numV + "* complex(0,1) * Mass(id) * dWZ",
+                   denominator = denominatorSq
+                  )
 
+        class model:
+            propagators = Propagators()
 
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.model = model()
+        amp = builder.compute_routine(2, tag=['PZ1'])
+        # Pass options={'vector.inc': True} to restore old behavior (include vector.inc)
+        routine = amp.write(output_dir=None, language='Fortran',
+                            options={'vector.inc': True})
+
+        self.assertIn(' include "../vector.inc"', routine)
+        self.assertIn(' include "../MODEL/input.inc"', routine)
+        self.assertNotIn('FCT0', routine)
+        self.assertIn('complex*16 FCT1', routine)
+        self.assertEqual(solution.strip(), routine.strip())
     def test_short_fortranwriter_C(self):
         """ test that python writer works """
 
