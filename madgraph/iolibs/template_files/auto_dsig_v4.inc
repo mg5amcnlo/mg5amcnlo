@@ -446,8 +446,8 @@ C       Call UNWGT to unweight and store events
      implicit none
 
      include 'nexternal.inc'
-     include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
      include 'maxamps.inc'
+     include 'cluster.inc'  ! for IGRAPHS common block (MLM per-event color selection); also defines VECSIZE_MEMMAX via vector.inc
      INTEGER                 NCOMB
      PARAMETER (             NCOMB=%(ncomb)d)
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
