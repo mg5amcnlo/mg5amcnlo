@@ -1084,7 +1084,7 @@ C
       end
 
 
-    subroutine select_color(rcol, jamp2, iconfig, iproc, icol)
+    subroutine select_color(rcol, jamp2, iconfig, iproc, icol, ivec)
     implicit none
     include 'nexternal.inc'
     include 'maxamps.inc' ! for the definition of maxflow
@@ -1099,10 +1099,13 @@ c
 	double precision jamp2(0:maxflow)
 	integer iconfig ! amplitude selected
 	integer iproc ! matrix element selected
+    integer ivec
 c	
 c   argument OUT
 c
        integer icol
+	   integer igraph(VECSIZE_MEMMAX)
+	   common/vec_igraph/igraph       
 c
 c    local
 c
@@ -1113,8 +1116,10 @@ c
 	integer i,j
 	double precision xtarget
 
-    if (ickkw.gt.0) then
+    if (ickkw.gt.0.and.ivec.eq.0) then
         iconfig = igraphs(1)
+    else
+        iconfig = vec_igraph(ivec)
     endif   
 
 

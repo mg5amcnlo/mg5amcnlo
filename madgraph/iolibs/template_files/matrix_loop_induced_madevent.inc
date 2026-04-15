@@ -297,7 +297,7 @@ c           Include the Jacobian from helicity sampling
        ENDIF
     ENDIF
 
-   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
    IF (MULTI_CHANNEL) THEN
         XTOT=0D0
