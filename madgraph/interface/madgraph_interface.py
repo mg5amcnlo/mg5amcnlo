@@ -5039,6 +5039,10 @@ This implies that with decay chains:
             if part_name in boundstates_keys_lower:
                 bound_name = boundstates_keys[boundstates_keys_lower.index(part_name)]
                 boundstates[index] = self._boundstates[bound_name]
+
+        if not hasattr(aloha, "npwave"):
+            aloha.npwave = [0]
+
         if boundstates:
             # find all combinations of Fock states
             for index,key in enumerate(boundstates.keys()):
@@ -5247,8 +5251,9 @@ This implies that with decay chains:
                     onium_ldme = 1.
 
                 # use dual mode for P-wave ONIA
+                
                 if onium_orbit >= 1:
-                    aloha.dual_mode = True
+                    aloha.dual_mode += 1
                 for i in range(2):
                     mypart = self._curr_model['particles'].get_copy(constituents[i])
 
@@ -5310,6 +5315,10 @@ This implies that with decay chains:
                 pass
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
+
+        if aloha.dual_mode:
+            aloha.npwave.append(aloha.dual_mode)
+            aloha.npwave = list(set(aloha.npwave))
 
         if any(['is_tagged' in l.keys()  and l['is_tagged'] and l['state'] for l in myleglist]):
             logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
@@ -9849,9 +9858,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.previous_lorentz = wanted_lorentz
                 self.previous_couplings = wanted_couplings
             else:
-                self._curr_exporter.convert_model(self._curr_model,
-                                               wanted_lorentz,
-                                               wanted_couplings)
+                for npwave in aloha.npwave:
+                    if npwave == 0:
+                        aloha.dual_mode = False
+                    else:
+                        aloha.dual_mode = True
+                    self._curr_exporter.convert_model(self._curr_model,
+                                                   wanted_lorentz,
+                                                   wanted_couplings,
+                                                   npwave)
                 if hasattr(self, '_me_curr_exporter') and self._me_curr_exporter:
                     self._me_curr_exporter.convert_model(self._curr_model,
                                                wanted_lorentz,

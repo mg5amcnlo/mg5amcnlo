@@ -3518,6 +3518,7 @@ class Process(PhysicsObject):
                 if prevleg.get('onium'):
                     if prevleg.get('onium').get('index') == leg.get('onium').get('index'):
                         mystr = mystr + leg.get('onium').get('name')
+                        mystr = mystr.replace('|','').replace('(','').replace(')','')
             elif mypart['is_part']:
                 mystr = mystr + mypart['name']
             else:

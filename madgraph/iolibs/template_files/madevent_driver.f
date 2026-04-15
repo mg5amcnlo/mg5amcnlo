@@ -53,6 +53,7 @@ c
 c     c
       include 'vector.inc'
       include 'run.inc'
+      include 'ldme.inc'
       
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig

@@ -16,6 +16,7 @@ c
       include 'cuts.inc'
       include '../../Source/vector.inc'
       include '../../Source/run.inc'
+      include '../../Source/ldme.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -295,6 +296,7 @@ c
       include 'maxconfigs.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
+      include '../../Source/ldme.inc'
       double precision zero
       parameter       (zero=0d0)
 c      include 'run_config.inc'
@@ -444,6 +446,7 @@ c
       include 'maxconfigs.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
+      include '../../Source/ldme.inc'
       double precision zero
       parameter       (zero=0d0)
       integer    imax

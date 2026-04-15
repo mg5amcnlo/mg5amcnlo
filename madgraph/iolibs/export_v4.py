@@ -150,7 +150,7 @@ class VirtualExporter(object):
         """
         return
 
-    def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[]):
+    def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[], npwave=0):
         return
 
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag, second_exporter=None):
@@ -808,12 +808,22 @@ param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
+        dual_libs = ''
+        dhelas_dual = ''
+        for npwave in aloha.npwave:
+            if npwave > 0:
+                dual_libs += ' $(LIBDIR)libdhelas%i.$(libext)'%npwave
+                dhelas_dual += '\n$(LIBDIR)libdhelas%i.$(libext): DHELAS%i\n'%(npwave,npwave)
+                dhelas_dual += '\tcd DHELAS%i; make; cd ..'%npwave
+
         replace_dict= {'libraries': set_of_lib,
                        'model':model_line,
                        'additional_dsample': '',
                        'additional_dependencies':'',
                        'additional_clean':'',
-                       'running': ''}
+                       'running': '',
+                       'dual_libs': dual_libs,
+                       'dhelas_dual': dhelas_dual}
 
         if self.opt['running']:
             replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
@@ -913,13 +923,30 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
             if wf.get('onium'):
+                # if onium == -1:
+                #     onium = wf.get('onium').get('index')
+                #     mass = "mdl_M%i"%wf.get('onium').get('id')
+                # elif onium == wf.get('onium').get('index'):
+                #     onium = -1
+                #     counter += 1
+                #     continue
                 if onium == -1:
                     onium = wf.get('onium').get('index')
-                    mass = "mdl_M%i"%wf.get('onium').get('id')
-                elif onium == wf.get('onium').get('index'):
-                    onium = -1
+                    if mass.lower() != "zero":
+                        onium_mass = "abs(%s)" % mass
+                    else:
+                        onium_mass = mass
                     counter += 1
                     continue
+                elif onium == wf.get('onium').get('index'):
+                    onium = -1
+                    if mass.lower() != "zero":
+                        mass = "abs(%s)" % mass
+                    if onium_mass.lower() != "zero":
+                        if mass.lower() != "zero":
+                            mass = onium_mass+"+"+mass
+                        else:
+                            mass = onium_mass
                 else:
                     raise MadGraph5Error("The file 'pmass.inc' cannot be produced.")
             elif mass.lower() != "zero":
@@ -1331,7 +1358,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     #===========================================================================
 
     def convert_model(self, model, wanted_lorentz = [],
-                             wanted_couplings = []):
+                             wanted_couplings = [],
+                             npwave = 0):
         """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
 
         # Make sure aloha is in quadruple precision if needed
@@ -1377,6 +1405,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Write them out
         write_dir=pjoin(self.dir_path, 'Source', 'DHELAS')
+        if npwave > 0:
+            write_dir=pjoin(self.dir_path, 'Source', 'DHELAS%i'%npwave)
         options= {}
         options['vector.inc'] = True if self.opt['export_format']=='madevent' else False
         aloha_model.write(write_dir, 'Fortran', options=options)
@@ -1391,8 +1421,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f',
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
-        elif aloha.dual_mode:
+        elif npwave>0:
             cp(MG5DIR + '/aloha/template_files/Makefile_F_dual', write_dir+'/makefile')
+            content = []
+            with open(write_dir+'/makefile', 'r') as f:
+                for line in f.readlines():
+                    content.append(line.replace('__npwave__',str(npwave)))
+            with open(write_dir+'/makefile', 'w') as f:
+                for line in content:
+                    f.write(line)
             cp(MG5DIR + '/aloha/template_files/aloha_functions_dual.f',
                                                  write_dir+'/aloha_functions.f')
             cp(MG5DIR + '/aloha/template_files/dual_variables.f',
@@ -3557,10 +3594,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             filename = pjoin(dirpath, 'onia.inc')
             self.write_onia_file(writers.FortranWriter(filename),
                          matrix_element)
-            if matrix_element.get_npwave()>0:
-                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'dual_opts.inc')
-                self.write_dual_opts_file(writers.FortranWriter(filename),
-                            matrix_element)
+
+            npwave = matrix_element.get_npwave()
+            if npwave>0:
+                helas_dir = pjoin(self.dir_path, 'Source', 'DHELAS')
+                try:
+                    helas_dir_copy = pjoin(self.dir_path, 'Source', 'DHELAS%s'%(npwave))
+                    cp(helas_dir,helas_dir_copy)
+                    filename = pjoin(helas_dir_copy, 'dual_opts.inc')
+                    self.write_dual_opts_file(writers.FortranWriter(filename),
+                                matrix_element)
+                except FileExistsError:
+                    pass
 
             filename = pjoin(dirpath, 'pmassonia.inc')
             self.write_pmassonia_file(writers.FortranWriter(filename),
@@ -3601,7 +3646,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         for file in linkfiles:
             ln('../%s' % file, cwd=dirpath)
-        ln('../makefileP', name='makefile', cwd=dirpath)
+        if matrix_element.get_npwave()>0:
+            npwave = matrix_element.get_npwave()
+            path1 = pjoin(dirpath,'../makefileP')
+            path2 = pjoin(dirpath,'makefile')
+            with open(path1, "r") as f:
+                content = f.readlines()
+            with open(path2, "w") as f:
+                for line in content:
+                    l = line.replace('dhelas','dhelas%i'%npwave).replace('DHELAS','DHELAS%i'%npwave)
+                    f.write(l)
+                    if 'make_opts' in line:
+                        f.write('FFLAGS += -I../../Source/DHELAS%i\n'%npwave)
+        else:
+            ln('../makefileP', name='makefile', cwd=dirpath)
         # Return to original PWD
         #os.chdir(cwd)
 
@@ -3618,6 +3676,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
+        dual_libs = ''
+        dhelas_dual = ''
+        for npwave in aloha.npwave:
+            if npwave > 0:
+                dual_libs += ' $(LIBDIR)libdhelas%i.$(libext)'%npwave
+                dhelas_dual += '\n$(LIBDIR)libdhelas%i.$(libext): DHELAS%i\n'%(npwave,npwave)
+                dhelas_dual += '\tcd DHELAS%i; make; cd ..'%npwave
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
         if model['running_elements']:
@@ -3631,7 +3696,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                        'additional_dsample': '',
                        'additional_dependencies':'',
                        'additional_clean':'',
-                       'running': running_line}
+                       'running': running_line,
+                       'dual_libs': dual_libs,
+                       'dhelas_dual': dhelas_dual}
 
         text = open(path).read() % replace_dict
 
@@ -3779,10 +3846,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if matrix_element.get_nonia()>0:
             if not 'onia' in matrix_template:
-                if matrix_element.get_npwave()>0:
-                    matrix_template = matrix_template.replace('.inc','_onia_pwave.inc')
-                else:
-                    matrix_template = matrix_template.replace('.inc','_onia.inc')
+                matrix_template = matrix_template.replace('.inc','_onia.inc')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
@@ -4062,10 +4126,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # convert_model
     #===========================================================================
     def convert_model(self, model, wanted_lorentz = [],
-                                                         wanted_couplings = []):
+                             wanted_couplings = [], npwave = 0):
 
         super(ProcessExporterFortranMW,self).convert_model(model,
-                                               wanted_lorentz, wanted_couplings)
+                                               wanted_lorentz, wanted_couplings, npwave)
 
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
@@ -4952,10 +5016,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
     def convert_model(self, model, wanted_lorentz = [],
-                                                         wanted_couplings = []):
+                            wanted_couplings = [], npwave = 0):
 
         super(ProcessExporterFortranME,self).convert_model(model,
-                                               wanted_lorentz, wanted_couplings)
+                                               wanted_lorentz, wanted_couplings, npwave)
 
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
@@ -5214,7 +5278,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'ldme.inc'
                      ]
 
-    def link_files_in_SubProcess(self, Ppath):
+    def link_files_in_SubProcess(self, Ppath, create_makefile = True):
         """ Create the necessary links in the P* directory path Ppath"""
 
         #import genps.inc and maxconfigs.inc into Subprocesses
@@ -5226,6 +5290,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         linkfiles = self.link_Sub_files
 
         for file in linkfiles:
+            if 'makefile' in file and not create_makefile:
+                continue
             ln('../' + file , cwd=Ppath)
 
 
@@ -5599,8 +5665,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                  T=T*(2d0-ABS(POL(%(bid)i)))
                ENDIF """ % {'bid': i+1}
 
+        if aloha.dual_mode:
+            tmpl = self.matrix_file.replace('.inc','_pwave.inc')
+        else:
+            tmpl = self.matrix_file
+
         replace_dict['template_file'] = pjoin(_file_path, \
-                          'iolibs/template_files/%s' % self.matrix_file)
+                          'iolibs/template_files/%s' % tmpl)
         replace_dict['template_file2'] = pjoin(_file_path, \
                           'iolibs/template_files/split_orders_helping_functions.inc')
 
@@ -7042,14 +7113,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         contains_onia = False
         if matrix_elements[0].get_nonia()>0:
+            if matrix_elements[0].get_npwave()>0:
+                aloha.dual_mode = True
+            else:
+                aloha.dual_mode = False
+
             self.opt['hel_recycling'] = False
             if not contains_onia:
                 if 'onia' not in self.matrix_file:
-                    if matrix_elements[0].get_npwave()>0:
-                        self.matrix_file = self.matrix_file.replace('.inc',"_onia_pwave.inc")
-                        print("condition taken: ", self.matrix_file)
-                    else:
-                        self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+                    self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
                 contains_onia = True
 
         # Add the driver.f, all grouped ME's must share the same number of
@@ -7249,10 +7321,18 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             filename = 'onia.inc'
             self.write_onia_file(writers.FortranWriter(filename),
                              matrix_element)
-            if matrix_element.get_npwave()>0:
-                filename = pjoin(self.dir_path, 'Source', 'DHELAS', 'dual_opts.inc')
-                self.write_dual_opts_file(writers.FortranWriter(filename),
-                            matrix_element)
+
+            npwave = matrix_element.get_npwave()
+            if npwave>0:
+                helas_dir = pjoin(self.dir_path, 'Source', 'DHELAS')
+                try:
+                    helas_dir_copy = pjoin(self.dir_path, 'Source', 'DHELAS%s'%(npwave))
+                    cp(helas_dir,helas_dir_copy)
+                    filename = pjoin(helas_dir_copy, 'dual_opts.inc')
+                    self.write_dual_opts_file(writers.FortranWriter(filename),
+                                matrix_element)
+                except FileExistsError:
+                    pass
 
             filename = 'pmassonia.inc'
             self.write_pmassonia_file(writers.FortranWriter(filename),
@@ -7296,7 +7376,22 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Generate jpgs -> pass in make_html
         #os.system(pjoin('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        self.link_files_in_SubProcess(pjoin(pathdir,subprocdir))
+
+        if matrix_element.get_npwave()>0:
+            npwave = matrix_element.get_npwave()
+            path1 = pjoin(pathdir,'makefile')
+            path2 = pjoin(pathdir,subprocdir,'makefile')
+            with open(path1, "r") as f:
+                content = f.readlines()
+            with open(path2, "w") as f:
+                for line in content:
+                    l = line.replace('dhelas','dhelas%i'%npwave).replace('DHELAS','DHELAS%i'%npwave)
+                    f.write(l)
+                    if 'make_opts' in line:
+                        f.write('MATRIX_FLAG += -I../../Source/DHELAS%i\n'%npwave)
+            self.link_files_in_SubProcess(pjoin(pathdir,subprocdir), False)
+        else:
+            self.link_files_in_SubProcess(pjoin(pathdir,subprocdir))
 
         #import nexternal/leshouch in Source
         ln('nexternal.inc', '../../Source', log=False)

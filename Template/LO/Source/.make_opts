@@ -126,13 +126,6 @@ else
   llhapdf=
 endif
 
-# Link dual module if needed
-
-PATH_TO_DUAL_MODULE=../../Source/DHELAS/dual_variables.mod
-ifneq ("$(wildcard $(PATH_TO_DUAL_MODULE))","")
-    FFLAGS+= -I../../Source/DHELAS/
-endif
-
 
 # Helper function to check MG5 version
 define CHECK_MG5AMC_VERSION

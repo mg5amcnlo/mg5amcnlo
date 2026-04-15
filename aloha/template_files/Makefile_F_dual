@@ -13,7 +13,8 @@
 
 include ../make_opts
 
-LIBRARY	= libdhelas.$(libext)
+NPWAVE = __npwave__
+LIBRARY	= libdhelas$(NPWAVE).$(libext)
 LIBDIR  = ../../lib/
 
 BASIC_OBJS = dual_variables.o aloha_functions.o
