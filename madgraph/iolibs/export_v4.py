@@ -3846,7 +3846,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if matrix_element.get_nonia()>0:
             if not 'onia' in matrix_template:
-                matrix_template = matrix_template.replace('.inc','_onia.inc')
+                if matrix_element.get_npwave()==0:
+                    matrix_template = matrix_template.replace('.inc','_onia.inc')
+                else:
+                    matrix_template = matrix_template.replace('.inc','_onia_pwave.inc')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
             replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
