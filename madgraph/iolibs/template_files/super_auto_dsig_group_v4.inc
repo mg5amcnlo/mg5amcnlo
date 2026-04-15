@@ -1116,10 +1116,12 @@ c
 	integer i,j
 	double precision xtarget
 
-    if (ickkw.gt.0.and.ivec.eq.0) then
-        iconfig = igraphs(1)
-    else
-        iconfig = vec_igraph(ivec)
+    if (ickkw.gt.0) then
+        if (ivec.eq.0) then
+            iconfig = igraphs(1)
+        else
+            iconfig = vec_igraph(ivec)
+        endif
     endif   
 
 
