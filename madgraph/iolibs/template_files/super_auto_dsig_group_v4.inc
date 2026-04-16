@@ -1121,6 +1121,10 @@ c
             iconfig = igraphs(1)
         else
             iconfig = vec_igraph(ivec)
+            if(iconfig.eq.0)then
+              icol =0 
+              return
+            endif
         endif
     endif   
 
