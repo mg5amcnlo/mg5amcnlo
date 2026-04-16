@@ -343,7 +343,7 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
         
         return [((state, part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
-                 leg.get('number'))]
+                 leg.get('number'),leg.get('onium'),leg.get('eatom'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):

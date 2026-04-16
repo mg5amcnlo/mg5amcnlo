@@ -181,7 +181,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         return [((number, id, part.get('spin'), leg.get('onshell'),
                   part.get('is_part'), part.get('self_antipart'),
                   part.get('mass'), part.get('width'), part.get('color')),
-                 leg.get('number'))]
+                 leg.get('number'), leg.get('onium'), leg.get('eatom'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -449,7 +449,8 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         
         return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
-                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+                 (leg.get('number'),leg.get('id'),leg.get('state'),
+                  leg.get('onium'),leg.get('eatom')))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -512,6 +513,8 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             leg = base_objects.Leg({'number':link.links[0][1][0],
                                      'id':link.links[0][1][1],
                                      'state':link.links[0][1][2],
+                                     'onium':link.links[0][1][3],
+                                     'eatom':link.links[0][1][4],
                                      'onshell':None})
             return leg
         # This shouldn't happen
@@ -650,6 +653,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #
         #
         self['polarization'] = []
+        self['onium'] = {}
+        self['eatom'] = {}
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -706,6 +711,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 else:
                     self.set('polarization', leg.get('polarization'))
                 self.set('interaction_id', interaction_id, model)
+                self.set('onium', leg.get('onium'))
+                self.set('eatom', leg.get('eatom'))
         elif arguments:
             super(HelasWavefunction, self).__init__(arguments[0])
         else:
@@ -843,6 +850,41 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if i not in [-1, 1, 2, -2, 3, -3, 0, 99]:
                     raise self.PhysicsObjectError( \
                       "%s is not a valid polarization" % str(value))
+
+        elif name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+	                "%s is not a valid dict" % str(value))
+            
+            if value:
+                if not value['N'] > 0:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
+
+        elif name == 'eatom':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+	                "%s is not a valid dict" % str(value))
+            
+            if value:
+                if not value['Z'] > 0:
+                    raise self.PhysicsObjectError( \
+		      " %s is not a valid atomic number" % str(value['Z']))
+                if not value['A'] > 0 or value['A'] < value['Z']:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid atomic mass number" % str(value['A']))
 
         return True
 
@@ -1510,6 +1552,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             return_dict['state_id'] = -(-1) ** self.get_with_flow('is_part')
         return_dict['number_external'] = self.get('number_external')
+        
+        if self.get('eatom'):
+            return_dict['atom_A'] = self.get('eatom').get('A')
+            return_dict['atom_Z'] = self.get('eatom').get('Z')
         
         return return_dict
 
@@ -4738,6 +4784,87 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return sum([ len(d.get('amplitudes')) for d in \
                        self.get('diagrams')])
 
+    def get_nonia(self):
+        """Gives the total number of external onia states"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+        nonia = 0
+        for wf in external_wfs:
+            if wf.get('onium'):
+               nonia +=1
+
+        if nonia%2:
+            raise MadGraph5Error("Odd number of quarkonia constituents detected.")
+        else:
+            nonia /= 2
+
+        return int(nonia)
+
+    def get_onia_pairs(self):
+        """Gives the total number of external onia states"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+
+        pairs = []
+        onia = [-1,-1]
+        for wf in external_wfs:
+            if wf.get('onium'):
+                if onia[0] < 0:
+                    onia = [wf.get('onium').get('index'),wf.get('number')]
+                elif onia[0] == wf.get('onium').get('index'):
+                    pairs.append((onia[1],wf.get('number')))
+                    onia[0] = -1
+                else:
+                    raise MadGraph5Error("Quarkonia constituents cannot be matched.")
+
+        return pairs
+
+    def get_natom(self):
+        """Gives the total number of external atoms"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+        natom = 0
+        for wf in external_wfs:
+            if wf.get('eatom'):
+               natom +=1
+
+        return int(natom)
+
+    def get_initial_natom(self):
+        """Gives the total number of external initial atoms"""
+
+        initial_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')\
+                        and wf.get('state') == 'initial']
+        natom = 0
+        for wf in initial_wfs:
+            if wf.get('eatom'):
+               natom +=1
+
+        return int(natom)
+
+    def get_eatom_numbers(self):
+        """Returns the wavefunction numbers for external atoms"""
+
+        external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
+        atoms = []
+        for wf in external_wfs:
+            if wf.get('eatom'):
+                atoms.append(wf.get('number'))
+
+        return atoms
+
+    def get_initial_eatom_numbers(self):
+        """Returns the wavefunction numbers for initial atoms"""
+
+        initial_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')\
+                       and wf.get('state') == 'initial']
+        atoms = []
+        for wf in initial_wfs:
+            if wf.get('eatom'):
+                atoms.append(wf.get('number'))
+
+        return atoms
+
     def get_nexternal_ninitial(self):
         """Gives (number or external particles, number of
         incoming particles)"""
@@ -4778,6 +4905,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code')].get_helicity_states())
             for wf in self.get_external_wavefunctions()]
 
+        if self.get_nonia()>0:
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            external_wavefunctions = self.get_external_wavefunctions()
+            for pair in onia_pairs:
+                hel_per_part[pair[0]-1] = int(2*external_wavefunctions[pair[0]-1].get('onium').get('S')+1)
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
+
+        if self.get_natom()>0:
+            atoms = self.get_eatom_numbers()
+            external_wavefunctions = self.get_external_wavefunctions()
+            for atom in atoms:
+                hel_per_part[atom-1] = 2*len(external_wavefunctions[atom-1].get('eatom').get('shells')) 
+
         return reduce(lambda x, y: x * y,
                       hel_per_part)
 
@@ -4793,6 +4936,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         else model.get('particle_dict')[\
                                   wf.get('pdg_code')].get_helicity_states(allow_reverse)
             for wf in self.get_external_wavefunctions()]
+
+        if self.get_nonia()>0:
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            external_wavefunctions = self.get_external_wavefunctions()
+            for pair in onia_pairs:
+                s = external_wavefunctions[pair[0]-1].get('onium').get('S')
+                hel = [i for i in range(-s,s+1,1)]
+                hel_per_part[pair[0]-1] = hel
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
+
+        if self.get_natom()>0:
+            atoms = self.get_eatom_numbers()
+            external_wavefunctions = self.get_external_wavefunctions()
+            offset = 10000
+            for atom in atoms:
+                shells = external_wavefunctions[atom-1].get('eatom').get('shells')
+                hel = [sign*(shell+offset) for shell in shells for sign in (1, -1)]
+                hel_per_part[atom-1] = hel
+
+        
         return itertools.product(*hel_per_part)
 
 
@@ -4803,7 +4969,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         state spin only """
         
         model = self.get('processes')[0].get('model')
-        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False]
+        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False and not leg.get('eatom')]
         hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
                         else len(model.get('particle_dict')[\
                                   leg.get('id')].get_helicity_states())
@@ -4823,6 +4989,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         if len(hel_per_part) == 1:
             hel_per_part.append(0)
+
+        if self.get_initial_natom()>0:
+            atoms = self.get_initial_eatom_numbers()
+            external_wavefunctions = self.get_external_wavefunctions()
+            for atom in atoms:
+                hel_per_part[atom-1] = 2*len(external_wavefunctions[atom-1].get('eatom').get('shells'))
         
         return hel_per_part
 
@@ -4838,6 +5010,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         if len(hel_per_part) == 1:
             hel_per_part.append(0)
+
+        if self.get_nonia()>0:
+            onia_pairs = self.get_onia_pairs()
+            constituent = []
+            legs = [leg for leg in self.get('processes')[0].get('legs')]
+            for pair in onia_pairs:
+                hel_per_part[pair[0]-1] = int(2*legs[pair[0]-1].get('onium').get('S')+1)
+                constituent.append(pair[1])
+            for i in sorted(constituent, reverse=True):
+                del hel_per_part[i-1]
+
+        if self.get_natom()>0:
+            atoms = self.get_eatom_numbers()
+            external_wavefunctions = self.get_external_wavefunctions()
+            for atom in atoms:
+                hel_per_part[atom-1] = 2*len(external_wavefunctions[atom-1].get('eatom').get('shells'))
             
         return hel_per_part
 

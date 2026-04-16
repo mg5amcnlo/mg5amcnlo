@@ -676,7 +676,7 @@ class FortranHelasCallWriter(HelasCallWriter):
             return
 
         if isinstance(argument, helas_objects.HelasWavefunction) and \
-               not argument.get('mothers'):
+               not argument.get('mothers') and not argument.get('eatom'):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = call + HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()]
@@ -710,6 +710,16 @@ class FortranHelasCallWriter(HelasCallWriter):
                                  wf.get('number_external'),
                                  # For fermions, need particle/antiparticle
                                  - (-1) ** wf.get_with_flow('is_part'),
+                                 wf.get('number_external'),
+                                 wf.get('me_id'))
+        elif isinstance(argument, helas_objects.HelasWavefunction) and \
+               not argument.get('mothers') and argument.get('eatom'):
+            # for bounded electrons in atoms
+            call = call + "EATOM_WF(%d,%d,NHEL(%d),P(0,%d),W(1,%d))"
+            call_function = lambda wf: call % \
+                                (wf.get('eatom').get('A'),
+                                 wf.get('eatom').get('Z'),
+                                 wf.get('number_external'),
                                  wf.get('number_external'),
                                  wf.get('me_id'))
         else:
@@ -1130,6 +1140,10 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call_function = None
         if argument.get('is_loop'):
             call=call+"LCUT_%(conjugate)s%(lcutspinletter)s(Q(0),I,WL(1,%(number)d))"
+        elif argument.get('eatom'):
+            call = call + "EATOM(%(atom_A)d,%(atom_Z)d,NHEL(%(number_external)d),"
+            call = call + "P(0,%(number_external)d),{0})".format(\
+                                    self.format_helas_object('W(1,','%(me_id)d'))
         else:
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = call + HelasCallWriter.mother_dict[\

@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -905,12 +905,141 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model = matrix_element.get('processes')[0].get('model')
         
         lines = []
+        onium = -1
+        onium_mass = 0
+        counter = 0
+        for wf in matrix_element.get_external_wavefunctions():
+            mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+            if wf.get('onium'):
+                if onium == -1:
+                    onium = wf.get('onium').get('index')
+                    if mass.lower() != "zero":
+                        onium_mass = "abs(%s)" % mass
+                    else:
+                        onium_mass = mass
+                    counter += 1
+                    continue
+                elif onium == wf.get('onium').get('index'):
+                    onium = -1
+                    if mass.lower() != "zero":
+                        mass = "abs(%s)" % mass
+                    if onium_mass.lower() != "zero":
+                        if mass.lower() != "zero":
+                            mass = onium_mass+"+"+mass
+                        else:
+                            mass = onium_mass
+                else:
+                    raise MadGraph5Error("The file 'pmass.inc' cannot be produced.")
+            elif mass.lower() != "zero":
+                mass = "abs(%s)" % mass
+
+            lines.append("pmass(%d)=%s" % \
+                         (wf.get('number_external'), mass))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_onia_file
+    #===========================================================================
+    def write_onia_file(self, writer, matrix_element):
+        """Write the onia.inc file for MG4"""
+
+        model = matrix_element.get('processes')[0].get('model')
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
+
+        lines = []
+        lines.append("INTEGER    NONIA")
+        lines.append("PARAMETER (NONIA=%d)"%nonia)
+
+        # Get mapping between production of bound states and open production mode
+        mapping = []
+        pairs = []
+        n = []
+        s = []
+        l = []
+        j = []
+        c = []
+        onia = [0]*nonia
+        onium = -1
+        onium_mass = 0
+        counter = 0
+        for wf in matrix_element.get_external_wavefunctions():
+            mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
+            if wf.get('onium'):
+                if onium == -1:
+                    onium = wf.get('onium').get('index')
+                    mapping.append(wf.get('number_external')-counter)
+                    if wf.get('is_part'):
+                        pairs.append(wf.get('onium').get('index')+1)
+                    else:
+                        pairs.append(-(wf.get('onium').get('index')+1))
+                    n.append(wf.get('onium').get('N'))
+                    s.append(wf.get('onium').get('S'))
+                    l.append(wf.get('onium').get('L'))
+                    j.append(wf.get('onium').get('J'))
+                    c.append(wf.get('onium').get('C'))
+                    onia[onium] = wf.get('number')-counter
+                    counter += 1
+                    continue
+                elif onium == wf.get('onium').get('index'):
+                    onium = -1
+                    if wf.get('is_part'):
+                        pairs.append(wf.get('onium').get('index')+1)
+                    else:
+                        pairs.append(-(wf.get('onium').get('index')+1))
+                else:
+                    raise MadGraph5Error("The file 'onia.inc' cannot be produced.")
+            else:
+                pairs.append(0)
+            mapping.append(wf.get('number_external')-counter)
+
+        lines.append("\nINTEGER MAPPING(%i)"%(nexternal+nonia))
+        lines.append("INTEGER PAIRS(%i)"%(nexternal+nonia))
+        lines.append("DATA (MAPPING(i),i=1,%d)/%s/" % \
+                         (nexternal+nonia,",".join(str(x) for x in mapping)))
+        lines.append("DATA (PAIRS(i),i=1,%d)/%s/" % \
+                         (nexternal+nonia,",".join(str(x) for x in pairs)))
+
+        lines.append("\nINTEGER ONIA(NONIA), N_ONIA(NONIA), S_ONIA(NONIA), L_ONIA(NONIA), J_ONIA(NONIA), C_ONIA(NONIA)")
+        lines.append("DATA (ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in onia)))
+        lines.append("DATA (N_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in n)))
+        lines.append("DATA (S_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in s)))
+        lines.append("DATA (L_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in l)))
+        lines.append("DATA (J_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in j)))
+        lines.append("DATA (C_ONIA(i),i=1,%d)/%s/" % \
+                         (nonia,",".join(str(x) for x in c)))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_pmassonia_file
+    #===========================================================================
+    def write_pmassonia_file(self, writer, matrix_element):
+        """Write the onia.inc file for MG4"""
+
+        model = matrix_element.get('processes')[0].get('model')
+
+        lines = []
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
             if mass.lower() != "zero":
                 mass = "abs(%s)" % mass
 
-            lines.append("pmass(%d)=%s" % \
+            lines.append("pmass_onia(%d)=%s" % \
                          (wf.get('number_external'), mass))
 
         # Write the file
@@ -956,9 +1085,26 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
+
+            idup = []
+            onium = False
+            for l in legs:
+                if l.get('onium'):
+                    if not onium:
+                        onium = True
+                        idup.append(str(l.get('onium').get('id')))
+                    else:
+                        onium = False
+                        continue
+                elif l.get('eatom'):
+                    idup.append(str(l.get('eatom').get('id')))
+                else:
+                    idup.append(str(l.get('id')))
+
             lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
                          (iproc + 1, numproc+1, nexternal,
-                          ",".join([str(l.get('id')) for l in legs])))
+                          ",".join(idup)))
+            
             if iproc == 0 and numproc == 0:
                 for i in [1, 2]:
                     lines.append("DATA (MOTHUP(%d,i),i=1,%2r)/%s/" % \
@@ -979,10 +1125,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 else:
                     # First build a color representation dictionnary
                     repr_dict = {}
+                    onium = False
                     for l in legs:
-                        repr_dict[l.get('number')] = \
-                            proc.get('model').get_particle(l.get('id')).get_color()\
-                            * (-1)**(1+l.get('state'))
+                        if l.get('onium'):
+                            if not onium:
+                                onium = True
+                                repr_dict[l.get('number')] = \
+                                    l.get('onium').get('C')\
+                                    * (-1)**(1+l.get('state'))
+                            else:
+                                onium = False
+                                continue
+                        else:
+                            repr_dict[l.get('number')] = \
+                                proc.get('model').get_particle(l.get('id')).get_color()\
+                                * (-1)**(1+l.get('state'))
+                            
                     # Get the list of color flows
                     color_flow_list = \
                         matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
@@ -990,11 +1148,23 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
+                            color_flow = []
+                            onium = False
+                            for l in legs:
+                                if l.get('onium'):
+                                    if not onium:
+                                        onium = True
+                                        color_flow.append("%3r" % color_flow_dict[l.get('number')][i])
+                                    else:
+                                        onium = False
+                                        continue
+                                else:
+                                    color_flow.append("%3r" % color_flow_dict[l.get('number')][i])
+
                             lines.append("DATA (ICOLUP(%d,i,%d,%d),i=1,%2r)/%s/" % \
                                  (i + 1, cf_i + 1, numproc+1, nexternal,
-                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
-                                            for l in legs])))
-
+                                  ",".join(color_flow)))
+                                    
         return lines
 
 
@@ -2285,6 +2455,230 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return s_and_t_channels
 
     #===========================================================================
+    # export the onia files
+    #===========================================================================
+    def export_onia_files(self, matrix_elements):
+        """Configure the files/link of the process according to the model"""
+
+        contains_onia = False
+        if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            for matrix_element in matrix_elements:
+                for me in matrix_element.get('matrix_elements'):
+                    if me.get_nonia() > 0:
+                        contains_onia = True
+                        break
+                if contains_onia:
+                    break
+
+        if contains_onia:
+
+            (onia_info, onia_ids) = self.get_onia_info(matrix_elements)
+
+            self.create_onia_card(onia_info)
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
+            self.write_ldme_file(writers.FortranWriter(filename),
+                         onia_ids)
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
+            self.write_onia_read(writers.FortranWriter(filename),
+                         onia_ids)
+
+            filename = pjoin(self.dir_path, 'Cards', 'ident_card.dat')
+            self.extend_ident_card(filename, onia_ids)
+
+            try:
+                if self.format == 'standalone':
+                    shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa_onia.f'),
+                            pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+            except:
+                pass
+
+            model_path = self.dir_path + '/Source/MODEL/'
+            ln(model_path + '/ldme.inc', self.dir_path + '/Source')
+            ln(model_path + '/ldme.inc', self.dir_path + '/SubProcesses')
+
+        else:
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
+            self.write_ldme_file(writers.FortranWriter(filename),
+                         [])
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
+            self.write_onia_read(writers.FortranWriter(filename),
+                         [])
+
+
+    def create_onia_card(self, onia_info):
+        """ """
+
+        shutil.copy(pjoin(self.mgme_dir, 'Template/Common/Cards/onia_card.dat'),
+                               pjoin(self.dir_path,'Cards'))
+
+        # create onia_card
+        for card in ['onia_card']:
+            ldme_default = {}
+            modelname = self.model.get('name').split('-')[0]
+            with open(pjoin(self.mgme_dir, 'models', modelname, 'ldme.dat')) as f:
+                for line in f:
+                    if line.startswith('#'):
+                        continue
+                    if line.split():
+                        ldme_default[int(line.split()[0])] = float(line.split()[1])
+
+            if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                try:
+                    with open(pjoin(self.dir_path, 'Cards',card + '_default.dat'), 'w') as f:
+                        with open(pjoin(self.dir_path, 'Cards',card + '.dat'),'r') as source:
+                            shutil.copyfileobj(source, f)
+                        f.write('Block ldme\n')
+                        for onium_info in onia_info:
+                            try:
+                                default_value = ldme_default[onium_info[0]]
+                            except:
+                                default_value = 1.
+                            f.write('   {id}  {value:.16f}   # LDME for {name}\n'.format(id=onium_info[0],name=onium_info[1],value=default_value))
+                    shutil.copy(pjoin(self.dir_path, 'Cards',card + '_default.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '.dat'))
+                except IOError:
+                    logger.warning("Failed to copy " + card + ".dat to default")
+
+
+    def get_onia_info(self, matrix_elements):
+
+        info = []
+        for matrix_element in matrix_elements:
+            for me in matrix_element.get('matrix_elements'):
+                for proc in me.get('processes'):
+                    for leg in proc.get('legs'):
+                        if leg.get('onium'):
+                            info += [[abs(leg.get('onium').get('id')),leg.get('onium').get('name').replace('+','').replace('-','')]]
+
+        info = sorted(info, key=lambda x: (x[0]))
+        for i in reversed(range(1,len(info))):
+            if info[i]==info[i-1]:
+                del info[i]
+
+        ids = [x[0] for x in info]
+
+        return info, ids
+
+
+    def write_ldme_file(self, writer, onia_ids):
+        """ write ldme.inc """
+
+        ldmes = ["LDME_%i"%(onium_id) for onium_id in onia_ids]
+
+        lines = []
+        if onia_ids:
+            lines.append("DOUBLE PRECISION %s"% \
+                            (",".join(str(x) for x in ldmes)))
+            lines.append("COMMON/LDME/ %s"% \
+                            (",".join(str(x) for x in ldmes)))
+
+        # Write the file
+        writer.writelines(lines)
+
+
+    def write_onia_read(self, writer, onia_ids):
+        """write onia_read.inc"""
+
+        lines = []
+        for onium_id in onia_ids:
+            lines.append("CALL LHA_GET_REAL(NONIA,ONIA,VALUE,'LDME_{id}',LDME_{id},1D0)".format(id=onium_id))
+
+        # Write the file
+        writer.writelines(lines)
+
+    def extend_ident_card(self, card, onia_ids):
+        """append ldmes to ident_card.dat"""
+
+        if os.path.isfile(card):
+            with open(card, 'a') as f:
+                for onium_id in onia_ids:
+                    f.write("\nldme {id} LDME_{id}\n".format(id=onium_id))
+
+        else:
+            raise MadGraph5Error("LDMEs cannot be added to 'ident_card.dat'")
+
+    #===========================================================================
+    # Onia helper methods
+    #===========================================================================
+
+    def get_ldme_product(self, matrix_element):
+
+        onia = []
+        ldmes = []
+        for proc in matrix_element.get('processes'):
+            for leg in proc.get('legs'):
+                if leg.get('onium'):
+                    if leg.get('onium').get('index') not in onia:
+                        onia += [leg.get('onium').get('index')]
+                        ldmes += ['LDME_{id}'.format(id=abs(leg.get('onium').get('id')))]
+
+        ldme_product = '*'.join(ldmes)
+
+        return ldme_product
+
+    def get_ldme_perturbative(self, matrix_element):
+
+        ldmes = []
+        for proc in matrix_element.get('processes'):
+            onia = {}
+            for leg in proc.get('legs'):
+                if leg.get('onium'):
+                    # dileptionia have perturbative LDMEs
+                    if abs(leg.get('id')) in [11,13,15]:
+                        try:
+                            if onia[leg.get('onium').get('index')]:
+                                state = ''
+                                if (leg.get('onium').get('S')==0 and \
+                                    leg.get('onium').get('L')==0 and \
+                                    leg.get('onium').get('J')==0):
+                                    state = '1S0'
+                                elif (leg.get('onium').get('S')==1 and \
+                                    leg.get('onium').get('L')==0 and \
+                                    leg.get('onium').get('J')==1):
+                                    state = '3S1'
+                                id = abs((leg.get('onium').get('id')))
+                                particles = [onia[leg.get('onium').get('index')],abs(leg.get('id'))]
+                                ldmes.append((id,min(particles),max(particles),state,leg.get('onium').get('N')))
+                        except:
+                            onia[leg.get('onium').get('index')] = abs(leg.get('id'))
+
+        ldmes = sorted(list(set(ldmes)))
+        ldme_perturbative = ''
+        for ldme in ldmes:
+            alpha = 'ABS(GC_3)**2/16D0/ATAN(1D0)'
+            if ldme[1]==11:
+                mass1 = 'MDL_ME'
+            elif ldme[1]==13:
+                mass1 = 'MDL_MM'
+            elif ldme[1]==15:
+                mass1 = 'MDL_MTA'
+            if ldme[2]==11:
+                mass2 = 'MDL_ME'
+            elif ldme[2]==13:
+                mass2 = 'MDL_MM'
+            elif ldme[2]==15:
+                mass2 = 'MDL_MTA'
+
+            # dileptonia
+            # The perturbative LDME is multiplied by a factor Nc*N[C]=3*6 to undo the color normalization
+            # of the color projetion of the quarkonium color-singelt projector.
+            if ldme[3]=='1S0':
+                ldme_perturbative += 'LDME_{id} = 9D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+            elif ldme[3]=='3S1':
+                ldme_perturbative += 'LDME_{id} = 27D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+
+            if ldme[4]>1:
+                ldme_perturbative += '/{n}D0\n'.format(n=ldme[4]**3)
+            else:
+                ldme_perturbative += '\n'
+
+        return ldme_perturbative
+    
+
+    #===========================================================================
     # Global helper methods
     #===========================================================================
 
@@ -2937,6 +3331,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
                 self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
+
+        if matrix_element.get_nonia()>0:
+            if matrix_element.get_natom() == 0:
+                self.matrix_file = 'matrix_standalone_v4_onia.inc'
+            else:
+                self.matrix_file = 'matrix_standalone_v4_onia_eatom.inc'
+        else:
+            if matrix_element.get_natom()>0:
+                self.matrix_file = 'matrix_standalone_v4_eatom.inc'
+
                 
         replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -2976,6 +3380,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
+        if matrix_element.get_nonia()>0:
+            filename = pjoin(dirpath, 'onia.inc')
+            self.write_onia_file(writers.FortranWriter(filename),
+	                 matrix_element)
+
+            filename = pjoin(dirpath, 'pmassonia.inc')
+            self.write_pmassonia_file(writers.FortranWriter(filename),
+                         matrix_element)
+
         filename = pjoin(dirpath, 'pmass.inc')
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
@@ -2998,6 +3411,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
@@ -3184,9 +3599,21 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                    PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
             files.cp('nsqso_born.inc', '..')
 
-        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-
         matrix_template = self.matrix_template
+
+        if matrix_element.get_nonia()>0:
+            if not 'onia' in matrix_template:
+                matrix_template = matrix_template.replace('.inc','_onia.inc')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+            ldme_product = self.get_ldme_product(matrix_element)
+            ldme_perturbative = self.get_ldme_perturbative(matrix_element)
+            replace_dict['ldme_perturbative'] = ldme_perturbative
+            replace_dict['ldme_product'] = ldme_product
+
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        
         if self.opt['export_format']=='standalone_msP' :
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
@@ -3800,6 +4227,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
         linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -4434,6 +4863,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
 
         # Add the driver.f 
         ncomb = matrix_element.get_helicity_combinations()
@@ -4479,7 +4909,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         filename = pjoin(Ppath, 'decayBW.inc')
         self.write_decayBW_file(writers.FortranWriter(filename),
-                           s_and_t_channels)
+                                s_and_t_channels,nexternal,nonia)
 
         filename = pjoin(Ppath, 'dname.mg')
         self.write_dname_file(writers.FileWriter(filename),
@@ -4812,6 +5242,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+        if matrix_element.get_nonia()>0:
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('P(0','P_ONIA(0')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('NHEL(','NHEL_ONIA(')
+            replace_dict['helas_calls'] = replace_dict['helas_calls'].replace('IC(','IC_ONIA(')
+            ldme_perturbative = self.get_ldme_perturbative(matrix_element)
+            ldme_product = self.get_ldme_product(matrix_element)
+            replace_dict['ldme_perturbative'] = ldme_perturbative
+            replace_dict['ldme_product'] = ldme_product
 
         #adding the support for the fake width (forbidding too small width)
         mass_width = matrix_element.get_all_mass_widths()
@@ -5230,6 +5668,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                            for me in matrix_elements], []))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
+        onium_legs = []
+        for me in matrix_elements:
+            for proc in me.get('processes'):
+                for leg in proc.get('legs'):
+                    if leg.get('onium'):
+                        onium_legs.append((leg.get('onium').get('id'),leg.get('onium').get('C')))
+        onium_legs = sorted(list(set(onium_legs)))
+
         lines = """function get_color(ipdg)
         implicit none
         integer get_color, ipdg
@@ -5244,6 +5690,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             get_color=%d
             return
             """ % (part_id, model.get_particle(part_id).get_color())
+        for (part_id,part_color) in onium_legs:
+            lines += """else if(ipdg.eq.%d)then                                                                           
+            get_color=%d                                                                                                  
+            return                                                                                                        
+            """ % (part_id, part_color)
         # Dummy particle for multiparticle vertices with pdg given by
         # first code not in the model
         lines += """else if(ipdg.eq.%d)then
@@ -5563,7 +6014,138 @@ c           This is dummy particle used in multiparticle vertices
         writer.writelines(lines)
 
         return s_and_t_channels, nqcd_list
+
     
+    #===========================================================================
+    # write_configs_file_from_diagrams
+    #===========================================================================
+    def write_configs_file_from_onia_diagrams(self, writer, configs, mapconfigs,
+                                         nexternal, ninitial, model,
+                                         onia_pairs=None):
+        """Write the actual configs.inc file.                                                                             
+                                                                                                                          
+        configs is the diagrams corresponding to configs (each                                                            
+        diagrams is a list of corresponding diagrams for all                                                              
+        subprocesses, with None if there is no corresponding diagrams                                                     
+        for a given process).                                                                                             
+        mapconfigs gives the diagram number for each config.
+
+        For s-channels, we need to output one PDG for each subprocess in                                                  
+        the subprocess group, in order to be able to pick the right                                                       
+        one for multiprocesses."""
+
+        lines = []
+
+        s_and_t_channels = []
+
+        nqcd_list = []
+
+        vert_list = [max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs if [d for d in config if d][0].\
+                                                  get_vertex_leg_numbers()!=[]]
+        minvert = min(vert_list) if vert_list!=[] else 0
+
+        # Number of subprocesses
+        nsubprocs = len(configs[0])
+
+        nconfigs = 0
+
+        new_pdg = model.get_first_non_pdg()
+
+        for iconfig, helas_diags in enumerate(configs):
+            if any([vert > minvert for vert in
+                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
+                # Only 3-vertices allowed in configs.inc
+                continue
+            nconfigs += 1
+
+            # Need s- and t-channels for all subprocesses, including
+            # those that don't contribute to this config
+            empty_verts = []
+            stchannels = []
+            for h in helas_diags:
+                if h:
+                    # get_s_and_t_channels gives vertices starting from
+                    # final state external particles and working inwards
+                    stchannels.append(h.get('amplitudes')[0].\
+                                      get_s_and_t_channels(ninitial, model,
+                                                           new_pdg))
+                else:
+                    stchannels.append((empty_verts, None))
+
+
+            # For t-channels, just need the first non-empty one
+            tchannels = [t for s,t in stchannels if t != None][0]
+
+            # pass to ping-pong strategy for t-channel for 3 ore more T-channel
+            #  this is directly related to change in genps.f
+            tstrat = self.opt.get('t_strategy', 0)
+            if isinstance(self, madgraph.loop.loop_exporters.LoopInducedExporterMEGroup):
+                tstrat = 2
+            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat, self.model)
+
+            # For s_and_t_channels (to be used later) use only first config
+            s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
+                                     tchannels, tchannels_strategy])
+
+            # Make sure empty_verts is same length as real vertices
+            if any([s for s,t in stchannels]):
+                empty_verts[:] = [None]*max([len(s) for s,t in stchannels])
+
+                # Reorganize s-channel vertices to get a list of all
+                # subprocesses for each vertex
+                schannels = list(zip(*[s for s,t in stchannels]))
+            else:
+                schannels = []
+
+            allchannels = schannels
+            if len(tchannels) > 1:
+                # Write out tchannels only if there are any non-trivial ones
+                allchannels = schannels + tchannels
+
+            # Write out propagators for s-channel and t-channel vertices
+
+            lines.append("# Diagram %d" % (mapconfigs[iconfig]))
+            # Correspondance between the config and the diagram = amp2
+            lines.append("data mapconfig(%d)/%d/" % (nconfigs,
+                                                     mapconfigs[iconfig]))
+            lines.append("data tstrategy(%d)/%d/" % (nconfigs, tchannels_strategy))
+            # Number of QCD couplings in this diagram
+            nqcd = 0
+            for h in helas_diags:
+                if h:
+                    try:
+                        nqcd = h.calculate_orders()['QCD']
+                    except KeyError:
+                        pass
+                    break
+                else:
+                    continue
+
+            nqcd_list.append(nqcd)
+
+            leg1 = nexternal
+            leg2 = nexternal-1
+            for i in range(1,nexternal-2):
+                lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
+                             (-i, nconfigs, 2,
+                              ",".join([str(leg1),str(leg2)])))
+                lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
+                              (-i, nconfigs, 1,
+                              ",".join([str(d) for d in [21]])))
+                lines.append("data tprid(%d,%d)/0/" % \
+                              (-i, nconfigs))
+                leg2 = leg2-1
+                leg1 = -i
+
+        # Write out number of configs
+        lines.append("# Number of configs")
+        lines.append("data mapconfig(0)/%d/" % nconfigs)
+
+        # Write the file
+        writer.writelines(lines)
+
+        return s_and_t_channels, nqcd_list
 
 
     #===========================================================================
@@ -5882,7 +6464,7 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_decayBW_file
     #===========================================================================
-    def write_decayBW_file(self, writer, s_and_t_channels):
+    def write_decayBW_file(self, writer, s_and_t_channels, nexternal, nonia):
         """Write the decayBW.inc file for MadEvent"""
 
         lines = []
@@ -5895,9 +6477,10 @@ c           This is dummy particle used in multiparticle vertices
                 # For the resulting leg, pick out whether it comes from
                 # decay or not, as given by the onshell flag
                 leg = vertex.get('legs')[-1]
-                lines.append("data gForceBW(%d,%d)/%s/" % \
-                             (leg.get('number'), iconf + 1,
-                              booldict[leg.get('onshell')]))
+                if (nonia == 0) or (-leg.get('number') < (nexternal-nonia)):
+                    lines.append("data gForceBW(%d,%d)/%s/" % \
+                                 (leg.get('number'), iconf + 1,
+                                  booldict[leg.get('onshell')]))
 
         # Write the file
         writer.writelines(lines)
@@ -5920,21 +6503,26 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_driver
     #===========================================================================
-    def write_driver(self, writer, ncomb, n_grouped_proc, v5=True):
+    def write_driver(self, writer, ncomb, n_grouped_proc, v5=True, onia=False):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_driver.f')
         
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            card = 'Source/MODEL/MG5_param.dat'
+            param_card = 'Source/MODEL/MG5_param.dat'
         else:
-            card = 'param_card.dat'
+            param_card = 'param_card.dat'
+        if onia:
+            load_onia_card = 'call setonia("onia_card.dat")'
+        else:
+            load_onia_card = ''
         # Requiring each helicity configuration to be probed by 10 points for 
         # matrix element before using the resulting grid for MC over helicity
         # sampling.
         # We multiply this by 2 because each grouped subprocess is called at most
         # twice for each IMIRROR.
-        replace_dict = {'param_card_name':card, 
+        replace_dict = {'param_card_name':param_card,
+                        'load_onia_card':load_onia_card,
                         'ncomb':ncomb,
                         'hel_init_points':n_grouped_proc*10*2}
         if not v5:
@@ -6265,6 +6853,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         matrix_elements = subproc_group.get('matrix_elements')
 
+        contains_onia = False
+        if matrix_elements[0].get_nonia()>0:
+            self.opt['hel_recycling'] = False
+            if not contains_onia:
+                if 'onia' not in self.matrix_file:
+                    self.matrix_file = self.matrix_file.replace('.inc',"_onia.inc")
+                contains_onia = True
 
 
         # Add the driver.f, all grouped ME's must share the same number of 
@@ -6277,7 +6872,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'driver.f'
         self.write_driver(writers.FortranWriter(filename),ncomb,
-                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
+                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'],onia=contains_onia)
 
         try:
             self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
@@ -6377,6 +6972,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nonia = matrix_element.get_nonia()
 
         # Generate a list of diagrams corresponding to each configuration
         # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
@@ -6413,7 +7009,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
-                           s_and_t_channels)
+                                s_and_t_channels,nexternal,nonia)
 
         filename = 'dname.mg'
         self.write_dname_file(writers.FortranWriter(filename),
@@ -6457,6 +7053,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+        if matrix_element.get_nonia()>0:
+            filename = 'onia.inc'
+            self.write_onia_file(writers.FortranWriter(filename),
+                             matrix_element)
+
+            filename = 'pmassonia.inc'
+            self.write_pmassonia_file(writers.FortranWriter(filename),
                          matrix_element)
 
         filename = 'props.inc'
@@ -6814,12 +7419,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Extract number of external particles
         (nexternal, ninitial) = subproc_group.get_nexternal_ninitial()
+        onia_pairs = matrix_elements[0].get_onia_pairs()
 
-        return len(diagrams), \
-               self.write_configs_file_from_diagrams(writer, diagrams,
+        if onia_pairs:
+            return len(diagrams), \
+               self.write_configs_file_from_onia_diagrams(writer, diagrams,
                                                 config_numbers,
                                                 nexternal, ninitial,
-                                                     model)
+                                                     model,onia_pairs)
+        else:
+            return len(diagrams), \
+                self.write_configs_file_from_diagrams(writer, diagrams,
+                                                      config_numbers,
+                                                      nexternal, ninitial,
+                                                      model)
 
 
 
@@ -7165,7 +7778,7 @@ class UFO_model_to_mg4(object):
         """Copy the standard files for the fortran model."""
         
         #copy the library files
-        file_to_link = ['formats.inc', \
+        file_to_link = ['formats.inc', 'rw_onia.f', \
                         'rw_para.f', 'testprog.f']
     
         for filename in file_to_link:
@@ -7206,6 +7819,9 @@ class UFO_model_to_mg4(object):
             load_card = ''
             lha_read_filename='lha_read.f'
             updateloop_default = '.false.'
+
+        cp( MG5DIR + '/models/template_files/fortran/rw_onia.f', \
+	                               os.path.join(self.dir_path,'rw_onia.f'))
             
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
                                        os.path.join(self.dir_path,'lha_read.f'))
@@ -9630,7 +10246,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_onia.o rw_para.o'
         text += ' model_functions.o '
         
         if self.opt['export_format'].startswith('standalone'):
@@ -10197,6 +10813,8 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
+        if matrix_element.get_nonia()>0:
+            linkfiles += ['ldme.inc']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)

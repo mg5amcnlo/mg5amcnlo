@@ -606,6 +606,8 @@ class ParamCard(dict):
             if len(split) < 3:
                 continue
             block = split[0]
+            if block == 'ldme':
+                continue
             if block not in self:
                 missing.add(block)
             elif block in all_blocks:

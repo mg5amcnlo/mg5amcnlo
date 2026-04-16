@@ -246,6 +246,8 @@ class DiagramTag(object):
             return base_objects.Leg({'number':link.links[0][1],
                                      'id':link.links[0][0][0],
                                      'state':(link.links[0][0][1] == 0),
+                                     'onium': {},
+                                     'eatom':{},
                                      'onshell':False})
 
         # This shouldn't happen
@@ -1743,11 +1745,13 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not all(istags):
                     raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
                 islegs = [\
-                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'is_tagged': tag}) \
+                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'],\
+                                        'onium': islegs['onium'], 'eatom': islegs['eatom'], 'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
                 islegs = [\
-                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization']})
+                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization'],\
+                                          'onium': islegs_orig[i]['onium'],'eatom': islegs_orig[i]['eatom']})
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1779,11 +1783,13 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'],\
+                                              'onium': fsleg['onium'],'eatom': fsleg['eatom']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
-                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'is_tagged': tag}) \
+                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], \
+                                            'onium': fsleg['onium'], 'eatom': fsleg['eatom'], 'is_tagged': tag}) \
                             for id, fsleg, tag in zip(prod, fslegs, fstags)])
 
 

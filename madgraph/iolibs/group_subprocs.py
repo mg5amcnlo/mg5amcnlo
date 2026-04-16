@@ -77,7 +77,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
 
         return [((leg.get('number'), spin,
                   mass, width, part.get('color')),
-                 leg.get('number'))]
+                 leg.get('number'),leg.get('onium'),leg.get('eatom'))]
 
     
     @staticmethod
@@ -259,6 +259,15 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             replace('+', 'p').replace('-', 'm')
         name += "_"
         for (fs_part, leg) in fs:
+            if leg.get('onium'):
+                if fs_part<0:
+                    continue
+                else:
+                    name += leg.get('onium').get('name').replace('(','').replace(')','').replace('|','')
+                    continue
+            if leg.get('eatom'):
+                name += leg.get('eatom').get('name').replace('_in_','')
+                continue
             part = process.get('model').get_particle(fs_part)
             if criteria == 'gpu':
                 name += part.get_name().replace('~', 'x').\
@@ -486,7 +495,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'), 
                              p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
-                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             abs(p.get('color')),l.get('onshell'),l.get('onium').get('id'),\
+                             l.get('eatom').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
                            process.get('id')]
@@ -501,7 +511,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'), p.get('pdg_code'), 
                              p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
-                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             abs(p.get('color')),l.get('onshell'),l.get('onium').get('id'),\
+                             l.get('eatom').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
                            process.get('id')]
