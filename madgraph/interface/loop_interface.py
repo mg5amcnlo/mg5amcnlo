@@ -17,6 +17,7 @@
 """
 
 from __future__ import absolute_import
+import copy
 import os
 import shutil
 import time
@@ -310,7 +311,14 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             self.exec_cmd('set apply_flavor_grouping False', precmd=True)
             assert self.options['apply_flavor_grouping'] == False
             model_name = self._curr_model.get('name')
+            # Preserve user-defined multiparticles: reloading the model triggers
+            # add_default_multiparticles which auto-removes the photon from p/j
+            # when the plain (non-loop) model has no QED perturbation couplings.
+            # Since this reload is an internal NLO operation (not a user model
+            # switch), all previously valid multiparticle definitions must survive.
+            saved_multiparticles = copy.deepcopy(self._multiparticles)
             self.exec_cmd(" import model %s" % (model_name), precmd=True)
+            self._multiparticles = saved_multiparticles
         
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
