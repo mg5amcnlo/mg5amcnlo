@@ -923,30 +923,30 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
             if wf.get('onium'):
-                # if onium == -1:
-                #     onium = wf.get('onium').get('index')
-                #     mass = "mdl_M%i"%wf.get('onium').get('id')
-                # elif onium == wf.get('onium').get('index'):
-                #     onium = -1
-                #     counter += 1
-                #     continue
                 if onium == -1:
                     onium = wf.get('onium').get('index')
-                    if mass.lower() != "zero":
-                        onium_mass = "abs(%s)" % mass
-                    else:
-                        onium_mass = mass
-                    counter += 1
-                    continue
+                    mass = "mdl_M%i"%wf.get('onium').get('id')
                 elif onium == wf.get('onium').get('index'):
                     onium = -1
-                    if mass.lower() != "zero":
-                        mass = "abs(%s)" % mass
-                    if onium_mass.lower() != "zero":
-                        if mass.lower() != "zero":
-                            mass = onium_mass+"+"+mass
-                        else:
-                            mass = onium_mass
+                    counter += 1
+                    continue
+                # if onium == -1:
+                #     onium = wf.get('onium').get('index')
+                #     if mass.lower() != "zero":
+                #         onium_mass = "abs(%s)" % mass
+                #     else:
+                #         onium_mass = mass
+                #     counter += 1
+                #     continue
+                # elif onium == wf.get('onium').get('index'):
+                #     onium = -1
+                #     if mass.lower() != "zero":
+                #         mass = "abs(%s)" % mass
+                #     if onium_mass.lower() != "zero":
+                #         if mass.lower() != "zero":
+                #             mass = onium_mass+"+"+mass
+                #         else:
+                #             mass = onium_mass
                 else:
                     raise MadGraph5Error("The file 'pmass.inc' cannot be produced.")
             elif mass.lower() != "zero":
