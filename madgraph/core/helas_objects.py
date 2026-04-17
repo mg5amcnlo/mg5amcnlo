@@ -5052,7 +5052,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         model = self.get('processes')[0].get('model')
 
-        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False]
+        initial_legs = [leg for leg in self.get('processes')[0].get('legs') if leg.get('state') == False\
+                        and not leg.get('eatom')]
+
 
         color_factor = reduce(lambda x, y: x * y,
                               [ model.get('particle_dict')[leg.get('id')].\

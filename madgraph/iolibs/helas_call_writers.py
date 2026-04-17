@@ -1141,7 +1141,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if argument.get('is_loop'):
             call=call+"LCUT_%(conjugate)s%(lcutspinletter)s(Q(0),I,WL(1,%(number)d))"
         elif argument.get('eatom'):
-            call = call + "EATOM(%(atom_A)d,%(atom_Z)d,NHEL(%(number_external)d),"
+            call = call + "EATOM_WF(%(atom_A)d,%(atom_Z)d,NHEL(%(number_external)d),"
             call = call + "P(0,%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
         else:

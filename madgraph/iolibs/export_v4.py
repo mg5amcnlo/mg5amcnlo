@@ -3611,6 +3611,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ldme_perturbative = self.get_ldme_perturbative(matrix_element)
             replace_dict['ldme_perturbative'] = ldme_perturbative
             replace_dict['ldme_product'] = ldme_product
+            
+        if matrix_element.get_natom()>0:
+            if not 'eatom' in matrix_template:
+                matrix_template = matrix_template.replace('.inc','_eatom.inc')
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         
@@ -4318,6 +4322,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract JAMP lines
         jamp_lines, nb = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
