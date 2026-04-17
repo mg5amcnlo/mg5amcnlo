@@ -9846,7 +9846,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logger.info('Copy %s model files to directory %s' % \
                             (os.path.basename(self._model_v4_path), self._export_dir))
             self._curr_exporter.export_model_files(self._model_v4_path)
-            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))        
+            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
         else:
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in

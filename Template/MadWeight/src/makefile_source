@@ -30,7 +30,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Compile commands
 
-all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libTF.$(libext)
+all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libeatom.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libTF.$(libext)
 
 # Libraries
 
@@ -40,6 +40,8 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make
+$(LIBDIR)libeatom.$(libext): EAtom
+	cd EAtom; make
 $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
@@ -75,5 +77,6 @@ clean:
 	$(RM) *.o $(LIBRARIES)
 	cd PDF; make clean; cd ..
 	cd DHELAS; make clean; cd ..
+	cd EAtom; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..

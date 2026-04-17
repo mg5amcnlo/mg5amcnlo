@@ -785,6 +785,7 @@ C
         also depends on the value of the 'output_dependencies' option"""
         
         return ['$(LIBDIR)libdhelas.$(libext)',
+                '$(LIBDIR)libeatom.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
                 '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
@@ -1242,6 +1243,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         options= {}
         options['vector.inc'] = True if self.opt['export_format']=='madevent' else False
         aloha_model.write(write_dir, 'Fortran', options=options)
+
+        # for EAtom
+        files.copytree(pjoin(self.mgme_dir, 'Template','LO','Source','EAtom'),\
+                       pjoin(self.dir_path, 'Source','EAtom'))
 
         # Revert the original aloha loop mode
         aloha.loop_mode = old_loop_mode
@@ -2904,6 +2909,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         os.mkdir(pjoin(self.dir_path, 'Source'))
         os.mkdir(pjoin(self.dir_path, 'Source', 'MODEL'))
         os.mkdir(pjoin(self.dir_path, 'Source', 'DHELAS'))
+        files.copytree(pjoin(temp_dir,'Source','EAtom'),pjoin(self.dir_path, 'Source','EAtom'))
         os.mkdir(pjoin(self.dir_path, 'SubProcesses'))
         os.mkdir(pjoin(self.dir_path, 'bin'))
         os.mkdir(pjoin(self.dir_path, 'bin', 'internal'))
@@ -3013,10 +3019,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
 
     #===========================================================================
-    # Make the Helas and Model directories for Standalone directory
+    # Make the Helas, EAtom and Model directories for Standalone directory
     #===========================================================================
     def make(self):
-        """Run make in the DHELAS and MODEL directories, to set up
+        """Run make in the DHELAS, EAtom and MODEL directories, to set up
         everything for running standalone
         """
 
@@ -3027,6 +3033,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         except:
             misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
             misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+            misc.compile(arg=['../lib/libeatom.a'], cwd=source_dir, mode='fortran')
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -3440,7 +3447,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
-        set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
+        set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libeatom.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
         if model['running_elements']:
@@ -4016,7 +4023,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # Make the Helas and Model directories for Standalone directory
     #===========================================================================
     def make(self):
-        """Run make in the DHELAS, MODEL, PDF and CERNLIB directories, to set up
+        """Run make in the DHELAS, MODEL, EAtom, PDF and CERNLIB directories, to set up
         everything for running madweight
         """
 
@@ -4027,6 +4034,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for EAtom")
+        misc.compile(arg=['../lib/libeatom.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for gammaUPC")
         misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
@@ -4345,7 +4354,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libeatom.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 

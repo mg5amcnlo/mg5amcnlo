@@ -42,6 +42,8 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	rm -f $(alfas_to_clean) 2>/dev/null
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make; cd ..
+$(LIBDIR)libeatom.$(libext): EAtom
+	cd EAtom; make; cd ..
 $(LIBDIR)libpdf.$(libext): PDF $(alfas_functions).o
 	cd PDF; make; cd ..
 ifneq (,$(filter edff chff, $(pdlabel1) $(pdlabel2)))
@@ -109,6 +111,8 @@ libmodel: $(LIBDIR)libmodel.$(libext)
 
 libdhelas: $(LIBDIR)libdhelas.$(libext)
 
+libeatom: $(LIBDIR)libeatom.$(libext)
+
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make
 	ln -sf ../Source/$(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
@@ -123,6 +127,7 @@ cleanSource: # Clean builds: fortran in this Source
 	cd PDF; make clean; cd ..
 	cd PDF/gammaUPC; make clean; cd ../../
 	cd DHELAS; make clean; cd ..
+	cd EAtom; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
 	if [ -d RUNNING ]; then cd RUNNING; make clean; cd ..; fi

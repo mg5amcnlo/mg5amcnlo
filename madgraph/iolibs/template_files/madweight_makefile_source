@@ -40,6 +40,8 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make; cd ..
+$(LIBDIR)libeatom.$(libext): EAtom
+	cd EAtom; make; cd ..
 $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make; cd ..
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
@@ -77,5 +79,6 @@ clean:
 	$(RM) *.o $(LIBRARIES)
 	cd PDF; make clean; cd ..
 	cd DHELAS; make clean; cd ..
+	cd EAtom; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
