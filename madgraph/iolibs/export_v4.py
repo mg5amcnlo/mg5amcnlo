@@ -2466,13 +2466,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Configure the files/link of the process according to the model"""
 
         contains_onia = False
+        contains_eatom = False
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
             for matrix_element in matrix_elements:
                 for me in matrix_element.get('matrix_elements'):
                     if me.get_nonia() > 0:
                         contains_onia = True
-                        break
-                if contains_onia:
+                    if me.get_natom() > 0:
+                        contains_eatom = True
+                if contains_onia and contains_eatom:
                     break
 
         if contains_onia:
@@ -2502,6 +2504,23 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             model_path = self.dir_path + '/Source/MODEL/'
             ln(model_path + '/ldme.inc', self.dir_path + '/Source')
             ln(model_path + '/ldme.inc', self.dir_path + '/SubProcesses')
+
+        elif contains_eatom:
+
+            try:
+                if self.format == 'standalone':
+                    shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa_eatom.f'),
+                            pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+            except:
+                pass
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
+            self.write_ldme_file(writers.FortranWriter(filename),
+                         [])
+
+            filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
+            self.write_onia_read(writers.FortranWriter(filename),
+                         [])
 
         else:
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
@@ -2604,6 +2623,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         else:
             raise MadGraph5Error("LDMEs cannot be added to 'ident_card.dat'")
+
+    def write_iatom_file(self, writer, iatom):
+        """ write iatom.inc """
+
+        lines = []
+        if iatom > 0:
+            lines.append("INTEGER IATOM")
+            lines.append("PARAMETER(IATOM=%d)"%iatom)
+
+        # Write the file
+        writer.writelines(lines)
 
     #===========================================================================
     # Onia helper methods
@@ -3347,6 +3377,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         else:
             if matrix_element.get_natom()>0:
                 self.matrix_file = 'matrix_standalone_v4_eatom.inc'
+
+        if matrix_element.get_natom()>0:
+            iatom=matrix_element.get_eatom_numbers()[0]
+            iatomfilename = pjoin(dirpath, 'iatom.inc')
+            self.write_iatom_file(writers.FortranWriter(iatomfilename),iatom)
 
                 
         replace_dict = self.write_matrix_element_v4(
