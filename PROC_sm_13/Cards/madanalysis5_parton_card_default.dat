@@ -1,0 +1,69 @@
+# Uncomment the line below to skip this analysis altogether
+# @MG5aMC skip_analysis
+
+@MG5aMC stdout_lvl=INFO
+
+@MG5aMC inputs = *.lhe
+@MG5aMC analysis_name = analysis1
+
+# Multiparticle definition
+define vl = 12 14 16
+define vl~ = -16 -14 -12
+define invisible = vt~ ve ve~ vm~ vt vm vl vl~
+
+# Histogram drawer (options: matplotlib or root)
+set main.graphic_render = matplotlib
+
+# Global event variables
+plot THT   40 0 500 [logY]
+plot MET   40 0 500 [logY]
+plot SQRTS 40 0 500 [logY]
+# PT and ETA distributions of all particles
+plot  PT(p[1]) 40 0  500 [logY]
+plot ETA(p[1]) 40 -10 10 [logY]
+plot  PT(p[2]) 40 0  500 [logY]
+plot ETA(p[2]) 40 -10 10 [logY]
+plot  PT(p[3]) 40 0  500 [logY]
+plot ETA(p[3]) 40 -10 10 [logY]
+plot  PT(l+[1]) 40 0  500 [logY]
+plot ETA(l+[1]) 40 -10 10 [logY]
+plot  PT(l-[1]) 40 0  500 [logY]
+plot ETA(l-[1]) 40 -10 10 [logY]
+# Invariant-mass distributions
+plot M(l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] l+[1]) 40 0  500 [logY ]
+plot M(p[1] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[2]) 40 0  500 [logY ]
+plot M(p[1] p[2] l+[1]) 40 0  500 [logY ]
+plot M(p[1] p[2] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[2] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[2] p[3]) 40 0  500 [logY ]
+plot M(p[1] p[2] p[3] l+[1]) 40 0  500 [logY ]
+plot M(p[1] p[2] p[3] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[2] p[3] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[3]) 40 0  500 [logY ]
+plot M(p[1] p[3] l+[1]) 40 0  500 [logY ]
+plot M(p[1] p[3] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[1] p[3] l-[1]) 40 0  500 [logY ]
+plot M(p[2] l+[1]) 40 0  500 [logY ]
+plot M(p[2] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[2] l-[1]) 40 0  500 [logY ]
+plot M(p[2] p[3]) 40 0  500 [logY ]
+plot M(p[2] p[3] l+[1]) 40 0  500 [logY ]
+plot M(p[2] p[3] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[2] p[3] l-[1]) 40 0  500 [logY ]
+plot M(p[3] l+[1]) 40 0  500 [logY ]
+plot M(p[3] l+[1] l-[1]) 40 0  500 [logY ]
+plot M(p[3] l-[1]) 40 0  500 [logY ]
+# Angular distance distributions
+plot DELTAR(l+[1],l-[1]) 40 0 10 [logY ]
+plot DELTAR(p[1],l+[1]) 40 0 10 [logY ]
+plot DELTAR(p[1],l-[1]) 40 0 10 [logY ]
+plot DELTAR(p[1],p[2]) 40 0 10 [logY ]
+plot DELTAR(p[1],p[3]) 40 0 10 [logY ]
+plot DELTAR(p[2],l+[1]) 40 0 10 [logY ]
+plot DELTAR(p[2],l-[1]) 40 0 10 [logY ]
+plot DELTAR(p[2],p[3]) 40 0 10 [logY ]
+plot DELTAR(p[3],l+[1]) 40 0 10 [logY ]
+plot DELTAR(p[3],l-[1]) 40 0 10 [logY ]
