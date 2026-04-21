@@ -2,6 +2,7 @@
       implicit none
       private
       public :: Dual
+      public :: assignment(=)
       public :: operator(+), operator(-)
       public :: operator(*), operator(/)
       public :: operator(**), sqrt, log
@@ -31,6 +32,12 @@
       !=================================================================
       ! Operators Interfaces
       !=================================================================
+      interface assignment(=)
+         module  procedure assign_Double
+         module  procedure assign_Complex
+         module procedure assign_Dual
+      end interface assignment(=)
+
       interface operator(+)
          module procedure add_DualVariable
          module procedure add_CN_DualVariable
@@ -109,22 +116,52 @@
       !=================================================================
 
       !=================================================================
+      ! Assignment rules
+      !=================================================================
+      subroutine assign_Double(self,dn)
+         type(Dual),intent(out)::self
+         real(kind(1d0)),intent(in)::dn
+         integer::i
+
+         self%comp(0) = dn
+         self%comp(1:i) = (0d0,0d0)
+      end subroutine assign_Double
+
+      subroutine assign_Complex(self,cn)
+         type(Dual),intent(inout)::self
+         complex*16,intent(in)::cn
+         integer::i
+
+         self%comp(0) = cn
+         self%comp(1:) = (0d0,0d0)
+      end subroutine assign_Complex
+
+      subroutine assign_Dual(self,other)
+         type(Dual),intent(inout)::self
+         type(Dual),intent(in)::other
+         integer::i
+
+         do i = 0, size(self)
+            self%comp(i) = other%comp(i)
+         enddo
+      end subroutine assign_Dual
+
+      !=================================================================
       ! Proprieties
       !=================================================================
       ! Array size
       pure function Dual_Length(a) result(res)
-         type(Dual), intent(in) :: a
-         Integer :: res
+         type(Dual),intent(in)::a
+         Integer::res
 
          res = size(a%comp) - 1
       end function Dual_Length
 
 
-
       ! Initialization & Resetting of dual components
       subroutine initZERO(self)
-         class(Dual) :: self
-         Integer :: i
+         class(Dual)::self
+         Integer::i
 
          do i = 0, size(self)
             self%comp(i) = (0d0,0d0)
