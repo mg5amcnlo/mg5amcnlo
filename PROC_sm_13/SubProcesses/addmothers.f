@@ -299,16 +299,12 @@ c     Add new color indices to list of color indices
      $            iforest(1,-max_branch,lconfig),icolalt,
      $            icolalt(1,ida(j)),icolalt(2,ida(j)))
           enddo
-          print *,'s-channel: ',i,mo_color,ida(1),ida(2),ncolmp
-          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
-          print *,'icolalt d1: ',icolalt(1,ida(1)),icolalt(2,ida(1))
-          print *,'icolalt d2: ',icolalt(1,ida(2)),icolalt(2,ida(2))
+c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
+c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           if(is_LC)then
           if (icolmp(1,1).eq.1000.or.icolmp(2,1).eq.1000)then
-             write(*,*) 'DEBUG stop5: i=',i,' ncolmp=',ncolmp,
-     $          ' icolmp(1,1)=',icolmp(1,1),' jpart(6,i)=',jpart(6,i)
              if (jpart(6,i).eq.2)then
-               stop 5
+               is_LC=.false.
             endif
           elseif(mo_color.eq.1) then ! color singlet
              maxcolor=elim_indices(0,0,ncolmp,icolmp,i,icolalt,
