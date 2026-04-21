@@ -1,0 +1,216 @@
+#! /usr/bin/env python3
+################################################################################
+#
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+""" This is the main script in order to generate events in MadEvent """
+
+import logging
+import logging.config
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+pjoin = os.path.join
+
+if sys.version_info < (3, 7):
+    sys.exit('MadEvent works with python 3.7 or higher.\n\
+               Please upgrade your version of python.')
+
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip install six --user"\n'
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
+    
+# Check if optimize mode is (and should be) activated
+if __debug__ and (not os.path.exists(pjoin(root_path,'../..', 'bin','create_release.py'))):
+    subprocess.call([sys.executable] + ['-O'] + sys.argv)
+    sys.exit()
+
+
+sys.path.append(pjoin(root_path,'bin','internal'))
+import madevent_interface as ME        
+import misc as misc
+
+import logging
+import logging.config
+
+try: 
+    import readline
+except ImportError:
+    try:
+        import pyreadline as readline
+    except:
+        print("For tab completion and history, install module readline.")
+else:
+    import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
+    
+    elif hasattr(readline, '__doc__'):
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+        else:
+            readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.__doc__ = 'GNU'
+        readline.parse_and_bind("tab: complete")
+
+    # charge history file
+    try:
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "me5history")
+        readline.read_history_file(history_file)
+
+    except:
+        pass
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print('Running MG5 in debug mode')
+
+
+
+def set_configuration():
+    import coloring_logging
+    logging.config.fileConfig(os.path.join(root_path, 'bin', 'internal', 'me5_logging.conf'))
+    logging.root.setLevel(logging.INFO)
+    logging.getLogger('madevent').setLevel(logging.INFO)
+    logging.getLogger('madgraph').setLevel(logging.INFO)    
+
+
+def treat_old_argument(argument):
+    """Have the MG4 behavior for this script"""
+
+    try:
+        mode = int(argument[1])
+    except:
+        mode = int(six.moves.input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
+    if mode == 0:
+        try:
+            name = argument[2]
+        except:
+            name = six.moves.input('Enter run name\n')
+    else:
+        try:
+            opt = argument[2]
+        except:
+            if mode == 1: 
+                opt = six.moves.input('Enter name for jobs on pbs queue\n')
+            else:
+                opt = int(six.moves.input('Enter number of cores\n'))
+        
+        try:
+            name = argument[3]
+        except:
+            name = six.moves.input('enter run name\n')
+
+#    launch = ME.MadEventCmd(me_dir=root_path)
+        
+
+    if mode == 1:
+        argument = ['fake','-f', str(name), '--cluster']
+    elif mode == 2:
+        argument = ['fake','-f', '--multicore', str(name), '--nb_core=%s' % opt]
+    else:
+        argument = ['fake','-f', name, '--nb_core=1']
+
+    return argument
+
+
+
+
+
+
+
+################################################################################  
+##   EXECUTABLE
+################################################################################
+
+if '__main__' == __name__:
+    # Check that python version is valid
+
+    set_configuration()
+    argument = sys.argv
+
+    # check for plugin customization of the launch command
+    launch_interface = ME.MadEventCmdShell
+    if os.path.exists(pjoin(root_path, 'bin','internal', 'launch_plugin.py')):
+        with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(root_path, 'bin', 'internal')]):
+            from importlib import reload
+            try:
+                reload('launch_plugin')
+            except Exception as error:
+                import launch_plugin
+        launch_interface =  launch_plugin.MEINTERFACE
+
+
+    
+    try:
+        if '-h' in argument or '--help' in argument:
+            launch = launch_interface(me_dir=root_path, force_run=True)
+            launch.exec_cmd('help generate_events')
+            sys.exit()
+        elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
+            argument = treat_old_argument(argument)
+        
+        with ME.MadEventCmdShell.RunWebHandling(root_path, ):
+            launch = launch_interface(me_dir=root_path, force_run=True)
+            launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
+            launch.run_cmd('quit')
+    except ME.MadEventAlreadyRunning as message:
+        logging.getLogger('madgraph').log(40, str(message))
+        sys.exit(1)
+    except KeyboardInterrupt:
+        try:
+            launch.run_cmd('quit')
+        except:
+            pass
+    except Exception as error:
+        logging.error(str(error))
+        sys.exit()
+            
+    # reconfigure path for the web 
+    #if len(argument) == 5:
+    #    ME.pass_in_web_mode()
+
+             
+        
+
+        
+    
+    
+    
+    
+    
+    
+    

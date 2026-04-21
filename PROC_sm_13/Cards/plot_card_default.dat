@@ -1,0 +1,203 @@
+#**************************************************************************
+#                      Card for MadAnalysis                               *
+#                                                                         *
+# This file is used to set the classes and options for                    *
+# the MadAnalysis program.                                                *
+#                                                                         *
+#                                                                         *
+# Some comments about the classes                                         *
+# 1. Plots are for classes of particles.                                  *
+# 2. Each particle is identified by its PDG code.                         *
+# 3. Classes names are arbitrary (4 symbols max, no spaces allowed).      *
+# 4. Particles in the same class will be ordered with the 'ordering       *
+#    function' in the file in_func.f.                                     *
+# 5. Classes can be added/edited/removed at will, and given a name        *
+#    that will then appear in the plots.                                  *
+# 6. A particle can be put in one class only. Putting a particle in       *
+#    two or more classes can lead to double counting of events.           *
+# 7. The class name mET is missing Energy and its name is reserved.       *
+#    If used, it must be put last in the classes list below.              *
+# 8. If events contain particles not belonging to an existing class,      *
+#    a new class will automatically be generated.                         *
+# 9. For LHCO events the PDG code 21 is assigned to a jet (not            *
+#    b-tagged), 5 to a b-tagged jet and 12 to missing ET.                 *
+#                                                                         *
+#                                                                         *
+# Some comments about the cuts                                            *
+# 1. In the file kin_func.f the functions on which cuts can be applied    *
+#    are given.                                                           *
+# 2. The syntax is as follows.                                            *
+#      etmin 1 3 30d0                                                     *
+#     means that from the first class the Et of the first three particles *
+#     has to be greater than 30 GeV.                                      *
+#                                                                         *
+#      etmissmin 20d0                                                     *
+#     means that there must be at least 20 GeV of missing Et              *
+#                                                                         *
+#      dRmin 2 1 4 3 3d0                                                  *
+#     means that the distance between the first particle in the second    *
+#     class and the first three particles in the fourth class has to be   *
+#     greater than 3.                                                     *
+#                                                                         *
+#      ptmax 1 3 10d0                                                     *
+#      ptmax 1 2 15d0                                                     *
+#     means that the maximum pt of the third particle in the first class  *
+#     has to smaller than 10 GeV, and the first two particles of this     *
+#     class has to be smaller than 15 GeV                                 *
+# 3. The ordering of the particles within a class can be set with the     *
+#    'ordering function' in the file kin_func.f.                          *
+# 4. For all the 'min' cuts, an event will be thrown away if the particle *
+#    does not exist. On the other hand, for all the 'max' cuts the cut    *
+#    will be ignored if the particle does not exist                       *
+#    (Only dRij is an exception, for which it is the other way around)    *
+#                                                                         *
+#                                                                         *
+#                                                                         *
+# Some comments about the plotting options                                *
+# 1. In the file kin_func.f the functions can be found that can be        *
+#    plotted. (only for off-line usage)                                   *
+# 2. With the plotting options one can set the number of plots for each   *
+#    of these functions.                                                  *
+# 3. One has to specify for each variable which particles from which      *
+#    class are used to set the plots. Syntax:                             *
+#    	et  2 4                                                           *
+#    means that the transverse energy of the first four particles in the  *
+#    second class will be plotted.                                        *
+#       mij 1 3                                                           *
+#	mij 2 2                                                           *
+#    means that for the invariant mass plots the first three particles    *
+#    from the first class and the first two from the second class will be *
+#    used to plot the invariant mass of two particles. (10 plots)         *
+# 4. The ordering of the particles in a class can be set with the         *
+#    'ordering_function'. pt, e and et are valid functions. (For off-line *
+#    users X1, X2 and X3 can also be used, if defined in kin_func.f.)     *
+# 5. Max number of plots is 200.                                          *
+#                                                                         *
+#                                                                         *
+#**************************************************************************
+# Put here your list of classes
+#**************************************************************************
+# Do NOT put spaces before class names!
+# Begin Classes # This is TAG. Do not modify this line
+jet  1 -1 2 -2 3 -3 4 -4 21   # Class number 1
+b    5 -5                     # Class number 2
+mET  12 -12 14 -14 16 -16 1000022    # Missing ET class, name is reserved
+# End Classes # This is TAG. Do not modify this line
+#**************************************************************************
+ordering_function pt  # orders particles in classes according to their pt
+normalization xsec    # histogram normalization, xsec or number (e.g. 1)
+#**************************************************************************
+# Put here list of minimum pt for the classes
+#**************************************************************************
+# Begin Minpts # This is TAG. Do not modify this line
+#1  30
+#2  40
+#3  10
+# End Minpts # This is TAG. Do not modify this line
+#**************************************************************************
+# Cuts on plotted events
+#**************************************************************************
+# Modify the cuts and remove the pounds/hashes to apply those cuts
+# Do NOT put spaces at the beginning of the following lines!
+# Begin Cuts # This is TAG. Do not modify this line
+#etmin     2 2 40d0
+#etmin     2 1 80d0
+#etmin     1 3 20d0
+#etmax     2 1 200d0
+#ptmin     3 1 0d0
+#etmissmin 20d0
+#etmissmax 80d0
+#etamax    1 1 1d0
+#etamax    2 1 2d0
+#etamin    2 2 1.5d0
+#etamin    2 1 2d0
+#mijmax    2 1 2 2 200d0
+#mijmin    2 1 2 2 100d0
+#X1min     2 1 40d0
+#X1max     2 2 50d0
+#dRijmin     2 1 2 2 0.7d0
+#dRijmax     1 3 2 2 0.7d0
+#XY1min    2 2 2 2 20d0
+#XYZA2max  2 2 2 2 4 1 5 1 40d0
+# End Cuts # This is TAG. Do not modify this line
+#**************************************************************************
+# Put here the required plots
+#**************************************************************************
+# Do NOT put spaces at the beginning of the following lines!
+# Begin PlotDefs # This is TAG. Do not modify this line
+pt   1 4   # plot pt for the first four particles in class 1
+pt   2 4   # plot pt for the first four particles in class 2
+pt   3 4   # plot pt for the first four particles in class 3
+pt   4 4   # plot pt for the first four particles in class 4
+pt   5 4   # etc.
+pt   6 4
+pt   7 4
+#e    2 2
+y    1 4   # plot rapidity for the first four particles in class 1
+y    2 4
+y    3 4   
+y    4 4   
+y    5 4   
+y    6 4   
+y    7 4   
+#eta  2 2   # plot pseudo-rapidity for the first two part in the 2nd class
+#mom  4 1
+#costh 5 1
+#phi   2 2
+#delta_eta 2 2 
+#delta_eta 4 1
+mij  1 4   # use the first four particles in the 1st class to plot inv. mass
+mij  2 2   # use the first two particles from the second class as well
+mij  3 1   # etc.
+mij  4 1   
+mij  5 1   
+mij  6 1   
+mij  7 1   
+#cosij  1 2
+#cosij  2 2
+#cosij  3 1
+#cosij  4 1
+dRij 1 4   
+dRij 2 2   
+dRij 3 1   
+dRij 4 1   
+dRij 5 1   
+dRij 6 1   
+dRij 7 1   
+#delta_phi 2 2
+#delta_phi 4 1
+#delta_phi 5 1 
+#X1       2 2  # plot X1 (defined in kin_func.f)
+#XYZA1   2 2
+#XYZA1   4 1
+#XYZA1   5 1
+# End PlotDefs # This is TAG. Do not modify this line
+#**************************************************************************
+#**************************************************************************
+# Put here the plot ranges
+#**************************************************************************
+# Do NOT put spaces at the beginning of the following lines!
+# Begin PlotRange # This is TAG. Do not modify this line
+pt        10    0  500   # bin size, min value, max value
+et        10    0  500   # bin size, min value, max value
+etmiss    10    0  500   # bin size, min value, max value
+ht        20    0 1500
+y         0.2 -5  5     # etc.
+mij       20   0  1500
+dRij      0.1  0  5
+#delta_phi 0.1  0  3.1
+#X1        1    0  100
+#XYZA1     1    0  100
+# End PlotRange # This is TAG. Do not modify this line
+#**************************************************************************
+#**************************************************************************
+# Output for plots
+#**************************************************************************
+# Do NOT put spaces at the beginning of the following lines!
+# Begin PlotOutput # This is TAG. Do not modify this line
+output        topdrawer  # set to topdrawer or gnuplot
+plot_decayed  no         # plot (and cut) dec. res.? (Only for LHE events)
+# End PlotOutput # This is TAG. Do not modify this line
+#**************************************************************************
+#
+#

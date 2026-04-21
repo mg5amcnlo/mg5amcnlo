@@ -1,0 +1,30 @@
+#!/usr/bin/perl -w
+
+$numArgs = $#ARGV + 1;
+
+if ($numArgs < 2){
+    print "You must supply at least one event file name and one text file name where to write the banner\n";
+    exit;
+}
+
+$events=$ARGV[0];
+$banner=$ARGV[1];
+
+if (open FILE,"$events"){
+}
+else {
+     print "Event file $events not found\n";
+     exit;
+}
+
+open(OUT,"> $banner");
+
+$found=0;
+
+EXTRACT: while ($i = <FILE>){
+    if($i =~ '</header>'){last EXTRACT;}
+    if($found==1){print OUT "$i";}
+    if($i =~ '<header>'){$found=1;}
+}
+
+close(OUT);
