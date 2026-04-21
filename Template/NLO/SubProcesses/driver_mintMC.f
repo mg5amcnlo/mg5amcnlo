@@ -693,7 +693,8 @@ c
       save partner_picked
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x_local(99),MC_int_wgt,vol1,probne
-     $     ,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+     $     ,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt,p_lab(0:3
+     $     ,nexternal) ,p_cms(0:3,nexternal)
       save vol1,proc_map
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
@@ -802,7 +803,7 @@ c Also the Born needs to be included in the Importance Sampling over the
 c FKS configurations (for the shower scale) (multiply by
 c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
-         call generate_momenta(nndim,iconfig,jac,x_local,p)
+         call generate_momenta(nndim,iconfig,jac,x_local,p,p_lab,p_cms)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
@@ -898,7 +899,8 @@ c for different nFKSprocess.
             gfactcl=1.d0
             MCcntcalled=0
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
-            call generate_momenta(nndim,iconfig,jac,x_local,p)
+            call generate_momenta(nndim,iconfig,jac,x_local,p,p_lab
+     $           ,p_cms)
 
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).

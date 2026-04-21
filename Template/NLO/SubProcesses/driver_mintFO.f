@@ -342,7 +342,8 @@ c timing statistics
       include 'orders.inc'
       include 'fks_info.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,p_lab(0:3
+     $     ,nexternal) ,p_cms(0:3,nexternal)
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
@@ -429,7 +430,7 @@ c The nbody contributions
       else
          jac=0.5d0
       endif
-      call generate_momenta(nndim,iconfig,jac,x,p)
+      call generate_momenta(nndim,iconfig,jac,x,p,p_lab,p_cms)
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
@@ -473,7 +474,7 @@ c The n+1-body contributions (including counter terms)
          wgt_me_real=0d0
          jac=MC_int_wgt
          call update_fks_dir(iFKS)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x,p,p_lab,p_cms)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)

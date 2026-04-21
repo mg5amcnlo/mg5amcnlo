@@ -10,7 +10,8 @@ module kinematics_module
   double precision,private,parameter :: tiny=1d-5
 
   public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR,boost_n1_to_its_cms&
-       &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p,get_phi_from_p,fill_father_and_ileg
+       &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p&
+       &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab
   private
 
 contains
@@ -93,6 +94,16 @@ contains
        call boostz(p(0,i),y,p_cm(0,i))
     enddo
   end subroutine boost_n1_to_its_cms
+  subroutine boost_n1_to_lab(p,p_lab,y)
+    implicit none
+    double precision,dimension(0:3,next_n1),intent(in) :: p
+    double precision,dimension(0:3,next_n1),intent(out) :: p_lab
+    double precision,intent(in) :: y
+    integer :: i
+    do i=1,next_n1
+       call boostz(p(0,i),y,p_lab(0,i))
+    enddo
+  end subroutine boost_n1_to_lab
   subroutine boost_1_to_its_cms(p,p1,p_cm)
     implicit none
     double precision,dimension(0:3,next_n1),intent(in) :: p

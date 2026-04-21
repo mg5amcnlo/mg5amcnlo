@@ -18,6 +18,7 @@ c
      $     ,use_config(0:lmaxconfigs)
       double precision diff,rwgt,p(0:3,nexternal),wgt,x(99),p_born1(0:3
      $     ,nexternal-1),p_born_save(0:3,nexternal-1),saveamp(ngraphs)
+     $     ,p_lab(0:3,nexternal) ,p_cms(0:3,nexternal)
       double complex wgt1(2)
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -125,7 +126,7 @@ c
       enddo
       new_point=.true.
       wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       call set_cms_stuff(-100)
       do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
      $     .or. p_born(0,1).le.0d0) .and. ntry.lt.10000)
@@ -134,7 +135,7 @@ c
          enddo
          new_point=.true.
          wgt=1d0
-         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
          call set_cms_stuff(-100)
          ntry=ntry+1
       enddo

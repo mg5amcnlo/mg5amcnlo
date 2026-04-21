@@ -291,7 +291,8 @@ c dump momenta in a fort.80 file
       include 'fks_info.inc'
       integer ilim,iamp,idum,nFKSprocess_save,iFKS
       double precision wgt,x(99),born_flow_factor,p(0:3,nexternal),fx
-     $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1)
+     $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1),p_lab(0:3
+     $     ,nexternal) ,p_cms(0:3,nexternal)
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       double precision xi_i_fks_ev,y_ij_fks_ev
@@ -306,7 +307,7 @@ c dump momenta in a fort.80 file
 
       integer i
       wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
 c$$$      write (*,*) wgt,x(1:ndim)
 c$$$      write (*,*) xbjrk_ev
 c$$$      do i=1,nexternal
@@ -338,7 +339,8 @@ c$$$      stop 1
          nFKSprocess=nFKSprocess_save
          call fks_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         call compute_MC_subt_term_test(p,wgt,born_flow_factor)
+         call compute_MC_subt_term_test(p,p_cms,p_lab,wgt
+     $        ,born_flow_factor)
          do iamp=1,amp_split_size
             if (amp_split(iamp).ne.0d0) then
                amp(iamp) = amp(iamp)/amp_split(iamp)
@@ -377,7 +379,7 @@ c$$$      stop 1
       integer ilim,iamp,idum
       double precision wgt,x(99),p(0:3,nexternal),fx,born_flow_factor
      $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
-     $     +1)
+     $     +1),p_lab(0:3,nexternal) ,p_cms(0:3,nexternal)
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       logical        softtest,colltest
@@ -395,7 +397,7 @@ c$$$      stop 1
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
       calculatedBorn=.false.
       if (softtest) then
@@ -440,7 +442,8 @@ c$$$      stop 1
 
 
 
-      subroutine compute_MC_subt_term_test(p,wgt,born_flow_factor)
+      subroutine compute_MC_subt_term_test(p,p_cms,p_lab,wgt
+     $     ,born_flow_factor)
       use mint_module
       use kinematics_module
       implicit none
@@ -451,9 +454,9 @@ c$$$      stop 1
       logical include_gfun
       integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp,nFKSprocess_save
       double precision p(0:3,nexternal),xi,y,z(2),born_flow_factor
-     $     ,amp_split_gfunc(amp_split_size),ybst
-     $     ,amp_split_xmcxsec(amp_split_size,2),p_cm(0:3,nexternal)
-     $     ,xx(99),wgt,jac
+     $     ,amp_split_gfunc(amp_split_size),dummy
+     $     ,amp_split_xmcxsec(amp_split_size,2),p_cms(0:3,nexternal)
+     $     ,p_lab(0:3,nexternal) ,xx(99),wgt,jac
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision amp_split_mc(1:amp_split_size)
@@ -463,7 +466,6 @@ c$$$      stop 1
       common /pborn/   p_born
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      call boost_n1_to_its_cms(p,p_cm,ybst)
       ! use local amp_split_mc, since, compute_MCsubtraction_kl will overwrite amp_split:
       amp_split_mc(1:amp_split_size)=0d0
       nFKSprocess_save=nFKSprocess
@@ -483,8 +485,8 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
             include_gfun=.false.
          endif
 !     compute kinematic variables
-         xi=get_xi_from_p(i_fks,j_fks,p_cm)
-         y=get_yij_from_p(i_fks,j_fks,p_cm)
+         xi=get_xi_from_p(i_fks,j_fks,p_cms)
+         y=get_yij_from_p(i_fks,j_fks,p_cms)
 
          ! call the inverse phase-space. This will update the Born
          ! momenta, and the corresponding phase-space jacobian for the
@@ -495,9 +497,9 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
          jac=1d0
          !     inputs are: ndim,iconfig,p
          !     outputs are: xx,jac (also updates pborn common block)
-         call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p)
+         call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
          CalculatedBorn=.false.
-         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
             amp_split_mc(1:amp_split_size)=amp_split_mc(1:amp_split_size)
@@ -514,8 +516,8 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
       call fks_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
       ! Set amp_split to amp_split_mc (see comment above)
-      xi=get_xi_from_p(i_fks,j_fks,p_cm) ! these correspond to ij, not kl
-      y=get_yij_from_p(i_fks,j_fks,p_cm)
+      xi=get_xi_from_p(i_fks,j_fks,p_cms) ! these correspond to ij, not kl
+      y=get_yij_from_p(i_fks,j_fks,p_cms)
       amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
       end
       
@@ -524,7 +526,8 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
       use mint_module
       implicit none
       include 'nexternal.inc'
-      double precision wgt,x(99),p(0:3,nexternal)
+      double precision wgt,x(99),p(0:3,nexternal),p_lab(0:3,nexternal)
+     $     ,p_cms(0:3,nexternal)
       integer jj,ntry
       double precision ran2
       external ran2
@@ -537,7 +540,7 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
       enddo
       new_point=.true.
       wgt=1d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       calculatedBorn=.false.
       do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
      &     ) .and. ntry .lt. 1000)
@@ -546,7 +549,7 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
          enddo
          new_point=.true.
          wgt=1d0
-         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
          calculatedBorn=.false.
          ntry=ntry+1
       enddo

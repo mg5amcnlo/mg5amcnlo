@@ -14,7 +14,8 @@
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
-      double precision x(99),p(0:3,nexternal)
+      double precision x(99),p(0:3,nexternal),p_lab(0:3,nexternal)
+     $     ,p_cms(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       logical unwgt
@@ -40,7 +41,7 @@
       
       wgt=1d0
       evnt_wgt=evtsgn*weight
-      call generate_momenta(ndim,iconfig,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
 c
 c Get all the info we need for writing the events.
 c      

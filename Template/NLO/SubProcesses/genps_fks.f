@@ -1,11 +1,13 @@
-      subroutine generate_momenta(ndim,iconfig,wgt,x,p)
+      subroutine generate_momenta(ndim,iconfig,wgt,xx,p,p_lab,p_cms)
+      use kinematics_module
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       integer ndim,iconfig
-      double precision wgt,x(99),p(0:3,nexternal)
+      double precision wgt,xx(99),p(0:3,nexternal),p_lab(0:3,nexternal)
+     $     ,p_cms(0:3,nexternal),dummy
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
       double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
       integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
@@ -34,6 +36,8 @@
       common /c_vegas_x/xvar
       integer            this_config
       common/to_mconfigs/this_config
+      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+      common/cbjrk12_cnt/tau_cnt,ycm_cnt
 c     
       call cpu_time(tBefore)
       this_config=iconfig
@@ -52,11 +56,11 @@ c
          qwidth_common(i)=qwidth(i)
       enddo
       do i=1,ndim
-         xvar(i)=x(i)
+         xvar(i)=xx(i)
       enddo
 c
 
-      call generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass,qwidth,p)
+      call generate_momenta_conf_wrapper(ndim,jac,xx,itree,qmass,qwidth,p)
 c If the input weight 'wgt' to this subroutine was not equal to one,
 c make sure we update all the (counter-event) jacobians and return also
 c the updated wgt (i.e. the jacobian for the event)
@@ -67,6 +71,12 @@ c the updated wgt (i.e. the jacobian for the event)
 c
       call cpu_time(tAfter)
       tGenPS=tGenPS+(tAfter-tBefore)
+
+      if (p(0,1).gt.0d0) then ! valid real-emission momenta
+         call boost_n1_to_its_cms(p,p_cms,dummy)
+         call boost_n1_to_lab(p,p_lab,-ycm_cnt(0))
+      endif
+      
       return
       end
 
@@ -4895,8 +4905,6 @@ c     Jacobian due to delta() of tau_born
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
       
-      ! FIX THIS: momenta are in CMS frame, but need to have bjorken x
-      ! which are defined in lab frame.
       call set_cms_stuff(-100)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
       tau=xbjrk(1)*xbjrk(2)
