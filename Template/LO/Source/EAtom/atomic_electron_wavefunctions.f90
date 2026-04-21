@@ -101,7 +101,7 @@ CONTAINS
        ! the averaged electron number square root
        ! in the wf definition
        DO i=3,6
-          wf(i)=wf(i)*DSQRT(nume)
+          wf(i)=wf(i)*DSQRT(nume)/DSQRT(dble(twoj+1))
        ENDDO
     ENDIF
     
