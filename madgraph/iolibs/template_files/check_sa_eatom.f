@@ -10,6 +10,8 @@ C     CONSTANTS
 C     
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
+      INTEGER iseed
+      PARAMETER (iseed=12345)
 C     
 C     INCLUDE FILES
 C     
@@ -78,6 +80,9 @@ c
       ENDIF
 
       call printout()
+
+c   fix the seed for pseudo-random-number generator
+      call init_rng(iseed)
 
       CALL GET_EATOM_MOMENTA(IATOM,SQRTS,PBEAM,PMASS,P)	
 c
@@ -424,7 +429,15 @@ c --- Step 1: generate n massless isotropic momenta -----------------------
       
       end subroutine RAMBO_GENERAL_weight
 
-
+      subroutine init_rng(master_seed)
+      integer, intent(in) :: master_seed
+      integer :: n, i
+      integer, allocatable :: seed(:)
+      call random_seed(size = n)
+      allocate(seed(n))
+      seed = [(master_seed + 37*i, i = 1, n)] ! spread the seed
+      call random_seed(put = seed)
+      end subroutine
 
 
 

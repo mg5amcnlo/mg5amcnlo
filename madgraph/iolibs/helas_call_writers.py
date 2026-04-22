@@ -1157,7 +1157,10 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "%(state_id)+d*IC(%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
 
+
         call_function = lambda wf: call % wf.get_external_helas_call_dict()
+
+        
         self.add_wavefunction(argument.get_call_key(), call_function)
 
     def generate_all_other_helas_objects(self,argument):

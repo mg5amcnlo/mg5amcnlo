@@ -1751,7 +1751,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if not self.get('mothers'):
                 res.append(self.get('is_part'))
 
+        if self['eatom']:
+            res.append(tuple([self.get('eatom').get('atom_A'),self.get('eatom').get('atom_Z')]))
+
         res.append(tuple(self.get('polarization')) )
+
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
