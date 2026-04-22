@@ -1,0 +1,21 @@
+#!/bin/bash
+#  
+#   Script to run jobs on multicore machines
+#
+
+if [[  "$2" == ""  ]]; then
+    echo 'Error! multicore must be run with number of cores and jobname as arguments!'
+    exit
+fi
+mult=$1
+job=$2
+
+r=`find ../../SubProcesses -maxdepth 2 -name "run.ajob*" |wc -l`
+
+while [[  $r -ge $mult  ]]; do    
+    sleep 2
+    r=`find ../../SubProcesses  -maxdepth 2 -name "run.ajob*" |wc -l`
+done
+echo "Launching job $job"
+nohup ./$job >& log.$job &
+echo $! >> ../../running_jobs

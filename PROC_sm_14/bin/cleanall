@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+#  Cleans up directories removing leaving only the results
+#     object files
+#     executable files
+#     events.dat   (Except in Events)
+#
+#  Usage: cleanall
+#
+#  
+#   First we need to get into the main directory
+#
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: survey must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+if [[ -d Source ]]; then
+    cd Source
+    echo "Cleaning Source:"
+    make clean >& /dev/null
+    cd ../
+else
+    echo "Error could not find Source"
+    exit
+fi
+if [[ -d SubProcesses ]]; then
+    cd SubProcesses
+    echo -n "Cleaning  SubProcesses"
+    for i in `cat subproc.mg` ; do
+	cd $i
+	echo -n "."
+	make clean >& /dev/null
+	rm -f *ajob* >& /dev/null
+        rm -f G*/ftn* >& /dev/null
+	rm -f G*/events.lhe >& /dev/null
+	cd ..
+    done
+    echo " "
+    cd ../
+else
+    echo "Error could not find SubProcesses"
+    exit
+fi

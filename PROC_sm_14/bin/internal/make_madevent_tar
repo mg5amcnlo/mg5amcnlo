@@ -1,0 +1,7 @@
+#!/bin/bash
+
+FILES="Cards HTML SubProcesses bin lib Source Events index.html README TemplateVersion.txt MGMEVersion.txt"
+
+rm -f madevent.tar.gz madevent.tar >& /dev/null
+tar cf madevent.tar $FILES
+gzip madevent.tar

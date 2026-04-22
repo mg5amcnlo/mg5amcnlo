@@ -1,0 +1,2 @@
+g++ -Wall -std=c++11 -O3 -fPIC -I/Users/omattelaer/Documents/HEPTools/madanalysis5/madanalysis5/tools/ -I./ -o Main/main.o -c Main/main.cpp
+g++ -Wall -std=c++11 -O3 -fPIC -I/Users/omattelaer/Documents/HEPTools/madanalysis5/madanalysis5/tools/ -I./ -o SampleAnalyzer/User/Analyzer/user.o -c SampleAnalyzer/User/Analyzer/user.cpp

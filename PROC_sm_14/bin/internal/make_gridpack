@@ -1,0 +1,18 @@
+#!/bin/bash
+
+FILES="Cards HTML SubProcesses bin lib Source Events index.html README TemplateVersion.txt MGMEVersion.txt"
+
+rm -f gridpack.tar gridpack.tar.gz >& /dev/null
+mv Events Events1
+mkdir Events
+mkdir madevent
+cp bin/internal/Gridpack/run.sh ./
+cp bin/internal/Gridpack/* bin/
+mv -f $FILES madevent
+tar -cf gridpack.tar madevent run.sh
+mv -f madevent/* ./ 
+rmdir madevent
+rm run.sh
+rm -rf Events
+mv Events1 Events
+gzip gridpack.tar

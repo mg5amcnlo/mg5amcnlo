@@ -1,0 +1,23 @@
+
+LIBRARY       = libgammaUPC.$(libext)
+LIBDIR        = ../../../lib/
+
+include ../../make_opts
+
+#FC=gfortran
+
+photonflux=gammaUPC_dummy.o
+
+all: $(LIBDIR)$(LIBRARY)
+
+$(LIBDIR)$(LIBRARY): $(photonflux)
+	$(call CREATELIB, $@, $^)
+
+gammaUPC_dummy.o : gammaUPC_dummy.f
+	$(FC) $(FFLAGS) -c $<
+
+clean_all:
+	$(RM) *.o *~ $(LIBDIR)$(LIBRARY)
+
+clean:
+	$(RM) *.o *~ $(LIBDIR)$(LIBRARY)

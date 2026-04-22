@@ -1,0 +1,1738 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025/Homebrew) (preloaded format=pdflatex 2025.11.7)  22 APR 2026 07:23
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**main.tex
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/articl
+e.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/size10
+.clo
+File: size10.clo 2024/06/29 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count196
+\c@section=\count197
+\c@subsection=\count198
+\c@subsubsection=\count199
+\c@paragraph=\count266
+\c@subparagraph=\count267
+\c@figure=\count268
+\c@table=\count269
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen141
+) (./jheppub.sty
+Package: jheppub 2012/06/08 r448
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+math.sty
+Package: amsmath 2024/11/05 v2.17t AMS math features
+\@mathmargin=\skip51
+
+For additional information on amsmath, use the `?' option.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+text.sty
+Package: amstext 2021/08/26 v2.01 AMS text
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+gen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks17
+\ex@=\dimen142
+))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+bsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen143
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+opn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count270
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count271
+\leftroot@=\count272
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count273
+\DOTSCASE@=\count274
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box52
+\strutbox@=\box53
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen144
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count275
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count276
+\dotsspace@=\muskip17
+\c@parentequation=\count277
+\dspbrk@lvl=\count278
+\tag@help=\toks18
+\row@=\count279
+\column@=\count280
+\maxfields@=\count281
+\andhelp@=\toks19
+\eqnshift@=\dimen145
+\alignsep@=\dimen146
+\tagshift@=\dimen147
+\tagwidth@=\dimen148
+\totwidth@=\dimen149
+\lineht@=\dimen150
+\@envbody=\toks20
+\multlinegap=\skip52
+\multlinetaggap=\skip53
+\mathdisplay@stack=\toks21
+LaTeX Info: Redefining \[ on input line 2953.
+LaTeX Info: Redefining \] on input line 2954.
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+ssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+sfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ep
+sfig.sty
+Package: epsfig 2024/01/14 v1.7b (e)psfig emulation (SPQR)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphicx.sty
+Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ke
+yval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks22
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/tr
+ig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-de
+f/pdftex.def
+File: pdftex.def 2024/04/13 v1.2c Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen151
+\Gin@req@width=\dimen152
+)
+\epsfxsize=\dimen153
+\epsfysize=\dimen154
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/natbib/natb
+ib.sty
+Package: natbib 2010/09/13 8.31b (PWD, AO)
+\bibhang=\skip54
+\bibsep=\skip55
+LaTeX Info: Redefining \cite on input line 694.
+\c@NAT@ctr=\count282
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/co
+lor.sty
+Package: color 2024/06/23 v1.3e Standard LaTeX Color (DPC)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package color Info: Driver file: pdftex.def on input line 149.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hy
+perref.sty
+Package: hyperref 2024-11-05 v7.01l Hypertext links for LaTeX
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/iftex/ift
+ex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvsetkeys/k
+vsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/kvdefinek
+eys/kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdfescape
+/pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/ltxcmds/l
+txcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdftexcmd
+s/pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/infwarerr
+/infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hycolor/hyc
+olor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/na
+meref.sty
+Package: nameref 2023-11-26 v2.56 Cross-referencing by name of section
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/refcount/re
+fcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/gettitles
+tring/gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvoptions/k
+voptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count283
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/etoolbox/et
+oolbox.sty
+Package: etoolbox 2025/02/11 v2.5l e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count284
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/stringenc
+/stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
+)
+)
+\@linkdim=\dimen155
+\Hy@linkcounter=\count285
+\Hy@pagecounter=\count286
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+1enc.def
+File: pd1enc.def 2024-11-05 v7.01l Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/intcalc/i
+ntcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count287
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pu
+enc.def
+File: puenc.def 2024-11-05 v7.01l Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Option `colorlinks' set `true' on input line 4040.
+
+
+Package hyperref Warning: Option `pagecolor' is not available anymore.
+
+Package hyperref Info: Option `linktocpage' set `true' on input line 4040.
+Package hyperref Info: Hyper figures OFF on input line 4157.
+Package hyperref Info: Link nesting OFF on input line 4162.
+Package hyperref Info: Hyper index ON on input line 4165.
+Package hyperref Info: Plain pages OFF on input line 4172.
+Package hyperref Info: Backreferencing OFF on input line 4177.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4424.
+\c@Hy@tempcnt=\count288
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4763.
+\XeTeXLinkMargin=\dimen156
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bitset/bi
+tset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bigintcal
+c/bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
+)
+))
+\Fld@menulength=\count289
+\Field@Width=\dimen157
+\Fld@charsize=\dimen158
+Package hyperref Info: Hyper figures OFF on input line 6042.
+Package hyperref Info: Link nesting OFF on input line 6047.
+Package hyperref Info: Hyper index ON on input line 6050.
+Package hyperref Info: backreferencing OFF on input line 6057.
+Package hyperref Info: Link coloring ON on input line 6060.
+Package hyperref Info: Link coloring with OCG OFF on input line 6067.
+Package hyperref Info: PDF/A mode OFF on input line 6072.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atbegs
+hi-ltx.sty
+Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
+package with kernel methods
+)
+\Hy@abspage=\count290
+\c@Item=\count291
+\c@Hfootnote=\count292
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hp
+dftex.def
+File: hpdftex.def 2024-11-05 v7.01l Hyperref driver for pdfTeX
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atvery
+end-ltx.sty
+Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend pac
+kage
+with kernel methods
+)
+\Fld@listcount=\count293
+\c@bookmark@seq@number=\count294
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/rerunfilech
+eck/rerunfilecheck.sty
+Package: rerunfilecheck 2022-07-10 v1.10 Rerun checks for auxiliary files (HO)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/uniquecou
+nter/uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
+85.
+)
+\Hy@SectionHShift=\skip56
+)
+\auth@toks=\toks23
+\affil@toks=\toks24
+\email@toks=\toks25
+\c@email@counter=\count295
+\affiliationsSep=\skip57
+LaTeX Font Info:    Trying to load font information for OT1+phv on input line 1
+40.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/psnfss/ot1p
+hv.fd
+File: ot1phv.fd 2020/03/25 scalable font definitions for OT1/phv.
+))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/fonten
+c.sty
+Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/colortbl/co
+lortbl.sty
+Package: colortbl 2024/07/06 v1.0i Color table columns (DPC)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/tools/array
+.sty
+Package: array 2024/10/17 v2.6g Tabular extension package (FMi)
+\col@sep=\dimen159
+\ar@mcellbox=\box54
+\extrarowheight=\dimen160
+\NC@list=\toks26
+\extratabsurround=\skip58
+\backup@length=\skip59
+\ar@cellbox=\box55
+)
+\everycr=\toks27
+\minrowclearance=\skip60
+\rownum=\count296
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/xcolor/xcol
+or.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+LaTeX Info: Redefining \color on input line 762.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/float/float
+.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count297
+\float@exts=\toks28
+\float@box=\box56
+\@float@everytoks=\toks29
+\@floatcapt=\box57
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/l3backend/l
+3backend-pdftex.def
+File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count298
+\l__pdf_internal_box=\box58
+) (./main.aux)
+\openout1 = `main.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 37.
+LaTeX Font Info:    ... okay on input line 37.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/context/base/mkii
+/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count299
+\scratchdimen=\dimen161
+\scratchbox=\box59
+\nofMPsegments=\count300
+\nofMParguments=\count301
+\everyMPshowfont=\toks30
+\MPscratchCnt=\count302
+\MPscratchDim=\dimen162
+\MPnumerator=\count303
+\makeMPintoPDFobject=\count304
+\everyMPtoPDFconversion=\toks31
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/epstopdf-pk
+g/epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/latexconfig
+/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+Package hyperref Info: Link coloring ON on input line 37.
+ (./main.out) (./main.out)
+\@outlinefile=\write3
+\openout3 = `main.out'.
+
+<logo.png, id=225, 325.215pt x 92.59593pt>
+File: logo.png Graphic file (type png)
+<use logo.png>
+Package pdftex.def Info: logo.png  used on input line 38.
+(pdftex.def)             Requested size: 130.0837pt x 37.0377pt.
+
+
+Package JHEP Warning: E-mails are missing.
+(JHEP)                Plese use \emailAdd macro to provide e-mails..
+
+LaTeX Font Info:    Trying to load font information for U+msa on input line 38.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 38.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+ []
+
+
+
+[0
+
+{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/map/pdftex/updm
+ap/pdftex.map}{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/e
+nc/dvips/cm-super/cm-super-t1.enc} <./logo.png>] (./main.toc
+
+[1])
+\tf@toc=\write4
+\openout4 = `main.toc'.
+
+
+
+[1]
+Overfull \hbox (26.4321pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-bin/-internal/-
+ []
+
+
+Overfull \hbox (31.68082pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-Events/-run_01/-
+ []
+
+
+Overfull \hbox (105.16287pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>submit /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-MA5_PARTON_ANALYSIS_analysis1 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--161
+
+ []
+
+
+
+[2]
+
+[3{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/enc/dvips/cm-
+super/cm-super-ts1.enc}]
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/cmr/m/n/10 PROC_sm_14/-Events/-run_01/-
+ []
+
+
+Overfull \hbox (18.13213pt too wide) in paragraph at lines 185--192
+ [] 
+ []
+
+
+
+[4]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 206--213
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 203--214
+
+ []
+
+<selection_0.png, id=318, 632.3625pt x 451.6875pt>
+File: selection_0.png Graphic file (type png)
+<use selection_0.png>
+Package pdftex.def Info: selection_0.png  used on input line 218.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[5
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.222       \newpage
+                     <./selection_0.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 228--235
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 225--236
+
+ []
+
+<selection_1.png, id=329, 632.3625pt x 451.6875pt>
+File: selection_1.png Graphic file (type png)
+<use selection_1.png>
+Package pdftex.def Info: selection_1.png  used on input line 240.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[6
+pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.244       \newpage
+                     <./selection_1.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 250--257
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--258
+
+ []
+
+<selection_2.png, id=337, 632.3625pt x 451.6875pt>
+File: selection_2.png Graphic file (type png)
+<use selection_2.png>
+Package pdftex.def Info: selection_2.png  used on input line 262.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[7
+pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.266       \newpage
+                     <./selection_2.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 272--279
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--280
+
+ []
+
+<selection_3.png, id=344, 632.3625pt x 451.6875pt>
+File: selection_3.png Graphic file (type png)
+<use selection_3.png>
+Package pdftex.def Info: selection_3.png  used on input line 284.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[8
+pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.288       \newpage
+                     <./selection_3.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 294--301
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--302
+
+ []
+
+<selection_4.png, id=351, 632.3625pt x 451.6875pt>
+File: selection_4.png Graphic file (type png)
+<use selection_4.png>
+Package pdftex.def Info: selection_4.png  used on input line 306.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[9
+pdfTeX warning (ext4): destination with the same identifier (name{figure.5}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.310       \newpage
+                     <./selection_4.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 316--323
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 313--324
+
+ []
+
+<selection_5.png, id=358, 632.3625pt x 451.6875pt>
+File: selection_5.png Graphic file (type png)
+<use selection_5.png>
+Package pdftex.def Info: selection_5.png  used on input line 328.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[10
+pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.332       \newpage
+                     <./selection_5.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 338--345
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 335--346
+
+ []
+
+<selection_6.png, id=365, 632.3625pt x 451.6875pt>
+File: selection_6.png Graphic file (type png)
+<use selection_6.png>
+Package pdftex.def Info: selection_6.png  used on input line 350.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[11
+pdfTeX warning (ext4): destination with the same identifier (name{figure.7}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.354       \newpage
+                     <./selection_6.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 360--367
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 357--368
+
+ []
+
+<selection_7.png, id=373, 632.3625pt x 451.6875pt>
+File: selection_7.png Graphic file (type png)
+<use selection_7.png>
+Package pdftex.def Info: selection_7.png  used on input line 372.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[12
+pdfTeX warning (ext4): destination with the same identifier (name{figure.8}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.376       \newpage
+                     <./selection_7.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 382--389
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 379--390
+
+ []
+
+<selection_8.png, id=380, 632.3625pt x 451.6875pt>
+File: selection_8.png Graphic file (type png)
+<use selection_8.png>
+Package pdftex.def Info: selection_8.png  used on input line 394.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[13
+pdfTeX warning (ext4): destination with the same identifier (name{figure.9}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.398       \newpage
+                     <./selection_8.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 404--411
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--412
+
+ []
+
+<selection_9.png, id=387, 632.3625pt x 451.6875pt>
+File: selection_9.png Graphic file (type png)
+<use selection_9.png>
+Package pdftex.def Info: selection_9.png  used on input line 416.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[14
+pdfTeX warning (ext4): destination with the same identifier (name{figure.10}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.420       \newpage
+                     <./selection_9.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 426--433
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 423--434
+
+ []
+
+<selection_10.png, id=394, 632.3625pt x 451.6875pt>
+File: selection_10.png Graphic file (type png)
+<use selection_10.png>
+Package pdftex.def Info: selection_10.png  used on input line 438.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[15
+pdfTeX warning (ext4): destination with the same identifier (name{figure.11}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.442       \newpage
+                     <./selection_10.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 448--455
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 445--456
+
+ []
+
+<selection_11.png, id=401, 632.3625pt x 451.6875pt>
+File: selection_11.png Graphic file (type png)
+<use selection_11.png>
+Package pdftex.def Info: selection_11.png  used on input line 460.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[16
+pdfTeX warning (ext4): destination with the same identifier (name{figure.12}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.464       \newpage
+                     <./selection_11.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 470--477
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 467--478
+
+ []
+
+<selection_12.png, id=408, 632.3625pt x 451.6875pt>
+File: selection_12.png Graphic file (type png)
+<use selection_12.png>
+Package pdftex.def Info: selection_12.png  used on input line 482.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[17
+pdfTeX warning (ext4): destination with the same identifier (name{figure.13}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.486       \newpage
+                     <./selection_12.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 492--499
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--500
+
+ []
+
+<selection_13.png, id=416, 632.3625pt x 451.6875pt>
+File: selection_13.png Graphic file (type png)
+<use selection_13.png>
+Package pdftex.def Info: selection_13.png  used on input line 504.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[18
+pdfTeX warning (ext4): destination with the same identifier (name{figure.14}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.508       \newpage
+                     <./selection_13.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 514--521
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 511--522
+
+ []
+
+<selection_14.png, id=423, 632.3625pt x 451.6875pt>
+File: selection_14.png Graphic file (type png)
+<use selection_14.png>
+Package pdftex.def Info: selection_14.png  used on input line 526.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[19
+pdfTeX warning (ext4): destination with the same identifier (name{figure.15}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.530       \newpage
+                     <./selection_14.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 536--543
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 533--544
+
+ []
+
+<selection_15.png, id=430, 632.3625pt x 451.6875pt>
+File: selection_15.png Graphic file (type png)
+<use selection_15.png>
+Package pdftex.def Info: selection_15.png  used on input line 548.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[20
+pdfTeX warning (ext4): destination with the same identifier (name{figure.16}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.552       \newpage
+                     <./selection_15.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 558--565
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 555--566
+
+ []
+
+<selection_16.png, id=437, 632.3625pt x 451.6875pt>
+File: selection_16.png Graphic file (type png)
+<use selection_16.png>
+Package pdftex.def Info: selection_16.png  used on input line 570.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[21
+pdfTeX warning (ext4): destination with the same identifier (name{figure.17}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.574       \newpage
+                     <./selection_16.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 580--587
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 577--588
+
+ []
+
+<selection_17.png, id=444, 632.3625pt x 451.6875pt>
+File: selection_17.png Graphic file (type png)
+<use selection_17.png>
+Package pdftex.def Info: selection_17.png  used on input line 592.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[22
+pdfTeX warning (ext4): destination with the same identifier (name{figure.18}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.596       \newpage
+                     <./selection_17.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 602--609
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 599--610
+
+ []
+
+<selection_18.png, id=451, 632.3625pt x 451.6875pt>
+File: selection_18.png Graphic file (type png)
+<use selection_18.png>
+Package pdftex.def Info: selection_18.png  used on input line 614.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[23
+pdfTeX warning (ext4): destination with the same identifier (name{figure.19}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.618       \newpage
+                     <./selection_18.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 624--631
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 621--632
+
+ []
+
+<selection_19.png, id=459, 632.3625pt x 451.6875pt>
+File: selection_19.png Graphic file (type png)
+<use selection_19.png>
+Package pdftex.def Info: selection_19.png  used on input line 636.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[24
+pdfTeX warning (ext4): destination with the same identifier (name{figure.20}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.640       \newpage
+                     <./selection_19.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 646--653
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 643--654
+
+ []
+
+<selection_20.png, id=466, 632.3625pt x 451.6875pt>
+File: selection_20.png Graphic file (type png)
+<use selection_20.png>
+Package pdftex.def Info: selection_20.png  used on input line 658.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[25
+pdfTeX warning (ext4): destination with the same identifier (name{figure.21}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.662       \newpage
+                     <./selection_20.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 668--675
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 665--676
+
+ []
+
+<selection_21.png, id=473, 632.3625pt x 451.6875pt>
+File: selection_21.png Graphic file (type png)
+<use selection_21.png>
+Package pdftex.def Info: selection_21.png  used on input line 680.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[26
+pdfTeX warning (ext4): destination with the same identifier (name{figure.22}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.684       \newpage
+                     <./selection_21.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 690--697
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--698
+
+ []
+
+<selection_22.png, id=481, 632.3625pt x 451.6875pt>
+File: selection_22.png Graphic file (type png)
+<use selection_22.png>
+Package pdftex.def Info: selection_22.png  used on input line 702.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[27
+pdfTeX warning (ext4): destination with the same identifier (name{figure.23}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.706       \newpage
+                     <./selection_22.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 712--719
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 709--720
+
+ []
+
+<selection_23.png, id=488, 632.3625pt x 451.6875pt>
+File: selection_23.png Graphic file (type png)
+<use selection_23.png>
+Package pdftex.def Info: selection_23.png  used on input line 724.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[28
+pdfTeX warning (ext4): destination with the same identifier (name{figure.24}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.728       \newpage
+                     <./selection_23.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 734--741
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 731--742
+
+ []
+
+<selection_24.png, id=495, 632.3625pt x 451.6875pt>
+File: selection_24.png Graphic file (type png)
+<use selection_24.png>
+Package pdftex.def Info: selection_24.png  used on input line 746.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[29
+pdfTeX warning (ext4): destination with the same identifier (name{figure.25}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.750       \newpage
+                     <./selection_24.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 756--763
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 753--764
+
+ []
+
+<selection_25.png, id=503, 632.3625pt x 451.6875pt>
+File: selection_25.png Graphic file (type png)
+<use selection_25.png>
+Package pdftex.def Info: selection_25.png  used on input line 768.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[30
+pdfTeX warning (ext4): destination with the same identifier (name{figure.26}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.772       \newpage
+                     <./selection_25.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 778--785
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 775--786
+
+ []
+
+<selection_26.png, id=510, 632.3625pt x 451.6875pt>
+File: selection_26.png Graphic file (type png)
+<use selection_26.png>
+Package pdftex.def Info: selection_26.png  used on input line 790.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[31
+pdfTeX warning (ext4): destination with the same identifier (name{figure.27}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.794       \newpage
+                     <./selection_26.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 800--807
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 797--808
+
+ []
+
+<selection_27.png, id=517, 632.3625pt x 451.6875pt>
+File: selection_27.png Graphic file (type png)
+<use selection_27.png>
+Package pdftex.def Info: selection_27.png  used on input line 812.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[32
+pdfTeX warning (ext4): destination with the same identifier (name{figure.28}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.816       \newpage
+                     <./selection_27.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 822--829
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 819--830
+
+ []
+
+<selection_28.png, id=524, 632.3625pt x 451.6875pt>
+File: selection_28.png Graphic file (type png)
+<use selection_28.png>
+Package pdftex.def Info: selection_28.png  used on input line 834.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[33
+pdfTeX warning (ext4): destination with the same identifier (name{figure.29}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.838       \newpage
+                     <./selection_28.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 844--851
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 841--852
+
+ []
+
+<selection_29.png, id=531, 632.3625pt x 451.6875pt>
+File: selection_29.png Graphic file (type png)
+<use selection_29.png>
+Package pdftex.def Info: selection_29.png  used on input line 856.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[34
+pdfTeX warning (ext4): destination with the same identifier (name{figure.30}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.860       \newpage
+                     <./selection_29.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 866--873
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 863--874
+
+ []
+
+<selection_30.png, id=538, 632.3625pt x 451.6875pt>
+File: selection_30.png Graphic file (type png)
+<use selection_30.png>
+Package pdftex.def Info: selection_30.png  used on input line 878.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[35
+pdfTeX warning (ext4): destination with the same identifier (name{figure.31}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.882       \newpage
+                     <./selection_30.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 888--895
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 885--896
+
+ []
+
+<selection_31.png, id=546, 632.3625pt x 451.6875pt>
+File: selection_31.png Graphic file (type png)
+<use selection_31.png>
+Package pdftex.def Info: selection_31.png  used on input line 900.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[36
+pdfTeX warning (ext4): destination with the same identifier (name{figure.32}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.904       \newpage
+                     <./selection_31.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 910--917
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 907--918
+
+ []
+
+<selection_32.png, id=553, 632.3625pt x 451.6875pt>
+File: selection_32.png Graphic file (type png)
+<use selection_32.png>
+Package pdftex.def Info: selection_32.png  used on input line 922.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[37
+pdfTeX warning (ext4): destination with the same identifier (name{figure.33}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.926       \newpage
+                     <./selection_32.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 932--939
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 929--940
+
+ []
+
+<selection_33.png, id=560, 632.3625pt x 451.6875pt>
+File: selection_33.png Graphic file (type png)
+<use selection_33.png>
+Package pdftex.def Info: selection_33.png  used on input line 944.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[38
+pdfTeX warning (ext4): destination with the same identifier (name{figure.34}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.948       \newpage
+                     <./selection_33.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 954--961
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 951--962
+
+ []
+
+<selection_34.png, id=567, 632.3625pt x 451.6875pt>
+File: selection_34.png Graphic file (type png)
+<use selection_34.png>
+Package pdftex.def Info: selection_34.png  used on input line 966.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[39
+pdfTeX warning (ext4): destination with the same identifier (name{figure.35}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.970       \newpage
+                     <./selection_34.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 976--983
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 973--984
+
+ []
+
+<selection_35.png, id=574, 632.3625pt x 451.6875pt>
+File: selection_35.png Graphic file (type png)
+<use selection_35.png>
+Package pdftex.def Info: selection_35.png  used on input line 988.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[40
+pdfTeX warning (ext4): destination with the same identifier (name{figure.36}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.992       \newpage
+                     <./selection_35.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 998--1005
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 995--1006
+
+ []
+
+<selection_36.png, id=581, 632.3625pt x 451.6875pt>
+File: selection_36.png Graphic file (type png)
+<use selection_36.png>
+Package pdftex.def Info: selection_36.png  used on input line 1010.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[41
+pdfTeX warning (ext4): destination with the same identifier (name{figure.37}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1014       \newpage
+                      <./selection_36.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1020--1027
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1017--1028
+
+ []
+
+<selection_37.png, id=589, 632.3625pt x 451.6875pt>
+File: selection_37.png Graphic file (type png)
+<use selection_37.png>
+Package pdftex.def Info: selection_37.png  used on input line 1032.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[42
+pdfTeX warning (ext4): destination with the same identifier (name{figure.38}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1036       \newpage
+                      <./selection_37.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1042--1049
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1039--1050
+
+ []
+
+<selection_38.png, id=596, 632.3625pt x 451.6875pt>
+File: selection_38.png Graphic file (type png)
+<use selection_38.png>
+Package pdftex.def Info: selection_38.png  used on input line 1054.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[43
+pdfTeX warning (ext4): destination with the same identifier (name{figure.39}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1058       \newpage
+                      <./selection_38.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1064--1071
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1061--1072
+
+ []
+
+<selection_39.png, id=603, 632.3625pt x 451.6875pt>
+File: selection_39.png Graphic file (type png)
+<use selection_39.png>
+Package pdftex.def Info: selection_39.png  used on input line 1076.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[44
+pdfTeX warning (ext4): destination with the same identifier (name{figure.40}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1080       \newpage
+                      <./selection_39.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1086--1093
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1083--1094
+
+ []
+
+<selection_40.png, id=610, 632.3625pt x 451.6875pt>
+File: selection_40.png Graphic file (type png)
+<use selection_40.png>
+Package pdftex.def Info: selection_40.png  used on input line 1098.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[45
+pdfTeX warning (ext4): destination with the same identifier (name{figure.41}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1102       \newpage
+                      <./selection_40.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1108--1115
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1105--1116
+
+ []
+
+<selection_41.png, id=617, 632.3625pt x 451.6875pt>
+File: selection_41.png Graphic file (type png)
+<use selection_41.png>
+Package pdftex.def Info: selection_41.png  used on input line 1120.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[46
+pdfTeX warning (ext4): destination with the same identifier (name{figure.42}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1124       \newpage
+                      <./selection_41.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1130--1137
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1127--1138
+
+ []
+
+<selection_42.png, id=625, 632.3625pt x 451.6875pt>
+File: selection_42.png Graphic file (type png)
+<use selection_42.png>
+Package pdftex.def Info: selection_42.png  used on input line 1142.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[47
+pdfTeX warning (ext4): destination with the same identifier (name{figure.43}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1146       \newpage
+                      <./selection_42.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1152--1159
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1149--1160
+
+ []
+
+<selection_43.png, id=633, 632.3625pt x 451.6875pt>
+File: selection_43.png Graphic file (type png)
+<use selection_43.png>
+Package pdftex.def Info: selection_43.png  used on input line 1164.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[48
+pdfTeX warning (ext4): destination with the same identifier (name{figure.44}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1168       \newpage
+                      <./selection_43.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1174--1181
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1171--1182
+
+ []
+
+<selection_44.png, id=640, 632.3625pt x 451.6875pt>
+File: selection_44.png Graphic file (type png)
+<use selection_44.png>
+Package pdftex.def Info: selection_44.png  used on input line 1186.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[49
+pdfTeX warning (ext4): destination with the same identifier (name{figure.45}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1190       \newpage
+                      <./selection_44.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1196--1203
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1193--1204
+
+ []
+
+<selection_45.png, id=647, 632.3625pt x 451.6875pt>
+File: selection_45.png Graphic file (type png)
+<use selection_45.png>
+Package pdftex.def Info: selection_45.png  used on input line 1208.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[50
+pdfTeX warning (ext4): destination with the same identifier (name{figure.46}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1212       \newpage
+                      <./selection_45.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1218--1225
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1215--1226
+
+ []
+
+<selection_46.png, id=654, 632.3625pt x 451.6875pt>
+File: selection_46.png Graphic file (type png)
+<use selection_46.png>
+Package pdftex.def Info: selection_46.png  used on input line 1230.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[51
+pdfTeX warning (ext4): destination with the same identifier (name{figure.47}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1234       \newpage
+                      <./selection_46.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1240--1247
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1237--1248
+
+ []
+
+<selection_47.png, id=661, 632.3625pt x 451.6875pt>
+File: selection_47.png Graphic file (type png)
+<use selection_47.png>
+Package pdftex.def Info: selection_47.png  used on input line 1252.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[52
+pdfTeX warning (ext4): destination with the same identifier (name{figure.48}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1256       \newpage
+                      <./selection_47.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1262--1269
+ [] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1259--1270
+
+ []
+
+<selection_48.png, id=668, 632.3625pt x 451.6875pt>
+File: selection_48.png Graphic file (type png)
+<use selection_48.png>
+Package pdftex.def Info: selection_48.png  used on input line 1274.
+(pdftex.def)             Requested size: 284.5605pt x 203.25749pt.
+
+
+[53
+pdfTeX warning (ext4): destination with the same identifier (name{figure.49}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1278       \end{document}
+                            <./selection_48.png>] (./main.aux)
+ ***********
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+ ***********
+Package rerunfilecheck Info: File `main.out' has not changed.
+(rerunfilecheck)             Checksum: F3A60C3D90FB0D83B8A0EB5D4438336B;6983.
+ ) 
+Here is how much of TeX's memory you used:
+ 11694 strings out of 473190
+ 180235 string characters out of 5704335
+ 582729 words of memory out of 5000000
+ 34630 multiletter control sequences out of 15000+600000
+ 571541 words of font info for 60 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 90i,12n,93p,341b,479s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/
+amsfonts/cm/cmr7.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/
+fonts/type1/public/amsfonts/cm/cmsy7.pfb></opt/homebrew/Cellar/texlive/20250308
+_2/share/texmf-dist/fonts/type1/public/cm-super/sfbx0900.pfb></opt/homebrew/Cel
+lar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pf
+b></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/
+cm-super/sfbx1200.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist
+/fonts/type1/public/cm-super/sfcc1000.pfb></opt/homebrew/Cellar/texlive/2025030
+8_2/share/texmf-dist/fonts/type1/public/cm-super/sfrm0900.pfb></opt/homebrew/Ce
+llar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfrm1000.p
+fb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public
+/cm-super/sfsx1000.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dis
+t/fonts/type1/public/cm-super/sfsx1728.pfb></opt/homebrew/Cellar/texlive/202503
+08_2/share/texmf-dist/fonts/type1/public/cm-super/sfti1000.pfb></opt/homebrew/C
+ellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sftt1000.
+pfb>
+Output written on main.pdf (55 pages, 825440 bytes).
+PDF statistics:
+ 769 PDF objects out of 1000 (max. 8388607)
+ 582 compressed objects within 6 object streams
+ 161 named destinations out of 1000 (max. 500000)
+ 691 words of extra memory for PDF output out of 10000 (max. 10000000)
+

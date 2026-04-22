@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+#  This runs MadAnalysis on the unweighted_events.lhe
+#
+#  Usage: run_plot run_name [madir [tddir]]
+#  where madir is the path to the MadAnalysis package
+
+main=`pwd`
+
+if [ "$1" != "" ]
+then
+  run=$1
+else
+  echo "Usage: run_plot runname [MAdir [tddir]]"
+  exit
+fi
+
+if [ "$2" != "" ]
+then
+  MAdir=$main/$2
+else
+  MAdir=$main/../../MadAnalysis
+fi
+
+if [ "$3" != "" ]; then
+  td=$main/$3
+else
+  td=$main/../../td
+fi
+
+dirbin=$main/../bin
+
+if [[ $run != "" && -e ${run}_unweighted_events.lhe.gz ]];then
+    gunzip -c ${run}_unweighted_events.lhe.gz > unweighted_events.lhe
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots"
+    mkdir $run
+    cd $run
+    echo "../unweighted_events.lhe" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl $run parton
+    mv plots.html ${run}_plots.html
+fi
+

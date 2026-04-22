@@ -1,0 +1,132 @@
+DEFAULT_F2PY_COMPILER=f2py
+DEFAULT_F_COMPILER=gfortran
+MACFLAG=-mmacosx-version-min=10.7
+DEFAULT_CPP_COMPILER=clang
+MG5AMC_VERSION=SpecifiedByMG5aMCAtRunTime
+STDLIB=-lstdc++
+PYTHIA8_PATH=NotInstalled
+STDLIB_FLAG=
+#end_of_make_opts_variables
+
+BIASLIBDIR=../../../lib/
+BIASLIBRARY=libbias.$(libext)
+
+# Rest of the makefile
+ifeq ($(origin FFLAGS),undefined)
+FFLAGS= -w -fPIC
+#FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall -fimplicit-none
+endif
+
+FFLAGS += $(GLOBAL_FLAG)
+
+# REMOVE MACFLAG IF NOT ON MAC OR FOR F2PY
+UNAME := $(shell uname -s)
+ifdef f2pymode
+MACFLAG=
+else
+ifneq ($(UNAME), Darwin)
+MACFLAG=
+endif
+endif
+
+# set the flag for dynamical library
+ifeq ($(UNAME), Darwin)
+DYNLIBFLAG=-dynamiclib
+RPATHFLAG=-install_name @rpath/
+else
+DYNLIBFLAG=-shared -fPIC
+RPATHFLAG=-Wl,-soname,
+endif
+
+ifeq ($(origin CXXFLAGS),undefined)
+CXXFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
+endif
+
+ifeq ($(origin CFLAGS),undefined)
+CFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
+endif
+
+# Set FC unless it's defined by an environment variable
+ifeq ($(origin FC),default)
+FC=$(DEFAULT_F_COMPILER)
+endif
+ifeq ($(origin F2PY), undefined)
+F2PY=$(DEFAULT_F2PY_COMPILER)
+endif
+
+# Increase the number of allowed charcters in a Fortran line
+ifeq ($(FC), ftn)
+FFLAGS+= -extend-source # for ifort type of compiler
+else
+    VERS="$(shell $(FC) --version | grep ifort -i)"
+    ifeq ($(VERS), "")
+        FFLAGS+= -ffixed-line-length-132
+    else	     
+        FFLAGS+= -extend-source # for ifort type of compiler
+    endif
+endif
+
+
+UNAME := $(shell uname -s)
+ifeq ($(origin LDFLAGS), undefined)
+LDFLAGS=$(STDLIB) $(MACFLAG)
+endif
+
+# Options: dynamic, lhapdf
+# Option dynamic
+
+ifeq ($(UNAME), Darwin)
+dylibext=dylib
+else
+dylibext=so
+endif
+
+ifdef dynamic
+ifeq ($(UNAME), Darwin)
+libext=dylib
+FFLAGS+= -fno-common
+LDFLAGS += -bundle
+define CREATELIB
+$(FC) -dynamiclib -undefined dynamic_lookup -o $(1) $(2)
+endef
+else
+libext=so
+FFLAGS+= -fPIC
+LDFLAGS += -shared
+define CREATELIB
+$(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)
+endef
+endif
+else
+libext=a
+define CREATELIB
+$(AR) cru $(1) $(2)
+ranlib $(1)
+endef
+endif
+
+# Option lhapdf
+
+ifneq ($(lhapdf),)
+  CXXFLAGS += $(shell $(lhapdf) --cppflags)
+  alfas_functions=alfas_functions_lhapdf
+  alfas_to_clean=alfas_functions.o
+  llhapdf+= $(shell $(lhapdf) --cflags --libs) -lLHAPDF
+# check if we need to activate c++11 (for lhapdf6.2)
+  ifeq ($(origin CXX),default)
+    ifeq ($lhapdfversion$lhapdfsubversion,62)
+      CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
+    else
+      CXX=$(DEFAULT_CPP_COMPILER)
+    endif
+  endif	     
+else
+  alfas_functions=alfas_functions
+  alfas_to_clean=alfas_functions_lhapdf.o
+  llhapdf=
+endif
+
+# Helper function to check MG5 version
+define CHECK_MG5AMC_VERSION
+python -c 'import re; from distutils.version import StrictVersion; print StrictVersion("$(MG5AMC_VERSION)") >= StrictVersion("$(1)") if re.match("^[\d\.]+$$","$(MG5AMC_VERSION)") else True;'
+endef

@@ -1,0 +1,1064 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025/Homebrew) (preloaded format=latex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/articl
+e.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/size10
+.clo)) (./jheppub.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+math.sty
+For additional information on amsmath, use the `?' option.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+text.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+gen.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+bsy.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+opn.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+ssymb.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+sfonts.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ep
+sfig.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphicx.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ke
+yval.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphics.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/tr
+ig.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/graphics.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-de
+f/dvips.def))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/natbib/natb
+ib.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/co
+lor.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/dv
+ipsnam.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hy
+perref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/iftex/ift
+ex.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvsetkeys/k
+vsetkeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/kvdefinek
+eys/kvdefinekeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdfescape
+/pdfescape.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/ltxcmds/l
+txcmds.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdftexcmd
+s/pdftexcmds.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/infwarerr
+/infwarerr.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hycolor/hyc
+olor.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/na
+meref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/refcount/re
+fcount.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/gettitles
+tring/gettitlestring.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvoptions/k
+voptions.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/etoolbox/et
+oolbox.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/stringenc
+/stringenc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+1enc.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/intcalc/i
+ntcalc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pu
+enc.def)
+
+Package hyperref Warning: Option `pagecolor' is not available anymore.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/url/url.sty
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bitset/bi
+tset.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bigintcal
+c/bigintcalc.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atbegs
+hi-ltx.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hd
+vips.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+fmark.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/rerunfilech
+eck/rerunfilecheck.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atvery
+end-ltx.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/uniquecou
+nter/uniquecounter.sty))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/psnfss/ot1p
+hv.fd))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/fonten
+c.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/colortbl/co
+lortbl.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/tools/array
+.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/xcolor/xcol
+or.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/float/float
+.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/l3backend/l
+3backend-dvips.def)
+No file main.aux.
+
+Package hyperref Warning: Rerun to get /PageLabels entry.
+
+<logo.eps>
+
+Package JHEP Warning: E-mails are missing.
+(JHEP)                Plese use \emailAdd macro to provide e-mails..
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sa.fd)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sb.fd)
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+[0]
+No file main.toc.
+
+[1]
+Overfull \hbox (26.4321pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-bin/-internal/-
+
+Overfull \hbox (31.68082pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (105.16287pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>submit /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-MA5_PARTON_ANALYSIS_analysis1 
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--161
+
+
+[2]
+[3]
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/cmr/m/n/10 PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (18.13213pt too wide) in paragraph at lines 185--192
+ [] 
+
+[4]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 206--213
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 203--214
+
+<selection_0.eps>
+[5]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 228--235
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 225--236
+
+<selection_1.eps>
+[6]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 250--257
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--258
+
+<selection_2.eps>
+[7]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 272--279
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--280
+
+<selection_3.eps>
+[8]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 294--301
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--302
+
+<selection_4.eps>
+[9]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 316--323
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 313--324
+
+<selection_5.eps>
+[10]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 338--345
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 335--346
+
+<selection_6.eps>
+[11]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 360--367
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 357--368
+
+<selection_7.eps>
+[12]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 382--389
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 379--390
+
+<selection_8.eps>
+[13]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 404--411
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--412
+
+<selection_9.eps>
+[14]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 426--433
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 423--434
+
+<selection_10.eps>
+[15]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 448--455
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 445--456
+
+<selection_11.eps>
+[16]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 470--477
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 467--478
+
+<selection_12.eps>
+[17]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 492--499
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--500
+
+<selection_13.eps>
+[18]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 514--521
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 511--522
+
+<selection_14.eps>
+[19]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 536--543
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 533--544
+
+<selection_15.eps>
+[20]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 558--565
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 555--566
+
+<selection_16.eps>
+[21]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 580--587
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 577--588
+
+<selection_17.eps>
+[22]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 602--609
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 599--610
+
+<selection_18.eps>
+[23]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 624--631
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 621--632
+
+<selection_19.eps>
+[24]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 646--653
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 643--654
+
+<selection_20.eps>
+[25]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 668--675
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 665--676
+
+<selection_21.eps>
+[26]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 690--697
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--698
+
+<selection_22.eps>
+[27]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 712--719
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 709--720
+
+<selection_23.eps>
+[28]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 734--741
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 731--742
+
+<selection_24.eps>
+[29]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 756--763
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 753--764
+
+<selection_25.eps>
+[30]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 778--785
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 775--786
+
+<selection_26.eps>
+[31]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 800--807
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 797--808
+
+<selection_27.eps>
+[32]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 822--829
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 819--830
+
+<selection_28.eps>
+[33]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 844--851
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 841--852
+
+<selection_29.eps>
+[34]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 866--873
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 863--874
+
+<selection_30.eps>
+[35]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 888--895
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 885--896
+
+<selection_31.eps>
+[36]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 910--917
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 907--918
+
+<selection_32.eps>
+[37]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 932--939
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 929--940
+
+<selection_33.eps>
+[38]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 954--961
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 951--962
+
+<selection_34.eps>
+[39]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 976--983
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 973--984
+
+<selection_35.eps>
+[40]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 998--1005
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 995--1006
+
+<selection_36.eps>
+[41]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1020--1027
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1017--1028
+
+<selection_37.eps>
+[42]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1042--1049
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1039--1050
+
+<selection_38.eps>
+[43]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1064--1071
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1061--1072
+
+<selection_39.eps>
+[44]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1086--1093
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1083--1094
+
+<selection_40.eps>
+[45]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1108--1115
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1105--1116
+
+<selection_41.eps>
+[46]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1130--1137
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1127--1138
+
+<selection_42.eps>
+[47]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1152--1159
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1149--1160
+
+<selection_43.eps>
+[48]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1174--1181
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1171--1182
+
+<selection_44.eps>
+[49]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1196--1203
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1193--1204
+
+<selection_45.eps>
+[50]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1218--1225
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1215--1226
+
+<selection_46.eps>
+[51]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1240--1247
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1237--1248
+
+<selection_47.eps>
+[52]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1262--1269
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1259--1270
+
+<selection_48.eps>
+[53] (./main.aux)
+
+Package rerunfilecheck Warning: File `main.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+ )
+(see the transcript file for additional information)
+Output written on main.dvi (54 pages, 149532 bytes).
+Transcript written on main.log.
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025/Homebrew) (preloaded format=latex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/articl
+e.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/size10
+.clo)) (./jheppub.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+math.sty
+For additional information on amsmath, use the `?' option.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+text.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+gen.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+bsy.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+opn.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+ssymb.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+sfonts.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ep
+sfig.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphicx.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ke
+yval.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphics.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/tr
+ig.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/graphics.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-de
+f/dvips.def))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/natbib/natb
+ib.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/co
+lor.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/dv
+ipsnam.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hy
+perref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/iftex/ift
+ex.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvsetkeys/k
+vsetkeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/kvdefinek
+eys/kvdefinekeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdfescape
+/pdfescape.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/ltxcmds/l
+txcmds.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdftexcmd
+s/pdftexcmds.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/infwarerr
+/infwarerr.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hycolor/hyc
+olor.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/na
+meref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/refcount/re
+fcount.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/gettitles
+tring/gettitlestring.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvoptions/k
+voptions.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/etoolbox/et
+oolbox.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/stringenc
+/stringenc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+1enc.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/intcalc/i
+ntcalc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pu
+enc.def)
+
+Package hyperref Warning: Option `pagecolor' is not available anymore.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/url/url.sty
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bitset/bi
+tset.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bigintcal
+c/bigintcalc.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atbegs
+hi-ltx.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hd
+vips.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+fmark.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/rerunfilech
+eck/rerunfilecheck.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atvery
+end-ltx.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/uniquecou
+nter/uniquecounter.sty))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/psnfss/ot1p
+hv.fd))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/fonten
+c.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/colortbl/co
+lortbl.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/tools/array
+.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/xcolor/xcol
+or.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/float/float
+.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/l3backend/l
+3backend-dvips.def) (./main.aux) (./main.out) (./main.out) <logo.eps>
+
+Package JHEP Warning: E-mails are missing.
+(JHEP)                Plese use \emailAdd macro to provide e-mails..
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sa.fd)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sb.fd)
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+[0] (./main.toc
+[1])
+[1]
+Overfull \hbox (26.4321pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-bin/-internal/-
+
+Overfull \hbox (31.68082pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (105.16287pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>submit /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-MA5_PARTON_ANALYSIS_analysis1 
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--161
+
+
+[2]
+[3]
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/cmr/m/n/10 PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (18.13213pt too wide) in paragraph at lines 185--192
+ [] 
+
+[4]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 206--213
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 203--214
+
+<selection_0.eps>
+[5]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 228--235
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 225--236
+
+<selection_1.eps>
+[6]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 250--257
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--258
+
+<selection_2.eps>
+[7]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 272--279
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--280
+
+<selection_3.eps>
+[8]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 294--301
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--302
+
+<selection_4.eps>
+[9]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 316--323
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 313--324
+
+<selection_5.eps>
+[10]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 338--345
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 335--346
+
+<selection_6.eps>
+[11]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 360--367
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 357--368
+
+<selection_7.eps>
+[12]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 382--389
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 379--390
+
+<selection_8.eps>
+[13]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 404--411
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--412
+
+<selection_9.eps>
+[14]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 426--433
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 423--434
+
+<selection_10.eps>
+[15]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 448--455
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 445--456
+
+<selection_11.eps>
+[16]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 470--477
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 467--478
+
+<selection_12.eps>
+[17]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 492--499
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--500
+
+<selection_13.eps>
+[18]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 514--521
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 511--522
+
+<selection_14.eps>
+[19]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 536--543
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 533--544
+
+<selection_15.eps>
+[20]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 558--565
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 555--566
+
+<selection_16.eps>
+[21]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 580--587
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 577--588
+
+<selection_17.eps>
+[22]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 602--609
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 599--610
+
+<selection_18.eps>
+[23]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 624--631
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 621--632
+
+<selection_19.eps>
+[24]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 646--653
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 643--654
+
+<selection_20.eps>
+[25]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 668--675
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 665--676
+
+<selection_21.eps>
+[26]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 690--697
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--698
+
+<selection_22.eps>
+[27]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 712--719
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 709--720
+
+<selection_23.eps>
+[28]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 734--741
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 731--742
+
+<selection_24.eps>
+[29]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 756--763
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 753--764
+
+<selection_25.eps>
+[30]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 778--785
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 775--786
+
+<selection_26.eps>
+[31]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 800--807
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 797--808
+
+<selection_27.eps>
+[32]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 822--829
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 819--830
+
+<selection_28.eps>
+[33]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 844--851
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 841--852
+
+<selection_29.eps>
+[34]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 866--873
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 863--874
+
+<selection_30.eps>
+[35]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 888--895
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 885--896
+
+<selection_31.eps>
+[36]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 910--917
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 907--918
+
+<selection_32.eps>
+[37]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 932--939
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 929--940
+
+<selection_33.eps>
+[38]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 954--961
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 951--962
+
+<selection_34.eps>
+[39]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 976--983
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 973--984
+
+<selection_35.eps>
+[40]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 998--1005
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 995--1006
+
+<selection_36.eps>
+[41]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1020--1027
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1017--1028
+
+<selection_37.eps>
+[42]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1042--1049
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1039--1050
+
+<selection_38.eps>
+[43]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1064--1071
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1061--1072
+
+<selection_39.eps>
+[44]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1086--1093
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1083--1094
+
+<selection_40.eps>
+[45]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1108--1115
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1105--1116
+
+<selection_41.eps>
+[46]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1130--1137
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1127--1138
+
+<selection_42.eps>
+[47]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1152--1159
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1149--1160
+
+<selection_43.eps>
+[48]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1174--1181
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1171--1182
+
+<selection_44.eps>
+[49]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1196--1203
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1193--1204
+
+<selection_45.eps>
+[50]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1218--1225
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1215--1226
+
+<selection_46.eps>
+[51]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1240--1247
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1237--1248
+
+<selection_47.eps>
+[52]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1262--1269
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1259--1270
+
+<selection_48.eps>
+[53] (./main.aux) )
+(see the transcript file for additional information)
+Output written on main.dvi (55 pages, 175052 bytes).
+Transcript written on main.log.

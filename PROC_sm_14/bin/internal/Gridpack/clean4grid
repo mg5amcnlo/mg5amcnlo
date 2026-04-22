@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+################################################################################
+#                                                                             ##
+#                    MadGraph/MadEvent                                        ##
+#                                                                             ##
+# FILE : clean4grid                                                           ##
+# VERSION : 1.0                                                               ##
+# DATE : 29 Jan 2008                                                          ##
+# AUTHORS : MH & RF - MadGraph5_aMC@NLO team                                  ##
+#                                                                             ##
+# DESCRIPTION : script to clean package for the grid                          ##
+# USAGE : ./clean4grid                                                        ##
+################################################################################
+
+set nonomatch
+
+if [[ ! -d ./bin ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+        echo "Error: it must be executed from the main, or bin directory"
+        exit
+    fi
+fi
+
+if [[ -d SubProcesses ]]; then
+    cd SubProcesses
+    echo -n "Cleaning  SubProcesses"
+    rm -f *.f  >& /dev/null
+    for i in `cat subproc.mg` ; do
+	cd $i
+	echo -n "."
+	rm -f *.o >& /dev/null
+        rm -f *.f  >& /dev/null
+#	rm -f madevent >& /dev/null
+#	rm -f *ajob* >& /dev/null
+	rm -f gensym >& /dev/null
+        rm -f matrix*.jpg >& /dev/null
+        rm -f matrix.ps >& /dev/null
+	rm -f G*/ftn25 >& /dev/null
+	rm -f G*/ftn26 >& /dev/null
+	rm -f G*/events.lhe >& /dev/null
+	cd ..
+    done
+    echo " "
+    cd ../
+else
+    echo "Error could not find SubProcesses"
+    exit
+fi
+if [[ -d Source ]]; then
+    echo "Removing Source:"
+    cd Source
+    rm -f *.o >& /dev/null
+    rm -f *.f >& /dev/null
+#    rm -f *.inc >& /dev/null
+    rm -f DHELAS/*.F >& /dev/null
+    rm -f DHELAS/*.f >& /dev/null
+    rm -f DHELAS/*.o >& /dev/null
+    rm -f DHELAS/*.inc >& /dev/null
+    rm -rf DHELAS/Doc >& /dev/null
+    rm -f MODEL/*.f >& /dev/null
+    rm -f MODEL/*.o >& /dev/null
+    rm -f MODEL/*.dat >& /dev/null
+    rm -f MODEL/*.html >& /dev/null
+    rm -f PDF/*.f >& /dev/null
+    rm -f PDF/*.o >& /dev/null
+    rm -f PDF/*.inc >& /dev/null
+    cd ..
+fi
+if [[ -d HTML ]]; then
+    echo "Removing HTML files:"
+    rm -f HTML/*  >& /dev/null
+fi
+#if [[ -d lib ]]; then
+#    cd lib
+#    echo "Cleaning lib:"
+#    rm -f *.a >& /dev/null
+#    cd ../
+#else
+#    echo "Error could not find lib"
+#    exit
+#fi
+#if [[ -d bin ]]; then
+#    cd bin
+#    echo "Cleaning bin:"
+#    for i in gen_ximprove scale_events select_events sum_html combine_events; do
+#	rm -f $i >& /dev/null
+#    done
+#    cd ../
+#else
+#    echo "Error could not find bin"
+#    exit
+#fi
+

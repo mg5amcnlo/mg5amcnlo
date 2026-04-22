@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+#  First get to main level directory for this process
+#
+
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: store must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+
+#  Now let shell know where to find important executables
+
+main=`pwd`
+if [[ $MADGRAPH_BASE != '' ]]; then
+        dirbin=$MADGRAPH_BASE/MG_ME/WebBin
+        mgmedir=$MADGRAPH_BASE/MG_ME
+else
+        dirbin=$main/bin
+        mgmedir=$main/..
+fi
+
+#	Clear out any old information/directories
+
+cp -p HTML/info-default.html HTML/info.html
+rm -f bin/internal/plot_events >& /dev/null
+rm -f bin/internal/scale_events >& /dev/null
+rm -f bin/internal/sum_html >& /dev/null
+rm -f bin/internal/select_events >& /dev/null
+
+bin/internal/gen_cardhtml-pl
+
+if [[ ! -d lib ]]; then
+    echo "Error: lib directory not found"
+    exit
+fi
+cd lib/
+rm -f libdhelas3.a libdsample.a libgeneric.a libmodel.a libpdf.a libdhelas3.so libdsample.so libgeneric.so libmodel.so libpdf.so >&/dev/null
+cd ..
+if [[ ! -d Source ]]; then
+    echo "Error: Source directory not found"
+    exit
+fi
+rm -f Source/*.o  >& /dev/null
+rm -f Source/DHELAS/* >& /dev/null
+rm -f Source/MODEL/* >& /dev/null
+rm -f Source/PDF/*.o >& /dev/null
+rm -f Source/DECAY/*.o >& /dev/null
+rm -f Source/nexternal.inc >& /dev/null
+rm -f Source/leshouche.inc >& /dev/null
+rm -f Source/coupl.inc >& /dev/null
+
+
+# MG5 info are copied inside the Python script 
+
+#   Now we need to get into the SubProcesses Directory
+
+if [[ ! -d SubProcesses ]]; then
+    echo "Error: SubProcesses directory not found"
+    exit
+fi
+cd SubProcesses
+
+#	Clear out any old information/directories
+
+rm -r `find . -mindepth 1 -maxdepth 1 -type d -name "P*_*_*"` >& /dev/null
+rm -f minput.mg  >& /dev/null
+rm -f dname.mg  >& /dev/null
+rm -f subproc.mg  >& /dev/null
+rm -f *.html >& /dev/null
+rm -f procdef_mg5.dat >& /dev/null 
+rm -f particles.dat >& /dev/null
+rm -f interactions.dat >& /dev/null
+rm -f coupl.inc >& /dev/null
+
+cp -p ../HTML/thinking.gif ../HTML/card.jpg
+ln -sf ../Source/cuts.inc cuts.inc
+ln -sf ../Source/genps.inc genps.inc
+
+if [[ -e ../param_card.dat  ]]; then
+  mv ../param_card.dat ./Cards/param_card.dat
+fi
+if [[ -e ../run_card.dat  ]]; then
+  mv ../run_card.dat ./Cards/run_card.dat
+fi
+if [[ -e ../pythia_card.dat  ]]; then
+  mv ../pythia_card.dat ./Cards/pythia_card.dat
+fi
+if [[ -e ../pgs_card.dat  ]]; then
+  mv ../pgs_card.dat ./Cards/pgs_card.dat
+fi
+if [[ -e ../delphes_card.dat  ]]; then
+  mv ../delphes_card.dat ./Cards/delphes_card.dat
+fi
+if [[ -e ../delphes_trigger.dat  ]]; then
+  mv ../delphes_trigger.dat ./Triggers/delphes_trigger.dat
+fi
+if [[ -e ../grid_card.dat  ]]; then
+  mv ../grid_card.dat ./Cards/grid_card.dat
+fi
+cd ..
+# Ensure that default card exists
+if [[ ! -e  ./Cards/run_card_default.dat ]]; then
+  cp ./Cards/run_card.dat ./Cards/run_card_default.dat
+fi
+

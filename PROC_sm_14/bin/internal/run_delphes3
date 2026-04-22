@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+#  This runs Delphes 3 on the pythia_events.hep
+#
+#  Usage: run_delphes3 [delphes3dir [para/serial [run_name]]]
+#  where delphes3dir is the path to the delphes3 executable
+
+delphesdir=$1
+run=$2
+tag=$3
+cross=$4 
+file=$5
+
+main=`pwd`
+
+if [ ! -e ../Cards/delphes_card.dat ]; then
+  echo "No delphes_card.dat found. Quitting..."
+  exit
+fi
+
+if [ ! -e $delphesdir/DelphesSTDHEP ]; then
+  echo "No Delphes executable found at $delphesdir/DelphesSTDHEP. Quitting..."
+  exit
+fi
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+if [ ${file: -3} == ".gz" ]
+then
+  if [ ${file: -7} == ".hep.gz" ]
+  then
+      gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+  else
+      gunzip --stdout $file | $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+  fi
+else
+  if [ ${file: -4} == ".hep" ]
+  then
+      $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file
+  else
+      $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
+  fi
+fi
+
+echo $$ >> ../myprocid
+
+# Uncomment the following to have the LHCO file:
+#
+#
+#$delphesdir/root2lhco ${run}/${tag}_delphes_events.root delphes_events.lhco
+#
+#if [ -e delphes_events.lhco ]; then
+## write the delphes banner
+#    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
+#    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+#    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
+#    gzip ${run}/${tag}_delphes_events.lhco
+#    rm -f delphes_events.lhco
+#fi

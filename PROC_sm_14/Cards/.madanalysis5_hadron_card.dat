@@ -1,0 +1,115 @@
+# Uncomment the line below to skip this analysis altogether
+# @MG5aMC skip_analysis
+
+@MG5aMC stdout_lvl=INFO
+
+@MG5aMC inputs = *.hepmc, *.hep, *.stdhep, *.lhco, *.fifo
+
+# Reconstruction using FastJet
+@MG5aMC reconstruction_name = BasicReco
+@MG5aMC reco_output = lhe
+# Multiparticle definition
+define invisible = 16 14 -14 12 -12 -16
+set main.fastsim.package = fastjet
+set main.fastsim.algorithm = antikt
+set main.fastsim.radius = 0.4
+set main.fastsim.ptmin = 5.0
+# b-tagging
+set main.fastsim.bjet_id.matching_dr = 0.4
+set main.fastsim.bjet_id.efficiency = 1.0
+set main.fastsim.bjet_id.misid_cjet = 0.0
+set main.fastsim.bjet_id.misid_ljet = 0.0
+# tau-tagging
+set main.fastsim.tau_id.efficiency = 1.0
+set main.fastsim.tau_id.misid_ljet = 0.0
+
+# Analysis using the fastjet reco
+@MG5aMC analysis_name = analysis2
+# Uncomment the next line to bypass this analysis
+# @MG5aMC skip_analysis
+@MG5aMC set_reconstructions = ['BasicReco']
+
+# plot tunning: dsigma/sigma is plotted.
+set main.stacking_method = normalize2one
+
+# object definition
+define e = e+ e-
+define mu = mu+ mu-
+select (j)  PT > 20
+select (b)  PT > 20
+select (e)  PT > 10
+select (mu) PT > 10
+select (j)  ABSETA < 2.5
+select (b)  ABSETA < 2.5
+select (e)  ABSETA < 2.5
+select (mu) ABSETA < 2.5
+# Basic plots
+plot MET 40 0 500
+plot THT 40 0 500
+# basic properties of the non-b-tagged jets
+plot PT(j[1]) 40 0 500 [logY]
+plot ETA(j[1]) 40 -10 10 [logY]
+plot MT_MET(j[1]) 40 0 500 [logY]
+plot PT(j[2]) 40 0 500 [logY]
+plot ETA(j[2]) 40 -10 10 [logY]
+plot MT_MET(j[2]) 40 0 500 [logY]
+plot PT(j[3]) 40 0 500 [logY]
+plot ETA(j[3]) 40 -10 10 [logY]
+plot MT_MET(j[3]) 40 0 500 [logY]
+# basic properties of the leptons
+plot PT(e[1]) 40 0 500 [logY]
+plot ETA(e[1]) 40 -10 10 [logY]
+plot MT_MET(e[1]) 40 0 500 [logY]
+plot PT(e[2]) 40 0 500 [logY]
+plot ETA(e[2]) 40 -10 10 [logY]
+plot MT_MET(e[2]) 40 0 500 [logY]
+plot PT(mu[1]) 40 0 500 [logY]
+plot ETA(mu[1]) 40 -10 10 [logY]
+plot MT_MET(mu[1]) 40 0 500 [logY]
+plot PT(mu[2]) 40 0 500 [logY]
+plot ETA(mu[2]) 40 -10 10 [logY]
+plot MT_MET(mu[2]) 40 0 500 [logY]
+# Invariant-mass distributions
+plot M(e[1] e[2]) 40 0  500 [logY]
+plot M(e[1] mu[1]) 40 0  500 [logY]
+plot M(e[1] mu[2]) 40 0  500 [logY]
+plot M(e[2] mu[1]) 40 0  500 [logY]
+plot M(e[2] mu[2]) 40 0  500 [logY]
+plot M(j[1] e[1]) 40 0  500 [logY]
+plot M(j[1] e[2]) 40 0  500 [logY]
+plot M(j[1] j[2]) 40 0  500 [logY]
+plot M(j[1] j[3]) 40 0  500 [logY]
+plot M(j[1] mu[1]) 40 0  500 [logY]
+plot M(j[1] mu[2]) 40 0  500 [logY]
+plot M(j[2] e[1]) 40 0  500 [logY]
+plot M(j[2] e[2]) 40 0  500 [logY]
+plot M(j[2] j[3]) 40 0  500 [logY]
+plot M(j[2] mu[1]) 40 0  500 [logY]
+plot M(j[2] mu[2]) 40 0  500 [logY]
+plot M(j[3] e[1]) 40 0  500 [logY]
+plot M(j[3] e[2]) 40 0  500 [logY]
+plot M(j[3] mu[1]) 40 0  500 [logY]
+plot M(j[3] mu[2]) 40 0  500 [logY]
+plot M(mu[1] mu[2]) 40 0  500 [logY]
+# Angular distance distributions
+plot DELTAR(e[1],e[2]) 40 0 10 [logY]
+plot DELTAR(e[1],mu[1]) 40 0 10 [logY]
+plot DELTAR(e[1],mu[2]) 40 0 10 [logY]
+plot DELTAR(e[2],mu[1]) 40 0 10 [logY]
+plot DELTAR(e[2],mu[2]) 40 0 10 [logY]
+plot DELTAR(j[1],e[1]) 40 0 10 [logY]
+plot DELTAR(j[1],e[2]) 40 0 10 [logY]
+plot DELTAR(j[1],j[2]) 40 0 10 [logY]
+plot DELTAR(j[1],j[3]) 40 0 10 [logY]
+plot DELTAR(j[1],mu[1]) 40 0 10 [logY]
+plot DELTAR(j[1],mu[2]) 40 0 10 [logY]
+plot DELTAR(j[2],e[1]) 40 0 10 [logY]
+plot DELTAR(j[2],e[2]) 40 0 10 [logY]
+plot DELTAR(j[2],j[3]) 40 0 10 [logY]
+plot DELTAR(j[2],mu[1]) 40 0 10 [logY]
+plot DELTAR(j[2],mu[2]) 40 0 10 [logY]
+plot DELTAR(j[3],e[1]) 40 0 10 [logY]
+plot DELTAR(j[3],e[2]) 40 0 10 [logY]
+plot DELTAR(j[3],mu[1]) 40 0 10 [logY]
+plot DELTAR(j[3],mu[2]) 40 0 10 [logY]
+plot DELTAR(mu[1],mu[2]) 40 0 10 [logY]
