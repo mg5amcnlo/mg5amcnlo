@@ -4672,13 +4672,6 @@ C dressed lepton stuff
       call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot
      $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
 
-      pb(0,1)=sqrt(tau_born*stot)/2d0
-      pb(1:2,1)=0d0
-      pb(3,1)=sqrt(tau_born*stot)/2d0
-      pb(0,2)=sqrt(tau_born*stot)/2d0
-      pb(1:2,2)=0d0
-      pb(3,2)=-sqrt(tau_born*stot)/2d0
-
       if (xjac0.lt.0d0) goto 222
       if(.not.one_body)then
          shat_born=tau_born*stot
@@ -4875,15 +4868,15 @@ c     Jacobian due to delta() of tau_born
 
       
       subroutine generate_FKS_kinematics_inverse(xx,ndim,xjac0,xpswgt0,
-     $     stot,tau_born,ycm_born,xbjrk_born,plab,pb)
+     $     stot,tau_born,ycm_born,xbjrk_born,p_lab,pb)
       use kinematics_module
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include "run.inc"
-      double precision xjac0,xpswgt0,xx(99),p(0:3,nexternal),stot
+      double precision xjac0,xpswgt0,xx(99),p_cms(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
-     $     -max_branch:nexternal-1),plab(0:3,nexternal)
+     $     -max_branch:nexternal-1),p_lab(0:3,nexternal)
       integer ndim
       logical input_granny_m2,pass
       integer i_fks,j_fks
@@ -4897,13 +4890,13 @@ c     Jacobian due to delta() of tau_born
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
 
-      xbjrk(1:2)=plab(0,1:2)/(sqrt(stot)/2d0)
+      xbjrk(1:2)=p_lab(0,1:2)/(sqrt(stot)/2d0)
 
-      call boost_n1_to_its_cms(plab,p,y_lab_to_cms)
+      call boost_n1_to_its_cms(p_lab,p_cms,y_lab_to_cms)
       
-      xi_i_fks=get_xi_from_p(i_fks,j_fks,p)
-      y_ij_fks=get_yij_from_p(i_fks,j_fks,p)
-      phi_i_fks=get_phi_from_p(i_fks,j_fks,p)
+      xi_i_fks=get_xi_from_p(i_fks,j_fks,p_cms)
+      y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms)
+      phi_i_fks=get_phi_from_p(i_fks,j_fks,p_cms)
       
       call set_cms_stuff(-100)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
@@ -4912,11 +4905,11 @@ c     Jacobian due to delta() of tau_born
       sqrtshat=sqrt(shat)
       if (j_fks.gt.nincoming) then
          if (m_j_fks.eq.0d0) then
-            call generate_momenta_massless_final_inverse(p,xi_i_fks
+            call generate_momenta_massless_final_inverse(p_lab,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks)
          else
-            call generate_momenta_massive_final_inverse(p,xi_i_fks
+            call generate_momenta_massive_final_inverse(p_lab,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
          endif
@@ -4924,7 +4917,7 @@ c     Jacobian due to delta() of tau_born
          ycm_born=ycm
          xbjrk_born(1:2)=xbjrk(1:2)
       else
-         call generate_momenta_initial_inverse(p,xi_i_fks,y_ij_fks
+         call generate_momenta_initial_inverse(p_lab,xi_i_fks,y_ij_fks
      $        ,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0,shat,sqrtshat
      $        ,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born
      $        ,xbjrk_born,y_lab_to_cms)
@@ -5169,7 +5162,12 @@ c Lower bound on xi_i_fks
       xdir_t(2)=sinphi_i_fks
       xdir_t(3)=zero
 
-c Boost the momenta
+!!!!TODO:
+c     Boost the momenta. Use xp in the reduced frame to get the Born momenta.
+c     To get xp in the reduced frame, we can take the xp in the lab frame, and compute the corresponding y-boost, such that
+c     p_tot = sum[p(:,3:nexternal (excluding i-fks) )]
+c     then rapidity of boost is
+c     y-bst= log[(p_tot(0)-p_tot(3) )/(p_tot(0)+p_tot(3) )]/2d0 (or something like this)
       do i=3,nexternal
          if (shy_bst.eq.0d0) cycle
          if (i.lt.i_fks) then
@@ -5187,7 +5185,7 @@ c$$$      p_born(0,1)=sqrt(xbjrk_born(1)*xbjrk_born(2)*stot)/2d0
       p_born(0,2)=p_born(0,1)
       p_born(3,2)=-p_born(0,1)
 c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
-      
+      write (*,*) 'AAAAAAAAAAAAA',sum(p_born(3,3:nexternal-1))
 
       xpswgt=xpswgt*shat
       xpswgt=xpswgt/(4*pi)**3/(1-xi_i_fks)
