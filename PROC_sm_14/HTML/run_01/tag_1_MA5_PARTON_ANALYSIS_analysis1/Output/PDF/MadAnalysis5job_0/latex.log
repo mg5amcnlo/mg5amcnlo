@@ -1,0 +1,1693 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025/Homebrew) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/articl
+e.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/size10
+.clo)) (./jheppub.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+math.sty
+For additional information on amsmath, use the `?' option.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+text.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+gen.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+bsy.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+opn.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+ssymb.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+sfonts.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ep
+sfig.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphicx.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ke
+yval.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphics.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/tr
+ig.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/graphics.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-de
+f/pdftex.def))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/natbib/natb
+ib.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/co
+lor.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hy
+perref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/iftex/ift
+ex.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvsetkeys/k
+vsetkeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/kvdefinek
+eys/kvdefinekeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdfescape
+/pdfescape.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/ltxcmds/l
+txcmds.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdftexcmd
+s/pdftexcmds.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/infwarerr
+/infwarerr.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hycolor/hyc
+olor.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/na
+meref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/refcount/re
+fcount.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/gettitles
+tring/gettitlestring.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvoptions/k
+voptions.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/etoolbox/et
+oolbox.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/stringenc
+/stringenc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+1enc.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/intcalc/i
+ntcalc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pu
+enc.def)
+
+Package hyperref Warning: Option `pagecolor' is not available anymore.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/url/url.sty
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bitset/bi
+tset.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bigintcal
+c/bigintcalc.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atbegs
+hi-ltx.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hp
+dftex.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atvery
+end-ltx.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/rerunfilech
+eck/rerunfilecheck.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/uniquecou
+nter/uniquecounter.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/psnfss/ot1p
+hv.fd))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/fonten
+c.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/colortbl/co
+lortbl.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/tools/array
+.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/xcolor/xcol
+or.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/float/float
+.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/l3backend/l
+3backend-pdftex.def)
+No file main.aux.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/context/base/mkii
+/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/epstopdf-pk
+g/epstopdf-base.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/latexconfig
+/epstopdf-sys.cfg))
+
+Package JHEP Warning: E-mails are missing.
+(JHEP)                Plese use \emailAdd macro to provide e-mails..
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sa.fd)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sb.fd)
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+[0{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/map/pdftex/up
+dmap/pdftex.map}{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts
+/enc/dvips/cm-super/cm-super-t1.enc} <./logo.png>]
+No file main.toc.
+
+[1]
+Overfull \hbox (26.4321pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-bin/-internal/-
+
+Overfull \hbox (31.68082pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (105.16287pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>submit /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-MA5_PARTON_ANALYSIS_analysis1 
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--161
+
+
+[2]
+[3{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/enc/dvips/cm-
+super/cm-super-ts1.enc}]
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/cmr/m/n/10 PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (18.13213pt too wide) in paragraph at lines 185--192
+ [] 
+
+[4]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 206--213
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 203--214
+
+
+[5
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.222       \newpage
+                     <./selection_0.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 228--235
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 225--236
+
+
+[6
+pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.244       \newpage
+                     <./selection_1.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 250--257
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--258
+
+
+[7
+pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.266       \newpage
+                     <./selection_2.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 272--279
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--280
+
+
+[8
+pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.288       \newpage
+                     <./selection_3.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 294--301
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--302
+
+
+[9
+pdfTeX warning (ext4): destination with the same identifier (name{figure.5}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.310       \newpage
+                     <./selection_4.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 316--323
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 313--324
+
+
+[10
+pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.332       \newpage
+                     <./selection_5.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 338--345
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 335--346
+
+
+[11
+pdfTeX warning (ext4): destination with the same identifier (name{figure.7}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.354       \newpage
+                     <./selection_6.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 360--367
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 357--368
+
+
+[12
+pdfTeX warning (ext4): destination with the same identifier (name{figure.8}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.376       \newpage
+                     <./selection_7.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 382--389
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 379--390
+
+
+[13
+pdfTeX warning (ext4): destination with the same identifier (name{figure.9}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.398       \newpage
+                     <./selection_8.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 404--411
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--412
+
+
+[14
+pdfTeX warning (ext4): destination with the same identifier (name{figure.10}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.420       \newpage
+                     <./selection_9.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 426--433
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 423--434
+
+
+[15
+pdfTeX warning (ext4): destination with the same identifier (name{figure.11}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.442       \newpage
+                     <./selection_10.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 448--455
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 445--456
+
+
+[16
+pdfTeX warning (ext4): destination with the same identifier (name{figure.12}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.464       \newpage
+                     <./selection_11.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 470--477
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 467--478
+
+
+[17
+pdfTeX warning (ext4): destination with the same identifier (name{figure.13}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.486       \newpage
+                     <./selection_12.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 492--499
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--500
+
+
+[18
+pdfTeX warning (ext4): destination with the same identifier (name{figure.14}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.508       \newpage
+                     <./selection_13.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 514--521
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 511--522
+
+
+[19
+pdfTeX warning (ext4): destination with the same identifier (name{figure.15}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.530       \newpage
+                     <./selection_14.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 536--543
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 533--544
+
+
+[20
+pdfTeX warning (ext4): destination with the same identifier (name{figure.16}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.552       \newpage
+                     <./selection_15.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 558--565
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 555--566
+
+
+[21
+pdfTeX warning (ext4): destination with the same identifier (name{figure.17}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.574       \newpage
+                     <./selection_16.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 580--587
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 577--588
+
+
+[22
+pdfTeX warning (ext4): destination with the same identifier (name{figure.18}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.596       \newpage
+                     <./selection_17.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 602--609
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 599--610
+
+
+[23
+pdfTeX warning (ext4): destination with the same identifier (name{figure.19}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.618       \newpage
+                     <./selection_18.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 624--631
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 621--632
+
+
+[24
+pdfTeX warning (ext4): destination with the same identifier (name{figure.20}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.640       \newpage
+                     <./selection_19.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 646--653
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 643--654
+
+
+[25
+pdfTeX warning (ext4): destination with the same identifier (name{figure.21}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.662       \newpage
+                     <./selection_20.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 668--675
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 665--676
+
+
+[26
+pdfTeX warning (ext4): destination with the same identifier (name{figure.22}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.684       \newpage
+                     <./selection_21.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 690--697
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--698
+
+
+[27
+pdfTeX warning (ext4): destination with the same identifier (name{figure.23}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.706       \newpage
+                     <./selection_22.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 712--719
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 709--720
+
+
+[28
+pdfTeX warning (ext4): destination with the same identifier (name{figure.24}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.728       \newpage
+                     <./selection_23.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 734--741
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 731--742
+
+
+[29
+pdfTeX warning (ext4): destination with the same identifier (name{figure.25}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.750       \newpage
+                     <./selection_24.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 756--763
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 753--764
+
+
+[30
+pdfTeX warning (ext4): destination with the same identifier (name{figure.26}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.772       \newpage
+                     <./selection_25.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 778--785
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 775--786
+
+
+[31
+pdfTeX warning (ext4): destination with the same identifier (name{figure.27}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.794       \newpage
+                     <./selection_26.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 800--807
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 797--808
+
+
+[32
+pdfTeX warning (ext4): destination with the same identifier (name{figure.28}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.816       \newpage
+                     <./selection_27.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 822--829
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 819--830
+
+
+[33
+pdfTeX warning (ext4): destination with the same identifier (name{figure.29}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.838       \newpage
+                     <./selection_28.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 844--851
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 841--852
+
+
+[34
+pdfTeX warning (ext4): destination with the same identifier (name{figure.30}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.860       \newpage
+                     <./selection_29.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 866--873
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 863--874
+
+
+[35
+pdfTeX warning (ext4): destination with the same identifier (name{figure.31}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.882       \newpage
+                     <./selection_30.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 888--895
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 885--896
+
+
+[36
+pdfTeX warning (ext4): destination with the same identifier (name{figure.32}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.904       \newpage
+                     <./selection_31.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 910--917
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 907--918
+
+
+[37
+pdfTeX warning (ext4): destination with the same identifier (name{figure.33}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.926       \newpage
+                     <./selection_32.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 932--939
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 929--940
+
+
+[38
+pdfTeX warning (ext4): destination with the same identifier (name{figure.34}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.948       \newpage
+                     <./selection_33.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 954--961
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 951--962
+
+
+[39
+pdfTeX warning (ext4): destination with the same identifier (name{figure.35}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.970       \newpage
+                     <./selection_34.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 976--983
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 973--984
+
+
+[40
+pdfTeX warning (ext4): destination with the same identifier (name{figure.36}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.992       \newpage
+                     <./selection_35.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 998--1005
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 995--1006
+
+
+[41
+pdfTeX warning (ext4): destination with the same identifier (name{figure.37}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1014       \newpage
+                      <./selection_36.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1020--1027
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1017--1028
+
+
+[42
+pdfTeX warning (ext4): destination with the same identifier (name{figure.38}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1036       \newpage
+                      <./selection_37.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1042--1049
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1039--1050
+
+
+[43
+pdfTeX warning (ext4): destination with the same identifier (name{figure.39}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1058       \newpage
+                      <./selection_38.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1064--1071
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1061--1072
+
+
+[44
+pdfTeX warning (ext4): destination with the same identifier (name{figure.40}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1080       \newpage
+                      <./selection_39.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1086--1093
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1083--1094
+
+
+[45
+pdfTeX warning (ext4): destination with the same identifier (name{figure.41}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1102       \newpage
+                      <./selection_40.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1108--1115
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1105--1116
+
+
+[46
+pdfTeX warning (ext4): destination with the same identifier (name{figure.42}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1124       \newpage
+                      <./selection_41.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1130--1137
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1127--1138
+
+
+[47
+pdfTeX warning (ext4): destination with the same identifier (name{figure.43}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1146       \newpage
+                      <./selection_42.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1152--1159
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1149--1160
+
+
+[48
+pdfTeX warning (ext4): destination with the same identifier (name{figure.44}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1168       \newpage
+                      <./selection_43.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1174--1181
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1171--1182
+
+
+[49
+pdfTeX warning (ext4): destination with the same identifier (name{figure.45}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1190       \newpage
+                      <./selection_44.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1196--1203
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1193--1204
+
+
+[50
+pdfTeX warning (ext4): destination with the same identifier (name{figure.46}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1212       \newpage
+                      <./selection_45.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1218--1225
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1215--1226
+
+
+[51
+pdfTeX warning (ext4): destination with the same identifier (name{figure.47}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1234       \newpage
+                      <./selection_46.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1240--1247
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1237--1248
+
+
+[52
+pdfTeX warning (ext4): destination with the same identifier (name{figure.48}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1256       \newpage
+                      <./selection_47.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1262--1269
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1259--1270
+
+
+[53
+pdfTeX warning (ext4): destination with the same identifier (name{figure.49}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1278       \end{document}
+                            <./selection_48.png>] (./main.aux)
+
+Package rerunfilecheck Warning: File `main.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+ )
+(see the transcript file for additional information)</opt/homebrew/Cellar/texli
+ve/20250308_2/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/ho
+mebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmsy7.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/typ
+e1/public/cm-super/sfbx0900.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/
+texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></opt/homebrew/Cellar/texli
+ve/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></opt/h
+omebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/
+sfcc1000.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/ty
+pe1/public/cm-super/sfrm0900.pfb></opt/homebrew/Cellar/texlive/20250308_2/share
+/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb></opt/homebrew/Cellar/texl
+ive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfsx1000.pfb></opt/
+homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super
+/sfsx1728.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/t
+ype1/public/cm-super/sfti1000.pfb></opt/homebrew/Cellar/texlive/20250308_2/shar
+e/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb>
+Output written on main.pdf (54 pages, 820234 bytes).
+Transcript written on main.log.
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025/Homebrew) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/articl
+e.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/size10
+.clo)) (./jheppub.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+math.sty
+For additional information on amsmath, use the `?' option.
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+text.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+gen.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+bsy.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsmath/ams
+opn.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+ssymb.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/am
+sfonts.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ep
+sfig.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphicx.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ke
+yval.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/gr
+aphics.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/tr
+ig.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/graphics.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-de
+f/pdftex.def))))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/natbib/natb
+ib.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/co
+lor.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hy
+perref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/iftex/ift
+ex.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvsetkeys/k
+vsetkeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/kvdefinek
+eys/kvdefinekeys.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdfescape
+/pdfescape.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/ltxcmds/l
+txcmds.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/pdftexcmd
+s/pdftexcmds.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/infwarerr
+/infwarerr.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hycolor/hyc
+olor.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/na
+meref.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/refcount/re
+fcount.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/gettitles
+tring/gettitlestring.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/kvoptions/k
+voptions.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/etoolbox/et
+oolbox.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/stringenc
+/stringenc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pd
+1enc.def)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/intcalc/i
+ntcalc.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/pu
+enc.def)
+
+Package hyperref Warning: Option `pagecolor' is not available anymore.
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/url/url.sty
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bitset/bi
+tset.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/bigintcal
+c/bigintcalc.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atbegs
+hi-ltx.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/hyperref/hp
+dftex.def
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/atvery
+end-ltx.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/rerunfilech
+eck/rerunfilecheck.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/generic/uniquecou
+nter/uniquecounter.sty)))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/psnfss/ot1p
+hv.fd))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/base/fonten
+c.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/colortbl/co
+lortbl.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/tools/array
+.sty))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/xcolor/xcol
+or.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics-cf
+g/color.cfg)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/graphics/ma
+thcolor.ltx))
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/float/float
+.sty)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/l3backend/l
+3backend-pdftex.def) (./main.aux)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/context/base/mkii
+/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/epstopdf-pk
+g/epstopdf-base.sty
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/latexconfig
+/epstopdf-sys.cfg)) (./main.out) (./main.out)
+
+Package JHEP Warning: E-mails are missing.
+(JHEP)                Plese use \emailAdd macro to provide e-mails..
+
+
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sa.fd)
+(/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/tex/latex/amsfonts/um
+sb.fd)
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--38
+
+
+[0{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/map/pdftex/up
+dmap/pdftex.map}{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts
+/enc/dvips/cm-super/cm-super-t1.enc} <./logo.png>] (./main.toc
+[1])
+[1]
+Overfull \hbox (26.4321pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-bin/-internal/-
+
+Overfull \hbox (31.68082pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>import /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (105.16287pt too wide) in paragraph at lines 50--161
+\T1/cmtt/m/n/10 ma5>submit /-Users/-omattelaer/-Documents/-git_workspace/-versi
+on3/-PROC_sm_14/-MA5_PARTON_ANALYSIS_analysis1 
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--161
+
+
+[2]
+[3{/opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/enc/dvips/cm-
+super/cm-super-ts1.enc}]
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/cmr/m/n/10 PROC_sm_14/-Events/-run_01/-
+
+Overfull \hbox (18.13213pt too wide) in paragraph at lines 185--192
+ [] 
+
+[4]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 206--213
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 203--214
+
+
+[5
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.222       \newpage
+                     <./selection_0.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 228--235
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 225--236
+
+
+[6
+pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.244       \newpage
+                     <./selection_1.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 250--257
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--258
+
+
+[7
+pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.266       \newpage
+                     <./selection_2.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 272--279
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--280
+
+
+[8
+pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.288       \newpage
+                     <./selection_3.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 294--301
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--302
+
+
+[9
+pdfTeX warning (ext4): destination with the same identifier (name{figure.5}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.310       \newpage
+                     <./selection_4.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 316--323
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 313--324
+
+
+[10
+pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.332       \newpage
+                     <./selection_5.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 338--345
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 335--346
+
+
+[11
+pdfTeX warning (ext4): destination with the same identifier (name{figure.7}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.354       \newpage
+                     <./selection_6.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 360--367
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 357--368
+
+
+[12
+pdfTeX warning (ext4): destination with the same identifier (name{figure.8}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.376       \newpage
+                     <./selection_7.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 382--389
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 379--390
+
+
+[13
+pdfTeX warning (ext4): destination with the same identifier (name{figure.9}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.398       \newpage
+                     <./selection_8.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 404--411
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 401--412
+
+
+[14
+pdfTeX warning (ext4): destination with the same identifier (name{figure.10}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.420       \newpage
+                     <./selection_9.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 426--433
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 423--434
+
+
+[15
+pdfTeX warning (ext4): destination with the same identifier (name{figure.11}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.442       \newpage
+                     <./selection_10.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 448--455
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 445--456
+
+
+[16
+pdfTeX warning (ext4): destination with the same identifier (name{figure.12}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.464       \newpage
+                     <./selection_11.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 470--477
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 467--478
+
+
+[17
+pdfTeX warning (ext4): destination with the same identifier (name{figure.13}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.486       \newpage
+                     <./selection_12.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 492--499
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--500
+
+
+[18
+pdfTeX warning (ext4): destination with the same identifier (name{figure.14}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.508       \newpage
+                     <./selection_13.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 514--521
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 511--522
+
+
+[19
+pdfTeX warning (ext4): destination with the same identifier (name{figure.15}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.530       \newpage
+                     <./selection_14.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 536--543
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 533--544
+
+
+[20
+pdfTeX warning (ext4): destination with the same identifier (name{figure.16}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.552       \newpage
+                     <./selection_15.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 558--565
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 555--566
+
+
+[21
+pdfTeX warning (ext4): destination with the same identifier (name{figure.17}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.574       \newpage
+                     <./selection_16.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 580--587
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 577--588
+
+
+[22
+pdfTeX warning (ext4): destination with the same identifier (name{figure.18}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.596       \newpage
+                     <./selection_17.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 602--609
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 599--610
+
+
+[23
+pdfTeX warning (ext4): destination with the same identifier (name{figure.19}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.618       \newpage
+                     <./selection_18.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 624--631
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 621--632
+
+
+[24
+pdfTeX warning (ext4): destination with the same identifier (name{figure.20}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.640       \newpage
+                     <./selection_19.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 646--653
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 643--654
+
+
+[25
+pdfTeX warning (ext4): destination with the same identifier (name{figure.21}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.662       \newpage
+                     <./selection_20.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 668--675
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 665--676
+
+
+[26
+pdfTeX warning (ext4): destination with the same identifier (name{figure.22}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.684       \newpage
+                     <./selection_21.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 690--697
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--698
+
+
+[27
+pdfTeX warning (ext4): destination with the same identifier (name{figure.23}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.706       \newpage
+                     <./selection_22.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 712--719
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 709--720
+
+
+[28
+pdfTeX warning (ext4): destination with the same identifier (name{figure.24}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.728       \newpage
+                     <./selection_23.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 734--741
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 731--742
+
+
+[29
+pdfTeX warning (ext4): destination with the same identifier (name{figure.25}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.750       \newpage
+                     <./selection_24.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 756--763
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 753--764
+
+
+[30
+pdfTeX warning (ext4): destination with the same identifier (name{figure.26}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.772       \newpage
+                     <./selection_25.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 778--785
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 775--786
+
+
+[31
+pdfTeX warning (ext4): destination with the same identifier (name{figure.27}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.794       \newpage
+                     <./selection_26.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 800--807
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 797--808
+
+
+[32
+pdfTeX warning (ext4): destination with the same identifier (name{figure.28}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.816       \newpage
+                     <./selection_27.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 822--829
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 819--830
+
+
+[33
+pdfTeX warning (ext4): destination with the same identifier (name{figure.29}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.838       \newpage
+                     <./selection_28.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 844--851
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 841--852
+
+
+[34
+pdfTeX warning (ext4): destination with the same identifier (name{figure.30}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.860       \newpage
+                     <./selection_29.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 866--873
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 863--874
+
+
+[35
+pdfTeX warning (ext4): destination with the same identifier (name{figure.31}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.882       \newpage
+                     <./selection_30.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 888--895
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 885--896
+
+
+[36
+pdfTeX warning (ext4): destination with the same identifier (name{figure.32}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.904       \newpage
+                     <./selection_31.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 910--917
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 907--918
+
+
+[37
+pdfTeX warning (ext4): destination with the same identifier (name{figure.33}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.926       \newpage
+                     <./selection_32.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 932--939
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 929--940
+
+
+[38
+pdfTeX warning (ext4): destination with the same identifier (name{figure.34}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.948       \newpage
+                     <./selection_33.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 954--961
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 951--962
+
+
+[39
+pdfTeX warning (ext4): destination with the same identifier (name{figure.35}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.970       \newpage
+                     <./selection_34.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 976--983
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 973--984
+
+
+[40
+pdfTeX warning (ext4): destination with the same identifier (name{figure.36}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.992       \newpage
+                     <./selection_35.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 998--1005
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 995--1006
+
+
+[41
+pdfTeX warning (ext4): destination with the same identifier (name{figure.37}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1014       \newpage
+                      <./selection_36.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1020--1027
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1017--1028
+
+
+[42
+pdfTeX warning (ext4): destination with the same identifier (name{figure.38}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1036       \newpage
+                      <./selection_37.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1042--1049
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1039--1050
+
+
+[43
+pdfTeX warning (ext4): destination with the same identifier (name{figure.39}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1058       \newpage
+                      <./selection_38.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1064--1071
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1061--1072
+
+
+[44
+pdfTeX warning (ext4): destination with the same identifier (name{figure.40}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1080       \newpage
+                      <./selection_39.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1086--1093
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1083--1094
+
+
+[45
+pdfTeX warning (ext4): destination with the same identifier (name{figure.41}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1102       \newpage
+                      <./selection_40.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1108--1115
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1105--1116
+
+
+[46
+pdfTeX warning (ext4): destination with the same identifier (name{figure.42}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1124       \newpage
+                      <./selection_41.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1130--1137
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1127--1138
+
+
+[47
+pdfTeX warning (ext4): destination with the same identifier (name{figure.43}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1146       \newpage
+                      <./selection_42.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1152--1159
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1149--1160
+
+
+[48
+pdfTeX warning (ext4): destination with the same identifier (name{figure.44}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1168       \newpage
+                      <./selection_43.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1174--1181
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1171--1182
+
+
+[49
+pdfTeX warning (ext4): destination with the same identifier (name{figure.45}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1190       \newpage
+                      <./selection_44.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1196--1203
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1193--1204
+
+
+[50
+pdfTeX warning (ext4): destination with the same identifier (name{figure.46}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1212       \newpage
+                      <./selection_45.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1218--1225
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1215--1226
+
+
+[51
+pdfTeX warning (ext4): destination with the same identifier (name{figure.47}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1234       \newpage
+                      <./selection_46.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1240--1247
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1237--1248
+
+
+[52
+pdfTeX warning (ext4): destination with the same identifier (name{figure.48}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1256       \newpage
+                      <./selection_47.png>]
+Overfull \hbox (55.33208pt too wide) in paragraph at lines 1262--1269
+ [] 
+
+Underfull \hbox (badness 10000) in paragraph at lines 1259--1270
+
+
+[53
+pdfTeX warning (ext4): destination with the same identifier (name{figure.49}) h
+as been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1278       \end{document}
+                            <./selection_48.png>] (./main.aux) )
+(see the transcript file for additional information)</opt/homebrew/Cellar/texli
+ve/20250308_2/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/ho
+mebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmsy7.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/typ
+e1/public/cm-super/sfbx0900.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/
+texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></opt/homebrew/Cellar/texli
+ve/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></opt/h
+omebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/
+sfcc1000.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/ty
+pe1/public/cm-super/sfrm0900.pfb></opt/homebrew/Cellar/texlive/20250308_2/share
+/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb></opt/homebrew/Cellar/texl
+ive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super/sfsx1000.pfb></opt/
+homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/type1/public/cm-super
+/sfsx1728.pfb></opt/homebrew/Cellar/texlive/20250308_2/share/texmf-dist/fonts/t
+ype1/public/cm-super/sfti1000.pfb></opt/homebrew/Cellar/texlive/20250308_2/shar
+e/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb>
+Output written on main.pdf (55 pages, 825440 bytes).
+Transcript written on main.log.

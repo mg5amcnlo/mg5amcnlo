@@ -1,0 +1,5 @@
+P1_gg_llgqq
+P1_gq_llggq
+P1_qq_llggg
+P1_gq_llqqq
+P1_qq_llgqq

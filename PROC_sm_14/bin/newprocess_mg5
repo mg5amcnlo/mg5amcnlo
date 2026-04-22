@@ -1,0 +1,124 @@
+#!/bin/bash
+#
+#  First get to main level directory for this process
+#
+
+if [[  ! -d ./bin || ! -d ./SubProcesses ]]; then
+    cd ../
+    if [[ ! -d ./bin || ! -d ./SubProcesses  ]]; then
+        echo "Error: newprocess_mg5 must be executed from the main, or bin directory"
+        exit
+    fi
+fi
+echo -e  "\033[1;31m WARNING This out-dated method of using MG5 will be remove in version 2.0\033[0m"
+echo -e "\033[1;31m A proc_card example is present in the main directory of MG5 \033[0m"
+echo -e "\033[1;31m you can run it like ./bin/mg5 proc_card.dat \033[0m"
+
+if [[ -e SubProcesses/subproc.mg ]]; then
+    echo "Error: newprocess_mg5 can only be used in a clean copy of Template."
+    echo "       This directory already contains a generated process, please"
+    echo "       open the index.html file to see information about the process."
+    echo "If you want to generate events from this process directory, run"
+    echo "  bin/generate_events"
+    echo "or"
+    echo "  bin/madevent"
+    echo "and type \"help\" to get started."
+    exit
+fi
+
+# Check that mg5 exists
+main=`pwd`
+mgdir=$main/../bin
+if [[  ! -x $mgdir/mg5 ]]; then
+    mgdir=$main/../madgraph5/bin
+fi
+if [[ ! -x $mgdir/mg5 ]]; then
+   echo "Error no mg5 executable $mgdir/mg5 found"
+   exit
+fi
+
+
+dirbin=$main/bin/internal
+bin=$main/bin 
+
+# Local versions to work on the cluster
+tag=''
+while [[ "$1" != ""  ]]; do
+    if [[ "$1" == "--web" ]]; then
+    mgdir=$MADGRAPH_BASE/MG_ME/mg5
+    dirbin=$MADGRAPH_BASE/MG_ME/WebBin
+    bin =$MADGRAPH_BASE/MG_ME/WebBin
+    tag="--web"
+    fi
+    shift 1
+done
+
+# some external executable
+gen_card=$dirbin/gen_cardhtml-pl
+gen_info=$dirbin/gen_infohtml-pl
+
+# Check if we have to use MG4 proc_card.dat or MG5 proc_card.dat
+if [[ -e ./Cards/proc_card_mg5.dat ]]; then 
+   if [[ -e ./Cards/proc_card.dat ]]; then
+      if [[ $tag != '--web' ]]; then
+          echo "both mg4 and mg5 proc_card.dat are detected. Which one do you want to use? [4/5]"
+      	  read card_use 
+      else
+           card_use='5'
+      fi
+   else
+	card_use='5'
+   fi
+elif [[ -e ./Cards/proc_card.dat ]]; then
+     card_use='4'
+else
+    echo "neither proc_card.dat or proc_card_mg5.dat" 
+    echo "are present in directory Cards"
+    echo "Prepare a card (see examples on the web) and"
+    echo "copy it there, or run directly ../bin/mg5_aMC."
+    exit
+fi
+
+echo $$ > generating
+rm proc_log.txt >& /dev/null
+echo "Started `date`" >  ./proc_log.txt
+echo "Running..."
+
+cp -p HTML/thinking.gif HTML/card.jpg
+rm SubProcesses/done >& /dev/null
+
+$gen_card >& /dev/null
+
+# launch the mg5 program
+if [[ $card_use == '4' ]]; then
+# Run ./mg5 with stderr going to both the file proc_log.txt and to terminal
+# output. See http://acs.lbl.gov/~ksb/Scratch/sh_redir_pipe.html
+    ((echo import proc_v4 ./Cards/proc_card.dat | $mgdir/mg5 3>&1 1>&2 2>&3) | tee /dev/tty) >> proc_log.txt 2>&1
+elif [[ $card_use == '5' ]]; then
+# Run ./mg5 with stderr going to both the file proc_log.txt and to terminal
+# output. See http://acs.lbl.gov/~ksb/Scratch/sh_redir_pipe.html
+     (($mgdir/mg5 ./Cards/proc_card_mg5.dat 3>&1 1>&2 2>&3) | tee /dev/tty) >> proc_log.txt 2>&1
+else
+    echo 'not recognized mode'
+fi
+
+echo "Finished `date` " >> ./proc_log.txt
+echo "`date` " >& ./CREATED
+cd SubProcesses
+touch done
+cd ..
+
+if [[  $tag == "--web"  ]]; then
+   touch Online
+fi
+rm generating
+echo 'done'
+
+# Check that generation worked
+if [[ ! -e SubProcesses/subproc.mg ]]; then
+
+    cp -p HTML/stop.jpg HTML/card.jpg
+    echo "No diagrams for this process!"
+fi
+
+$gen_card >& /dev/null

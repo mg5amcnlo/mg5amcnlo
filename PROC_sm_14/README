@@ -1,0 +1,170 @@
+MadGraph5_aMC@NLO (MadEvent)
+arXiv:1405.0301
+
+
+http://madgraph.phys.ucl.ac.be/
+http://madgraph.hep.uiuc.edu/
+
+Information on the process to be generated is found in the file
+index.html in this directory, which should be viewed using your web
+browser. If the file index.html is missing, you need to generate a
+process. Please refer to the README file one directory above this
+(MadGraph5_vx_x_x/) for instructions on how to generate a process.
+
+This README includes information on how 
+A) generate events
+B) how to run in cluster/multi-core mode
+C) how to launch sequential run (called multi-run)
+D) How to launch Pythia/PGS/Delphes
+E) How to prevent automatic opening of html pages
+F) How to link to lhapdf 
+G) How to run in gridpack mode
+
+A) To generate events:
+-------------------
+
+1) Specify the model parameters. The model parameters include masses
+and widths for the particles and coupling constants. They are given by
+the file param_card.dat in the Cards directory. Although it is
+possible to edit this file manually, this is not recommended since
+there are dependencies among the parameters which need to be taken
+into account. Instead the param_card.dat should be generated using one
+of the Calculators found on the MG/ME homepages (stated above).  Click
+Calculators, choose model and follow the instructions. Place the
+resulting param_card.dat in the Cards directory.
+
+2) Specify the run parameters. The run parameters includes collider
+type and energy, choice of parton distribution functions and scales.
+They are given by the file run_card.dat in the Cards directory. This
+file should be edited manually, following the syntax given in the
+example file.
+**Warning!** For several reasons, avoid running more than 100,000
+events per run. Instead perform several runs to reach the luminosity
+you need, e.g. using the multi_run describe below. Subsequent runs
+automatically update the random seed, so the results from different
+runs are statistically independent.
+
+3) Run bin/generate_events to generate the events and calculate the
+cross-section.
+
+4) Follow the generation and look at the results in the file
+HTML/crossx.html, using your web browser.
+
+5) If you want to run Pythia and/or PGS/Delphes on the events.
+You first need to install it. For this launch MG5 ($MG5PATH/bin/mg5)
+and type `install pythia-pgs`/ `install Delphes`.
+If they are detected, the first question asked when launching ./bin/generate_events
+should be something like:
+Which programs do you want to run?
+  0 / auto    : running existing card
+  1 / parton  :  Madevent
+  2 / pythia  : MadEvent + Pythia.
+  3 / pgs     : MadEvent + Pythia + PGS.
+ [0, 1, 2, 3, auto, parton, pythia, pgs][20s to answer] 
+if this is not that means that you need to specify the path of the new program
+in the file Cards/me5_configuration.txt . By default they are 
+installed in the MG5 directory.
+
+If you need to run one of those programs on some events which are already generated
+please see instructions below.
+
+
+B) Running in cluster or multicore mode:
+----------------------------------------
+
+In order to automatically run in cluster or multicore mode, please set
+the flag run_mode in the Cards/me5_configuration.txt file (or in the
+input/mg5_configuration.txt file before you generate your process):
+
+# Default Running mode 
+# 0: single machine/ 1: cluster / 2: multicore
+run_mode = 0
+
+You can also specify the cluster type (for cluster mode) or your
+preferred number of CPUs (for multicore mode - note that by default,
+the maximum number of cores is used) by setting cluster_type and
+nb_core.
+
+
+C) Launch sequential runs for generation of large number of events:
+-------------------------------------------------------------------
+
+For various reason, we recommend not to generate more than 100k events
+per run. In order to simplify generating large numbers of events,
+we have created a special command 'multi_run', which is equivalent to
+running generate_events multiple times (ensuring that the random seed is
+different for each run), and also automatically combines the resulting
+lhe files into a single file.
+This command can be launched via the madevent user interface
+./bin/madevent using the following command:
+multi_run NBRUN [RUN_NAME] [options]
+For more information about this command (valid options), you can type
+`help multi_run` inside the interface.
+
+Note that you can also launch a command whithout entering the interactive mode:
+./bin/madevent multi_run NBRUN 
+
+
+D) Launching pythia/pgs/delphes on a (previously) generated sample:
+-------------------------------------------------------------------
+
+In this section, I will presupose that the corresponding package is
+already installed and configured properly. (See section how to generate 
+events if this is not the case)
+
+In order to launch pythia/pgs/delphes on a sample, you need first to
+launch the interactive session of madevent `./bin/madevent`
+and then you can enter of the following command
+pythia RUN [--run_options]
+pgs RUN [--run_options]
+delphes RUN [--run_options]
+where RUN is the run_name of the run. One of the convenient options is
+--tag=XXXX
+which allow to specify the tag name in case of multiple runs with
+the same program. Note that by default, a unique run tag is generated 
+for each time you run.
+
+E) How to prevent automatic opening of the crossx.html page:
+------------------------------------------------------------
+
+Edit the file ./Cards/me5_configuration.txt and set
+the option automatic_html_opening to `False`.
+You can also edit the MG5 configuration card
+input/mg5_configuration.txt
+in order to have this value on False by default for all subsequently 
+generated processes.
+
+
+F) How to run with a LHAPDF set
+-------------------------------
+
+1) Install lhapdf on your computer
+2) If not install globally, modify the file input/mg5_configuration.txt
+and specify the path to the script lhpadfconfig.
+3) in the run_card use the following parameter
+ 'lhapdf'    = pdlabel     ! PDF set
+ 10042       = lhaid       ! PDF number used ONLY for LHAPDF
+4) RUN as usual
+
+
+G) How to run in gridpack mode
+------------------------------
+
+The gridpackage is meant to be sent over to the cluster or grid
+nodes. It's completely frozen, meaning that you cannot change any
+parameters or run options, apart from the # of event and the rnd
+number.
+
+Using the option " .true.  = gridpack " in the run_card.dat will generate a gridpack.tar.gz.
+
+When you unpack it you get:
+run.sh
+madevent/
+The first is a script which accepts two numbers (the number of events
+and the rnd number).
+
+For more information on the options please refer to 
+https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/GridDevelopment
+
+to know the technical details please read:
+https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/IntroGrid

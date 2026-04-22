@@ -1,0 +1,26 @@
+a:link {text-decoration: none; color:#424242; background-color: #FFFFFF; font-size:11px;}
+a:visited {text-decoration: none; color:#424242; background-color: #FFFFFF; font-size:11px;}
+a:hover {font-weight:bold; font-size:11px;}
+
+body  { width: 1024px; height: 768px; margin: 10px auto; color: #000000; font-family: 'Verdana',Serif; font-size: 12px; background-color: #FFFFFF; }
+
+#top { height: 83px; font-family :'Verdana',Serif; font-size: 11px; margin: auto; background-color: #FFFFFF; text-align:center;}
+.top table { width: 1024px; height: 71px; border: medium solid #000000; border-collapse: collapse; border-spacing: 1px}
+.top td { font-family :'Verdana',Serif; font-size: 12px; vertical-align: center; text-align: center; border: medium solid #000000; border-collapse: collapse; }
+.top h1 { text-align: top ; margin: auto;  font-size: 32px; font-family: 'Verdana', Serif; font-weight:bold; }
+
+#menu { float:left; background-color : #FFFFFF; color: #000000; width: 150px; height: 697px; font-family: 'Verdana',Serif; font-size: 12px; margin: auto; padding: 0 0 0 10px ; }
+.menu h3 {  margin-top:2px;  margin-bottom: 2px; border-bottom:2px groove #263d65; border-top:2px groove #263d65; font-size: 14px; font-family: 'Verdana', Serif; text-align: center; width : 90%; }
+.menu ul { list-style-type: square; }
+.menu li { margin:0 0 0 -15px; padding: 0; }
+
+#main { float: right; margin: auto; width: 864px; height: 697px; padding: 0; background-color: #FFFFFF; color: #000000; font-family: 'Verdana',Serif; font-size: 12px; overflow: auto; }
+.main h2 { text-align: center; width: 250px; margin: auto; border-bottom:2px groove #263d65; border-top:2px groove #263d65; font-size: 24px; font-family: 'Verdana',Serif; font-weight:bold; }
+.main h3 { text-align: left; margin: auto;  font-size: 14px; font-family: 'Verdana',Serif; font-weight:bold; }
+.main h3 a:hover { text-align: left; margin: auto; font-size: 14px; font-family: 'Verdana',Serif; font-weight:bold; }
+.main ul { list-style-type: square; }
+.main li { margin:0 0 0 -15px; padding: 0; }
+.main img { align='center'; width: 620px; }
+.main table { width: 844px; border: medium solid #000000; border-collapse: collapse; border-spacing: 1px}
+.main td { font-family :'Verdana',Serif; font-size: 12px; vertical-align: center; text-align: center; border: thin solid #000000; border-collapse: collapse; }
+

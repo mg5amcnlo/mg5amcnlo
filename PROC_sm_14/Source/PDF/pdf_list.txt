@@ -1,0 +1,81 @@
+    name           pdflabel     Data file         as(Mz)       nloop    
+---------------------------------------------------------------------
+          
+ MRST2002NLO       mrs02nl     mrst2002nlo.dat    0.1197         2
+ MRST2002NNLO      mrs02nn     mrst2002nnlo.dat   0.1154         2
+ 
+ MRST2001-cg       mrs0119     alf119.dat         0.119          2
+ MRST2001-lg       mrs0117     alf117.dat         0.117          2
+ MRST2001-hg       mrs0121     alf121.dat         0.121          2
+ MRST2001-jet      mrs01_j     j121.dat           0.121          2
+
+ MRS99-cg          mrs99_1     cor01.dat          0.1175         2
+ MRS99-hg          mrs99_2     cor02.dat          0.1175         2
+ MRS99-lg          mrs99_3     cor03.dat          0.1175         2
+ MRS99-la          mrs99_4     cor04.dat          0.1125         2
+ MRS99-ha          mrs99_5     cor05.dat          0.1225         2
+ MRS99-qu          mrs99_6     cor06.dat          0.1178         2
+ MRS99-qd          mrs99_7     cor07.dat          0.1171         2
+ MRS99-su          mrs99_8     cor08.dat          0.1175         2
+ MRS99-sd          mrs99_9     cor09.dat          0.1175         2
+ MRS99-su          mrs9910     cor10.dat          0.1175         2
+ MRS99-cd          mrs9911     cor11.dat          0.1175         2
+ MRS99-lq          mrs9912     cor12.dat          0.1175         2
+
+ MRS98-cg          mrs98z1     ft08a.dat          0.1175         2
+ MRS98-hg          mrs98z2     ft09a.dat          0.1175         2
+ MRS98-lg          mrs98z3     ft11a.dat          0.1175         2
+ MRS98-la          mrs98z4     ft24a.dat          0.1125         2
+ MRS98-ha          mrs98z5     ft23a.dat          0.1225         2
+ MRS98-ht          mrs98ht     ht11b.dat          0.1175         2
+
+ MRS98LO-cg        mrs98l1     lo05a.dat          0.1250         1
+ MRS98LO-hg        mrs98l2     lo09a.dat          0.1250         1
+ MRS98LO-lg        mrs98l3     lo10a.dat          0.1250         1
+ MRS98LO-la        mrs98l4     lo01a.dat          0.1200         1
+ MRS98LO-ha        mrs98l5     lo07a.dat          0.1300         1
+
+-------------------------------------------------------------------
+
+ CTEQ6M            cteq6_m     cteq6m.tbl         0.118          2
+ CTEQ6D            cteq6_d     cteq6d.tbl         0.118          2
+ CTEQ6L            cteq6_l     cteq6l.tbl         0.118          2
+ CTEQ6L1           cteq6l1     cteq6l1.tbl        0.130          1
+
+ CTEQ5M            cteq5_m     cteq5m.tbl         0.118          2
+ CTEQ5D            cteq5_d     cteq5d.tbl         0.118          2
+ CTEQ5L            cteq5_l     cteq5l.tbl         0.127          1
+ CTEQ5L parametric cteq5l1     ----------         0.127          1
+ CTEQ5HJ           cteq5hj     cteq5hj.tbl        0.118          2
+ CTEQ5HQ           cteq5hq     cteq5hq.tbl        0.118          2
+ CTEQ5F3           cteq5f3     cteq5f3.tbl        0.106          2
+ CTEQ5F4           cteq5f4     cteq5f4.tbl        0.112          2
+ CTEQ5M1           cteq5m1     cteq5m1.tbl        0.118          2
+ CTEQ5HQ1          ctq5hq1     ctq5hq1.tbl        0.118          2
+
+ CTEQ4M            cteq4_m     cteq4m.tbl         0.116          2
+ CTEQ4D            cteq4_d     cteq4d.tbl         0.116          2
+ CTEQ4L            cteq4_l     cteq4l.tbl         0.132          1
+ CTEQ4A1           cteq4a1     cteq4a1.tbl        0.110          2
+ CTEQ4A2           cteq4a2     cteq4a2.tbl        0.113          2
+ CTEQ4A3           cteq4a3     cteq4m.tbl         0.116          2
+ CTEQ4A4           cteq4a4     cteq4a4.tbl        0.119          2
+ CTEQ4A5           cteq4a5     cteq4a5.tbl        0.122          2
+ CTEQ4HJ           cteq4hj     cteq4hj.tbl        0.116          2
+ CTEQ4LQ           cteq4lq     cteq4lq.tbl        0.114          2
+
+ CTEQ3M            cteq3_m     ---------          0.112          2
+ CTEQ3L            cteq3_l     ---------          0.112          1
+ CTEQ3D            cteq3_d     ---------          0.112          2
+
+
+---------------------------------------------------------------------
+          
+ NNPDF23NLO        nn23nlo     NNPDF23nlo_as_0119_qed_mem0.grid  0.119  2
+ NNPDF23LO         nn23lo      NNPDF23_lo_as_0119_qed_mem0.grid  0.119  2
+ NNPDF23LO1        nn23lo1     NNPDF23_lo_as_0130_qed_mem0.grid  0.130  1
+  
+
+
+ 
+

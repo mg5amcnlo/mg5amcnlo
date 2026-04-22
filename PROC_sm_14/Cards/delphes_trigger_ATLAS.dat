@@ -1,0 +1,16 @@
+#TRIGGER CARD      # DO NOT REMOVE THIS IS A TAG!
+
+# list of trigger algorithms
+# trigger_name	>> algorithm                   #comments
+Inclusive Isol electron  >> IElec1_PT:  '25'                            
+di-electron Isol         >> IELEC1_PT:  '15'   &&   IELEC2_PT:   '15'    
+Inclusive Photon         >> GAMMA1_PT:  '60'                            
+di-Photon                >> GAMMA1_PT:  '20'   &&   GAMMA2_PT:   '20'    
+Inclusive Isol muon      >> IMuon1_PT:  '20'                            
+di-muon                  >> MUON1_PT:   '10'   &&   MUON2_PT:    '10'    
+Taujet and ETmis         >> TAU1_PT:    '35'   &&   ETMIS_PT:    '45'
+Jet and ETmis            >> JET1_PT:    '70'   &&   ETMIS_PT:    '70'
+Inclusive 1 jet          >> JET1_PT:    '400'
+Inclusive 3 jets         >> JET1_PT:    '165'  &&   JET2_PT:     '165'    &&     JET3_PT:    '165'
+Inclusive 4 jets         >> JET1_PT:    '110'  &&   JET2_PT:     '110'    &&     JET3_PT:    '110'   &&     JET4_PT:    '110'
+

@@ -1,0 +1,40 @@
+1       u u > e+ e- g u u,u u > mu+ mu- g u u,c c > e+ e- g c c,c c > mu+ mu- g c c
+mirror  none
+2       u u~ > e+ e- g u u~,u u~ > mu+ mu- g u u~,c c~ > e+ e- g c c~,c c~ > mu+ mu- g c c~
+mirror  u~ u > e+ e- g u u~,u~ u > mu+ mu- g u u~,c~ c > e+ e- g c c~,c~ c > mu+ mu- g c c~
+3       d d > e+ e- g d d,d d > mu+ mu- g d d,s s > e+ e- g s s,s s > mu+ mu- g s s
+mirror  none
+4       d d~ > e+ e- g d d~,d d~ > mu+ mu- g d d~,s s~ > e+ e- g s s~,s s~ > mu+ mu- g s s~
+mirror  d~ d > e+ e- g d d~,d~ d > mu+ mu- g d d~,s~ s > e+ e- g s s~,s~ s > mu+ mu- g s s~
+5       u~ u~ > e+ e- g u~ u~,u~ u~ > mu+ mu- g u~ u~,c~ c~ > e+ e- g c~ c~,c~ c~ > mu+ mu- g c~ c~
+mirror  none
+6       d~ d~ > e+ e- g d~ d~,d~ d~ > mu+ mu- g d~ d~,s~ s~ > e+ e- g s~ s~,s~ s~ > mu+ mu- g s~ s~
+mirror  none
+7       u c > e+ e- g u c,u c > mu+ mu- g u c
+mirror  c u > e+ e- g u c,c u > mu+ mu- g u c
+8       u d > e+ e- g u d,u d > mu+ mu- g u d,u s > e+ e- g u s,u s > mu+ mu- g u s,c d > e+ e- g c d,c d > mu+ mu- g c d,c s > e+ e- g c s,c s > mu+ mu- g c s
+mirror  d u > e+ e- g u d,d u > mu+ mu- g u d,s u > e+ e- g u s,s u > mu+ mu- g u s,d c > e+ e- g c d,d c > mu+ mu- g c d,s c > e+ e- g c s,s c > mu+ mu- g c s
+9       u u~ > e+ e- g c c~,u u~ > mu+ mu- g c c~,c c~ > e+ e- g u u~,c c~ > mu+ mu- g u u~
+mirror  u~ u > e+ e- g c c~,u~ u > mu+ mu- g c c~,c~ c > e+ e- g u u~,c~ c > mu+ mu- g u u~
+10      u u~ > e+ e- g d d~,u u~ > e+ e- g s s~,u u~ > mu+ mu- g d d~,u u~ > mu+ mu- g s s~,c c~ > e+ e- g d d~,c c~ > e+ e- g s s~,c c~ > mu+ mu- g d d~,c c~ > mu+ mu- g s s~
+mirror  u~ u > e+ e- g d d~,u~ u > e+ e- g s s~,u~ u > mu+ mu- g d d~,u~ u > mu+ mu- g s s~,c~ c > e+ e- g d d~,c~ c > e+ e- g s s~,c~ c > mu+ mu- g d d~,c~ c > mu+ mu- g s s~
+11      u c~ > e+ e- g u c~,u c~ > mu+ mu- g u c~,c u~ > e+ e- g c u~,c u~ > mu+ mu- g c u~
+mirror  c~ u > e+ e- g u c~,c~ u > mu+ mu- g u c~,u~ c > e+ e- g c u~,u~ c > mu+ mu- g c u~
+12      u d~ > e+ e- g u d~,u d~ > mu+ mu- g u d~,u s~ > e+ e- g u s~,u s~ > mu+ mu- g u s~,c d~ > e+ e- g c d~,c d~ > mu+ mu- g c d~,c s~ > e+ e- g c s~,c s~ > mu+ mu- g c s~
+mirror  d~ u > e+ e- g u d~,d~ u > mu+ mu- g u d~,s~ u > e+ e- g u s~,s~ u > mu+ mu- g u s~,d~ c > e+ e- g c d~,d~ c > mu+ mu- g c d~,s~ c > e+ e- g c s~,s~ c > mu+ mu- g c s~
+13      d s > e+ e- g d s,d s > mu+ mu- g d s
+mirror  s d > e+ e- g d s,s d > mu+ mu- g d s
+14      d u~ > e+ e- g d u~,d u~ > mu+ mu- g d u~,d c~ > e+ e- g d c~,d c~ > mu+ mu- g d c~,s u~ > e+ e- g s u~,s u~ > mu+ mu- g s u~,s c~ > e+ e- g s c~,s c~ > mu+ mu- g s c~
+mirror  u~ d > e+ e- g d u~,u~ d > mu+ mu- g d u~,c~ d > e+ e- g d c~,c~ d > mu+ mu- g d c~,u~ s > e+ e- g s u~,u~ s > mu+ mu- g s u~,c~ s > e+ e- g s c~,c~ s > mu+ mu- g s c~
+15      d d~ > e+ e- g u u~,d d~ > e+ e- g c c~,d d~ > mu+ mu- g u u~,d d~ > mu+ mu- g c c~,s s~ > e+ e- g u u~,s s~ > e+ e- g c c~,s s~ > mu+ mu- g u u~,s s~ > mu+ mu- g c c~
+mirror  d~ d > e+ e- g u u~,d~ d > e+ e- g c c~,d~ d > mu+ mu- g u u~,d~ d > mu+ mu- g c c~,s~ s > e+ e- g u u~,s~ s > e+ e- g c c~,s~ s > mu+ mu- g u u~,s~ s > mu+ mu- g c c~
+16      d d~ > e+ e- g s s~,d d~ > mu+ mu- g s s~,s s~ > e+ e- g d d~,s s~ > mu+ mu- g d d~
+mirror  d~ d > e+ e- g s s~,d~ d > mu+ mu- g s s~,s~ s > e+ e- g d d~,s~ s > mu+ mu- g d d~
+17      d s~ > e+ e- g d s~,d s~ > mu+ mu- g d s~,s d~ > e+ e- g s d~,s d~ > mu+ mu- g s d~
+mirror  s~ d > e+ e- g d s~,s~ d > mu+ mu- g d s~,d~ s > e+ e- g s d~,d~ s > mu+ mu- g s d~
+18      u~ c~ > e+ e- g u~ c~,u~ c~ > mu+ mu- g u~ c~
+mirror  c~ u~ > e+ e- g u~ c~,c~ u~ > mu+ mu- g u~ c~
+19      u~ d~ > e+ e- g u~ d~,u~ d~ > mu+ mu- g u~ d~,u~ s~ > e+ e- g u~ s~,u~ s~ > mu+ mu- g u~ s~,c~ d~ > e+ e- g c~ d~,c~ d~ > mu+ mu- g c~ d~,c~ s~ > e+ e- g c~ s~,c~ s~ > mu+ mu- g c~ s~
+mirror  d~ u~ > e+ e- g u~ d~,d~ u~ > mu+ mu- g u~ d~,s~ u~ > e+ e- g u~ s~,s~ u~ > mu+ mu- g u~ s~,d~ c~ > e+ e- g c~ d~,d~ c~ > mu+ mu- g c~ d~,s~ c~ > e+ e- g c~ s~,s~ c~ > mu+ mu- g c~ s~
+20      d~ s~ > e+ e- g d~ s~,d~ s~ > mu+ mu- g d~ s~
+mirror  s~ d~ > e+ e- g d~ s~,s~ d~ > mu+ mu- g d~ s~

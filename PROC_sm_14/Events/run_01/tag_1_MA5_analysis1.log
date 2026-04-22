@@ -1,0 +1,106 @@
+*************************************************************
+*        W E L C O M E  to  M A D A N A L Y S I S  5        *
+*                                                           *
+*   MA5 release : 1.9.60                       2026-03-17   *
+*                                                           *
+*         Comput. Phys. Commun. 184 (2013) 222-256          *
+*             Eur. Phys. J. C74 (2014) 3103                 *
+*************************************************************
+Executing the commands from the script
+...
+ma5>import /Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/bin/internal/ufomodel
+UFO model folder is detected
+Import all particles defined in the model ...
+43 particles have been successfully exported.
+Adding 'gha' 'gha~' 've' 've~' 'vm' 'vm~' 'vt' 'vt~' to 'invisible' multiparticle
+ma5>import /Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/Events/run_01/unweighted_events.lhe.gz as run_01
+   -> Storing the file 'unweighted_events.lhe.gz' in the dataset 'run_01'.
+ma5>define vl = 12 14 16
+ma5>define vl~ = -16 -14 -12
+ma5>define invisible = ve~ vm vt vm~ ve vt~ vl vl~
+ma5>set main.graphic_render = matplotlib
+ma5>plot THT   40 0 500 [logY]
+ma5>plot MET   40 0 500 [logY]
+ma5>plot SQRTS 40 0 500 [logY]
+ma5>plot  PT(l-[1]) 40 0  500 [logY]
+ma5>plot ETA(l-[1]) 40 -10 10 [logY]
+ma5>plot  PT(l+[1]) 40 0  500 [logY]
+ma5>plot ETA(l+[1]) 40 -10 10 [logY]
+ma5>plot  PT(p[1]) 40 0  500 [logY]
+ma5>plot ETA(p[1]) 40 -10 10 [logY]
+ma5>plot  PT(p[2]) 40 0  500 [logY]
+ma5>plot ETA(p[2]) 40 -10 10 [logY]
+ma5>plot  PT(p[3]) 40 0  500 [logY]
+ma5>plot ETA(p[3]) 40 -10 10 [logY]
+ma5>plot M(l+[1] p[1]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l+[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[1]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] l+[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[1]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(l-[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(p[1] p[2]) 40 0  500 [logY ]
+ma5>plot M(p[1] p[2] p[3]) 40 0  500 [logY ]
+ma5>plot M(p[1] p[3]) 40 0  500 [logY ]
+ma5>plot M(p[2] p[3]) 40 0  500 [logY ]
+ma5>plot DELTAR(l+[1],p[1]) 40 0 10 [logY ]
+ma5>plot DELTAR(l+[1],p[2]) 40 0 10 [logY ]
+ma5>plot DELTAR(l+[1],p[3]) 40 0 10 [logY ]
+ma5>plot DELTAR(l-[1],l+[1]) 40 0 10 [logY ]
+ma5>plot DELTAR(l-[1],p[1]) 40 0 10 [logY ]
+ma5>plot DELTAR(l-[1],p[2]) 40 0 10 [logY ]
+ma5>plot DELTAR(l-[1],p[3]) 40 0 10 [logY ]
+ma5>plot DELTAR(p[1],p[2]) 40 0 10 [logY ]
+ma5>plot DELTAR(p[1],p[3]) 40 0 10 [logY ]
+ma5>plot DELTAR(p[2],p[3]) 40 0 10 [logY ]
+ma5>submit /Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/MA5_PARTON_ANALYSIS_analysis1
+   Creating folder 'MA5_PARTON_ANALYSIS_analysis1'...
+   Copying 'SampleAnalyzer' source files...
+   Inserting your selection into 'SampleAnalyzer'...
+   Writing the list of datasets...
+   Writing the command line history...
+   Creating Makefiles...
+   Compiling 'SampleAnalyzer'...
+   Linking 'SampleAnalyzer'...
+   Running 'SampleAnalyzer' over dataset 'run_01'...
+    *******************************************************
+    * SampleAnalyzer for MadAnalysis 5 - Welcome.
+    * Initializing all components
+    - version: 1.11.0 (2025/04/23) [ python interface version: 1.9.60 (2026-03-17) ]
+    - general: everything is default.
+    - extracting the list of event samples...
+    - analyzer 'MadAnalysis5job'
+    * Running over files ...
+    * 1/1  /Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/Events/run_01/unweighted_events.lhe.gz
+    => file size: 12.62 Mo
+    => sample format: LHE file produced by MadGraph5.
+    => total number of events: 10000 ( analyzed: 10000 ; skipped: 0 )
+    * Finalizing all components ...
+    * Total number of processed events: 10000.
+    * Goodbye.
+    *******************************************************
+   Checking SampleAnalyzer output...
+   Extracting data from the output files...
+   Preparing data for the reports ...
+   Generating all plots ...
+   Generating the HMTL report ...
+     -> To open this HTML report, please type 'open'.
+   Generating the PDF report ...
+     -> To open this PDF report, please type 'open PROC_sm_14/MA5_PARTON_ANALYSIS_analysis1/Output/PDF/MadAnalysis5job_0'.
+   Generating the DVI report ...
+   Well done! Elapsed time = 19.06 seconds

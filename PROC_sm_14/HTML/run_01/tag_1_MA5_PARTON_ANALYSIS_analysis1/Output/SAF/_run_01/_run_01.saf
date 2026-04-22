@@ -1,0 +1,19 @@
+<SAFheader>
+</SAFheader>
+
+<SampleGlobalInfo>
+# xsection     xsection_error nevents        sum_weight+    sum_weight-    
+3.002166e+02   6.711312e-01   10000          3.002166e+06   0.000000e+00   
+</SampleGlobalInfo>
+
+<FileInfo>
+"/Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/Events/run_01/unweighted_events.lhe.gz" # file 1 / 1
+</FileInfo>
+
+<SampleDetailedInfo>
+# xsection     xsection_error nevents        sum_weight+    sum_weight-    
+3.002166e+02   6.711312e-01   10000          3.002166e+06   0.000000e+00    # file 1 / 1
+</SampleDetailedInfo>
+
+<SAFfooter>
+</SAFfooter>

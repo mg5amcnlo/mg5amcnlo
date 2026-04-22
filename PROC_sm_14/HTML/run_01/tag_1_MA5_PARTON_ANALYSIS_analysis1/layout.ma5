@@ -1,0 +1,411 @@
+################################################################################
+#                  MADANALYSIS5 CONFIGURATION FILE FOR PLOTS                   #
+#                   produced by MadAnalysis5 version 1.9.60                    #
+#                                  2026-03-17                                  #
+################################################################################
+
+################################################################################
+#                               Files and Paths                                #
+################################################################################
+<Files>
+  jobdir = /Users/omattelaer/Documents/git_workspace/version3/PROC_sm_14/MA5_PARTON_ANALYSIS_analysis1
+  html = 1
+  latex = 1
+  pdflatex = 1
+</Files>
+
+################################################################################
+#                   Global information related to the layout                   #
+################################################################################
+<Main>
+  <Normalization>
+    normalize = "2"
+    lumi = 10 # fb^{-1}
+  </Normalization>
+  <Histograming>
+    stack = 1
+  </Histograming>
+  <Selection>
+    fom = "4"
+    x = "0"
+  </Selection>
+</Main>
+
+################################################################################
+#                            Definition of datasets                            #
+################################################################################
+<Datasets>
+<Dataset name="run_01">
+  <Physics>
+    background = False
+    weight = 1.0
+    xsection = 0.0
+  </Physics>
+  <Layout>
+    title = run_01
+    linecolor = 0
+    linestyle = 0
+    lineshade = 0
+    linewidth = 1
+    backcolor = 0
+    backstyle = 1
+    backshade = 0
+  </Layout>
+</Dataset>
+</Datasets>
+
+################################################################################
+#                            Definition of regions                             #
+################################################################################
+<Regions>
+</Regions>
+
+################################################################################
+#              Definition of the selection : histograms and cuts               #
+################################################################################
+<Selection>
+  <Histogram name="selection0">
+    stack = 0
+    titleX = "H_{T} (GeV) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection1">
+    stack = 0
+    titleX = "#slash{E}_{T} (GeV) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection2">
+    stack = 0
+    titleX = "#sqrt{#hat{s}} (GeV) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection3">
+    stack = 0
+    titleX = "p_{T} [ l-_{1} ] (GeV/c) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection4">
+    stack = 0
+    titleX = "#eta [ l-_{1} ] "
+    titleY = "Events "
+    xmin = -10.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection5">
+    stack = 0
+    titleX = "p_{T} [ l+_{1} ] (GeV/c) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection6">
+    stack = 0
+    titleX = "#eta [ l+_{1} ] "
+    titleY = "Events "
+    xmin = -10.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection7">
+    stack = 0
+    titleX = "p_{T} [ p_{1} ] (GeV/c) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection8">
+    stack = 0
+    titleX = "#eta [ p_{1} ] "
+    titleY = "Events "
+    xmin = -10.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection9">
+    stack = 0
+    titleX = "p_{T} [ p_{2} ] (GeV/c) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection10">
+    stack = 0
+    titleX = "#eta [ p_{2} ] "
+    titleY = "Events "
+    xmin = -10.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection11">
+    stack = 0
+    titleX = "p_{T} [ p_{3} ] (GeV/c) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection12">
+    stack = 0
+    titleX = "#eta [ p_{3} ] "
+    titleY = "Events "
+    xmin = -10.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection13">
+    stack = 0
+    titleX = "M [ l+_{1} p_{1} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection14">
+    stack = 0
+    titleX = "M [ l+_{1} p_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection15">
+    stack = 0
+    titleX = "M [ l+_{1} p_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection16">
+    stack = 0
+    titleX = "M [ l+_{1} p_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection17">
+    stack = 0
+    titleX = "M [ l+_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection18">
+    stack = 0
+    titleX = "M [ l+_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection19">
+    stack = 0
+    titleX = "M [ l+_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection20">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection21">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{1} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection22">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection23">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection24">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection25">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection26">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection27">
+    stack = 0
+    titleX = "M [ l+_{1} l-_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection28">
+    stack = 0
+    titleX = "M [ l-_{1} p_{1} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection29">
+    stack = 0
+    titleX = "M [ l-_{1} p_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection30">
+    stack = 0
+    titleX = "M [ l-_{1} p_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection31">
+    stack = 0
+    titleX = "M [ l-_{1} p_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection32">
+    stack = 0
+    titleX = "M [ l-_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection33">
+    stack = 0
+    titleX = "M [ l-_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection34">
+    stack = 0
+    titleX = "M [ l-_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection35">
+    stack = 0
+    titleX = "M [ p_{1} p_{2} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection36">
+    stack = 0
+    titleX = "M [ p_{1} p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection37">
+    stack = 0
+    titleX = "M [ p_{1} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection38">
+    stack = 0
+    titleX = "M [ p_{2} p_{3} ] (GeV/c^{2}) "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 500.0
+  </Histogram>
+  <Histogram name="selection39">
+    stack = 0
+    titleX = "#DeltaR [ l+_{1}, p_{1} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection40">
+    stack = 0
+    titleX = "#DeltaR [ l+_{1}, p_{2} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection41">
+    stack = 0
+    titleX = "#DeltaR [ l+_{1}, p_{3} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection42">
+    stack = 0
+    titleX = "#DeltaR [ l-_{1}, l+_{1} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection43">
+    stack = 0
+    titleX = "#DeltaR [ l-_{1}, p_{1} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection44">
+    stack = 0
+    titleX = "#DeltaR [ l-_{1}, p_{2} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection45">
+    stack = 0
+    titleX = "#DeltaR [ l-_{1}, p_{3} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection46">
+    stack = 0
+    titleX = "#DeltaR [ p_{1}, p_{2} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection47">
+    stack = 0
+    titleX = "#DeltaR [ p_{1}, p_{3} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+  <Histogram name="selection48">
+    stack = 0
+    titleX = "#DeltaR [ p_{2}, p_{3} ] "
+    titleY = "Events "
+    xmin = 0.0
+    xmax = 10.0
+  </Histogram>
+</Selection>
+

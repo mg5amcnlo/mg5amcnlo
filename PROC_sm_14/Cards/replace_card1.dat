@@ -1,0 +1,4 @@
+# Enter here any particles you want replaced in the event file after ME run
+# In the syntax PID : PID1 PID2 PID3 ...
+# End with "done" or <newline>
+

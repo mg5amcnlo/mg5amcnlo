@@ -1,0 +1,87 @@
+#!/bin/bash
+#  This generates a grid file for the present choice of run_card
+#
+#  Usage: run_genissud [para/serial]
+
+qsub="qsub -N pythia_run -V -q madgraph"
+
+p=0
+if [ "$1" != "" ];then
+  p=$1
+fi
+
+if [ ! -e Cards/run_card.dat ]; then
+  echo "No Cards/run_card.dat found. Quitting..."
+  exit
+fi
+
+e1=`awk '/^[^#].*=.*ebeam1/{print $1}' Cards/run_card.dat`
+e2=`awk '/^[^#].*=.*ebeam2/{print $1}' Cards/run_card.dat`
+pd=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+lha=`awk '/^[^#].*=.*lhaid/{print $1}' Cards/run_card.dat`
+xq=`awk '/^[^#].*=.*xqcut/{print $1}' Cards/run_card.dat`
+
+# Remove ':s from pd
+pd=${pd#\'*}
+pd=${pd%*\'}
+
+if [[ $xq -gt 2 || $xq -eq 0 ]];then
+  xq=2
+fi
+
+outfile=lib/issudgrid-$e1-$e2-$pd-$xq.dat
+if [ "$pd" = "lhapdf" ];then
+  outfile=lib/issudgrid-$e1-$e2-$pd-$lha-$xq.dat
+fi
+
+if [ -e $outfile.gz ];then
+  echo "File $outfile.gz already exists, no need to regenerate"
+  exit
+fi
+
+if [[ ! -e bin/internal/gensudgrid ]];then
+  cd Source;make ../bin/internal/gensudgrid;cd ..
+fi
+
+echo "Generating $outfile"
+
+main=`pwd`
+rm -f myprocid running_jobs
+echo $$ >> myprocid
+
+if [ "$p" = "1" ]; then 
+  for i in -2 -1 0 1 2 3 4 5;do
+    rm -f donegen$i rungen$i waitgen$i gensudgrid$i.log gensudgrid$i.pbs gen$i.log
+    echo '#!/bin/bash' > gensudgrid$i.pbs
+    touch waitgen$i
+    echo "cd $main;rm waitgen$i;touch rungen$i;bin/internal/gensudgrid $i > gensudgrid$i.log;rm rungen$i;touch donegen$i" >> gensudgrid$i.pbs
+    chmod u+x gensudgrid$i.pbs
+    $qsub -e gensudgrid$i.err -o gen$i.log gensudgrid$i.pbs >> running_jobs
+  done
+  t=`find ./ -name "gensudgrid*.pbs" -maxdepth 1 |wc -l`
+  r=`find ./ -name "rungen*" -maxdepth 1 |wc -l`
+  w=`find ./ -name "waitgen*" -maxdepth 1 |wc -l`
+  d=`find ./ -name "donegen*" -maxdepth 1 |wc -l`
+  echo "waiting while finishing jobs on cluster"
+  echo $w $r $d $t
+  while [[  $d -lt $t  ]]; do    
+      sleep 10
+      t=`find ./ -name "gensudgrid*.pbs" -maxdepth 1 |wc -l`
+      r=`find ./ -name "rungen*" -maxdepth 1 |wc -l`
+      w=`find ./ -name "waitgen*" -maxdepth 1 |wc -l`
+      d=`find ./ -name "donegen*" -maxdepth 1 |wc -l`
+      echo $w $r $d $t
+  done
+  rm -f gensudgrid*.pbs donegen*
+else
+  for i in -2 -1 0 1 2 3 4 5;do
+    echo "Generating grid for parton number $i"
+    bin/internal/gensudgrid $i > gensudgrid$i.log
+  done
+fi
+
+for i in -2 -1 0 1 2 3 4 5;do
+  cat gensudgrid$i.log >> $outfile
+  gzip $outfile
+  rm gensudgrid$i.log
+done

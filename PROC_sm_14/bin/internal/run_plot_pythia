@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+#  This runs MadAnalysis on the unweighted_events.lhe
+#
+#  Usage: run_plot run_name [madir [tddir]]
+#  where madir is the path to the MadAnalysis package
+
+main=`pwd`
+
+if [ "$1" != "" ]
+then
+  run=$1
+else
+  echo "Usage: run_plot runname [MAdir [tddir]]"
+  exit
+fi
+
+if [ "$2" != "" ]
+then
+  MAdir=$main/$2
+else
+  MAdir=$main/../../MadAnalysis
+fi
+
+if [ "$3" != "" ]; then
+  td=$main/$3
+else
+  td=$main/../../td
+fi
+
+dirbin=$main/../bin/internal
+
+if [[ $run != "" && -e ${run}_pythia_events.lhe.gz ]];then
+    gunzip -c ${run}_pythia_events.lhe.gz > pythia_events.lhe
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots"
+    mkdir ${run}_pythia
+    cd ${run}_pythia
+    echo "../pythia_events.lhe" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${run}_pythia Pythia
+    mv plots.html ${run}_plots_pythia.html
+    $dirbin/gen_crossxhtml-pl $run
+else
+   echo "Not creating plots"
+fi
+

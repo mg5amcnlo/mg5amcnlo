@@ -1,0 +1,16 @@
+# Central scale factors
+scalefact:
+%(sys_scalefact)s
+# choice of correlation scheme between muF and muR
+scalecorrelation:
+%(sys_scalecorrelation)s
+# \alpha_s emission scale factors
+alpsfact:
+%(sys_alpsfact)s
+# matching scales
+matchscale:
+%(sys_matchscale)s
+# PDF sets and number of members (0 or none for all members)
+PDF:
+%(sys_pdf)s
+# MSTW2008nlo68cl.LHgrid 1
