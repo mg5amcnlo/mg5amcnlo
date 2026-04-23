@@ -324,6 +324,7 @@ C
       INCLUDE 'ldme.inc'
       REAL*8 NORM, LDME
       REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA)
+      REAL*8 P_RESH(0:3,NEXTERNAL+NONIA), PMASS_RESH(NEXTERNAL)
       COMPLEX*16 PROJ(4**NONIA)
       INTEGER NHEL_ONIA(NEXTERNAL+NONIA), IC_ONIA(NEXTERNAL+NONIA)
       INTEGER HELQ1(2), HELQ2(2)
@@ -380,13 +381,19 @@ C ----------
         ENDIF
       ENDIF
 
+      PMASS_RESH = 0.D0
+      DO I = 1, NEXTERNAL+NONIA
+        PMASS_RESH(MAPPING(I)) = PMASS_RESH(MAPPING(I))+PMASS_ONIA(I)
+      ENDDO
+      CALL RESHUFFLE_MOMENTA%(proc_id)s(P,PMASS_RESH,P_RESH)
+
       DO I = 1, NEXTERNAL+NONIA
         IF (PAIRS(I).NE.0) THEN
-          FRAC = PMASS_ONIA(I)/PMASS(MAPPING(I))
+          FRAC = PMASS_ONIA(I)/PMASS_RESH(MAPPING(I))
         ELSE
           FRAC = 1.D0
         ENDIF
-        P_ONIA(:,I) = FRAC*P(:,MAPPING(I))
+        P_ONIA(:,I) = FRAC*P_RESH(:,MAPPING(I))
         NHEL_ONIA(I) = NHEL(MAPPING(I))
         IC_ONIA(I) = IC(MAPPING(I))
       ENDDO
@@ -403,7 +410,7 @@ C       Computing the projectors
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
               NHEL_ONIA(Q2) = HELQ2(K)
-              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P(:,QQ),PMASS(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
+              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P_RESH(:,QQ),PMASS_RESH(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
               PROJ_SAVED%(proc_id)s(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
           ENDDO
@@ -416,7 +423,7 @@ C       Computing normalisation factor from color projector
           NORM = NORM*2D0
         ENDIF
 C       Computing normalisation factor for LDME convention
-        LDME = LDME*PMASS(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
+        LDME = LDME*PMASS_RESH(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
         IF (C_ONIA(I).EQ.1) THEN
           LDME = LDME/6D0/(2D0*J_ONIA(I)+1D0)
         ELSE IF (C_ONIA(I).EQ.8) THEN
@@ -544,4 +551,291 @@ C           Store amplitudes for reuse
       ENDDO
 
       RETURN
+      END
+
+      SUBROUTINE RESHUFFLE_MOMENTA%(proc_id)s(P,PMASS,P_RESH)
+      IMPLICIT NONE
+C
+C     CONSTANT
+C
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'onia.inc'
+C
+C     ARGUMENTS
+C
+      REAL*8    P(0:3,NEXTERNAL), P_RESH(0:3,NEXTERNAL)
+      REAL*8    PMASS(NEXTERNAL)
+C
+C     LOCALS
+C
+      LOGICAL FS, RESHUFFLE
+      INTEGER I, J, CNT_ONIA, CNT_ELEM, NELEM, MAP(NEXTERNAL)
+      PARAMETER (NELEM = NEXTERNAL-NONIA-2)
+
+      REAL*8 TINY
+      PARAMETER (TINY=1D-99)
+
+      ! HADRONIC SYSTEM
+      REAL*8 HAD_P(0:3,NONIA), HAD_M(NONIA), HAD_K(0:3,NELEM)
+      REAL*8 HAD_PIN(0:3,NONIA), HAD_MIN(NONIA), HAD_KX(0:3)
+      REAL*8 HAD_SQRTS, MREC
+
+      ! PARTONIC SYSTEM
+      REAL*8 PAR_P(0:3,NONIA), PAR_M(NONIA), PAR_K(0:3,NELEM)
+      REAL*8 PAR_PIN(0:3,NONIA), PAR_MIN(NONIA), PAR_KX(0:3)
+      REAL*8 PAR_SQRTS, PAR_E1, PAR_E2
+
+      ! AUXILIARY
+      REAL*8 PCOM(0:3,NEXTERNAL), PAUX(0:3), UNIT_VECTOR(1:3)
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      FS = .TRUE.
+
+      RESHUFFLE = .FALSE.
+      DO I = 3, NEXTERNAL
+        IF (ABS(PMASS(I)-MASS(P(:,I)))/PMASS(I).GT.1D-11) THEN 
+          RESHUFFLE = .TRUE.
+        ENDIF
+      ENDDO
+      IF (.NOT.RESHUFFLE) THEN
+        P_RESH = P
+        RETURN
+      ENDIF
+
+      IF (NINCOMING.NE.2) THEN
+        PRINT*, 'Momentum reshuffling only possible for 2->N processes.'
+        STOP
+      ENDIF
+
+      IF (FS) THEN
+C     FINAL-STATE MOMENTUM RESHUFFLING
+        DO I = 1, NEXTERNAL
+          PAUX = P(0:3,1)+P(0:3,2)
+          CALL BOOST(PAUX,+1D0,P(0:3,I),PCOM(0:3,I))
+        ENDDO
+
+        CNT_ONIA = 0
+        CNT_ELEM = 0
+        HAD_KX(0:3) = 0D0
+        DO I = NINCOMING+1, NEXTERNAL
+          IF (ANY(I==ONIA)) THEN
+            CNT_ONIA = CNT_ONIA + 1
+            MAP(I) = CNT_ONIA
+            HAD_P(0:3,CNT_ONIA) = PCOM(0:3,I)
+            HAD_M(CNT_ONIA) = MASS(HAD_P(0:3,CNT_ONIA))
+            PAR_M(CNT_ONIA) = PMASS(I)
+          ELSE
+            CNT_ELEM = CNT_ELEM + 1
+            MAP(I) = -CNT_ELEM
+            HAD_K(0:3,CNT_ELEM) = PCOM(0:3,I)
+            HAD_KX(0:3) = HAD_KX(0:3) + HAD_K(0:3,CNT_ELEM)
+          ENDIF
+        ENDDO
+        MREC = MASS(HAD_KX)
+
+        HAD_PIN(0:3,NONIA) = HAD_P(0:3,NONIA)
+        HAD_MIN(NONIA) = HAD_M(NONIA)
+        PAR_MIN(NONIA) = PAR_M(NONIA)
+        DO I = NONIA-1, 1, -1
+          HAD_PIN(0:3,I) = HAD_PIN(0:3,I+1) + HAD_P(0:3,I)
+          HAD_MIN(I) = MASS(HAD_PIN(0:3,I))
+          PAR_MIN(I) = PHI(HAD_MIN(I),PAR_M(I),PAR_MIN(I+1),HAD_M(I),HAD_MIN(I+1))
+        ENDDO
+
+        HAD_SQRTS = PCOM(0,1)+PCOM(0,2)
+        PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC)
+
+        PAR_PIN(0,1) = EPSILON(PAR_SQRTS,PAR_MIN(1),MREC)
+        PAR_PIN(1:3,1) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_PIN(1:3,1)/MAX(SQRT(PABS2(HAD_PIN(0:3,1))),TINY)
+
+        PAR_KX(0) = EPSILON(PAR_SQRTS,MREC,PAR_MIN(1))
+        PAR_KX(1:3) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_KX(1:3)/SQRT(PABS2(HAD_KX))
+
+        IF (NELEM.GT.1) THEN
+          DO I = 1, NELEM
+            CALL BOOST(HAD_KX,+1D0,HAD_K(0:3,I),PAUX)
+            CALL BOOST(PAR_KX,-1D0,PAUX,PAR_K(0:3,I))
+          ENDDO
+        ELSE IF (NELEM.EQ.1) THEN
+          PAR_K(0:3,1) = PAR_KX(0:3)
+        ENDIF
+
+        DO I = 1, NONIA-1
+          CALL BOOST(HAD_PIN(0:3,I),+1D0,HAD_P(0:3,I),PAUX)
+          UNIT_VECTOR = PAUX(1:3)/PI(HAD_MIN(I),HAD_M(I),HAD_MIN(I+1))
+          PAUX(0) = EPSILON(PAR_MIN(I),PAR_M(I),PAR_MIN(I+1))
+          PAUX(1:3) = PI(PAR_MIN(I),PAR_M(I),PAR_MIN(I+1))*UNIT_VECTOR
+          CALL BOOST(PAR_PIN(0:3,I),-1D0,PAUX,PAR_P(0:3,I))
+          PAUX(0) = EPSILON(PAR_MIN(I),PAR_MIN(I+1),PAR_M(I))
+          PAUX(1:3) = -PAUX(1:3)
+          CALL BOOST(PAR_PIN(0:3,I),-1D0,PAUX,PAR_PIN(0:3,I+1))
+        ENDDO
+        PAR_P(0:3,NONIA) = PAR_PIN(0:3,NONIA)
+
+        DO I = NINCOMING+1, NEXTERNAL
+          J = MAP(I)
+          IF (J.GT.0) THEN
+            P_RESH(0:3,I) = PAR_P(0:3,J)
+          ELSE
+            P_RESH(0:3,I) = PAR_K(0:3,-J)
+          ENDIF
+        ENDDO
+        P_RESH(0:3,1) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,1D0/)
+        P_RESH(0:3,2) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,-1D0/)
+
+        PCOM = P_RESH
+        DO I = 1, NEXTERNAL
+          PAUX = P(0:3,1)+P(0:3,2)
+          CALL BOOST(PAUX,-1D0,PCOM(0:3,I),P_RESH(0:3,I))
+        ENDDO
+      ELSE
+C     INITIAL-STATE RESHUFFLING
+        DO I = NINCOMING+1, NEXTERNAL
+          IF (MASS(P(0:3,I)).NE.PMASS(I)) THEN
+            P_RESH(1:3,I) = P(1:3,I)
+            P_RESH(0,I) = SQRT(PMASS(I)**2+PABS2(P(0:3,I)))
+          ELSE
+            P_RESH(0:3,I) = P(0:3,I)
+          ENDIF
+        ENDDO
+        PAR_SQRTS = SUM(P_RESH(0,NINCOMING+1:))
+        PAR_E1 = 0.5D0*(PAR_SQRTS+P(0,1)-P(0,2))
+        PAR_E2 = 0.5D0*(PAR_SQRTS-P(0,1)+P(0,2))
+        P_RESH(0:3,1) = PAR_E1*(/ 1D0, 0D0, 0D0, 1D0/)
+        P_RESH(0:3,2) = PAR_E2*(/ 1D0, 0D0, 0D0,-1D0/)
+      ENDIF
+
+      CONTAINS
+
+        DOUBLE PRECISION FUNCTION MASS(P)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8    P(0:3)
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          MASS = P(0)*P(0)-P(1)*P(1)-P(2)*P(2)-P(3)*P(3)
+          IF (ABS(MASS).LT.1D-07) THEN
+            MASS = 0D0
+          ELSE
+            MASS = SQRT(MASS)
+          ENDIF
+          RETURN
+        END
+
+        DOUBLE PRECISION FUNCTION PABS2(P)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8    P(0:3)
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          PABS2 = P(1)*P(1)+P(2)*P(2)+P(3)*P(3)
+          IF (ABS(PABS2).LT.1D-07) THEN
+            PABS2 = 0D0
+          ENDIF
+          RETURN
+        END
+
+        DOUBLE PRECISION FUNCTION PI(M,M1,M2)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8 M,M1,M2
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          PI = 0.5D0*M*SQRT(1D0-(M1+M2)**2/M**2)*SQRT(1D0-(M1-M2)**2/M**2)
+          RETURN
+        END
+
+        DOUBLE PRECISION FUNCTION EPSILON(M,M1,M2)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8 M,M1,M2
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          EPSILON = 0.5D0*M*(1D0+(M1**2-M2**2)/M**2)
+          RETURN
+        END
+
+        DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8 M,MP1,MP2,M1,M2
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          IF (M.GE.(MP1+MP2)) THEN
+            PHI = M
+          ELSE
+            PHI = (MP1+MP2)/(M1+M2)*M
+          ENDIF
+          RETURN
+        END
+
+        SUBROUTINE BOOST(PREF, DIRECTION, P, PBOOST)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8 PREF(0:3), DIRECTION, P(0:3), PBOOST(0:3)
+C
+C         LOCALS
+C
+          REAL*8 BETA(1:3), BETA2, GAMMA, LAMBDA(0:3,0:3)
+          REAL*8 TINY
+          PARAMETER (TINY=1D-99)
+
+C         ----------
+C         BEGIN CODE
+C         ----------
+          BETA(1:3) = DIRECTION*PREF(1:3)/PREF(0)
+
+          BETA2 = BETA(1)*BETA(1)+BETA(2)*BETA(2)+BETA(3)*BETA(3)
+          GAMMA = 1D0/SQRT(1D0-BETA2)
+          BETA2 = MAX(BETA2,TINY)
+
+C         CONSTRUCT LORENTZ TRANSFORMATION MATRIX
+          LAMBDA(0,0) = GAMMA
+          LAMBDA(0,1) = -GAMMA*BETA(1)
+          LAMBDA(0,2) = -GAMMA*BETA(2)
+          LAMBDA(0,3) = -GAMMA*BETA(3)
+
+          LAMBDA(1,0) = LAMBDA(0,1)
+          LAMBDA(1,1) = 1D0+(GAMMA-1D0)*BETA(1)*BETA(1)/BETA2
+          LAMBDA(1,2) = (GAMMA-1D0)*BETA(1)*BETA(2)/BETA2
+          LAMBDA(1,3) = (GAMMA-1D0)*BETA(1)*BETA(3)/BETA2
+
+          LAMBDA(2,0) = LAMBDA(0,2)
+          LAMBDA(2,1) = LAMBDA(1,2)
+          LAMBDA(2,2) = 1D0+(GAMMA-1D0)*BETA(2)*BETA(2)/BETA2
+          LAMBDA(2,3) = (GAMMA-1D0)*BETA(2)*BETA(3)/BETA2
+
+          LAMBDA(3,0) = LAMBDA(0,3)
+          LAMBDA(3,1) = LAMBDA(1,3)
+          LAMBDA(3,2) = LAMBDA(2,3)
+          LAMBDA(3,3) = 1D0+(GAMMA-1D0)*BETA(3)*BETA(3)/BETA2
+
+C         APPLY TRANSFORMATION
+          PBOOST = MATMUL(LAMBDA,P)
+        END
       END

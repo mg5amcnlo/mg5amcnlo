@@ -1,5 +1,5 @@
 C MadSONS
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,PRESHUFFLED,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,P_RESH,HEL,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -10,12 +10,12 @@ C
       PARAMETER (NCOMB=%(ncomb)d)
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: HEL
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),PRESHUFFLED(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
 
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),PRESHUFFLED(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
       INTEGER HEL
 C
 C GLOBAL VARIABLES
@@ -26,12 +26,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-      CALL %(proc_prefix)sSMATRIX(P,PRESHUFFLED,ANS)
+      CALL %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
       USERHEL=-1
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX(P,PRESHUFFLED,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
 C
 %(info_lines)s
 C
@@ -60,9 +60,9 @@ C
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),PRESHUFFLED(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),PRESHUFFLED(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
 C
 C LOCAL VARIABLES
 C
@@ -152,7 +152,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
               IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                 CYCLE
               ENDIF
-              T=%(proc_prefix)sMATRIX(P,PRESHUFFLED,NHEL(1,IHEL),JC(1))
+              T=%(proc_prefix)sMATRIX(P,P_RESH,NHEL(1,IHEL),JC(1))
               IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                 ANS=ANS+T
               ENDIF
@@ -176,7 +176,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
       END
 
 
-      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,PRESHUFFLED,NHEL,IC)
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,P_RESH,NHEL,IC)
 C
 %(info_lines)s
 C
@@ -224,7 +224,7 @@ C
       INCLUDE 'ldme.inc'
       REAL*8 NORM, LDME
       COMPLEX*16 PROJ(4**NONIA)
-      REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA),PRESHUFFLED(0:3,NEXTERNAL),PMASS_RESHUFFLE(NEXTERNAL)
+      REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA),P_RESH(0:3,NEXTERNAL),PMASS_RESH(NEXTERNAL)
       INTEGER NHEL_ONIA(NEXTERNAL+NONIA), IC_ONIA(NEXTERNAL+NONIA)
       INTEGER HELQ1(2), HELQ2(2)
       DATA HELQ1/-1, 1/
@@ -256,11 +256,11 @@ C ----------
 C BEGIN CODE
 C ----------
 
-      PMASS_RESHUFFLE = 0.D0
+      PMASS_RESH = 0.D0
       DO I = 1, NEXTERNAL+NONIA
-        PMASS_RESHUFFLE(MAPPING(I)) = PMASS_RESHUFFLE(MAPPING(I))+PMASS_ONIA(I)
+        PMASS_RESH(MAPPING(I)) = PMASS_RESH(MAPPING(I))+PMASS_ONIA(I)
       ENDDO
-      CALL %(proc_prefix)sRESHUFFLE_MOMENTA(P,PMASS_RESHUFFLE,PRESHUFFLED)
+      CALL %(proc_prefix)sRESHUFFLE_MOMENTA(P,PMASS_RESH,P_RESH)
 
       DO I = 1, NEXTERNAL+NONIA
         IF (PAIRS(I).NE.0) THEN
@@ -269,7 +269,7 @@ C ----------
         ELSE
           FRAC = 1.D0
         ENDIF
-        P_ONIA(:,I) = FRAC*PRESHUFFLED(:,MAPPING(I))
+        P_ONIA(:,I) = FRAC*P_RESH(:,MAPPING(I))
         NHEL_ONIA(I) = NHEL(MAPPING(I))
         IC_ONIA(I) = IC(MAPPING(I))
       ENDDO
@@ -286,7 +286,7 @@ C       Computing the projectors
             DO K = 1, SIZE(HELQ2)
               NHEL_ONIA(Q1) = HELQ1(J)
               NHEL_ONIA(Q2) = HELQ2(K)
-              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),PRESHUFFLED(:,QQ),PMASS_RESHUFFLE(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
+              CALL ONIA_PROJ(P_ONIA(:,Q1),PMASS_ONIA(Q1),NHEL_ONIA(Q1),P_ONIA(:,Q2),PMASS_ONIA(Q2),NHEL_ONIA(Q2),P_RESH(:,QQ),PMASS_RESH(QQ),NHEL(QQ),S_ONIA(I),PROJ(1))
               PROJ_SAVED(I,NHEL(QQ),NHEL_ONIA(Q1),NHEL_ONIA(Q2)) = PROJ(1)
             ENDDO
           ENDDO
@@ -299,7 +299,7 @@ C       Computing normalisation factor from color projector
           NORM = NORM*2D0
         ENDIF
 C       Computing normalisation factor for LDME convention
-        LDME = LDME*PMASS_RESHUFFLE(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
+        LDME = LDME*PMASS_RESH(QQ)/(2D0*PMASS_ONIA(Q1)*PMASS_ONIA(Q2))
         IF (C_ONIA(I).EQ.1) THEN
           LDME = LDME/6D0/(2D0*J_ONIA(I)+1D0)
         ELSE IF (C_ONIA(I).EQ.8) THEN
@@ -374,7 +374,7 @@ C
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),PRESHUFFLED(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
       INTEGER NHEL
       DOUBLE PRECISION ALPHAS
       real*8 pi
@@ -390,9 +390,9 @@ C     the include file with the values of the parameters and masses
       G = 2*DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, PRESHUFFLED, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, P_RESH, NHEL, ANS)
       else
-        CALL %(proc_prefix)sSMATRIX(P, PRESHUFFLED, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, P_RESH, ANS)
       endif
       return
       end
@@ -461,7 +461,7 @@ C     ----------
       RETURN
       END
 
-      SUBROUTINE %(proc_prefix)sRESHUFFLE_MOMENTA(P,PMASS,PRESHUFFLED)
+      SUBROUTINE %(proc_prefix)sRESHUFFLE_MOMENTA(P,PMASS,P_RESH)
       IMPLICIT NONE
 C
 C     CONSTANT
@@ -471,7 +471,7 @@ C
 C
 C     ARGUMENTS
 C
-      REAL*8    P(0:3,NEXTERNAL), PRESHUFFLED(0:3,NEXTERNAL)
+      REAL*8    P(0:3,NEXTERNAL), P_RESH(0:3,NEXTERNAL)
       REAL*8    PMASS(NEXTERNAL)
 C
 C     LOCALS
@@ -509,7 +509,7 @@ C     ----------
         ENDIF
       ENDDO
       IF (.NOT.RESHUFFLE) THEN
-        PRESHUFFLED = P
+        P_RESH = P
         RETURN
       ENDIF
 
@@ -586,121 +586,136 @@ C     FINAL-STATE MOMENTUM RESHUFFLING
         DO I = NINCOMING+1, NEXTERNAL
           J = MAP(I)
           IF (J.GT.0) THEN
-            PRESHUFFLED(0:3,I) = PAR_P(0:3,J)
+            P_RESH(0:3,I) = PAR_P(0:3,J)
           ELSE
-            PRESHUFFLED(0:3,I) = PAR_K(0:3,-J)
+            P_RESH(0:3,I) = PAR_K(0:3,-J)
           ENDIF
         ENDDO
+        P_RESH(0:3,1) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,1D0/)
+        P_RESH(0:3,2) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,-1D0/)
 
-        PRESHUFFLED(0:3,1) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,1D0/)
-        PRESHUFFLED(0:3,2) = 0.5D0*PAR_SQRTS*(/1D0,0D0,0D0,-1D0/)
-
-C ! LS:: remove the following commented part
-C ! ============================= from here =============================
-C !      ELSE IF ((PABS2(P(0:3,1)+P(0:3,2)).EQ.0D0).AND.(.NOT.FS)) THEN
-C !C     INITIAL-STATE RESHUFFLING IN PARTONIC CENTER-OF-MASS FRAME
-C !        PRINT*, 'IS PARTONIC COM'
-C !        DO I = NINCOMING+1, NEXTERNAL
-C !          IF (MASS(P(0:3,I)).NE.PMASS(I)) THEN
-C !            PRESHUFFLED(1:3,I) = P(1:3,I)
-C !            PRESHUFFLED(0,I) = SQRT(PMASS(I)**2+PABS2(P(0:3,I)))
-C !          ELSE
-C !            PRESHUFFLED(0:3,I) = P(0:3,I)
-C !          ENDIF
-C !        ENDDO
-C !        SQRTSBAR = SUM(PRESHUFFLED(0,NINCOMING+1:))
-C !        PRESHUFFLED(0:3,1) = 0.5D0*SQRTSBAR*(/ 1D0, 0D0, 0D0, 1D0/)
-C !        PRESHUFFLED(0:3,2) = 0.5D0*SQRTSBAR*(/ 1D0, 0D0, 0D0,-1D0/)
-C ! ============================== to here ==============================
+        PCOM = P_RESH
+        DO I = 1, NEXTERNAL
+          PAUX = P(0:3,1)+P(0:3,2)
+          CALL BOOST(PAUX,-1D0,PCOM(0:3,I),P_RESH(0:3,I))
+        ENDDO
       ELSE
 C     INITIAL-STATE RESHUFFLING
         DO I = NINCOMING+1, NEXTERNAL
           IF (MASS(P(0:3,I)).NE.PMASS(I)) THEN
-            PRESHUFFLED(1:3,I) = P(1:3,I)
-            PRESHUFFLED(0,I) = SQRT(PMASS(I)**2+PABS2(P(0:3,I)))
+            P_RESH(1:3,I) = P(1:3,I)
+            P_RESH(0,I) = SQRT(PMASS(I)**2+PABS2(P(0:3,I)))
           ELSE
-            PRESHUFFLED(0:3,I) = P(0:3,I)
+            P_RESH(0:3,I) = P(0:3,I)
           ENDIF
         ENDDO
-        PAR_SQRTS = SUM(PRESHUFFLED(0,NINCOMING+1:))
+        PAR_SQRTS = SUM(P_RESH(0,NINCOMING+1:))
         PAR_E1 = 0.5D0*(PAR_SQRTS+P(0,1)-P(0,2))
         PAR_E2 = 0.5D0*(PAR_SQRTS-P(0,1)+P(0,2))
-        PRESHUFFLED(0:3,1) = PAR_E1*(/ 1D0, 0D0, 0D0, 1D0/)
-        PRESHUFFLED(0:3,2) = PAR_E2*(/ 1D0, 0D0, 0D0,-1D0/)
+        P_RESH(0:3,1) = PAR_E1*(/ 1D0, 0D0, 0D0, 1D0/)
+        P_RESH(0:3,2) = PAR_E2*(/ 1D0, 0D0, 0D0,-1D0/)
       ENDIF
 
       CONTAINS
 
         DOUBLE PRECISION FUNCTION MASS(P)
-        IMPLICIT NONE
+          IMPLICIT NONE
 C
-C       ARGUMENTS
+C         ARGUMENTS
 C
-        REAL*8    P(0:3)
+          REAL*8    P(0:3)
 
-C       ----------
-C       BEGIN CODE
-C       ----------
-        MASS = P(0)*P(0)-P(1)*P(1)-P(2)*P(2)-P(3)*P(3)
-        IF (ABS(MASS).LT.1D-07) THEN
-          MASS = 0D0
-        ELSE
-          MASS = SQRT(MASS)
-        ENDIF
-        RETURN
-
+C         ----------
+C         BEGIN CODE
+C         ----------
+          MASS = P(0)*P(0)-P(1)*P(1)-P(2)*P(2)-P(3)*P(3)
+          IF (ABS(MASS).LT.1D-07) THEN
+            MASS = 0D0
+          ELSE
+            MASS = SQRT(MASS)
+          ENDIF
+          RETURN
         END
 
         DOUBLE PRECISION FUNCTION PABS2(P)
-        IMPLICIT NONE
+          IMPLICIT NONE
 C
-C       ARGUMENTS
+C         ARGUMENTS
 C
-        REAL*8    P(0:3)
+          REAL*8    P(0:3)
 
-C       ----------
-C       BEGIN CODE
-C       ----------
-        PABS2 = P(1)*P(1)+P(2)*P(2)+P(3)*P(3)
-        IF (ABS(PABS2).LT.1D-07) THEN
-          PABS2 = 0D0
-        ENDIF
-        RETURN
-
+C         ----------
+C         BEGIN CODE
+C         ----------
+          PABS2 = P(1)*P(1)+P(2)*P(2)+P(3)*P(3)
+          IF (ABS(PABS2).LT.1D-07) THEN
+            PABS2 = 0D0
+          ENDIF
+          RETURN
         END
 
         DOUBLE PRECISION FUNCTION PI(M,M1,M2)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
           REAL*8 M,M1,M2
 
+C         ----------
+C         BEGIN CODE
+C         ----------
           PI = 0.5D0*M*SQRT(1D0-(M1+M2)**2/M**2)*SQRT(1D0-(M1-M2)**2/M**2)
           RETURN
         END
 
         DOUBLE PRECISION FUNCTION EPSILON(M,M1,M2)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
           REAL*8 M,M1,M2
 
+C         ----------
+C         BEGIN CODE
+C         ----------
           EPSILON = 0.5D0*M*(1D0+(M1**2-M2**2)/M**2)
           RETURN
         END
 
         DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2)
-          REAL*8 M,M1,M2,MP1,MP2
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
+          REAL*8 M,MP1,MP2,M1,M2
 
+C         ----------
+C         BEGIN CODE
+C         ----------
           IF (M.GE.(MP1+MP2)) THEN
             PHI = M
           ELSE
             PHI = (MP1+MP2)/(M1+M2)*M
           ENDIF
           RETURN
-
         END
 
         SUBROUTINE BOOST(PREF, DIRECTION, P, PBOOST)
+          IMPLICIT NONE
+C
+C         ARGUMENTS
+C
           REAL*8 PREF(0:3), DIRECTION, P(0:3), PBOOST(0:3)
+C
+C         LOCALS
+C
           REAL*8 BETA(1:3), BETA2, GAMMA, LAMBDA(0:3,0:3)
           REAL*8 TINY
           PARAMETER (TINY=1D-99)
 
+C         ----------
+C         BEGIN CODE
+C         ----------
           BETA(1:3) = DIRECTION*PREF(1:3)/PREF(0)
 
           BETA2 = BETA(1)*BETA(1)+BETA(2)*BETA(2)+BETA(3)*BETA(3)
@@ -730,7 +745,5 @@ C         CONSTRUCT LORENTZ TRANSFORMATION MATRIX
 
 C         APPLY TRANSFORMATION
           PBOOST = MATMUL(LAMBDA,P)
-
         END
-
       END
