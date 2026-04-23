@@ -4906,11 +4906,11 @@ c     Jacobian due to delta() of tau_born
       sqrtshat=sqrt(shat)
       if (j_fks.gt.nincoming) then
          if (m_j_fks.eq.0d0) then
-            call generate_momenta_massless_final_inverse(p_lab,xi_i_fks
+            call generate_momenta_massless_final_inverse(p_cms,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks)
          else
-            call generate_momenta_massive_final_inverse(p_lab,xi_i_fks
+            call generate_momenta_massive_final_inverse(p_cms,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
          endif
@@ -5161,6 +5161,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
      $           xp_red(0,i),p_born(0,i-1))
          endif
       enddo
+
       p_born(1:2,1:2)=0d0
       p_born(0,1)=sum(p_born(0,3:nexternal-1))/2d0
       p_born(3,1)=p_born(0,1)
@@ -5348,7 +5349,8 @@ c     cosh(y) is very often close to one, so define cosh(y)-1 as well
       xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c     Perform the boost here
       do i=nincoming+1,nexternal
-         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle
+!         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle
+         if(i.eq.j_fks) cycle
          if (i.lt.i_fks) then
             call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
      &           p_born(0,i))
@@ -5551,7 +5553,7 @@ c
       double precision xjac0,xpswgt0,m(-max_branch:max_particles),x(99)
      $     ,s(-max_branch:max_particles),pb(0:3,-max_branch:nexternal-1)
      $     ,pr(0:3)
-      integer itree(2,-max_branch:-1),ns_channel,nbranch
+      integer itree(2,-max_branch:-1),ns_channel,nbranch,i
       logical pass
       double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass

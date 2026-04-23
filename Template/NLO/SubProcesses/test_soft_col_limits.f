@@ -304,6 +304,8 @@ c dump momenta in a fort.80 file
       common/c_nFKSprocess/nFKSprocess
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+      logical soft_limit_is_zero
+      common /c_soft_limit_is_zero/soft_limit_is_zero
 
       integer i
       wgt=1d0
@@ -342,10 +344,14 @@ c$$$      stop 1
          call compute_MC_subt_term_test(p,p_cms,p_lab,wgt
      $        ,born_flow_factor)
          do iamp=1,amp_split_size
-            if (amp_split(iamp).ne.0d0) then
-               amp(iamp) = amp(iamp)/amp_split(iamp)
+            if (.not.soft_limit_is_zero) then
+               if (amp_split(iamp).ne.0d0) then
+                  amp(iamp) = amp(iamp)/amp_split(iamp)
+               else
+                  amp(iamp) = 1d0
+               endif
             else
-               amp(iamp) = 1d0
+               amp(iamp)=amp_split(iamp)
             endif
          enddo
       else
@@ -396,6 +402,8 @@ c$$$      stop 1
       common /cxiifkscnt/xi_i_fks_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      logical soft_limit_is_zero
+      common /c_soft_limit_is_zero/soft_limit_is_zero
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
@@ -425,7 +433,11 @@ c$$$      stop 1
          enddo
       elseif (ilim.eq.1) then
          do iamp=1,amp_split_size
-            limit_split(iamp) = 1d0
+            if (.not.soft_limit_is_zero) then
+               limit_split(iamp) = 1d0
+            else
+               limit_split(iamp) = 0d0
+            endif
          enddo
       endif
       
@@ -611,6 +623,7 @@ c$$$         write (*,*) '2',p_lab(:,2)
       include 'born_conf.inc'
       include 'coupl.inc'
       include 'leshouche_decl.inc'
+      include 'fks_info.inc'
       double precision ZERO,    one
       parameter       (ZERO=0d0,one=1d0)
       integer iconfig_in,bs_min,bs_max,fks_loop
@@ -625,6 +638,8 @@ c$$$         write (*,*) '2',p_lab(:,2)
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      logical soft_limit_is_zero
+      common /c_soft_limit_is_zero/soft_limit_is_zero
       nFKSprocess=fks_loop
       call fks_inc_chooser()
       call leshouche_inc_chooser()
@@ -669,6 +684,9 @@ c
          bs_min=iconfig_in
          bs_max=iconfig_in
       endif
+
+      soft_limit_is_zero=.not.(need_color_links_D(nFKSprocess).or.
+     $                         need_charge_links_D(nFKSprocess))
       
       end
 

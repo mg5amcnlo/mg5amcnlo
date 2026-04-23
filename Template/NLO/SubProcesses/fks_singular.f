@@ -4161,7 +4161,7 @@ c Insert <ij>/[ij] which is not included by sborn()
                ! analytic form here (otherwise, damped by S-function). 
                azifact=xij_aor
             else
-               if (xi_i_fks_ev.lt.1d-8) then
+               if (xi_i_fks.lt.1d-8) then
                   pi(i)=p_i_fks_ev(i)
                else
                   pi(i)=p(i,i_fks)
@@ -4360,7 +4360,7 @@ c Insert <ij>/[ij] which is not included by sborn()
                ! analytic form here (otherwise, damped by S-function).
               azifact=xij_aor
            else
-              if (xi_i_fks_ev.lt.1d-8) then
+              if (xi_i_fks.lt.1d-8) then
                  pi(i)=p_i_fks_ev(i)
               else
                  pi(i)=p(i,i_fks)

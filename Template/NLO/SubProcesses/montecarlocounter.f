@@ -1003,7 +1003,8 @@ c     New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
 
 c     Call barred Born and assign shower scale
-      call get_mbar(pp,y_ij_fks,p_born,ileg,bornbars,bornbarstilde)
+      call get_mbar(pp,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
+     $     ,bornbarstilde)
       
 c$$$  c     Distinguish ISR and FSR
 c$$$  if(ileg.le.2)then
@@ -2601,7 +2602,8 @@ c
       end
 
 
-      subroutine get_mbar(p,y_ij_fks,p_born,ileg,bornbars,bornbarstilde)
+      subroutine get_mbar(p,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
+     $     ,bornbarstilde)
 c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).
 c Computes barred azimuthal amplitudes (bornbarstilde) with
@@ -2615,8 +2617,8 @@ c the same method
       include "nFKSconfigs.inc"
       
       double precision p(0:3,nexternal),p_born(0:3,nexternal-1)
-      double precision y_ij_fks,bornbars(max_bcol,nsplitorders),
-     &                          bornbarstilde(max_bcol,nsplitorders)
+      double precision xi_i_fks,y_ij_fks,bornbars(max_bcol,nsplitorders)
+     $     ,bornbarstilde(max_bcol,nsplitorders)
 
       double precision zero
       parameter (zero=0.d0)
@@ -2752,7 +2754,7 @@ c Insert <ij>/[ij] which is not included by sborn()
             azifact=xij_aor
          else
             do i=0,3
-               if (xi_i_fks_ev.lt.1d-8) then
+               if (xi_i_fks.lt.1d-8) then
                   pi(i)=p_i_fks_ev(i)
                else
                   pi(i)=p(i,i_fks)
@@ -2811,7 +2813,7 @@ c Insert <ij>/[ij] which is not included by sborn()
                azifact=xij_aor
             else
                do i=0,3
-                  if (xi_i_fks_ev.lt.1d-8) then
+                  if (xi_i_fks.lt.1d-8) then
                      pi(i)=p_i_fks_ev(i)
                   else
                      pi(i)=p(i,i_fks)
