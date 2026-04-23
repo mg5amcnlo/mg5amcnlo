@@ -38,7 +38,7 @@
       common/to_mconfigs/this_config
       double precision tau_cnt(-2:2),ycm_cnt(-2:2)
       common/cbjrk12_cnt/tau_cnt,ycm_cnt
-c     
+c
       call cpu_time(tBefore)
       this_config=iconfig
       iconf=iconfig
@@ -4693,9 +4693,10 @@ C dressed lepton stuff
          stop 1
       endif
 
+
       call fill_intermediate_momenta_inverse(ns_channel,nt_channel
      $     ,nbranch,pb,itree,m,s)
-
+      
 ! given Born momenta, return all other x's and jac
       call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
      $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
@@ -4931,6 +4932,8 @@ c     Jacobian due to delta() of tau_born
       double precision pi,stiny,qtiny,zero,ctiny
       parameter (pi=3.1415926535897932d0,stiny=1d-6,qtiny=1d-7,zero=0d0
      $     ,ctiny=5d-7)
+      double complex ximag
+      parameter (ximag=(0d0,1d0))
       logical fks_as_is
       parameter (fks_as_is=.false.)
       include 'genps.inc'
@@ -4938,7 +4941,7 @@ c     Jacobian due to delta() of tau_born
       double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
      $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
-     $     ,x1,x2,y_lab_to_cms
+     $     ,x1,x2,y_lab_to_cms,xp_red(0:3,nexternal)
       integer i_fks,j_fks
       double precision yijdir,costh_i_fks,omega,ltau_born ,e2ycm_born
      $     ,em2ycm_born,yij_upp,yij_low ,y_ij_fks_upp ,y_ij_fks_low
@@ -4954,6 +4957,8 @@ c     Jacobian due to delta() of tau_born
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
       logical softtest,colltest
       common/sctests/softtest,colltest
+      double complex xij_aor
+      common/cxij_aor/xij_aor
       idir=0
       if(.not.fks_as_is)then
          if(j_fks.eq.1)then
@@ -4969,39 +4974,13 @@ c     Jacobian due to delta() of tau_born
       yijdir=idir*y_ij_fks
       costh_i_fks=yijdir
       omega=sqrt( (2-xi_i_fks*(1+yijdir))/
-     &     (2-xi_i_fks*(1-yijdir)) )
+     &            (2-xi_i_fks*(1-yijdir)) )
       tau_born=tau*(1-xi_i_fks)
       ycm_born=ycm+log(omega)
       shat=tau*stot
       sqrtshat=sqrt(shat)
       xbjrk_born(1)=xbjrk(1)*(sqrt(1-xi_i_fks)*omega)
       xbjrk_born(2)=xbjrk(2)/omega*sqrt(1-xi_i_fks)   
-      
-! boost n+1 body from cms to tilde frame
-      ybst=0.5*log(xbjrk_born(1)/xbjrk_born(2))-y_lab_to_cms
-      chy_bst=(exp(ybst)+exp(-ybst))/2d0
-      shy_bst=(exp(ybst)-exp(-ybst))/2d0
-      chy_bstmo=chy_bst-1d0
-      do i=1,nexternal
-         call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
-     &        xp(0,i),xp(0,i))
-      enddo
-
-c$$$      write (*,*) 'real incoming',xp(0:3,1:2)
-
-! boost n+1-body kinematics to the tilde frame (defined such that the
-! boost from CMS to lab for Born is the same as from tilde to lab for
-! n+1).
-c$$$      x1=xbjrk_born(1)
-c$$$      x2=xbjrk_born(2)
-c$$$      chy_bst=(sqrt(x1/x2)+sqrt(x2/x1))/2d0
-c$$$      shy_bst=(sqrt(x1/x2)-sqrt(x2/x1))/2d0
-c$$$      chy_bstmo=chy_bst-1d0
-c$$$      do i=1,nexternal
-c$$$         call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
-c$$$     &        xp(0,i),xp(0,i))
-c$$$      enddo
-      
       
 ! this is to overcome numerical instabilities in ee collisions
       if (1d0-tau_born.gt.stiny) then
@@ -5161,36 +5140,38 @@ c Lower bound on xi_i_fks
       xdir_t(1)=cosphi_i_fks
       xdir_t(2)=sinphi_i_fks
       xdir_t(3)=zero
+      
+c Boost the xp momenta from the lab frame to the reduced frame.      
+      ybst=log(omega)+ycm
+      chy_bst=(exp(ybst)+exp(-ybst))/2d0
+      shy_bst=(exp(ybst)-exp(-ybst))/2d0
+      chy_bstmo=chy_bst-1d0
+      do i=1,nexternal
+         call boostwdir2(chy_bst,shy_bst,chy_bstmo,[0d0,0d0,1d0],
+     &        xp(0,i),xp_red(0,i))
+      enddo
 
-!!!!TODO:
-c     Boost the momenta. Use xp in the reduced frame to get the Born momenta.
-c     To get xp in the reduced frame, we can take the xp in the lab frame, and compute the corresponding y-boost, such that
-c     p_tot = sum[p(:,3:nexternal (excluding i-fks) )]
-c     then rapidity of boost is
-c     y-bst= log[(p_tot(0)-p_tot(3) )/(p_tot(0)+p_tot(3) )]/2d0 (or something like this)
+c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       do i=3,nexternal
-         if (shy_bst.eq.0d0) cycle
          if (i.lt.i_fks) then
             call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
-     $           xp(0,i),p_born(0,i))
+     $           xp_red(0,i),p_born(0,i))
          elseif (i.gt.i_fks) then
             call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
-     $           xp(0,i),p_born(0,i-1))
+     $           xp_red(0,i),p_born(0,i-1))
          endif
       enddo
       p_born(1:2,1:2)=0d0
-c$$$      p_born(0,1)=sqrt(xbjrk_born(1)*xbjrk_born(2)*stot)/2d0
       p_born(0,1)=sum(p_born(0,3:nexternal-1))/2d0
       p_born(3,1)=p_born(0,1)
       p_born(0,2)=p_born(0,1)
       p_born(3,2)=-p_born(0,1)
-c$$$      write (*,*) 'inverse born',p_born(0:3,1:nexternal-1),ycm_born,ybst
-      write (*,*) 'AAAAAAAAAAAAA',sum(p_born(3,3:nexternal-1))
 
       xpswgt=xpswgt*shat
       xpswgt=xpswgt/(4*pi)**3/(1-xi_i_fks)
       xpswgt=abs(xpswgt)
       
+      xij_aor=-exp( 2*idir*ximag*phi_i_fks )
       end
 
 
@@ -5328,17 +5309,22 @@ c Phase-space factor for (xii,yij,phii)
       implicit none
       real*8 pi
       parameter (pi=3.1415926535897932d0)
+      double complex ximag
+      parameter (ximag=(0d0,1d0))
       include 'genps.inc'
       include 'nexternal.inc'
       double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
-     $     ,xpswgt
+     $     ,xpswgt,th_mother_fks,costh_mother_fks,sinth_mother_fks
+     $     ,phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks
       integer i_fks,j_fks
       double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
      $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
      $     ,xiimax,xmrec2
       logical        softtest,colltest
       common/sctests/softtest,colltest
+      double complex xij_aor
+      common/cxij_aor/xij_aor
       logical pass
       integer i
       double precision rho
@@ -5398,6 +5384,12 @@ c     Phase-space factor for (xii,yij,phii)
 !     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
+
+c Collinear limit of <ij>/[ij]. See innerpin.m. 
+      call getangles(p_born(0:3,j_fks),
+     &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
+     &     phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
+      xij_aor=-exp( 2*ximag*(phi_mother_fks+phi_i_fks) )
       end
       
       
@@ -5473,7 +5465,7 @@ c     Phase-space factor for (xii,yij,phii)
          do i=-ns_channel-1,-nbranch+1,-1
             pb(0:3,i)=pb(0:3,itree(1,i))-pb(0:3,itree(2,i))
             s(i)=dot(pb(0,i),pb(0,i))
-            m(i)=sqrt(s(i))
+            m(i)=sqrt(abs(s(i)))
          enddo
       endif
       end

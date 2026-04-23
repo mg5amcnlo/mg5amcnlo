@@ -4161,7 +4161,11 @@ c Insert <ij>/[ij] which is not included by sborn()
                ! analytic form here (otherwise, damped by S-function). 
                azifact=xij_aor
             else
-               pi(0:3)=p_i_fks_ev(0:3)
+               if (xi_i_fks_ev.lt.1d-8) then
+                  pi(i)=p_i_fks_ev(i)
+               else
+                  pi(i)=p(i,i_fks)
+               endif
                pj(0:3)=p(0:3,j_fks)
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
                CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
@@ -4356,7 +4360,11 @@ c Insert <ij>/[ij] which is not included by sborn()
                ! analytic form here (otherwise, damped by S-function).
               azifact=xij_aor
            else
-              pi(0:3)=p_i_fks_ev(0:3)
+              if (xi_i_fks_ev.lt.1d-8) then
+                 pi(i)=p_i_fks_ev(i)
+              else
+                 pi(i)=p(i,i_fks)
+              endif
               pj(0:3)=p(0:3,j_fks)
               if(j_fks.eq.2 .and. nincoming.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 

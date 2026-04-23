@@ -651,7 +651,6 @@ c$$$
 
 !     given the flow, loop over the (up to two) partners of the
 !     fks-father.
-
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,p_born,i_connect(iconnect)
      $        ,include_gfun,lzone(iconnect),z(iconnect)
@@ -985,7 +984,6 @@ c over colour partners
       common /to_amp_split_bornbars/amp_split_bornbars,
      $                              amp_split_bornbarstilde
       include "pmass.inc"
-
 
 c     Initialise if first time
       if (split_type(QED_pos)) then
@@ -2754,7 +2752,11 @@ c Insert <ij>/[ij] which is not included by sborn()
             azifact=xij_aor
          else
             do i=0,3
-               pi(i)=p_i_fks_ev(i)
+               if (xi_i_fks_ev.lt.1d-8) then
+                  pi(i)=p_i_fks_ev(i)
+               else
+                  pi(i)=p(i,i_fks)
+               endif
                pj(i)=p(i,j_fks)
             enddo
             if(j_fks.eq.2)then
@@ -2809,7 +2811,11 @@ c Insert <ij>/[ij] which is not included by sborn()
                azifact=xij_aor
             else
                do i=0,3
-                  pi(i)=p_i_fks_ev(i)
+                  if (xi_i_fks_ev.lt.1d-8) then
+                     pi(i)=p_i_fks_ev(i)
+                  else
+                     pi(i)=p(i,i_fks)
+                  endif
                   pj(i)=p(i,j_fks)
                enddo
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        

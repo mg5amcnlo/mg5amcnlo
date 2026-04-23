@@ -493,6 +493,9 @@ c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
          ! n+1-body. Note: if the random numbers are not generated flat
          ! (they are flat here), also the jacobian from importance
          ! sampling should be included.
+c$$$
+c$$$         write (*,*) '1',p_lab(:,1)
+c$$$         write (*,*) '2',p_lab(:,2)
 
          jac=1d0
          !     inputs are: ndim,iconfig,p
