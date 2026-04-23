@@ -306,6 +306,8 @@ c dump momenta in a fort.80 file
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
       logical soft_limit_is_zero
       common /c_soft_limit_is_zero/soft_limit_is_zero
+      logical        softtest,colltest
+      common/sctests/softtest,colltest
 
       integer i
       wgt=1d0
@@ -344,13 +346,14 @@ c$$$      stop 1
          call compute_MC_subt_term_test(p,p_cms,p_lab,wgt
      $        ,born_flow_factor)
          do iamp=1,amp_split_size
-            if (.not.soft_limit_is_zero) then
+            if (.not.(soft_limit_is_zero .and. softtest)) then
                if (amp_split(iamp).ne.0d0) then
                   amp(iamp) = amp(iamp)/amp_split(iamp)
                else
                   amp(iamp) = 1d0
                endif
             else
+c$$$               continue
                amp(iamp)=amp_split(iamp)
             endif
          enddo
@@ -433,7 +436,7 @@ c$$$      stop 1
          enddo
       elseif (ilim.eq.1) then
          do iamp=1,amp_split_size
-            if (.not.soft_limit_is_zero) then
+            if (.not.(soft_limit_is_zero .and. softtest)) then
                limit_split(iamp) = 1d0
             else
                limit_split(iamp) = 0d0
