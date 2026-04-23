@@ -5278,7 +5278,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
 c Boost the momenta
       do i=nincoming+1,nexternal
-         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle
+         if(i.eq.j_fks) cycle
          if (i.lt.i_fks) then
             call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),
      &           p_born(0,i))
