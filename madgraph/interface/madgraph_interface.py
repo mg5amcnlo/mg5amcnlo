@@ -1712,14 +1712,16 @@ This will take effect only in a NEW terminal
         elif args:
             # check for PLUGIN format
             output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
-                                                 args[0], warning=True, 
+                                                 args[0], warning=True,
                                                  info='Output will be done with PLUGIN: %(plug)s')
             if output_cls:
+                if hasattr(output_cls, 'build'):
+                    output_cls = output_cls.build(args=args, order='lo')
                 self._export_format = 'plugin'
                 self._export_plugin = output_cls
                 args.pop(0)
                 if hasattr(output_cls, 'change_output_args'):
-                    args[:] = output_cls.change_output_args(args, self) 
+                    args[:] = output_cls.change_output_args(args, self)
             else:
                 self._export_format = default
         else:
@@ -9217,8 +9219,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         elif me_exporter:
             # check for PLUGIN format
             output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
-                                                 me_exporter, warning=True, 
+                                                 me_exporter, warning=True,
                                                  info='Addition matrix-element will be done with PLUGIN: %(plug)s')
+            if hasattr(output_cls, 'build'):
+                output_cls = output_cls.build(args=args, order='lo')
             options['me_exporter'] = {'check': output_cls.check, 'exporter':output_cls.exporter, 'output':output_cls.output}
             options['me_exporter']['name'] = me_exporter
         else:
@@ -9304,9 +9308,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             elif options['me_exporter']['exporter']  in ['cpp','gpu']:
                 # check for PLUGIN format
                 output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
-                                                 options['me_exporter']['name'], warning=True, 
+                                                 options['me_exporter']['name'], warning=True,
                                                  info='Output will be done with PLUGIN: %(plug)s')
                 if output_cls:
+                    if hasattr(output_cls, 'build'):
+                        output_cls = output_cls.build(args=args, order='lo')
                     self._export_plugin = output_cls
 
 
