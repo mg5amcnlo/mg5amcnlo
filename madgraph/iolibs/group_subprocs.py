@@ -239,7 +239,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
         name = ""
         for beam in beam:
             part = process.get('model').get_particle(beam)
-            if part.get('mass').lower() == 'zero' and part.is_fermion() and \
+            if criteria == 'gpu':
+                name += part.get_name().replace('~', 'x').\
+                            replace('+', 'p').replace('-', 'm')
+            elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') != 1:
                 name += "q"
             elif criteria == 'madweight':
@@ -257,7 +260,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
         name += "_"
         for (fs_part, leg) in fs:
             part = process.get('model').get_particle(fs_part)
-            if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
+            if criteria == 'gpu':
+                name += part.get_name().replace('~', 'x').\
+                            replace('+', 'p').replace('-', 'm')
+            elif part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
                 name += "q" # "j"
             elif criteria == 'madweight':
@@ -423,7 +429,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         if not criteria:
             criteria = 'madevent'
-        assert criteria in ['madevent', 'madweight']
+        assert criteria in ['madevent', 'madweight', 'gpu']
 
         logger.info("Organizing processes into subprocess groups")
 
@@ -456,7 +462,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to find_process_classes must be AmplitudeList"
         assert amplitudes
-        assert criteria in ['madevent','madweight']
+        assert criteria in ['madevent','madweight', 'gpu']
 
         model = amplitudes[0].get('process').get('model')
         proc_classes = []
@@ -489,6 +495,16 @@ class SubProcessGroup(base_objects.PhysicsObject):
                            abs(p.get('pdg_code'))==13, abs(p.get('pdg_code'))==15) for p in \
                             fs_parts],
                            amplitude.get('process').get('id')]
+            
+            if (criteria == "gpu"):
+              proc_class = [ [(p.is_fermion(),) \
+                            for p in is_parts], # p.get('is_part')
+                           [(p.get('mass'), p.get('spin'), p.get('pdg_code'), 
+                             p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
+                             abs(p.get('color')),l.get('onshell')) for (p, l) \
+                             in zip(is_parts + fs_parts, process.get('legs'))],
+                           amplitude.get('process').get('id'),
+                           process.get('id')]
 
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
@@ -511,6 +527,7 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
+
         return helas_objects.HelasMatrixElementList(\
             sum([group.get('matrix_elements') for group in self], []))
 
@@ -555,6 +572,21 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
                 output.append(new_group)
         return output
         
+    def split_nonidentical_grouping(self):
+        """Return a list of grouping where they are no groupoing over the leptons."""
+        
+        output = SubProcessGroupList()
+        for group in self:
+            for me in group['matrix_elements']:
+                new_me = copy.copy(me)
+                new_group = copy.copy(group)
+                new_group['matrix_elements'] = group['matrix_elements'].__class__([new_me])
+                new_group.set('name', new_group.generate_name(\
+                                    new_me['processes'][0],
+                                    criteria='gpu'))
+                output.append(new_group)
+                
+        return output        
         
     
 #===============================================================================

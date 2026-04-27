@@ -1,3 +1,7 @@
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c      written by the UFO converter
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
 c************************************************************************
 c**                                                                    **
 c**           MadGraph/MadEvent Interface to FeynRules                 **
@@ -9,7 +13,8 @@ c************************************************************************
       subroutine printout
       implicit none
 
-      include 'coupl.inc'
+      
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'input.inc'
       
       include 'formats.inc'

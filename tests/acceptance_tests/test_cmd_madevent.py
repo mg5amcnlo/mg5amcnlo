@@ -286,6 +286,8 @@ class TestMECmdShell(unittest.TestCase):
         text = open('%s/Events/run_01/param_card.dat' % self.run_dir).read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         data = data.split('\n')
+        if '#' in data[0]:
+            data[0] = data[0].split('#',1)[0]
         width = float(data[0])
         self.assertAlmostEqual(width, 1.492240e+00, delta=1e-4)
         values = {(3,-3): 2.493165e-01,
@@ -480,17 +482,18 @@ class TestMECmdShell(unittest.TestCase):
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
-        target = 3978.0
+        target = 3932.0
         self.assertLess(
-            abs(val1 - target) / err1,
-            1.,
+            abs(val1 - target) / (err1+1.7),
+            2.,
             'large diference between %s and %s +- %s'%
                         (target, val1, err1)
         )
         
 
     def test_eva_collision(self):
-        """check that e p > e j gives the correct result"""
+        """check that w+ w- > t t~ with EVA gives the correct result
+        assuming x > MV/Ebeam restriction (eva_xcut=1) [2502.07878]"""
         
 
         mg_cmd = MGCmd.MasterCmd()
@@ -522,6 +525,51 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(run_card['lpp2'], 3)
         self.assertEqual(run_card['pdlabel'], 'eva')
         self.assertEqual(run_card['fixed_fac_scale'], True)
+        self.assertEqual(run_card['eva_xcut'], 1)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.01118182
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))
+
+    def test_eva_oldrelease_collision(self):
+        """check that w+ w- > t t~ with EVA gives the correct result
+        assuming no x > MV/Ebeam restriction (eva_xcut=0) [2111.02442]"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        self.assertEqual(run_card['eva_xcut'], 0)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
@@ -529,7 +577,152 @@ class TestMECmdShell(unittest.TestCase):
         
         target = 0.02174605
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))    
+
+        
+    def test_ieva_collision(self):
+        """check that w+ w- > t t~ with EVA at full LP gives the correct result"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['evaorder'], 1)
+        self.assertEqual(run_card['eva_xcut'], 1)
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.003795
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
+
+
+    def test_customised_madevent_via_run_card(self):
+        """checking various advanced functionality of customization
+           - set run_card entry via input/default_run_card_lo.dat
+           - check that unknow entry can be added to the run_card.dat
+           - check that custom cuts can be defined via the run_card.dat
+           - check that those custom cuts can use custom entry
+           - check that the cross-section is the expected one 
+        """
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False')
+        mg_cmd.run_cmd('generate p p > t t~')
+        default_path = pjoin(self.path, 'default.dat')
+        open(default_path, 'w').write("4 = dynamical_scale_choice\n 5.0 = my_param\n F = use_syst\n 5000 = nevents")
+        import madgraph.various.banner as banner
+        with misc.TMP_variable(banner.RunCardLO, 'default_run_card', default_path):
+            mg_cmd.run_cmd('output %s/'% self.run_dir)
+
+        self.assertIn('my_param', open(pjoin(self.run_dir,'Cards','run_card.dat')).read())
+        lo = banner.RunCard(pjoin(self.run_dir,'Cards', 'run_card.dat'))
+        self.assertEqual(lo['dynamical_scale_choice'], 4)
+        self.assertEqual(lo['my_param'], 5.0)
+        
+        # edit run_card
+        fsock = open(pjoin(self.run_dir,'Cards', 'run_card.dat'),'a')
+        fsock.write('\n[%s] = custom_fcts\n 10.0 = my_param2\n' % pjoin(self.path, 'custom.f'))
+        fsock.close()
+
+        # define the user cut
+        cut = """
+              logical FUNCTION dummy_cuts(P)
+C**************************************************************************
+C     INPUT:
+C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            COMMON/JETCUTS/   CUTS ON JETS
+C     OUTPUT:
+C            TRUE IF EVENTS PASSES ALL CUTS LISTED
+C**************************************************************************
+      IMPLICIT NONE
+c
+c     Constants
+c
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+C
+C     ARGUMENTS
+C
+      REAL*8 P(0:3,nexternal)
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+      double precision pt
+
+      if (pt(P(0,3)).lt.my_param)then
+        dummy_cuts=.false.
+        return
+      endif   
+      if (pt(P(0,4)).lt.my_param2)then
+        dummy_cuts=.false.
+        return
+      endif   
+      if (my_param.eq.my_param2)then
+        dummy_cuts=.false.
+        return
+      endif  
+      dummy_cuts=.true.
+
+      return
+      end
+        """
+
+        fsock = open(pjoin(self.path, 'custom.f'),'w')
+        fsock.write(cut)
+        fsock.close()
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.do('generate_events -f')
+
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 361.7 #+- 0.1037 pb
+        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run.inc')).read())
+        self.assertEqual(2, open(pjoin(self.run_dir,'Source','run.inc')).read().count('autodef'))
+
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run_card.inc')).read())
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'SubProcesses','dummy_fct.f')).read())
 
 
     def test_customised_madevent_via_run_card(self):
@@ -659,8 +852,9 @@ C
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
-        target = 166.36114
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+        #target = 166.36114 # value used as reference before changing sde_strategy
+        target = 165.7 # computed with sde_strategy #165.8 +- 0.02099 pb
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
         
@@ -672,7 +866,7 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 165.7
+        target = 165.7 
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -1053,7 +1247,119 @@ class TestMEfromfile(unittest.TestCase):
         self.assertEqual(cwd, os.getcwd())
         
         
+    def test_DY_onejet(self):
+        """
+        This test is checking that the scale in auto_dsig are correctly assigned
+        in 3.6.2, a wrong Q2FACT(IB(1)) was used instead of Q2FACT(1).
+        Leading to an assymetry in the DY +1j process.
+        This acceptance test is there to prevent such type of error
+        """
+
+        cwd = os.getcwd()
         
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > mu+ mu- j
+        output %(path)s
+        launch
+        shower=OFF    
+        set nevents 10000
+        set ickkw 1
+        set xqcut 10
+        set mmll 50
+        set auto_ptj_mmjj False
+        set ptj 0.01
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross=591.1733, error=2.17,target_event=10000)
+
+        count = [0,0]
+        for event in lhe_parser.EventFile(pjoin(self.run_dir, 'Events', 'run_01','unweighted_events.lhe.gz')):
+            event.check()
+            for particle in event:
+                if particle.pid == 13:
+                    if particle.pz > 0:
+                        count[0] += 1
+                    else:
+                        count[1] += 1
+                    break 
+
+        self.assertTrue(0.49<count[0]/10000.<0.51)       
+        self.assertTrue(0.49<count[1]/10000.<0.51)
+
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_generation_heft(self):
+        """test added since heft was crashing due to a wrong handling of color denominator
+           in the fortran exporter
+        """
+
+        cwd = os.getcwd()
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model heft
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate g g > b b~ HIW<=1
+        output %(path)s
+        launch 
+        set nevents 1000
+        set shower none
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
+
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()

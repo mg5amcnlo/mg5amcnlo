@@ -73,7 +73,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
     prompt = 'Reweight>'
     debug_output = 'Reweight_debug'
-
+    sa_class = 'standalone_rw'
+    nb_rw=0
+    
     @misc.mute_logger()
     def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
@@ -121,6 +123,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.keep_ordering = False
         self.use_eventid = False
         self.inc_sudakov = False
+        self.path2prefix = {} # store the f2pyprefix associated to a library 
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -300,6 +303,7 @@ class ReweightInterface(extended_cmd.Cmd):
         negative_event = 0
         positive_event = 0
         
+        bannerfile = banner.Banner(self.lhe_input.banner)
         start = time.time()
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
@@ -313,6 +317,16 @@ class ReweightInterface(extended_cmd.Cmd):
             except Exception as error:
                 print(event)
                 raise error
+            
+            # check that event does not have more energy than the beam
+            if event[1].status == -1:
+                if event[0].E > bannerfile.get('run_card', 'ebeam1'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+                if event[1].E > bannerfile.get('run_card', 'ebeam2'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
             if event.wgt < 0 :
@@ -501,32 +515,10 @@ class ReweightInterface(extended_cmd.Cmd):
         model = self.banner.get('proc_card', 'model')
         self.load_model( model, True, False)
 
-        if not self.has_standalone_dir:     
-            if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
-                self.load_from_pickle()
-                if opts['rwgt_name']:
-                    self.options['rwgt_name'] = opts['rwgt_name']
-                if not self.rwgt_dir:
-                    self.me_dir = self.rwgt_dir
-                self.load_module()       # load the fortran information from the f2py module
-            elif self.multicore == 'wait':
-                i=0
-                while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
-                    time.sleep(10+i)
-                    i+=5
-                if not self.rwgt_dir:
-                    self.rwgt_dir = self.me_dir
-                self.load_from_pickle(keep_name=True)
-                self.load_module()
-            else:
-                self.create_standalone_directory()
-                self.compile()
-                self.load_module()  
-                if self.multicore == 'create':
-                    self.load_module()
-                    if not self.rwgt_dir:
-                        self.rwgt_dir = self.me_dir
-                    self.save_to_pickle()      
+        if not self.has_standalone_dir:
+            out = self.setup_f2py_interface()
+            if out:
+                return
 
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
@@ -544,6 +536,30 @@ class ReweightInterface(extended_cmd.Cmd):
                     scale_rwgt_info.append(i[start+11:start+15])
                     
         if self.inc_sudakov:
+            type_rwgt=[]
+            for tag in scale_rwgt_info:
+                tag_strip=tag[1:]
+                type_rwgt.append('2'+tag_strip)
+
+
+            
+        # get iterator over param_card and the name associated to the current reweighting.
+        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
+
+        return self.launch_actual_reweighting(param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me)
+
+
+
+    def launch_actual_reweighting(self, param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me):
+       
+        if self.inc_sudakov:
+            tag_name = ''
             import importlib
             import numpy as np
             rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
@@ -555,25 +571,16 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
 
-            type_rwgt=[]
-            for tag in scale_rwgt_info:
-                tag_strip=tag[1:]
-                type_rwgt.append('2'+tag_strip)
-
         if type_rwgt==[]:
             type_rwgt=['2001']
-            
-        # get iterator over param_card and the name associated to the current reweighting.
-        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
-        
-        if self.inc_sudakov:
-            tag_name = ''
 
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-                
+
+
+         
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -763,6 +770,40 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
+
+    def setup_f2py_interface(self):
+        """ ensure that all f2py interface are ready/loaded/compiled
+            if this function does not return None then nothing is executed after this
+            usefull for some plugin
+        """
+
+        if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
+            self.load_from_pickle()
+            if opts['rwgt_name']:
+                self.options['rwgt_name'] = opts['rwgt_name']
+            if not self.rwgt_dir:
+                self.me_dir = self.rwgt_dir
+            self.load_module()       # load the fortran information from the f2py module
+        elif self.multicore == 'wait':
+            i=0
+            while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
+                time.sleep(10+i)
+                i+=5
+            if not self.rwgt_dir:
+                self.rwgt_dir = self.me_dir
+            self.load_from_pickle(keep_name=True)
+            self.load_module()
+        else:
+            self.create_standalone_directory()
+            self.compile()
+            self.load_module()  
+            if self.multicore == 'create':
+                self.load_module()
+                if not self.rwgt_dir:
+                    self.rwgt_dir = self.me_dir
+                self.save_to_pickle()  
+
+
 
     def handle_param_card(self, model_line, args, type_rwgt):
         
@@ -962,6 +1003,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
+
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):                    
                     if 'rw_me_' in path or tag == 3:
@@ -1560,6 +1602,7 @@ class ReweightInterface(extended_cmd.Cmd):
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
             nhel = hel_dict[tuple(hel_order)]                
+
         else:
             nhel = -1
             
@@ -1759,11 +1802,15 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(type(error))
             raise
         
-        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
+        commandline = 'output %s %s --prefix=int --prefixf2py=%s' % (self.sa_class, pjoin(path_me,data['paths'][0]), self.nb_rw)
+        self.path2prefix[pjoin(path_me,data['paths'][0])] = self.nb_rw
+        self.nb_rw += 1
+        commandline = 'output %s %s --prefix=int' % (self.sa_class, pjoin(path_me,data['paths'][0]))
         if self.inc_sudakov:
             # in this case, the sudakov output format has to be changed
             commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
         mgcmd.exec_cmd(commandline, precmd=True)
+
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
         
@@ -1865,7 +1912,9 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
-        commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+        commandline = 'output standalone_rw %s --prefix=int -f --prefixf2py=%i ' % (pjoin(path_me, data['paths'][1]), self.nb_rw)
+        self.path2prefix[pjoin(path_me,data['paths'][1])] = self.nb_rw
+        self.nb_rw += 1
         mgcmd.exec_cmd(commandline, precmd=True) 
         
         #put back golem to original value
@@ -1933,7 +1982,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                     if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                    if re.search(r'^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -1976,8 +2025,6 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir
-            ## TV: skip all output and generation of folder is rw_me exists already
-            return
         data['path'] = path_me
 
         for i in range(2):
@@ -2026,65 +2073,65 @@ class ReweightInterface(extended_cmd.Cmd):
                     mgcmd.exec_cmd("define %s = %s" % (name, content))
                 except madgraph.InvalidCmd:
                     pass
-                        
-            if  second and 'tree_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
-                if 'virtual_path' in self.dedicated_path:
-                    has_nlo=True
-                else:
-                    has_nlo=False
+        if  second and 'tree_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
+            if 'virtual_path' in self.dedicated_path:
+                has_nlo=True
             else:
-                has_nlo = self.create_standalone_tree_directory(data, second)
+                has_nlo=False
+        else:
+            has_nlo = self.create_standalone_tree_directory(data, second)
 
-            if has_nlo and not self.rwgt_mode:
-                self.rwgt_mode = ['NLO']
+        if has_nlo and not self.rwgt_mode:
+            self.rwgt_mode = ['NLO']
 
-            # 5. create the virtual for NLO reweighting  ---------------------------
-            if second and 'virtual_path' in self.dedicated_path:
-                files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
-            elif has_nlo and 'NLO' in self.rwgt_mode:
-                self.create_standalone_virt_directory(data, second)
+        # 5. create the virtual for NLO reweighting  ---------------------------
+        if second and 'virtual_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
+        elif has_nlo and 'NLO' in self.rwgt_mode:
+            self.create_standalone_virt_directory(data, second)
+            
+            if self.multicore == 'create':
+                try:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=self.mother.options['nb_core'])
+                except:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                            nb_core=1)
+        elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
+            # We do not have any virtual reweighting to do but we still have to
+            #combine the weights.
+            #Idea:create a fake directory.
+            start = time.time()
+            commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
+            # deactivate golem since it creates troubles
+            old_options = dict(mgcmd.options)
+            mgcmd.options['golem'] = None             
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            commandline = 'output standalone_rw %s --prefix=int -f --prefixf2py=%i' % (pjoin(path_me, data['paths'][1]), self.nb_rw)
+            self.path2prefix[pjoin(path_me,data['paths'][1])] = self.nb_rw
+            self.nb_rw+=1
+            mgcmd.exec_cmd(commandline, precmd=True)    
+            #put back golem to original value
+            mgcmd.options['golem'] = old_options['golem']
+            # update make_opts
+            if not mgcmd.options['lhapdf']:
+                raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
+            
+            # Download LHAPDF SET
+            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
+            
                 
-                if self.multicore == 'create':
-                    print("compile OLP", data['paths'][1])
-                    try:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=self.mother.options['nb_core'])
-                    except:
-                        misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                                nb_core=1)
-            elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
-                # We do not have any virtual reweighting to do but we still have to
-                #combine the weights.
-                #Idea:create a fake directory.
-                start = time.time()
-                commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
-                # deactivate golem since it creates troubles
-                old_options = dict(mgcmd.options)
-                mgcmd.options['golem'] = None             
-                commandline = commandline.replace('add process', 'generate',1)
-                logger.info(commandline)
-                mgcmd.exec_cmd(commandline, precmd=True)
-                commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
-                mgcmd.exec_cmd(commandline, precmd=True)    
-                #put back golem to original value
-                mgcmd.options['golem'] = old_options['golem']
-                # update make_opts
-                if not mgcmd.options['lhapdf']:
-                    raise Exception("NLO_tree reweighting requires LHAPDF to work correctly")
-                
-                # Download LHAPDF SET
-                common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
-                    mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
-                
-                    
-                
-            # 6. If we need a new model/process-------------------------------------
-            if (self.second_model or self.second_process or self.dedicated_path) and not second :
-                self.create_standalone_directory(second=True)    
+            
+        # 6. If we need a new model/process-------------------------------------
+        if (self.second_model or self.second_process or self.dedicated_path) and not second :
+            self.create_standalone_directory(second=True)    
 
-            if not second:
-                self.has_nlo = has_nlo
+        if not second:
+            self.has_nlo = has_nlo
             
 
 
@@ -2149,15 +2196,29 @@ class ReweightInterface(extended_cmd.Cmd):
                 if not os.path.isdir(pjoin(path_me,onedir)):
                     continue
                 pdir = pjoin(path_me, onedir, 'SubProcesses')
-                if self.mother:
-                    nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
-                else:
-                    nb_core = 1
-                os.environ['MENUM'] = '2'
-                misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-                if not (self.second_model or self.second_process or self.dedicated_path):
-                    os.environ['MENUM'] = '3'
-                    misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+                self.compile_SubProcess_dir(pdir)
+
+
+    def compile_SubProcess_dir(self, Sdir):
+        """compile a full Subprocess directory"""
+
+        if self.mother:
+            nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+        else:
+            nb_core = 1
+        os.environ['MENUM'] = '2'
+        try: 
+            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=nb_core)
+        except Exception as e:
+            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=1)
+
+        if not (self.second_model or self.second_process or self.dedicated_path):
+            os.environ['MENUM'] = '3'
+            try:
+                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=nb_core)
+            except Exception as e:
+                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=1)
+                
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
@@ -2170,15 +2231,32 @@ class ReweightInterface(extended_cmd.Cmd):
         self.id_to_path = {}
         self.id_to_path_second = {}
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+        fprefix = ''
         for onedir in rwgt_dir_possibility:
+            if pjoin(path_me,onedir) in self.path2prefix:
+                fprefix = self.path2prefix[pjoin(path_me,onedir)]
             if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
             if self.inc_sudakov:
                 return
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
-                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,onedir, 'SubProcesses')]+sys.path): 
+                    tmp = sys.path[0]
+                    import ctypes
+                    alllib = pjoin(sys.path[0], ('liball%s_%sme.so' % (onedir, tag)))
+                    if os.path.exists(alllib):
+                            #os.environ['LD_PRELOAD'] = pjoin(pdir, 'liballme%s' % ext) + os.pathsep + os.environ.get('LD_PRELOAD','')
+                            #if ext == '.dylib':
+                            #    mode=os.RTLD_LOCAL
+                            #else:
+                            mode=os.RTLD_GLOBAL | os.RTLD_DEEPBIND
+                            try:
+                                ctypes.CDLL(alllib, mode=mode)
+                            except Exception as err:
+                                logger.debug('ctypes trick fail for module')
+                            break
+                    mod_name = '%s.SubProcesses.all_matrix%spy' % (onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
                     if mod_name in list(sys.modules.keys()):
                         del sys.modules[mod_name]
@@ -2194,9 +2272,10 @@ class ReweightInterface(extended_cmd.Cmd):
                         else:
                             mymod = __import__(mod_name, globals(), locals(), [],-1) 
                             S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag)
+                            mymod = getattr(S, 'all_matrix%spy' % tag)
                             reload(mymod) 
                     else:
+
                         if six.PY3:
                             import importlib
                             mymod = importlib.import_module(mod_name,)
@@ -2204,43 +2283,64 @@ class ReweightInterface(extended_cmd.Cmd):
                         else:
                             mymod = __import__(mod_name, globals(), locals(), [],-1)
                             S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                            mymod = getattr(S, 'all_matrix%spy' % tag) 
                     
-                
+                if fprefix != '':
+                    fprefix = 'f%i_' % fprefix
+                    for attr in dir(mymod):
+                        if attr.startswith(fprefix):
+                            setattr(mymod, attr[len(fprefix):], getattr(mymod, attr)    )
+                elif any(attr.startswith('f') and attr[1:].split('_')[0].isdigit() for attr in dir(mymod)):
+                    fprefix = [attr for attr in dir(mymod) if attr.startswith('f') and attr[1:].split('_')[0].isdigit()][0].split('_')[0] + '_'
+                    for attr in dir(mymod):
+                        if attr.startswith(fprefix):
+                            setattr(mymod, attr[len(fprefix):], getattr(mymod, attr))
+                else:
+                    logger.debug("Could not find the fortran prefix in module %s", mod_name)
+                fprefix = ''
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
                 if (self.second_model or self.second_process or self.dedicated_path):
                     break
+
+
+
             data = self.id_to_path
             if onedir not in ["rw_me",  "rw_mevirt"]:
                 data = self.id_to_path_second
 
             # get all the information
-            allids, all_pids = mymod.get_pdg_order()
+
+            allids, all_pids = getattr(mymod, 'get_pdg_order')()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
             all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}
             for prefix in prefix_set:
-                if hasattr(mymod,'%sprocess_nhel' % prefix):
-                    nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel    
+                if hasattr(mymod,'%s%sprocess_nhel' % (fprefix,prefix)):
+                    #transer nhel information from fortran to wrapper
+                    getattr(mymod, '%sget_nhel_entry' % prefix)()
+                    #transer now to python dictionary
+                    nhel = getattr(getattr(mymod, '%sprocess_nhel' % prefix), '%snhel' %prefix)
                     hel_dict[prefix] = {}
                     for i, onehel in enumerate(zip(*nhel)):
                         hel_dict[prefix][tuple(onehel)] = i+1
-                elif hasattr(mymod, 'set_madloop_path') and \
+                elif hasattr(mymod, '%sset_madloop_path' % fprefix) or  hasattr(mymod, 'set_madloop_path') and \
                      os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())):
                     hel_dict[prefix] = {}
                     for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))):
                         onehel = [int(h) for h in line.split()]
                         hel_dict[prefix][tuple(onehel)] = i+1
                 else:
-                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper() ))
-                    misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())))
+                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))
+                    misc.sprint(dir(mymod))
+                    raise Exception
                     continue
-
+            if not hel_dict:
+                raise Exception("No helicity information found for reweighting ME in %s" % pdir)    
             for i,(pdg,pid) in enumerate(zip(all_pdgs,all_pids)):
                 if self.is_decay:
                     incoming = [pdg[0]]

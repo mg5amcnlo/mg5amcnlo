@@ -58,6 +58,7 @@
 # Collider type and energy                                             *
 #    0 = no PDF                                                        *
 #    1/-1 = proton/antiproton                                          *
+#    2 = elastic photon of proton/ion beam                             *
 #    3/-3 = electron/positron with ISR/Beamstrahlung;                  * 
 #    4/-4 = muon/antimuon with ISR/Beamstrahlung;                      * 
 #***********************************************************************
@@ -67,6 +68,9 @@
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
+# pdlabel: lhapdf = LHAPDF (installation needed) [1412.7420]           *
+#          edff = EDFF in gamma-UPC            [eq.(11) in 2207.03012] *
+#          chff = ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
 #***********************************************************************
  %(pdlabel)s = pdlabel ! PDF set
  %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
@@ -76,6 +80,7 @@
 	            ! 2->eta (leptonic); 3->beta (leptonic) 
 		    ! 4->mixed (leptonic); 6->delta (leptonic)
                     ! if pdlabel==emela, this is set automatically
+$ion_pdf
 #***********************************************************************
 # The following block is specific to lepton collisions (lpp=+-3)       *
 #***********************************************************************

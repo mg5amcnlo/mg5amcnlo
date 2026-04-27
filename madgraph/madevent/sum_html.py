@@ -770,7 +770,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
     return all
 
 
-def make_all_html_results(cmd, folder_names = [], jobs=[]):
+def make_all_html_results(cmd, folder_names = [], jobs=[], get_attr=None):
     """ folder_names and jobs have been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
     if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
@@ -794,7 +794,12 @@ def make_all_html_results(cmd, folder_names = [], jobs=[]):
     fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
     fsock.write('%s </dl></body>' % P_text)
 
-    return Presults.xsec, Presults.xerru
+    if not get_attr:
+        return Presults.xsec, Presults.xerru
+    else:
+        if isinstance(get_attr, tuple):
+            return [getattr(Presults, _) for _ in get_attr]
+        return getattr(Presults, get_attr)
 
             
 

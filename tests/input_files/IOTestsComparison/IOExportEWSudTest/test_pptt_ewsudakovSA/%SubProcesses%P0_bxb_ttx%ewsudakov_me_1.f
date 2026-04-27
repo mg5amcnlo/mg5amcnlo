@@ -68,11 +68,11 @@ C         this is for the orders of the born to integrate
             ENDIF
           ENDDO
 
-            !if (keep_order(i)) then
-            ! write(*,*) 'SDK1: keeping split order ', i
-            !else
-            ! write(*,*) 'SDK1: not keeping split order ', i
-            !endif
+C         if (keep_order(i)) then
+C         write(*,*) 'SDK1: keeping split order ', i
+C         else
+C         write(*,*) 'SDK1: not keeping split order ', i
+C         endif
         ENDDO
 
         FIRSTTIME = .FALSE.
@@ -96,7 +96,7 @@ C     reset the amp_split_ewsud array
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX_B(J, I)
           ENDDO
-            !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
+C         amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
           IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_EWSUD(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) =
      $      ANS(I) / IDEN
@@ -159,7 +159,8 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 CF(NCOLOR2,NCOLOR1)
+      INTEGER DENOM
+      INTEGER CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1
      $ ,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(8,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP1(0)
@@ -185,10 +186,9 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I,  1),I=  1,  2) /9,3/
+      DATA (CF(I,  2),I=  1,  2) /3,9/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -204,9 +204,8 @@ C     JAMPs contributing to orders QCD=2 QED=0
       JAMP1(1,1) = (-1.666666666666667D-01)*AMP1(1)
       JAMP1(2,1) = (5.000000000000000D-01)*AMP1(1)
 
-      DO I = 1, NSQAMPSO
-        ANS(I) = (0D0,0D0)
-      ENDDO
+      ANS(:) = (0D0,0D0)
+
 
 C     Reshuffle the momenta here
       P_SAVE(:,:) = P(:,:)
@@ -245,12 +244,9 @@ C     Finally interfere the two sets of color-stripped amplitudes
           DO J = 1, NCOLOR2
             ZTEMP = ZTEMP + CF(J,I)*JAMP2(J,M)
           ENDDO
-          DO N = 1, NAMPSO
-            ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))
-          ENDDO
         ENDDO
       ENDDO
+      ANS(:) = ANS(:) /DENOM
 C     C NOT NEEDED
 C     include the imaginary factor if needed
 C     if (imag_power.ne.0) ans(:) = ans(:) * imag1**imag_power 

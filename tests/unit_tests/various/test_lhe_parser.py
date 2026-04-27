@@ -21,6 +21,7 @@ import madgraph .various.misc as misc
 import tempfile
 import os
 import shutil
+import math
 from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
@@ -297,6 +298,39 @@ class TestEvent(unittest.TestCase):
                     nb_identical[j] +=1
         self.assertEqual(nb_identical, [4,4,2,2,2,2])
 
+
+from madgraph.various.lhe_parser import FourMomentum
+class TestFourMomentum(unittest.TestCase):
+
+
+    def test_boost_to_restframe(self):
+        """check that we can correctly boost momenta to a restframe"""
+
+        plep = FourMomentum(38.249416771525524,24.8053721987,27.2397493528,-10.281412774874447)
+        ptop = FourMomentum(186.51892916393933,66.4591715464,-21.3845299376,10.463198859726106)
+        #Want to have the lepton momenta in the frame where the top is at rest
+
+        out = plep.boost_to_restframe(ptop) 
+
+        self.assertAlmostEqual(out.E, 35.77191285579485)
+        self.assertAlmostEqual(out.px,  11.108508511835302)
+        self.assertAlmostEqual(out.py, 31.646981413441754)
+        self.assertAlmostEqual(out.pz, -12.437819560808716)
+
+
+        out = ptop.boost_to_restframe(ptop)
+        self.assertAlmostEqual(out.E, ptop.mass) 
+        self.assertAlmostEqual(out.px,  0)
+        self.assertAlmostEqual(out.py, 0)
+        self.assertAlmostEqual(out.pz, 0)
+
+    def test_y_eta_massless(self):
+        """test that rapidity and pseudorapidity coincide for
+        a massless particle. At 45 degrees, they both should be equal to .88"""
+        p = FourMomentum(100*math.sqrt(2),100.,0.,100.)
+        self.assertAlmostEqual(p.rapidity, p.pseudorapidity)
+        self.assertAlmostEqual(p.rapidity, 0.881373587)
+        self.assertAlmostEqual(p.pseudorapidity, 0.881373587)
 
 
 class TESTLHEParser(unittest.TestCase):

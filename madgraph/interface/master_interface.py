@@ -581,7 +581,50 @@ class Switcher(object):
         
     def help_set(self, *args, **opts):
         return self.cmd.help_set(self, *args, **opts)
-        
+   
+    def help_set2_OLP(self, *args, **opts):
+        return self.cmd.help_set2_OLP(self, *args, **opts)
+
+    def help_set2_cluster_temp_path(self, *args, **opts):
+        return self.cmd.help_set2_cluster_temp_path(self, *args, **opts)
+
+    def help_set2_complex_mass_scheme(self, *args, **opts):
+        return self.cmd.help_set2_complex_mass_scheme(self, *args, **opts)
+
+    def help_set2_gauge(self, *args, **opts):
+        return self.cmd.help_set2_gauge(self, *args, **opts)
+
+    def help_set2_group_subprocesses(self, *args, **opts):
+        return self.cmd.help_set2_group_subprocesses(self, *args, **opts)
+
+    def help_set2_ignore_six_quark_processes(self, *args, **opts):
+        return self.cmd.help_set2_ignore_six_quark_processes(self, *args, **opts)
+
+    def help_set2_include_lepton_initiated_processes(self, *args, **opts):
+        return self.cmd.help_set2_include_lepton_initiated_processes(self, *args, **opts)
+
+    def help_set2_loop_color_flows(self, *args, **opts):
+        return self.cmd.help_set2_loop_color_flows(self, *args, **opts)
+
+    def help_set2_loop_optimized_output(self, *args, **opts):
+        return self.cmd.help_set2_loop_optimized_output(self, *args, **opts)
+
+    def help_set2_max_npoint_for_channel(self, *args, **opts):
+        return self.cmd.help_set2_max_npoint_for_channel(self, *args, **opts)
+
+    def help_set2_max_t_for_channel(self, *args, **opts):
+        return self.cmd.help_set2_max_t_for_channel(self, *args, **opts)
+
+    def help_set2_nlo_mixed_expansion(self, *args, **opts):
+        return self.cmd.help_set2_nlo_mixed_expansion(self, *args, **opts)
+
+    def help_set2_output_dependencies(self, *args, **opts):
+        return self.cmd.help_set2_output_dependencies(self, *args, **opts)
+
+    def help_set2_zerowidth_tchannel(self, *args, **opts):
+        return self.cmd.help_set2_zerowidth_tchannel(self, *args, **opts)
+
+       
     def help_tutorial(self, *args, **opts):
         return self.cmd.help_tutorial(self, *args, **opts)
         

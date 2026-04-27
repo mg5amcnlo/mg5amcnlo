@@ -282,6 +282,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  'Source','make_opts.inc')).read()  
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        if 'collier' in replace_dict['link_tir_libs']:
+            collierpath = ''
+            for lib in link_tir_libs:
+                if '-lcollier' in lib:
+                    collierpath = lib.split()[0][2:]
+                    break
+            if collierpath:
+                replace_dict['link_tir_libs'] = ' -Wl,-rpath,%s %s ' % (collierpath, replace_dict['link_tir_libs'])
+        #raise Exception
+
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
@@ -625,7 +635,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'orders.inc'
         amp_split_orders, amp_split_size, amp_split_size_born = \
 			   self.write_orders_file(
-                            writers.FortranWriter(filename),
+                            writers.FortranWriter90(filename),
                             matrix_element)
 
         filename = 'a0Gmuconv.inc'
@@ -669,7 +679,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_poles.f',
                      'check_sudakov.f',
                      'check_sudakov_angle2.f',
-                     'ewsudakov_functions.f',
                      'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
@@ -757,6 +766,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f']
+
+        if matrix_element.ewsudakov:
+            linkfiles.append('ewsudakov_functions.f')
+        else:
+            linkfiles.append('ewsudakov_functions_dummy.f')
 
         for file in linkfiles:
             ln('../' + file , '.')
@@ -1155,8 +1169,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         bornproc = matrix_element.born_me['processes'][0]
         startfromalpha0 = False
         if any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
-            if 'loop_qcd_qed_sm_a0' in bornproc['model'].get('modelpath'):
-                startfromalpha0 = True
+            startfromalpha0 = bornproc['model'].get('startfromalpha0')
 
         text = 'logical  startfroma0\nparameter (startfroma0=%s)\n' % bool_dict[startfromalpha0]
         writer.writelines(text)
@@ -2473,7 +2486,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         filename = "loop_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              matrix_element.get('base_amplitude').get('loop_diagrams')),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
@@ -3095,47 +3108,53 @@ Parameters              %(params)s\n\
         has contributions from LO1 and has a LO2, and the corresponding 
         position (iamp)
         """
-        # get the coupling combination of the born
-        squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
-        split_orders = \
-                matrix_element.born_me['processes'][0]['split_orders']
 
-        # compute the born orders
-        born_orders = []
-        split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
-        for ordd in split_orders:
-            born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
+        if matrix_element.ewsudakov:
+            # get the coupling combination of the born
+            squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+            split_orders = \
+                    matrix_element.born_me['processes'][0]['split_orders']
 
-        # check that there is at most one coupling combination
-        # that satisfies the born_orders constraints 
-        # (this is a limitation of the current implementation of the EW sudakov
-        nborn = 0
-        for orders in squared_orders_born:
-            if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
-                nborn += 1
+            # compute the born orders
+            born_orders = []
+            split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+            for ordd in split_orders:
+                born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
 
+            # check that there is at most one coupling combination
+            # that satisfies the born_orders constraints 
+            # (this is a limitation of the current implementation of the EW sudakov
+            nborn = 0
+            for orders in squared_orders_born:
+                if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
+                    nborn += 1
 
-        if nborn > 1:
-            raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
-                    " the Born has more than one coupling combination, found %d)" % nborn)
+            if nborn > 1:
+                raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+                        " the Born has more than one coupling combination, found %d)" % nborn)
 
-        # now we can see if the process has a LO1
-        has_lo1 = bool(nborn)
-        if has_lo1:
-            lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            # now we can see if the process has a LO1
+            has_lo1 = bool(nborn)
+            if has_lo1:
+                lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+            else:
+                lo1_pos = -100
+
+            # now determine the LO2 orders
+            lo2_orders = born_orders
+            lo2_orders[split_orders.index('QCD')] += -2
+            lo2_orders[split_orders.index('QED')] += 2
+
+            has_lo2 = tuple(lo2_orders) in squared_orders_born
+
+            if has_lo2:
+                lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
+            else:
+                lo2_pos = -100
         else:
+            has_lo1 = False
+            has_lo2 = False
             lo1_pos = -100
-
-        # now determine the LO2 orders
-        lo2_orders = born_orders
-        lo2_orders[split_orders.index('QCD')] += -2
-        lo2_orders[split_orders.index('QED')] += 2
-
-        has_lo2 = tuple(lo2_orders) in squared_orders_born
-
-        if has_lo2:
-            lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
-        else:
             lo2_pos = -100
 
         bool_dict = {True: '.true.', False: '.false.'}
@@ -4360,6 +4379,22 @@ Parameters              %(params)s\n\
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF values for the different initial states
             for i, init_states in enumerate(initial_states):
                 if not mirror:
@@ -4413,6 +4448,9 @@ Parameters              %(params)s\n\
 
                 pdf_lines = pdf_lines + "ENDIF\n"
 
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                pdf_lines = pdf_lines + "ENDIF\n"
+
             # Add up PDFs for the different initial state particles
             pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
             for proc in processes:
@@ -4453,14 +4491,15 @@ Parameters              %(params)s\n\
         else:
             ret_list = []
             my_cs = color.ColorString()
-            for index, denominator in \
-                enumerate(color_matrix.get_line_denominators()):
-                # Then write the numerators for the matrix elements
+            denominator = min(color_matrix.get_line_denominators())
+            ret_list.append("DATA Denom/%i/" % denominator)
+            
+            for index in range(len(color_matrix._col_basis1)):
                 num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                                     ','.join(["%u" % int(i) for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================
@@ -4753,18 +4792,21 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     # We must add the corresponding includes for these TIR
                     if tir in ['golem','samurai','ninja','collier']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
+                        trg_path2 = pjoin(trg_path,tir)
+                        to_include = None
                         if os.path.isdir(trg_path):
                             to_include = misc.find_includes_path(trg_path,
                                                         self.include_names[tir])
-                        else:
-                            to_include = None
+                        if to_include is None and os.path.isdir(trg_path2):
+                            to_include = misc.find_includes_path(trg_path2,
+                                                        self.include_names[tir])
                         # Special possible location for collier
                         if to_include is None and tir=='collier':
                             to_include = misc.find_includes_path(
                                pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
-'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
+'Could not find the include directory for %s, looking in %s and %s.\n' % (tir ,str(trg_path), str(trg_path2))+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             to_include = '<Not_found_define_it_yourself>'
                         tir_include.append('-I %s'%to_include)
@@ -4927,9 +4969,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+        #writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-              matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
+              matrix_element.get('base_amplitude').get('loop_diagrams')),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
@@ -5036,7 +5078,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
         replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
         replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
-                ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+                ": import_lib('%s')" % dd[0] for dd in self.dirstopdg])   
 
         replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
                         str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),

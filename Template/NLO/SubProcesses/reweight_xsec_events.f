@@ -369,7 +369,7 @@ c       y(k)_lab = y(k)_tilde - ybst_til_tolab
 c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
 c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
 c c.m. frame respectively
-      ybst_til_tolab=-ycm_cnt(0)
+      ybst_til_tolab=-ycm_cnt(0)-0.5d0*log(ebeam(1)/ebeam(2))
       if(icountevts.eq.-100)then
 c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
         xbk(1)=xbjrk_ev(1)
@@ -434,9 +434,9 @@ c do the same as above for the counterevents
       integer i,pd,lp,iwgt_save,kr,kf,dd
       double precision mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales)
      $     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
-     $     ,c_mu2_r,c_mu2_f
+     $     ,c_mu2_r,c_mu2_f,photonpdfsquare
       parameter (pi=3.14159265358979323846d0)
-      external pdg2pdf,rwgt_muR_dep_fac,alphas
+      external pdg2pdf,rwgt_muR_dep_fac,alphas,photonpdfsquare
       integer orderstag_this, iamp
       integer get_orders_tag_from_amp_pos
       external get_orders_tag_from_amp_pos
@@ -465,17 +465,21 @@ c Update the strong coupling
                   if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                   mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
 c call the PDFs
-                  xlum(kf)=1d0
-                  LP=SIGN(1,LPP(1))
-                  pd=pdg(1,i)
-                  if (pd.eq.21) pd=0
-                  xlum(kf)=xlum(kf)*PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i)
-     &                 ,DSQRT(mu2_f(kf)))
-                  LP=SIGN(1,LPP(2))
-                  pd=pdg(2,i)
-                  if (pd.eq.21) pd=0
-                  xlum(kf)=xlum(kf)*PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i)
-     &                 ,DSQRT(mu2_f(kf)))
+                  if (lpp(1).eq.2 .and. lpp(2).eq.2) then
+                     xlum(kf)=photonpdfsquare(bjx(1,i),bjx(2,i))
+                  else
+                     xlum(kf)=1d0
+                     LP=SIGN(1,LPP(1))
+                     pd=pdg(1,i)
+                     if (pd.eq.21) pd=0
+                     xlum(kf)=xlum(kf)*PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i)
+     &                    ,DSQRT(mu2_f(kf)))
+                     LP=SIGN(1,LPP(2))
+                     pd=pdg(2,i)
+                     if (pd.eq.21) pd=0
+                     xlum(kf)=xlum(kf)*PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i)
+     &                    ,DSQRT(mu2_f(kf)))
+                  endif
                enddo
 
                do kf=1,nint(scalevarF(0))
@@ -509,9 +513,9 @@ c add the weights to the array
       integer i,pd,lp,iwgt_save,izero,n,nn,iset,imem
       parameter (izero=0)
       double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
-     &     ,xlum,alphas,g,pi
+     &     ,xlum,alphas,g,pi,photonpdfsquare
       parameter (pi=3.14159265358979323846d0)
-      external pdg2pdf,rwgt_muR_dep_fac,alphas
+      external pdg2pdf,rwgt_muR_dep_fac,alphas,photonpdfsquare
       do nn=1,lhaPDFid(0)
          do n=0,nmemPDF(nn)
             if ((.not. lpdfvar(nn)) .and. n.ne.0) exit
@@ -526,17 +530,21 @@ c add the weights to the array
 c alpha_s
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c call the PDFs
-               xlum=1d0
-               LP=SIGN(1,LPP(1))
-               pd=pdg(1,i)
-               if (pd.eq.21) pd=0
-               xlum=xlum*
-     &            PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
-               LP=SIGN(1,LPP(2))
-               pd=pdg(2,i)
-               if (pd.eq.21) pd=0
-               xlum=xlum*
-     &             PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
+               if (lpp(1).eq.2 .and. lpp(2).eq.2) then
+                  xlum=photonpdfsquare(bjx(1,i),bjx(2,i))
+               else
+                  xlum=1d0
+                  LP=SIGN(1,LPP(1))
+                  pd=pdg(1,i)
+                  if (pd.eq.21) pd=0
+                  xlum=xlum*
+     &               PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
+                  LP=SIGN(1,LPP(2))
+                  pd=pdg(2,i)
+                  if (pd.eq.21) pd=0
+                  xlum=xlum*
+     &                PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
+               endif
 c add the weights to the array
                wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)

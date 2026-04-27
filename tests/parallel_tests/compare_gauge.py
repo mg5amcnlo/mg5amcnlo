@@ -44,12 +44,12 @@ class GaugeComparator(unittest.TestCase):
     
     def compare_processes(self, my_proc_list = [], orders = {}, model = 'sm',
                         energy = 500, filename = "", pickle_file = "",
-                        tolerance = 1e-06):
+                        tolerance = 1e-06, FD=True):
         """ """
-        
+
         cmsunit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='True',gauge='unitary')
-        cmsunit_runner.setup(MG5DIR, MG5DIR)
-            
+        cmsunit_runner.setup(MG5DIR, MG5DIR)   
+        
         mg5unit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='unitary')
         mg5unit_runner.setup(MG5DIR, MG5DIR)
         
@@ -58,12 +58,18 @@ class GaugeComparator(unittest.TestCase):
         
         mg5feynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='Feynman')
         mg5feynman_runner.setup(MG5DIR, MG5DIR)
-        
+
+        all_runner = [cmsunit_runner, cmsfeynman_runner,mg5feynman_runner,mg5unit_runner]
+        if FD:
+            mg5FD_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='FD')
+            mg5FD_runner.setup(MG5DIR, MG5DIR)         
+            all_runner.append(mg5FD_runner)
         # ADD FOR Feynmam and CMS + Feynman
                 
         # Create and setup a comparator
+
         my_comp = me_comparator.MEComparatorGauge()
-        my_comp.set_me_runners(cmsunit_runner, cmsfeynman_runner,mg5feynman_runner,mg5unit_runner) # can add Feynman+...
+        my_comp.set_me_runners(*all_runner) # can add Feynman+...
         
 
         # Run the actual comparison
@@ -256,7 +262,8 @@ class GaugeComparator(unittest.TestCase):
                              model = "sm",
                              energy = 90,
                              filename = "sm_gauge_6_e90.log",
-                             tolerance = 1e-3)
+                             tolerance = 1e-3,
+                             FD=False)
         
     def test_gauge_6_e500(self):
         """Test a semi-complete list of sm 2->4 processes"""
@@ -271,7 +278,8 @@ class GaugeComparator(unittest.TestCase):
                              model = "sm",
                              energy = 500,
                              filename = "sm_gauge_6_e500_2.log",
-                             tolerance = 1e-3)          
+                             tolerance = 1e-3,
+                             FD=False)          
 
 class GaugeComparatorLoop(unittest.TestCase):
     """A class to compare the values of unitary and Feynman gauge in complex and fixed width schemes"""

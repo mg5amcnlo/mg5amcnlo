@@ -86,15 +86,14 @@ c     instead of stopping the code, as this might accidentally happen.
        endif
       endif
 
-
 C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
 C      and check that it is not a photon initial state --elastic photon is handle below --
       if ((abs(ih).eq.3.or.abs(ih).eq.4)) then
-         ipart = ipdg
-c          ! change e/mu/tau = 8/9/10 to 11/13/15 
+        ipart = ipdg
+c         ! change e/mu/tau = 8/9/10 to 11/13/15 
 
 
-         if (abs(ipart).eq.8) then
+        if (abs(ipart).eq.8) then
           ipart = sign(1,ipart) * 11
         else if (abs(ipart).eq.9) then
           ipart = sign(1,ipart) * 13

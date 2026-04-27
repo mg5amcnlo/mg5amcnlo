@@ -222,7 +222,8 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       data ic /nexternal*1/
-      REAL*8  CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C
@@ -240,21 +241,22 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      DO I=0,NSQAMPSO
-         RES(I)=0d0
-      ENDDO
+      RES(:) = 0d0
       DO M = 1, NAMPSO
+      CF_INDEX = 0
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX+1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
             RES(SQSOINDEX%(proc_prefix)s(M,N)) = RES(SQSOINDEX%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
       ENDDO
-      ENDDO
 
+      ENDDO
+      RES(:) = RES(:)/DENOM
       DO I=1,NSQAMPSO
          RES(0)=RES(0)+RES(I)
       ENDDO

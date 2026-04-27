@@ -1,16 +1,16 @@
 #!/usr/bin/perl -w
 
 #---------------------------------------------------------------------
-# Run GS to create jpeg files defined as $gs
+# Run GS to create PNG files defined as $gs
 #---------------------------------------------------------------------
-system("/bin/bash -c \"rm -f matrix*.jpg\" ");
+system("/bin/bash -c \"rm -f matrix*.png\" ");
 
 $imatrix = "";
 if (! -e "matrix.ps") {$imatrix = 1;}
-$max_jpg = 2;
-if ($imatrix eq "") {$max_jpg = 5;}
-# add 1 to max_jpg, to get max_jpg pages
-$max_jpg += 1;
+$max_png = 2;
+if ($imatrix eq "") {$max_png = 5;}
+# add 1 to max_png, to get max_png pages
+$max_png += 1;
 open(PAGE,"> diagrams.html") || die "Error creating diagrams.html";
 print PAGE "\<HTML\> \n";
 print PAGE "\<HEAD\> \n";
@@ -21,22 +21,22 @@ while ( -e "matrix$imatrix.ps"){
   open(IN, "< matrix$imatrix.ps") || die "No file matrix$imatrix.ps";
   open(OUT, "> matrix-1.ps") || die "Could not open file matrix-1.ps";
   while (<IN>) {
-    if ($_ =~ m/^%%Page: $max_jpg $max_jpg/) {last;}
+    if ($_ =~ m/^%%Page: $max_png $max_png/) {last;}
     else {print OUT $_, "\n";}
   }
   close(OUT);
   close(IN);
-  system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=matrix$imatrix\%00d.jpg \-q \-dNOPAUSE \-dBATCH matrix-1.ps > /dev/null\"";
+  system "/bin/bash -c \"nice gs  \-sDEVICE\=pngmono \-r150 \-sOutputFile\=matrix$imatrix\%00d.png \-q \-dNOPAUSE \-dBATCH matrix-1.ps > /dev/null\"";
   system "rm -f matrix-1.ps";
 
-# Determine how many jpg files we have
+# Determine how many png files we have
   $pages=1;
 
-  while(-e "matrix$imatrix$pages.jpg"){
+  while(-e "matrix$imatrix$pages.png"){
     $pages++;
   }#end of while
   #reduce it by one
-  if ($pages > $max_jpg){
+  if ($pages > $max_png){
     $pages -= 1;
   }
 # Find name of process
@@ -45,24 +45,24 @@ while ( -e "matrix$imatrix.ps"){
   if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
   print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\" id\=\"$imatrix\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
   for($j=1;$j<$pages;$j++){
-    print PAGE "\<IMG SRC=\"matrix$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
+    print PAGE "\<IMG SRC=\"matrix$imatrix$j.png\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
   }#end of for
 #
-#   In case I didn't include all of the diagrams as jpeg, warn user
+#   In case I didn't include all of the diagrams as PNG, warn user
 #
-  if (-e "matrix$imatrix$max_jpg.jpg" ) {
-    print PAGE "<P>To save bandwidth not all diagrams were converted to jpeg.";
+  if (-e "matrix$imatrix$max_png.png" ) {
+    print PAGE "<P>To save bandwidth not all diagrams were converted to PNG.";
     print PAGE "<P> To view all diagrams click on ";
     print PAGE "\<A HREF\=\"matrix$imatrix.ps\"\> postscript. \<\/A\> \<BR\> \n";
 #
 #    Delete files which aren't included in diagrams.html
 #
-    system ("/bin/bash -c \"rm -f matrix$max_jpg.jpg\" ");
+    system ("/bin/bash -c \"rm -f matrix$max_png.png\" ");
   }
 #
-#  Now create jpeg file for card
+#  Now create PNG file for card
 #
-  if (! -e "../../HTML/card.jpg") {
+  if (! -e "../../HTML/card.png") {
     system ("/bin/bash -c \"head -352 matrix$imatrix.ps >& junk.ps\" ");
     open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
 
@@ -72,7 +72,7 @@ while ( -e "matrix$imatrix.ps"){
 
     system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,352d >> junk.ps\" ");
 
-    system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.jpg ../../HTML/card.jpg > /dev/null\" ";
+    system "/bin/bash -c \"nice gs  \-sDEVICE\=pngmono \-sOutputFile\=card.png \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.png ../../HTML/card.png > /dev/null\" ";
   }
   if ($imatrix eq "") {$imatrix = 0;}
   $imatrix = $imatrix + 1;
@@ -82,3 +82,4 @@ print PAGE "\n";
 print PAGE "\<\/BODY\> \n";
 print PAGE "\<\/HTML\> \n";
 close(PAGE);
+

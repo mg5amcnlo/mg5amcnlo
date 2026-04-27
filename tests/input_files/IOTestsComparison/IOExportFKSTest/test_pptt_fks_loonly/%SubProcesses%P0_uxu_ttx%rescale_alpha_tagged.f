@@ -29,10 +29,10 @@ C     virtuals (single pole if ivirt = 1, finite if ivirt = 0
       INCLUDE '../../Source/MODEL/input.inc'
 
       IF (IVIRT.EQ.1) THEN
-          ! single 
+C       single 
         GET_VIRTUAL_A0GMU_CONV = 0D0
       ELSE IF (IVIRT.EQ.0) THEN
-          ! finite part
+C       finite part
         GET_VIRTUAL_A0GMU_CONV = 0D0
       ELSE
         WRITE(*,*) 'Error get_virtual_a0Gmu_conv: Invalid ivirt', IVIRT

@@ -126,6 +126,9 @@ def compile_dir(*arguments):
             # skip check_poles for LOonly dirs
             if test == 'check_poles' and os.path.exists(pjoin(this_dir, 'parton_lum_0.f')):
                 continue
+            # skip check_poles for no virtual
+            if test == 'check_poles' and len(misc.glob(pjoin(this_dir, 'V*'))) == 0:
+                continue
             if test == 'test_ME' or test == 'test_MC':
                 test_exe='test_soft_col_limits'
             else:
@@ -155,7 +158,7 @@ def compile_dir(*arguments):
         logger.info('    %s done.' % p_dir) 
         return 0
     except MadGraph5Error as msg:
-        return msg
+        raise aMCatNLOError(msg)
 
 
 def check_compiler(options, block=False):
@@ -1100,6 +1103,12 @@ class AskRunNLO(cmd.ControlSwitch):
         #else:
             return self.print_options('fixed_order', keep_default=True)
     
+    def print_options_madspin(self):
+        if 'QED' in self.proc_characteristics['splitting_types']:
+            return "No madspin for EW correction"
+        else:
+            return self.print_options('madspin', keep_default=True)
+
     def color_for_shower(self, switch_value):
          
         if switch_value in ['ON']:
@@ -1114,6 +1123,7 @@ class AskRunNLO(cmd.ControlSwitch):
         """ temporary way to forbid event generation due to lack of validation"""
         
 #        if True:
+
 #        if 'QED' in self.proc_characteristics['splitting_types']:
 #            out = {}
 #            to_check ={'fixed_order': ['ON'],
@@ -1131,6 +1141,7 @@ class AskRunNLO(cmd.ControlSwitch):
         #else: 
         return self.check_consistency_with_all(key, value)
         #return out 
+    
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
     consistency_shower = lambda self, *args, **opts: self.consistency_QED('shower', *args, **opts)
@@ -1266,9 +1277,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-            self.switch['shower'] = self.run_card['parton_shower']  
-            #self.switch['shower'] = 'ON'
-            self.switch['fixed_order'] = "OFF"
+            if 'OFF' in self.get_allowed_fixed_order():
+                self.switch['shower'] = self.run_card['parton_shower']  
+                self.switch['fixed_order'] = "OFF"
 
 
     def consistency_shower_madanalysis(self, vshower, vma5):
@@ -1311,7 +1322,7 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.allowed_madspin
         else:        
             if 'QED' in self.proc_characteristics['splitting_types']:
-                self.allowed_madspin = ['OFF', 'onshell']
+                self.allowed_madspin = ['OFF']
             else:
                 self.allowed_madspin = ['OFF', 'ON', 'onshell']
             return  self.allowed_madspin
@@ -2090,7 +2101,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
                         channels=chan_file.readline().split()
                 except IOError:
-                    logger.warning('No integration channels found for contribution %s' % p_dir)
+                    logger.warning('No integration channels found for contribution %s (too large masses/low energy?)' % p_dir)
                     continue
                 if fixed_order:
                     lch=len(channels)
@@ -2771,6 +2782,55 @@ RESTART = %(mint_mode)s
                                 '\n'.join(error_log)+'\n')
 
 
+    def getSysSummaryFromLog(self, kpath=None,knext_name=None):
+        '''extracts and returns MUF and PDF scale uncertainties as lists [Hi,Lo]
+              from  summary.txt log files for MC@NLO type events'''
+        # summary.txt files have the following format:
+        #--------------------------------------------------------------
+        #Summary:
+        #Process p p > t t~ QCD=2 QED=0 [QCD]
+        #Run at p-p collider (6500.0 + 6500.0 GeV)
+        #Number of events generated: 10000
+        #Total cross section: 4.580e+02 +- 2.2e+00 pb
+        #--------------------------------------------------------------
+        #  Scale variation (computed from LHE events):
+        #      Dynamical_scale_choice -1 (envelope of 9 values):
+        #          4.578e+02 pb  +28.9% -20.9%
+        #  PDF variation (computed from LHE events):
+        #      NNPDF23_nlo_as_0118_qed (101 members; using replicas method):
+        #          4.578e+02 pb  + 1.8% -1.8%
+        # note possible space between sign and number
+        # define output
+        tmpMUX = []
+        tmpPDF = []
+
+        # open, read, and implicitly close it
+        sys_log = pjoin(kpath.rsplit("/", 2)[0],"Events",knext_name,"summary.txt")
+        with open(sys_log,'r') as sys_out:
+            sys_lst = list(sys_out.readlines())
+
+        # parse the list for...
+        for kk, line in enumerate(sys_lst):
+            tmpLine=line.replace(" ","")
+
+            # 'Scale variation'
+            if(tmpLine.startswith("Scalevariation")):
+                sysLine = sys_lst[kk+2]
+                varHi=sysLine.split("pb")[1].split("%")[0].replace(" ","")
+                varLo=sysLine.split("pb")[1].split("%")[1].replace(" ","")
+                tmpMUX = [varHi,varLo]
+                continue
+
+            # 'PDF variation'
+            if(tmpLine.startswith("PDFvariation")):
+                sysLine = sys_lst[kk+2]
+                varHi=sysLine.split("pb")[1].split("%")[0].replace(" ","")
+                varLo=sysLine.split("pb")[1].split("%")[1].replace(" ","")
+                tmpPDF = [varHi,varLo]
+                continue
+
+        # done!
+        return tmpMUX, tmpPDF
 
     def write_res_txt_file(self,jobs,integration_step):
         """writes the res.txt files in the SubProcess dir"""
@@ -2819,8 +2879,8 @@ RESTART = %(mint_mode)s
             err+= math.pow(job['error'],2)*job['wgt_frac']
         if jobs:
             content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
-                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
-                            tot, math.sqrt(err), math.sqrt(err)/tot *100.))
+                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.  if totABS !=0. else 100.,\
+                            tot, math.sqrt(err), math.sqrt(err)/tot *100. if tot !=0. else 100.))
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
@@ -3923,7 +3983,9 @@ RESTART = %(mint_mode)s
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
-            extrapaths.append(hepmc.split()[1].replace('-L', '')) 
+            for token in hepmc.split():
+                if token.startswith('-L'):
+                    extrapaths.append(token[2:])
 
         # check that if FxFx is activated the correct shower plugin is present
         if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
@@ -4373,15 +4435,22 @@ RESTART = %(mint_mode)s
                 self.run_tag = tag
                 self.results.add_run(self.run_name, self.run_card)
             else:
-                for tag in upgrade_tag[level]:
-                    if getattr(self.results[self.run_name][-1], tag):
+                if name in self.results:
+                    result_name = name
+                elif '%s_LO' % name in self.results:
+                    result_name = '%s_LO' % name
+                else:
+                    result_name = name
+
+                for tag in upgrade_tag[level]:                    
+                    if getattr(self.results[result_name][-1], tag):
                         tag = self.get_available_tag()
                         self.run_card['run_tag'] = tag
                         self.run_tag = tag
-                        self.results.add_run(self.run_name, self.run_card)                        
+                        self.results.add_run(result_name, self.run_card)                        
                         break
             return # Nothing to do anymore
-        
+
         # save/clean previous run
         if self.run_name:
             self.store_result()
@@ -4998,6 +5067,12 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(pjoin(cwd, os.path.pardir, 'orderstags_glob.dat'))
             input_files.append(args[0])
+            open('%s.rwgt' % os.path.basename(args[0]), "a").close()
+            open('reweight_xsec_events.output', "a").close()
+            open('scale_pdf_dependence.dat', "a").close()
+            input_files.append('%s.rwgt' % os.path.basename(args[0]))
+            input_files.append('reweight_xsec_events.output')
+            input_files.append('scale_pdf_dependence.dat')
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
             output_files.append('scale_pdf_dependence.dat')
@@ -5458,6 +5533,11 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
 
+            elif self.run_card['lpp1'] == 2 == self.run_card['lpp2']:
+                if self.run_card['pdlabel'] in ['edff', 'chff']:
+                    logger.info('Using '+self.run_card['pdlabel'].upper()+' in gamma-UPC')
+                    self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
+
             self.make_opts_var['lhapdf'] = ""
 
         # create param_card.inc and run_card.inc
@@ -5474,7 +5554,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
                 except OSError:
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                        'Please set the path to %s-config by using \n' + \
-                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
+                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s \n') % (code,code,code,code))
         else:
             self.make_opts_var['pineappl'] = ""
 
@@ -5616,10 +5696,8 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             compile_cluster.wait(self.me_dir, update_status)
         except Exception as  error:
             logger.warning("Compilation of the Subprocesses failed")
-            if __debug__:
-                raise
             compile_cluster.remove()
-            self.do_quit('')
+            raise aMCatNLOError(error)
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
@@ -5632,25 +5710,6 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
                 self.check_tests(test, this_dir)
 
 
-    def compile_and_run_printalpha(self):
-        this_dir = os.path.join(self.me_dir, 'SubProcesses')
-
-        input = pjoin(this_dir, 'printalpha.in')
-        infile = open(input, 'w')
-        infile.write('%d %e\n' % (self.run_card['lhaid'][0], self.run_card['ebeam1'] + self.run_card['ebeam2']))
-        infile.close()
-
-        misc.compile(['printalpha'], cwd = this_dir, job_specs = False)
-        misc.call(['./printalpha' ], cwd = this_dir, 
-                    stdin = open(input),
-                    stdout=open(pjoin(this_dir, 'printalpha.log'), 'w'),
-                    close_fds=True)
-
-        output = open(pjoin(this_dir, 'printalpha.log')).read()
-        return float(output.split('ALPHAVALUE')[1])
-
-
-
     def donothing(*args):
         pass
 
@@ -5660,7 +5719,9 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         Skip check_poles for LOonly folders"""
         if test in ['test_ME', 'test_MC']:
             return self.parse_test_mx_log(pjoin(dir, '%s.log' % test)) 
-        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')):
+        # we must ensure there is virtual. Otherwise, we skip the pole checks
+        elif test == 'check_poles' and not os.path.exists(pjoin(dir,'parton_lum_0.f')) \
+          and len(misc.glob(pjoin(dir,'V*'))) > 0:
             return self.parse_check_poles_log(pjoin(dir, '%s.log' % test)) 
 
 

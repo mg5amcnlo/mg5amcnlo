@@ -32,6 +32,7 @@ mv ./Cards/proc_card.dat ./temp/
 mv ./Source/alfas.inc ./temp/alfas.inc
 mv ./Source/coupl.inc ./temp/coupl.inc
 mv ./Source/cuts.inc ./temp/cuts.inc
+mv ./Source/vector.inc ./temp/vector.inc
 mv ./Source/maxparticles.inc ./temp/maxparticles.inc
 mv ./Source/run_config.inc ./temp/run_config.inc
 mv ./Source/run.inc ./temp/run.inc
@@ -85,6 +86,7 @@ mv ./temp/cuts.inc ./Source/cuts.inc
 mv ./temp/maxparticles.inc ./Source/maxparticles.inc
 mv ./temp/run_config.inc ./Source/run_config.inc
 mv ./temp/run.inc ./Source/run.inc
+mv ./temp/vector.inc ./Source/vector.inc
 
 mv ./temp/alfas_functions.f ./Source/alfas_functions.f
 mv ./temp/kin_functions.f ./Source/kin_functions.f

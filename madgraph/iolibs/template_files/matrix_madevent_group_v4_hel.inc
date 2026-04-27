@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -7,6 +7,7 @@ C
 C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
+c  potentially times multi-channel weight
 C  
 %(process_lines)s
 C 
@@ -24,41 +25,44 @@ C
     PARAMETER (NGRAPHS=%(ngraphs)d) 
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
-    INTEGER    THEL
-    PARAMETER (THEL=2*NCOMB)
 C  
 C ARGUMENTS 
 C  
-    REAL*8 P(0:3,NEXTERNAL),ANS
+    REAL*8 P(0:3,NEXTERNAL)
+    double precision RHEL ! random number for selecting helicity
+    double precision RCOL ! random number for selecting helicity
+    integer channel ! channel to keep for the multi-channel
+    integer ivec ! for using the correct coupling
+c
+c   output argument
+c
+    integer ihel, icol ! selected helicity/color
+    double precision ans 
 C  
 C LOCAL VARIABLES 
 C  
         INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
         INCLUDE 'config_subproc_map.inc'
-        INTEGER NHEL(NEXTERNAL,NCOMB)
+        INTEGER NHEL(0:NEXTERNAL,NCOMB)
         REAL*8 T
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
         INTEGER JC(NEXTERNAL),II
         REAL*8 XTOT
         INTEGER  J, JJ
-
       double precision get_channel_cut
       external get_channel_cut
 
 C  
 C GLOBAL VARIABLES
-C  
+C
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
 
 
 C
 C   INFORMATION TO WRITE THE HELICITY IN THE EVENT --not memory efficient--
 C   
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
-
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
@@ -89,19 +93,18 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=%(ncolor)d
-        DO I=1,INT(JAMP2(0))
-            JAMP2(I)=0D0
-        ENDDO
     ENDIF
-    ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
-c   Kiran please check if you need this:    
-    DO I=1,NCOMB
-       TS(I)=0d0
+    JAMP2(0)=%(ncolor)d
+    DO I=1,INT(JAMP2(0))
+            JAMP2(I)=0D0
     ENDDO
 
-    call MATRIX%(proc_id)s(P ,JC(1), TS)
+
+    ANS = 0D0
+
+    TS(:) = 0d0
+
+    call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2, JAMP2, IVEC)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -116,12 +119,12 @@ c   Kiran please check if you need this:
     ENDDO
 
     IF (ANS.ne.0d0) THEN
-        CALL RANMAR(R)
         SUMHEL=0d0
 	DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
-            IF(R.LT.SUMHEL)THEN
-                WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            IF(RHEL.LT.SUMHEL)THEN
+	         IHEL = NHEL(0,I) ! this returns the id of the helicity before helicity recycling
+c                WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
                 ANS=DSIGN(ANS,TS(I))
                 GOTO 10
@@ -144,17 +147,20 @@ c         Set right sign for ANS, based on sign of chosen helicity
              endif
         ENDDO
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+	   ANS=ANS*AMP2(channel)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
 	        stop 1
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,IC, TS)
+Subroutine  MATRIX%(proc_id)s(P,IC, TS, AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -191,13 +197,15 @@ C
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     REAL*8 TS(NCOMB)
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  
     INTEGER I,J,M,N,K
     COMPLEX*16 ZTEMP,TMP_JAMP(%(nb_temp_jamp)i)
-    COMPLEX*16 TMP(6)
-    REAL*8 CF(NCOLOR,NCOLOR)
+    COMPLEX*16 TMP(%(wavefunctionsize)d)
+    INTEGER CF(NCOLOR*(NCOLOR+1))
+    INTEGER DENOM, CF_INDEX
     COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
@@ -215,10 +223,10 @@ C
 
 C  
 C GLOBAL VARIABLES
-C  
+C
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
-    include 'coupl.inc'
+    include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
        double precision tmin_for_channel
        integer sde_strat ! 1 means standard single diagram enhancement strategy,
@@ -246,18 +254,21 @@ ${helas_calls}
 ${jamp_lines}
         TS(K) = 0.D0 
     	DO M = 1, NAMPSO
+          CF_INDEX = 0
           DO I = 1, NCOLOR
             ZTEMP = (0.D0,0.D0)
-            DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
-            ENDDO
+            DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX + 1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
+            ENDDO ! J
     		DO N = 1, NAMPSO
 			%(select_configs_if)s
-    		     TS(K) = TS(K) + ZTEMP*DCONJG(JAMP(I,N))
+    		     TS(K) = TS(K) + REAL(ZTEMP*DCONJG(JAMP(I,N)))
 			  %(select_configs_endif)s
-    		ENDDO
-          ENDDO
-    	ENDDO
+    		ENDDO ! N
+        ENDDO ! I
+    ENDDO ! M
+    TS(K) = TS(K) / DENOM
 	if(sde_strat.eq.1) then
         ${amp2_lines}
 	endif
@@ -270,7 +281,7 @@ ${jamp_lines}
     		enddo
     	  enddo
         Enddo
-    ENDDO
+    ENDDO ! K
 
     END
 

@@ -8,10 +8,13 @@ ifeq ($(wildcard ../Source/make_opts),)
 else
     ROOT = ..
 endif
-LIBDIR = $(ROOT)/lib/
+LIBDIR = $(abspath $(ROOT))/lib/
 
 PROG   = check
 all : $(PROG)
+
+HERE := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+ROOTNAME = $(notdir $(abspath $(ROOT)))
 
 # For the compilation of the MadLoop file polynomial.f it makes a big difference to use -O3 and
 # to turn off the bounds check. These can however be modified here if really necessary.
@@ -27,6 +30,7 @@ STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
 LINKLIBS = -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS) $(LDFLAGS)
 LIBS =  $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) $(LOOP_LIBS)
+DYLIBS =  $(LIBDIR)libdhelas.$(dylibext) $(LIBDIR)libmodel.$(dylibext) $(LOOP_LIBS)
 
 PROCESS= MadLoopParamReader.o MadLoopCommons.o \
  $(patsubst $(DOTF),$(DOTO),$(wildcard polynomial.f)) \
@@ -90,6 +94,16 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst $(DOTF),$(
 %olynomial.o : %olynomial.f
 	$(FC) $(patsubst -O%,, $(subst -fbounds-check,,$(FFLAGS))) $(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) -c $< -o $@ $(LOOP_INCLUDE)
 
+%/%oloop_matrix.o : %/polynomial.o %/%oloop_matrix.f
+	$(FC) $(patsubst -O%,,$(subst -fbounds-check,,$(FFLAGS))) \
+		$(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) \
+		-c $< -o $@ $(LOOP_INCLUDE)
+
+%/polynomial.o : %/polynomial.f
+	$(FC) $(patsubst -O%,,$(subst -fbounds-check,,$(FFLAGS))) \
+		$(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) \
+		-c $< -o $@ $(LOOP_INCLUDE)
+
 
 $(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
@@ -114,16 +128,71 @@ $(OLP)_static: $(OLP_PROCESS)
 
 libMadLoop.$(dylibext): ../$(OLP)
 
+WRAPPER_SRCS := $(wildcard */f2py_wrapper.f)
+WRAPPER_OBJS := $(patsubst %.f,%.o,$(wildcard */f2py_wrapper.f))
+
+%/f2py_wrapper.o: %/f2py_wrapper.f
+	$(MAKE) -C $* f2py_wrapper.o
+
+
+
+
+ALL_DOTF := $(wildcard */polynomial.f */loop_matrix.f */improve_ps.f */born_matrix.f */CT_interface.f \
+             */loop_num.f \
+             */helas_calls*.f */mp_compute_loop_coefs.f */mp_helas_calls*.f */coef_construction_*.f \
+             */loop_CT_calls_*.f */mp_coef_construction_*.f */TIR_interface.f */COLLIER_interface.f \
+             MadLoopParamReader.f MadLoopCommons.f */GOLEM_interface.f */compute_color_flows.f \
+             */mp_born_amps_and_wfs.f */jamp?_calls_*.f)
+
+# Convert .f to .o
+ALL_DOTO := $(patsubst %.f,%.o,$(ALL_DOTF))
+
+ifeq ($(UNAME), Darwin)
+  LIBALLME_DYNFLAG = -install_name @rpath/liball$(ROOTNAME)_$(MENUM)me.dylib -undefined dynamic_lookup
+  WHOLE_ARCH=-Wl,-force_load,
+  NOWHOLE_ARCH=
+  STAT_LIB = $(WHOLE_ARCH)$(LIBDIR)libcts.$(libext) $(WHOLE_ARCH)$(LIBDIR)libiregi.$(libext)
+  LD_F2PY=
+else
+  LIBALLME_DYNFLAG =
+  WHOLE_ARCH=  -Wl,--whole-archive
+  NOWHOLE_ARCH= -Wl,--no-whole-archive
+  STAT_LIB = $(WHOLE_ARCH) $(LIBDIR)libcts.$(libext) $(LIBDIR)libiregi.$(libext) $(NOWHOLE_ARCH)
+  LD_F2PY=-lgfortran -lquadmath
+endif
+
+
+liball$(ROOTNAME)_$(MENUM)me.$(dylibext): all_matrix.o libMadLoop.$(dylibext) $(WRAPPER_OBJS) $(LIBS)  $(OLP) 
+	$(CXX) $(DYNLIBFLAG)  $(LIBALLME_DYNFLAG)  $(STDLIB_FLAG)  -o liball$(ROOTNAME)_$(MENUM)me.$(dylibext) all_matrix.o */f2py_wrapper.o ../Source/DHELAS/*.o ../Source/MODEL/*.o $(STAT_LIB) $(RPATH_LIBS) $(LINK_LOOP_LIBS) $(ALL_DOTO) $(STDLIB) $(LINK_LOOP_LIBS) 
+
+
+
+
+
+
+
+shared: liball$(ROOTNAME)_$(MENUM)me.$(dylibext)
+
 ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
+
+
+
 matrix$(MENUM)py.so: ../$(OLP)_static f2py_wrapper.f 
 	touch __init__.py
 	$(F2PY) $(MADLOOP_LIB) -m matrix$(MENUM)py -c f2py_wrapper.f --f77exec=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS) $(STDLIB)
 
 allmatrix$(MENUM)py.so: $(OLP)_static all_matrix.f $(LIBS) $(WRAPPER)
 	touch __init__.py
-	$(F2PY) $(MADLOOP_LIB)  -m allmatrix$(MENUM)py -c all_matrix.f $(wildcard $(LOOP_PREFIX)*/f2py_wrapper.f) --f77exec=$(FC)   -L../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS) $(STDLIB)
+	$(F2PY) $(MADLOOP_LIB)  -m allmatrix$(MENUM)py -c all_matrix.f $(wildcard $(LOOP_PREFIX)*/f2py_wrapper.f) --f77exec=$(FC)   -L../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS) $(STDLIB) 
+
+
+all_matrix$(MENUM)py.so:  liball$(ROOTNAME)_$(MENUM)me.$(dylibext) f2py_wrapper.f makefile
+	LDFLAGS="-Wl,-rpath,$(HERE) -L$(HERE) $(RPATH_LIBS)  $(LINK_LOOP_LIBS) $(LD_F2PY)" $(F2PY)  -c f2py_wrapper.f -L$(HERE) -lall$(ROOTNAME)_$(MENUM)me -m all_matrix$(MENUM)py  
+	touch all_matrix$(MENUM)py.so
+	touch __init__.py
+
 
 clean:
 	@rm -f *.o *.so *.$(libext) *.$(dylibext)

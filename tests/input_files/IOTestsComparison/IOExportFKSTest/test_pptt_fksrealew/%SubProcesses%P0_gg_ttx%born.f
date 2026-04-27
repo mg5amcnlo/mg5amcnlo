@@ -102,9 +102,9 @@ C         this is for the orders of the counterterms
           NORD_INTEGRATED_BORN = 0
           IF (KEEP_ORDER(I)) THEN
             NORD_INTEGRATED_BORN = NORD_INTEGRATED_BORN + 1
-              !write(*,*) 'BORN: keeping split order ', i
-              !else
-              !write(*,*) 'BORN: not keeping split order ', i
+C           write(*,*) 'BORN: keeping split order ', i
+C           else
+C           write(*,*) 'BORN: not keeping split order ', i
           ENDIF
         ENDDO
 
@@ -313,7 +313,8 @@ C     reset the amp_split array
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX_B(J, I)
           ENDDO
-            !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,I)
+C         amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) =
+C          ans(1,I)
           IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY)
      $      AMP_SPLIT_EWSUD(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) =
      $      ANS(1,I) / IDEN
@@ -474,11 +475,12 @@ C     ----------
       ENDDO
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
-          ! the following lines are to avoid segfaults when glu_ij=0
+C       the following lines are to avoid segfaults when glu_ij=0
         COND_IJ=SKIP(NFKSPROCESS).EQ.0
         IF (.NOT.COND_IJ) COND_IJ=COND_IJ.OR.NHEL(GLU_IJ,IHEL)
      $   .EQ.NHEL(GLU_IJ,1)
-          !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+C       if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq
+C       .0) then
         IF (COND_IJ) THEN
           IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
      $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.
@@ -550,7 +552,8 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS), JAMPH(2, NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(0)
@@ -583,27 +586,20 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
-     $ -6.666666666666666D-01/
+      DATA DENOM/3/
+      DATA (CF(I),I=  1,  2) /16,-4/
 C     1 T(1,2,3,4)
-      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
-     $ ,5.333333333333333D+00/
+      DATA (CF(I),I=  3,  3) /16/
 C     1 T(2,1,3,4)
 C     ----------
 C     BEGIN CODE
 C     ----------
       JAMP(:,:) = (0D0,0D0)
+      BORNS(:,:) =0D0
+      ANS(:,:) = (0D0, 0D0)
+
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       IF (FORCE_IJGLU_ZERO) GLU_IJ = 0
-
-      DO I = 1, NSQAMPSO
-        ANS(1,I)=0D0
-        ANS(2,I)=0D0
-        BORNS(1,I)=0D0
-        BORNS(2,I)=0D0
-      ENDDO
-      BORNS(1,0)=0D0
-      BORNS(2,0)=0D0
       IF (GLU_IJ.NE.0) THEN
         BACK_HEL = NHEL(GLU_IJ)
         IF (BACK_HEL.NE.0) THEN
@@ -667,10 +663,12 @@ C         JAMPs contributing to orders QCD=2 QED=0
           JAMP(2,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
      $     *AMP(1)+(-1.000000000000000D+00)*AMP(3)
           DO M = 1, NAMPSO
+            CF_INDEX = 0
             DO I = 1, NCOLOR
               ZTEMP = (0.D0,0.D0)
-              DO J = 1, NCOLOR
-                ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+              DO J = I, NCOLOR
+                CF_INDEX = CF_INDEX + 1
+                ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
               ENDDO
               DO N = 1, NAMPSO
                 BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2
@@ -690,23 +688,28 @@ C         JAMPs contributing to orders QCD=2 QED=0
           ENDDO
         ENDIF
       ENDDO
+      BORNS(:,:) = BORNS(:,:)/DENOM
       DO I = 1, NSQAMPSO
         BORNS(1,0)=BORNS(1,0)+BORNS(1,I)
         BORNS(2,0)=BORNS(2,0)+BORNS(2,I)
         ANS(1,I) = BORNS(1,I) + BORNS(2,I)
       ENDDO
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
-          ENDDO
-          DO N = 1, NAMPSO
-            ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP
-     $       *DCONJG(JAMPH(1,I,N))
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            DO  N = 1, NAMPSO
+              ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) +
+     $          CF(CF_INDEX)*(JAMPH(2,J,M)*DCONJG(JAMPH(1,I,N))
+     $         +JAMPH(2,I,M)*DCONJG(JAMPH(1,J,N)))
+            ENDDO
           ENDDO
         ENDDO
+
       ENDDO
+      ANS(2,:) = ANS(2,:)/(2D0*DENOM)
       IF (GLU_IJ.NE.0) NHEL(GLU_IJ) = BACK_HEL
       END
 

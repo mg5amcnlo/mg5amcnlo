@@ -30,6 +30,7 @@ C     INCLUDE FILES
 C     
 C     the include file with the values of the parameters and masses   
 C        
+
       INCLUDE 'coupl.inc'
 C     particle masses
       REAL*8 PMASS(NEXTERNAL)
@@ -193,7 +194,7 @@ C        scale.
         MU_R=SQRTS
 
 C       Update the couplings with the new MU_R
-        CALL UPDATE_AS_PARAM()
+        CALL UPDATE_AS_PARAM(1)
 
 C       Optionally the user can set where to find the
 C        MadLoop5_resources folder.

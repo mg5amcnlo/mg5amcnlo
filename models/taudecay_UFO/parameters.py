@@ -142,7 +142,7 @@ WTA = Parameter(name = 'WTA',
                 nature = 'external',
                 type = 'real',
                 value = 2.265e-12,
-                texname = '\\text{WTA}',
+                texname = 'no_restrict',
                 lhablock = 'DECAY',
                 lhacode = [ 15 ])
 

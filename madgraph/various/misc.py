@@ -964,6 +964,9 @@ def check_system_error(value=1):
                     # raise a more meaningfull error message
                     raise Exception('%s fails with no such file or directory' \
                                                                            % arg)            
+                # Checkpoint, requeued automatically
+                elif error.errno == 85:
+                    logger.info('%s created a checkpoint' % arg)
                 else:
                     raise
         return deco_f
@@ -1236,10 +1239,15 @@ def gunzip(path, keep=False, stdout=None):
     
     #for large file (>1G) it is faster and safer to use a separate thread
     if os.path.getsize(path) > 1e8:
-        if stdout:
-            os.system('gunzip -c %s > %s' % (path, stdout))
+        if keep:
+            options = '-k '
         else:
-            os.system('gunzip  %s' % path) 
+            options = ''
+
+        if stdout:
+            os.system('gunzip  %s -c %s > %s' % (options, path, stdout))
+        else:
+            os.system('gunzip %s %s' % (options, path)) 
         return 0
     
     if not stdout:
@@ -1264,18 +1272,54 @@ def gunzip(path, keep=False, stdout=None):
         os.remove(path)
     return 0
 
+_gzip_tool = 'gzip'
+_gzip_tool_supports_multithreading = False
+_gzip_tool_max_cores = None
+
+def configure_gzip(configuration=None):
+    if not configuration:
+        configuration = {}
+
+    # Set some default values, in case the keys are missing from the configuration
+    configuration = {'use_pigz': None, 'nb_core': None} | configuration
+
+    global _gzip_tool, _gzip_tool_supports_multithreading, _gzip_tool_max_cores
+
+    use_pigz = configuration['use_pigz']
+    if use_pigz is None:
+        # Try using pigz if possible, fall back to gzip otherwise
+        _gzip_tool = open_file.find_valid(['pigz', 'gzip'], 'gzip') 
+    elif use_pigz:
+        _gzip_tool = open_file.find_valid(['pigz'], 'pigz')
+        if not which(_gzip_tool):
+            logger.warning('Could not find valid `pigz` executable.')
+    else:
+        _gzip_tool = open_file.find_valid(['gzip'], 'gzip')
+        if not which(_gzip_tool):
+            logger.warning('Could not find valid `gzip` executable.')
+
+    # If we use the pigz binary, enable multithreading support
+    if 'pigz' in _gzip_tool:
+        _gzip_tool_supports_multithreading = True
+        if configuration['nb_core'] is not None:
+            _gzip_tool_max_cores = configuration['nb_core']
+
 def gzip(path, stdout=None, error=True, forceexternal=False):
     """ a standard replacement for os.system('gzip %s ' % path)"""
- 
-    #for large file (>1G) it is faster and safer to use a separate thread
-    if os.path.getsize(path) > 1e9 or forceexternal:
-        call(['gzip', '-f', path])
+
+    # For large files (>256M), it is faster and safer to use a separate tool.
+    if os.path.getsize(path) > 256e6 or forceexternal:
+        if _gzip_tool_supports_multithreading and _gzip_tool_max_cores is not None:
+            call([_gzip_tool, '-p', str(_gzip_tool_max_cores), '-f', path])
+        else:
+            call([_gzip_tool, '-f', path])
+
         if stdout:
             if not stdout.endswith(".gz"):
                 stdout = "%s.gz" % stdout
             shutil.move('%s.gz' % path, stdout)
         return
-    
+
     if not stdout:
         stdout = "%s.gz" % path
     elif not stdout.endswith(".gz"):
@@ -2054,20 +2098,22 @@ class EasterEgg(object):
 
 
 def get_older_version(v1, v2):
-    """ return v2  if v1>v2
+    """ return v2 if v1>v2
         return v1 if v1<v2
         return v1 if v1=v2 
-        return v1 if v2 is not in 1.2.3.4.5 format
-        return v2 if v1 is not in 1.2.3.4.5 format
+        return v1 if v2 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
+        return v2 if v1 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
     """
     
     for a1, a2 in zip_longest(v1, v2, fillvalue=0):
+        if '_' in str(a1) : a1 = str(a1)[:str(a1).index('_')]
+        if '_' in str(a2) : a2 = str(a2)[:str(a2).index('_')]
         try:
-            a1= int(a1)
+            a1 = int(a1)
         except:
             return v2
         try:
-            a2= int(a2)
+            a2 = int(a2)
         except:
             return v1        
         if a1 > a2:
@@ -2101,13 +2147,14 @@ def is_plugin_supported(obj):
         plugin_support[name] = False
         return
     
+    logger.debug("Validating plugin against this version: %s." % '.'.join(str(i) for i in mg5_ver) )
     if get_older_version(min_ver, mg5_ver) == min_ver and \
        get_older_version(mg5_ver, max_ver) == mg5_ver:
         plugin_support[name] = True
         if get_older_version(mg5_ver, val_ver) == val_ver:
-            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+            logger.warning("""Plugin %s has marked as NOT being validated with this version: %s. 
 It has been validated for the last time with version: %s""",
-                                        name, '.'.join(str(i) for i in val_ver))
+			   name, '.'.join(str(i) for i in mg5_ver), '.'.join(str(i) for i in val_ver) )
     else:
         if __debug__:
             logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
@@ -2242,39 +2289,51 @@ def import_python_lhapdf(lhapdfconfig):
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
-        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
         except OSError:
             candidates=[]
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib')):
+            candidates += [pjoin(os.pardir,'local', 'lib', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir,candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir,candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir,candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as  error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
     if not use_lhapdf:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-
+        if os.path.isdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib64')):
+            candidates += [pjoin(os.pardir,'local', 'lib64', dirname) for dirname in os.listdir(pjoin(lhapdf_libdir, os.pardir, 'local', 'lib'))
+                           if os.path.isdir(os.path.join(lhapdf_libdir,os.pardir, 'local', 'lib64', dirname))]
         for candidate in candidates:
-            if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
-                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                    break
-                except ImportError:
-                    sys.path.pop(0)
-                    continue
+            for subdir in ['site-packages', 'dist-packages']:
+                if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate, subdir)):
+                    sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate, subdir))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError as error:
+                        sys.path.pop(0)
+                        continue
+            else:
+                continue
+            break
         if not use_lhapdf:
             try:
                 import lhapdf
@@ -2327,6 +2386,7 @@ def make_unique(input, keepordering=None):
             keepordering = False
         else:
             keepordering = madgraph.ordering
+
     if not keepordering:
         return list(set(input))
     else:

@@ -20,6 +20,10 @@ on:
 env:
   commitmsg: ${{ github.event.head_commit.message }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -27,7 +31,7 @@ jobs:
 
   acceptancetest_0:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -53,7 +57,7 @@ jobs:
 
   acceptancetest_5:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -78,7 +82,7 @@ jobs:
 
   acceptancetest_10:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -86,7 +90,7 @@ jobs:
       - uses: actions/checkout@v2
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_complex_mass_SA
+      - name: test one of the test test_complex_mass_SA/ DYj has no assymetry
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
@@ -95,12 +99,13 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_complex_mass_SA -pA -t0 -l INFO
+            ./tests/test_manager.py -pA test_DY_onejet -l INFO -t0
 
 
 
   acceptancetest_11:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -122,7 +127,7 @@ jobs:
 
   acceptancetest_12:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -144,7 +149,7 @@ jobs:
 
   acceptancetest_13:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -166,7 +171,7 @@ jobs:
 
   acceptancetest_14:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -188,7 +193,7 @@ jobs:
 
   acceptancetest_15:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -210,7 +215,7 @@ jobs:
 
   acceptancetest_16:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -232,7 +237,7 @@ jobs:
 
   acceptancetest_17:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -254,7 +259,7 @@ jobs:
 
   acceptancetest_18:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -276,7 +281,7 @@ jobs:
 
   acceptancetest_19:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -298,7 +303,7 @@ jobs:
 
   acceptancetest_20:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -320,7 +325,7 @@ jobs:
 
   acceptancetest_21:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -342,7 +347,7 @@ jobs:
 
   acceptancetest_22:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -364,7 +369,7 @@ jobs:
 
   acceptancetest_23:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -386,7 +391,7 @@ jobs:
 
   acceptancetest_24:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -408,7 +413,7 @@ jobs:
 
   acceptancetest_25:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -430,7 +435,7 @@ jobs:
 
   acceptancetest_26:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -452,7 +457,7 @@ jobs:
 
   acceptancetest_27:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -474,7 +479,7 @@ jobs:
 
   acceptancetest_28:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -496,7 +501,7 @@ jobs:
 
   acceptancetest_29:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -518,7 +523,7 @@ jobs:
 
   acceptancetest_30:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -540,7 +545,7 @@ jobs:
 
   acceptancetest_31:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -562,7 +567,7 @@ jobs:
 
   acceptancetest_32:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -584,7 +589,7 @@ jobs:
 
   acceptancetest_33:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -606,7 +611,7 @@ jobs:
 
   acceptancetest_34:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -628,7 +633,7 @@ jobs:
 
   acceptancetest_35:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -650,7 +655,7 @@ jobs:
 
   acceptancetest_36:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -672,7 +677,7 @@ jobs:
 
   acceptancetest_37:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -700,7 +705,7 @@ jobs:
 
   acceptancetest_38:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -719,14 +724,23 @@ jobs:
             ./tests/test_manager.py test_mass_reweighting -pA -t0 -l INFO
 
 
-  acceptancetest_41:
+  test_oneloop_reweighting:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
+
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_oneloop_reweighting
@@ -737,13 +751,22 @@ jobs:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+      #- name: Breakpoint
+      #  uses: namespacelabs/breakpoint-action@v0
+      #  with:
+      #    duration: 30m
+      #    authorized-users: oliviermattelaer
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_oneloop_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_oneloop_reweighting -pA -t0 -l INFO
 
 
 
   acceptancetest_42:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -765,7 +788,7 @@ jobs:
 
   acceptancetest_43:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -787,7 +810,7 @@ jobs:
 
   acceptancetest_44:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -809,7 +832,7 @@ jobs:
 
   acceptancetest_45:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -831,7 +854,7 @@ jobs:
 
   acceptancetest_46:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -853,7 +876,7 @@ jobs:
 
   acceptancetest_47:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -875,7 +898,7 @@ jobs:
 
   acceptancetest_48:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -896,7 +919,7 @@ jobs:
 
   acceptancetest_49:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -918,7 +941,7 @@ jobs:
 
   acceptancetest_50:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -940,7 +963,7 @@ jobs:
 
   acceptancetest_51:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -962,7 +985,7 @@ jobs:
 
   acceptancetest_52:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -984,7 +1007,7 @@ jobs:
 
   acceptancetest_53:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1006,7 +1029,7 @@ jobs:
 
   acceptancetest_54:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1028,7 +1051,7 @@ jobs:
 
   acceptancetest_55:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1050,7 +1073,7 @@ jobs:
 
   acceptancetest_56:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1071,7 +1094,7 @@ jobs:
 
   acceptancetest_contur:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1085,12 +1108,19 @@ jobs:
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             sudo pip install numpy
             sudo apt install python3-pip
+            pip install matplotlib
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             echo "install pythia8" > cmd
             echo "install rivet" >> cmd
             echo "install contur" >> cmd
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_contur_from_file
+        run: |
             ./bin/mg5_aMC cmd
+      - name: run the test
+        run: |
             ls /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/
             #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1101,7 +1131,7 @@ jobs:
 
   acceptancetest_59:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1123,7 +1153,7 @@ jobs:
 
   acceptancetest_60:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1146,7 +1176,7 @@ jobs:
 
   acceptancetest_65:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1168,7 +1198,7 @@ jobs:
 
   acceptancetest_66:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1190,7 +1220,7 @@ jobs:
 
   acceptancetest_67:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1212,7 +1242,7 @@ jobs:
 
   acceptancetest_68:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1225,6 +1255,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             echo "import model_v4 sm_v4" > cmd
+            echo "continue" >> cmd
             ./bin/mg5_aMC cmd
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1232,7 +1263,7 @@ jobs:
 
   acceptancetest_69:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1254,7 +1285,7 @@ jobs:
 
   acceptancetest_70:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1280,7 +1311,7 @@ jobs:
 
   acceptancetest_71:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1302,7 +1333,7 @@ jobs:
 
   acceptancetest_72:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1324,7 +1355,7 @@ jobs:
 
   acceptancetest_73:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1346,7 +1377,7 @@ jobs:
 
   acceptancetest_74:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1368,7 +1399,7 @@ jobs:
 
   acceptancetest_75:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1390,7 +1421,7 @@ jobs:
 
   acceptancetest_76:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1412,7 +1443,7 @@ jobs:
 
   acceptancetest_77:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1438,7 +1469,7 @@ jobs:
 
   acceptancetest_78:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1460,7 +1491,7 @@ jobs:
 
   acceptancetest_79:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1482,7 +1513,10 @@ jobs:
 
   acceptancetest_80:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1506,7 +1540,7 @@ jobs:
 
   acceptancetest_81:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1528,7 +1562,7 @@ jobs:
 
   acceptancetest_82:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1550,7 +1584,7 @@ jobs:
 
   acceptancetest_83:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1571,7 +1605,7 @@ jobs:
 
             #  acceptancetest_85:
             #    # The type of runner that the job will run on
-            #    runs-on: ubuntu-latest
+            #    runs-on: ubuntu-22.04
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1593,7 +1627,7 @@ jobs:
 
   acceptancetest_emela:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1619,7 +1653,7 @@ jobs:
 
   acceptancetest_88:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1641,7 +1675,7 @@ jobs:
 
             #  acceptancetest_91:
             #    # The type of runner that the job will run on
-            #    runs-on: ubuntu-latest
+            #    runs-on: ubuntu-22.04
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1663,7 +1697,7 @@ jobs:
 
             #  acceptancetest_92:
             #    # The type of runner that the job will run on
-            #    runs-on: ubuntu-latest
+            #    runs-on: ubuntu-22.04
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1685,7 +1719,7 @@ jobs:
 
   acceptancetest_93:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1707,7 +1741,7 @@ jobs:
 
   acceptancetest_94:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1729,7 +1763,7 @@ jobs:
 
             #  acceptancetest_95:
             #    # The type of runner that the job will run on
-            #    runs-on: ubuntu-latest
+            #    runs-on: ubuntu-22.04
             #
             #    # Steps represent a sequence of tasks that will be executed as part of the job
             #    steps:
@@ -1751,7 +1785,7 @@ jobs:
 
   acceptancetest_96:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1773,7 +1807,7 @@ jobs:
 
   acceptancetest_97:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1798,7 +1832,7 @@ jobs:
 
   acceptancetest_98:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1820,7 +1854,7 @@ jobs:
 
   acceptancetest_99:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1842,7 +1876,7 @@ jobs:
 
   acceptancetest_100:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1863,7 +1897,7 @@ jobs:
 
   acceptancetest_100_2:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1876,6 +1910,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             #sudo pip install numpy
+            sudo apt install pigz
             #which f2py
             #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
@@ -1890,7 +1925,7 @@ jobs:
 
   acceptancetest_101:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1917,12 +1952,21 @@ jobs:
 
   acceptancetest_102:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_loop_improved_reweighting
@@ -1941,3 +1985,40 @@ jobs:
             echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
             ./tests/test_manager.py  test_nlo_reweighting -pA -t0 -l INFO
+
+
+  acceptancetest_ewsudakov:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_tt_ewsudakov
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_ttbar_ewsudakov -pA -t0 -l INFO
+
+  acceptancetest_heft:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            ./tests/test_manager.py test_generation_heft -pA -t0 -l INFO

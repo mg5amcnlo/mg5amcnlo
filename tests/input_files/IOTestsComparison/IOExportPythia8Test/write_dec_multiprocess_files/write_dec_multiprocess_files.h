@@ -8,7 +8,7 @@
 #ifndef Pythia8_Sigma_sm_gd_ddxd_H
 #define Pythia8_Sigma_sm_gd_ddxd_H
 
-#include <complex> 
+#include <complex>
 
 #include "Pythia8/SigmaProcess.h"
 #include "Parameters_sm.h"
@@ -127,5 +127,5 @@ class Sigma_sm_gd_ddxd : public Sigma3Process
 
 }  // end namespace Pythia8
 
-#endif  // Pythia8_Sigma_sm_gd_ddxd_H
+#endif // Pythia8_Sigma_sm_gd_ddxd_H
 
