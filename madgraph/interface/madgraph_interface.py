@@ -9727,13 +9727,58 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.previous_lorentz = wanted_lorentz
                 self.previous_couplings = wanted_couplings
             else:
-                self._curr_exporter.convert_model(self._curr_model, 
+                self._curr_exporter.convert_model(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
                 if hasattr(self, '_me_curr_exporter') and self._me_curr_exporter:
-                    self._me_curr_exporter.convert_model(self._curr_model, 
-                                               wanted_lorentz,
-                                               wanted_couplings)
+                    me_wanted_lorentz = wanted_lorentz
+                    me_wanted_couplings = wanted_couplings
+                    # CPP/GPU ALOHA writers don't support loop expressions
+                    # (SplitCoefficient, etc.). For NLO, restrict the second
+                    # exporter to tree-level lorentz/couplings (born + reals).
+                    if self._export_format == 'NLO' and \
+                            hasattr(self._curr_matrix_elements, 'get'):
+                        tree_lorentz = []
+                        tree_couplings = []
+                        for me in self._curr_matrix_elements.get('matrix_elements'):
+                            if not hasattr(me, 'born_me'):
+                                continue
+                            tree_lorentz.extend(me.born_me.get_used_lorentz())
+                            tree_couplings.extend(
+                                c for l in me.born_me.get_used_couplings() for c in l)
+                            for real in me.real_processes:
+                                tree_lorentz.extend(real.matrix_element.get_used_lorentz())
+                                tree_couplings.extend(
+                                    c for l in real.matrix_element.get_used_couplings() for c in l)
+                        if tree_lorentz:
+                            me_wanted_lorentz = misc.make_unique(tree_lorentz)
+                            me_wanted_couplings = misc.make_unique(tree_couplings)
+                    # aloha.loop_mode is a module-level flag: it sticks at True
+                    # once any loop ALOHA routine has been generated (during the
+                    # NLO virtual export). Reset it so the second exporter's
+                    # tree-level routines emit list_double momenta, not
+                    # list_complex.
+                    saved_loop_mode = aloha.loop_mode
+                    aloha.loop_mode = False
+                    try:
+                        self._me_curr_exporter.convert_model(self._curr_model,
+                                                   me_wanted_lorentz,
+                                                   me_wanted_couplings)
+                    except (AssertionError, Exception) as err:
+                        if self._export_format == 'NLO':
+                            # Known limitation: routine variables (momenta) are
+                            # typed at creation time in loop_mode for NLO. The
+                            # CPP/GPU ALOHA writer cannot re-emit them as real.
+                            # The real ME files (CPPProcess.h/.cc, etc.) have
+                            # already been written by write_real_matrix_elements
+                            # under SubProcesses/P*/reals/<n>/. Model conversion
+                            # for the second exporter is left to a follow-up.
+                            logger.warning('Skipped CUDACPP model conversion '
+                                           'for NLO second exporter: %s', err)
+                        else:
+                            raise
+                    finally:
+                        aloha.loop_mode = saved_loop_mode
 
         
         # move the old options to the flaglist system.
