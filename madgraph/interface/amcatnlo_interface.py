@@ -50,6 +50,7 @@ import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -136,14 +137,29 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         else:
             return mg_interface.CheckValidForCmd.check_tutorial(self,args)
 
-    def check_output(self, args):
+    def check_output(self, args, default='NLO'):
         """ check the validity of the line"""
-                  
+
         if args and args[0] == 'ewsudakovsa':
             self._export_format = 'ewsudsa'
             args.pop(0)
+        elif args and args[0][0] != '-':
+            # check for PLUGIN format (e.g. madevent_simd / madevent_gpu)
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 args[0], warning=True,
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                if hasattr(output_cls, 'build'):
+                    output_cls = output_cls.build(args=args, order='nlo')
+                self._export_format = default
+                self._export_plugin = output_cls
+                args.pop(0)
+                if hasattr(output_cls, 'change_output_args'):
+                    args[:] = output_cls.change_output_args(args, self)
+            else:
+                self._export_format = default
         else:
-            self._export_format = 'NLO'
+            self._export_format = default
 
         forbidden_formats = ['madevent', 'standalone']
         
@@ -739,14 +755,31 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
-        
+
         args = self.split_arg(line)
+        # Reset plugin state before parsing
+        self._export_plugin = None
+        self._me_curr_exporter = False
         # Check Argument validity
         self.check_output(args)
-        
+
         noclean = '-noclean' in args
-        force = '-f' in args 
+        force = '-f' in args
         nojpeg = '-nojpeg' in args
+
+        # Detect optional second matrix-element exporter request
+        # (e.g. --me_exporter=standalone_simd, set by SIMD_ProcessExporter
+        # change_output_args). When present we will also instantiate a CUDACPP
+        # exporter that writes the real matrix elements in C++/CUDA.
+        me_exporter = False
+        for arg in args:
+            if arg.startswith('--me_exporter='):
+                me_exporter = arg.split('=', 1)[1]
+                break
+
+        line_options = dict( (arg[2:].split('=') if '=' in arg else (arg[2:], True))
+                             for arg in args if arg.startswith('--'))
+
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -758,11 +791,34 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # initialize the writer
         if self._export_format in ['NLO','ewsudsa']:
             output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa'}
-            self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean,
                       output_type=output_type_dict[self._export_format],
                       group_subprocesses=group_processes)
-            
+
             self._curr_exporter.pass_information_from_cmd(self)
+
+        # If the user requested a second ME exporter (CUDACPP), build it now.
+        # We mirror the LO logic in madgraph_interface.do_output: temporarily
+        # flip _export_format to the me_exporter name so ExportCPPFactory
+        # falls through to cmd._export_plugin (the SIMD/GPU plugin class).
+        if me_exporter:
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 me_exporter, warning=True,
+                                                 info='Real matrix-element will be done with PLUGIN: %(plug)s')
+            if output_cls:
+                if hasattr(output_cls, 'build'):
+                    output_cls = output_cls.build(args=args, order='nlo')
+                # ExportCPPFactory consults cmd._export_plugin for unknown
+                # _export_format values; set it to the ME exporter class.
+                me_export_plugin = output_cls
+                with misc.TMP_variable(self, '_export_plugin', me_export_plugin), \
+                     misc.TMP_variable(self, '_export_format', me_exporter):
+                    self._me_curr_exporter = export_cpp.ExportCPPFactory(self,
+                            group_subprocesses=group_processes,
+                            cmd_options=line_options)
+                self._me_curr_exporter.pass_information_from_cmd(self)
+            else:
+                self._me_curr_exporter = False
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
@@ -770,7 +826,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be deleted and replaced.')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
+            answer = self.ask('Do you want to continue?', 'y', ['y','n'],
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
@@ -783,6 +839,10 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # Make a Template Copy
         if self._export_format in ['NLO', 'ewsudsa']:
             self._curr_exporter.copy_fkstemplate(self._curr_model)
+            if self._me_curr_exporter:
+                # Layout the CUDACPP src/SubProcesses/CMake/test scaffold under
+                # the same export_dir as the Fortran NLO output.
+                self._me_curr_exporter.copy_template(self._curr_model)
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -807,11 +867,21 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
 
-    # Export a matrix element  
+    # Export a matrix element
     def export(self, nojpeg = False, main_file_name = "", group_processes=False):
         """Export a generated amplitude to file"""
 
         self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+        # Define the helas call writer for the second (CUDACPP) exporter, if any.
+        # Mirrors the LO logic in madgraph_interface.export.
+        self._me_curr_helas_model = False
+        if getattr(self, '_me_curr_exporter', False):
+            if hasattr(self._me_curr_exporter, 'helas_exporter') and self._me_curr_exporter.helas_exporter:
+                self._me_curr_helas_model = self._me_curr_exporter.helas_exporter(self._curr_model, options=self.options)
+            elif self._me_curr_exporter.exporter == 'cpp':
+                self._me_curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+            elif self._me_curr_exporter.exporter == 'gpu':
+                self._me_curr_helas_model = helas_call_writers.GPUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self, group=False):
             """Helper function to generate the matrix elements before
             exporting"""
@@ -910,10 +980,12 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
                     calls_dir, splitorders_dir = \
-                            self._curr_exporter.generate_directories_fks(me, 
-                            self._curr_helas_model, 
-                            ime, len(self._curr_matrix_elements.get('matrix_elements')), 
-                            path,self.options['OLP'])
+                            self._curr_exporter.generate_directories_fks(me,
+                            self._curr_helas_model,
+                            ime, len(self._curr_matrix_elements.get('matrix_elements')),
+                            path,self.options['OLP'],
+                            second_exporter=self._me_curr_exporter,
+                            second_helas=self._me_curr_helas_model)
                     calls += calls_dir
                     splitorders += [so for so in splitorders_dir if so not in splitorders]
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
