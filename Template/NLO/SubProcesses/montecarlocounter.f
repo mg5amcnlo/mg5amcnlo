@@ -114,9 +114,7 @@ c isspecial will be set equal to .true. colour flow by colour flow only
 c if the father is a gluon, and another gluon will be found which is
 c connected to it by both colour and anticolour
       isspecial=.false.
-c
-      if (split_type(qcd_pos)) then
-        ! identify the color partners 
+
 c consider only leading colour flows
         num_leading_cflows=0
         do i=1,max_bcol
@@ -129,6 +127,9 @@ c consider only leading colour flows
             endif
           enddo
         enddo
+c
+      if (split_type(qcd_pos)) then
+        ! identify the color partners 
 c
         do i=1,max_bcol
           if(.not.is_leading_cflow(i))cycle
@@ -424,9 +425,9 @@ c
         if (.not.found) then
           do j=1,nexternal
             if (j.ne.fksfather.and.j.ne.i_fks) then
-              if (particle_charge(fksfather).ne.0d0.and.particle_charge(j).ne.0d0) then
-                ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) / 
-     $            (particle_charge(fksfather) * particle_charge(j))
+               if (particle_charge(j).ne.0d0) then
+                  ppnow=(dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j)) /
+     $            (particle_charge(j) * particle_charge(j))
                 if (ppnow.lt.ppmin) then
                   found=.true.
                   partner=j
@@ -540,6 +541,11 @@ c
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_mc(1:amp_split_size)=0d0
+      if (split_type(QED_pos)) then
+         ! QED partners are dynamically found
+         call find_ipartner_QED(pp,nofpartners)
+      endif
+
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
@@ -677,6 +683,10 @@ c -- call to MC counterterm functions
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
+      if (split_type(QED_pos)) then
+         ! QED partners are dynamically found
+         call find_ipartner_QED(p,nofpartners)
+      endif
       do npartner=1,ipartners(0)
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
@@ -5050,8 +5060,6 @@ c Definition and initialisation of variables
       max_scale=scalemax
       xmp2=dot(pip,pip) ! mass squared of the partner
       e0sq=dot(pip,pifat) ! father-partner dot product (Born level)
-      theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
-      theta2p=theta2p**2
       xmm2=xm12*(4-ileg) ! emitter mass squared
       xmr2=xm22*(4-ileg)-xm12*(3-ileg) ! global-recoiler mass squared
       ww=w1*(4-ileg)-w2*(3-ileg) ! FKS parent/sister dot product
@@ -5093,6 +5101,8 @@ c
          if(xi.lt.upscale2)lzone=.true.
 c
       elseif(shower_mc.eq.'PYTHIA6Q')then
+         theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
+         theta2p=theta2p**2
          if(ileg.le.2)then
             if(mstp67.eq.2.and.ip.gt.2.and.
      &         4*xi/s/(1-z).ge.theta2p)lzone=.false.
