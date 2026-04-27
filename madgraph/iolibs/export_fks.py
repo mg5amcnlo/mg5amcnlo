@@ -470,14 +470,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     # generate_directories_fks
     #===============================================================================
     def generate_directories_fks(self, matrix_element, fortran_model, me_number,
-                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop',
+                                    second_exporter=None, second_helas=None):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_me['processes'][0]
 
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
-        
+
         cwd = os.getcwd()
         try:
             os.chdir(path)
@@ -486,10 +487,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         "to \"export\" in it. If you see this error message by " + \
                         "typing the command \"export\" please consider to use " + \
                         "instead the command \"output\". "
-            raise MadGraph5Error(error_msg) 
-        
+            raise MadGraph5Error(error_msg)
+
         calls = 0
-        
+
         self.fksdirs = []
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
@@ -507,7 +508,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if OLP=='NJET':
             filename = 'OLE_order.lh'
             self.write_lh_order(filename, [matrix_element.born_me.get('processes')[0]], OLP)
-        
+
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
                             matrix_element.virt_matrix_element, \
@@ -516,7 +517,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 #write the infortions for the different real emission processes
         sqsorders_list = \
-            self.write_real_matrix_elements(matrix_element, fortran_model)
+            self.write_real_matrix_elements(matrix_element, fortran_model,
+                                            second_exporter=second_exporter,
+                                            second_helas=second_helas)
 
         filename = 'extra_cnt_wrapper.f'
         self.write_extra_cnt_wrapper(writers.FortranWriter(filename),
@@ -1890,19 +1893,93 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             plot.draw()
 
 
-    def write_real_matrix_elements(self, matrix_element, fortran_model):
-        """writes the matrix_i.f files which contain the real matrix elements""" 
-        
+    def write_real_matrix_elements(self, matrix_element, fortran_model,
+                                   second_exporter=None, second_helas=None):
+        """writes the matrix_i.f files which contain the real matrix elements.
+
+        If a ``second_exporter`` (e.g. CUDACPP) is provided, also write a
+        C++/CUDA copy of each real matrix element under ``reals/<n>/`` inside
+        the current P* directory. The Fortran files keep their original layout
+        so the standard madevent_mintMC build is unaffected.
+        """
+
         sqsorders_list = []
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
             ncalls, ncolors, nsplitorders, nsqsplitorders = \
                                     self.write_split_me_fks(\
                                         writers.FortranWriter(filename),
-                                        fksreal.matrix_element, 
+                                        fksreal.matrix_element,
                                         fortran_model, 'real', "%d" % (n+1))
             sqsorders_list.append(nsqsplitorders)
+
+        if second_exporter and second_helas:
+            self.write_real_matrix_elements_second_exporter(
+                matrix_element, second_exporter, second_helas)
+
         return sqsorders_list
+
+    def write_real_matrix_elements_second_exporter(self, matrix_element,
+                                                   second_exporter, second_helas):
+        """Write a C++/CUDA copy of each real matrix element via the second
+        exporter (CUDACPP plugin). One subfolder per real ME is created under
+        ``reals/`` in the current working directory (the P* folder)."""
+
+        base_cls = second_exporter.oneprocessclass
+
+        class _RealsOneProcessExporter(base_cls):
+            # The plugin's PLUGIN_OneProcessExporter assumes the LO layout
+            # P*/.. = SubProcesses/.. = <export>/{src,test,...}. For NLO
+            # reals each ME lives in a leaf P*/reals/<n>/ folder, so the
+            # out-of-tree writes (mgOnGpuConfig.h, MemoryBuffers.h,
+            # testxxx.cc, makefile/test-tree linking) don't apply. Drop
+            # them and emit only the ME-local files.
+            def edit_mgonGPU(self): pass
+            def edit_testxxx(self): pass
+            def edit_memorybuffers(self): pass
+            def edit_memoryaccesscouplings(self): pass
+
+            def generate_process_files(self):
+                if not self.include_multi_channel and \
+                        self.matrix_elements[0].get('has_mirror_process'):
+                    self.matrix_elements[0].set('has_mirror_process', False)
+                    self.nprocesses /= 2
+                # Walk up to OneProcessExporterCPP to write CPPProcess.{h,cc}
+                # without triggering OneProcessExporterGPU's CU-link tail.
+                for ancestor in type(self).__mro__:
+                    if ancestor.__name__ == 'OneProcessExporterCPP':
+                        ancestor.generate_process_files(self)
+                        break
+                # Plugin auxiliaries that stay inside self.path
+                self.edit_CMakeLists()
+                self.edit_check_sa()
+                self.edit_processidfile()
+                self.edit_colorsum()
+
+        reals_root = 'reals'
+        if not os.path.isdir(reals_root):
+            os.mkdir(reals_root)
+
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            real_subdir = pjoin(reals_root, '%d' % (n + 1))
+            os.mkdir(real_subdir)
+
+            # `prefix=n` becomes `proc_id=n+1` inside the plugin's __init__.
+            process_exporter_cpp = _RealsOneProcessExporter(
+                fksreal.matrix_element, second_helas, prefix=n)
+
+            with misc.chdir(real_subdir):
+                process_exporter_cpp.path = '.'
+                # generate_process_files_madevent() sets include_multi_channel
+                # from config_map. Pass {} for now: no MadFKS multi-channel
+                # information is hooked up yet.
+                process_exporter_cpp.generate_process_files_madevent(
+                    proc_id=str(n + 1),
+                    config_map={},
+                    subproc_number=0,
+                )
+
+        logger.info('Wrote CUDACPP real matrix elements under %s/' % reals_root)
 
         
     
@@ -5102,7 +5179,8 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
     # generate_directories_fks
     #===============================================================================
     def generate_directories_fks(self, matrix_element, fortran_model, me_number,
-                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop',
+                                    second_exporter=None, second_helas=None):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         only generating the relevant files for the EW Sudakov"""
         proc = matrix_element.born_me['processes'][0]

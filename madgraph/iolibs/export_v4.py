@@ -9949,8 +9949,13 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
-            ExporterClass = export_fks.ProcessExporterFortranFKS
             amcatnlo_options['export_format']='FKS5_default'
+            # If a plugin (e.g. CUDACPP FortranExporterBridgeNLO) was provided
+            # via cmd._export_plugin, use it instead of the default FKS exporter.
+            if getattr(cmd, '_export_plugin', None):
+                ExporterClass = cmd._export_plugin
+            else:
+                ExporterClass = export_fks.ProcessExporterFortranFKS
         else:
             logger.info("Writing out the aMC@NLO code, using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
