@@ -4928,6 +4928,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return libdir
 
+    def reset_iseed_in_run_card(self):
+        """If iseed is set to a non-zero value in the run_card, reset it to 0
+        and write the updated run_card to disk.  This ensures that subsequent
+        runs will use an automatically-generated (independent) seed rather than
+        repeating the same one."""
+        iseed = self.run_card['iseed']
+        if iseed != 0:
+            self.run_card['iseed'] = 0
+            # Reset seed in run_card to 0, to ensure that following runs
+            # will be statistically independent
+            self.run_card.write(pjoin(self.me_dir, 'Cards', 'run_card.dat'),
+                                template=pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
     set command define and modifying the param_card/run_card correctly

@@ -1898,12 +1898,16 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     def update_random_seed(self):
         """Update random number seed with the value from the run_card. 
-        If this is 0, update the number according to a fresh one"""
+        If this is 0, update the number according to a fresh one.
+        If a specific seed is set, reset it to 0 in the run_card after use
+        to ensure that subsequent runs will be statistically independent."""
         iseed = self.run_card['iseed']
         if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
             randinit.close()
+        else:
+            self.reset_iseed_in_run_card()
         randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
         randinit.write('r=%d' % iseed)
         randinit.close()

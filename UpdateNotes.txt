@@ -14,9 +14,13 @@ ANNOUNCEMENT:
         This has no impact if sde_strategy=1 but avoids issue with sde_strategy=2.
         We still recomend sde_strategy=1 when using $ syntax since you can have spurious writting of resonances
         in the lhef with sde_stragegy=2.
-    Team: INclude all bug fix from 3.5.14 (see below)
+    Team: include all bug fix from 3.5.14 (see below)
         Note slightly different handling of default parameter when a parameter is not within the run_card
-        
+    OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
+        to 0 (automatic) meaning that the next run in the directory will be with a different seed. 
+        Note that this was the behavior at LO already.
+    OM: Remove the dependency to the six package
+
 
 3.7.0 (05/01/26):
     RR: When carrying out parameter scans in MadGraph/MadEvent or MG5aMC@NLO with systematics (use_syst True or reweight_scale/pdf True), then the uncertain information is also recorded in the scan summary.
