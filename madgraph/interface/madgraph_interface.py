@@ -9753,32 +9753,22 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         if tree_lorentz:
                             me_wanted_lorentz = misc.make_unique(tree_lorentz)
                             me_wanted_couplings = misc.make_unique(tree_couplings)
-                    # aloha.loop_mode is a module-level flag: it sticks at True
-                    # once any loop ALOHA routine has been generated (during the
-                    # NLO virtual export). Reset it so the second exporter's
-                    # tree-level routines emit list_double momenta, not
-                    # list_complex.
+                    # The second (CUDACPP) exporter must rebuild ALOHA in
+                    # tree mode: aloha.loop_mode is sticky once the NLO
+                    # virtual export has set it, AND the aloha_lib KERNEL
+                    # caches per-name variable instances (so cached P1s
+                    # carry their old C_Variable type). Reset both around
+                    # the call, mirroring misc.set_global.
                     saved_loop_mode = aloha.loop_mode
                     aloha.loop_mode = False
+                    aloha_lib.KERNEL.clean()
                     try:
                         self._me_curr_exporter.convert_model(self._curr_model,
                                                    me_wanted_lorentz,
                                                    me_wanted_couplings)
-                    except (AssertionError, Exception) as err:
-                        if self._export_format == 'NLO':
-                            # Known limitation: routine variables (momenta) are
-                            # typed at creation time in loop_mode for NLO. The
-                            # CPP/GPU ALOHA writer cannot re-emit them as real.
-                            # The real ME files (CPPProcess.h/.cc, etc.) have
-                            # already been written by write_real_matrix_elements
-                            # under SubProcesses/P*/reals/<n>/. Model conversion
-                            # for the second exporter is left to a follow-up.
-                            logger.warning('Skipped CUDACPP model conversion '
-                                           'for NLO second exporter: %s', err)
-                        else:
-                            raise
                     finally:
                         aloha.loop_mode = saved_loop_mode
+                        aloha_lib.KERNEL.clean()
 
         
         # move the old options to the flaglist system.
