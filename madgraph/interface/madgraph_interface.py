@@ -5263,10 +5263,17 @@ This implies that with decay chains:
                             pdg_to_merge[mpart] = pdg
                             pdg_to_merge[-mpart] = -pdg
                     for pid in self._multiparticles[part_name]:
-                        if pid in pdg_to_merge and pdg_to_merge[pid] not in mylegids:
-                            mylegids.append(pdg_to_merge[pid])
-                            if not all(pdg in self._multiparticles[part_name] for pdg in self._curr_model.merged_particles[abs(pdg_to_merge[pid])]):
-                                raise self.InvalidCmd("Multiparticle %s contains merged particles but not all their merged components." % part_name)
+                        if pid in pdg_to_merge:
+                            merged_pdg = pdg_to_merge[pid]
+                            if merged_pdg not in mylegids:
+                                mylegids.append(merged_pdg)
+                            # If not all merged components are in this multiparticle,
+                            # record the present ones as a per-leg flavor restriction
+                            # so diagram generation only allows those specific flavors.
+                            if not all(pdg in self._multiparticles[part_name]
+                                       for pdg in self._curr_model.merged_particles[abs(merged_pdg)]):
+                                if pid not in flavor:
+                                    flavor.append(pid)
                         else:
                             mylegids.append(pid)
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():

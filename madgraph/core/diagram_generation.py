@@ -1779,7 +1779,8 @@ class MultiProcess(base_objects.PhysicsObject):
             else:
                 islegs = [\
                         base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization'],
-                                          'flavor': [-1* f for f in islegs_orig[i]['flavor']]}) \
+                                          'flavor': [-1* f for f in islegs_orig[i]['flavor']]
+                                                    if abs(id) in model.get('merged_particles') else []}) \
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1812,7 +1813,8 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not fstags:   
                     leg_list.extend([\
                             base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'],
-                                              'flavor': fsleg['flavor']}) \
+                                              'flavor': fsleg['flavor']
+                                                        if abs(id) in model.get('merged_particles') else []}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
