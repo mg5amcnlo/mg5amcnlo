@@ -774,7 +774,7 @@ C     FOR A PROCESS
 C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 3 finalize
+C     imode 0 run, 1 init, 2 reweight, 3 finalize, 4: PDF only, 5: ME only
 C     Output:
 C     Amplitude squared and summed
 C     ****************************************************
@@ -872,9 +872,9 @@ c       stop 1
 c     endif
 
 c     set the running scale 
-c     and update the couplings accordingly
-      IF (VECSIZE_MEMMAX.LE.1) THEN ! no-vector (NB not VECSIZE_USED!)
-      call update_scale_coupling(pp, wgt)
+c     and update the couplings accordingly (but deactivate for discrete sampler(imode=5) and 
+      IF (VECSIZE_MEMMAX.LE.1.and.imode.ne.5) THEN ! no-vector (NB not VECSIZE_USED!)
+            call update_scale_coupling(pp, wgt)
       endif
 
 

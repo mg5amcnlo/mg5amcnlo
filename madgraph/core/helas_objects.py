@@ -845,7 +845,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2, -2, 3, -3, 0, 99]:
+                if i not in base_objects.Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                       "%s is not a valid polarization" % str(value))
 
@@ -1631,6 +1631,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_coupling_for_flavor(self, model, tag_name='flavortag'):
         """Return the coupling for the given flavor"""
 
+        # interaction_id==0 means external particle (no vertex); no coupling to return.
+        if self.get('interaction_id') in [0, -1]:
+            return None
+
         vertex = model.get('interaction_dict')[self.get('interaction_id')]
         coup = next(iter(vertex.get('couplings').values()))
         if isinstance(coup, str):
@@ -1723,7 +1727,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if mother.get('is_loop'):
                     output['WF%d'%i] = 'L(1,%d)'%nb
                 else:
-                    output['WF%d'%i] = '(1,WE(%d)'%nb
+                    output['WF%d'%i] = '(WE(%d)'%nb
             else:
                 if mother.get('is_loop'):
                     output['loop_mother_number']=nb
@@ -1733,7 +1737,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     output['WF%d'%i] = 'PL(0,%d)'%nb
                     loop_mother_found=True
                 else:
-                    output['WF%d'%i] = 'W(1,%d'%nb
+                    output['WF%d'%i] = 'W(%d'%nb
             if not mother.get('is_loop'):
                 if specifyHel:
                     output['WF%d'%i]=output['WF%d'%i]+',H)'
@@ -1771,7 +1775,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
               
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
+        #if self.get('onshell') is False:
+        #    output['W'] = '%s*BWCUTOFF' % self.get('width')
+        #else:
         output['W'] = self.get('width')
+        if self.get('onshell') is False:
+            output['bwcutoff'] = 'BWCUTOFF,'
+        else:
+            output['bwcutoff'] = ''
+
         output['propa'] = self.get('particle').get('propagator')
 
         if output['propa'] not in ['', None]:
@@ -1781,26 +1793,51 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1L' 
-            elif self.get('polarization') == [1,-1]:
+            elif sorted(self.get('polarization')) == [-1,1]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1T'
             elif self.get('polarization') == [99]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd('polarization not handle for decay particle')
+                    raise InvalidCmd('polarization not supported for decay particle')
                 output['propa'] = 'P1A'
+            elif sorted(self.get('polarization')) == [0,9]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1LS'
+            elif self.get('polarization') == [4]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1G'
+            elif self.get('polarization') == [5]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1H'
+            elif self.get('polarization') == [6]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1Q'
+            elif self.get('polarization') == [7]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1W'
+            elif self.get('polarization') == [9]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1S'
+
             elif self.get('polarization') == [1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not handle for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
+                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
                 output['propa'] = 'P1M'
             else:            
-                raise InvalidCmd( 'polarization not handle for decay particle')
+                raise InvalidCmd( 'polarization not supported for decay particle')
             
         if flav_mode:
             output['propa'] = 'M%s' % output['propa']
@@ -1889,6 +1926,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         res.append(tuple(self.get('polarization')) )
         res.append(tuple(self.get('flavor')))
+        res.append(self.get('onshell'))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -2022,7 +2060,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 tags.append('P1L') 
-            elif self.get('polarization') == [1,-1]:
+            elif sorted(self.get('polarization')) == [-1,1]: # = 4+5
                 tags.append('P1T')
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
@@ -2030,11 +2068,29 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1P')
             elif self.get('polarization') == [-1]:
                 tags.append('P1M')
+            elif sorted(self.get('polarization')) == [0,9]: # = 0+9
+                tags.append('P1LS')
+            elif self.get('polarization') == [4]: # = T-5
+                tags.append('P1G')
+            elif self.get('polarization') == [5]: # = T-4
+                tags.append('P1H')
+            elif self.get('polarization') == [6]: # = 0-5
+                tags.append('P1Q')
+            elif self.get('polarization') == [7]: # = full + width
+                tags.append('P1W')
+            elif self.get('polarization') == [9]: # = 99 + width
+                tags.append('P1S')
+
+
+
             else:
                 raise InvalidCmd( 'polarization not handle for decay particle')
             
         if isinstance(self.get('coupling')[0], base_objects.FLV_Coupling):
             tags.append('M')
+        if self.get('onshell') is False:
+            tags.append('P1D') # D is for DOLLAR
+            #misc.sprint(self.get('onshell'), )
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
@@ -2998,6 +3054,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     def propagate_flavor_tag(self, model, debug=False, fct=None, tag_name='flavortag'):
 
+        # interaction_id==0 means "no interaction" (e.g. loop-induced contact
+        # amplitudes); no vertex look-up needed — treat as valid.
+        if self.get('interaction_id') in [0, -1]:
+            self[tag_name] = 1
+            return True
+
         # pdg and flavor from previous wfct
         pdg_in = [w.get_pdg_code() for w in self.get('mothers')]
         flav = [w[tag_name] if hasattr(w,tag_name) else None for w in self.get('mothers') ]
@@ -3217,6 +3279,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
         
     def get_coupling_for_flavor(self, model, tag_name='flavortag'):
         """Return the coupling for the given flavor"""
+
+        # interaction_id==0 or -1 means no real interaction vertex; no coupling to return.
+        if self.get('interaction_id') in [0, -1]:
+            return None
 
         valid = self.propagate_flavor_tag(model, tag_name=tag_name)
         if not valid:
@@ -3440,9 +3506,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 output['WF%d' % i ] = 'L(1,%d)'%nb
             else:
                 if specifyHel:
-                    output['WF%d' % i ] = '(1,WE(%d),H)'%nb
+                    output['WF%d' % i ] = '(WE(%d),H)'%nb
                 else:
-                    output['WF%d' % i ] = '(1,WE(%d))'%nb                    
+                    output['WF%d' % i ] = '(WE(%d))'%nb                    
                 
         #fixed argument
         output['tags'] = list()
@@ -3469,6 +3535,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         output['propa'] = ''
         output['tags'] =''.join(output['tags'])
 
+        output['bwcutoff'] = ''
         output.update(opt)
         return output
 
@@ -5172,7 +5239,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             allow_triming = True
             self.reset_has_flavor()
 
-        misc.sprint('need to decide which permutation to keep --only one for the moment--')
         for one_flavor in itertools.product(*[to_map[abs(id)] for id in pdgs]):
             # get the actual pdg code (with the sign)
             pdg = [one_flavor[i] if id > 0 else -one_flavor[i] for i,id in enumerate(pdgs)]
@@ -5252,7 +5318,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     
     def reset_has_flavor(self):
         """reset the has_flavor attribute for all diagrams"""
-        misc.sprint('resetting has_flavor for all diagrams')
         for diag in self.get('diagrams'):
             diag.has_flavor = False
     

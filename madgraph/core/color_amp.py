@@ -715,19 +715,19 @@ class ColorMatrix(dict):
 
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
-        """Returns a copy of the immutable Color String representation struct2 
+        """Returns a copy of the immutable Color String representation struct2
         where summed indices are modified to avoid duplicates with those
         appearing in struct1. Assumes internal summed indices are negative."""
 
         # First, determines what is the smallest index appearing in struct1
-        #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
-        list2 = sum((list(elem[1]) for elem in struct1),[])
-        if not list2: 
+        list1 = sum((list(elem[1]) for elem in struct1),[])
+        list2 = sum((list(elem[1]) for elem in struct2),[])
+        if not list1:
             min_index = -1
         else:
-           min_index = min(list2) - 1
+           min_index = min(list1) - 1
 
-        # Second, determines the summed indices in struct2 and create a 
+        # Second, determines the summed indices in struct2 and create a
         # replacement dictionary
         repl_dict = {}
         #list2 = reduce(operator.add,

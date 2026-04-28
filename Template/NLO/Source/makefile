@@ -34,6 +34,7 @@ $(LIBDIR)librunning.$(libext): RUNNING
 $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a
 	cd DHELAS; make
+	cp -f DHELAS/aloha_object.mod $(LIBDIR)
 
 $(LIBDIR)libgeneric.a: $(GENERIC)
 	rm -f $(LIBDIR)libgeneric.a
@@ -64,7 +65,8 @@ $(LIBDIR)libcernlib.a: CERNLIB
 
 $(LIBDIR)libmodel.a: MODEL param_card.inc
 	rm -f $(LIBDIR)libmodel.a
-	cd MODEL; make	
+	cd MODEL; make
+	cp -f MODEL/model_object.mod $(LIBDIR)
 
 run_card.inc: ../Cards/run_card.dat
 	../bin/aMCatNLO treatcards run

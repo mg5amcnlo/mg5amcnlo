@@ -670,7 +670,7 @@ class Test_DecayModel2(unittest.TestCase):
                 Test_DecayModel2.base_model = Test_DecayModel.base_model
                 Test_DecayModel2.my_testmodel_base = Test_DecayModel.my_testmodel_base
             else:
-                Test_DecayModel2.base_model = import_ufo.import_model('MSSM_SLHA2')
+                Test_DecayModel2.base_model = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
                 Test_DecayModel2.my_testmodel_base = import_ufo.import_model('sm')
 
         #if hasattr(Test_DecayModel2,'my_testmodel'):
@@ -794,7 +794,7 @@ class Test_DecayModel(unittest.TestCase):
                 Test_DecayModel.base_model = Test_DecayModel2.base_model
                 Test_DecayModel.my_testmodel_base = Test_DecayModel2.my_testmodel_base
             else:
-                Test_DecayModel.base_model = import_ufo.import_model('MSSM_SLHA2')
+                Test_DecayModel.base_model = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
                 Test_DecayModel.my_testmodel_base = import_ufo.import_model('sm')
         
         if hasattr(Test_DecayModel,'my_testmodel'):
@@ -955,7 +955,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('MSSM_SLHA2')
+        mssm = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
         decay_mssm = decay_objects.DecayModel(mssm, True)
         decay_mssm.find_decay_groups()
         goal_groups = [[25, 35, 36, 37],
@@ -969,7 +969,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('MSSM_SLHA2')
+        mssm = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
         particles = mssm.get('particles')
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
@@ -1011,7 +1011,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_general(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('MSSM_SLHA2')
+        mssm = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
         decay_mssm = decay_objects.DecayModel(mssm, True)
         # Read data to find massless SM-like particle
         param_path = os.path.join(_file_path,
@@ -1048,7 +1048,7 @@ class Test_DecayModel(unittest.TestCase):
            Test to get decay_groups and stable_particles from get."""
 
         # Setup the mssm with parameters read in.
-        mssm = import_ufo.import_model('MSSM_SLHA2')
+        mssm = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
         decay_mssm = decay_objects.DecayModel(mssm, True)
         particles = decay_mssm.get('particles')
         param_path = os.path.join(_file_path,
@@ -1355,7 +1355,7 @@ class Test_DecayModel(unittest.TestCase):
 
 
         # Read mssm
-        model_base = import_ufo.import_model('MSSM_SLHA2')
+        model_base = import_ufo.import_model('MSSM_SLHA2', options={'apply_flavor_grouping': False})
         model = decay_objects.DecayModel(model_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         model.read_param_card(param_path)
@@ -1441,9 +1441,9 @@ class Test_DecayModel(unittest.TestCase):
         # GC_365 should not change
         self.assertAlmostEqual(eval('decay_objects.'+coup0.name), coup0_old)
 
-        # Both of GC_114 ('aS',) and GC_15 ('aEWSM1', 'aS') should change
+        # GC_7 ('aS',) should change (its formula is 1j*G)
         self.assertAlmostEqual(eval('decay_objects.'+coup_aS.name), \
-                                   1j*decay_objects.G**2)
+                                   1j*decay_objects.G)
 
         # copying the expr of 
         self.assertAlmostEqual(eval('decay_objects.'+coup_both.name), \
@@ -2799,8 +2799,9 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         self.assertEqual(h_zz_eemumu_Tag, h_zz_mumumumu_Tag)
         # Lorentz structure of z > e e~ != z > ve ve~
         self.assertNotEqual(h_zz_eemumu_Tag, h_zz_eeveve_Tag)
-        # Lorentz structure of z > up-type up-type != z > down-type down-type
-        self.assertNotEqual(h_zz_ssss_Tag, h_zz_sscc_Tag)
+        # In the flavor-merged SM model, s and c quarks share the same Lorentz
+        # structures for the Z vertex, so their HELAS tags are equal.
+        self.assertEqual(h_zz_ssss_Tag, h_zz_sscc_Tag)
         self.assertNotEqual(h_zz_sscc_Tag, h_ww_sscc_Tag)
         self.assertNotEqual(h_zz_sscc_Tag, h_zz_eemumu_Tag)
 
@@ -2810,6 +2811,82 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         new_tag = diagram_generation.DiagramTag(new_diagram)
         old_tag = diagram_generation.DiagramTag(h_zz_ssss)
         #print new_tag, old_tag
+        self.assertEqual(new_tag, old_tag)
+
+    def test_helas_comparison_unmerged(self):
+        """Test the ability to identify Helas calls using unmerged SM model."""
+
+        # Load an unmerged (non-flavor-grouped) model for this test so that
+        # up-type and down-type quarks have distinct Lorentz structures.
+        sm_path = import_ufo.find_ufo_path('sm')
+        unmerged_base = import_ufo.import_model(sm_path, options={'apply_flavor_grouping': False})
+        my_model = decay_objects.DecayModel(unmerged_base, True)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        my_model.read_param_card(param_path)
+
+        particles = my_model.get('particles')
+        interactions = my_model.get('interactions')
+        inter_list = copy.copy(interactions)
+        no_want_pid = [1, 2, 15, 16, 21]
+        for pid in no_want_pid:
+            particles.remove(my_model.get_particle(pid))
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in inter.get('particles')]):
+                interactions.remove(inter)
+        my_model.set('name', 'my_smallsm_unmerged')
+        my_model.set('particles', particles)
+        my_model.set('interactions', interactions)
+        my_model.find_vertexlist()
+
+        # Turn higgs decay into 4-body
+        decay_objects.mdl_MH = 80
+        h = my_model.get_particle(25)
+        h.find_channels(4, my_model)
+
+        for c in h.get_channels(4, True):
+            pids = set([l['id'] for l in c.get_final_legs()])
+            if pids == set([3, -3, 4, -4]) and \
+                    c['vertices'][0]['legs'][-1]['id'] == 23:
+                h_zz_sscc = c
+                h_zz_sscc_Tag = decay_objects.IdentifyHelasTag(h_zz_sscc, my_model)
+            if pids == set([3, -3, 3, -3]):
+                h_zz_ssss = c
+                h_zz_ssss_Tag = decay_objects.IdentifyHelasTag(h_zz_ssss, my_model)
+            if pids == set([5, -5, 5, -5]):
+                h_zz_bbbb = c
+                h_zz_bbbb_Tag = decay_objects.IdentifyHelasTag(h_zz_bbbb, my_model)
+            if pids == set([11, -11, 12, -12]) and \
+                    c['vertices'][0]['legs'][-1]['id'] == 23:
+                h_zz_eeveve = c
+                h_zz_eeveve_Tag = decay_objects.IdentifyHelasTag(h_zz_eeveve, my_model)
+            if pids == set([11, -11, 13, -13]):
+                h_zz_eemumu = c
+                h_zz_eemumu_Tag = decay_objects.IdentifyHelasTag(h_zz_eemumu, my_model)
+            if pids == set([13, -13, 13, -13]):
+                h_zz_mumumumu = c
+                h_zz_mumumumu_Tag = decay_objects.IdentifyHelasTag(h_zz_mumumumu, my_model)
+            if pids == set([3, -3, 4, -4]) and \
+                    abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                h_ww_sscc = c
+                h_ww_sscc_Tag = decay_objects.IdentifyHelasTag(h_ww_sscc, my_model)
+            if pids == set([11, -11, 12, -12]) and \
+                    abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                h_ww_eeveve = c
+                h_ww_eeveve_Tag = decay_objects.IdentifyHelasTag(h_ww_eeveve, my_model)
+
+        self.assertEqual(h_zz_ssss_Tag, h_zz_bbbb_Tag)
+        self.assertEqual(h_zz_eemumu_Tag, h_zz_mumumumu_Tag)
+        # Lorentz structure of z > e e~ != z > ve ve~
+        self.assertNotEqual(h_zz_eemumu_Tag, h_zz_eeveve_Tag)
+        # In the unmerged model, Lorentz structure of z > ss != z > sc
+        self.assertNotEqual(h_zz_ssss_Tag, h_zz_sscc_Tag)
+        self.assertNotEqual(h_zz_sscc_Tag, h_ww_sscc_Tag)
+        self.assertNotEqual(h_zz_sscc_Tag, h_zz_eemumu_Tag)
+
+        # Test diagram_from_tag
+        new_diagram = h_zz_ssss_Tag.diagram_from_tag(my_model)
+        new_tag = diagram_generation.DiagramTag(new_diagram)
+        old_tag = diagram_generation.DiagramTag(h_zz_ssss)
         self.assertEqual(new_tag, old_tag)
 
     def test_helas_helpers(self):
@@ -3684,11 +3761,12 @@ class Test_AbstractModel(unittest.TestCase):
         #print type_sn, inter_type[1], inter_type[2], new_inter['couplings']
         self.assertEqual(new_inter.get('id') % 10, 1)
         self.assertEqual(new_inter.get('color'), I_wtb['color'])
-        self.assertEqual(new_inter.get('lorentz'), ['FFV2', 'FFV3', 'FFV5'])
+        self.assertEqual(new_inter.get('lorentz'), ['FFS1', 'FFS3', 'FFV2', 'FFV6'])
         self.assertEqual(new_inter.get('couplings'), 
                          {(0,0):'G%03d0001' %type_sn,
                           (0,1):'G%03d0101' %type_sn,
-                          (0,2):'G%03d0201' %type_sn})
+                          (0,2):'G%03d0201' %type_sn,
+                          (0,3):'G%03d0301' %type_sn})
 
 
     def test_get_interactions_type(self):

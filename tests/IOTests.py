@@ -560,10 +560,8 @@ class IOTestManager(unittest.TestCase):
             if verbose: print("Processing %s in %s"%(
                                 colored%(32,test_name),colored%(34,folder_name)))
             
-            files_path = iotest.run(iotestManager)
             try:
-                pass
-#                files_path = iotest.run(iotestManager)
+                files_path = iotest.run(iotestManager)
             except Exception as e: 
                 iotest.clean_output()
                 if not verbose:

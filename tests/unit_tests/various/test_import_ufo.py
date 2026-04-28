@@ -567,10 +567,52 @@ class TestRestrictModel(unittest.TestCase):
   
     def test_merge_iden_couplings(self):
         """ check that the merged couplings are treated correctly:
-             suppression and replacement in the vertex """
+             suppression and replacement in the vertex (allow_minus_coupling=False) """
         
         self.model.locate_coupling()
         zero, iden = self.model.detect_identical_couplings()
+        self.assertEqual(len(iden), 2)
+        
+        # Check that All the code/model is the one intended for this test
+        target = [i for i in iden if len(i)==7][0] 
+        target2 = [i[0] for i in target]
+        GC = target2[0]
+        
+        check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
+        content =  [[p.get('name') for p in v.get('particles')] \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+        self.assertEqual(len(check_content),len(content))#, 'test not up-to-date'      
+
+        vertex_id = [v.get('id') \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+
+        for id in vertex_id:
+            is_in_target = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                if coup in target2:
+                    is_in_target = True
+            assert is_in_target == True, 'test not up-to-date'
+        
+        # check now that everything is fine
+        self.model.merge_iden_couplings(target)
+        for id in vertex_id:
+            has_GC = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                self.assertNotIn(coup, target[1:])
+                if coup == GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
+
+    def test_merge_iden_couplings_with_minus(self):
+        """ check that the merged couplings are treated correctly with allow_minus_coupling=True:
+             suppression and replacement in the vertex, including opposite-sign couplings """
+        
+        self.model.locate_coupling()
+        zero, iden = self.model.detect_identical_couplings(allow_minus_coupling=True)
         self.assertEqual(len(iden), 14)
         
         # Check that All the code/model is the one intended for this test
@@ -616,8 +658,6 @@ class TestRestrictModel(unittest.TestCase):
         content =  [[p.get('name') for p in v.get('particles')] \
                for v in self.model.get('interactions') \
                if any([c in target2 for c in v['couplings'].values()])]
-        #content =  [[v.get('couplings').values() for p in v.get('particles')] \
-        #       for v in self.model.get('interactions')]
         self.assertEqual(len(check_content),len(content))#, 'test not up-to-date'
         
         vertex_id = [v.get('id') \
@@ -640,7 +680,6 @@ class TestRestrictModel(unittest.TestCase):
                     has_GC = True
             self.assertTrue(has_GC, True)
         
-                 
 
     def test_remove_couplings(self):
         """ check that the detection of irrelevant interactions works """
@@ -995,28 +1034,543 @@ class TestBenchmarkModel(unittest.TestCase):
         model = import_ufo.import_model('sm-no_b_mass') 
         self.assertEqual(model["name"], "sm-no_b_mass")        
 
+
 #===============================================================================
-# TestRestrictModel
+# TestRestrictModel_Merged
 #===============================================================================
-class TestRestrictModel_Flavor(unittest.TestCase):
-    """Test class for the RestrictModel object"""
+class TestRestrictModel_Merged(unittest.TestCase):
+    """Duplicate of TestRestrictModel with the model fully merged via restrict_model.
+    Verifies that detection/manipulation methods behave correctly on an already-
+    restricted model."""
 
     def setUp(self):
-        """Set up decay model"""
-        #Read the full SM
-        sm_path = import_ufo.find_ufo_path('sm', )
-        self.base_model = import_ufo.import_full_model(sm_path,  options={'apply_flavor_grouping':True})
+        """Set up fully restricted SM model"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        self.base_model = import_ufo.import_full_model(sm_path, options={'apply_flavor_grouping': True})
 
         model = copy.deepcopy(self.base_model)
         self.model = import_ufo.RestrictModel(model)
         self.restrict_file = os.path.join(_file_path, os.path.pardir,
                                      'input_files', 'restrict_sm.dat')
-        self.model.set_parameters_and_couplings(self.restrict_file)
+        # Apply the full restriction pipeline (merge identical couplings/parameters,
+        # remove zero couplings/interactions, etc.)
+        self.model.restrict_model(self.restrict_file)
 
-    def test_to_implement(self):
-        """ check that the flavor grouping is correctly implemented in the model
-            and that the restriction works as expected in this case
-        """
-        
-        raise Exception('test not implemented yet')
-         
+    def test_detect_special_parameters(self):
+        """check that detect zero parameters works on a merged model"""
+
+        expected = set(['I3x32', 'etaWS', 'conjg__CKM3x2', 'CKM1x2', 'WT', 'I1x32', 'I1x33', 'I1x31', 'I2x32', 'CKM3x1', 'I2x13', 'I2x12', 'I3x23', 'I3x22', 'I3x21', 'conjg__CKM2x1', 'lamWS', 'conjg__CKM2x3', 'I2x23', 'AWS', 'CKM1x3', 'conjg__CKM3x1', 'I4x23', 'ymc', 'ymb', 'yme', 'CKM3x2', 'CKM2x3', 'CKM2x1', 'ymm', 'conjg__CKM1x3', 'Me', 'ym', 'I2x22', 'WTau', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'MC', 'MB', 'MM', 'conjg__CKM1x2', 'I3x31', 'rhoWS', 'I4x33', 'I4x13'])
+        zero, one = self.model.detect_special_parameters()
+        result = set(zero)
+        self.assertEqual(len(result), len(expected))
+        self.assertEqual(expected, result)
+
+        expected = set(['conjg__CKM3x3', 'conjg__CKM2x2', 'CKM1x1', 'CKM2x2', 'CKM3x3', 'conjg__CKM1x1'])
+        result = set(one)
+        self.assertEqual(expected, result)
+
+    def test_detect_identical_parameters(self):
+        """After restrict_model, no identical parameters remain to be detected"""
+
+        result = self.model.detect_identical_parameters()
+        # MH/MZ were already merged in setUp's restrict_model
+        self.assertEqual(result, [])
+
+    def test_merge_identical_parameters(self):
+        """After restrict_model, identical parameters are already merged; check state"""
+
+        # No identical parameters remain
+        parameters = self.model.detect_identical_parameters()
+        self.assertEqual(parameters, [])
+
+        # One of MH/MZ is kept as external, the other is a derived parameter
+        keeped, rejected = None, None
+        for param in self.model['parameters'][('external',)]:
+            if param.name == 'MH':
+                self.assertIsNone(keeped)
+                keeped, rejected = 'MH', 'MZ'
+            elif param.name == 'MZ':
+                self.assertIsNone(keeped)
+                keeped, rejected = 'MZ', 'MH'
+        self.assertIsNotNone(keeped)
+
+        found = 0
+        for param in self.model['parameters'][()]:
+            self.assertNotEqual(param.name, keeped)
+            if param.name == rejected:
+                found += 1
+                self.assertEqual(param.expr, '1*%s' % keeped)
+        self.assertEqual(found, 1)
+
+        # The Z and H particles should share the same mass parameter
+        self.assertEqual(self.model['particle_dict'][23]['mass'],
+                         self.model['particle_dict'][25]['mass'])
+        self.assertNotEqual(self.model['particle_dict'][23]['width'],
+                         self.model['particle_dict'][25]['width'])
+
+    def test_detect_zero_iden_couplings(self):
+        """check that detect zero/identical couplings works on a merged model"""
+
+        zero, iden = self.model.detect_identical_couplings(allow_minus_coupling=True)
+
+        expected = set(['GC_17', 'GC_16', 'GC_15', 'GC_14', 'GC_13', 'GC_19', 'GC_18', 'GC_22', 'GC_30', 'GC_20', 'GC_89', 'GC_88', 'GC_101', 'GC_102', 'GC_103', 'GC_42', 'GC_106', 'GC_107', 'GC_82', 'GC_43', 'GC_84', 'GC_85', 'GC_86', 'GC_105', 'GC_28', 'GC_29', 'GC_48', 'GC_44', 'GC_23', 'GC_46', 'GC_47', 'GC_26', 'GC_24', 'GC_25', 'GC_83', 'GC_87', 'GC_93', 'GC_92', 'GC_91', 'GC_90'])
+        result = set(zero)
+        self.assertEqual(len(expected), len(result))
+        for name in result:
+            self.assertEqual(self.model['coupling_dict'][name], 0)
+        self.assertEqual(expected, result)
+
+        expected = [[('GC_100',1), ('GC_108',1), ('GC_49',1), ('GC_45',1), ('GC_40',1), ('GC_41',1), ('GC_104',1)],
+                    [('GC_21', 1), ('GC_27', -1)],
+                    [('GC_3', 1), ('GC_4', -1)],
+                    [('GC_38', 1), ('GC_39', -1)],
+                    [('GC_50', 1), ('GC_51', -1)],
+                    [('GC_54', 1), ('GC_56', -1)],
+                    [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_68', 1), ('GC_80', 1)],
+                    [('GC_7', 1), ('GC_9', -1)],
+                    [('GC_70', 1), ('GC_73', -1)],
+                    [('GC_74', 1), ('GC_75', -1)],
+                    [('GC_76', 1), ('GC_79', -1)],
+                    [('GC_77', 1), ('GC_78', -1)],
+                    [('GC_96', 1), ('GC_97', -1)]]
+
+        for elem in expected:
+            elem.sort(key=str)
+        for elem in iden:
+            elem.sort(key=str)
+
+        expected.sort(key=str)
+        iden.sort(key=str)
+
+        self.assertEqual(expected, iden)
+
+    def test_locate_couplings(self):
+        """check the coupling-to-vertex dict on a merged model.
+        bbh is absent (removed by restrict); wen uses the merged coupling GC_100."""
+
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [23, 23, 25, 25]:
+                input_zzhh = candidate
+                coupling_zzhh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 12, 24]:
+                # GC_40..GC_49 were merged into GC_100 by restrict_model
+                input_wen = candidate
+                coupling_wen = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [22, 24, 24]:
+                input_aww = candidate
+                coupling_aww = candidate['couplings'][(0,0)]
+
+        sol = {coupling_zzhh: [input_zzhh['id']],
+               coupling_aww: [input_aww['id']]}
+
+        self.model.locate_coupling()
+
+        # zzhh and aww: each maps to exactly one vertex
+        for coup in [coupling_zzhh, coupling_aww]:
+            self.assertIn(coup, self.model.coupling_pos)
+            self.assertEqual(sol[coup], [v['id'] for v in self.model.coupling_pos[coup]])
+
+        # The merged wen coupling covers all 12 quark/lepton charged-current vertices
+        self.assertIn(coupling_wen, self.model.coupling_pos)
+        self.assertEqual(len(self.model.coupling_pos[coupling_wen]), 12)
+
+    def test_merge_iden_couplings(self):
+        """check that re-applying merge_iden_couplings on an already-merged model
+        is a no-op and leaves the canonical coupling in place."""
+
+        self.model.locate_coupling()
+        zero, iden = self.model.detect_identical_couplings()
+        self.assertEqual(len(iden), 2)
+
+        target = [i for i in iden if len(i)==7][0]
+        target2 = [i[0] for i in target]
+        GC = target2[0]
+
+        check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
+        content =  [[p.get('name') for p in v.get('particles')] \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+        self.assertEqual(len(check_content), len(content))
+
+        vertex_id = [v.get('id') \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+        for id in vertex_id:
+            is_in_target = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                if coup in target2:
+                    is_in_target = True
+            assert is_in_target == True, 'test not up-to-date'
+
+        # Re-applying merge_iden_couplings should be a no-op: canonical GC_100 stays
+        self.model.merge_iden_couplings(target)
+        for id in vertex_id:
+            has_GC = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                self.assertNotIn(coup, target[1:])
+                if coup == GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
+
+    def test_merge_iden_couplings_with_minus(self):
+        """check that re-applying merge_iden_couplings (allow_minus_coupling=True)
+        on an already-merged model works correctly for both same-sign and
+        opposite-sign coupling groups."""
+
+        self.model.locate_coupling()
+        zero, iden = self.model.detect_identical_couplings(allow_minus_coupling=True)
+        self.assertEqual(len(iden), 14)
+
+        target = [i for i in iden if len(i)==7][0]
+        target2 = [i[0] for i in target]
+        GC = target2[0]
+
+        check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
+        content =  [[p.get('name') for p in v.get('particles')] \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+        self.assertEqual(len(check_content), len(content))
+
+        vertex_id = [v.get('id') \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+
+        for id in vertex_id:
+            is_in_target = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                if coup in target2:
+                    is_in_target = True
+            assert is_in_target == True, 'test not up-to-date'
+
+        self.model.merge_iden_couplings(target)
+        for id in vertex_id:
+            has_GC = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                self.assertNotIn(coup, target[1:])
+                if coup == GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
+
+        # check opposite-sign coupling group (GC_3 / GC_4)
+        target = [i for i in sorted(iden) if len(i)==2][1]
+        target2 = [i[0] for i in target]
+        GC = target2[0]
+
+        check_content = [['a', 'w+', 'w+'], ['e-', 'e-', 'a'], ['mu-', 'mu-', 'a'], ['ta-', 'ta-', 'a']]
+        content =  [[p.get('name') for p in v.get('particles')] \
+               for v in self.model.get('interactions') \
+               if any([c in target2 for c in v['couplings'].values()])]
+        self.assertEqual(len(check_content), len(content))
+
+        vertex_id = [v.get('id') \
+               for v in self.model.get('interactions') \
+               if any([c in target2[1:] for c in v['couplings'].values()])]
+
+        for id in vertex_id:
+            is_in_target = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                if coup in target2:
+                    is_in_target = True
+            assert is_in_target == True, 'test not up-to-date'
+
+        self.model.merge_iden_couplings(target)
+        for id in vertex_id:
+            has_GC = False
+            for coup in self.model.get_interaction(id)['couplings'].values():
+                self.assertNotIn(coup, target[1:])
+                if coup == '-%s' % GC:
+                    has_GC = True
+            self.assertTrue(has_GC, True)
+
+    def test_remove_couplings(self):
+        """check that the detection of irrelevant interactions works (merged model).
+        Uses GC_12 (4g) and GC_65 (zzhh) which survive restrict_model."""
+
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [23, 23, 25, 25]:
+                coupling_zzhh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                coupling_4g = candidate['couplings'][(0,0)]
+
+        found_zzhh = 0
+        found_4g = 0
+        for dep, data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_zzhh: found_zzhh += 1
+                elif param.name == coupling_4g: found_4g += 1
+        self.assertGreater(found_zzhh, 0)
+        self.assertGreater(found_4g, 0)
+
+        result = self.model.remove_couplings([coupling_zzhh, coupling_4g])
+
+        for dep, data in self.model['couplings'].items():
+            for param in data:
+                self.assertNotIn(param.name, [coupling_zzhh, coupling_4g])
+
+    def test_remove_interactions(self):
+        """check that the detection of irrelevant interactions works (merged model).
+        Uses GC_65 (zzhh) and GC_12 (4g); with apply_flavor_grouping=True, ddz
+        uses GC_FFV_0/GC_FFV_1 while eez uses GC_FFV_2/GC_FFV_3 (different), so
+        removing ddz couplings does not affect eez."""
+
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [23, 23, 25, 25]:
+                input_zzhh = candidate
+                coupling_zzhh = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                input_4g = candidate
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]
+                coupling_eez_2 = candidate['couplings'][(0,1)]
+
+        found_4g = 0
+        found_zzhh = 0
+        for dep, data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_4g: found_4g += 1
+                elif param.name == coupling_zzhh: found_zzhh += 1
+        self.assertGreater(found_zzhh, 0)
+        self.assertGreater(found_4g, 0)
+
+        self.model.locate_coupling()
+        result = self.model.remove_interactions([coupling_zzhh, coupling_4g])
+        self.assertNotIn(input_zzhh, self.model['interactions'])
+        self.assertNotIn(input_4g, self.model['interactions'])
+
+        # With apply_flavor_grouping=True, ddz and eez have different couplings
+        # (GC_FFV_0/1 vs GC_FFV_2/3), so removing ddz couplings leaves eez intact
+        assert coupling_ddz_1 != coupling_eez_1, \
+            'With flavor grouping, ddz and eez should have different couplings'
+
+        result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
+        # eez is entirely unaffected
+        self.assertIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        # ddz lost both its couplings
+        self.assertNotIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertNotIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
+
+    def test_remove_interactions2(self):
+        """check that the detection of irrelevant interactions works (merged model).
+        With apply_flavor_grouping=True, ddz uses GC_FFV_0/GC_FFV_1 and eez uses
+        GC_FFV_2/GC_FFV_3; removing coupling_ddz_1 does not affect eez."""
+
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]
+                coupling_eez_2 = candidate['couplings'][(0,1)]
+
+        found_4g = 0
+        for dep, data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_4g: found_4g += 1
+        self.assertGreater(found_4g, 0)
+
+        self.model.locate_coupling()
+
+        # With flavor grouping, ddz and eez have independent couplings
+        assert coupling_ddz_1 != coupling_eez_1, \
+            'With flavor grouping, ddz and eez should have different couplings'
+
+        result = self.model.remove_interactions([coupling_ddz_1])
+        # eez fully unaffected
+        self.assertIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        # ddz: lost coupling_ddz_1, kept coupling_ddz_2
+        self.assertNotIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
+
+        self.assertEqual(len(input_ddz['couplings']), 1)
+        self.assertEqual(len(input_ddz['lorentz']), 1)
+        self.assertEqual(list(input_ddz['couplings'].keys())[0], (0,0))
+
+    def test_remove_interactions3(self):
+        """check that the detection of irrelevant interactions works (merged model).
+        With apply_flavor_grouping=True, ddz uses GC_FFV_0/GC_FFV_1 and eez uses
+        GC_FFV_2/GC_FFV_3; removing coupling_ddz_2 does not affect eez."""
+
+        for candidate in self.model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [21, 21, 21, 21]:
+                coupling_4g = candidate['couplings'][(0,0)]
+            if [p['pdg_code'] for p in candidate['particles']] == [1, 1, 23]:
+                input_ddz = candidate
+                coupling_ddz_1 = candidate['couplings'][(0,0)]
+                coupling_ddz_2 = candidate['couplings'][(0,1)]
+            if [p['pdg_code'] for p in candidate['particles']] == [11, 11, 23]:
+                input_eez = candidate
+                coupling_eez_1 = candidate['couplings'][(0,0)]
+                coupling_eez_2 = candidate['couplings'][(0,1)]
+
+        found_4g = 0
+        for dep, data in self.model['couplings'].items():
+            for param in data:
+                if param.name == coupling_4g: found_4g += 1
+        self.assertGreater(found_4g, 0)
+
+        self.model.locate_coupling()
+
+        # With flavor grouping, ddz and eez have independent couplings
+        assert coupling_ddz_1 != coupling_eez_1, \
+            'With flavor grouping, ddz and eez should have different couplings'
+
+        result = self.model.remove_interactions([coupling_ddz_2])
+        # eez fully unaffected
+        self.assertIn(coupling_eez_1, list(input_eez['couplings'].values()))
+        self.assertIn(coupling_eez_2, list(input_eez['couplings'].values()))
+        # ddz: lost coupling_ddz_2, kept coupling_ddz_1
+        self.assertIn(coupling_ddz_1, list(input_ddz['couplings'].values()))
+        self.assertNotIn(coupling_ddz_2, list(input_ddz['couplings'].values()))
+
+        self.assertEqual(len(input_ddz['couplings']), 1)
+        self.assertEqual(len(input_ddz['lorentz']), 1)
+        self.assertEqual(list(input_ddz['couplings'].keys())[0], (0,0))
+
+    def test_put_parameters_to_zero(self):
+        """check that we remove parameters correctly on a merged model"""
+
+        part_t = self.model.get_particle(6)
+        # top quark mass is still present (not zeroed by restrict_model)
+        self.assertEqual(part_t['mass'], 'MT')
+        self.model.fix_parameter_values(['MT'], [])
+        self.assertEqual(part_t['mass'], 'ZERO')
+        for dep, data in self.model['parameters'].items():
+            for param in data:
+                self.assertNotEqual(param.name, 'MT')
+
+        for particle in self.model['particles']:
+            self.assertNotEqual(particle['mass'], 'MT')
+
+        for pdg, particle in self.model['particle_dict'].items():
+            self.assertNotEqual(particle['mass'], 'MT')
+
+        # top quark width was already zeroed by restrict_model
+        self.assertEqual(part_t['width'], 'ZERO')
+        for dep, data in self.model['parameters'].items():
+            for param in data:
+                self.assertNotEqual(param.name, 'WT')
+
+        for pdg, particle in self.model['particle_dict'].items():
+            self.assertNotEqual(particle['width'], 'WT')
+
+        # ymb and yb were already removed by restrict_model
+        for dep, data in self.model['parameters'].items():
+            for param in data:
+                self.assertNotIn(param.name, ['ymb', 'yb'])
+
+    def test_get_new_coupling_name(self):
+        """test that the static function get_new_coupling_name behaves as expected
+        (same as non-merged variant; no model state used)"""
+
+        self.assertRaises(AssertionError, import_ufo.RestrictModel.get_new_coupling_name,
+                         '','','',0)
+        self.assertRaises(AssertionError, import_ufo.RestrictModel.get_new_coupling_name,
+                         '','','',2.)
+        self.assertRaises(AssertionError, import_ufo.RestrictModel.get_new_coupling_name,
+                         '','1','2',1)
+        self.assertRaises(AssertionError, import_ufo.RestrictModel.get_new_coupling_name,
+                         '',1,1,1)
+        self.assertRaises(AssertionError, import_ufo.RestrictModel.get_new_coupling_name,
+                         1,'1','1',1)
+
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', 'GC2', 'GC2', 1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', 'GC2', '-GC2', 1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', '-GC2', 'GC2', 1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', '-GC2', '-GC2', 1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', 'GC2', 'GC2', 1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', 'GC2', '-GC2', 1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', '-GC2', 'GC2', 1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', '-GC2', '-GC2', 1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', 'GC2', 'GC2', -1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', 'GC2', '-GC2', -1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', '-GC2', 'GC2', -1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        'GC1', '-GC2', '-GC2', -1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', 'GC2', 'GC2', -1), 'GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', 'GC2', '-GC2', -1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', '-GC2', 'GC2', -1), '-GC1')
+        self.assertEqual(import_ufo.RestrictModel.get_new_coupling_name(\
+                        '-GC1', '-GC2', '-GC2', -1), 'GC1')
+
+    def test_restrict_from_a_param_card(self):
+        """check that applying restrict_model a second time is idempotent"""
+
+        # Find the coupling for an interaction that was already removed
+        coupling_bbh = None
+        for candidate in self.base_model['interactions']:
+            if [p['pdg_code'] for p in candidate['particles']] == [5, 5, 25]:
+                coupling_bbh = candidate['couplings'][(0,0)]
+                break
+
+        # Confirm the already-restricted state before second call
+        self.assertNotIn(coupling_bbh,
+                         [c.name for dep, data in self.model['couplings'].items()
+                          for c in data])
+
+        # Apply restriction a second time
+        self.model.restrict_model(self.restrict_file)
+
+        # bbh interaction must still be absent
+        for candidate in self.model['interactions']:
+            self.assertNotEqual([p['pdg_code'] for p in candidate['particles']],
+                                [5, 5, 25])
+
+        # Parameters removed by restrict must still be absent
+        for dep, data in self.model['parameters'].items():
+            for param in data:
+                self.assertNotIn(param.name, ['yb', 'ymb', 'MB', 'WT'])
+
+        # b quark mass and t quark width are ZERO
+        part_b = self.model.get_particle(5)
+        part_t = self.model.get_particle(6)
+        self.assertEqual(part_b['mass'], 'ZERO')
+        self.assertEqual(part_t['width'], 'ZERO')
+
+        # MH/MZ: one is kept as external, the other remains a derived parameter
+        keeped, rejected = None, None
+        for param in self.model['parameters'][('external',)]:
+            if param.name == 'MH':
+                self.assertEqual(keeped, None)
+                keeped, rejected = 'MH', 'MZ'
+            elif param.name == 'MZ':
+                self.assertEqual(keeped, None)
+                keeped, rejected = 'MZ', 'MH'
+        self.assertNotEqual(keeped, None)
+
+        found = 0
+        for param in self.model['parameters'][()]:
+            self.assertNotEqual(param.name, keeped)
+            if param.name == rejected:
+                found += 1
+        self.assertEqual(found, 1)
+

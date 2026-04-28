@@ -177,10 +177,10 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     why it is so."""
 
     class version:
-        def __init__(input):
+        def __init__(self, input):
             self.info = input.split('.')
 
-        def __lt__(input):
+        def __lt__(self, input):
             if isinstance(input, str):
                 input = version(input)
             
@@ -214,12 +214,24 @@ def is_MA5_compatible_with_this_MG5(ma5path):
 
     ma5_version = None
     try:
-        for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
-            if line.startswith('MA5 version :'):
-                ma5_version=LooseVersion(line[13:].strip())
-                break
-    except:
+        text = open(pjoin(ma5path,'bin', 'ma5'),'r').read()
+        pattern = re.compile(r'\s*version\s*=\s*["\'](.*)["\']\s*')
+        ma5_version = pattern.findall(text)[0]
+        ma5_version=LooseVersion(ma5_version)
+    except Exception as error:
+        misc.sprint(error)   
         ma5_version = None
+    # fallback to version.txt if the above method fails.
+    # for the transition period where that file still exists (from HEPinstaller)
+    if not ma5_version and os.path.exists(pjoin(ma5path,'version.txt')):
+        try:
+            for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
+                if line.startswith('MA5 version :'):
+                    ma5_version=LooseVersion(line[13:].strip())
+                    break
+        except Exception:
+            ma5_version = None
+
 
     if ma5_version is None:
         reason = "No MadAnalysis5 version number could be read from the path supplied '%s'."%ma5path
@@ -237,13 +249,13 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     if not mg5_version:
         return None
     
-    if mg5_version < LooseVersion("2.6.1") and ma5_version >= LooseVersion("1.6.32"):
+    if mg5_version < LooseVersion("2.6.1") and ma5_version > LooseVersion("1.6.31"):
         reason =  "This active MG5aMC version is too old (v%s) for your selected version of MadAnalysis5 (v%s)"%(mg5_version,ma5_version)
         reason += "\nUpgrade MG5aMC or re-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
         return reason
 
-    if mg5_version >= LooseVersion("2.6.1") and ma5_version < LooseVersion("1.6.32"):
+    if mg5_version > LooseVersion("2.6.0") and ma5_version < LooseVersion("1.6.32"):
         reason = "Your selected version of MadAnalysis5 (v%s) is too old for this active version of MG5aMC (v%s)."%(ma5_version,mg5_version)
         reason += "\nRe-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."

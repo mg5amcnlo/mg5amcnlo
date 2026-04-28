@@ -10054,7 +10054,6 @@ C     Gamma(3,2,1)
 C     
       SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1,F1)
       USE ALOHA_OBJECT
-      USE MODEL_OBJECT
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
@@ -10113,7 +10112,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_15', 'GC_21', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_50', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_74', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_96', 'GC_98', 'GC_99', 'GC_100']
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_4', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_9', 'GC_15', 'GC_21', 'GC_27', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_67', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_73', 'GC_74', 'GC_75', 'GC_76', 'GC_77', 'GC_78', 'GC_79', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_96', 'GC_97', 'GC_98', 'GC_99', 'GC_100', 'GC_FFV_0', 'GC_FFV_1', 'GC_FFV_2', 'GC_FFV_3', 'GC_FFV_4', 'GC_FFV_5']
 
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 

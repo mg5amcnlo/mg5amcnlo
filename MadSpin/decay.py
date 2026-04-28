@@ -2792,9 +2792,11 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
-            
-        
+                try:
+                    mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                except Exception as e:
+                    pass
+
         mgcmd.exec_cmd("set group_subprocesses False")
         logger.info('generating the production square matrix element')
         start = time.time()

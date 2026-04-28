@@ -4709,6 +4709,7 @@ c has soft singularities
 
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
+      USE ALOHA_OBJECT
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4741,7 +4742,8 @@ C
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double precision t,z,ap(2),E_j_fks,E_i_fks,Q(2),cphi_mother,
      # sphi_mother,pi(0:3),pj(0:3),wgt_born
-      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      TYPE(ALOHA) W1,W2,W3,W4
+      double complex Wij_angle,Wij_recta
       double complex azifact
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
@@ -4825,15 +4827,15 @@ c Insert <ij>/[ij] which is not included by sborn()
                   pi(i)=p_i_fks_ev(i)
                   pj(i)=p(i,j_fks)
                enddo
-               CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-               CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-               CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-               CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
+               CALL IXXXSO(pi ,ZERO ,+1,+1,1,W1)        
+               CALL OXXXSO(pj ,ZERO ,-1,+1,1,W2)        
+               CALL IXXXSO(pi ,ZERO ,-1,+1,1,W3)        
+               CALL OXXXSO(pj ,ZERO ,+1,+1,1,W4)        
                Wij_angle=(0d0,0d0)
                Wij_recta=(0d0,0d0)
                do i=1,4
-                  Wij_angle = Wij_angle + W1(i)*W2(i)
-                  Wij_recta = Wij_recta + W3(i)*W4(i)
+                  Wij_angle = Wij_angle + W1%W(i)*W2%W(i)
+                  Wij_recta = Wij_recta + W3%W(i)*W4%W(i)
                enddo
                azifact=Wij_angle/Wij_recta
             endif
@@ -4875,6 +4877,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 
       subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt)
+      USE ALOHA_OBJECT
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4914,7 +4917,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double precision t,z,ap(2),Q(2),cphi_mother,sphi_mother,
      $ pi(0:3),pj(0:3),wgt_born
-      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      TYPE(ALOHA) W1,W2,W3,W4
+      double complex Wij_angle,Wij_recta
       double complex azifact
 
       double precision zero,vtiny
@@ -5014,15 +5018,15 @@ c general rotation is needed
                  pj(1)=-pj(1)
                  pj(3)=-pj(3)
               endif
-              CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-              CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-              CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-              CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
+              CALL IXXXSO(pi ,ZERO ,+1,+1,1,W1)        
+              CALL OXXXSO(pj ,ZERO ,-1,+1,1,W2)        
+              CALL IXXXSO(pi ,ZERO ,-1,+1,1,W3)        
+              CALL OXXXSO(pj ,ZERO ,+1,+1,1,W4)        
               Wij_angle=(0d0,0d0)
               Wij_recta=(0d0,0d0)
               do i=1,4
-                 Wij_angle = Wij_angle + W1(i)*W2(i)
-                 Wij_recta = Wij_recta + W3(i)*W4(i)
+                 Wij_angle = Wij_angle + W1%W(i)*W2%W(i)
+                 Wij_recta = Wij_recta + W3%W(i)*W4%W(i)
               enddo
               azifact=Wij_angle/Wij_recta
            endif

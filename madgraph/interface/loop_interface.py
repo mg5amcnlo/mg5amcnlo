@@ -308,7 +308,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 ##            raise self.InvalidCmd('MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c))
         if self._curr_model.merged_particles:
             logger.debug('Unmerge particles for loop computations')
-            self.exec_cmd('set apply_flavor_grouping False', precmd=True)
+            self.exec_cmd('set apply_flavor_grouping False', precmd=False)
             assert self.options['apply_flavor_grouping'] == False
             model_name = self._curr_model.get('name')
             # Preserve user-defined multiparticles: reloading the model triggers
@@ -317,7 +317,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             # Since this reload is an internal NLO operation (not a user model
             # switch), all previously valid multiparticle definitions must survive.
             saved_multiparticles = copy.deepcopy(self._multiparticles)
-            self.exec_cmd(" import model %s" % (model_name), precmd=True)
+            self.exec_cmd(" import model %s" % (model_name), precmd=False)
             self._multiparticles = saved_multiparticles
         
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
@@ -360,10 +360,10 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
                     #import model with correct treatment of the history
-                    self.history.move_to_last('generate')
-                    last_command = self.history[-1]
-                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=True)
-                    self.history.append(last_command)
+                    #self.history.move_to_last('generate')
+                    #last_command = self.history[-1]
+                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=False)
+                    #self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -592,7 +592,7 @@ This installation can take some time but only needs to be performed once.""" %{'
                         self.do_install(key,paths={'HEPToolsInstaller':
                                 pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
                         additional_options=additional_options)
-                    except self.InvalidCmd:
+                    except (self.InvalidCmd, FileNotFoundError):
                             logger.warning(
 """The offline installation of %(p)s was unsuccessful, and MG5aMC disabled it.
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
@@ -954,11 +954,12 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     def __init__(self, question, *args, **opts):
 
-        import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
+        import urllib.request
+        import urllib.error
         try:
-            response=six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+            response=urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
             self.online=True
-        except six.moves.urllib.error.URLError as err: 
+        except urllib.error.URLError as err: 
             self.online=False        
         
         self.code = {'ninja': 'install',
@@ -976,7 +977,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         #check if some partial installation is already done.  
         if 'mother_interface' in opts:
             mother = opts['mother_interface']
-            if  'heptools_install_dir' in mother.options:
+            if mother.options['heptools_install_dir']:
                 install_dir1 = mother.options['heptools_install_dir'] 
                 install_dir2 = mother.options['heptools_install_dir']
                 if os.path.exists(pjoin(install_dir1, 'CutTools')):

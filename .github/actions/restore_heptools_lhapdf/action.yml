@@ -1,0 +1,41 @@
+name: Restore lhapdf cache
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+inputs:
+  setup_only:
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set cache key
+      run: echo "CACHE_KEY=lhapdf-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        cd $GITHUB_WORKSPACE
+        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
+        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lhapdf6_py3//lib" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lib" >> $GITHUB_ENV
+      shell: bash
+
+    - name: set pythonpath for ubuntu22
+      if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu22' }}
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages" >> $GITHUB_ENV
+      shell: bash 
+
+    - name: set pythonpath for ubuntu24
+      if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu24' }}
+      run: |
+        echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages" >> $GITHUB_ENV
+      shell: bash 

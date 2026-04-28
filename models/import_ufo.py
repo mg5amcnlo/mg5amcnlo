@@ -434,8 +434,13 @@ def import_full_model(model_path, decay=False, prefix='', options={}):
                     bypass_pkl = True                        
             else:
                 if all(not 'FFV' in name for name in all_coup_name):
-                    logger.info('reload from .py file')
-                    bypass_pkl = True
+                    # Only bypass for non-loop (non-NLO) models; loop models
+                    # are not compatible with FFV optimization so they should
+                    # use the pickle directly (which has properly restricted
+                    # wavefunction counterterms).
+                    if not dict.get(model, 'perturbation_couplings'):
+                        logger.info('reload from .py file')
+                        bypass_pkl = True
 
             # We don't care about the restrict_card for this comparison
             if 'version_tag' in model and not model.get('version_tag') is None and \
@@ -477,6 +482,12 @@ def import_full_model(model_path, decay=False, prefix='', options={}):
     model = ufo2mg5_converter.load_model()
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
+
+    # Store the WF CT coupling expression strings in the model so that they
+    # can be evaluated during model restriction (e.g. to remove counterterms
+    # for massless particles like b when MB=0).
+    if ufo2mg5_converter.wf_ct_coupling_exprs:
+        model['wf_ct_coupling_exprs'] = ufo2mg5_converter.wf_ct_coupling_exprs
 
     # Load the Parameter/Coupling in a convenient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main(\
@@ -560,6 +571,7 @@ class UFOMG5Converter(object):
                                     # This is not supported by madevent/systematics
         self.wavefunction_CT_couplings = []
         self.additional_couplings = []
+        self.wf_ct_coupling_exprs = {}
  
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
@@ -599,9 +611,6 @@ class UFOMG5Converter(object):
         
         if auto:
             self.load_model()
-
-        self.additional_couplings += self.wavefunction_CT_couplings \
-                           if self.perturbation_couplings else []
 
     def load_model(self):
         """load the different of the model first particles then interactions"""
@@ -757,6 +766,9 @@ class UFOMG5Converter(object):
         del self.checked_lor
 
         self.check_model_all()
+
+        self.additional_couplings += self.wavefunction_CT_couplings \
+                           if self.perturbation_couplings else []
 
         return self.model
     
@@ -1667,6 +1679,12 @@ class UFOMG5Converter(object):
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
                   dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
                         for key in counterterm])
+                # Store the expression strings so they can be evaluated later during
+                # model restriction (to zero out WF CT couplings for massless particles)
+                for laurentOrder, expr in counterterm.items():
+                    coupName = newCouplingName + \
+                               ('' if laurentOrder==0 else '_'+str(-laurentOrder)+'eps')
+                    self.wf_ct_coupling_exprs[coupName] = expr
                 # We want to create the new coupling for this wavefunction
                 # renormalization.
                 self.ufomodel.object_library.Coupling(\

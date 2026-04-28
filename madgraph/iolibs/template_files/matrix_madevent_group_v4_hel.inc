@@ -193,6 +193,8 @@ C
 	SAVE CHOSEN_SO_CONFIGS
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=${ncomb})
+    double precision bwcutoff
+    common/to_bwcutoff/ bwcutoff
 C  
 C ARGUMENTS 
 C

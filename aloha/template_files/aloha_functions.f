@@ -12,15 +12,17 @@ C
 C###############################################################################
       module ALOHA_OBJECT
          TYPE ALOHA 
+            SEQUENCE
             double complex::W(4)
             double precision :: P(0:3)
             integer :: flv_index 
          END TYPE ALOHA
          TYPE ALOHA2D 
+            SEQUENCE
             double complex::W(16)
             double precision :: P(0:3)
             integer :: flv_index 
-         END TYPE ALOHA
+         END TYPE ALOHA2D
       end module ALOHA_OBJECT
 
 
@@ -1856,6 +1858,21 @@ c spin-3/2 fermion wavefunction
       end
 
 
+      complex*16 function THETA_FUNCTIONR(cond, out_true, out_false)
+
+      double precision cond
+      double precision  out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTIONR = out_true
+      else
+        THETA_FUNCTIONR = out_false
+      endif
+
+      return
+
+
+      end
       complex*16 function THETA_FUNCTION(cond, out_true, out_false)
 
       double precision cond

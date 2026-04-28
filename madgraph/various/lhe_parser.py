@@ -2844,9 +2844,8 @@ class Event(list):
         p = self.get_momenta(get_order, allow_reversed, merged_map=merged_map)
 
         nbin = len(get_order[0])
-        #final = get_order[1]
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
-        _, (init, final) = self.get_tag_and_order()
+        final = list(get_order[1])
         for i, part in enumerate(self):
             pdg = part.pid
             if part.status != 1:
@@ -2872,8 +2871,6 @@ class Event(list):
         # for unnittest 
         if debug_output == 1:
             return data
-
-        final = get_order[1]#
 
         # check which pdg to permutate
         # need to permutate pdg code where multiple M are present

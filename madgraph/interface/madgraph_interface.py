@@ -34,6 +34,7 @@ import subprocess
 import copy
 import sys
 import shutil
+import tempfile
 
 import traceback
 import time
@@ -46,6 +47,9 @@ from six.moves import range
 
 #useful shortcut
 pjoin = os.path.join
+
+# define a temporary directory for drawing diagrams
+tempdir = tempfile.TemporaryDirectory()
 
 try:
     import readline
@@ -632,6 +636,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info(" o Example: generate p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
         logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Polarized process syntax:",'$MG:BOLD')
+        logger.info(" > Fix the helicity polarizations of external particles (massless or massive) or massive internal particles")
+        logger.info("   before decay chain by adding '{X}' to (multi)particles in process definitions.")
+        logger.info(" > Example: generate t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
+        logger.info(" > For further help, see 'help polarization'")
         logger.info("Loop processes syntax:",'$MG:BOLD')
         logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")
         logger.info(" o Example: generate p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
@@ -669,6 +678,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
         logger.info(" o Example: add process p p > t~ t QED=0, (t~ > W- b~, W- > l- vl~), t > j j b @2",'$MG:color:GREEN')
         logger.info(" > Note that identical particles will all be decayed.")
+        logger.info("Polarized process syntax:",'$MG:BOLD')
+        logger.info(" > Fix the helicity polarizations of external particles (massless or massive) or massive internal particles")
+        logger.info("   before decay chain by adding '{X}' to (multi)particles in process definitions.")
+        logger.info(" > Example: add process t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
+        logger.info(" > For further help, see 'help polarization'")
         logger.info("Loop processes syntax:",'$MG:BOLD')
         logger.info(" o core process [ <NLO_mode=> LoopOrder1 LoopOrder2 ... ] SQUAREDCOUPi=ORDERi")
         logger.info(" o Example: add process p p > t~ t QED=0 QCD=2 [ all= QCD ] QCD=6",'$MG:color:GREEN')
@@ -759,6 +773,22 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
         logger.info("Special syntax: Use | for OR (used for required s-channels)")
         logger.info("Special syntax: Use / to remove particles. Example: define q = p / g")
+
+    def help_polarization(self):
+        logger.info("Polarized process syntax:",'$MG:BOLD')
+        logger.info(" > Fix the helicity polarizations of external particles (massless or massive) or massive internal particles")
+        logger.info("   before decay chain by adding '{X}' to (multi)particles in process definitions.")
+        logger.info(" > Example: generate t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
+        logger.info(" > Example: generate p p > z{T} z{A}, z > e+ e-",'$MG:color:GREEN')
+        logger.info(" > Example: generate p p > z{0} z{T}, z > e+ e-, z > mu+ mu-",'$MG:color:GREEN')
+        logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
+        logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
+        logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
+        logger.info("   and for possibilities with loop-induced processes, see [2401.17365].")
+    
+    def help_polarisation(self):
+        logger.info("Polarized process syntax:",'$MG:BOLD')
+        logger.info(" > See 'help polarization'")
 
     def help_set(self):
         logger.info("-- set options for generation or output.",'$MG:color:BLUE')
@@ -972,7 +1002,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         """
 
         if len(args) < 1:
-            args.append('/tmp')
+            args.append(tempdir.name)
 
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
@@ -1537,6 +1567,8 @@ This will take effect only in a NEW terminal
                         config_dir = legacy_config_dir
                     else:
                         config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+                        if not os.path.exists(config_dir):
+                            os.makedirs(config_dir)
 
                     config_file = os.path.join(config_dir, 'mg5_configuration.txt')
                     args.remove('global')
@@ -3076,6 +3108,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'auto_convert_model': True,
                        'acknowledged_v3.1_syntax': True,
                        'auto_update':7,
+                       'heptools_install_dir': './HEPTools',
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -5126,22 +5159,48 @@ This implies that with decay chains:
                     if ignore or p==',':
                         ignore= False
                         continue
-                    if p in ['t','T']:
+                    if p.upper() in ['T']:
                         if spin == 3:
                             polarization += [1,-1]
                         else:
                             raise self.InvalidCmd('"T" (transverse) polarization are only supported for spin one particle.')
-                    elif p in ['l', 'L']:
+                    elif p.upper() in ['L']:
                         if spin == 3:
-                            logger.warning('"L" polarization is interpreted as Left for Longitudinal please use "0".')
+                            logger.warning('"L" polarization is interpreted as left (-1); for longitudinal (0) please use "0".')
                         polarization += [-1]
                     elif p in ['R','r']:
                         polarization += [1]
-                    elif p in ["A",'a']:
+                    elif p.upper() in ["A"]:
                         if spin == 3:
                             polarization += [99]
                         else:
-                            raise self.InvalidCmd('"A" (auxiliary) polarization are only supported for spin one particle.')
+                            raise self.InvalidCmd('"A" (auxiliary) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['G']:
+                        if spin == 3:
+                            polarization += [4]
+                        else:
+                            raise self.InvalidCmd('"G" (metric) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['H']:
+                        if spin == 3:
+                            polarization += [5]
+                        else:
+                            raise self.InvalidCmd('"H" (Theta) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['Q']:
+                        if spin == 3:
+                            polarization += [6]
+                        else:
+                            raise self.InvalidCmd('"Q" (qq = longitudinal - Theta) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['W']:
+                        if spin == 3:
+                            polarization += [7]
+                        else:
+                            raise self.InvalidCmd('"W" (Ward-protected full prop) polarization is only supported for spin one particles.')
+                    elif p.upper() in ['S']:
+                        if spin == 3:
+                            polarization += [9]
+                        else:
+                            raise self.InvalidCmd('"S" (scalar=aux+width) polarization is only supported for spin one particles.')
+
                     elif p in ['+']:
                         if i +1 < len(pol) and pol[i+1].isdigit():
                             p = int(pol[i+1])
@@ -6222,7 +6281,7 @@ This implies that with decay chains:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
-        if 'heptools_install_dir' in self.options:
+        if  self.options['heptools_install_dir']:
             prefix = self.options['heptools_install_dir']
             legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
 
@@ -6230,6 +6289,8 @@ This implies that with decay chains:
                 config_dir = legacy_config_dir
             else:
                 config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+                if not os.path.exists(config_dir):
+                    os.makedirs(config_dir)
 
             config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
@@ -6249,7 +6310,7 @@ This implies that with decay chains:
                 logger.warning("==========")
             if self.options['pythia8_path']:
                 add_options.append(
-                               '--with_pythia8=%s'%self.options['pythia8_path'])
+                               '--with_pythia8=%s'%os.path.abspath(self.options['pythia8_path']))
 
         # Special rules for certain tools
         if tool in ['madanalysis5', 'rivet']:
@@ -6267,7 +6328,7 @@ This implies that with decay chains:
                 add_options.append('--with_delphes3=%s'%\
                    os.path.normpath(pjoin(MG5DIR,self.options['delphes_path'])))
 
-        if tool=='pythia8':
+        if tool in ['pythia8','eMELA']:
             # All what's below is to handle the lhapdf dependency of Pythia8
             lhapdf_config  = misc.which(self.options['lhapdf'])
             lhapdf_version = None
@@ -6300,11 +6361,11 @@ This implies that with decay chains:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
                                                  lhapdf_config),os.path.pardir))
             if lhapdf_version is None:
-                logger.warning('You decided not to link the Pythia8 installation'+
+                logger.warning('You decided not to link the '+ tool + ' installation'+
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
             else:
-                logger.info('Pythia8 will be linked to LHAPDF v%d.'%lhapdf_version)
-            logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
+                logger.info(tool + 'will be linked to LHAPDF v%d.'%lhapdf_version)
+            logger.info('Now installing' + tool + '. Be patient...','$MG:color:GREEN')
             lhapdf_option = []
             if lhapdf_version is None:
                 lhapdf_option.append('--with_lhapdf6=OFF')
@@ -6323,7 +6384,7 @@ This implies that with decay chains:
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
-             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             'HEPToolsInstallers','HEPToolInstaller.py'), tool,
              '--prefix=%s' % prefix]
                         + lhapdf_option + compiler_options + add_options)
         else:
@@ -6366,8 +6427,7 @@ This implies that with decay chains:
                               additional_options=add_options+['--force'])            
         else:
             if tool=='madanalysis5' and '--update' not in add_options and \
-                                 ('--no_MA5_further_install' not in add_options or
-                                                        '--no_root_in_MA5' in add_options):
+                                 ('--no_MA5_further_install' not in add_options):
                 if not __debug__:
                     logger.warning('Default installation of Madanalys5 failed.')
                     logger.warning("MG5aMC will now attempt to reinstall it with the options '--no_MA5_further_install --no_root_in_MA5'.")
@@ -6401,7 +6461,7 @@ This implies that with decay chains:
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
         elif tool == 'eMELA':
-            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
+            self.options['eMELA'] = pjoin(prefix,'bin', 'eMELA-config')
             self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
@@ -7413,7 +7473,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if os.path.exists(legacy_config_dir):
                     config_dir = legacy_config_dir
                 else:
-                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.config'))
 
                 config_path = os.path.join(config_dir, "mg5_configuration.txt")
 
@@ -7445,11 +7505,11 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             else:
                 name = name.strip()
                 value = value.strip()
-                if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3']:
+                if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3', 'lhapdf']:
                     self.options[name] = value
-                elif hasattr(self, 'set_%s' % name):
+                elif hasattr(self, 'set2_%s' % name):
                     misc.sprint('set configuration option %s to %s' % (name, value) )
-                    func = getattr(self, 'set_%s' % name)
+                    func = getattr(self, 'set2_%s' % name)
                     func(value.split())
                 if value.lower() == "none" or value=="":
                     self.options[name] = None
@@ -7934,7 +7994,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             
             basedir = MG5DIR
-            if partial_save:
+            if partial_save and os.path.exists(filepath):
                 basefile = filepath
             else:
                 basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
@@ -9148,6 +9208,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not self.history or self.history[-1].split() != line.split():
                 self.history.append('set %s' % line)
                 self.avoid_history_duplicate('set %s' % args[0], ['define', 'set'])
+
         return stop
 
     def do_open(self, line):

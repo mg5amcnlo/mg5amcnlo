@@ -1146,7 +1146,7 @@ class ProjP(aloha_lib.FactoryLorentz):
 class L_EPSL(aloha_lib.LorentzObject):
     """ eps^mu_L (polarization vector) 
         (kx**2+ky**2+kz**2, E*kz, E*ky, E*kz)
-        the normalization 1/m *|\vec{k} is NOT include
+        the normalization 1/m *|\vec{k}| is NOT include
     
     """
     
@@ -1246,9 +1246,8 @@ class EPST1(aloha_lib.FactoryLorentz):
 
 class L_EPST2(aloha_lib.LorentzObject):
     """ eps^mu_+ (polarization vector) 
-        (0,  ky k_T ,  -i kx k_T, 0)
- 
-        the normalization 1/(kT*norm(k)) is NOT include here
+        (0,  -ky , kx , 0)
+        the normalization 1/kT is NOT include here
         as well as the k_T term (to avoid the square-root)
     
     """

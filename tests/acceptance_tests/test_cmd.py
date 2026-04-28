@@ -234,7 +234,8 @@ class TestCmdShell1(unittest.TestCase):
                     'cluster_requirement': None,
                     'cluster_vacatetime': '120',
                     'enforce_shared_disk': False,
-                    }
+                    'heptools_install_dir': './HEPTools',
+                        }
 
         self.assertEqual(config, expected)
         
@@ -1016,6 +1017,7 @@ C
     def test_complex_mass_SA(self):
         """ Test that the complex_mass compile in fortran """
 
+        self.do('set apply_flavor_grouping False')
         self.do('import model sm --noprefix')
         self.do('set complex_mass_scheme')
         self.do('generate e+ e- > e+ e-')
@@ -1045,6 +1047,39 @@ C
             if 'Matrix element' in line:
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 0.019538610404713896)
+
+    def test_complex_mass_SA_merged(self):
+        """ Test that the complex_mass compiles in fortran with flavor-grouped (merged) model """
+
+        self.do('import model sm --noprefix')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        subdir = os.path.join(self.out_dir, 'SubProcesses', 'P0__anti_lepton_lepton__anti_lepton_lepton')
+        misc.compile(cwd=subdir)
+        p = subprocess.Popen(['./check'], cwd=subdir, stdout=subprocess.PIPE)
+        for line in p.stdout:
+            line = line.decode('utf8')
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value.split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 0.019538610404713896)
+
+        self.do('import model sm')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s -f' % self.out_dir)
+        subdir = os.path.join(self.out_dir, 'SubProcesses', 'P0__anti_lepton_lepton__anti_lepton_lepton')
+        misc.compile(cwd=subdir)
+        p = subprocess.Popen(['./check'], cwd=subdir, stdout=subprocess.PIPE)
+        for line in p.stdout:
+            line = line.decode('utf8')
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value.split('GeV')[0]
                 value = eval(value)
                 self.assertAlmostEqual(value, 0.019538610404713896)
 

@@ -31,6 +31,7 @@ import signal
 import tempfile
 import itertools
 import os
+import re
 import six.moves.cPickle
 
 
@@ -473,6 +474,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                         break
 
             line = ' '.join(args[1:])
+
+        # convert the single $ to $$ automatically
+        if re.search(r"\b\$\b", line):
+            raise MadGraph5Error("Single $ syntax is not supported at NLO, please use $$")
 
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:

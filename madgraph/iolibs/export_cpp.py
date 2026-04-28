@@ -2070,7 +2070,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int perm[], const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[], const int flavor[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];
                           static const int namplitudes = %d;

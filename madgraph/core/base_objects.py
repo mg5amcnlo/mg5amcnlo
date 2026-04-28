@@ -2150,6 +2150,13 @@ class Model(PhysicsObject):
                 for coup in self['couplings'][key]:
                     coup.expr = rep_pattern.sub(replace, coup.expr)
 
+            # change WF CT coupling expressions if present (loop models)
+            if dict.get(self, 'wf_ct_coupling_exprs'):
+                self['wf_ct_coupling_exprs'] = {
+                    name: rep_pattern.sub(replace, expr)
+                    for name, expr in self['wf_ct_coupling_exprs'].items()
+                }
+
             # change form-factor
             ff = [l.formfactors for l in self['lorentz'] if hasattr(l, 'formfactors')]
             ff = set(sum(ff,[])) # here we have the list of ff used in the model
@@ -2590,6 +2597,11 @@ class Leg(PhysicsObject):
     """Leg object: id (Particle), number, I/F state, flag from_group
     """
 
+    # List of allowed helicity polarizations for a fermion or vector boson.
+    # See [arXiv:1912.01725] for definitions (fermions,vectors) and
+    # [arXiv:2512.10015] for extensions (vectors)
+    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -2639,7 +2651,7 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                if i not in self.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
                                                                     
@@ -2838,7 +2850,7 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                if i not in Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 

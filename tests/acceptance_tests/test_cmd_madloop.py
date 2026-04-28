@@ -507,6 +507,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
             target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
         
         cmd = """
+        set apply_flavor_grouping False
         import model sm
         generate w+ w- > w+ w- @0
         output matchbox %(path)s/TEST --postpone_model

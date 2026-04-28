@@ -550,7 +550,7 @@ class TestRunCard(unittest.TestCase):
     
 
     def setUp(self):
-        self.debugging = unittest.debug
+        self.debugging = getattr(unittest, 'debug', False)
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):
@@ -829,8 +829,8 @@ class TestRunCard(unittest.TestCase):
         f.write("c .   this is a comment to test feature of missing end line ")
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf", f.getvalue()) #no automatic formatting due to iostring for unittest
 
@@ -839,8 +839,8 @@ class TestRunCard(unittest.TestCase):
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         # order of the two variable within the common block is not important
         if "COMMON/USER_CUSTOM_RUN/include_pdf," in f.getvalue():
@@ -857,8 +857,8 @@ class TestRunCard(unittest.TestCase):
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -873,8 +873,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -889,8 +889,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertNotIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertNotIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertNotIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
 
     def test_autodef_nomissmatch(self):

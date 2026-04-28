@@ -2094,7 +2094,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                 if abs(initial_state) in model.get('merged_particles'):
                                     flv = proc.get_initial_flavor(ibeam)
                                     if len(flv) == 0:
-                                        initial_state = one_flv[ibeam-1]
+                                        sign = 1 if initial_state > 0 else -1
+                                        initial_state = sign * one_flv[ibeam-1]
                                     elif len(flv) ==1:
                                         initial_state = flv[0]
                                     else:
@@ -2140,7 +2141,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             if abs(initial_state) in model.get('merged_particles'):
                                 flv = proc.get_initial_flavor(ibeam)
                                 if len(flv) == 0:
-                                    init_states = matrix_element.get_external_flavors()[nb_flavor][ibeam-1] 
+                                    sign = 1 if initial_state > 0 else -1
+                                    initial_state = sign * matrix_element.get_external_flavors()[nb_flavor][ibeam-1]
                                 elif len(flv) ==1:
                                     initial_state = flv[0]
                                 else:
@@ -3363,7 +3365,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
-            elif  self.opt['export_format'] in ['madloop_matchbox']:
+            elif  self.opt['export_format'] in ['madloop_matchbox', 'matchbox']:
                 replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
                 matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
             else:
@@ -7647,8 +7649,8 @@ C
             c_list = [coupl.name for coupl in self.coups_flv_indep]
             fsock.writelines('type(flv_coupling) '+', '.join(c_list)+'\n')
 
-        # Write the dependent couplings
-        if self.vector_size:
+        # Write the dependent coupling 
+        if self.vector_size and not self.opt['loop_induced']:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
@@ -7657,13 +7659,15 @@ C
             fsock.writelines('double complex, target :: '+', '.join(c_list)+'\n')  
 
         # Write the flavor dependent couplings
-        if self.vector_size:
+        if self.vector_size and not self.opt['loop_induced']:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_flv_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_flv_dep] 
         
         if c_list:
-            fsock.writelines('type(flv_coupling) '+', '.join(c_list)+'\n')  
+            fsock.writelines('type(flv_coupling) '+', '.join(c_list)+'\n')
+            if sel.opt['loop_induced']:
+                raise Exception('Flavor coupling are not supported for loop induced process for the moment')  
 
 
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop + self.coups_flv_dep + self.coups_flv_indep]       
@@ -8788,6 +8792,9 @@ C
         If mp is True and dp is False, then the prefix 'MP_' is appended to the
         filename and subroutine name.
         """
+
+        if self.opt['loop_induced']:
+            vec = False
         
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')

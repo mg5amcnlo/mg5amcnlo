@@ -113,6 +113,7 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -145,9 +146,12 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
+      INTEGER FLAVOR(NEXTERNAL-1)
+      DATA FLAVOR /NMO*1/
       INTEGER DENOM
       INTEGER CF(NCOLOR2,NCOLOR1)
-      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
+      type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP1(%(nb_temp_jamp1)i)
       COMPLEX*16 TMP_JAMP2(%(nb_temp_jamp2)i)
       real*8 p_save(0:3, nexternal-1), p_resh(0:3, nexternal-1)
@@ -199,6 +203,9 @@ C Finally interfere the two sets of color-stripped amplitudes
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR2
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
+          ENDDO
+          DO N = 1, NAMPSO
+            ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))
           ENDDO
       ENDDO
     ENDDO
