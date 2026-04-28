@@ -1,9 +1,5 @@
+      %(python_information)s
 
-C     PY ((21, 21), (-6, 6)) : (21, 21, 6, -6) # M0_ 1
-C     PY ((2, -2), (-6, 6)) : (2, -2, 6, -6) # M1_ 1
-C     PY ((4, -4), (-6, 6)) : (4, -4, 6, -6) # M1_ 1
-C     PY ((1, -1), (-6, 6)) : (1, -1, 6, -6) # M1_ 1
-C     PY ((3, -3), (-6, 6)) : (3, -3, 6, -6) # M1_ 1
       SUBROUTINE %(f2py_prefix)sSMATRIXHEL(PDGS, PROCID, NPDG, P, ALPHAS, SCALE2,
      $  NHEL, ANS)
       IMPLICIT NONE

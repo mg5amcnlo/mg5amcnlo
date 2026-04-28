@@ -1,4 +1,4 @@
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL, FLAVOR, ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -10,12 +10,14 @@ C
 CF2PY INTENT(OUT) :: ANS                                                                                                                                                                                     
 CF2PY INTENT(IN) :: HEL                                                                                                                                                                                    
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)  
+CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
 
 C  
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
 	  INTEGER HEL
+      INTEGER FLAVOR(NEXTERNAL)
 C
 C GLOBAL VARIABLES
 C
@@ -25,12 +27,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL %(proc_prefix)sSMATRIX(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
 	  USERHEL=-1
 
 	  END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
 C  
 %(info_lines)s
 C 
@@ -62,6 +64,7 @@ C
       REAL*8 P(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
 C  
 C LOCAL VARIABLES 
 C  
@@ -74,7 +77,7 @@ C  put in common block to expose this variable to python interface
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
 	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
-      INTEGER JC(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
@@ -100,7 +103,7 @@ C
 C     FUNCTIONS
 C
       LOGICAL %(proc_prefix)sIS_BORN_HEL_SELECTED
-
+      INTEGER %(proc_prefix)sBROKEN_SYM
 c----------
 c   Check if helreset mode is on
 c---------
@@ -116,9 +119,6 @@ C ----------
 C BEGIN CODE
 C ----------
       IF(USERHEL.EQ.-1) NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
 C     When spin-2 particles are involved, the Helicity filtering is dangerous for the 2->1 topology.
 C     This is because depending on the MC setup the initial PS points have back-to-back initial states
 C     for which some of the spin-2 helicity configurations are zero. But they are no longer zero
@@ -137,7 +137,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
 				    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                         CYCLE
                     ENDIF
-                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))
+                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),FLAVOR(1))
                     IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                         ANS=ANS+T
                     ENDIF
@@ -147,7 +147,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
                 ENDIF
 		     ENDIF
           ENDDO
-      ANS=ANS/DBLE(IDEN)
+      ANS=ANS/DBLE(IDEN)*%(proc_prefix)sBROKEN_SYM(FLAVOR)
 	  IF(USERHEL.NE.-1) THEN
           ANS=ANS*HELAVGFACTOR	  
 	  ELSE
@@ -161,7 +161,8 @@ C     For this reason, we simply remove the filterin when there is only three ex
 	  END
        
        
-      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,FLAVOR)
+      use model_object
 C  
 %(info_lines)s
 C
@@ -170,6 +171,7 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+      use aloha_object
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -188,7 +190,8 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL)
 C  
 C LOCAL VARIABLES 
 C  
@@ -198,7 +201,7 @@ C
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
       INTEGER DENOM
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C  
@@ -230,7 +233,10 @@ C ----------
 %(amp2_lines)s
       END
 
-      SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL, FLAVOR ,ANS)
+C     This routine is the f2py interface for GET_value_internal which can not be in the interface
+C     due to f2py not knowing how to handle the couplings common block
+      use model_object
       IMPLICIT NONE   
 C
 C CONSTANT
@@ -244,10 +250,37 @@ C
       INTEGER NHEL
       DOUBLE PRECISION ALPHAS 
       real*8 pi     
+      INTEGER FLAVOR(NEXTERNAL)
 CF2PY INTENT(OUT) :: ANS  
 CF2PY INTENT(IN) :: NHEL   
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
 CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
+C     ROUTINE FOR F2PY to read the benchmark point.    
+
+      CALL  %(proc_prefix)sGET_value_internal(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      RETURN
+      END
+
+
+      SUBROUTINE %(proc_prefix)sGET_value_internal(P, ALPHAS, NHEL, FLAVOR ,ANS)
+C     This routine is the real value but can not be in the interface
+C     due to f2py not knowing how to handle the couplings common block
+      use model_object
+      IMPLICIT NONE   
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS 
+      real*8 pi     
+      INTEGER FLAVOR(NEXTERNAL)
 C     ROUTINE FOR F2PY to read the benchmark point.    
 C     the include file with the values of the parameters and masses 
       include "coupl.inc"
@@ -256,9 +289,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, FLAVOR, ANS)
       else
-        CALL %(proc_prefix)sSMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
       endif
       return 
       end
@@ -326,3 +359,33 @@ C     ----------
 
       RETURN
       END
+
+
+      INTEGER FUNCTION %(proc_prefix)sBROKEN_SYM(FLAV)
+
+      include 'nexternal.inc'
+      INTEGER FLAV(NEXTERNAL)
+      INTEGER PID(NINCOMING+1:NEXTERNAL)
+      INTEGER I,J
+      INTEGER N_BROK, N_TOT
+      INTEGER OLD_FACTOR  
+      
+      OLD_FACTOR = %(get_old_symmmetry_value)s  
+
+      %(get_pid)s
+c     get new symmetry factor      
+      do I=NINCOMING+1, NEXTERNAL
+         if (PID(I).eq.0) cycle
+         N_TOT=1
+         do J = I+1,NEXTERNAL
+            if (PID(I).eq.PID(J).and.FLAV(I).EQ.FLAV(J))then
+               PID(J) = 0
+               N_TOT = N_TOT + 1
+               OLD_FACTOR = OLD_FACTOR/N_TOT
+            endif
+        enddo
+    enddo
+   %(proc_prefix)sBROKEN_SYM = OLD_FACTOR   
+   return
+   end
+

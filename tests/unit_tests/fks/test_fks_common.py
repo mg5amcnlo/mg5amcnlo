@@ -3065,7 +3065,7 @@ class TestLinkRBConfSM(unittest.TestCase):
 
     def setUp(self):
         if not hasattr(self, 'base_model'):
-            TestLinkRBConfSM.base_model = import_ufo.import_model('sm')
+            TestLinkRBConfSM.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
 
     def test_link_udxwpg_udxwp(self):
         """tests that the real emission process ud~>w+g and born process u u~>w+ are

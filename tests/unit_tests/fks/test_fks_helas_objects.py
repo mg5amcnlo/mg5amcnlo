@@ -63,7 +63,7 @@ class testFKSHelasObjects(unittest.TestCase):
             for i in mylegs:
                 myleglist3.append(MG.Leg(i))
 
-            mymodel = import_ufo.import_model('sm')
+            mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False} )
 
             dict1 = {'legs' : myleglist1, 
                                'model': mymodel,

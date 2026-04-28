@@ -43,7 +43,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             echo "import model MSSM_SLHA2" > cmd
             ./bin/mg5_aMC cmd
-            ./tests/test_manager.py -pP -t0 test_aloha.* -e test_short_mssm_subset_creation
+            ./tests/test_manager.py -pP -t0 test_aloha.*  testIO_aloha.*-e test_short_mssm_subset_creation
 
   test_excluded:
     # excluded due to side effect

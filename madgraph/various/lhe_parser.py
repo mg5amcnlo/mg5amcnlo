@@ -233,7 +233,6 @@ class EventFile(object):
             except IOError as error:
                 raise
             except Exception as error:
-                misc.sprint(error)
                 if mode == 'r':
                     misc.gunzip(path)
                 else:
@@ -1114,7 +1113,6 @@ class MultiEventFile(EventFile):
 %(cross_info)s
 %(generator_info)s
 """
-        
         self.banner["init"] = template_init % init_information
         
             
@@ -2263,19 +2261,35 @@ class Event(list):
             self.aqed=inputs[4]
             self.aqcd=inputs[5]
         
-    def get_tag_and_order(self):
+    def get_tag_and_order(self, merged_particle=None):
         """Return the unique tag identifying the SubProcesses for the generation.
-        Usefull for program like MadSpin and Reweight module."""
+        Usefull for program like MadSpin and Reweight module.
+        merged particle is a dictionary id:merged
+        such that if id is in the tag, it will be replace by merged[id]
+        """
+        if merged_particle is None:
+            map = lambda x: x
+        else:
+            def get_merged(x):
+                try:
+                    return merged_particle[x]
+                except:
+                    try:
+                        return - merged_particle[-x]
+                    except:
+                        return x
+            map = get_merged
         
         initial, final, order = [], [], [[], []]
         for particle in self:
             if particle.status == -1:
-                initial.append(particle.pid)
+                initial.append(map(particle.pid))
                 order[0].append(particle.pid)
             elif particle.status == 1: 
-                final.append(particle.pid)
+                final.append(map(particle.pid))
                 order[1].append(particle.pid)
         initial.sort(), final.sort()
+
         tag = (tuple(initial), tuple(final))
         return tag, order
     
@@ -2434,16 +2448,28 @@ class Event(list):
         return jac        
         
     
-    def get_helicity(self, get_order, allow_reversed=True):
+    def get_helicity(self, get_order, allow_reversed=True, merged_map=None):
         """return a list with the helicities in the order asked for"""
-        
+
+        if not merged_map:
+            map = lambda x: x
+        else:
+            def map(x):
+                try:
+                    return merged_map[x]
+                except:
+                    try:
+                        return - merged_map[-x]
+                    except:
+                        return x
+
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
         out = [9] *(len(order[0])+len(order[1]))
         for i, part in enumerate(self):
             if part.status == 1: #final
                 try:
-                    ind = order[1].index(part.pid)
+                    ind = order[1].index(map(part.pid))
                 except ValueError as error:
                     if not allow_reversed:
                         raise error
@@ -2457,7 +2483,7 @@ class Event(list):
                 order[1][ind] = 0   
             elif part.status == -1:
                 try:
-                    ind = order[0].index(part.pid)
+                    ind = order[0].index(map(part.pid))
                 except ValueError as error:
                     if not allow_reversed:
                         raise error
@@ -2673,63 +2699,154 @@ class Event(list):
                       'reweight': reweight_str}
         
         return re.sub('[\n]+', '\n', out)
+    
 
-    def get_momenta(self, get_order, allow_reversed=True):
-        """return the momenta vector in the order asked for"""
-        
+    def get_mapping(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
+        """return the mapping between the order asked for and the order in the event
+            return two dictionary: one from the order of the event to the order asked for
+            and one from the order asked for to the order of the event.
+
+            if the order of the pdg of the event is (1,2),(3,4,5)
+            and the get_order is (2,1),(5,3,4)
+            the mapping will be:
+            {1:2, 2:1, 3:5, 4:3, 5:4}, {2:1, 1:2, 5:3, 4:5, 3:4}  
+
+            Note that get_order received merged pid value not the actual pid (like in the event)
+            In that case the merged map allow to pass from the actual pid to the merged one.          
+        """
+
+        if not merged_map:
+            map = lambda x: x
+        else:
+            def map(x):
+                try:
+                    return merged_map[x]
+                except:
+                    try:
+                        return - merged_map[-x]
+                    except:
+                        return x
+
+
+        out1 = {}
+        out2 = {}        
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
-        out = [''] *(len(order[0])+len(order[1]))
+        curr_pos = -1
         for i, part in enumerate(self):
-            if part.status == 1: #final
-                try:
-                    ind = order[1].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error     
-                position = len(order[0]) + ind
-                order[1][ind] = 0   
-            elif part.status == -1:
-                try:
-                    ind = order[0].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error
-                 
-                position =  ind
-                order[0][ind] = 0
-            else: #intermediate
+            if abs(part.status) != 1: #intermediate
                 continue
+            curr_pos += 1
+            flip = False # check if the crossing is used
+            # curr_block is the part of get_order where the current particle is expected to be
+            # other_block is the other part of get_order
+            if part.status == -1:
+                curr_block, other_block = order[0],order[1]
+            else:
+                curr_block, other_block = order[1],order[0]
+            # check if the particle is in the initinal/final state (after moving to the merged pid)
+            # should be the case but if allow_reverse is True or allow_crossing is True
+            try:
+                ind = curr_block.index(map(part.pid))
+            except ValueError as error:
+                # check first for crossing and therefore if the particle is in the "wrong" block:
+                if allow_crossing and -part.pid in other_block:
+                    ind = other_block.index(-map(part.pid))
+                    flip = True
+                elif not allow_reversed:
+                    raise error
+                else:
+                    # try the allow_reversed option and change all particle/anti-particle
+                    order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                    return self.get_mapping(order, False, allow_crossing, merged_map)
 
-            out[position] = (part.E, part.px, part.py, part.pz)
-            
+            # Now ind should be defined and correspond to the position in the curr_block
+            # compute now the associate postion in the original order
+            # first case is the particle was found in the initial state
+            if (part.status == -1 and not flip) or (part.status == 1 and flip):
+                position =  ind
+            else:
+                position = len(order[0]) + ind
+            # empty the position for handling case with identical pdg
+            curr_block[ind] = 0
+            # store the mapping
+            out1[curr_pos] = position   
+            out2[position] = curr_pos
+        return out1, out2    
+           
+
+    def get_momenta(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
+        """return the momenta vector in the order asked for"""
+        
+        event_pos2order, orderevent_2pos = self.get_mapping(get_order, allow_reversed, allow_crossing, merged_map)
+        curr_pos = -1
+        out = [''] *(len(get_order[0])+len(get_order[1]))
+        for i, part in enumerate(self):
+            if abs(part.status) != 1:
+                continue
+            curr_pos += 1
+            position = event_pos2order[curr_pos]
+            # check for crossing
+            if part.status == -1 and position >= len(get_order[0]):
+                flip = True
+            elif part.status == 1 and position < len(get_order[0]):
+                flip = True
+            else:   
+                flip = False
+            if flip:
+               out[position] = (-part.E, -part.px, -part.py, -part.pz) 
+            else:   
+                out[position] = (part.E, part.px, part.py, part.pz)
+
+        # check that all position are filled 
+        if __debug__:   
+            for i in range(len(get_order[0])+len(get_order[1])):
+                if not out[i]:
+                    raise Exception("Missing particle %s in the event" % map(orderevent_2pos[i]))   
+        return out
+    
+
+    def get_pdg(self, momenta):
+        """return the pdg vector in the order related to the momenta"""
+    
+        out = [''] *len(momenta)
+        data = {}
+        for i, part in enumerate(self):
+            if abs(part.status) != 1:
+                continue
+            data[(part.E, part.px, part.py, part.pz)] = part.pid
+
+        for i,p in enumerate(momenta):
+            if (p[0], p[1], p[2], p[3]) in data:
+                out[i] = data[(p[0], p[1], p[2], p[3])]
+            elif (-p[0], -p[1], -p[2], -p[3]) in data:
+                out[i] = -data[(-p[0], -p[1], -p[2], -p[3])]
+            else:
+                misc.sprint(data)
+                misc.sprint((p[0], p[1], p[2], p[3]))
+                raise Exception("Missing particle %s in the event" % p)
+
+        #check that all position are filled
+        if __debug__:
+            for i in range(len(momenta)):
+                if  '' == out[i]:
+                    raise Exception("Missing particle %s in %s" %(i, out))
+
         return out
 
-
-    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
               for easier development debug output allow to return internal variable for the unittest to check
         """  
 
-
-        p = self.get_momenta(get_order, allow_reversed)
+        misc.sprint(self)
+        p = self.get_momenta(get_order, allow_reversed, merged_map=merged_map)
 
         nbin = len(get_order[0])
-        final = get_order[1]
+        #final = get_order[1]
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
+        _, (init, final) = self.get_tag_and_order()
         for i, part in enumerate(self):
             pdg = part.pid
             if part.status != 1:
@@ -2755,6 +2872,8 @@ class Event(list):
         # for unnittest 
         if debug_output == 1:
             return data
+
+        final = get_order[1]#
 
         # check which pdg to permutate
         # need to permutate pdg code where multiple M are present
@@ -2898,10 +3017,10 @@ class Event(list):
     
     
     
-    def get_momenta_str(self, get_order, allow_reversed=True):
+    def get_momenta_str(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
         """return the momenta str in the order asked for"""
         
-        out = self.get_momenta(get_order, allow_reversed)
+        out = self.get_momenta(get_order, allow_reversed, allow_crossing, merged_map)
         #format
         format = '%.12f'
         format_line = ' '.join([format]*4) + ' \n'

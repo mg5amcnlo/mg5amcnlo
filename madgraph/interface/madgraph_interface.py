@@ -508,6 +508,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("o full:",'$MG:color:GREEN')
         logger.info("   Perform all four checks described below:")
         logger.info("   permutation, brs, gauge and lorentz_invariance.")
+        logger.info("   If the model uses flavor grouping (merged particles),")
+        logger.info("   the flavor check is also performed automatically.")
         logger.info("o permutation:",'$MG:color:GREEN')
         logger.info("   Check that the model and MG5 are working properly")
         logger.info("   by generating permutations of the process and checking")
@@ -523,6 +525,16 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("o lorentz_invariance:",'$MG:color:GREEN')
         logger.info("   Check that the amplitude is lorentz invariant by")
         logger.info("   comparing the amplitiude in different frames")
+        logger.info("o flavor:",'$MG:color:GREEN')
+        logger.info("   Check that the flavor-merged matrix element agrees with")
+        logger.info("   the individual-flavor matrix elements computed without")
+        logger.info("   flavor grouping at the same phase-space point.")
+        logger.info("   This is useful to validate the merged-flavor method.")
+        logger.info("o language:",'$MG:color:GREEN')
+        logger.info("   Cross-check the matrix element by comparing the Python,")
+        logger.info("   Fortran standalone (SA), and C++ standalone (SA) back-ends")
+        logger.info("   at the same phase-space point.  Requires gfortran / g++.")
+        logger.info("   Example: check language p p > e+ e-",'$MG:color:GREEN')
         logger.info("o cms:",'$MG:color:GREEN')
         logger.info("   Check the complex mass scheme consistency by comparing")
         logger.info("   it to the narrow width approximation in the off-shell")
@@ -1454,10 +1466,7 @@ This will take effect only in a NEW terminal
         if os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
         elif os.path.isdir(src_path):
-            if any(p.endswith('.cu') for p in os.listdir(src_path)):
-                return 'standalone_gpu'
-            else:   
-                return 'standalone_cpp'
+            return 'standalone_cpp'
         elif os.path.isdir(mw_path):
             return 'madweight'
         elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
@@ -1727,7 +1736,7 @@ This will take effect only in a NEW terminal
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight',
-                      'matchbox', 'plugin', 'standalone_gpu']:
+                      'matchbox', 'plugin']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1884,11 +1893,6 @@ This will take effect only in a NEW terminal
         elif self._export_format.startswith('standalone'):
             if self._export_format == 'standalone_cpp':
                 name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
-                                    (self._curr_model['name'], i)
-                auto_path = lambda i: pjoin(self.writing_dir,
-                                               name_dir(i))
-            elif self._export_format == 'standalone_gpu':
-                name_dir = lambda i: 'PROC_SA_GPU_%s_%s' % \
                                     (self._curr_model['name'], i)
                 auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -2201,6 +2205,12 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
                             (not '[' in line or ('[' in line and ']' in line))):
             return
+
+        if text.startswith('--'):
+            return self.list_completion(text, ['--no_crossing', 
+                                               '--no_warning=duplicate',
+                                               '--diagram_filter',
+                                               '--standalone']) 
 
         try:
             return self.model_completion(text, ' '.join(args[1:]),line, formatting)
@@ -2968,7 +2978,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
-                   'gauge','lorentz', 'brs', 'cms']
+                   'gauge','lorentz', 'brs', 'cms', 'flavor', 'language']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
@@ -2985,8 +2995,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
-                                            'matchbox_cpp', 'matchbox',
-                                            'standalone_gpu']
+                                            'matchbox_cpp', 'matchbox']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -3083,6 +3092,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
                           'nlo_mixed_expansion':True,
+                          'apply_flavor_grouping': True 
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3179,7 +3189,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
                                    'matrix', 'standalone_rw']
-        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8', 'standalone_gpu']
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
 
     def do_quit(self, line):
@@ -3221,7 +3231,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         standalone_only = False
         if '--standalone' in args:
             standalone_only = True
+            merge_crossing = True
             args.remove('--standalone')            
+
+        merge_crossing = False
+        if '--no_crossing' in args:
+            merge_crossing = True
+            args.remove('--no_crossing') 
 
         # Check the validity of the arguments
         self.check_add(args)
@@ -3338,7 +3354,8 @@ This implies that with decay chains:
                 myproc = diagram_generation.MultiProcess(myprocdef,
                                          collect_mirror_procs = collect_mirror_procs,
                                          ignore_six_quark_processes = ignore_six_quark_processes,
-                                         optimize=optimize, diagram_filter=diagram_filter)
+                                         optimize=optimize, diagram_filter=diagram_filter,
+                                         merge_crossing=merge_crossing)
     
     
                 for amp in myproc.get('amplitudes'):
@@ -4442,6 +4459,8 @@ This implies that with decay chains:
         profile_time = []
         profile_stab = []
         cms_results = []
+        flavor_result = []
+        language_result = []
 
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
@@ -4588,6 +4607,25 @@ This implies that with decay chains:
                                           options=options)
             nb_processes += len(lorentz_result)
 
+        _merged_pdgs = myprocdef.get('model').get('merged_particles') if myprocdef else {}
+        _proc_has_merged = myprocdef and any(
+            abs(pid) in _merged_pdgs
+            for leg in myprocdef.get('legs')
+            for pid in leg.get('ids'))
+        if args[0] in ['flavor'] or (args[0] == 'full' and _proc_has_merged):
+            flavor_result = process_checks.check_flavor(myprocdef,
+                                          param_card = param_card,
+                                          options=options,
+                                          cmd = self)
+            nb_processes += len(flavor_result)
+
+        if args[0] in ['language']:
+            language_result = process_checks.check_language(myprocdef,
+                                          param_card = param_card,
+                                          options=options,
+                                          cmd = self)
+            nb_processes += len(language_result)
+
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
@@ -4702,6 +4740,12 @@ This implies that with decay chains:
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
+        if flavor_result:
+            text += 'Flavor grouping check results:\n'
+            text += process_checks.output_flavor(flavor_result) + '\n'
+        if language_result:
+            text += 'Language comparison results (Fortran SA / C++ SA):\n'
+            text += process_checks.output_language(language_result) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
@@ -5048,6 +5092,7 @@ This implies that with decay chains:
 
             mylegids = []
             polarization = []
+            flavor = []
             if '{' in part_name:
                 part_name, pol = part_name.split('{',1)
                 pol, rest = pol.split('}',1)
@@ -5131,6 +5176,7 @@ This implies that with decay chains:
                         polarization.append(p)
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
+                    
 
             duplicate =1
             if part_name in self._multiparticles:
@@ -5140,9 +5186,41 @@ This implies that with decay chains:
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
-                mylegids.extend(self._multiparticles[part_name])
+                all_merged = sum(self._curr_model.merged_particles.values(),[])
+                # support l+ l- when they are exactly the multiparticle definition with merged particles
+                if self._multiparticles[part_name] in self._curr_model.merged_particles.values():
+                    key = [k for k,v in self._curr_model.merged_particles.items() if v==self._multiparticles[part_name]][0]
+                    mylegids.append(key)
+                elif [-i for i in self._multiparticles[part_name]] in self._curr_model.merged_particles.values(): 
+                    key = [k for k,v in self._curr_model.merged_particles.items() if v==[-i for i in self._multiparticles[part_name]]][0]
+                    mylegids.append(-key)
+                #check where none-merged particles are present in the multiparticle definition                    
+                elif all(abs(i) not in all_merged for i in self._multiparticles[part_name]): 
+                    mylegids.extend(self._multiparticles[part_name])
+                else:
+                    pdg_to_merge = {}
+                    for pdg, merged_list in self._curr_model.merged_particles.items():
+                        for mpart in merged_list:
+                            pdg_to_merge[mpart] = pdg
+                            pdg_to_merge[-mpart] = -pdg
+                    for pid in self._multiparticles[part_name]:
+                        if pid in pdg_to_merge and pdg_to_merge[pid] not in mylegids:
+                            mylegids.append(pdg_to_merge[pid])
+                            if not all(pdg in self._multiparticles[part_name] for pdg in self._curr_model.merged_particles[abs(pdg_to_merge[pid])]):
+                                raise self.InvalidCmd("Multiparticle %s contains merged particles but not all their merged components." % part_name)
+                        else:
+                            mylegids.append(pid)
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
-                if int(part_name) in self._curr_model.get('particle_dict'):
+                if abs(int(part_name)) in sum(self._curr_model.merged_particles.values(),[]):
+                   for pdg in self._curr_model.merged_particles: 
+                        if abs(int(part_name)) in self._curr_model.merged_particles[pdg]:
+                            if int(part_name) > 0:
+                                mylegids.append(pdg)
+                            else:
+                                mylegids.append(-pdg)
+                            flavor = [int(part_name)]
+                            break 
+                elif int(part_name) in self._curr_model.get('particle_dict'):
                     mylegids.append(int(part_name))
                 else:
                     raise self.InvalidCmd("No pdg_code %s in model" % part_name)
@@ -5150,7 +5228,18 @@ This implies that with decay chains:
                 mypart = self._curr_model['particles'].get_copy(part_name)
                 
                 if mypart:
-                    mylegids.append(mypart.get_pdg_code())
+                    pdg = mypart.get_pdg_code()
+                    if abs(pdg) in sum(self._curr_model.merged_particles.values(),[]):
+                        for mpdg in self._curr_model.merged_particles: 
+                            if abs(pdg) in self._curr_model.merged_particles[mpdg]:
+                                if pdg > 0:
+                                    mylegids.append(mpdg)
+                                else:
+                                    mylegids.append(-mpdg)
+                                flavor = [pdg] 
+                                break
+                    else:  
+                        mylegids.append(pdg)
                 else:
                     # check for duplication flag!
                     if part_name[0].isdigit():
@@ -5172,10 +5261,10 @@ This implies that with decay chains:
                         if is_tagged:
                             raise self.InvalidCmd(
                                 "%s mode does not handle tagged particles" % LoopOption)
-
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
-                                                            'polarization': polarization}))
+                                                            'polarization': polarization,
+                                                            'flavor': flavor }))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
@@ -5727,6 +5816,8 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
+                options['apply_flavor_grouping'] = self.options.get('apply_flavor_grouping', True)
+
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'],
@@ -7930,6 +8021,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         else:
             export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'madevent'
 
+        # remove flavor special handling for non grouped case
+        if args[1].lower() == 'False':
+            self._curr_model.unmerge_flavors()
+
+
     def set2_stdout_level(self, args, log=True):
         """Set the level of output information.  Options are:
               DEBUG, INFO, WARNING, ERROR, CRITICAL, 5
@@ -8869,6 +8965,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         self.check_set(args)
         self.options[args[0]] = args[1].strip()
 
+    def set2_apply_flavor_grouping(self, args, log=True):
+        """Set whether the code should apply flavor grouping in the generation of LO processes.
+        Default: True
+        """    
+        self.options['apply_flavor_grouping'] = banner_module.ConfigFile.format_variable(args[0], bool, 'apply_flavor_grouping')
+
+
+
 # not documented options:
 #   	            	contur_path         
 #delphes_path             	eps_viewer               	exrootanalysis_path
@@ -9152,7 +9256,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['standalone_msP'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
-        config['standalone_gpu'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
@@ -9556,6 +9659,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                       
                       
         matrix_elements = self._curr_matrix_elements.get_matrix_elements()
+        if any(l.get('flavor') is None for l in matrix_elements[0].get('processes')[0].get('legs')):
+            [m.get_external_flavors() for m in matrix_elements]  #precompute all flavors
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:

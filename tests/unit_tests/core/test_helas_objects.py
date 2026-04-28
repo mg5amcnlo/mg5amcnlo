@@ -5031,7 +5031,7 @@ class TestIdentifyMETag(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm',  options={'apply_flavor_grouping':False})
     
     def test_identify_me_tag_qq_qqg(self):
         """Test the find_symmetry function"""
@@ -5156,7 +5156,7 @@ class TestIdentifyMETagFKS(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm',  options={'apply_flavor_grouping':False})
     
     def test_identify_me_tag_qq_qg(self):
         """Test the find_symmetry function"""

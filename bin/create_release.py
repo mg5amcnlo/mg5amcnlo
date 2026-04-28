@@ -27,9 +27,109 @@ following actions:
 5. Remove the .bzr directory
 
 6. tar the MadGraph5_vVERSION directory.
+
+7. create the author-list anniversary db
 """
 
 from __future__ import absolute_import
+
+import subprocess
+from collections import defaultdict
+from datetime import datetime
+import re
+import unicodedata
+
+def sanitize_author(name):
+    # Remove email addresses
+    name = re.sub(r'\S+@\S+', '', name)
+
+    # Remove parentheses and their content
+    name = re.sub(r'\(.*?\)', '', name)
+
+    # Normalize unicode (remove accents)
+    name = unicodedata.normalize("NFKD", name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
+
+    # Lowercase
+    name = name.lower()
+
+    # Replace sequences of non-alphanumerics with a single ""
+    name = re.sub(r'[^a-z0-9]+', '', name)
+
+    # Remove leading/trailing garbage
+    return name.strip()
+
+
+
+
+
+alias = {'herquet': 'michelherquet',
+         'mherquet': 'michelherquet', 
+         'janovak': 'jakobnovak',
+         'davidepaganicluster': 'davidepagani',
+         'davide': 'davidepagani',
+         'pagani':'davidepagani',
+         'rikkert': 'rikkertfrederix',
+         'frederix':'rikkertfrederix',
+         'riruiz': 'richardruiz',
+         'richardphysics': 'richardruiz',
+         'mguser': 'oliviermattelaer',
+         'githubbot' : 'oliviermattelaer',
+         'shjeon': 'sihyunjeon',
+         'paolotorriell': 'paolotorrielli',
+         'sc': 'oliviermattelaer',
+         'omatt': 'oliviermattelaer',
+         'priscilaaquino' : 'prisciladeaquino',
+         'mattelaerolivier': 'oliviermattelaer',
+         '':'oliviermattelaer',
+         'shaohuasheng': 'huashengshao',
+         'ti5714vi':'timstelzer',
+         }
+
+def get_first_contributions(repo_path):
+    """
+    Scan a Git repository and return a dictionary mapping
+    first contribution dates (YYYY-MM-DD) -> list of authors.
+    """
+    # Run git log to get all commits: author name + author date (unix)
+    cmd = [
+        "git", "-C", repo_path, "log", "--pretty=format:%an|%at"
+    ]
+    output = subprocess.check_output(cmd, text=True)
+
+    first_dates = {}
+
+    for line in output.splitlines():
+        try:
+            author, timestamp = line.split("|")
+            author = sanitize_author(author)
+            if author in alias:
+                author = alias[author]
+            timestamp = int(timestamp)
+            date = datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
+
+            # Keep only the earliest commit date for each author
+            if author not in first_dates or date < first_dates[author]:
+                first_dates[author] = date
+
+        except ValueError:
+            continue  # Skip malformed lines
+    author = list(first_dates.keys())
+    author.sort()
+
+    # Invert mapping: date -> [authors...]
+    #result = defaultdict(list)
+    #for author, date in first_dates.items():
+    #    result[date].append(author)
+
+    return first_dates
+
+
+
+
+
+
+
 import sys
 from six.moves import range
 from six.moves import input
@@ -362,6 +462,16 @@ if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller
     print('Fail to create OfflineHEPToolsInstaller')
     sys.exit()
 
+
+
+### create the author contribution list
+first_contribs = get_first_contributions('.')
+fsock = open(pjoin(filepath, 'input', 'authors.md'),'w')
+for  author, first in first_contribs.items():
+    fsock.write('%s %s\n' % (author, first))
+
+
+
 # 5. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
@@ -382,6 +492,11 @@ except:
     logging.warning("Call to gpg to create signature file failed. " +\
                     "Please install and run\n" + \
                     "gpg --armor --sign --detach-sig " + filename)
+
+
+
+
+
 
 
 logging.info("Running tests on directory %s", filepath)

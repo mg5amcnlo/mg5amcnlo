@@ -1,6 +1,7 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
      $                      npart,numproc,flip, icol, ivec)
 
+      use model_object
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'

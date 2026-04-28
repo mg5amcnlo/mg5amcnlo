@@ -23,6 +23,7 @@ import time
 import tempfile 
 import shutil 
 
+import unittest as base_unittest
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import models
@@ -329,7 +330,7 @@ class TestModUFO(unittest.TestCase):
 
 
     def setUp(self):
-        self.debug=False
+        self.debug = base_unittest.debug
         if self.debug:
             self.path = "/tmp/"
         else:   

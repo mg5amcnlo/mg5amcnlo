@@ -255,7 +255,7 @@ class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""
 
-    debugging = True
+    debugging = False
     def setUp(self):
         
         self.cmd = Cmd.MasterCmd()

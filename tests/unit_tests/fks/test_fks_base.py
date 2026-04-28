@@ -42,7 +42,7 @@ class TestFKSProcess(unittest.TestCase):
 
     # the model, import the SM but remove 2nd and 3rd gen quarks
     remove_list = [3,4,5,6,-3,-4,-5,-6]
-    mymodel = import_ufo.import_model('sm')
+    mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
     for p in mymodel['particles'][:]:
         if p.get_pdg_code() in remove_list:
             mymodel['particles'].remove(p)

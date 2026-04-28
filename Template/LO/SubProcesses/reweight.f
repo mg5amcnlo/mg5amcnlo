@@ -558,6 +558,7 @@ c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
 c     keepq2bck allow to not reset the parameter q2bck
 c**************************************************
+      use model_object
       implicit none
 
       integer ivec              ! for event number in batch for common block
@@ -1335,6 +1336,7 @@ c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
 c**************************************************
+      use model_object
       implicit none
 
       include 'message.inc'
@@ -1818,6 +1820,7 @@ c            s_rwfact=0d0
       end
 
       subroutine update_scale_coupling(p, wgt)
+          use model_object
       implicit none
 
 C
@@ -1848,6 +1851,7 @@ C      include 'maxparticles.inc'
 
       
       subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
+          use model_object
       implicit none
 
 C

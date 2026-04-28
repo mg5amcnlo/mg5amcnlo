@@ -45,7 +45,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
     
     def test_find_symmetry_epem_aaa(self):
         """Test the find_symmetry function"""

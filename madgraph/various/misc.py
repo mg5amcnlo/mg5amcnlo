@@ -501,7 +501,7 @@ def get_scan_name(first, last):
     return name
 
 def copytree(*args, **opts):
-
+    raise Exception('this copytree is overwritten by another function')
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
     return shutil.copytree(*args, **opts)
@@ -1631,6 +1631,7 @@ class misc(object):
     @staticmethod
     def sprint(*args, **opt):
         return sprint(*args, **opt)
+spirnt = sprint
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
@@ -1991,6 +1992,8 @@ class EasterEgg(object):
             date = now.tm_mday, now.tm_mon 
             if date in [(1,4)]:
                 madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool = True
+                if msgtype == 'loading':
+                   self.post_banner(date) 
                 if msgtype in EasterEgg.message_aprilfirst:
                     choices = EasterEgg.message_aprilfirst[msgtype]
                     if len(choices) == 0:
@@ -2005,8 +2008,10 @@ class EasterEgg(object):
                     return
             elif msgtype=='loading' and date in self.special_banner:
                 self.change_banner(date)
+                self.post_banner(date)
                 return
             else:
+                self.post_banner(date)
                 return
             if MADEVENT:
                 return
@@ -2054,6 +2059,34 @@ class EasterEgg(object):
         else:
             madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
+    def post_banner(self, date):
+
+        if MADEVENT:
+            return ""
+        from madgraph import MG5DIR
+        import madgraph.interface.madgraph_interface as madgraph_interface
+        to_add = []
+        ff = open(pjoin(MG5DIR,'input','authors.md'), 'r')
+        for line in ff:
+            author, fdate = line.split()
+            year, month, day = [int(i) for i in fdate.split('-')]
+            if (day, month) == date:
+                to_add.append((author, year))
+        ff.close()
+
+        if not to_add:
+            return ""
+        
+        text= """
+*                CONTIBUTOR OF THE DAY:                    *
+"""
+        for author, year in to_add:
+            one = "*  - %s (first contribution in %s)" % (author, year) 
+            text += '%s%s*\n' % (one, ' '* (59-len(one)))
+        text += "************************************************************"
+
+        madgraph_interface.CmdExtended.intro_banner += text
+
 
     def call_apple(self, msg):
         

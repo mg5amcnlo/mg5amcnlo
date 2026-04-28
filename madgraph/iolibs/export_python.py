@@ -20,12 +20,14 @@ import fractions
 import glob
 import itertools
 import logging
+import math
 import os
 import re
 import shutil
 import subprocess
 import aloha
 
+import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
@@ -123,6 +125,23 @@ class ProcessExporterPython(object):
             # Averaging initial state color, spin, and identical FS particles
             den_factor_line = self.get_den_factor_line(matrix_element)
             replace_dict['den_factor_line'] = den_factor_line
+
+            # Information for the flavor-dependent symmetry factor (broken_sym).
+            # For merged-particle processes different flavor combinations may have
+            # a different identical-particle symmetry factor in the final state.
+            # The base-process PIDs and its identical-particle factorial are stored
+            # so that smatrix can apply the correct per-flavor correction at
+            # runtime, matching the BROKEN_SYM logic in the Fortran/C++ outputs.
+            _pid_data = matrix_element.get('processes')[0].get_final_ids_after_decay()
+            replace_dict['broken_sym_pid'] = repr(list(_pid_data))
+            _old_factor = 1
+            _done = []
+            for _val in _pid_data:
+                if _val not in _done:
+                    _done.append(_val)
+                    _old_factor *= math.factorial(_pid_data.count(_val))
+            replace_dict['broken_sym_old_factor'] = _old_factor
+            replace_dict['ninitial'] = ninitial
 
             # Extract process info lines for all processes
             process_lines = self.get_process_info_lines(matrix_element)
@@ -374,14 +393,49 @@ class ProcessExporterPython(object):
         couplings = misc.make_unique([c.replace('-', '') for func \
                               in matrix_element.get_all_wavefunctions() + \
                               matrix_element.get_all_amplitudes() for c in func.get('coupling')
-                              if func.get('mothers') ])
-        
-        return "\n        ".join([\
+                              if func.get('mothers') and  isinstance(c, str)])
+
+        # Collect FLV_Coupling objects and add their constituent couplings
+        flv_couplings = {}
+        for func in matrix_element.get_all_wavefunctions() + \
+                     matrix_element.get_all_amplitudes():
+            if not func.get('mothers'):
+                continue
+            for c in func.get('coupling'):
+                if not isinstance(c, str) and c.get('name') not in flv_couplings:
+                    flv_couplings[c.get('name')] = c
+                    # Also collect the underlying coupling names
+                    for coup_name in c.get_all_couplings():
+                        stripped = coup_name.lstrip('-')
+                        if stripped not in couplings:
+                            couplings.append(stripped)
+
+        # Build FLV_Coupling_py instantiation lines
+        flv_lines = []
+        for fc_name in sorted(flv_couplings):
+            fc = flv_couplings[fc_name]
+            items = ', '.join(
+                '%s: model.get(\'coupling_dict\')[\'%s\']' % (
+                    repr(key), val.lstrip('-'))
+                for key, val in fc.get('flavors').items()
+            )
+            flv_lines.append(
+                '%s = wavefunctions.FLV_Coupling_py({%s})' % (fc_name, items))
+
+        param_lines = "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
-                         % {"param": param} for param in sorted(parameters)]) + \
-               "\n        " + "\n        ".join([\
+                         % {"param": param} for param in sorted(parameters)])
+        coup_lines = "\n        ".join([\
                          "%(coup)s = model.get(\'coupling_dict\')[\"%(coup)s\"]"\
                               % {"coup": coup} for coup in sorted(couplings)])
+        flv_section = "\n        ".join(flv_lines)
+
+        result = param_lines
+        if coup_lines:
+            result += "\n        " + coup_lines
+        if flv_section:
+            result += "\n        " + flv_section
+        return result
 
 #===============================================================================
 # Global helper methods

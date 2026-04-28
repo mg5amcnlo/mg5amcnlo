@@ -815,6 +815,11 @@ class Amplitude(base_objects.PhysicsObject):
         if diagram_filter:
             res = self.apply_user_filter(res)
 
+        # 4 gluon specials demo (dedicated aloha not implemented yet)
+        #if True:
+        #    misc.sprint('apply 4 gluon specials')
+        #    #res = self.apply_4gluon_specials(res)
+
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
             for diagram in res:
@@ -926,7 +931,8 @@ class Amplitude(base_objects.PhysicsObject):
                 return False                
 
         res = diag_list.__class__()                
-        nb_removed = 0 
+        nb_removed = 0
+        misc.sprint('Diagram filter is ON', type(diag_list))
         model = self['process']['model'] 
         for diag in diag_list:
             if remove_diag(diag, model):
@@ -939,6 +945,27 @@ class Amplitude(base_objects.PhysicsObject):
             
         return res
 
+    def apply_4gluon_specials(self, diag_list):
+
+        res = diag_list.__class__()       
+        for diag in diag_list:
+            keep = True
+            for vertex in diag.get('vertices'):
+                if [21,21,21] == [abs(leg.get('id')) for leg in vertex.get('legs')]:
+                    misc.sprint([hasattr(leg, 'g3') for leg in vertex.get('legs')])
+                    if any([hasattr(leg, 'g3') for leg in vertex.get('legs')]):
+                        keep = False
+                        break
+                    else:
+                        vertex.get('legs')[-1].g3 = True
+                        misc.sprint([hasattr(leg, 'g3') for leg in vertex.get('legs')])
+                if [21,21] == [abs(leg.get('id')) for leg in vertex.get('legs')]:
+                    if all([hasattr(leg, 'g3') for leg in vertex.get('legs')]):
+                        keep = False
+                        break
+            if keep:
+                res.append(diag)
+        return res
 
 
     def create_diagram(self, vertexlist):
@@ -1263,6 +1290,7 @@ class Amplitude(base_objects.PhysicsObject):
                                     'from_group':True}),
                    vert_id)\
                   for leg_id, vert_id in leg_vert_ids]
+        
 
         return mylegs
                           
@@ -1581,7 +1609,7 @@ class MultiProcess(base_objects.PhysicsObject):
         
     def __init__(self, argument=None, collect_mirror_procs = False,
                  ignore_six_quark_processes = [], optimize=False,
-                 loop_filter=None, diagram_filter=None):
+                 loop_filter=None, diagram_filter=None, merge_crossing=False):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList
         optimize allows to use param_card information. (usefull for 1-.N)"""
@@ -1604,6 +1632,7 @@ class MultiProcess(base_objects.PhysicsObject):
         self['use_numerical'] = optimize
         self['loop_filter'] = loop_filter
         self['diagram_filter'] = diagram_filter # only True/False so far
+        self['merge_crossing'] = merge_crossing
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1652,7 +1681,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('ignore_six_quark_processes'),
                                        self['use_numerical'],
                                        loop_filter=self['loop_filter'],
-                                       diagram_filter=self['diagram_filter']))
+                                       diagram_filter=self['diagram_filter'],
+                                       merge_crossing=self['merge_crossing']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1671,7 +1701,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                   ignore_six_quark_processes = [],
                                   use_numerical=False,
                                   loop_filter=None,
-                                  diagram_filter=False):
+                                  diagram_filter=False,
+                                  merge_crossing=False):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1720,7 +1751,7 @@ class MultiProcess(base_objects.PhysicsObject):
         polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
 
-        masses = {id: model.get_particle(id).get('mass')  for leg in process_definition['legs'] for id in leg['ids']} 
+        masses = {id: model.get_particle(abs(id)).get('mass')  for leg in process_definition['legs'] for id in leg['ids']} 
 
         # keep track of the 'is_tagged' property of the legs if needed
         try:
@@ -1747,7 +1778,8 @@ class MultiProcess(base_objects.PhysicsObject):
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
                 islegs = [\
-                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization']})
+                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization'],
+                                          'flavor': [-1* f for f in islegs_orig[i]['flavor']]}) \
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1779,7 +1811,8 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'],
+                                              'flavor': fsleg['flavor']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
@@ -1875,18 +1908,22 @@ class MultiProcess(base_objects.PhysicsObject):
                         # No crossing found, just continue
                         pass
                     else:
-                        # Found crossing - reuse amplitude
-                        amplitude = MultiProcess.cross_amplitude(\
-                            amplitudes[crossed_index],
-                            process,
-                            permutations[crossed_index],
-                            permutation)
-                        amplitudes.append(amplitude)
-                        success_procs.append(sorted_legs)
-                        permutations.append(permutation)
-                        non_permuted_procs.append(fast_proc)
-                        logger.info("Crossed process found for %s, reuse diagrams." % \
-                                    process.base_string())
+                        if not merge_crossing:
+                            # Found crossing - reuse amplitude
+                            amplitude = MultiProcess.cross_amplitude(\
+                                amplitudes[crossed_index],
+                                process,
+                                permutations[crossed_index],
+                                permutation)
+                            amplitudes.append(amplitude)
+                            success_procs.append(sorted_legs)
+                            permutations.append(permutation)
+                            non_permuted_procs.append(fast_proc)
+                            logger.info("Crossed process found for %s, reuse diagrams." % \
+                                        process.base_string())
+                        else:
+                            logger.info("Crossed process found for %s, do not generate diagrams." % \
+                                        process.base_string())
                         continue
                     
                 # Create new amplitude
