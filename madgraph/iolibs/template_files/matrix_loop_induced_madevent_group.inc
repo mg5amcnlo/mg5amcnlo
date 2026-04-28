@@ -307,7 +307,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
       ENDIF
     ENDIF
 
-    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0

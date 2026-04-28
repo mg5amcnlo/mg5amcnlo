@@ -16,8 +16,6 @@
 """Unit test library for the export Python format routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
 import copy
 import fractions
 import os
@@ -232,7 +230,7 @@ class IOExportPythonTest(unittest.TestCase):
     def clean(self):
         self.jamp = []
 
-    def smatrix(self,p, model):
+    def smatrix(self, p, model, flavor=None):
         #  
         #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
         #  By the MadGraph5_aMC@NLO Development Team
@@ -284,13 +282,34 @@ class IOExportPythonTest(unittest.TestCase):
         self.helEvals = []
         ans = 0.
         for hel in helicities:
-            t = self.matrix(p, hel, model)
+            t = self.matrix(p, hel, model, flavor)
             ans = ans + t
             self.helEvals.append([hel, t.real / denominator ])
-        ans = ans / denominator
+        # Apply flavor-dependent symmetry factor (broken_sym) for merged
+        # processes.  For a merged matrix element the denominator includes the
+        # identical-particle factorial of the *base* process.  When the actual
+        # runtime flavor has a different set of identical final-state particles,
+        # a correction factor must be applied, exactly as in the Fortran/C++
+        # BROKEN_SYM function:  ans = ans * broken_sym / denominator.
+        if flavor is not None:
+            _sym_pid = list([2, -2])
+            _sym_factor = 1
+            _ninitial = 2
+            for _i in range(len(_sym_pid)):
+                if _sym_pid[_i] == 0:
+                    continue
+                _n_tot = 1
+                for _j in range(_i + 1, len(_sym_pid)):
+                    if _sym_pid[_i] == _sym_pid[_j] and flavor[_ninitial + _i] == flavor[_ninitial + _j]:
+                        _sym_pid[_j] = 0
+                        _n_tot += 1
+                        _sym_factor = _sym_factor // _n_tot
+            ans = ans * _sym_factor / denominator
+        else:
+            ans = ans / denominator
         return ans.real
 
-    def matrix(self, p, hel, model):
+    def matrix(self, p, hel, model, flavor=None):
         #  
         #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
         #  By the MadGraph5_aMC@NLO Development Team
@@ -329,10 +348,10 @@ class IOExportPythonTest(unittest.TestCase):
         # ----------
         amp = [None] * ngraphs
         w = [None] * nwavefuncs
-        w[0] = ixxxxx(p[0],ZERO,hel[0],+1)
-        w[1] = oxxxxx(p[1],ZERO,hel[1],-1)
-        w[2] = oxxxxx(p[2],ZERO,hel[2],+1)
-        w[3] = ixxxxx(p[3],ZERO,hel[3],-1)
+        w[0] = ixxxxx(p[0],ZERO,hel[0],+1, flavor[0] if flavor is not None else -1)
+        w[1] = oxxxxx(p[1],ZERO,hel[1],-1, flavor[1] if flavor is not None else -1)
+        w[2] = oxxxxx(p[2],ZERO,hel[2],+1, flavor[2] if flavor is not None else -1)
+        w[3] = ixxxxx(p[3],ZERO,hel[3],-1, flavor[3] if flavor is not None else -1)
         w[4]= FFV1_3(w[0],w[1],GC_10,ZERO,ZERO)
         # Amplitude(s) for diagram number 1
         amp[0]= FFV1_0(w[3],w[2],w[4],GC_10)
@@ -381,7 +400,7 @@ class IOExportPythonTest(unittest.TestCase):
 
         # Import the SM
         sm_path = import_ufo.find_ufo_path('sm')
-        model = import_ufo.import_model(sm_path)
+        model = import_ufo.import_model(sm_path, options={'apply_flavor_grouping':False})
 
         myleglist = base_objects.LegList()
 

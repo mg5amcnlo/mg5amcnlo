@@ -27,8 +27,6 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
 import tests.unit_tests as unittest
-from six.moves import range
-
 class ColorAmpTest(unittest.TestCase):
     """Test class for the color_amp module"""
 
@@ -759,7 +757,7 @@ class ColorSquareTest(unittest.TestCase):
 
         self.assertEqual(color_amp.ColorMatrix.fix_summed_indices(immutable1,
                                                                immutable2),
-                         (('d', (1, -2, -4)), ('T', (-4, -2, 4))))
+                         (('d', (1, -4, -5)), ('T', (-5, -4, 4))))
 
     def test_helper_lcm_functions(self):
         """Test the helper functions to derive common denominators for

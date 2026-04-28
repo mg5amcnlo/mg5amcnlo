@@ -19,8 +19,6 @@ import sys
 import re
 import os
 import logging
-from six.moves import range
-
 try:
     import madgraph
 except ImportError:

@@ -15,8 +15,6 @@
 """Unit test library for the export Pythia8 format routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
 import copy
 import fractions
 import os
@@ -393,7 +391,8 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
-    void calculate_wavefunctions(const int perm[], const int hel[]); 
+    void calculate_wavefunctions(const int perm[], const int hel[], const int
+        flavor[]); 
     static const int nwavefuncs = 8; 
     std::complex<double> w[nwavefuncs][18]; 
     static const int namplitudes = 4; 
@@ -658,7 +657,7 @@ double Sigma_sm_qqx_qqx::weightDecay(Event& process, int iResBeg, int iResEnd)
 // Evaluate |M|^2 for each subprocess
 
 void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
-    hel[])
+    hel[], const int flavor[])
 {
   // Calculate wavefunctions for all processes
   double p[nexternal][4]; 
@@ -674,10 +673,10 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
   }
 
   // Calculate all wavefunctions
-  ixxxxx(p[perm[0]], mME[0], hel[0], +1, w[0]); 
-  oxxxxx(p[perm[1]], mME[1], hel[1], -1, w[1]); 
-  oxxxxx(p[perm[2]], mME[2], hel[2], +1, w[2]); 
-  ixxxxx(p[perm[3]], mME[3], hel[3], -1, w[3]); 
+  ixxxxx(p[perm[0]], mME[0], hel[0], +1, flavor[0], w[0]); 
+  oxxxxx(p[perm[1]], mME[1], hel[1], -1, flavor[1], w[1]); 
+  oxxxxx(p[perm[2]], mME[2], hel[2], +1, flavor[2], w[2]); 
+  ixxxxx(p[perm[3]], mME[3], hel[3], -1, flavor[3], w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
   FFV2_5_3(w[0], w[1], pars->GC_35, pars->GC_47, pars->MZ, pars->WZ, w[5]); 
   FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[6]); 
@@ -970,7 +969,8 @@ double Sigma_sm_qq_six::weightDecay(Event& process, int iResBeg, int iResEnd)
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int hel[])
+void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int
+    hel[], const int flavor[])
 {
   // Calculate wavefunctions for all processes
   double p[nexternal][4]; 
@@ -986,8 +986,8 @@ void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int hel[])
   }
 
   // Calculate all wavefunctions
-  oxxxxx(p[perm[0]], mME[0], hel[0], -1, w[0]); 
-  ixxxxx(p[perm[1]], mME[1], hel[1], +1, w[1]); 
+  oxxxxx(p[perm[0]], mME[0], hel[0], -1, flavor[0], w[0]); 
+  ixxxxx(p[perm[1]], mME[1], hel[1], +1, flavor[1], w[1]); 
   sxxxxx(p[perm[2]], +1, w[2]); 
 
   // Calculate all amplitudes
@@ -1355,18 +1355,16 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 
     def setUp(self):
 
-        model_pkl = os.path.join(MG5DIR, 'models','sm','model.pkl')
+        model_pkl = os.path.join(MG5DIR, 'models','sm','py3_model.pkl')
         if os.path.isfile(model_pkl):
             try:
                 self.model = save_load_object.load_from_file(model_pkl)
             except:
                 sm_path = import_ufo.find_ufo_path('sm')
                 self.model = import_ufo.import_model(sm_path)
-                self.model = save_load_object.load_from_file(model_pkl)                
         else:
             sm_path = import_ufo.find_ufo_path('sm')
             self.model = import_ufo.import_model(sm_path)
-            self.model = save_load_object.load_from_file(model_pkl)
         self.model_builder = export_cpp.UFOModelConverterPythia8(\
                                              self.model, "/tmp",
                                              replace_dict={'include_prefix':'Pythia8/'})
@@ -1409,12 +1407,12 @@ static Parameters_sm* getInstance();
 // Model parameters independent of aS
 double mdl_WTau,mdl_WH,mdl_WT,mdl_WW,mdl_WZ,mdl_MTA,mdl_MM,mdl_Me,mdl_MH,mdl_MB,mdl_MT,mdl_MC,mdl_MZ,mdl_ymtau,mdl_ymm,mdl_yme,mdl_ymt,mdl_ymb,mdl_ymc,mdl_etaWS,mdl_rhoWS,mdl_AWS,mdl_lamWS,mdl_Gf,aEWM1,ZERO,mdl_lamWS__exp__2,mdl_lamWS__exp__3,mdl_MZ__exp__2,mdl_MZ__exp__4,mdl_sqrt__2,mdl_MH__exp__2,mdl_aEW,mdl_MW,mdl_sqrt__aEW,mdl_ee,mdl_MW__exp__2,mdl_sw2,mdl_cw,mdl_sqrt__sw2,mdl_sw,mdl_g1,mdl_gw,mdl_vev,mdl_vev__exp__2,mdl_lam,mdl_yb,mdl_yc,mdl_ye,mdl_ym,mdl_yt,mdl_ytau,mdl_muH,mdl_ee__exp__2,mdl_sw__exp__2,mdl_cw__exp__2;
 std::complex<double> mdl_CKM1x1,mdl_CKM1x2,mdl_complexi,mdl_CKM1x3,mdl_CKM2x1,mdl_CKM2x2,mdl_CKM2x3,mdl_CKM3x1,mdl_CKM3x2,mdl_CKM3x3,mdl_conjg__CKM1x3,mdl_conjg__CKM2x3,mdl_conjg__CKM3x3,mdl_conjg__CKM2x1,mdl_conjg__CKM3x1,mdl_conjg__CKM2x2,mdl_conjg__CKM3x2,mdl_conjg__CKM1x1,mdl_conjg__CKM1x2,mdl_I1x31,mdl_I1x32,mdl_I1x33,mdl_I2x12,mdl_I2x13,mdl_I2x22,mdl_I2x23,mdl_I2x32,mdl_I2x33,mdl_I3x21,mdl_I3x22,mdl_I3x23,mdl_I3x31,mdl_I3x32,mdl_I3x33,mdl_I4x13,mdl_I4x23,mdl_I4x33;
+// Model couplings independent of aS
+std::complex<double> GC_1,GC_2,GC_3,GC_4,GC_5,GC_6,GC_7,GC_8,GC_9,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48,GC_49,GC_50,GC_51,GC_52,GC_53,GC_54,GC_55,GC_56,GC_57,GC_58,GC_59,GC_60,GC_61,GC_62,GC_63,GC_64,GC_65,GC_66,GC_67,GC_68,GC_69,GC_70,GC_71,GC_72,GC_73,GC_74,GC_75,GC_76,GC_77,GC_78,GC_79,GC_80,GC_81,GC_82,GC_83,GC_84,GC_85,GC_86,GC_87,GC_88,GC_89,GC_90,GC_91,GC_92,GC_93,GC_94,GC_95,GC_96,GC_97,GC_98,GC_99,GC_100,GC_101,GC_102,GC_103,GC_104,GC_105,GC_106,GC_107,GC_108,GC_FFV_0,GC_FFV_1,GC_FFV_2,GC_FFV_3,GC_FFV_4,GC_FFV_5;
 // Model parameters dependent on aS
 double aS,mdl_sqrt__aS,G,mdl_G__exp__2;
-// Model couplings independent of aS
-std::complex<double> GC_1,GC_2,GC_3,GC_4,GC_5,GC_6,GC_7,GC_8,GC_9,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48,GC_49,GC_50,GC_51,GC_52,GC_53,GC_54,GC_55,GC_56,GC_57,GC_58,GC_59,GC_60,GC_61,GC_62,GC_63,GC_64,GC_65,GC_66,GC_67,GC_68,GC_69,GC_70,GC_71,GC_72,GC_73,GC_74,GC_75,GC_76,GC_77,GC_78,GC_79,GC_80,GC_81,GC_82,GC_83,GC_84,GC_85,GC_86,GC_87,GC_88,GC_89,GC_90,GC_91,GC_92,GC_93,GC_94,GC_95,GC_96,GC_97,GC_98,GC_99,GC_100,GC_101,GC_102,GC_103,GC_104,GC_105,GC_106,GC_107,GC_108;
 // Model couplings dependent on aS
-std::complex<double> GC_12,GC_11,GC_10;
+std::complex<double> GC_10,GC_11,GC_12;
 
 // Set parameters that are unchanged during the run
 void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);
@@ -1680,6 +1678,12 @@ GC_105 = (mdl_ee*mdl_complexi*mdl_conjg__CKM2x3)/(mdl_sw*mdl_sqrt__2);
 GC_106 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x1)/(mdl_sw*mdl_sqrt__2);
 GC_107 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x2)/(mdl_sw*mdl_sqrt__2);
 GC_108 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x3)/(mdl_sw*mdl_sqrt__2);
+GC_FFV_0 = -2.*(-(mdl_ee*mdl_complexi*mdl_sw)/(6.*mdl_cw));
+GC_FFV_1 = 1.*(-(mdl_cw*mdl_ee*mdl_complexi)/(2.*mdl_sw)+(-(mdl_ee*mdl_complexi*mdl_sw)/(6.*mdl_cw)));
+GC_FFV_2 = 2.*((mdl_ee*mdl_complexi*mdl_sw)/(2.*mdl_cw));
+GC_FFV_3 = 1.*(-(mdl_cw*mdl_ee*mdl_complexi)/(2.*mdl_sw)+((mdl_ee*mdl_complexi*mdl_sw)/(2.*mdl_cw)));
+GC_FFV_4 = 4.*(-(mdl_ee*mdl_complexi*mdl_sw)/(6.*mdl_cw));
+GC_FFV_5 = 1.*((mdl_cw*mdl_ee*mdl_complexi)/(2.*mdl_sw)+(-(mdl_ee*mdl_complexi*mdl_sw)/(6.*mdl_cw)));
 }
 
 void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
@@ -1691,9 +1695,9 @@ mdl_G__exp__2 = ((G)*(G));
 
 
 void Parameters_sm::setDependentCouplings(){
-GC_12 = mdl_complexi*mdl_G__exp__2;
-GC_11 = mdl_complexi*G;
 GC_10 = -G;
+GC_11 = mdl_complexi*G;
+GC_12 = mdl_complexi*mdl_G__exp__2;
 }
 
 // Routines for printing out parameters
@@ -1900,6 +1904,12 @@ cout << setw(20) << "GC_105 " << "= " << setiosflags(ios::scientific) << setw(10
 cout << setw(20) << "GC_106 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_106 << endl;
 cout << setw(20) << "GC_107 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_107 << endl;
 cout << setw(20) << "GC_108 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_108 << endl;
+cout << setw(20) << "GC_FFV_0 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_0 << endl;
+cout << setw(20) << "GC_FFV_1 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_1 << endl;
+cout << setw(20) << "GC_FFV_2 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_2 << endl;
+cout << setw(20) << "GC_FFV_3 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_3 << endl;
+cout << setw(20) << "GC_FFV_4 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_4 << endl;
+cout << setw(20) << "GC_FFV_5 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_FFV_5 << endl;
 }
 void Parameters_sm::printDependentParameters(){
 cout << "sm model parameters dependent on event kinematics:" << endl;
@@ -1910,9 +1920,9 @@ cout << setw(20) << "mdl_G__exp__2 " << "= " << setiosflags(ios::scientific) << 
 }
 void Parameters_sm::printDependentCouplings(){
 cout << "sm model couplings dependent on event kinematics:" << endl;
-cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
-cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
 cout << setw(20) << "GC_10 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_10 << endl;
+cout << setw(20) << "GC_11 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_11 << endl;
+cout << setw(20) << "GC_12 " << "= " << setiosflags(ios::scientific) << setw(10) << GC_12 << endl;
 }
 
 """ % misc.get_pkg_info()

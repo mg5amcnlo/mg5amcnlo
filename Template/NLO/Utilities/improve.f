@@ -107,14 +107,14 @@ c-----
 
       open (unit=lun, file = fname, status='unknown')
       if (run_cluster.eq.0) then
-         write(lun,15) '#!/bin/bash'
+         write(lun,15) '#!/usr/bin/env bash'
          write(lun,15) 'script=' // fname
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
          write(lun,'(a,$)') 'for i in '
       elseif(run_cluster.eq.1) then
-         write(lun,15) '#!/bin/bash'
+         write(lun,15) '#!/usr/bin/env bash'
          write(lun,15) 'if [ -n "$_CONDOR_SCRATCH_DIR" ]; then'
          write(lun,15) '    CONDOR_INITIAL_DIR=`pwd`'
          write(lun,15) '    cd $_CONDOR_SCRATCH_DIR'

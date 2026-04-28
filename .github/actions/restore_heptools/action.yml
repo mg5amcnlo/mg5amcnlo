@@ -1,0 +1,53 @@
+name: Restore full heptools cache
+description: Restores heptools from cache and sets MG5 accordingly
+
+runs:
+  using: composite
+  steps:
+    - name: get os 
+      run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - name: restore full cache
+      id: heptools-cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    - name: validate cache content
+      id: validate-cache
+      if: steps.heptools-cache.outputs.cache-hit == 'true'
+      run: |
+        # Check that all expected HEPtool binaries/directories are present
+        VALID=true
+        test -d $HOME/.cache/HEPtools/lhapdf6_py3                    || VALID=false
+        test -d $HOME/.cache/HEPtools/pythia8                         || VALID=false
+        test -x $HOME/.cache/HEPtools/bin/eMELA-config                || VALID=false
+        test -x $HOME/.cache/HEPtools/fastjet/bin/fastjet-config      || VALID=false
+        test -d $HOME/.cache/HEPtools/rivet                           || VALID=false
+        test -d $HOME/.cache/HEPtools/ninja                           || VALID=false
+        echo "cache_valid=$VALID" >> $GITHUB_OUTPUT
+        if [ "$VALID" = "false" ]; then
+          echo "::warning::heptools cache is incomplete, will restore from sub-caches"
+        fi
+      shell: bash
+
+    # setup other environment of previous level of cache 
+    # try to use their cache if previous cache failed or content is incomplete
+    - uses: ./.github/actions/restore_heptools_lhapdf
+      with: 
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+    - uses: ./.github/actions/restore_heptools_pythia8
+      with: 
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+    - uses: ./.github/actions/restore_heptools_emela
+      with: 
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+    - uses: ./.github/actions/restore_heptools_contur
+      with: 
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+    - uses: ./.github/actions/restore_heptools_looptools
+      with: 
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+

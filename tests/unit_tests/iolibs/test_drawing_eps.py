@@ -21,7 +21,6 @@ from __future__ import division
 # diagram generation using __main__
 from __future__ import absolute_import
 import os, sys
-from six.moves import range
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.realpath(os.path.join(root_path,'..','..'))
 sys.path.insert(0, root_path)

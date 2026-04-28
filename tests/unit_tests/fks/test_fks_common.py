@@ -19,8 +19,6 @@ from __future__ import absolute_import
 import sys
 import operator
 import os
-from six.moves import range
-from six.moves import zip
 pjoin = os.path.join
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
@@ -3065,7 +3063,7 @@ class TestLinkRBConfSM(unittest.TestCase):
 
     def setUp(self):
         if not hasattr(self, 'base_model'):
-            TestLinkRBConfSM.base_model = import_ufo.import_model('sm')
+            TestLinkRBConfSM.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
 
     def test_link_udxwpg_udxwp(self):
         """tests that the real emission process ud~>w+g and born process u u~>w+ are

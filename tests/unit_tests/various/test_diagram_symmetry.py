@@ -32,9 +32,6 @@ import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
-from six.moves import range
-from six.moves import zip
-
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
@@ -45,7 +42,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
     
     def test_find_symmetry_epem_aaa(self):
         """Test the find_symmetry function"""

@@ -1,4 +1,5 @@
       subroutine setrun
+      use model_object
 c----------------------------------------------------------------------
 c     Sets the run parameters reading them from the run_card.dat
 c

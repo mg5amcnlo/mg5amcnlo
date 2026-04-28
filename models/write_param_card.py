@@ -16,8 +16,6 @@ from __future__ import absolute_import
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
-
 class ParamCardWriterError(Exception):
     """ a error class for this file """
 
@@ -116,6 +114,8 @@ class ParamCardWriter(object):
         def_param = [] 
         # one loop for the mass
         for p in all_particles:
+            if p['pdg_code'] in self.model['merged_particles']:
+                continue
             mass = self.param_dict[p["mass"]]
             if isinstance(mass, base_objects.ParamCardVariable):
                 if mass.lhacode[0] != p['pdg_code']:
@@ -132,6 +132,8 @@ class ParamCardWriter(object):
         # one loop for the width
         def_param = [] 
         for p in all_particles:
+            if p['pdg_code'] in self.model['merged_particles']:
+                continue
             width = self.param_dict[p["width"]]
             if isinstance(width, base_objects.ParamCardVariable):
                 if width.lhacode[0] != p['pdg_code']:
@@ -338,6 +340,8 @@ class ParamCardWriter(object):
         text = "" 
         for part in self.model['particles']:
             if part["pdg_code"] in self.sm_pdg or part["pdg_code"] < 0:
+                continue
+            if part["pdg_code"] in self.model['merged_particles']:
                 continue
             # don't write ghosts in the QNumbers block
             #if part["type"] == 'ghost':

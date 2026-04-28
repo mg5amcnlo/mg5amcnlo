@@ -32,13 +32,11 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 #import models.sm.object_library as object_library
 import tests.unit_tests as unittest
+import tests.IOTests as IOTests
 import madgraph.various.misc as misc
-from six.moves import range
-from six.moves import zip
-
-
 set_global = misc.set_global
 
+pjoin = os.path.join
 
 class TestVariable(unittest.TestCase):
 
@@ -2806,7 +2804,7 @@ class TestSimplify(unittest.TestCase):
         simp = simp.simplify()
                 
         
-class test_aloha_creation(unittest.TestCase):
+class test_aloha_creation(IOTests.IOTestManager):
     """ test the creation of one aloha routine from the create_aloha routine """
     
     
@@ -3267,8 +3265,15 @@ class test_aloha_creation(unittest.TestCase):
         self.assertEqual(solution, helas_suite.multiple_lor)
 
 
-    def test_short_aloha_multiple_lorentz_and_symmetry(self):
-        """ check if the detection of multiple lorentz work """
+    @IOTests.createIOTest()
+    def testIO_short_aloha_multiple_lorentz_and_symmetry(self):
+        """  target: fortran.f 
+             target: cpp.h 
+             target: cpp.cc 
+             target: vvs1.py"""
+
+
+        #check if the detection of multiple lorentz work """
         
         aloha_lib.KERNEL.clean()
         VVS1 = self.Lorentz(name = 'VVS1',
@@ -3284,195 +3289,23 @@ class test_aloha_creation(unittest.TestCase):
         abstract.add_combine(('VVS2',))
         
         text =  abstract.write(None, 'Fortran')
+        fsock = open(pjoin(self.IOpath, 'fortran.f'), 'w')
+        fsock.write(text)
+        fsock.close()
 
-        goal = """subroutine VVS1_1(V2, S3, COUP, M1, W1,V1)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- real*8 M1
- real*8 OM1
- real*8 P1(0:3)
- complex*16 S3(*)
- complex*16 TMP0
- complex*16 V1(6)
- complex*16 V2(*)
- real*8 W1
- complex*16 denom
-entry VVS1_2(V2, S3, COUP, M1, W1,V1)
-
-    OM1 = 0d0
-    if (M1.ne.0d0) OM1=1d0/M1**2
-    V1(1) = +V2(1)+S3(1)
-    V1(2) = +V2(2)+S3(2)
-P1(0) = -dble(V1(1))
-P1(1) = -dble(V1(2))
-P1(2) = -dimag(V1(2))
-P1(3) = -dimag(V1(1))
- TMP0 = (V2(3)*P1(0)-V2(4)*P1(1)-V2(5)*P1(2)-V2(6)*P1(3))
-    denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI* W1))
-    V1(3)= denom*S3(3)*(-CI*(V2(3))+CI*(P1(0)*OM1*TMP0))
-    V1(4)= denom*S3(3)*(-CI*(V2(4))+CI*(P1(1)*OM1*TMP0))
-    V1(5)= denom*S3(3)*(-CI*(V2(5))+CI*(P1(2)*OM1*TMP0))
-    V1(6)= denom*S3(3)*(-CI*(V2(6))+CI*(P1(3)*OM1*TMP0))
- end
-
-
-
-subroutine VVS1_2_1(V2, S3, COUP1, COUP2, M1, W1,V1)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP1
- complex*16 COUP2
- real*8 M1
- real*8 OM1
- real*8 P1(0:3)
- complex*16 S3(*)
- complex*16 V1(6)
- complex*16 V2(*)
- complex*16 Vtmp(6)
- real*8 W1
- complex*16 denom
- integer*4 i
-entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
-
-    call VVS1_1(V2,S3,COUP1,M1,W1,V1)
-    call VVS2_1(V2,S3,COUP2,M1,W1,Vtmp)
- do i = 3, 6
-        V1(i) = V1(i) + Vtmp(i)
- enddo
- end
-
-"""
-        self.assertEqual(text.split('\n'),goal.split('\n')) 
         text_h, text_cpp =  abstract.write(None, 'CPP')
-    
-        goal_h = """#ifndef VVS1_1_guard
-#define VVS1_1_guard
-#include <complex>
+        fsock = open(pjoin(self.IOpath, 'cpp.h'), 'w')
+        fsock.write(text_h)
+        fsock.close()
+        fsock = open(pjoin(self.IOpath, 'cpp.cc'), 'w')
+        fsock.write(text_cpp)
+        fsock.close()
 
- void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
- void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
-#endif
-
-#ifndef VVS1_2_1_guard
-#define VVS1_2_1_guard
-#include <complex>
-
- void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
- void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
-#endif
-
-"""
-        goal_cpp = """#include "VVS1_1.h"
-
- void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
-{
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  OM1;
- double  P1[4];
- std::complex<double>  TMP0;
- std::complex<double>  denom;
-    OM1 = 0.;
-    if (M1 != 0.)
- OM1=1./(M1*M1);
-    V1[0] = +V2[0]+S3[0];
-    V1[1] = +V2[1]+S3[1];
-P1[0] = -V1[0].real();
-P1[1] = -V1[1].real();
-P1[2] = -V1[1].imag();
-P1[3] = -V1[0].imag();
- TMP0 = (V2[2]*P1[0]-V2[3]*P1[1]-V2[4]*P1[2]-V2[5]*P1[3]);
-    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - M1 * (M1 -cI* W1));
-    V1[2]= denom*S3[2]*(-cI*(V2[2])+cI*(P1[0]*OM1*TMP0));
-    V1[3]= denom*S3[2]*(-cI*(V2[3])+cI*(P1[1]*OM1*TMP0));
-    V1[4]= denom*S3[2]*(-cI*(V2[4])+cI*(P1[2]*OM1*TMP0));
-    V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
-}
-
- void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
-{
-
- VVS1_1(V2,S3,COUP,M1,W1,V1);
-}
- void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
-{
- std::complex<double>  Vtmp[6];
- int  i;
-    VVS1_1(V2,S3,COUP1,M1,W1,V1);
-    VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
- i= 2;
-while (i < 6)
-{
- V1[i] = V1[i] + Vtmp[i];
- i++;
-}
-}
- void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
-{
- std::complex<double>  Vtmp[6];
- int  i;
-    VVS1_1(V2,S3,COUP1,M1,W1,V1);
-    VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
- i= 2;
-while (i < 6)
-{
- V1[i] = V1[i] + Vtmp[i];
- i++;
-}
-}
-"""
-        self.assertEqual(text_h.split('\n'),goal_h.split('\n'))
-        self.assertEqual(text_cpp.split('\n'),goal_cpp.split('\n'))
-        
         
         text =  abstract.write(None, 'Python')
-
-        goal = """import cmath
-import wavefunctions
-def VVS1_1(V2,S3,COUP,M1,W1):
-    OM1 = 0.0
-    if (M1): OM1=1.0/M1**2
-    V1 = wavefunctions.WaveFunction(size=6)
-    V1[0] = +V2[0]+S3[0]
-    V1[1] = +V2[1]+S3[1]
-    P1 = [-complex(V1[0]).real, -complex(V1[1]).real, -complex(V1[1]).imag, -complex(V1[0]).imag]
-    TMP0 = (V2[2]*P1[0]-V2[3]*P1[1]-V2[4]*P1[2]-V2[5]*P1[3])
-    denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    V1[2]= denom*S3[2]*(-1j*(V2[2])+1j*(P1[0]*OM1*TMP0))
-    V1[3]= denom*S3[2]*(-1j*(V2[3])+1j*(P1[1]*OM1*TMP0))
-    V1[4]= denom*S3[2]*(-1j*(V2[4])+1j*(P1[2]*OM1*TMP0))
-    V1[5]= denom*S3[2]*(-1j*(V2[5])+1j*(P1[3]*OM1*TMP0))
-    return V1
-
-
-import cmath
-import wavefunctions
-def VVS1_2(V2,S3,COUP,M1,W1):
-
-    return VVS1_1(V2,S3,COUP,M1,W1)
-import cmath
-import wavefunctions
-def VVS1_2_1(V2,S3,COUP1,COUP2,M1,W1):
-    V1 = VVS1_1(V2,S3,COUP1,M1,W1)
-    tmp = VVS2_1(V2,S3,COUP2,M1,W1)
-    for i in range(2,6):
-        V1[i] += tmp[i]
-    return V1
-
-import cmath
-import wavefunctions
-def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
-    V1 = VVS1_1(V2,S3,COUP1,M1,W1)
-    tmp = VVS2_1(V2,S3,COUP2,M1,W1)
-    for i in range(2,6):
-        V1[i] += tmp[i]
-    return V1
-
-"""
-        self.assertEqual(text.split('\n'),goal.split('\n'))
-        
+        fsock = open(pjoin(self.IOpath, 'vvs1.py'), 'w')
+        fsock.write(text)
+        fsock.close()
         
     def test_short_full_sm_aloha(self):
         """test that the full SM seems to work"""
@@ -3531,20 +3364,22 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
             
             # Check the content of FFV1__FFV2C1_0.f
             fsock = open('%s/FFV1C1_0.f' % path)
-            goal = """
-          SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
-          IMPLICIT NONE
-          COMPLEX*16 F1(*)
-          COMPLEX*16 F2(*)
-          COMPLEX*16 V3(*)
-          COMPLEX*16 COUP1
-          COMPLEX*16 COUP2
-          COMPLEX*16 VERTEX
-          COMPLEX*16 TMP
-          CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
-          CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
-          VERTEX = VERTEX + TMP
-          END"""
+            goal ="""
+SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
+USE ALOHA_OBJECT
+IMPLICIT NONE
+PARAMETER (CI=(0D0,1D0))
+COMPLEX*16 COUP1
+COMPLEX*16 COUP2
+TYPE(ALOHA) F1
+TYPE(ALOHA) F2
+TYPE(ALOHA) V3
+COMPLEX*16 TMP
+COMPLEX*16 VERTEX
+CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
+CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
+VERTEX = VERTEX + TMP
+END"""
     
             data = [ l.strip() for l in fsock.read().split('\n')]
             for line in goal.split('\n'):
@@ -3651,9 +3486,11 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
             self.assertAlmostEqual(out, sol)
             
 
-    def test_short_aloha_expr_VVS1(self):
-        """Test analytical expression for VVS from SILH. 
-        This checks that P(-1,1)**2 is correct."""
+    @IOTests.createIOTest()
+    def testIO_short_aloha_expr_VVS1(self):
+        """ target: fortran.f """
+        #Test analytical expression for VVS from SILH. 
+        #This checks that P(-1,1)**2 is correct."""
         
         
         aloha_lib.KERNEL.clean()
@@ -3665,38 +3502,10 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         builder = create_aloha.AbstractRoutineBuilder(VVS1)
         amp = builder.compute_routine(0)
 
-        solution = """subroutine VVS1_0(V1, V2, S3, COUP,vertex)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- real*8 P1(0:3)
- complex*16 S3(*)
- complex*16 TMP0
- complex*16 TMP1
- complex*16 TMP2
- complex*16 TMP3
- complex*16 V1(*) 
- complex*16 V2(*)
- complex*16 vertex
-P1(0) = dble(V1(1))
-P1(1) = dble(V1(2))
-P1(2) = dimag(V1(2))
-P1(3) = dimag(V1(1))
-TMP0 = (V2(3)*P1(0)-V2(4)*P1(1)-V2(5)*P1(2)-V2(6)*P1(3))
-TMP1 = (P1(0)*V1(3)-P1(1)*V1(4)-P1(2)*V1(5)-P1(3)*V1(6))
-TMP2 = (V2(3)*V1(3)-V2(4)*V1(4)-V2(5)*V1(5)-V2(6)*V1(6))
-TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
-vertex = COUP*S3(3)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
-end
-
-
-"""
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = [l.strip() for l in solution.split('\n')]
-        split_routine = [l.strip() for l in routine.split('\n')]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'fortran.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
 
         V1_1, V1_2, V1_3, V1_4 = 1,2,3,4
@@ -3829,7 +3638,7 @@ class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
         self.expr.tag=[]
         return self.define_simple_output()
 
-class TestAlohaWriter(unittest.TestCase):
+class TestAlohaWriter(IOTests.IOTestManager):
     """ simple unittest of the writer more test are in test_export_v4
     and test_export_pythia"""
 
@@ -4176,11 +3985,13 @@ class TestAlohaWriter(unittest.TestCase):
 import wavefunctions
 def SSS1_1(S2,S3,COUP,M1,W1):
     S1 = wavefunctions.WaveFunction(size=3)
-    S1[0] = +S2[0]+S3[0]
-    S1[1] = +S2[1]+S3[1]
-    P1 = [-complex(S1[0]).real, -complex(S1[1]).real, -complex(S1[1]).imag, -complex(S1[0]).imag]
+    S1.momenta[0] = +S2.momenta[0]+S3.momenta[0]
+    S1.momenta[1] = +S2.momenta[1]+S3.momenta[1]
+    S1.momenta[2] = +S2.momenta[2]+S3.momenta[2]
+    S1.momenta[3] = +S2.momenta[3]+S3.momenta[3]
+    P1 = [-S1.momenta[j] for j in range(4)]
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    S1[2]= denom*1j * S3[2]*S2[2]
+    S1.W[0]= denom*1j * S3.W[0]*S2.W[0]
     return S1
 
 
@@ -4211,29 +4022,18 @@ def SSS1_3(S2,S3,COUP,M1,W1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
-    
+
     @set_global()
-    def test_short_pythonwriter_spin3half(self):
-        """ test that python writer works """
+    @IOTests.createIOTest()
+    def testIO_short_pythonwriter_spin3half(self):
+        """  target: rfsc1_1.py
+             target: rfsc1_0.py
+             target: rfsc1_2.py
+        """ 
+
+        #""" test that python writer works """
 
 
-        solution ="""import cmath
-import wavefunctions
-def RFSC1_1(R1,S3,COUP,M2,W2):
-    F2 = wavefunctions.WaveFunction(size=6)
-    F2[0] = +R1[0]+S3[0]
-    F2[1] = +R1[1]+S3[1]
-    P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
-    denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
-    F2[2]= denom*1j * S3[2]*(P2[0]*(-1)*(-R1[2]+R1[7]+R1[14]+1j*(R1[11]))+(P2[1]*(R1[3]+R1[15]-R1[6]+1j*(R1[10]))+(P2[2]*(+1j*(R1[3]+R1[15])-1j*(R1[6])-R1[10])-P2[3]*(-R1[2]+R1[7]+R1[14]+1j*(R1[11])))))
-    F2[3]= denom*1j * S3[2]*(P2[0]*(R1[3]+R1[15]-R1[6]+1j*(R1[10]))+(P2[1]*(-1)*(-R1[2]+R1[7]+R1[14]+1j*(R1[11]))+(P2[2]*(-1j*(R1[2])+1j*(R1[7]+R1[14])-R1[11])-P2[3]*(R1[3]+R1[15]-R1[6]+1j*(R1[10])))))
-    F2[4]= denom*1j * M2*S3[2]*(-R1[2]+R1[7]+R1[14]+1j*(R1[11]))
-    F2[5]= denom*-1j * M2*S3[2]*(R1[3]+R1[15]-R1[6]+1j*(R1[10]))
-    return F2
-
-
-"""
-        
         RFS = UFOLorentz(name = 'RFS',
                  spins = [ 4, 2, 1 ],
                  structure = 'Gamma(1,2,-1)*ProjM(-1,1)')        
@@ -4242,103 +4042,35 @@ def RFSC1_1(R1,S3,COUP,M2,W2):
         amp = builder.compute_routine(1)
         
         routine = amp.write(output_dir=None, language='Python')
-        
-        
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'rfsc1_1.py'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
-        solution = """import cmath
-import wavefunctions
-def RFSC1_0(F2,R1,S3,COUP):
-    TMP0 = (F2[4]*(-R1[2]+R1[7]+R1[14]+1j*(R1[11]))-F2[5]*(R1[3]+R1[15]-R1[6]+1j*(R1[10])))
-    vertex = COUP*-1j * TMP0*S3[2]
-    return vertex   
-    
-    
-"""
 
-        
+
         amp = builder.compute_routine(0)
         routine = amp.write(output_dir=None, language='Python')
-        split_solution = [l.strip() for l in solution.split('\n')]
-        split_routine = [l.strip() for l in routine.split('\n')]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'rfsc1_0.py'), 'w')
+        fsock.write(routine)
+        fsock.close()
+
         
-        solution = """import cmath
-import wavefunctions
-def RFSC1_2(F2,S3,COUP,M1,W1):
-    OM1 = 0.0
-    if (M1): OM1=1.0/M1**2
-    R1 = wavefunctions.WaveFunction(size=18)
-    R1[0] = +F2[0]+S3[0]
-    R1[1] = +F2[1]+S3[1]
-    P1 = [-complex(R1[0]).real, -complex(R1[1]).real, -complex(R1[1]).imag, -complex(R1[0]).imag]
-    denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    R1[2]= denom*1j/3 * M1*S3[2]*(OM1*(P1[0]*(F2[4]*(M1*M1*OM1*(-P1[0]+P1[3])+(+2*(P1[0])-P1[3]))+F2[5]*(M1*M1*OM1*(P1[1]-1j*(P1[2]))+(-P1[1]+1j*(P1[2]))))-F2[4]*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))-F2[4])
-    R1[6]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[1]*(F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(-P1[0]+P1[3]))+F2[5]*(M1*M1*OM1*(-P1[1]+1j*(P1[2]))+(+2*(P1[1])-1j*(P1[2]))))+F2[5]*(P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))+F2[5])
-    R1[10]= denom*-1/3 * M1*S3[2]*(OM1*(P1[2]*(F2[4]*(M1*M1*OM1*(+1j*(P1[0])-1j*(P1[3]))+(-1j*(P1[0])+1j*(P1[3])))+F2[5]*(M1*-M1*OM1*(+1j*(P1[1])+P1[2])+(+1j*(P1[1])+2*(P1[2]))))+F2[5]*(P1[1]*P1[1]+P1[3]*P1[3]-P1[0]*P1[0]))+F2[5])
-    R1[14]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[3]*(F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(-P1[0]+2*(P1[3])))+F2[5]*(M1*M1*OM1*(-P1[1]+1j*(P1[2]))+(P1[1]-1j*(P1[2]))))+F2[4]*(-P1[0]*P1[0]+P1[1]*P1[1]+P1[2]*P1[2]))+F2[4])
-    R1[3]= denom*1j/3 * M1*S3[2]*(OM1*(P1[0]*(F2[4]*(M1*M1*OM1*(P1[1]+1j*(P1[2]))+(-P1[1]-1j*(P1[2])))+F2[5]*(M1*-M1*OM1*(P1[0]+P1[3])+(+2*(P1[0])+P1[3])))-F2[5]*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]))-F2[5])
-    R1[7]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[1]*(F2[4]*(M1*-M1*OM1*(P1[1]+1j*(P1[2]))+(+2*(P1[1])+1j*(P1[2])))+F2[5]*(M1*M1*OM1*(P1[0]+P1[3])+(-P1[0]-P1[3])))+F2[4]*(-P1[0]*P1[0]+P1[3]*P1[3]+P1[2]*P1[2]))+F2[4])
-    R1[11]= denom*1/3 * M1*S3[2]*(OM1*(P1[2]*(F2[4]*(M1*M1*OM1*(+1j*(P1[1])-P1[2])+(-1j*(P1[1])+2*(P1[2])))+F2[5]*(M1*-M1*OM1*(+1j*(P1[0]+P1[3]))+(+1j*(P1[0]+P1[3]))))+F2[4]*(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]))+F2[4])
-    R1[15]= denom*1j/3 * M1*S3[2]*(OM1*(P1[3]*(F2[4]*(M1*M1*OM1*(P1[1]+1j*(P1[2]))+(-P1[1]-1j*(P1[2])))+F2[5]*(M1*-M1*OM1*(P1[0]+P1[3])+(P1[0]+2*(P1[3]))))+F2[5]*(P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))+F2[5])
-    R1[4]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[0]*(M1*M1*(OM1*(-1/3)*(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2])+ -5/3)+(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))+1/3*(P1[3]*M1*M1))+(+7/3*(P1[0])-1/3*(P1[3])))+F2[5]*(M1*1/3 * M1*OM1*(P1[1]-1j*(P1[2]))+(-1/3*(P1[1])+1j/3*(P1[2]))))
-    R1[8]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[1]*(M1*M1*(OM1*(-1/3)*(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2])+ -5/3)+(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))-1j/3*(P1[2]*M1*M1))+(+7/3*(P1[1])+1j/3*(P1[2])))+F2[5]*(M1*1/3 * M1*OM1*(P1[0]+P1[3])+(-1/3*(P1[0]+P1[3]))))
-    R1[12]= denom*1/3 * S3[2]*(F2[4]*(OM1*(P1[2]*(M1*M1*(OM1*(-1)*(-1j*(P1[0]*P1[0])+1j*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))+ -5j)+(-3j*(P1[0]*P1[0])+3j*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2])))-P1[1]*M1*M1)+(P1[1]+7j*(P1[2])))+F2[5]*(M1*M1*OM1*(P1[0]+P1[3])+(-P1[0]-P1[3])))
-    R1[16]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[3]*(M1*M1*(OM1*(-1/3)*(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2])+ -5/3)+(-P1[0]*P1[0]+P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))+1/3*(P1[0]*M1*M1))+(-1/3*(P1[0])+7/3*(P1[3])))+F2[5]*(M1*1/3 * M1*OM1*(-P1[1]+1j*(P1[2]))+(+1/3*(P1[1])-1j/3*(P1[2]))))
-    R1[5]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[0]*(M1*M1*(OM1*(-1/3)*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))-1/3*(P1[3]*M1*M1))+(+7/3*(P1[0])+1/3*(P1[3])))+F2[4]*(M1*1/3 * M1*OM1*(P1[1]+1j*(P1[2]))+(-1/3*(P1[1])-1j/3*(P1[2]))))
-    R1[9]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[1]*(M1*M1*(OM1*(-1/3)*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))+1j/3*(P1[2]*M1*M1))+(+7/3*(P1[1])-1j/3*(P1[2])))+F2[4]*(M1*1/3 * M1*OM1*(P1[0]-P1[3])+(-1/3*(P1[0])+1/3*(P1[3]))))
-    R1[13]= denom*-1/3 * S3[2]*(F2[5]*(OM1*(P1[2]*(M1*M1*(OM1*(+1j*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3])-1j*(P1[0]*P1[0]))+ 5j)+(-3j*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3])+3j*(P1[0]*P1[0])))-P1[1]*M1*M1)+(P1[1]-7j*(P1[2])))+F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(-P1[0]+P1[3])))
-    R1[17]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[3]*(M1*M1*(OM1*(-1/3)*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))-1/3*(P1[0]*M1*M1))+(+1/3*(P1[0])+7/3*(P1[3])))+F2[4]*(M1*1/3 * M1*OM1*(P1[1]+1j*(P1[2]))+(-1/3*(P1[1])-1j/3*(P1[2]))))
-    return R1
-        
-    
-"""
 
         
         amp = builder.compute_routine(2)
         routine = amp.write(output_dir=None, language='Python')
-        split_solution = [l.strip() for l in solution.split('\n')]
-        split_routine = [l.strip() for l in routine.split('\n')]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))        
-        
+        fsock = open(pjoin(self.IOpath, 'rfsc1_2.py'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
-    def test_short_Fortranwriter_spin3half(self):
+    @IOTests.createIOTest()
+    def testIO_short_Fortranwriter_spin3half(self):
+        """ target: rfsc1_1.f
+            target: rfsc1_0.f
+            target: rfsc1_2.f"""
         """ test that python writer works """
         
         aloha_lib.KERNEL.clean()
-
-        solution ="""subroutine RFSC1_1(R1, S3, COUP, M2, W2,F2)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F2(6)
- real*8 M2
- real*8 P2(0:3)
- complex*16 R1(*)
- complex*16 S3(*)
- real*8 W2
- complex*16 denom
-    F2(1) = +R1(1)+S3(1)
-    F2(2) = +R1(2)+S3(2)
-P2(0) = -dble(F2(1))
-P2(1) = -dble(F2(2))
-P2(2) = -dimag(F2(2))
-P2(3) = -dimag(F2(1))
-    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
-    F2(3)= denom*CI * S3(3)*(P2(0)*(-1d0)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))+(P2(1)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))+(P2(2)*(+CI*(R1(4)+R1(16))-CI*(R1(7))-R1(11))-P2(3)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12))))))
-    F2(4)= denom*CI * S3(3)*(P2(0)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))+(P2(1)*(-1d0)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))+(P2(2)*(-CI*(R1(3))+CI*(R1(8)+R1(15))-R1(12))-P2(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))))
-    F2(5)= denom*CI * M2*S3(3)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))
-    F2(6)= denom*(-CI )* M2*S3(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))
- end
-
-
-"""
         
         RFS = UFOLorentz(name = 'RFS',
                  spins = [ 4, 2, 1 ],
@@ -4348,95 +4080,22 @@ P2(3) = -dimag(F2(1))
         amp = builder.compute_routine(1)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_solution = split_solution[:1] + split_solution[12:]
-        split_routine = routine.split('\n')
-        split_routine = split_routine[:1] + split_routine[12:]
-        
-        
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-        solution = """subroutine RFSC1_0(F2, R1, S3, COUP,vertex)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F2(*)
- complex*16 R1(*)
- complex*16 S3(*)
- complex*16 TMP0
- complex*16 vertex
- TMP0 = (F2(5)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))-F2(6)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))
- vertex = COUP*(-CI * TMP0*S3(3))
- end
-    
-    
-"""
-
+        fsock = open(pjoin(self.IOpath, 'rfsc1_1.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
         
         amp = builder.compute_routine(0)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = [l.strip() for l in solution.split('\n')]
-        split_routine = [l.strip() for l in routine.split('\n')]
-        split_solution = split_solution[:1] + split_solution[-2:]
-        split_routine = split_routine[:1] + split_routine[-2:]
-        
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
-        solution = """subroutine RFSC1_2(F2, S3, COUP, M1, W1,R1)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F2(*)
- real*8 M1
- real*8 OM1
- real*8 P1(0:3)
- complex*16 R1(18)
- complex*16 S3(*)
- real*8 W1
- complex*16 denom
-    OM1 = 0d0
-    if (M1.ne.0d0) OM1=1d0/M1**2
-    R1(1) = +F2(1)+S3(1)
-    R1(2) = +F2(2)+S3(2)
-P1(0) = -dble(R1(1))
-P1(1) = -dble(R1(2))
-P1(2) = -dimag(R1(2))
-P1(3) = -dimag(R1(1))
-    denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI* W1))
-    R1(3)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(0)*(F2(5)*(M1*M1*OM1*(-P1(0)+P1(3))+(+2d0*(P1(0))-P1(3)))+F2(6)*(M1*M1*OM1*(P1(1)-CI*(P1(2)))+(-P1(1)+CI*(P1(2)))))-F2(5)*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))-F2(5))
-    R1(4)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(0)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-P1(1)-CI*(P1(2))))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(+2d0*(P1(0))+P1(3))))-F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)))-F2(6))
-    R1(5)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(0)*(M1*M1*(OM1*(-1d0/3d0)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))+ -5d0/3d0)+(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+1d0/3d0*(P1(3)*M1*M1))+(+7d0/3d0*(P1(0))-1d0/3d0*(P1(3))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(P1(1)-CI*(P1(2)))+(-1d0/3d0*(P1(1))+1d0/3d0 * CI*(P1(2)))))
-    R1(6)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(0)*(M1*M1*(OM1*(-1d0/3d0)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(3)*M1*M1))+(+7d0/3d0*(P1(0))+1d0/3d0*(P1(3))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
-    R1(7)= denom*(-1d0/3d0 )* CI * M1*S3(3)*(OM1*(P1(1)*(F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(-P1(0)+P1(3)))+F2(6)*(M1*M1*OM1*(-P1(1)+CI*(P1(2)))+(+2d0*(P1(1))-CI*(P1(2)))))+F2(6)*(P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))+F2(6))
-    R1(8)= denom*(-1d0/3d0 )* CI * M1*S3(3)*(OM1*(P1(1)*(F2(5)*(M1*-M1*OM1*(P1(1)+CI*(P1(2)))+(+2d0*(P1(1))+CI*(P1(2))))+F2(6)*(M1*M1*OM1*(P1(0)+P1(3))+(-P1(0)-P1(3))))+F2(5)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(2)*P1(2)))+F2(5))
-    R1(9)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(1)*(M1*M1*(OM1*(-1d0/3d0)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))+ -5d0/3d0)+(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))-1d0/3d0 * CI*(P1(2)*M1*M1))+(+7d0/3d0*(P1(1))+1d0/3d0 * CI*(P1(2))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(P1(0)+P1(3))+(-1d0/3d0*(P1(0)+P1(3)))))
-    R1(10)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(1)*(M1*M1*(OM1*(-1d0/3d0)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))+1d0/3d0 * CI*(P1(2)*M1*M1))+(+7d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(0)-P1(3))+(-1d0/3d0*(P1(0))+1d0/3d0*(P1(3)))))
-    R1(11)= denom*(-1d0/3d0 )* M1*S3(3)*(OM1*(P1(2)*(F2(5)*(M1*M1*OM1*(+CI*(P1(0))-CI*(P1(3)))+(-CI*(P1(0))+CI*(P1(3))))+F2(6)*(M1*-M1*OM1*(+CI*(P1(1))+P1(2))+(+CI*(P1(1))+2d0*(P1(2)))))+F2(6)*(P1(1)*P1(1)+P1(3)*P1(3)-P1(0)*P1(0)))+F2(6))
-    R1(12)= denom*1d0/3d0 * M1*S3(3)*(OM1*(P1(2)*(F2(5)*(M1*M1*OM1*(+CI*(P1(1))-P1(2))+(-CI*(P1(1))+2d0*(P1(2))))+F2(6)*(M1*-M1*OM1*(+CI*(P1(0)+P1(3)))+(+CI*(P1(0)+P1(3)))))+F2(5)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)))+F2(5))
-    R1(13)= denom*1d0/3d0 * S3(3)*(F2(5)*(OM1*(P1(2)*(M1*M1*(OM1*(-1d0)*(-CI*(P1(0)*P1(0))+CI*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+ -5d0 * CI)+(-3d0 * CI*(P1(0)*P1(0))+3d0 * CI*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))))-P1(1)*M1*M1)+(P1(1)+7d0 * CI*(P1(2))))+F2(6)*(M1*M1*OM1*(P1(0)+P1(3))+(-P1(0)-P1(3))))
-    R1(14)= denom*(-1d0/3d0 )* S3(3)*(F2(6)*(OM1*(P1(2)*(M1*M1*(OM1*(+CI*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3))-CI*(P1(0)*P1(0)))+ 5d0 * CI)+(-3d0 * CI*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3))+3d0 * CI*(P1(0)*P1(0))))-P1(1)*M1*M1)+(P1(1)-7d0 * CI*(P1(2))))+F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(-P1(0)+P1(3))))
-    R1(15)= denom*(-1d0/3d0 )* CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(-P1(0)+2d0*(P1(3))))+F2(6)*(M1*M1*OM1*(-P1(1)+CI*(P1(2)))+(P1(1)-CI*(P1(2)))))+F2(5)*(-P1(0)*P1(0)+P1(1)*P1(1)+P1(2)*P1(2)))+F2(5))
-    R1(16)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-P1(1)-CI*(P1(2))))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(P1(0)+2d0*(P1(3)))))+F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(6))
-    R1(17)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))+ -5d0/3d0)+(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+1d0/3d0*(P1(0)*M1*M1))+(-1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(-P1(1)+CI*(P1(2)))+(+1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
-    R1(18)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(0)*M1*M1))+(+1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
- end
-
-
-"""
+        fsock = open(pjoin(self.IOpath, 'rfsc1_0.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
 
         amp = builder.compute_routine(2)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = [l.strip() for l in solution.split('\n')]
-        split_routine = [l.strip() for l in routine.split('\n')]
-        split_solution = split_solution[:1] + split_solution[-20:]
-        split_routine = split_routine[:1] + split_routine[-20:]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'rfsc1_2.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
     def test_short_pythonwriter_C(self):
         """ test that python writer works """
@@ -4445,14 +4104,17 @@ P1(3) = -dimag(R1(1))
 import wavefunctions
 def FFV1C1_1(F1,V3,COUP,M2,W2):
     F2 = wavefunctions.WaveFunction(size=6)
-    F2[0] = +F1[0]+V3[0]
-    F2[1] = +F1[1]+V3[1]
-    P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
+    F2.momenta[0] = +F1.momenta[0]+V3.momenta[0]
+    F2.momenta[1] = +F1.momenta[1]+V3.momenta[1]
+    F2.momenta[2] = +F1.momenta[2]+V3.momenta[2]
+    F2.momenta[3] = +F1.momenta[3]+V3.momenta[3]
+    P2 = [-F2.momenta[j] for j in range(4)]
+    F2.flavor = F1.flavor
     denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
-    F2[2]= denom*(-1j)*(F1[2]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]-1j*(V3[4]))+(P2[2]*(+1j*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+(F1[3]*(P2[0]*(V3[3]+1j*(V3[4]))+(P2[1]*(-1)*(V3[2]+V3[5])+(P2[2]*(-1)*(+1j*(V3[2]+V3[5]))+P2[3]*(V3[3]+1j*(V3[4])))))+M2*(F1[4]*(V3[2]+V3[5])+F1[5]*(V3[3]+1j*(V3[4])))))
-    F2[3]= denom*1j*(F1[2]*(P2[0]*(-V3[3]+1j*(V3[4]))+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-1j*(V3[2])+1j*(V3[5]))+P2[3]*(V3[3]-1j*(V3[4])))))+(F1[3]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-1)*(V3[3]+1j*(V3[4]))+(P2[2]*(+1j*(V3[3])-V3[4])-P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(-V3[3]+1j*(V3[4]))+F1[5]*(-V3[2]+V3[5]))))
-    F2[4]= denom*1j*(F1[4]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-V3[3]+1j*(V3[4]))+(P2[2]*(-1)*(+1j*(V3[3])+V3[4])-P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*(V3[3]+1j*(V3[4]))+(P2[1]*(-V3[2]+V3[5])+(P2[2]*(-1j*(V3[2])+1j*(V3[5]))-P2[3]*(V3[3]+1j*(V3[4])))))+M2*(F1[2]*(-V3[2]+V3[5])+F1[3]*(V3[3]+1j*(V3[4])))))
-    F2[5]= denom*(-1j)*(F1[4]*(P2[0]*(-V3[3]+1j*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(-1)*(+1j*(V3[2]+V3[5]))+P2[3]*(-V3[3]+1j*(V3[4])))))+(F1[5]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]+1j*(V3[4]))+(P2[2]*(-1j*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+M2*(F1[2]*(-V3[3]+1j*(V3[4]))+F1[3]*(V3[2]+V3[5]))))
+    F2.W[0]= denom*(-1j)*(F1.W[0]*(P2[0]*(-V3.W[0]+V3.W[3])+(P2[1]*(V3.W[1]-1j*(V3.W[2]))+(P2[2]*(+1j*(V3.W[1])+V3.W[2])+P2[3]*(-V3.W[0]+V3.W[3]))))+(F1.W[1]*(P2[0]*(V3.W[1]+1j*(V3.W[2]))+(P2[1]*(-1)*(V3.W[0]+V3.W[3])+(P2[2]*(-1)*(+1j*(V3.W[0]+V3.W[3]))+P2[3]*(V3.W[1]+1j*(V3.W[2])))))+M2*(F1.W[2]*(V3.W[0]+V3.W[3])+F1.W[3]*(V3.W[1]+1j*(V3.W[2])))))
+    F2.W[1]= denom*1j*(F1.W[0]*(P2[0]*(-V3.W[1]+1j*(V3.W[2]))+(P2[1]*(V3.W[0]-V3.W[3])+(P2[2]*(-1j*(V3.W[0])+1j*(V3.W[3]))+P2[3]*(V3.W[1]-1j*(V3.W[2])))))+(F1.W[1]*(P2[0]*(V3.W[0]+V3.W[3])+(P2[1]*(-1)*(V3.W[1]+1j*(V3.W[2]))+(P2[2]*(+1j*(V3.W[1])-V3.W[2])-P2[3]*(V3.W[0]+V3.W[3]))))+M2*(F1.W[2]*(-V3.W[1]+1j*(V3.W[2]))+F1.W[3]*(-V3.W[0]+V3.W[3]))))
+    F2.W[2]= denom*1j*(F1.W[2]*(P2[0]*(V3.W[0]+V3.W[3])+(P2[1]*(-V3.W[1]+1j*(V3.W[2]))+(P2[2]*(-1)*(+1j*(V3.W[1])+V3.W[2])-P2[3]*(V3.W[0]+V3.W[3]))))+(F1.W[3]*(P2[0]*(V3.W[1]+1j*(V3.W[2]))+(P2[1]*(-V3.W[0]+V3.W[3])+(P2[2]*(-1j*(V3.W[0])+1j*(V3.W[3]))-P2[3]*(V3.W[1]+1j*(V3.W[2])))))+M2*(F1.W[0]*(-V3.W[0]+V3.W[3])+F1.W[1]*(V3.W[1]+1j*(V3.W[2])))))
+    F2.W[3]= denom*(-1j)*(F1.W[2]*(P2[0]*(-V3.W[1]+1j*(V3.W[2]))+(P2[1]*(V3.W[0]+V3.W[3])+(P2[2]*(-1)*(+1j*(V3.W[0]+V3.W[3]))+P2[3]*(-V3.W[1]+1j*(V3.W[2])))))+(F1.W[3]*(P2[0]*(-V3.W[0]+V3.W[3])+(P2[1]*(V3.W[1]+1j*(V3.W[2]))+(P2[2]*(-1j*(V3.W[1])+V3.W[2])+P2[3]*(-V3.W[0]+V3.W[3]))))+M2*(F1.W[0]*(-V3.W[1]+1j*(V3.W[2]))+F1.W[1]*(V3.W[0]+V3.W[3]))))
     return F2
 
 
@@ -4474,14 +4136,17 @@ def FFV1C1_1(F1,V3,COUP,M2,W2):
 import wavefunctions
 def FFV1C1_2(F2,V3,COUP,M1,W1):
     F1 = wavefunctions.WaveFunction(size=6)
-    F1[0] = +F2[0]+V3[0]
-    F1[1] = +F2[1]+V3[1]
-    P1 = [-complex(F1[0]).real, -complex(F1[1]).real, -complex(F1[1]).imag, -complex(F1[0]).imag]
+    F1.momenta[0] = +F2.momenta[0]+V3.momenta[0]
+    F1.momenta[1] = +F2.momenta[1]+V3.momenta[1]
+    F1.momenta[2] = +F2.momenta[2]+V3.momenta[2]
+    F1.momenta[3] = +F2.momenta[3]+V3.momenta[3]
+    P1 = [-F1.momenta[j] for j in range(4)]
+    F1.flavor = F2.flavor
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    F1[2]= denom*(-1j)*(F2[2]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(-1)*(V3[3]+1j*(V3[4]))+(P1[2]*(+1j*(V3[3])-V3[4])-P1[3]*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(V3[3]-1j*(V3[4]))+(P1[1]*(-V3[2]+V3[5])+(P1[2]*(+1j*(V3[2])-1j*(V3[5]))+P1[3]*(-V3[3]+1j*(V3[4])))))+M1*(F2[4]*(V3[2]-V3[5])+F2[5]*(-V3[3]+1j*(V3[4])))))
-    F1[3]= denom*1j*(F2[2]*(P1[0]*(-1)*(V3[3]+1j*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+1j*(V3[2]+V3[5]))-P1[3]*(V3[3]+1j*(V3[4])))))+(F2[3]*(P1[0]*(-V3[2]+V3[5])+(P1[1]*(V3[3]-1j*(V3[4]))+(P1[2]*(+1j*(V3[3])+V3[4])+P1[3]*(-V3[2]+V3[5]))))+M1*(F2[4]*(V3[3]+1j*(V3[4]))-F2[5]*(V3[2]+V3[5]))))
-    F1[4]= denom*1j*(F2[4]*(P1[0]*(-V3[2]+V3[5])+(P1[1]*(V3[3]+1j*(V3[4]))+(P1[2]*(-1j*(V3[3])+V3[4])+P1[3]*(-V3[2]+V3[5]))))+(F2[5]*(P1[0]*(V3[3]-1j*(V3[4]))+(P1[1]*(-1)*(V3[2]+V3[5])+(P1[2]*(+1j*(V3[2]+V3[5]))+P1[3]*(V3[3]-1j*(V3[4])))))+M1*(F2[2]*(-1)*(V3[2]+V3[5])+F2[3]*(-V3[3]+1j*(V3[4])))))
-    F1[5]= denom*(-1j)*(F2[4]*(P1[0]*(-1)*(V3[3]+1j*(V3[4]))+(P1[1]*(V3[2]-V3[5])+(P1[2]*(+1j*(V3[2])-1j*(V3[5]))+P1[3]*(V3[3]+1j*(V3[4])))))+(F2[5]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(-V3[3]+1j*(V3[4]))+(P1[2]*(-1)*(+1j*(V3[3])+V3[4])-P1[3]*(V3[2]+V3[5]))))+M1*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5]))))
+    F1.W[0]= denom*(-1j)*(F2.W[0]*(P1[0]*(V3.W[0]+V3.W[3])+(P1[1]*(-1)*(V3.W[1]+1j*(V3.W[2]))+(P1[2]*(+1j*(V3.W[1])-V3.W[2])-P1[3]*(V3.W[0]+V3.W[3]))))+(F2.W[1]*(P1[0]*(V3.W[1]-1j*(V3.W[2]))+(P1[1]*(-V3.W[0]+V3.W[3])+(P1[2]*(+1j*(V3.W[0])-1j*(V3.W[3]))+P1[3]*(-V3.W[1]+1j*(V3.W[2])))))+M1*(F2.W[2]*(V3.W[0]-V3.W[3])+F2.W[3]*(-V3.W[1]+1j*(V3.W[2])))))
+    F1.W[1]= denom*1j*(F2.W[0]*(P1[0]*(-1)*(V3.W[1]+1j*(V3.W[2]))+(P1[1]*(V3.W[0]+V3.W[3])+(P1[2]*(+1j*(V3.W[0]+V3.W[3]))-P1[3]*(V3.W[1]+1j*(V3.W[2])))))+(F2.W[1]*(P1[0]*(-V3.W[0]+V3.W[3])+(P1[1]*(V3.W[1]-1j*(V3.W[2]))+(P1[2]*(+1j*(V3.W[1])+V3.W[2])+P1[3]*(-V3.W[0]+V3.W[3]))))+M1*(F2.W[2]*(V3.W[1]+1j*(V3.W[2]))-F2.W[3]*(V3.W[0]+V3.W[3]))))
+    F1.W[2]= denom*1j*(F2.W[2]*(P1[0]*(-V3.W[0]+V3.W[3])+(P1[1]*(V3.W[1]+1j*(V3.W[2]))+(P1[2]*(-1j*(V3.W[1])+V3.W[2])+P1[3]*(-V3.W[0]+V3.W[3]))))+(F2.W[3]*(P1[0]*(V3.W[1]-1j*(V3.W[2]))+(P1[1]*(-1)*(V3.W[0]+V3.W[3])+(P1[2]*(+1j*(V3.W[0]+V3.W[3]))+P1[3]*(V3.W[1]-1j*(V3.W[2])))))+M1*(F2.W[0]*(-1)*(V3.W[0]+V3.W[3])+F2.W[1]*(-V3.W[1]+1j*(V3.W[2])))))
+    F1.W[3]= denom*(-1j)*(F2.W[2]*(P1[0]*(-1)*(V3.W[1]+1j*(V3.W[2]))+(P1[1]*(V3.W[0]-V3.W[3])+(P1[2]*(+1j*(V3.W[0])-1j*(V3.W[3]))+P1[3]*(V3.W[1]+1j*(V3.W[2])))))+(F2.W[3]*(P1[0]*(V3.W[0]+V3.W[3])+(P1[1]*(-V3.W[1]+1j*(V3.W[2]))+(P1[2]*(-1)*(+1j*(V3.W[1])+V3.W[2])-P1[3]*(V3.W[0]+V3.W[3]))))+M1*(F2.W[0]*(V3.W[1]+1j*(V3.W[2]))+F2.W[1]*(V3.W[0]-V3.W[3]))))
     return F1
 
 
@@ -4499,14 +4164,17 @@ def FFV1C1_2(F2,V3,COUP,M1,W1):
 import wavefunctions
 def FFV1C1_1(F1,V3,COUP,M2,W2):
     F2 = wavefunctions.WaveFunction(size=6)
-    F2[0] = +F1[0]+V3[0]
-    F2[1] = +F1[1]+V3[1]
-    P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
+    F2.momenta[0] = +F1.momenta[0]+V3.momenta[0]
+    F2.momenta[1] = +F1.momenta[1]+V3.momenta[1]
+    F2.momenta[2] = +F1.momenta[2]+V3.momenta[2]
+    F2.momenta[3] = +F1.momenta[3]+V3.momenta[3]
+    P2 = [-F2.momenta[j] for j in range(4)]
+    F2.flavor = F1.flavor
     denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
-    F2[2]= denom*(-1j)*(F1[2]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]-1j*(V3[4]))+(P2[2]*(+1j*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+(F1[3]*(P2[0]*(V3[3]+1j*(V3[4]))+(P2[1]*(-1)*(V3[2]+V3[5])+(P2[2]*(-1)*(+1j*(V3[2]+V3[5]))+P2[3]*(V3[3]+1j*(V3[4])))))+M2*(F1[4]*(V3[2]+V3[5])+F1[5]*(V3[3]+1j*(V3[4])))))
-    F2[3]= denom*1j*(F1[2]*(P2[0]*(-V3[3]+1j*(V3[4]))+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-1j*(V3[2])+1j*(V3[5]))+P2[3]*(V3[3]-1j*(V3[4])))))+(F1[3]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-1)*(V3[3]+1j*(V3[4]))+(P2[2]*(+1j*(V3[3])-V3[4])-P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(-V3[3]+1j*(V3[4]))+F1[5]*(-V3[2]+V3[5]))))
-    F2[4]= denom*1j*(F1[4]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-V3[3]+1j*(V3[4]))+(P2[2]*(-1)*(+1j*(V3[3])+V3[4])-P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*(V3[3]+1j*(V3[4]))+(P2[1]*(-V3[2]+V3[5])+(P2[2]*(-1j*(V3[2])+1j*(V3[5]))-P2[3]*(V3[3]+1j*(V3[4])))))+M2*(F1[2]*(-V3[2]+V3[5])+F1[3]*(V3[3]+1j*(V3[4])))))
-    F2[5]= denom*(-1j)*(F1[4]*(P2[0]*(-V3[3]+1j*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(-1)*(+1j*(V3[2]+V3[5]))+P2[3]*(-V3[3]+1j*(V3[4])))))+(F1[5]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]+1j*(V3[4]))+(P2[2]*(-1j*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+M2*(F1[2]*(-V3[3]+1j*(V3[4]))+F1[3]*(V3[2]+V3[5]))))
+    F2.W[0]= denom*(-1j)*(F1.W[0]*(P2[0]*(-V3.W[0]+V3.W[3])+(P2[1]*(V3.W[1]-1j*(V3.W[2]))+(P2[2]*(+1j*(V3.W[1])+V3.W[2])+P2[3]*(-V3.W[0]+V3.W[3]))))+(F1.W[1]*(P2[0]*(V3.W[1]+1j*(V3.W[2]))+(P2[1]*(-1)*(V3.W[0]+V3.W[3])+(P2[2]*(-1)*(+1j*(V3.W[0]+V3.W[3]))+P2[3]*(V3.W[1]+1j*(V3.W[2])))))+M2*(F1.W[2]*(V3.W[0]+V3.W[3])+F1.W[3]*(V3.W[1]+1j*(V3.W[2])))))
+    F2.W[1]= denom*1j*(F1.W[0]*(P2[0]*(-V3.W[1]+1j*(V3.W[2]))+(P2[1]*(V3.W[0]-V3.W[3])+(P2[2]*(-1j*(V3.W[0])+1j*(V3.W[3]))+P2[3]*(V3.W[1]-1j*(V3.W[2])))))+(F1.W[1]*(P2[0]*(V3.W[0]+V3.W[3])+(P2[1]*(-1)*(V3.W[1]+1j*(V3.W[2]))+(P2[2]*(+1j*(V3.W[1])-V3.W[2])-P2[3]*(V3.W[0]+V3.W[3]))))+M2*(F1.W[2]*(-V3.W[1]+1j*(V3.W[2]))+F1.W[3]*(-V3.W[0]+V3.W[3]))))
+    F2.W[2]= denom*1j*(F1.W[2]*(P2[0]*(V3.W[0]+V3.W[3])+(P2[1]*(-V3.W[1]+1j*(V3.W[2]))+(P2[2]*(-1)*(+1j*(V3.W[1])+V3.W[2])-P2[3]*(V3.W[0]+V3.W[3]))))+(F1.W[3]*(P2[0]*(V3.W[1]+1j*(V3.W[2]))+(P2[1]*(-V3.W[0]+V3.W[3])+(P2[2]*(-1j*(V3.W[0])+1j*(V3.W[3]))-P2[3]*(V3.W[1]+1j*(V3.W[2])))))+M2*(F1.W[0]*(-V3.W[0]+V3.W[3])+F1.W[1]*(V3.W[1]+1j*(V3.W[2])))))
+    F2.W[3]= denom*(-1j)*(F1.W[2]*(P2[0]*(-V3.W[1]+1j*(V3.W[2]))+(P2[1]*(V3.W[0]+V3.W[3])+(P2[2]*(-1)*(+1j*(V3.W[0]+V3.W[3]))+P2[3]*(-V3.W[1]+1j*(V3.W[2])))))+(F1.W[3]*(P2[0]*(-V3.W[0]+V3.W[3])+(P2[1]*(V3.W[1]+1j*(V3.W[2]))+(P2[2]*(-1j*(V3.W[1])+V3.W[2])+P2[3]*(-V3.W[0]+V3.W[3]))))+M2*(F1.W[0]*(-V3.W[1]+1j*(V3.W[2]))+F1.W[1]*(V3.W[0]+V3.W[3]))))
     return F2
 
 
@@ -4515,8 +4183,8 @@ import wavefunctions
 def FFV1_2C1_1(F1,V3,COUP1,COUP2,M2,W2):
     F2 = FFV1C1_1(F1,V3,COUP1,M2,W2)
     tmp = FFV2C1_1(F1,V3,COUP2,M2,W2)
-    for i in range(2,6):
-        F2[i] += tmp[i]
+    for i in range(4):
+        F2.W[i] += tmp.W[i]
     return F2
 
 """
@@ -4545,15 +4213,18 @@ def FFV1_2C1_1(F1,V3,COUP1,COUP2,M2,W2):
 import wavefunctions
 def FFFF1_1(F2,F3,F4,COUP,M1,W1):
     F1 = wavefunctions.WaveFunction(size=6)
-    F1[0] = +F2[0]+F3[0]+F4[0]
-    F1[1] = +F2[1]+F3[1]+F4[1]
-    P1 = [-complex(F1[0]).real, -complex(F1[1]).real, -complex(F1[1]).imag, -complex(F1[0]).imag]
-    TMP0 = (F4[2]*F3[2]+F4[3]*F3[3]+F4[4]*F3[4]+F4[5]*F3[5])
+    F1.momenta[0] = +F2.momenta[0]+F3.momenta[0]+F4.momenta[0]
+    F1.momenta[1] = +F2.momenta[1]+F3.momenta[1]+F4.momenta[1]
+    F1.momenta[2] = +F2.momenta[2]+F3.momenta[2]+F4.momenta[2]
+    F1.momenta[3] = +F2.momenta[3]+F3.momenta[3]+F4.momenta[3]
+    P1 = [-F1.momenta[j] for j in range(4)]
+    F1.flavor = F2.flavor
+    TMP0 = (F4.W[0]*F3.W[0]+F4.W[1]*F3.W[1]+F4.W[2]*F3.W[2]+F4.W[3]*F3.W[3])
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    F1[2]= denom*-1j * TMP0*(F2[4]*(P1[0]+P1[3])+(F2[5]*(P1[1]+1j*(P1[2]))-F2[2]*M1))
-    F1[3]= denom*1j * TMP0*(F2[4]*(-P1[1]+1j*(P1[2]))+(F2[5]*(-P1[0]+P1[3])+F2[3]*M1))
-    F1[4]= denom*1j * TMP0*(F2[2]*(-P1[0]+P1[3])+(F2[3]*(P1[1]+1j*(P1[2]))+F2[4]*M1))
-    F1[5]= denom*-1j * TMP0*(F2[2]*(-P1[1]+1j*(P1[2]))+(F2[3]*(P1[0]+P1[3])-F2[5]*M1))
+    F1.W[0]= denom*-1j * TMP0*(F2.W[2]*(P1[0]+P1[3])+(F2.W[3]*(P1[1]+1j*(P1[2]))-F2.W[0]*M1))
+    F1.W[1]= denom*1j * TMP0*(F2.W[2]*(-P1[1]+1j*(P1[2]))+(F2.W[3]*(-P1[0]+P1[3])+F2.W[1]*M1))
+    F1.W[2]= denom*1j * TMP0*(F2.W[0]*(-P1[0]+P1[3])+(F2.W[1]*(P1[1]+1j*(P1[2]))+F2.W[2]*M1))
+    F1.W[3]= denom*-1j * TMP0*(F2.W[0]*(-P1[1]+1j*(P1[2]))+(F2.W[1]*(P1[0]+P1[3])-F2.W[3]*M1))
     return F1
 
 
@@ -4576,15 +4247,18 @@ def FFFF1_1(F2,F3,F4,COUP,M1,W1):
 import wavefunctions
 def FFFF1C1_1(F1,F3,F4,COUP,M2,W2):
     F2 = wavefunctions.WaveFunction(size=6)
-    F2[0] = +F1[0]+F3[0]+F4[0]
-    F2[1] = +F1[1]+F3[1]+F4[1]
-    P2 = [-complex(F2[0]).real, -complex(F2[1]).real, -complex(F2[1]).imag, -complex(F2[0]).imag]
-    TMP0 = (F4[2]*F3[2]+F4[3]*F3[3]+F4[4]*F3[4]+F4[5]*F3[5])
+    F2.momenta[0] = +F1.momenta[0]+F3.momenta[0]+F4.momenta[0]
+    F2.momenta[1] = +F1.momenta[1]+F3.momenta[1]+F4.momenta[1]
+    F2.momenta[2] = +F1.momenta[2]+F3.momenta[2]+F4.momenta[2]
+    F2.momenta[3] = +F1.momenta[3]+F3.momenta[3]+F4.momenta[3]
+    P2 = [-F2.momenta[j] for j in range(4)]
+    F2.flavor = F1.flavor
+    TMP0 = (F4.W[0]*F3.W[0]+F4.W[1]*F3.W[1]+F4.W[2]*F3.W[2]+F4.W[3]*F3.W[3])
     denom = COUP/(P2[0]**2-P2[1]**2-P2[2]**2-P2[3]**2 - M2 * (M2 -1j* W2))
-    F2[2]= denom*-1j * TMP0*(F1[4]*(P2[0]+P2[3])+(F1[5]*(P2[1]+1j*(P2[2]))-F1[2]*M2))
-    F2[3]= denom*1j * TMP0*(F1[4]*(-P2[1]+1j*(P2[2]))+(F1[5]*(-P2[0]+P2[3])+F1[3]*M2))
-    F2[4]= denom*1j * TMP0*(F1[2]*(-P2[0]+P2[3])+(F1[3]*(P2[1]+1j*(P2[2]))+F1[4]*M2))
-    F2[5]= denom*-1j * TMP0*(F1[2]*(-P2[1]+1j*(P2[2]))+(F1[3]*(P2[0]+P2[3])-F1[5]*M2))
+    F2.W[0]= denom*-1j * TMP0*(F1.W[2]*(P2[0]+P2[3])+(F1.W[3]*(P2[1]+1j*(P2[2]))-F1.W[0]*M2))
+    F2.W[1]= denom*1j * TMP0*(F1.W[2]*(-P2[1]+1j*(P2[2]))+(F1.W[3]*(-P2[0]+P2[3])+F1.W[1]*M2))
+    F2.W[2]= denom*1j * TMP0*(F1.W[0]*(-P2[0]+P2[3])+(F1.W[1]*(P2[1]+1j*(P2[2]))+F1.W[2]*M2))
+    F2.W[3]= denom*-1j * TMP0*(F1.W[0]*(-P2[1]+1j*(P2[2]))+(F1.W[1]*(P2[0]+P2[3])-F1.W[3]*M2))
     return F2
 
 
@@ -4607,15 +4281,18 @@ def FFFF1C1_1(F1,F3,F4,COUP,M2,W2):
 import wavefunctions
 def FFFF1C2_1(F2,F4,F3,COUP,M1,W1):
     F1 = wavefunctions.WaveFunction(size=6)
-    F1[0] = +F2[0]+F3[0]+F4[0]
-    F1[1] = +F2[1]+F3[1]+F4[1]
-    P1 = [-complex(F1[0]).real, -complex(F1[1]).real, -complex(F1[1]).imag, -complex(F1[0]).imag]
-    TMP0 = (F4[2]*F3[2]+F4[3]*F3[3]+F4[4]*F3[4]+F4[5]*F3[5])
+    F1.momenta[0] = +F2.momenta[0]+F3.momenta[0]+F4.momenta[0]
+    F1.momenta[1] = +F2.momenta[1]+F3.momenta[1]+F4.momenta[1]
+    F1.momenta[2] = +F2.momenta[2]+F3.momenta[2]+F4.momenta[2]
+    F1.momenta[3] = +F2.momenta[3]+F3.momenta[3]+F4.momenta[3]
+    P1 = [-F1.momenta[j] for j in range(4)]
+    F1.flavor = F2.flavor
+    TMP0 = (F4.W[0]*F3.W[0]+F4.W[1]*F3.W[1]+F4.W[2]*F3.W[2]+F4.W[3]*F3.W[3])
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    F1[2]= denom*-1j * TMP0*(F2[4]*(P1[0]+P1[3])+(F2[5]*(P1[1]+1j*(P1[2]))-F2[2]*M1))
-    F1[3]= denom*1j * TMP0*(F2[4]*(-P1[1]+1j*(P1[2]))+(F2[5]*(-P1[0]+P1[3])+F2[3]*M1))
-    F1[4]= denom*1j * TMP0*(F2[2]*(-P1[0]+P1[3])+(F2[3]*(P1[1]+1j*(P1[2]))+F2[4]*M1))
-    F1[5]= denom*-1j * TMP0*(F2[2]*(-P1[1]+1j*(P1[2]))+(F2[3]*(P1[0]+P1[3])-F2[5]*M1))
+    F1.W[0]= denom*-1j * TMP0*(F2.W[2]*(P1[0]+P1[3])+(F2.W[3]*(P1[1]+1j*(P1[2]))-F2.W[0]*M1))
+    F1.W[1]= denom*1j * TMP0*(F2.W[2]*(-P1[1]+1j*(P1[2]))+(F2.W[3]*(-P1[0]+P1[3])+F2.W[1]*M1))
+    F1.W[2]= denom*1j * TMP0*(F2.W[0]*(-P1[0]+P1[3])+(F2.W[1]*(P1[1]+1j*(P1[2]))+F2.W[2]*M1))
+    F1.W[3]= denom*-1j * TMP0*(F2.W[0]*(-P1[1]+1j*(P1[2]))+(F2.W[1]*(P1[0]+P1[3])-F2.W[3]*M1))
     return F1
 
 
@@ -4641,16 +4318,20 @@ def FFFF1C2_1(F2,F4,F3,COUP,M1,W1):
         solution ="""import cmath
 import wavefunctions
 def FFV13C1_0(F2,F1,V3,COUP):
-    P2 = [complex(F2[0]).real, complex(F2[1]).real, complex(F2[1]).imag, complex(F2[0]).imag]
-    P3 = [complex(V3[0]).real, complex(V3[1]).real, complex(V3[1]).imag, complex(V3[0]).imag]
-    TMP0 = (F1[2]*(F2[4]*(P2[1]*(P3[2]*(-V3[5]+V3[2])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(-P3[3]+P3[0]))+(P3[1]*V3[4]*(-P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]-P2[0]))))+F2[5]*(P2[0]*(P3[3]*(-1)*(V3[4]+1j*(V3[3]))+V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]+1j*(V3[3]))-V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*-V3[5]*(P2[2]+1j*(P2[1]))+P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[3]*(F2[4]*(P2[0]*(P3[3]*(-V3[4]+1j*(V3[3]))+V3[5]*(P3[2]-1j*(P3[1])))+(P2[3]*(P3[0]*(V3[4]-1j*(V3[3]))+V3[2]*(-P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(-P2[2]+1j*(P2[1]))+P3[3]*V3[2]*(P2[2]-1j*(P2[1])))))+F2[5]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))))
-    TMP1 = (V3[2]*P2[0]-V3[3]*P2[1]-V3[4]*P2[2]-V3[5]*P2[3])
-    TMP2 = (F1[2]*(F2[4]*(-P3[0]+P3[3])+F2[5]*(P3[1]-1j*(P3[2])))+F1[3]*(F2[4]*(P3[1]+1j*(P3[2]))-F2[5]*(P3[0]+P3[3])))
-    TMP3 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(-V3[3]+1j*(V3[4])))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    P2 = [F2.momenta[j] for j in range(4)]
+    P3 = [V3.momenta[j] for j in range(4)]
+    flv_index1 = F1.flavor
+    flv_index2 = F2.flavor
+    if flv_index1 != -1 and flv_index2 != -1 and flv_index1 != flv_index2:
+        return 0j
+    TMP0 = (F1.W[0]*(F2.W[2]*(P2[1]*(P3[2]*(-V3.W[3]+V3.W[0])+V3.W[2]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3.W[3]-V3.W[0])+V3.W[1]*(-P3[3]+P3[0]))+(P3[1]*V3.W[2]*(-P2[3]+P2[0])+P3[2]*V3.W[1]*(P2[3]-P2[0]))))+F2.W[3]*(P2[0]*(P3[3]*(-1)*(V3.W[2]+1j*(V3.W[1]))+V3.W[3]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(V3.W[2]+1j*(V3.W[1]))-V3.W[0]*(P3[2]+1j*(P3[1])))+(P3[0]*-V3.W[3]*(P2[2]+1j*(P2[1]))+P3[3]*V3.W[0]*(P2[2]+1j*(P2[1]))))))+F1.W[1]*(F2.W[2]*(P2[0]*(P3[3]*(-V3.W[2]+1j*(V3.W[1]))+V3.W[3]*(P3[2]-1j*(P3[1])))+(P2[3]*(P3[0]*(V3.W[2]-1j*(V3.W[1]))+V3.W[0]*(-P3[2]+1j*(P3[1])))+(P3[0]*V3.W[3]*(-P2[2]+1j*(P2[1]))+P3[3]*V3.W[0]*(P2[2]-1j*(P2[1])))))+F2.W[3]*(P2[1]*(P3[2]*(-1)*(V3.W[3]+V3.W[0])+V3.W[2]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3.W[3]+V3.W[0])-V3.W[1]*(P3[3]+P3[0]))+(P3[1]*-V3.W[2]*(P2[3]+P2[0])+P3[2]*V3.W[1]*(P2[3]+P2[0]))))))
+    TMP1 = (V3.W[0]*P2[0]-V3.W[1]*P2[1]-V3.W[2]*P2[2]-V3.W[3]*P2[3])
+    TMP2 = (F1.W[0]*(F2.W[2]*(-P3[0]+P3[3])+F2.W[3]*(P3[1]-1j*(P3[2])))+F1.W[1]*(F2.W[2]*(P3[1]+1j*(P3[2]))-F2.W[3]*(P3[0]+P3[3])))
+    TMP3 = (-1)*(F1.W[0]*(F2.W[2]*(V3.W[0]-V3.W[3])+F2.W[3]*(-V3.W[1]+1j*(V3.W[2])))+F1.W[1]*(F2.W[2]*(-1)*(V3.W[1]+1j*(V3.W[2]))+F2.W[3]*(V3.W[0]+V3.W[3])))
     TMP4 = (P2[0]*P3[0]-P2[1]*P3[1]-P2[2]*P3[2]-P2[3]*P3[3])
-    TMP5 = (F1[4]*(F2[2]*(P2[1]*(P3[2]*(-1)*(V3[5]+V3[2])+V3[4]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3[5]+V3[2])-V3[3]*(P3[3]+P3[0]))+(P3[1]*-V3[4]*(P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]+P2[0]))))+F2[3]*(P2[0]*(P3[3]*(V3[4]+1j*(V3[3]))-V3[5]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3[4]+1j*(V3[3]))+V3[2]*(P3[2]+1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]+1j*(P2[1]))-P3[3]*V3[2]*(P2[2]+1j*(P2[1]))))))+F1[5]*(F2[2]*(P2[0]*(P3[3]*(V3[4]-1j*(V3[3]))+V3[5]*(-P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-V3[4]+1j*(V3[3]))+V3[2]*(P3[2]-1j*(P3[1])))+(P3[0]*V3[5]*(P2[2]-1j*(P2[1]))+P3[3]*V3[2]*(-P2[2]+1j*(P2[1])))))+F2[3]*(P2[1]*(P3[2]*(-V3[5]+V3[2])+V3[4]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3[5]-V3[2])+V3[3]*(-P3[3]+P3[0]))+(P3[1]*V3[4]*(-P2[3]+P2[0])+P3[2]*V3[3]*(P2[3]-P2[0]))))))
-    TMP6 = (-1)*(F1[4]*(F2[2]*(P3[0]+P3[3])+F2[3]*(P3[1]-1j*(P3[2])))+F1[5]*(F2[2]*(P3[1]+1j*(P3[2]))+F2[3]*(P3[0]-P3[3])))
-    TMP7 = (-1)*(F1[4]*(F2[2]*(V3[2]+V3[5])+F2[3]*(V3[3]-1j*(V3[4])))+F1[5]*(F2[2]*(V3[3]+1j*(V3[4]))+F2[3]*(V3[2]-V3[5])))
+    TMP5 = (F1.W[2]*(F2.W[0]*(P2[1]*(P3[2]*(-1)*(V3.W[3]+V3.W[0])+V3.W[2]*(P3[3]+P3[0]))+(P2[2]*(P3[1]*(V3.W[3]+V3.W[0])-V3.W[1]*(P3[3]+P3[0]))+(P3[1]*-V3.W[2]*(P2[3]+P2[0])+P3[2]*V3.W[1]*(P2[3]+P2[0]))))+F2.W[1]*(P2[0]*(P3[3]*(V3.W[2]+1j*(V3.W[1]))-V3.W[3]*(P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-1)*(V3.W[2]+1j*(V3.W[1]))+V3.W[0]*(P3[2]+1j*(P3[1])))+(P3[0]*V3.W[3]*(P2[2]+1j*(P2[1]))-P3[3]*V3.W[0]*(P2[2]+1j*(P2[1]))))))+F1.W[3]*(F2.W[0]*(P2[0]*(P3[3]*(V3.W[2]-1j*(V3.W[1]))+V3.W[3]*(-P3[2]+1j*(P3[1])))+(P2[3]*(P3[0]*(-V3.W[2]+1j*(V3.W[1]))+V3.W[0]*(P3[2]-1j*(P3[1])))+(P3[0]*V3.W[3]*(P2[2]-1j*(P2[1]))+P3[3]*V3.W[0]*(-P2[2]+1j*(P2[1])))))+F2.W[1]*(P2[1]*(P3[2]*(-V3.W[3]+V3.W[0])+V3.W[2]*(P3[3]-P3[0]))+(P2[2]*(P3[1]*(V3.W[3]-V3.W[0])+V3.W[1]*(-P3[3]+P3[0]))+(P3[1]*V3.W[2]*(-P2[3]+P2[0])+P3[2]*V3.W[1]*(P2[3]-P2[0]))))))
+    TMP6 = (-1)*(F1.W[2]*(F2.W[0]*(P3[0]+P3[3])+F2.W[1]*(P3[1]-1j*(P3[2])))+F1.W[3]*(F2.W[0]*(P3[1]+1j*(P3[2]))+F2.W[1]*(P3[0]-P3[3])))
+    TMP7 = (-1)*(F1.W[2]*(F2.W[0]*(V3.W[0]+V3.W[3])+F2.W[1]*(V3.W[1]-1j*(V3.W[2])))+F1.W[3]*(F2.W[0]*(V3.W[1]+1j*(V3.W[2]))+F2.W[1]*(V3.W[0]-V3.W[3])))
     vertex = COUP*(TMP1*(TMP2+TMP6)+(TMP4*(-1)*(TMP3+TMP7)+(-1j*(TMP0)+1j*(TMP5))))
     return vertex
 
@@ -4747,9 +4428,11 @@ end
         
         self.assertEqual(name, 'FFVMC1P0_3')
     
+    @IOTests.createIOTest()
     @set_global(loop=True, unitary=True, mp=True, cms=False)
-    def test_short_aloha_MP_mode(self):
-        """ """
+    def testIO_short_aloha_MP_mode(self):
+        """target: ffvm_3.f
+        """
         aloha_lib.KERNEL.clean()
 
         FFV_M = UFOLorentz(name = 'FFVM',
@@ -4759,135 +4442,17 @@ end
         abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
         text = abstract.write('/tmp')
 
-        # Not performed the Fortran formatting
-        target = """subroutine FFVM_3(F1, F2, COUP, M3, W3,V3)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F1(*)
- complex*16 F2(*)
- real*8 M3
- real*8 OM3
- complex*16 P3(0:3)
- complex*16 TMP0
- complex*16 V3(8)
- real*8 W3
- complex*16 denom
-    OM3 = 0d0
-    if (M3.ne.0d0) OM3=1d0/M3**2
-    V3(1) = +F1(1)+F2(1)
-    V3(2) = +F1(2)+F2(2)
-    V3(3) = +F1(3)+F2(3)
-    V3(4) = +F1(4)+F2(4)
-P3(0) = -V3(1)
-P3(1) = -V3(2)
-P3(2) = -V3(3)
-P3(3) = -V3(4)
- TMP0 = (F1(7)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)-CI*(P3(2))))+F1(8)*(F2(5)*(P3(1)+CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
-    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI* W3))
-    V3(5)= denom*(-CI)*(F2(5)*F1(7)+F2(6)*F1(8)-P3(0)*OM3*TMP0)
-    V3(6)= denom*(-CI)*(-F2(6)*F1(7)-F2(5)*F1(8)-P3(1)*OM3*TMP0)
-    V3(7)= denom*(-CI)*(+CI*(F2(6)*F1(7))-CI*(F2(5)*F1(8))-P3(2)*OM3*TMP0)
-    V3(8)= denom*(-CI)*(-F2(5)*F1(7)-P3(3)*OM3*TMP0+F2(6)*F1(8))
-end
+        fsock = open(pjoin(self.IOpath, 'ffvm_3.f'), 'w')
+        fsock.write(text)
+        fsock.close()
+       
 
-
-subroutine MP_FFVM_3(F1, F2, COUP, M3, W3,V3)
-implicit none
- complex*32 CI
- parameter (CI=(0q0,1q0))
- complex*32 COUP
- complex*32 F1(*)
- complex*32 F2(*)
- real*16 M3
- real*16 OM3
- complex*32 P3(0:3)
- complex*32 TMP0
- complex*32 V3(8)
- real*16 W3
- complex*32 denom
-    OM3 = 0q0
-    if (M3.ne.0q0) OM3=1q0/M3**2
-    V3(1) = +F1(1)+F2(1)
-    V3(2) = +F1(2)+F2(2)
-    V3(3) = +F1(3)+F2(3)
-    V3(4) = +F1(4)+F2(4)
-P3(0) = -V3(1)
-P3(1) = -V3(2)
-P3(2) = -V3(3)
-P3(3) = -V3(4)
- TMP0 = (F1(7)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)-CI*(P3(2))))+F1(8)*(F2(5)*(P3(1)+CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
-    denom = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI* W3))
-    V3(5)= denom*(-CI)*(F2(5)*F1(7)+F2(6)*F1(8)-P3(0)*OM3*TMP0)
-    V3(6)= denom*(-CI)*(-F2(6)*F1(7)-F2(5)*F1(8)-P3(1)*OM3*TMP0)
-    V3(7)= denom*(-CI)*(+CI*(F2(6)*F1(7))-CI*(F2(5)*F1(8))-P3(2)*OM3*TMP0)
-    V3(8)= denom*(-CI)*(-F2(5)*F1(7)-P3(3)*OM3*TMP0+F2(6)*F1(8))
-end
-
-
-"""
-
-        text_split = [l.strip() for l in text.split('\n')]
-        target_split = [l.strip() for l in target.split('\n')]
-        #target2_split = [l.strip() for l in target2.split('\n')]
-        #check that all defintion are in both side
-        # raise an error is one line is missing
-        for line in list(target_split):
-            if line.startswith(('real','complex', 'parameter')):
-                index = text_split.index(line)
-                index2 = target_split.index(line)
-                #index3 = target2_split.index(line)
-                text_split.pop(index)
-                target_split.pop(index2)
-                #target2_split.pop(index3)
-        
-
-
-        try:
-            self.assertEqual(text_split, target_split)         
-        except Exception:
-            self.assertEqual(text_split, target2_split)
-
-    def test_short_fortranwriter_CFF(self):
-        """ test that python writer works """
-
-        solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F1(*)
- complex*16 F2(6)
- complex*16 FCT0
- real*8 M2
- real*8 P2(0:3)
- real*8 P3(0:3)
- complex*16 TMP0
- complex*16 V3(*)
- real*8 W2
- complex*16 denom
-P3(0) = dble(V3(1))
-P3(1) = dble(V3(2))
-P3(2) = dimag(V3(2))
-P3(3) = dimag(V3(1))
-    F2(1) = +F1(1)+V3(1)
-    F2(2) = +F1(2)+V3(2)
-P2(0) = -dble(F2(1))
-P2(1) = -dble(F2(2))
-P2(2) = -dimag(F2(2))
-P2(3) = -dimag(F2(1))
- TMP0 = (P3(0)*P3(0)-P3(1)*P3(1)-P3(2)*P3(2)-P3(3)*P3(3))
- FCT0 = exp(TMP0)
-    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
-    F2(3)= denom*(-CI )* FCT0*(F1(3)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)-CI*(V3(5)))+(P2(2)*(+CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+(F1(4)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-1d0)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(5)*(V3(3)+V3(6))+F1(6)*(V3(4)+CI*(V3(5))))))
-    F2(4)= denom*CI * FCT0*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
-    F2(5)= denom*CI * FCT0*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
-    F2(6)= denom*(-CI )* FCT0*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
- end
-
-
-"""        
+    @IOTests.createIOTest()
+    def testIO_short_fortranwriter_CFF(self):
+        """target: ffv1c1_1.f
+           target: ffv1c2_1.f """
+        #test that python writer works """
+     
         FFV = UFOLorentz(name = 'FFV1',
                  spins = [ 2, 2, 3 ],
                  structure = 'cmath.exp( P(-1,3)*P(-1,3)) * Gamma(3,2,1)')        
@@ -4895,50 +4460,11 @@ P2(3) = -dimag(F2(1))
         builder.apply_conjugation()
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_1.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
-
-        solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F1(*)
- complex*16 F2(6)
- complex*16 FCT1
- real*8 M2
- real*8 P2(0:3)
- real*8 P3(0:3)
- complex*16 TMP0
- complex*16 V3(*)
- real*8 W2
- complex*16 denom
- complex*16 mymdl_VEC
- external mymdl_VEC
-P3(0) = dble(V3(1))
-P3(1) = dble(V3(2))
-P3(2) = dimag(V3(2))
-P3(3) = dimag(V3(1))
-    F2(1) = +F1(1)+V3(1)
-    F2(2) = +F1(2)+V3(2)
-P2(0) = -dble(F2(1))
-P2(1) = -dble(F2(2))
-P2(2) = -dimag(F2(2))
-P2(3) = -dimag(F2(1))
- TMP0 = (P3(0)*P3(0)-P3(1)*P3(1)-P3(2)*P3(2)-P3(3)*P3(3))
- FCT1 = mymdl_VEC(TMP0)
-    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
-    F2(3)= denom*(-CI )* FCT1*(F1(3)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)-CI*(V3(5)))+(P2(2)*(+CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+(F1(4)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-1d0)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(5)*(V3(3)+V3(6))+F1(6)*(V3(4)+CI*(V3(5))))))
-    F2(4)= denom*CI * FCT1*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
-    F2(5)= denom*CI * FCT1*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
-    F2(6)= denom*(-CI )* FCT1*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
- end
-
-
-"""        
+    
         FFV = UFOLorentz(name = 'FFV1',
                  spins = [ 2, 2, 3 ],
                  structure = 'mymdl_VEC( P(-1,3)*P(-1,3) ) * Gamma(3,2,1)')        
@@ -4946,57 +4472,18 @@ P2(3) = -dimag(F2(1))
         builder.apply_conjugation()
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')[18:]
-        split_routine = routine.split('\n')[18:]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1c2_1.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
 
-    def test_short_fortranwriter_drop_fct(self):
-        """test a case where a ratio is present in the lorentz but not needed in the 
-           writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
+    @IOTests.createIOTest()
+    def testIO_short_fortranwriter_drop_fct(self):
+        """ target: vvs4pz1_2.f
+        """
+        #"""test a case where a ratio is present in the lorentz but not needed in the 
+        #   writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
         
-        solution = """
-subroutine VVS4PZ1_2(V1, S3, COUP, M2, W2,V2)
-implicit none
- include "../MODEL/input.inc"
- include "../MODEL/coupl.inc"
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 FCT1
- real*8 M2
- real*8 P1(0:3)
- real*8 P2(0:3)
- complex*16 S3(*)
- complex*16 TMP0
- complex*16 TMP1
- complex*16 TMP2
- complex*16 V1(*)
- complex*16 V2(6)
- real*8 W2
- complex*16 denom
-P1(0) = dble(V1(1))
-P1(1) = dble(V1(2))
-P1(2) = dimag(V1(2))
-P1(3) = dimag(V1(1))
-    V2(1) = +V1(1)+S3(1)
-    V2(2) = +V1(2)+S3(2)
-P2(0) = -dble(V2(1))
-P2(1) = -dble(V2(2))
-P2(2) = -dimag(V2(2))
-P2(3) = -dimag(V2(1))
- TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
- TMP1 = (P2(0)*V1(3)-P2(1)*V1(4)-P2(2)*V1(5)-P2(3)*V1(6))
- TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
- FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
-    denom = COUP/(FCT1)
-    V2(3)= denom*M2*S3(3)*mdl_dWZ*(-P1(0)*TMP1+V1(3)*TMP2)
-    V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
-    V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
-    V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
- end
-"""
         FFV = UFOLorentz(name = 'VVS4',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')       
@@ -5036,42 +4523,21 @@ P2(3) = -dimag(V2(1))
         self.assertIn('TMP1 =', routine)
         self.assertIn('*TMP1', routine)
         #full check
-        self.assertEqual(solution.strip(), routine.strip())
+        fsock = open(pjoin(self.IOpath, 'vvs4pz1_2.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
+        #self.assertEqual(solution.strip(), routine.strip())
 
 
 
 
+    @IOTests.createIOTest()
+    def testIO_short_fortranwriter_C(self):
+        """target: ffv1c1_1.f
+           target: ffv1c1_2.f """
+        #""" test that python writer works """
 
-    def test_short_fortranwriter_C(self):
-        """ test that python writer works """
-
-        solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F1(*)
- complex*16 F2(6)
- real*8 M2
- real*8 P2(0:3)
- complex*16 V3(*)
- real*8 W2
- complex*16 denom
-    F2(1) = +F1(1)+V3(1)
-    F2(2) = +F1(2)+V3(2)
-P2(0) = -dble(F2(1))
-P2(1) = -dble(F2(2))
-P2(2) = -dimag(F2(2))
-P2(3) = -dimag(F2(1))
-    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
-    F2(3)= denom*(-CI)*(F1(3)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)-CI*(V3(5)))+(P2(2)*(+CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+(F1(4)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-1d0)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(5)*(V3(3)+V3(6))+F1(6)*(V3(4)+CI*(V3(5))))))
-    F2(4)= denom*CI*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
-    F2(5)= denom*CI*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
-    F2(6)= denom*(-CI)*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
- end
-
-
-"""        
+     
         FFV = UFOLorentz(name = 'FFV1',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,1)')        
@@ -5080,81 +4546,27 @@ P2(3) = -dimag(F2(1))
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='Fortran')
         
-        split_solution = solution.split('\n')
-        split_solution = split_solution[:1] + split_solution[12:]
-        split_routine = routine.split('\n')
-        split_routine = split_routine[:1] + split_routine[12:]
-        
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_1.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
-        solution="""subroutine FFV1C1_2(F2, V3, COUP, M1, W1,F1)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 F1(6)
- complex*16 F2(*)
- real*8 M1
- real*8 P1(0:3)
- complex*16 V3(*)
- real*8 W1
- complex*16 denom
-    F1(1) = +F2(1)+V3(1)
-    F1(2) = +F2(2)+V3(2)
-P1(0) = -dble(F1(1))
-P1(1) = -dble(F1(2))
-P1(2) = -dimag(F1(2))
-P1(3) = -dimag(F1(1))
-    denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI* W1))
-    F1(3)= denom*(-CI)*(F2(3)*(P1(0)*(V3(3)+V3(6))+(P1(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(2)*(+CI*(V3(4))-V3(5))-P1(3)*(V3(3)+V3(6)))))+(F2(4)*(P1(0)*(V3(4)-CI*(V3(5)))+(P1(1)*(-V3(3)+V3(6))+(P1(2)*(+CI*(V3(3))-CI*(V3(6)))+P1(3)*(-V3(4)+CI*(V3(5))))))+M1*(F2(5)*(V3(3)-V3(6))+F2(6)*(-V3(4)+CI*(V3(5))))))
-    F1(4)= denom*CI*(F2(3)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))-P1(3)*(V3(4)+CI*(V3(5))))))+(F2(4)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)-CI*(V3(5)))+(P1(2)*(+CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+M1*(F2(5)*(V3(4)+CI*(V3(5)))-F2(6)*(V3(3)+V3(6)))))
-    F1(5)= denom*CI*(F2(5)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)+CI*(V3(5)))+(P1(2)*(-CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+(F2(6)*(P1(0)*(V3(4)-CI*(V3(5)))+(P1(1)*(-1d0)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))+P1(3)*(V3(4)-CI*(V3(5))))))+M1*(F2(3)*(-1d0)*(V3(3)+V3(6))+F2(4)*(-V3(4)+CI*(V3(5))))))
-    F1(6)= denom*(-CI)*(F2(5)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)-V3(6))+(P1(2)*(+CI*(V3(3))-CI*(V3(6)))+P1(3)*(V3(4)+CI*(V3(5))))))+(F2(6)*(P1(0)*(V3(3)+V3(6))+(P1(1)*(-V3(4)+CI*(V3(5)))+(P1(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P1(3)*(V3(3)+V3(6)))))+M1*(F2(3)*(V3(4)+CI*(V3(5)))+F2(4)*(V3(3)-V3(6)))))
- end
-
-
-"""
         amp = builder.compute_routine(2)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')[12:]
-        split_routine = routine.split('\n')[12:]
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_2.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
+        #self.assertEqual(split_solution, split_routine)
+        #self.assertEqual(len(split_routine), len(split_solution))
 
-    def test_short_Cppwriter_C(self):
-        """ test that python writer works """
-
-        solution_h = """#ifndef FFV1C1_1_guard
-#define FFV1C1_1_guard
-#include <complex>
-
- void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[]);
-#endif
-
-"""
-        solution_c="""#include "FFV1C1_1.h"
-
- void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[])
-{
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  P2[4];
- std::complex<double>  denom;
-    F2[0] = +F1[0]+V3[0];
-    F2[1] = +F1[1]+V3[1];
-P2[0] = -F2[0].real();
-P2[1] = -F2[1].real();
-P2[2] = -F2[1].imag();
-P2[3] = -F2[0].imag();
-    denom = COUP/((P2[0]*P2[0])-(P2[1]*P2[1])-(P2[2]*P2[2])-(P2[3]*P2[3]) - M2 * (M2 -cI* W2));
-    F2[2]= denom*(-cI)*(F1[2]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]-cI*(V3[4]))+(P2[2]*(+cI*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+(F1[3]*(P2[0]*(V3[3]+cI*(V3[4]))+(P2[1]*(-1.)*(V3[2]+V3[5])+(P2[2]*(-1.)*(+cI*(V3[2]+V3[5]))+P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[4]*(V3[2]+V3[5])+F1[5]*(V3[3]+cI*(V3[4])))));
-    F2[3]= denom*cI*(F1[2]*(P2[0]*(-V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))+P2[3]*(V3[3]-cI*(V3[4])))))+(F1[3]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-1.)*(V3[3]+cI*(V3[4]))+(P2[2]*(+cI*(V3[3])-V3[4])-P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(-V3[3]+cI*(V3[4]))+F1[5]*(-V3[2]+V3[5]))));
-    F2[4]= denom*cI*(F1[4]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-V3[3]+cI*(V3[4]))+(P2[2]*(-1.)*(+cI*(V3[3])+V3[4])-P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*(V3[3]+cI*(V3[4]))+(P2[1]*(-V3[2]+V3[5])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))-P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[2]*(-V3[2]+V3[5])+F1[3]*(V3[3]+cI*(V3[4])))));
-    F2[5]= denom*(-cI)*(F1[4]*(P2[0]*(-V3[3]+cI*(V3[4]))+(P2[1]*(V3[2]+V3[5])+(P2[2]*(-1.)*(+cI*(V3[2]+V3[5]))+P2[3]*(-V3[3]+cI*(V3[4])))))+(F1[5]*(P2[0]*(-V3[2]+V3[5])+(P2[1]*(V3[3]+cI*(V3[4]))+(P2[2]*(-cI*(V3[3])+V3[4])+P2[3]*(-V3[2]+V3[5]))))+M2*(F1[2]*(-V3[3]+cI*(V3[4]))+F1[3]*(V3[2]+V3[5]))));
-}
-
-"""
+    @IOTests.createIOTest()
+    def testIO_short_Cppwriter_C(self):
+        """target: ffv1c1_1.h
+           target: ffv1c1_1.c 
+           target: ffv1c1_2.h
+           target: ffv1c1_2.c
+        """
+        #""" test that python writer works """
 
         
         FFV = UFOLorentz(name = 'FFV1',
@@ -5165,75 +4577,26 @@ P2[3] = -F2[0].imag();
         amp = builder.compute_routine(1)
         routine = amp.write(output_dir=None, language='CPP')
         
-        split_solution = solution_h.split('\n')
-        split_routine = routine[0].split('\n')
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_1.h'), 'w')
+        fsock.write(routine[0])
+        fsock.close()
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_1.c'), 'w')
+        fsock.write(routine[1])
+        fsock.close()
 
 
-        
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-        
-        split_solution = solution_c.split('\n')
-        #split_solution2 = solution2_c.split('\n')
-        split_routine = routine[1].split('\n')
-        for i in range(len(split_routine)):
-            try:
-                self.assertEqual(split_solution[i], split_routine[i])
-            except:
-                raise
-                self.assertEqual(split_solution2[i], split_routine[i])
-        self.assertEqual(len(split_routine), len(split_solution))
 
-        solution_h = """#ifndef FFV1C1_2_guard
-#define FFV1C1_2_guard
-#include <complex>
 
- void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[]);
-#endif
-
-"""
-
-        solution_c = """#include "FFV1C1_2.h"
-
- void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[])
-{
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  P1[4];
- std::complex<double>  denom;
-    F1[0] = +F2[0]+V3[0];
-    F1[1] = +F2[1]+V3[1];
-P1[0] = -F1[0].real();
-P1[1] = -F1[1].real();
-P1[2] = -F1[1].imag();
-P1[3] = -F1[0].imag();
-    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - M1 * (M1 -cI* W1));
-    F1[2]= denom*(-cI)*(F2[2]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(-1.)*(V3[3]+cI*(V3[4]))+(P1[2]*(+cI*(V3[3])-V3[4])-P1[3]*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(-V3[2]+V3[5])+(P1[2]*(+cI*(V3[2])-cI*(V3[5]))+P1[3]*(-V3[3]+cI*(V3[4])))))+M1*(F2[4]*(V3[2]-V3[5])+F2[5]*(-V3[3]+cI*(V3[4])))));
-    F1[3]= denom*cI*(F2[2]*(P1[0]*(-1.)*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))-P1[3]*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(-V3[2]+V3[5])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(+cI*(V3[3])+V3[4])+P1[3]*(-V3[2]+V3[5]))))+M1*(F2[4]*(V3[3]+cI*(V3[4]))-F2[5]*(V3[2]+V3[5]))));
-    F1[4]= denom*cI*(F2[4]*(P1[0]*(-V3[2]+V3[5])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(-cI*(V3[3])+V3[4])+P1[3]*(-V3[2]+V3[5]))))+(F2[5]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(-1.)*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[2]*(-1.)*(V3[2]+V3[5])+F2[3]*(-V3[3]+cI*(V3[4])))));
-    F1[5]= denom*(-cI)*(F2[4]*(P1[0]*(-1.)*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]-V3[5])+(P1[2]*(+cI*(V3[2])-cI*(V3[5]))+P1[3]*(V3[3]+cI*(V3[4])))))+(F2[5]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(-V3[3]+cI*(V3[4]))+(P1[2]*(-1.)*(+cI*(V3[3])+V3[4])-P1[3]*(V3[2]+V3[5]))))+M1*(F2[2]*(V3[3]+cI*(V3[4]))+F2[3]*(V3[2]-V3[5]))));
-}
-
-"""
-        solution2_c="""
-"""
         amp = builder.compute_routine(2)
         
         routine = amp.write(output_dir=None, language='CPP') 
 
-        split_solution = solution_h.split('\n')
-        split_routine = routine[0].split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-        split_solution = solution_c.split('\n')
-        split_solution2 = solution2_c.split('\n')
-
-        split_routine = routine[1].split('\n')
-        for i in range(len(split_routine)):
-            try:
-                self.assertEqual(split_solution[i][:50], split_routine[i][:50])
-            except:
-                self.assertEqual(split_solution2[i], split_routine[i])
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_2.h'), 'w')
+        fsock.write(routine[0])
+        fsock.close()
+        fsock = open(pjoin(self.IOpath, 'ffv1c1_2.c'), 'w')
+        fsock.write(routine[1])
+        fsock.close()
 
     @set_global(cms=True)
     def test_short_pythonwriter_complex_mass_scheme(self):
@@ -5243,11 +4606,13 @@ P1[3] = -F1[0].imag();
 import wavefunctions
 def SSS1_1(S2,S3,COUP,M1):
     S1 = wavefunctions.WaveFunction(size=3)
-    S1[0] = +S2[0]+S3[0]
-    S1[1] = +S2[1]+S3[1]
-    P1 = [-complex(S1[0]).real, -complex(S1[1]).real, -complex(S1[1]).imag, -complex(S1[0]).imag]
+    S1.momenta[0] = +S2.momenta[0]+S3.momenta[0]
+    S1.momenta[1] = +S2.momenta[1]+S3.momenta[1]
+    S1.momenta[2] = +S2.momenta[2]+S3.momenta[2]
+    S1.momenta[3] = +S2.momenta[3]+S3.momenta[3]
+    P1 = [-S1.momenta[j] for j in range(4)]
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1**2)
-    S1[2]= denom*1j * S3[2]*S2[2]
+    S1.W[0]= denom*1j * S3.W[0]*S2.W[0]
     return S1
 
 
@@ -5278,39 +4643,12 @@ def SSS1_3(S2,S3,COUP,M1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
 
+    @IOTests.createIOTest()
     @set_global(cms=True)
-    def test_short_F77writer_complex_mass_scheme(self):
-        """ test that python writer works """
+    def testIO_short_F77writer_complex_mass_scheme(self):
+        """target: sss1_1.f"""
+        #""" test that python writer works """
         
-        solution = """subroutine SSS1_1(S2, S3, COUP, M1,S1)
-implicit none
- complex*16 CI
- parameter (CI=(0d0,1d0))
- complex*16 COUP
- complex*16 M1
- real*8 P1(0:3)
- complex*16 S1(3)
- complex*16 S2(*)
- complex*16 S3(*)
- complex*16 denom
-entry SSS1_2(S2, S3, COUP, M1,S1)
-
-entry SSS1_3(S2, S3, COUP, M1,S1)
-
-    S1(1) = +S2(1)+S3(1)
-    S1(2) = +S2(2)+S3(2)
-P1(0) = -dble(S1(1))
-P1(1) = -dble(S1(2))
-P1(2) = -dimag(S1(2))
-P1(3) = -dimag(S1(1))
-    denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1**2)
-    S1(3)= denom*CI * S3(3)*S2(3)
- end
-
-
-
-
-"""
         SSS = UFOLorentz(name = 'SSS1',
                  spins = [ 1, 1, 1 ],
                  structure = '1')        
@@ -5320,29 +4658,20 @@ P1(3) = -dimag(S1(1))
         amp.add_symmetry(3)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'sss1_1.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
 
+    @IOTests.createIOTest()
     @set_global(cms=True)
-    def test_short_Cwriter_complex_mass_scheme(self):
-        """ test that python writer works """
+    def testIO_short_Cwriter_complex_mass_scheme(self):
+        """ target: sss1_1.h
+            target: sss1_1.c"""
+        #""" test that python writer works """
         
         assert aloha.complex_mass
-        
-        solution_h="""#ifndef SSS1_1_guard
-#define SSS1_1_guard
-#include <complex>
-
- void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
- void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
- void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
-#endif
-
-"""     
+          
         SSS = UFOLorentz(name = 'SSS1',
                  spins = [ 1, 1, 1 ],
                  structure = '1')        
@@ -5352,48 +4681,19 @@ P1(3) = -dimag(S1(1))
         amp.add_symmetry(3)
         
         routine_h, routine_c = amp.write(output_dir=None, language='CPP')
+        fsock = open(pjoin(self.IOpath, 'sss1_1.h'), 'w')
+        fsock.write(routine_h)
+        fsock.close()
         
-        split_solution = solution_h.split('\n')
-        split_routine = routine_h.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'sss1_1.c'), 'w')
+        fsock.write(routine_c)
+        fsock.close()
 
-        solution_c = """#include "SSS1_1.h"
-
- void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
-{
-static std::complex<double> cI = std::complex<double>(0.,1.);
- double  P1[4];
- std::complex<double>  denom;
-    S1[0] = +S2[0]+S3[0];
-    S1[1] = +S2[1]+S3[1];
-P1[0] = -S1[0].real();
-P1[1] = -S1[1].real();
-P1[2] = -S1[1].imag();
-P1[3] = -S1[0].imag();
-    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - (M1*M1));
-    S1[2]= denom*cI * S3[2]*S2[2];
-}
-
- void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
-{
-
- SSS1_1(S2,S3,COUP,M1,S1);
-}
- void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
-{
-
- SSS1_1(S2,S3,COUP,M1,S1);
-}
-"""
-        split_solution = solution_c.split('\n')
-        split_routine = routine_c.split('\n')
-        self.assertEqual(split_solution, split_routine)
-        self.assertEqual(len(split_routine), len(split_solution))
-
+    @IOTests.createIOTest()
     @set_global(unitary=False)
-    def test_short_F77writer_feynman(self):
-        """ test that python writer works """
+    def testIO_short_F77writer_feynman(self):
+        """target: ffv1_3.f"""
+        #""" test that python writer works """
         
         solution = """subroutine FFV1_3(F1, F2, COUP, M3, W3,V3)
 implicit none
@@ -5457,15 +4757,9 @@ P3(3) = -dimag(V3(1))
         amp = builder.compute_routine(3)
         
         routine = amp.write(output_dir=None, language='Fortran')
-        split_solution = solution.split('\n')
-        split_routine = routine.split('\n')
-        try:
-            self.assertEqual(split_solution, split_routine)
-        except Exception:
-            split_solution = solution2.split('\n')
-            self.assertEqual(split_solution, split_routine)
-            
-        self.assertEqual(len(split_routine), len(split_solution))
+        fsock = open(pjoin(self.IOpath, 'ffv1_3.f'), 'w')
+        fsock.write(routine)
+        fsock.close()
 
 
 
@@ -5486,7 +4780,11 @@ P3(3) = -dimag(V3(1))
         solution = """import cmath
 import wavefunctions
 def FFV2C1_0(F2,F1,V3,COUP):
-    TMP0 = (-1)*(F1[2]*(F2[4]*(V3[2]-V3[5])+F2[5]*(-V3[3]+1j*(V3[4])))+F1[3]*(F2[4]*(-1)*(V3[3]+1j*(V3[4]))+F2[5]*(V3[2]+V3[5])))
+    flv_index1 = F1.flavor
+    flv_index2 = F2.flavor
+    if flv_index1 != -1 and flv_index2 != -1 and flv_index1 != flv_index2:
+        return 0j
+    TMP0 = (-1)*(F1.W[0]*(F2.W[2]*(V3.W[0]-V3.W[3])+F2.W[3]*(-V3.W[1]+1j*(V3.W[2])))+F1.W[1]*(F2.W[2]*(-1)*(V3.W[1]+1j*(V3.W[2]))+F2.W[3]*(V3.W[0]+V3.W[3])))
     vertex = COUP*-1j * TMP0
     return vertex
 

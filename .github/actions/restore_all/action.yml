@@ -1,0 +1,12 @@
+name: Restore full heptools cache
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+runs:
+  using: composite
+  steps:
+    # setup other environment 
+    - uses: ./.github/actions/restore_heptools
+    - uses: ./.github/actions/restore_ufomodel
+    - uses: ./.github/actions/restore-pip-cache
+
+

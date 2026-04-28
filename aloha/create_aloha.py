@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import cmath
 import copy
 import operator
-import six.moves.cPickle
+import pickle
 import glob
 import logging
 import numbers
@@ -27,9 +27,6 @@ import shutil
 import sys
 import time
 from madgraph.interface.tutorial_text import output
-
-from six.moves import range
-from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -93,6 +90,8 @@ class AbstractRoutine(object):
 
     def write(self, output_dir, language='Fortran', mode='self', combine=True, options=None, **opt):
         """ write the content of the object """
+        # Set loop_mode based on the tag of this specific routine
+        aloha.loop_mode = any(t.startswith('L') for t in self.tag)
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag, options)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -321,11 +320,16 @@ in presence of majorana particle/flow violation"""
                     else:
                         massless = True
                         self.denominator = None
-                elif propa == []:
+                # 1D is a multiplication of standar propagator -> later
+                elif propa in [[],['1D']]:
                     massless = False
                     self.denominator = None
                 else:
-                    lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
+                    if '1D' in propa:
+                        lorentz *= self.get_custom_propa('1D', spin, id)
+                        if propa[0] == '1D':
+                            propa = propa[1:] + ['1D']
+                    lorentz *= complex(0,1) * self.get_custom_propa(propa, spin, id)
                     continue
                 
                 
@@ -374,6 +378,10 @@ in presence of majorana particle/flow violation"""
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s (2s+1) is not supported yet' % spin)
+                
+                if '1D' in propa:
+                    # add the bwcutoff condition
+                    lorentz *= self.get_custom_propa('1D', spin, id)
             else:
                 # This is an incoming particle
                 if spin in [1,-1]:
@@ -444,22 +452,48 @@ in presence of majorana particle/flow violation"""
         text=''.join(data)
         return text
 
-    def get_custom_propa(self, propa, spin, id):
+    def get_custom_propa(self, propas, spin, id):
         """Return the ALOHA object associated to the user define propagator"""
+
+        basicPole = "(P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+        if isinstance(propas, str):
+            propa = propas
+        else:
+            propa = propas[0]
 
         if not propa.startswith('1'):
             propagator = getattr(self.model.propagators, propa)
             numerator = propagator.numerator
             denominator = propagator.denominator      
-        elif propa == "1L":
+        elif propa == "1L": # (pol=0) longitudinal = Theta + qq/Q2
             numerator = "EPSL(1,id) * EPSL(2,id)"
-            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1T":
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * " + basicPole
+        elif propa == "1T": # (pol=-1,1) transverse = -metric + -Theta
             numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
-            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
-        elif propa == "1A":
-            numerator = "(P(-2,id)**2 - Mass(id)**2) * P(1,id) * P(2,id)"
-            denominator = "P(-2,id)**2 * Mass(id)**2 * (P(-1,id)**2 - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1A": # (pol=99) auxiliary
+            numerator = "(P(-2,id)*P(-2,id) - Mass(id)**2) * P(1,id) * P(2,id)"
+            denominator = "P(-2,id)*P(-2,id) * Mass(id)**2 * " + basicPole
+        elif propa == "1S": # (pol=9) scalar (aux + finite-width correction)
+            numerator = "P(1,id) * P(2,id)"
+            denominator = "P(-2,id)*P(-2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id))"
+        elif propa == "1LS": # (pol=0,9) long + scalar
+            numerator = "EPSL(1,id)*EPSL(2,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) " \
+            "-1*PVec(-2,id)*PVec(-2,id)*P(1,id)*P(2,id) * " + basicPole
+            denominator = "-1*PVec(-2,id)*PVec(-2,id)*P(-3,id)*P(-3,id) * (Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) * " + basicPole
+        elif propa == "1G": # (pol=4) metric
+            numerator = "-1*Metric(1, 2)"
+            denominator = basicPole
+        elif propa == "1H": # (pol=5) Theta = -transverse + -metric
+            numerator = "PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id) - PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * Metric(1, 2)"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1Q": # (pol=6) qq/Q2 tensor
+            numerator = "P(1,id) * P(2,id)"
+            denominator = "P(-3,id)*P(-3,id) * " + basicPole
+        elif propa == "1W": # (pol=7) -metric + qq/(M2-iM*W)
+            numerator = "-1*Metric(1, 2)*(Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) + P(1,id)*P(2,id)"
+            denominator = "(Mass(id)**2 - complex(0,1)*Mass(id)*Width(id)) * " + basicPole
+
         elif propa in ["1P"]:
             # shift and flip the tag if we multiply by C matrices
             spin_id = id
@@ -492,6 +526,10 @@ in presence of majorana particle/flow violation"""
             else:
                 numerator = "-1"
             denominator = "1"
+        elif propa == "1D": # For $ DOLLAR propagator
+            # only the multiplicative factor for offshell veto -> the real propagator is handle like normal
+            numerator = "theta_functionr( (P(-1,id)**2 -(Mass(id)-BWCUTOFF*Width(id))**2 ) *( P(-1,id)**2 - (Mass(id)+BWCUTOFF*Width(id))**2),1,0)"
+            denominator = None
         else:
             raise Exception
 
@@ -751,7 +789,7 @@ class AbstractALOHAModel(dict):
         fsock = open(filepos, 'w')
         t=dict(self)
         try:
-            six.moves.cPickle.dump(dict(self), fsock)
+            pickle.dump(dict(self), fsock)
         except:
             logger.info('aloha not saved')
             
@@ -762,7 +800,7 @@ class AbstractALOHAModel(dict):
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
             fsock = open(filepos, 'r')
-            self.update(six.moves.cPickle.load(fsock))        
+            self.update(pickle.load(fsock))        
             return True
         else:
             return False
@@ -1084,7 +1122,8 @@ class AbstractALOHAModel(dict):
             realname = name + ''.join(tag)
             if (realname, outgoing) in self:
                 continue # already computed
-            
+            # Set loop_mode correctly for each routine based on its tag
+            aloha.loop_mode = any(t.startswith('L') for t in tag)
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:

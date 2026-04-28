@@ -6,9 +6,6 @@ import logging
 import os
 import stat
 import re
-import six
-from six.moves import range
-
 logger = logging.getLogger('madweight.diagram_class')
 
 try: 
@@ -792,7 +789,7 @@ class Option:
 
     def __init__(self,info='default'):
        "initialize option"
-       if isinstance(info, six.string_types) and info!='default':
+       if isinstance(info, str) and info!='default':
             info=MW_param.read_card(info)
        # DEFAULT VALUE:
        self.ecs_fuse=1

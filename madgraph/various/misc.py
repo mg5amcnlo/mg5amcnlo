@@ -30,15 +30,8 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-import six
-from six.moves import zip_longest
-from six.moves import range
-from six.moves import zip
-from six.moves import input
-StringIO = six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+from itertools import zip_longest
 try:
     # Use in MadGraph
     import madgraph
@@ -129,7 +122,7 @@ def get_pkg_info(info_str=None):
     global PACKAGE_INFO
 
     if info_str:
-        info_dict = parse_info_str(StringIO.StringIO(info_str))
+        info_dict = parse_info_str(io.StringIO(info_str))
         return info_dict
 
     if PACKAGE_INFO:
@@ -177,10 +170,10 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     why it is so."""
 
     class version:
-        def __init__(input):
+        def __init__(self, input):
             self.info = input.split('.')
 
-        def __lt__(input):
+        def __lt__(self, input):
             if isinstance(input, str):
                 input = version(input)
             
@@ -214,12 +207,24 @@ def is_MA5_compatible_with_this_MG5(ma5path):
 
     ma5_version = None
     try:
-        for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
-            if line.startswith('MA5 version :'):
-                ma5_version=LooseVersion(line[13:].strip())
-                break
-    except:
+        text = open(pjoin(ma5path,'bin', 'ma5'),'r').read()
+        pattern = re.compile(r'\s*version\s*=\s*["\'](.*)["\']\s*')
+        ma5_version = pattern.findall(text)[0]
+        ma5_version=LooseVersion(ma5_version)
+    except Exception as error:
+        misc.sprint(error)   
         ma5_version = None
+    # fallback to version.txt if the above method fails.
+    # for the transition period where that file still exists (from HEPinstaller)
+    if not ma5_version and os.path.exists(pjoin(ma5path,'version.txt')):
+        try:
+            for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
+                if line.startswith('MA5 version :'):
+                    ma5_version=LooseVersion(line[13:].strip())
+                    break
+        except Exception:
+            ma5_version = None
+
 
     if ma5_version is None:
         reason = "No MadAnalysis5 version number could be read from the path supplied '%s'."%ma5path
@@ -237,13 +242,13 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     if not mg5_version:
         return None
     
-    if mg5_version < LooseVersion("2.6.1") and ma5_version >= LooseVersion("1.6.32"):
+    if mg5_version < LooseVersion("2.6.1") and ma5_version > LooseVersion("1.6.31"):
         reason =  "This active MG5aMC version is too old (v%s) for your selected version of MadAnalysis5 (v%s)"%(mg5_version,ma5_version)
         reason += "\nUpgrade MG5aMC or re-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
         return reason
 
-    if mg5_version >= LooseVersion("2.6.1") and ma5_version < LooseVersion("1.6.32"):
+    if mg5_version > LooseVersion("2.6.0") and ma5_version < LooseVersion("1.6.32"):
         reason = "Your selected version of MadAnalysis5 (v%s) is too old for this active version of MG5aMC (v%s)."%(ma5_version,mg5_version)
         reason += "\nRe-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
@@ -501,7 +506,7 @@ def get_scan_name(first, last):
     return name
 
 def copytree(*args, **opts):
-
+    raise Exception('this copytree is overwritten by another function')
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
     return shutil.copytree(*args, **opts)
@@ -1475,8 +1480,8 @@ class open_file(object):
             if not background:
                 subprocess.call(arguments)
             else:
-                import six.moves._thread
-                six.moves._thread.start_new_thread(subprocess.call,(arguments,))
+                import _thread
+                _thread.start_new_thread(subprocess.call,(arguments,))
         else:
             logger.warning('Not able to open file %s since no program configured.' % file_path + \
                                 'Please set one in ./input/mg5_configuration.txt')
@@ -1631,6 +1636,7 @@ class misc(object):
     @staticmethod
     def sprint(*args, **opt):
         return sprint(*args, **opt)
+spirnt = sprint
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
@@ -1697,10 +1703,7 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def mmin(iter, default=None):
     
-    if six.PY3:
-        return min(iter, default=default)
-    else:
-        return min(iter, default)
+    return min(iter, default=default)
 
 
 ################################################################################
@@ -1991,6 +1994,8 @@ class EasterEgg(object):
             date = now.tm_mday, now.tm_mon 
             if date in [(1,4)]:
                 madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool = True
+                if msgtype == 'loading':
+                   self.post_banner(date) 
                 if msgtype in EasterEgg.message_aprilfirst:
                     choices = EasterEgg.message_aprilfirst[msgtype]
                     if len(choices) == 0:
@@ -2005,8 +2010,10 @@ class EasterEgg(object):
                     return
             elif msgtype=='loading' and date in self.special_banner:
                 self.change_banner(date)
+                self.post_banner(date)
                 return
             else:
+                self.post_banner(date)
                 return
             if MADEVENT:
                 return
@@ -2054,6 +2061,34 @@ class EasterEgg(object):
         else:
             madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
+    def post_banner(self, date):
+
+        if MADEVENT:
+            return ""
+        from madgraph import MG5DIR
+        import madgraph.interface.madgraph_interface as madgraph_interface
+        to_add = []
+        ff = open(pjoin(MG5DIR,'input','authors.md'), 'r')
+        for line in ff:
+            author, fdate = line.split()
+            year, month, day = [int(i) for i in fdate.split('-')]
+            if (day, month) == date:
+                to_add.append((author, year))
+        ff.close()
+
+        if not to_add:
+            return ""
+        
+        text= """
+*                CONTIBUTOR OF THE DAY:                    *
+"""
+        for author, year in to_add:
+            one = "*  - %s (first contribution in %s)" % (author, year) 
+            text += '%s%s*\n' % (one, ' '* (59-len(one)))
+        text += "************************************************************"
+
+        madgraph_interface.CmdExtended.intro_banner += text
+
 
     def call_apple(self, msg):
         
@@ -2205,10 +2240,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
-    if six.PY2:
-        level = -1
-    else:
-        level = 0
+    level = 0
 
     try:
         _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
@@ -2392,13 +2424,12 @@ def make_unique(input, keepordering=None):
     else:
         return list(dict.fromkeys(input)) 
 
-if six.PY3:
-    try:
-        from collections import MutableSet
-    except ImportError: # this is for python3.10
-        from collections.abc import  MutableSet
+try:
+    from collections import MutableSet
+except ImportError: # this is for python3.10
+    from collections.abc import  MutableSet
     
-    class OrderedSet(collections.OrderedDict, MutableSet):
+class OrderedSet(collections.OrderedDict, MutableSet):
 
         def __init__(self, arg=None):
             super( OrderedSet, self).__init__()
@@ -2459,8 +2490,7 @@ if six.PY3:
         symmetric_difference = property(lambda self: self.__xor__)
         symmetric_difference_update = property(lambda self: self.__ixor__)
         union = property(lambda self: self.__or__)
-else:
-    OrderedSet = set
+
 
 
 def cmp_to_key(mycmp):
@@ -2509,9 +2539,7 @@ def dict_cmp(A, B, level=1):
         return (a > b) - (a < b)
         #return cmp(A[adiff], B[bdiff])
 
-if six.PY3:
-    import io
-    file = io.FileIO
+file = io.FileIO
         
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()

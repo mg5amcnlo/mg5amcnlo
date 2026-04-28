@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 import sys
 import os
-from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -63,7 +62,7 @@ class testFKSHelasObjects(unittest.TestCase):
             for i in mylegs:
                 myleglist3.append(MG.Leg(i))
 
-            mymodel = import_ufo.import_model('sm')
+            mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False} )
 
             dict1 = {'legs' : myleglist1, 
                                'model': mymodel,

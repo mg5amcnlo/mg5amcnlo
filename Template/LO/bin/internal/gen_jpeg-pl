@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------
 # Run GS to create PNG files defined as $gs
 #---------------------------------------------------------------------
-system("/bin/bash -c \"rm -f matrix*.png\" ");
+system("/usr/bin/env bash -c \"rm -f matrix*.png\" ");
 
 $imatrix = "";
 if (! -e "matrix.ps") {$imatrix = 1;}
@@ -26,7 +26,7 @@ while ( -e "matrix$imatrix.ps"){
   }
   close(OUT);
   close(IN);
-  system "/bin/bash -c \"nice gs  \-sDEVICE\=pngmono \-r150 \-sOutputFile\=matrix$imatrix\%00d.png \-q \-dNOPAUSE \-dBATCH matrix-1.ps > /dev/null\"";
+  system "/usr/bin/env bash -c \"nice gs  \-sDEVICE\=pngmono \-r150 \-sOutputFile\=matrix$imatrix\%00d.png \-q \-dNOPAUSE \-dBATCH matrix-1.ps > /dev/null\"";
   system "rm -f matrix-1.ps";
 
 # Determine how many png files we have
@@ -57,22 +57,22 @@ while ( -e "matrix$imatrix.ps"){
 #
 #    Delete files which aren't included in diagrams.html
 #
-    system ("/bin/bash -c \"rm -f matrix$max_png.png\" ");
+    system ("/usr/bin/env bash -c \"rm -f matrix$max_png.png\" ");
   }
 #
 #  Now create PNG file for card
 #
   if (! -e "../../HTML/card.png") {
-    system ("/bin/bash -c \"head -352 matrix$imatrix.ps >& junk.ps\" ");
+    system ("/usr/bin/env bash -c \"head -352 matrix$imatrix.ps >& junk.ps\" ");
     open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
 
     print JUNK "-30 -380 translate \n";
     print JUNK "0.7 0.7 scale \n";
     close(JUNK);
 
-    system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,352d >> junk.ps\" ");
+    system ("/usr/bin/env bash -c \"cat matrix$imatrix.ps | sed 1,352d >> junk.ps\" ");
 
-    system "/bin/bash -c \"nice gs  \-sDEVICE\=pngmono \-sOutputFile\=card.png \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.png ../../HTML/card.png > /dev/null\" ";
+    system "/usr/bin/env bash -c \"nice gs  \-sDEVICE\=pngmono \-sOutputFile\=card.png \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.png ../../HTML/card.png > /dev/null\" ";
   }
   if ($imatrix eq "") {$imatrix = 0;}
   $imatrix = $imatrix + 1;

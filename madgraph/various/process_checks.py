@@ -78,13 +78,9 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
-import six
-StringIO = six
-from six.moves import range
-from six.moves import zip
 import io
-if six.PY3:
-    file = io.FileIO
+import io as StringIO
+file = io.FileIO
 
 
 ADDED_GLOBAL = []
@@ -105,14 +101,16 @@ class FakeInterface(object):
     """ Just an 'option container' to mimick the interface which is passed to the
     tests. We put in only what is now used from interface by the test:
     cmd.options['fortran_compiler']
+    cmd.options['cpp_compiler']
     cmd.options['complex_mass_scheme']
     cmd._mgme_dir"""
     def __init__(self, mgme_dir = "", complex_mass_scheme = False,
-                 fortran_compiler = 'gfortran' ):
+                 fortran_compiler = 'gfortran', cpp_compiler = 'g++'):
         self._mgme_dir = mgme_dir
         self.options = {}
         self.options['complex_mass_scheme']=complex_mass_scheme
         self.options['fortran_compiler']=fortran_compiler
+        self.options['cpp_compiler']=cpp_compiler
 
 #===============================================================================
 # Logger for process_checks
@@ -208,6 +206,11 @@ class MatrixElementEvaluator(object):
         process = matrix_element.get('processes')[0]
         model = process.get('model')
 
+        # Extract per-leg flavor indices for FLV_Coupling / merged-particle models.
+        # For legs without an explicit flavor tag the value is -1 (no flavor).
+        legs = process.get('legs')
+        flavor = [leg.get('flavor')[0] if leg.get('flavor') else -1
+                  for leg in legs]
 
         if "matrix_elements" not in self.stored_quantities:
             self.stored_quantities['matrix_elements'] = []
@@ -219,11 +222,11 @@ class MatrixElementEvaluator(object):
                     self.stored_quantities['matrix_elements'].append(matrix_element)
                 # Evaluate the matrix element for the momenta p
                 matrix = eval("Matrix_%s()" % process.shell_string(), globals())
-                me_value = matrix.smatrix(p, self.full_model)
+                me_value = matrix.smatrix(p, self.full_model, flavor)
                 if output == "m2":
-                    return matrix.smatrix(p, self.full_model), matrix.amp2
+                    return matrix.smatrix(p, self.full_model, flavor), matrix.amp2
                 else:
-                    m2 = matrix.smatrix(p, self.full_model)
+                    m2 = matrix.smatrix(p, self.full_model, flavor)
                 return {'m2': m2, output:getattr(matrix, output)}
             except NameError:
                 pass
@@ -318,23 +321,60 @@ class MatrixElementEvaluator(object):
             return None
         # If one wants to output the python code generated for the computation
         # of these matrix elements, it is possible to run the following cmd
-#       open('output_path','w').write(matrix_methods[process.shell_string()])
+        if False:
+            fsock = open('output%s.py' % process.shell_string(), 'w')
+            text = """
+import madgraph
+import models.model_reader as model_reader
+import aloha.template_files.wavefunctions as wavefunctions
+from aloha.template_files.wavefunctions import \
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx
+import cmath
+
+
+import madgraph.interface.master_interface as Cmd
+"""
+            fsock.write(text)
+            for routine in aloha_routines:
+                fsock.write(routine)
+            fsock.write(matrix_methods[process.shell_string()])
+            if not p:
+                p, w_rambo = self.get_momenta(process, options)
+            text= """
+if __name__ == '__main__':
+    
+     interface = Cmd.MasterCmd()
+     interface.exec_cmd('import model sm')  # or whatever model you need
+    
+     model = interface._curr_model
+     runner = Matrix_%s()
+     p =  %s
+     flavor = %s
+     print(flavor, runner.smatrix(p, model, flavor))
+    """ % (process.shell_string(), str(p), str(flavor))
+            fsock.write(text)
+            fsock.close()
         if self.reuse:
-            # Define the routines (globally)
+            # Define the routines globally so they can be reused in future calls
             exec(matrix_methods[process.shell_string()], globals())	    
             ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
+            exec_ns = globals()
         else:
-            # Define the routines (locally is enough)
-            exec(matrix_methods[process.shell_string()], globals())
+            # Define the routines in a local namespace to avoid overwriting
+            # globally cached matrices (e.g. from the reuse evaluator) that
+            # share the same shell_string but were generated for a different
+            # model (merged vs unmerged).
+            exec_ns = dict(globals())
+            exec(matrix_methods[process.shell_string()], exec_ns)
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process, options)
         # Evaluate the matrix element for the momenta p
-        exec("data = Matrix_%s()" % process.shell_string(), globals())
+        data = exec_ns['Matrix_%s' % process.shell_string()]()
         if output == "m2":
-            return data.smatrix(p, self.full_model), data.amp2
+            return data.smatrix(p, self.full_model, flavor), data.amp2
         else:
-            m2 = data.smatrix(p,self.full_model)
+            m2 = data.smatrix(p, self.full_model, flavor)
             return {'m2': m2, output:getattr(data, output)}
     
     @staticmethod
@@ -432,8 +472,11 @@ class MatrixElementEvaluator(object):
         # Find masses of particles
         mass = []
         for l in sorted_legs:
-            if l.get('id') != 0:
-                mass_string = self.full_model.get_particle(l.get('id')).get('mass')        
+            pdg = l.get('id')
+            if pdg != 0 and pdg:
+                if pdg in self.full_model.merged_particles:
+                    pdg =  self.full_model.merged_particles[pdg][0] 
+                mass_string = self.full_model.get_particle(pdg).get('mass')        
                 mass.append(self.full_model.get('parameter_dict')[mass_string].real)
             else:
                 if isinstance(special_mass, float):
@@ -829,7 +872,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
+        elif isinstance(output,(str)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode(errors='ignore').split('\n')
@@ -3515,6 +3558,790 @@ def check_lorentz_process(process, evaluator,options=None):
     return {'process': process, 'results': results}
 
 #===============================================================================
+# check_flavor
+#===============================================================================
+def check_flavor(process_definition, param_card=None, options=None,
+                 cmd=FakeInterface()):
+    """Check that the merged-flavor matrix element agrees with the individual-
+    flavor matrix elements for each subprocess.
+
+    For each individual-flavor subprocess (e.g. ``u u~ > t t~``, ``d d~ > t t~``,
+    etc.) the function evaluates:
+
+    1. The matrix element using the *merged* model with explicit flavor tags on
+       the external legs (so the merged coupling selects the correct flavor).
+    2. The matrix element for the same individual subprocess using the *unmerged*
+       model at the *same* phase-space point.
+
+    The two results are compared.  A successful check means both evaluations
+    agree to within a relative tolerance.
+
+    Parameters
+    ----------
+    process_definition : base_objects.ProcessDefinition
+        The process definition (may contain merged-flavor multi-legs such as
+        ``p``, ``_quark``, etc.).
+    param_card : str or None
+        Path to a param_card file.  If *None* the model defaults are used.
+    options : dict or None
+        Optional dict with keys understood by ``MatrixElementEvaluator`` (e.g.
+        ``'energy'``).
+    cmd : interface object
+        Interface object providing ``cmd.options`` etc.
+
+    Returns
+    -------
+    list of dict
+        Each dict has the keys:
+        ``'process'``       – the *individual-flavor* process string,
+        ``'value_merged'``  – ``{'m2': float, 'jamp': ...}`` from merged model
+                              (or ``None`` if no diagrams / evaluation failed),
+        ``'value_unmerged'``– same dict from the unmerged model.
+    """
+    if not isinstance(process_definition, base_objects.ProcessDefinition):
+        raise InvalidCmd(
+            "check_flavor requires a ProcessDefinition (multiprocess) object")
+
+    if options is None:
+        options = {}
+
+    multiprocess = process_definition
+    merged_model = multiprocess.get('model')
+    cmass_scheme = cmd.options['complex_mass_scheme']
+
+    # Determine the set of merged particle PDG codes and their constituents.
+    merged_particles = merged_model.get('merged_particles')  # {merged_pdg: [individual_pdgs]}
+
+    def expand_ids(pdg_code):
+        """Return list of individual pdg codes for a potentially merged one."""
+        apg = abs(pdg_code)
+        if apg in merged_particles:
+            sub_ids = merged_particles[apg]
+            if pdg_code > 0:
+                return [i for i in sub_ids if i > 0]
+            else:
+                return [-i for i in sub_ids if i > 0]
+        return [pdg_code]
+
+    # ── 1. Set up the merged-model evaluator ─────────────────────────────────
+    # Use reuse=True: all individual-flavor processes for the same merged
+    # process share the same matrix class (the merged PDG codes give the same
+    # shell_string), and flavor is a runtime argument passed to smatrix, so
+    # the class can safely be reused across different flavor evaluations.
+    evaluator_merged = MatrixElementEvaluator(merged_model, param_card,
+                                              cmd=cmd,
+                                              auth_skipping=False, reuse=True)
+    if not cmass_scheme and multiprocess.get('perturbation_couplings') == []:
+        logger.info('Setting all widths to zero for flavor check')
+        for particle in evaluator_merged.full_model.get('particles'):
+            if particle.get('width') != 'ZERO':
+                evaluator_merged.full_model.get('parameter_dict')[
+                    particle.get('width')] = 0.
+
+    # ── 2. Import the same model *without* flavor grouping ───────────────────
+    # Using unmerge_flavors() on a deep-copy can leave color-algebra objects in
+    # an array form that the color module cannot handle.  Importing the model
+    # fresh with apply_flavor_grouping=False gives clean color objects.
+    model_path = merged_model.get('modelpath')
+    unmerged_model = import_ufo.import_model(model_path,
+                                             options={'apply_flavor_grouping': False})
+
+    evaluator_unmerged = MatrixElementEvaluator(unmerged_model, param_card,
+                                                cmd=cmd,
+                                                auth_skipping=False, reuse=True)
+    if not cmass_scheme:
+        for particle in evaluator_unmerged.full_model.get('particles'):
+            if particle.get('width') != 'ZERO':
+                evaluator_unmerged.full_model.get('parameter_dict')[
+                    particle.get('width')] = 0.
+
+    # ── 3. Build the list of individual-flavor processes to check ────────────
+    # For each multileg combination in the process definition, expand every
+    # merged-particle id into its constituent individual ids.
+    is_id_options_merged  = [leg.get('ids') for leg in multiprocess.get('legs')
+                             if not leg.get('state')]
+    fs_id_options_merged  = [leg.get('ids') for leg in multiprocess.get('legs')
+                             if leg.get('state')]
+    is_id_options_indiv   = [sum([expand_ids(i) for i in ids], [])
+                             for ids in is_id_options_merged]
+    fs_id_options_indiv   = [sum([expand_ids(i) for i in ids], [])
+                             for ids in fs_id_options_merged]
+
+    results = []
+    checked = set()   # avoid duplicate (is_ids, fs_ids) combinations
+
+    for is_flavor_ids in itertools.product(*is_id_options_indiv):
+        for fs_flavor_ids in itertools.product(*fs_id_options_indiv):
+            key = (is_flavor_ids, fs_flavor_ids)
+            if key in checked:
+                continue
+            checked.add(key)
+
+            # ── 3a. Unmerged evaluation ──────────────────────────────────────
+            unmerged_legs = base_objects.LegList(
+                [base_objects.Leg({'id': id, 'state': False})
+                 for id in is_flavor_ids] +
+                [base_objects.Leg({'id': id, 'state': True})
+                 for id in fs_flavor_ids])
+            unmerged_proc = base_objects.Process({
+                'legs': unmerged_legs,
+                'model': unmerged_model,
+                'orders': multiprocess.get('orders'),
+                'forbidden_particles': multiprocess.get('forbidden_particles'),
+                'forbidden_onsh_s_channels': multiprocess.get('forbidden_onsh_s_channels'),
+                'forbidden_s_channels': multiprocess.get('forbidden_s_channels'),
+                'perturbation_couplings': multiprocess.get('perturbation_couplings'),
+            })
+            for i, leg in enumerate(unmerged_proc.get('legs')):
+                leg.set('number', i + 1)
+
+            logger.info("Flavor check (unmerged): %s" %
+                        unmerged_proc.nice_string().replace('Process:', 'process'))
+
+            try:
+                amplitude_u = diagram_generation.Amplitude(unmerged_proc)
+            except InvalidCmd:
+                continue
+            if not amplitude_u.get('diagrams'):
+                continue
+
+            p, _ = evaluator_unmerged.get_momenta(unmerged_proc, options)
+            me_u = helas_objects.HelasMatrixElement(amplitude_u, gen_color=True)
+            val_unmerged = evaluator_unmerged.evaluate_matrix_element(
+                me_u, p=p, output='jamp', options=options)
+
+            # ── 3b. Merged evaluation with explicit flavor tags on legs ──────
+            # Map each individual-flavor id back to the merged-particle id (if
+            # it belongs to a merged group) and set the flavor attribute on the
+            # leg so the ALOHA routine selects the correct coupling entry.
+            # The FLV_Coupling convention always uses the POSITIVE (particle)
+            # PDG code as the flavor key, even for antiparticle legs.
+            merged_legs_list = []
+            for is_id_individual in is_flavor_ids:
+                merged_id = is_id_individual
+                flav_tag = []
+                for mpdg, sub_ids in merged_particles.items():
+                    if abs(is_id_individual) in sub_ids:
+                        # Use the merged-particle id (preserving sign for
+                        # particle/anti-particle), and the POSITIVE individual
+                        # pdg as the flavor tag.
+                        merged_id = mpdg if is_id_individual > 0 else -mpdg
+                        flav_tag = [abs(is_id_individual)]
+                        break
+                merged_legs_list.append(
+                    base_objects.Leg({'id': merged_id, 'state': False,
+                                      'flavor': flav_tag}))
+            for fs_id_individual in fs_flavor_ids:
+                merged_id = fs_id_individual
+                flav_tag = []
+                for mpdg, sub_ids in merged_particles.items():
+                    if abs(fs_id_individual) in sub_ids:
+                        merged_id = mpdg if fs_id_individual > 0 else -mpdg
+                        flav_tag = [abs(fs_id_individual)]
+                        break
+                merged_legs_list.append(
+                    base_objects.Leg({'id': merged_id, 'state': True,
+                                      'flavor': flav_tag}))
+
+            merged_proc = base_objects.Process({
+                'legs': base_objects.LegList(merged_legs_list),
+                'model': merged_model,
+                'orders': multiprocess.get('orders'),
+                'forbidden_particles': multiprocess.get('forbidden_particles'),
+                'forbidden_onsh_s_channels': multiprocess.get('forbidden_onsh_s_channels'),
+                'forbidden_s_channels': multiprocess.get('forbidden_s_channels'),
+                'perturbation_couplings': multiprocess.get('perturbation_couplings'),
+            })
+            for i, leg in enumerate(merged_proc.get('legs')):
+                leg.set('number', i + 1)
+
+            logger.info("Flavor check (merged):   %s" %
+                        merged_proc.nice_string().replace('Process:', 'process'))
+
+            val_merged = None
+            try:
+                amplitude_m = diagram_generation.Amplitude(merged_proc)
+            except InvalidCmd:
+                amplitude_m = None
+            if amplitude_m and amplitude_m.get('diagrams'):
+                me_m = helas_objects.HelasMatrixElement(amplitude_m, gen_color=True)
+                val_merged = evaluator_merged.evaluate_matrix_element(
+                    me_m, p=p, output='jamp', options=options)
+
+            results.append({
+                'process': unmerged_proc,
+                'value_merged': val_merged,
+                'value_unmerged': val_unmerged,
+            })
+
+    clean_added_globals(ADDED_GLOBAL)
+    return results
+
+
+
+def output_flavor(comparison_results, output='text'):
+    """Present the results of a flavor check in a nice table.
+
+    Compares the matrix element from the *merged* model against the same
+    matrix element computed with the *unmerged* model for each individual
+    flavor subprocess.
+
+    Parameters
+    ----------
+    comparison_results : list of dict
+        As returned by :func:`check_flavor`.
+    output : {'text', 'fail'}
+        If ``'fail'``, return the number of failed processes instead of the
+        formatted string.
+
+    Returns
+    -------
+    str or int
+        Formatted results table (``output='text'``) or number of failures.
+    """
+    proc_col_size = 17
+    process_header = "Process"
+
+    for data in comparison_results:
+        proc = data['process'].base_string()
+        if len(proc) + 1 > proc_col_size:
+            proc_col_size = len(proc) + 1
+
+    col_size = 18
+
+    pass_proc = 0
+    fail_proc = 0
+    no_check_proc = 0
+    failed_proc_list = []
+    no_check_proc_list = []
+
+    res_str = fixed_string_length(process_header, proc_col_size) + \
+              fixed_string_length("Merged", col_size) + \
+              fixed_string_length("Unmerged", col_size) + \
+              fixed_string_length("Relative diff.", col_size) + \
+              "Result"
+
+    for one_comp in comparison_results:
+        proc = one_comp['process'].base_string()
+        val_m = one_comp['value_merged']
+        val_u = one_comp['value_unmerged']
+
+        if val_m is None or val_u is None:
+            no_check_proc += 1
+            no_check_proc_list.append(proc)
+            res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                       "    * No matrix element, process not checked *"
+            continue
+
+        m2_merged   = val_m['m2']
+        m2_unmerged = val_u['m2']
+
+        if m2_merged == 0 and m2_unmerged == 0:
+            no_check_proc += 1
+            no_check_proc_list.append(proc)
+            res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                       "    * Both matrix elements are zero, process not checked *"
+            continue
+
+        ref = abs(m2_merged) if m2_merged != 0 else abs(m2_unmerged)
+        diff = abs(m2_merged - m2_unmerged) / ref
+
+        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                   fixed_string_length("%1.10e" % m2_merged, col_size) + \
+                   fixed_string_length("%1.10e" % m2_unmerged, col_size) + \
+                   fixed_string_length("%1.10e" % diff, col_size)
+
+        if diff < 1e-6:
+            pass_proc += 1
+            res_str += "Passed"
+        else:
+            fail_proc += 1
+            failed_proc_list.append(proc)
+            res_str += "Failed"
+
+    res_str += "\nSummary: %i/%i passed, %i/%i failed" % (
+        pass_proc, pass_proc + fail_proc,
+        fail_proc, pass_proc + fail_proc)
+
+    if fail_proc:
+        res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+    if no_check_proc:
+        res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
+
+    if output == 'text':
+        return res_str
+    else:
+        return fail_proc
+
+
+#===============================================================================
+# check_language
+#===============================================================================
+def check_language(process_definition, param_card=None, options=None,
+                   cmd=FakeInterface()):
+    """Compare Fortran SA and C++ SA matrix elements for each process in
+    *process_definition*.
+
+    For each process the function:
+
+    1. Generates a Fortran standalone (SA) directory, compiles it, and runs
+       ``./check <energy>`` where *energy* is fixed so that both backends use
+       the same RAMBO seed → identical phase-space points.
+    2. Does the same with the C++ SA back-end.
+    3. Parses both outputs, extracts the per-flavor |M|² values, and compares
+       them.
+
+    The centre-of-mass energy defaults to 1000 GeV and can be overridden via
+    ``options['energy']``.
+
+    Parameters
+    ----------
+    process_definition : base_objects.ProcessDefinition or base_objects.Process
+        The process to check.
+    param_card : str or None
+        Path to a ``param_card.dat`` file.  *None* uses model defaults.
+    options : dict or None
+        Optional dict.  Recognised key: ``'energy'`` (float, GeV).
+    cmd : interface object
+        Interface object providing ``cmd.options`` and ``cmd._mgme_dir``.
+
+    Returns
+    -------
+    list of dict
+        One entry per process.  Each dict has the keys:
+
+        ``'process'``       – :class:`base_objects.Process`,
+        ``'value_fortran'`` – ``{'m2': float}`` or ``None``,
+        ``'value_cpp'``     – ``{'m2': float}`` or ``None``,
+        ``'momenta'``       – phase-space point (list of 4-vectors) or ``None``.
+    """
+    import madgraph.iolibs.export_v4 as export_v4
+    import madgraph.iolibs.export_cpp as export_cpp
+    import tempfile
+
+    if options is None:
+        options = {}
+
+    energy = float(options.get('energy', 1000.0))
+
+    # Compiler availability
+    has_fortran = bool(misc.which('gfortran') or
+                       (hasattr(cmd, 'options') and
+                        cmd.options.get('fortran_compiler')))
+    has_cpp     = bool(misc.which('g++') or
+                       (hasattr(cmd, 'options') and
+                        cmd.options.get('cpp_compiler')))
+    fortran_compiler = (hasattr(cmd, 'options') and
+                        cmd.options.get('fortran_compiler')) or 'gfortran'
+    cpp_compiler     = (hasattr(cmd, 'options') and
+                        cmd.options.get('cpp_compiler'))     or 'g++'
+
+    # Ensure Template/LO/Source/make_opts exists (written on first MG5 run).
+    make_opts     = pjoin(MG5DIR, 'Template', 'LO', 'Source', 'make_opts')
+    make_opts_src = pjoin(MG5DIR, 'Template', 'LO', 'Source', '.make_opts')
+    if not os.path.exists(make_opts) and os.path.exists(make_opts_src):
+        shutil.copy(make_opts_src, make_opts)
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+    _me_re  = re.compile(
+        r"\sMatrix\selement\s=\s*(?P<val>-?\d*\.\d*(E[+-]?\d*)?)"
+        r"\s*GeV\^\s*(?P<pow>-?\d+)", re.IGNORECASE | re.VERBOSE)
+    _mom_re = re.compile(
+        r"""\s*\d+\s+(?P<p0>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p1>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p2>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p3>-?\d*\.\d*E[+-]?\d*)""",
+        re.IGNORECASE | re.VERBOSE)
+    # Matches the "PDG  2  -2  6  -6" lines written by the flavor loop.
+    _pdg_re = re.compile(r'^\s*PDG\s+(.+)$', re.IGNORECASE)
+
+    def _parse_all_flavors_dict(text):
+        """Parse ALL PDG blocks in SA output.
+
+        Returns an OrderedDict mapping ``pdg_tuple → me_value``.
+        Each PDG line like ``PDG 2 -2 23 21`` followed by a
+        ``Matrix element = ...`` line produces one entry.
+        """
+        from collections import OrderedDict
+        result = OrderedDict()
+        current_pdgs = None
+        for line in text.split('\n'):
+            mp = _pdg_re.match(line)
+            if mp:
+                try:
+                    current_pdgs = tuple(int(x) for x in mp.group(1).split())
+                except ValueError:
+                    current_pdgs = None
+            m = _me_re.match(line)
+            if m:
+                val = float(m.group('val'))
+                key = current_pdgs  # None when no PDG line precedes this ME
+                if key not in result:  # keep first occurrence per combination
+                    result[key] = val
+                current_pdgs = None
+        return result
+
+    def _pdg_tuple_to_label(pdg_tuple, m, proc):
+        """Convert a tuple of PDG codes to a human-readable process label.
+
+        E.g. ``(2, -2, 23, 21)`` → ``'u u~ > z g'``.
+        Falls back to a numeric string on any error.
+        """
+        try:
+            ninitial = sum(1 for l in proc.get('legs') if not l.get('state'))
+            names = []
+            for pdg in pdg_tuple:
+                part = m.get_particle(pdg)
+                names.append(part.get_name() if part else str(pdg))
+            return (' '.join(names[:ninitial]) + ' > ' +
+                    ' '.join(names[ninitial:]))
+        except Exception:
+            return str(pdg_tuple)
+
+    def _parse_sa_output(text, target_pdgs=None):
+        """Parse stdout of a SA check binary; return (me_value, momenta).
+
+        Matches the per-flavor PDG block to *target_pdgs* when provided.
+        Falls back to the last seen ME value when no match is found.
+        """
+        me_val, momenta = None, []
+        last_val = None
+        current_pdgs = None
+        for line in text.split('\n'):
+            mp = _pdg_re.match(line)
+            if mp:
+                try:
+                    current_pdgs = [int(x) for x in mp.group(1).split()]
+                except ValueError:
+                    current_pdgs = None
+            m = _me_re.match(line)
+            if m:
+                val = float(m.group('val'))
+                last_val = val
+                if target_pdgs is not None and current_pdgs is not None:
+                    if current_pdgs == list(target_pdgs):
+                        me_val = val
+                else:
+                    me_val = val
+                current_pdgs = None
+            m2 = _mom_re.match(line)
+            if m2:
+                momenta.append([float(x) for x in m2.groups()[:4]])
+        if target_pdgs is not None and me_val is None:
+            me_val = last_val
+        return me_val, momenta
+
+    # ── resolve process list ──────────────────────────────────────────────────
+    if isinstance(process_definition, base_objects.ProcessDefinition):
+        model = process_definition.get('model')
+        is_id_options = [leg.get('ids') for leg in process_definition.get('legs')
+                         if not leg.get('state')]
+        fs_id_options = [leg.get('ids') for leg in process_definition.get('legs')
+                         if leg.get('state')]
+        proc_list = []
+        checked   = set()
+        for is_ids in itertools.product(*is_id_options):
+            for fs_ids in itertools.product(*fs_id_options):
+                key = (is_ids, fs_ids)
+                if key in checked:
+                    continue
+                checked.add(key)
+                legs = base_objects.LegList(
+                    [base_objects.Leg({'id': i, 'state': False}) for i in is_ids] +
+                    [base_objects.Leg({'id': i, 'state': True})  for i in fs_ids])
+                proc = base_objects.Process({
+                    'legs': legs,
+                    'model': model,
+                    'orders': process_definition.get('orders'),
+                    'forbidden_particles':
+                        process_definition.get('forbidden_particles'),
+                    'forbidden_onsh_s_channels':
+                        process_definition.get('forbidden_onsh_s_channels'),
+                    'forbidden_s_channels':
+                        process_definition.get('forbidden_s_channels'),
+                    'perturbation_couplings':
+                        process_definition.get('perturbation_couplings'),
+                })
+                for idx, leg in enumerate(proc.get('legs')):
+                    leg.set('number', idx + 1)
+                proc_list.append(proc)
+    else:
+        model     = process_definition.get('model')
+        proc_list = [process_definition]
+
+    mg5opt = {
+        'fortran_compiler': fortran_compiler,
+        'cpp_compiler':     cpp_compiler,
+        'f2py_compiler':    'f2py',
+        'output_dependencies': 'external',
+    }
+
+    results = []
+    # Cache SA output text (stdout of ./check <energy>) keyed by the leg-id
+    # tuple.  All individual-flavor procs share the same matrix element code.
+    sa_f_output_cache   = {}
+    sa_cpp_output_cache = {}
+
+    energy_str = str(energy)
+
+    for proc in proc_list:
+        try:
+            amplitude = diagram_generation.Amplitude(proc)
+        except InvalidCmd:
+            continue
+        if not amplitude.get('diagrams'):
+            continue
+
+        logger.info("Language check: %s" %
+                    proc.nice_string().replace('Process:', 'process'))
+
+        me = helas_objects.HelasMatrixElement(amplitude, gen_color=True)
+        wl = misc.make_unique(me.get_used_lorentz())
+        _seen_wc = set()
+        wc = []
+        for l in me.get_used_couplings():
+            for c in l:
+                key_c = c if isinstance(c, str) else c.get('name')
+                if key_c not in _seen_wc:
+                    _seen_wc.add(key_c)
+                    wc.append(c)
+
+        sa_key = tuple(leg.get('id') for leg in proc.get('legs'))
+
+        # ── Fortran SA ───────────────────────────────────────────────────────
+        out_f_text = None
+        if has_fortran:
+            if sa_key not in sa_f_output_cache:
+                sa_f_output_cache[sa_key] = None
+                parent_f  = tempfile.mkdtemp(prefix='mg5_langcheck_f_')
+                sa_dir_f  = pjoin(parent_f, 'sa_f')
+                try:
+                    opt_f = {'sa_symmetry': False, 'export_format': 'standalone',
+                             'mp': False, 'v5_model': True,
+                             'output_options': {'noeps': 'True'}}
+                    exporter_f = export_v4.ProcessExporterFortranSA(sa_dir_f, opt_f)
+                    fmodel = helas_call_writers.FortranUFOHelasCallWriter(model)
+                    exporter_f.copy_template(model)
+                    me_f = copy.deepcopy(me)
+                    exporter_f.generate_subprocess_directory(me_f, fmodel, 0)
+                    exporter_f.convert_model(model, wl, wc)
+                    exporter_f.finalize({'matrix_elements': [me_f]}, '',
+                                        mg5opt, ['nojpeg'])
+                    p_dirs_f = sorted([
+                        d for d in os.listdir(pjoin(sa_dir_f, 'SubProcesses'))
+                        if d.startswith('P') and
+                        os.path.isdir(pjoin(sa_dir_f, 'SubProcesses', d))])
+                    if p_dirs_f:
+                        check_dir_f = pjoin(sa_dir_f, 'SubProcesses', p_dirs_f[0])
+                        with open(os.devnull, 'w') as devnull:
+                            ret = subprocess.call(['make', 'check'],
+                                                  cwd=check_dir_f,
+                                                  stdout=devnull, stderr=devnull)
+                        if ret == 0:
+                            try:
+                                out_f = subprocess.check_output(
+                                    ['./check', energy_str],
+                                    cwd=check_dir_f,
+                                    stderr=subprocess.STDOUT).decode()
+                                sa_f_output_cache[sa_key] = out_f
+                            except Exception:
+                                pass
+                except Exception as err:
+                    logger.info("Language check: Fortran SA failed for %s: %s"
+                                % (proc.nice_string(), err))
+                finally:
+                    shutil.rmtree(parent_f, ignore_errors=True)
+
+            out_f_text = sa_f_output_cache.get(sa_key)
+
+        # ── C++ SA ───────────────────────────────────────────────────────────
+        out_cpp_text = None
+        if has_cpp:
+            if sa_key not in sa_cpp_output_cache:
+                sa_cpp_output_cache[sa_key] = None
+                parent_cpp = tempfile.mkdtemp(prefix='mg5_langcheck_cpp_')
+                sa_dir_cpp = pjoin(parent_cpp, 'sa_cpp')
+                try:
+                    opt_cpp = {'sa_symmetry': False,
+                               'export_format': 'standalone_cpp',
+                               'mp': False, 'v5_model': True,
+                               'cpp_compiler': cpp_compiler}
+                    exporter_cpp = export_cpp.ProcessExporterCPP(sa_dir_cpp,
+                                                                  opt_cpp)
+                    cpp_model = helas_call_writers.CPPUFOHelasCallWriter(model)
+                    exporter_cpp.copy_template(model)
+                    me_cpp_sa = copy.deepcopy(me)
+                    exporter_cpp.generate_subprocess_directory(me_cpp_sa,
+                                                               cpp_model, 0)
+                    exporter_cpp.convert_model(model, wl, wc)
+                    exporter_cpp.finalize({'matrix_elements': [me_cpp_sa]},
+                                          '', mg5opt, ['nojpeg'])
+                    p_dirs_cpp = sorted([
+                        d for d in os.listdir(pjoin(sa_dir_cpp, 'SubProcesses'))
+                        if d.startswith('P') and
+                        os.path.isdir(pjoin(sa_dir_cpp, 'SubProcesses', d))])
+                    if p_dirs_cpp:
+                        check_dir_cpp = pjoin(sa_dir_cpp, 'SubProcesses',
+                                              p_dirs_cpp[0])
+                        with open(os.devnull, 'w') as devnull:
+                            ret = subprocess.call(['make', 'check'],
+                                                  cwd=check_dir_cpp,
+                                                  stdout=devnull, stderr=devnull)
+                        if ret == 0:
+                            try:
+                                out_cpp = subprocess.check_output(
+                                    ['./check', energy_str],
+                                    cwd=check_dir_cpp,
+                                    stderr=subprocess.STDOUT).decode()
+                                sa_cpp_output_cache[sa_key] = out_cpp
+                            except Exception:
+                                pass
+                except Exception as err:
+                    logger.info("Language check: C++ SA failed for %s: %s"
+                                % (proc.nice_string(), err))
+                finally:
+                    shutil.rmtree(parent_cpp, ignore_errors=True)
+
+            out_cpp_text = sa_cpp_output_cache.get(sa_key)
+
+        # ── per-flavor comparison ─────────────────────────────────────────────
+        # Parse ALL PDG blocks from both SA outputs and match by PDG tuple so
+        # that merged-particle processes (e.g. _quark _anti_quark > z g) are
+        # compared flavor-by-flavor: u u~ > z g, d d~ > z g, etc.
+        from collections import OrderedDict as _OD
+        flavors_f   = _parse_all_flavors_dict(out_f_text)   if out_f_text   else _OD()
+        flavors_cpp = _parse_all_flavors_dict(out_cpp_text) if out_cpp_text else _OD()
+
+        # Union of PDG keys in order: Fortran first, then any C++-only keys.
+        all_keys = list(dict.fromkeys(
+            list(flavors_f.keys()) + list(flavors_cpp.keys())))
+
+        if not all_keys:
+            # Neither backend ran → one placeholder entry so the process still
+            # appears in the output table.
+            results.append({
+                'process':        proc,
+                'process_label':  proc.base_string(),
+                'value_fortran':  None,
+                'value_cpp':      None,
+                'momenta':        None,
+            })
+        else:
+            for key in all_keys:
+                me_f_val   = flavors_f.get(key)
+                me_cpp_val = flavors_cpp.get(key)
+
+                if key is None:
+                    label = proc.base_string()
+                else:
+                    label = _pdg_tuple_to_label(key, model, proc)
+
+                results.append({
+                    'process':        proc,
+                    'process_label':  label,
+                    'value_fortran':  {'m2': me_f_val}   if me_f_val   is not None else None,
+                    'value_cpp':      {'m2': me_cpp_val} if me_cpp_val is not None else None,
+                    'momenta':        None,
+                })
+
+    clean_added_globals(ADDED_GLOBAL)
+    return results
+
+
+def output_language(comparison_results, output='text'):
+    """Present the results of a Fortran SA / C++ SA language cross-check.
+
+    Parameters
+    ----------
+    comparison_results : list of dict
+        As returned by :func:`check_language`.
+    output : {'text', 'fail'}
+        If ``'fail'``, return the number of failed processes.
+
+    Returns
+    -------
+    str or int
+    """
+    proc_col_size = 17
+    for data in comparison_results:
+        proc = data.get('process_label', data['process'].base_string())
+        if len(proc) + 1 > proc_col_size:
+            proc_col_size = len(proc) + 1
+
+    col_size = 18
+    process_header = "Process"
+
+    pass_proc = 0
+    fail_proc = 0
+    no_check_proc = 0
+    no_check_list = []
+    failed_list = []
+
+    res_str = (fixed_string_length(process_header, proc_col_size) +
+               fixed_string_length("Fortran SA", col_size) +
+               fixed_string_length("C++ SA", col_size) +
+               fixed_string_length("F/C++ rel.diff.", col_size) +
+               "Result")
+
+    def _fmt(v):
+        return "%1.6e" % v if v is not None else "N/A"
+
+    def _reldiff(a, b):
+        if a is None or b is None:
+            return None
+        ref = abs(a) if a != 0 else abs(b) if b != 0 else 0.
+        if ref == 0:
+            return 0.
+        return abs(a - b) / ref
+
+    def _fmt_diff(d):
+        return "%1.6e" % d if d is not None else "N/A"
+
+    for entry in comparison_results:
+        proc    = entry.get('process_label', entry['process'].base_string())
+        val_f   = entry['value_fortran']
+        val_cpp = entry['value_cpp']
+
+        me_f   = val_f['m2']   if val_f   is not None else None
+        me_cpp = val_cpp['m2'] if val_cpp is not None else None
+
+        diff = _reldiff(me_f, me_cpp)
+
+        row = ('\n' + fixed_string_length(proc, proc_col_size) +
+               fixed_string_length(_fmt(me_f),   col_size) +
+               fixed_string_length(_fmt(me_cpp),  col_size) +
+               fixed_string_length(_fmt_diff(diff), col_size))
+
+        if me_f is None and me_cpp is None:
+            no_check_proc += 1
+            no_check_list.append(proc)
+            res_str += row + "No compiled backend"
+        elif diff is None:
+            no_check_proc += 1
+            no_check_list.append(proc)
+            res_str += row + "Only one backend available"
+        elif diff < 1e-4:
+            pass_proc += 1
+            res_str += row + "Passed"
+        else:
+            fail_proc += 1
+            failed_list.append(proc)
+            res_str += row + "Failed"
+
+    res_str += "\nSummary: %i/%i passed, %i/%i failed" % (
+        pass_proc, pass_proc + fail_proc,
+        fail_proc, pass_proc + fail_proc)
+    if fail_proc:
+        res_str += "\nFailed processes: %s" % ', '.join(failed_list)
+    if no_check_proc:
+        res_str += "\nNot checked: %s" % ', '.join(no_check_list)
+
+    if output == 'text':
+        return res_str
+    return fail_proc
+
+
+#===============================================================================
 # check_gauge
 #===============================================================================
 def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
@@ -5945,8 +6772,8 @@ minimum value of lambda to be considered in the CMS check."""\
             general_error = "\n= Could not produce the cms check plot because of "+\
                                                     "the following error: %s"%str(e)
             try:
-                import six.moves.tkinter
-                if isinstance(e, six.moves.tkinter.TclError):
+                import tkinter
+                if isinstance(e, tkinter.TclError):
                     res_str += "\n= Plots are not generated because your system"+\
                                           " does not support graphical display."
                 else:

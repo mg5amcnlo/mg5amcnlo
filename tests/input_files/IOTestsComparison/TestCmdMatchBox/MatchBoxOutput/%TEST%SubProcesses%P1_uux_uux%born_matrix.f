@@ -504,39 +504,6 @@ C     JAMPs contributing to orders QCD=2
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 C     Set of functions to handle the array indices of the split orders
 
 

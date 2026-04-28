@@ -28,8 +28,6 @@ import shutil
 import subprocess
 import sys
 import time
-import six
-
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
@@ -624,17 +622,21 @@ class MG5_CPP_Runner(MG5Runner):
         return v5_string
 
     def fix_energy_in_check(self, dir_name, energy):
-        """Replace the hard coded collision energy in check_sa.f by the given
+        """Replace the hard coded collision energy in check_sa.cpp by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'r')
-        check_sa = file.read()
-        file.close()
+        for check_sa_path in glob.glob(
+                os.path.join(dir_name, 'SubProcesses', '*', 'check_sa.cpp')):
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'w')
-        file.write(re.sub("energy = 1000", "energy = %i" % int(energy),
-                          check_sa))
-        file.close()
+            file = open(check_sa_path, 'r')
+            check_sa = file.read()
+            file.close()
+
+            file = open(check_sa_path, 'w')
+            file.write(re.sub(r"double energy = [\d.]+;",
+                              "double energy = %s;" % str(float(energy)),
+                              check_sa))
+            file.close()
 
 class PickleRunner(MERunner):
     """Runner object for the stored comparison results."""
@@ -733,7 +735,7 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []

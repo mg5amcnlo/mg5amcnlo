@@ -30,8 +30,6 @@ from functools import wraps
 
 import aloha
 import aloha.aloha_lib as aloha_lib
-from six.moves import zip
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
@@ -560,10 +558,8 @@ class IOTestManager(unittest.TestCase):
             if verbose: print("Processing %s in %s"%(
                                 colored%(32,test_name),colored%(34,folder_name)))
             
-            files_path = iotest.run(iotestManager)
             try:
-                pass
-#                files_path = iotest.run(iotestManager)
+                files_path = iotest.run(iotestManager)
             except Exception as e: 
                 iotest.clean_output()
                 if not verbose:

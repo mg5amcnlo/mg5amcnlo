@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
+SUBROUTINE SMATRIX%(proc_id)s(P, IFLAV, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -11,6 +11,7 @@ c  potentially times multi-channel weight
 C  
 %(process_lines)s
 C 
+    use model_object
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -33,6 +34,7 @@ C
     double precision RCOL ! random number for selecting helicity
     integer channel ! channel to keep for the multi-channel
     integer ivec ! for using the correct coupling
+    integer iflav
 c
 c   output argument
 c
@@ -47,7 +49,8 @@ C
         REAL*8 T
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
-        INTEGER JC(NEXTERNAL),II
+        INTEGER FLAVOR(NEXTERNAL, %(max_flavor)s),II
+        %(get_flavor_matrix)s
         REAL*8 XTOT
         INTEGER  J, JJ
       double precision get_channel_cut
@@ -85,9 +88,6 @@ C ----------
 C BEGIN CODE
 C ----------
 
-    DO I=1,NEXTERNAL
-       JC(I) = +1
-    ENDDO
      
     IF (multi_channel) THEN
         DO I=1,NDIAGS
@@ -104,7 +104,7 @@ C ----------
 
     TS(:) = 0d0
 
-    call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2, JAMP2, IVEC)
+    call MATRIX%(proc_id)s(P ,FLAVOR(1, IFLAV), TS, AMP2, JAMP2, IVEC)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -155,12 +155,12 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
     ANS=ANS/DBLE(IDEN)
 
-    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,IC, TS, AMP2, JAMP2, IVEC)
+Subroutine  MATRIX%(proc_id)s(P,FLAVOR, TS, AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -169,6 +169,8 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+    use aloha_object
+    use model_object
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -191,11 +193,13 @@ C
 	SAVE CHOSEN_SO_CONFIGS
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=${ncomb})
+    double precision bwcutoff
+    common/to_bwcutoff/ bwcutoff
 C  
 C ARGUMENTS 
 C
     REAL*8 P(0:3,NEXTERNAL)
-    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    INTEGER FLAVOR(NEXTERNAL)
     REAL*8 TS(NCOMB)
     INTEGER IVEC
 C  
@@ -207,7 +211,7 @@ C
     INTEGER CF(NCOLOR*(NCOLOR+1))
     INTEGER DENOM, CF_INDEX
     COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NAMPSO)
-    COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
+    type(aloha) W(NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/

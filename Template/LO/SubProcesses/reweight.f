@@ -558,6 +558,7 @@ c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
 c     keepq2bck allow to not reset the parameter q2bck
 c**************************************************
+      use model_object
       implicit none
 
       integer ivec              ! for event number in batch for common block
@@ -1335,6 +1336,7 @@ c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
 c**************************************************
+      use model_object
       implicit none
 
       include 'message.inc'
@@ -1416,6 +1418,7 @@ c     ipart gives external particle number chain
       
       rewgt=1.0d0
       clustered=.false.
+      vec_igraph(ivec) = 0  ! default: no MLM graph selected for this event
 
       if(ickkw.le.0.and..not.use_syst) return
 
@@ -1467,6 +1470,7 @@ c         stop 1
         rewgt = 0d0
         return
       endif
+      vec_igraph(ivec) = igraphs(1)  ! save MLM-matched graph for this event
 
 
 c     Store pdf information for systematics studies (initial)
@@ -1592,6 +1596,10 @@ c          good parton lines; for FSR, just require one FS particle to be good
 c       alpha_s weight
 
            if(ipdgcl(imocl(n),igraphs(1),iproc).ne.fake_id)then
+              if (q2now.le.4)then
+                  rewgt=0d0
+                  return
+              endif
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
 c             Store information for systematics studies
               if(use_syst)then
@@ -1818,6 +1826,7 @@ c            s_rwfact=0d0
       end
 
       subroutine update_scale_coupling(p, wgt)
+          use model_object
       implicit none
 
 C
@@ -1848,6 +1857,7 @@ C      include 'maxparticles.inc'
 
       
       subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
+          use model_object
       implicit none
 
 C
@@ -1903,7 +1913,7 @@ c      save firsttime
          else
             all_q2fact(1,i) = q2fact(1)
             all_q2fact(2,i) = q2fact(2)
-            vec_igraph1(i) = igraphs(1)
+            vec_igraph(i) = igraphs(1)
          endif
 c         call save_cl_val_to(i)
 c      endif

@@ -1,7 +1,7 @@
-      SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS_SUMMED)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P,FLAVOR,ANS_SUMMED)
 C
-C     Simple routine wrapper to provide the same interface for
-C     backward compatibility for usage without split orders.
+C     Provides the same SMATRIX interface as matrix_standalone_v4.inc,
+C     summing over the selected split-order configurations.
 C
 C  
 C CONSTANTS
@@ -14,6 +14,7 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      INTEGER FLAVOR(NEXTERNAL)
 C
 C VARIABLES
 C
@@ -22,12 +23,12 @@ C
 C
 C BEGIN CODE
 C
-	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,FLAVOR,ANS)
 	  ANS_SUMMED=ANS(0)
 
 	  END
 
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,FLAVOR,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -41,6 +42,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
 	  INTEGER HEL
+      INTEGER FLAVOR(NEXTERNAL)
 C
 C GLOBAL VARIABLES
 C
@@ -50,12 +52,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL %(proc_prefix)sSMATRIX(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
 	  USERHEL=-1
 
 	  END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX_SPLITORDERS(P,FLAVOR,ANS)
 C  
 %(info_lines)s
 C 
@@ -90,6 +92,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
+      INTEGER FLAVOR(NEXTERNAL)
 C  
 C LOCAL VARIABLES 
 C
@@ -99,7 +102,6 @@ C
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
 	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
-      INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
@@ -128,9 +130,6 @@ C ----------
 C BEGIN CODE
 C ----------
       NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
 	  DO I=1,NSQAMPSO
       	ANS(I) = 0D0	  
 	  ENDDO
@@ -151,7 +150,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
               IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                 CYCLE
               ENDIF
-              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
+              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),FLAVOR(1), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO
                 IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
@@ -188,7 +187,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
 	  ENDIF
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P,HEL,FLAVOR,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -204,6 +203,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
 	  INTEGER HEL
+      INTEGER FLAVOR(NEXTERNAL)
 C
 C GLOBAL VARIABLES
 C
@@ -213,12 +213,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,FLAVOR,ANS)
 	  USERHEL=-1
 
 	  END
  
-      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,RES)
+      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,FLAVOR,RES)
 C  
 %(info_lines)s
 C
@@ -227,6 +227,8 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+      use model_object
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -247,7 +249,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), FLAVOR(NEXTERNAL)
 	  REAL*8 RES(NSQAMPSO)
 C  
 C LOCAL VARIABLES 
@@ -260,7 +262,7 @@ C
       INTEGER CF_INDEX
 	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
 	  COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C
@@ -299,6 +301,7 @@ C ----------
       END
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
+      use model_object
       IMPLICIT NONE   
 C
 C CONSTANT
@@ -311,7 +314,9 @@ C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER NHEL
       DOUBLE PRECISION ALPHAS 
-      real*8 pi     
+      real*8 pi
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /%(nexternal)d*1/
 CF2PY INTENT(OUT) :: ANS  
 CF2PY INTENT(IN) :: NHEL   
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
@@ -324,9 +329,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, FLAVOR, ANS)
       else
-        CALL %(proc_prefix)sSMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
       endif
       return 
       end

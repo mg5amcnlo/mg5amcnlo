@@ -3,33 +3,114 @@ from __future__ import absolute_import
 import math
 from math import sqrt, pow
 from itertools import product
-from six.moves import range
+
+
+class _WView:
+    """A writable view into the spin-representation part of a WaveFunction.
+    
+    WaveFunction stores the 4-momentum in indices 0-1 (as complex numbers)
+    and the spin components starting at index 2.  This view provides
+    zero-based indexed access to those spin components so that ALOHA
+    routines can use ``wf.W[0]``, ``wf.W[1]``, … instead of
+    ``wf[2]``, ``wf[3]``, …
+    """
+
+    __slots__ = ('_wf',)
+
+    def __init__(self, wf):
+        self._wf = wf
+
+    def __getitem__(self, i):
+        return self._wf[i + 2]
+
+    def __setitem__(self, i, value):
+        self._wf[i + 2] = value
+
+    def __len__(self):
+        return len(self._wf) - 2
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+
+class FLV_Coupling_py:
+    """Python counterpart of the Fortran FLV_COUPLING type.
+
+    Holds numerical flavor-indexed coupling values for use inside Python
+    ALOHA routines generated with the ``M`` flag (flavor-merged models).
+
+    Attributes
+    ----------
+    partner  : dict {k1 -> k2}
+        Given the flavor index *k1* of the first fermion, gives the
+        expected flavor index *k2* of the second fermion.
+    partner2 : dict {k2 -> k1}
+        Reverse mapping.
+    val      : dict {k1 -> complex}
+        Actual coupling value indexed by the first-fermion flavor.
+    """
+
+    def __init__(self, flavors_dict):
+        """Build the coupling tables from a resolved-value dictionary.
+
+        Parameters
+        ----------
+        flavors_dict : dict
+            Maps flavor-index tuples ``(k1, k2, …)`` to complex coupling
+            values.  Exactly two non-zero entries are expected in each key.
+        """
+        self.partner = {}
+        self.partner2 = {}
+        self.val = {}
+        for key, value in flavors_dict.items():
+            non_zero = [i for i in key if i != 0]
+            if len(non_zero) == 2:
+                k1, k2 = non_zero
+            elif len(non_zero) == 1:
+                k1 = k2 = non_zero[0]
+            else:
+                continue
+            self.partner[k1] = k2
+            self.partner2[k2] = k1
+            self.val[k1] = value
+
 
 class WaveFunction(list):
-    """a objet for a WaveFunction"""
-    
-    spin_to_size={0:1,
-                  1:3,
-                  2:6,
-                  3:6,
-                  4:18,
-                  5:18}
-    
-    def __init__(self, spin= None, size=None):
-        """Init the list with zero value"""
-        
+    """A WaveFunction object with momenta, W (spin representation), and flavor."""
+
+    spin_to_size = {0: 1,
+                    1: 3,
+                    2: 6,
+                    3: 6,
+                    4: 18,
+                    5: 18}
+
+    def __init__(self, spin=None, size=None):
+        """Init the list with zero value and set extra attributes."""
+
         if spin:
             size = self.spin_to_size[spin]
-        list.__init__(self, [0]*size)
-        
+        list.__init__(self, [0] * size)
+        # Writable zero-based view into the spin components (list[2:])
+        self.W = _WView(self)
+        # Four-momentum [p0, p1, p2, p3] stored with the sign convention
+        # of the wavefunction initialisation function (ixxxxx uses −p·nsf,
+        # oxxxxx/vxxxxx/sxxxxx use +p·ns).
+        self.momenta = [0.0, 0.0, 0.0, 0.0]
+        # Flavor index for merged-particle models (−1 = no flavor / not merged)
+        self.flavor = -1
 
-def ixxxxx(p,fmass,nhel,nsf):
+
+def ixxxxx(p, fmass, nhel, nsf, flavor=-1):
     """Defines an inflow fermion."""
     
     fi = WaveFunction(2)
     
     fi[0] = complex(-p[0]*nsf,-p[3]*nsf)
-    fi[1] = complex(-p[1]*nsf,-p[2]*nsf) 
+    fi[1] = complex(-p[1]*nsf,-p[2]*nsf)
+    fi.momenta = [-p[0]*nsf, -p[1]*nsf, -p[2]*nsf, -p[3]*nsf]
+    fi.flavor = flavor
     nh = nhel*nsf 
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
@@ -83,12 +164,14 @@ def ixxxxx(p,fmass,nhel,nsf):
     
     return fi 
 
-def oxxxxx(p,fmass,nhel,nsf):
+def oxxxxx(p, fmass, nhel, nsf, flavor=-1):
     """ initialize an outgoing fermion"""
     
     fo = WaveFunction(2)
     fo[0] = complex(p[0]*nsf,p[3]*nsf)
     fo[1] = complex(p[1]*nsf,p[2]*nsf)
+    fo.momenta = [p[0]*nsf, p[1]*nsf, p[2]*nsf, p[3]*nsf]
+    fo.flavor = flavor
     nh = nhel*nsf
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
@@ -155,6 +238,7 @@ def vxxxxx(p,vmass,nhel,nsv):
 
     vc[0] = complex(p[0]*nsv,p[3]*nsv)
     vc[1] = complex(p[1]*nsv,p[2]*nsv)
+    vc.momenta = [p[0]*nsv, p[1]*nsv, p[2]*nsv, p[3]*nsv]
 
     if (nhel == 4):
         if (vmass == 0.):
@@ -231,6 +315,7 @@ def sxxxxx(p,nss):
     sc[2] = complex(1.,0.)
     sc[0] = complex(p[0]*nss,p[3]*nss)
     sc[1] = complex(p[1]*nss,p[2]*nss)
+    sc.momenta = [p[0]*nss, p[1]*nss, p[2]*nss, p[3]*nss]
     return sc
 
 
@@ -359,6 +444,7 @@ def txxxxx(p, tmass, nhel, nst):
     tc[17] = ft[(3,3)]
     tc[0] = ft[(4,0)]
     tc[1] = ft[(5,0)]
+    tc.momenta = [ft[(4,0)].real, ft[(5,0)].real, ft[(5,0)].imag, ft[(4,0)].imag]
 
     return tc
 
@@ -606,7 +692,8 @@ def irxxxx(p, mass, nhel, nsr):
     ri[16] = rc[(3,2)]
     ri[17] = rc[(3,3)]
     ri[0] = rc[(4,0)]
-    ri[1] = rc[(5,0)]              
+    ri[1] = rc[(5,0)]
+    ri.momenta = [-rc[(4,0)].real, -rc[(5,0)].real, -rc[(5,0)].imag, -rc[(4,0)].imag]
 
     return ri
 
@@ -874,6 +961,7 @@ def orxxxx(p, mass, nhel, nsr):
     ro[17] = rc[(3,3)]
     ro[0] = rc[(4,0)]
     ro[1] = rc[(5,0)]
+    ro.momenta = [rc[(4,0)].real, rc[(5,0)].real, rc[(5,0)].imag, rc[(4,0)].imag]
     
     return ro
     

@@ -20,11 +20,7 @@ import re
 import glob
 import inspect
 import sys
-import six
 import tempfile
-from six.moves import range
-from six.moves import input
-
 logger = logging.getLogger('madgraph.cluster') 
 
 try:
@@ -175,7 +171,7 @@ class Cluster(object):
             prog = os.path.join(cwd, prog)
         temp_file_name = "sub." + os.path.basename(prog) + '.'.join(argument)
 
-        text = """#!/bin/bash
+        text = """#!/usr/bin/env bash
         MYTMP=%(tmpdir)s/run$%(job_id)s
         MYPWD=%(cwd)s
         mkdir -p $MYTMP
@@ -623,9 +619,9 @@ class Packet(object):
     """
 
     def __init__(self, name, fct, args, opts={}):
-        import six.moves.queue
+        import queue
         import threading
-        self.queue = six.moves.queue.Queue()
+        self.queue = queue.Queue()
         self.tag = name
         self.fct = fct
         self.args = args
@@ -653,12 +649,12 @@ class MultiCore(Cluster):
         
         super(MultiCore, self).__init__(self, *args, **opt)
         
-        import six.moves.queue
+        import queue
         import threading
-        import six.moves._thread
-        self.queue = six.moves.queue.Queue() # list of job to do
-        self.done = six.moves.queue.Queue()  # list of job finisned
-        self.submitted = six.moves.queue.Queue() # one entry by job submitted
+        import _thread
+        self.queue = queue.Queue() # list of job to do
+        self.done = queue.Queue()  # list of job finisned
+        self.submitted = queue.Queue() # one entry by job submitted
         self.stoprequest = threading.Event() #flag to ensure everything to close
         self.demons = []
         self.gpus_list = []
@@ -678,9 +674,9 @@ class MultiCore(Cluster):
         self.update_fct = None
         
         self.lock = threading.Event() # allow nice lock of the main thread
-        self.pids = six.moves.queue.Queue() # allow to clean jobs submit via subprocess
+        self.pids = queue.Queue() # allow to clean jobs submit via subprocess
         self.done_pid = []  # list of job finisned
-        self.done_pid_queue = six.moves.queue.Queue()
+        self.done_pid_queue = queue.Queue()
         self.fail_msg = None
 
         mg5_gpu_env_str = 'MG5_GPU_VISIBLE_DEVICES'
@@ -716,8 +712,8 @@ class MultiCore(Cluster):
 
 
     def worker(self, env2=None):
-        import six.moves.queue
-        import six.moves._thread
+        import queue
+        import _thread
         while not self.stoprequest.isSet():
             try:
                 args = self.queue.get(timeout=10)
@@ -775,7 +771,7 @@ class MultiCore(Cluster):
                     self.remove(error)
                     
                     if __debug__:
-                        six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                        raise self.fail_msg[1].with_traceback(self.fail_msg[2])
 
                 self.queue.task_done()
                 self.done.put(tag)
@@ -783,9 +779,9 @@ class MultiCore(Cluster):
                 #release the mother to print the status on the screen
                 try:
                     self.lock.set()
-                except six.moves._thread.error:
+                except _thread.error:
                     continue
-            except six.moves.queue.Empty:
+            except queue.Empty:
                 continue
         import threading
         self.demons.remove(threading.current_thread())  
@@ -856,7 +852,7 @@ class MultiCore(Cluster):
         """Waiting that all the jobs are done. This function also control that
         the submission by packet are handle correctly (i.e. submit the function)"""
 
-        import six.moves.queue
+        import queue
         import threading
 
         try: # to catch KeyBoardInterupt to see which kind of error to display 
@@ -872,7 +868,7 @@ class MultiCore(Cluster):
                 while self.done.qsize():
                     try:
                         tag = self.done.get(True, 1)
-                    except six.moves.queue.Empty:
+                    except queue.Empty:
                         pass
                     else:
                         if self.id_to_packet and tuple(tag) in self.id_to_packet:
@@ -936,7 +932,7 @@ class MultiCore(Cluster):
                     raise Exception(self.fail_msg)
                 elif self.fail_msg:
                     # can happend that stoprequest is set bu not fail if no job have been resubmitted
-                    six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                    raise self.fail_msg[1].with_traceback(self.fail_msg[2])
                 # self.fail_msg is None can happen when no job was submitted -> ignore
 
             # reset variable for next submission
@@ -944,12 +940,12 @@ class MultiCore(Cluster):
                 self.lock.clear()
             except Exception:
                 pass
-            self.done = six.moves.queue.Queue()
+            self.done = queue.Queue()
             self.done_pid = []
-            self.done_pid_queue = six.moves.queue.Queue()
+            self.done_pid_queue = queue.Queue()
             self.nb_done = 0
-            self.submitted = six.moves.queue.Queue()
-            self.pids = six.moves.queue.Queue()
+            self.submitted = queue.Queue()
+            self.pids = queue.Queue()
             self.stoprequest.clear()
             self.id_to_packet = {}
 
@@ -961,7 +957,7 @@ class MultiCore(Cluster):
             elif isinstance(self.fail_msg, str):
                 raise Exception(self.fail_msg)
             elif self.fail_msg:
-                six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                raise self.fail_msg[1].with_traceback(self.fail_msg[2])
             # else return orignal error
             raise 
 
@@ -1235,7 +1231,7 @@ class CondorCluster(Cluster):
 
             with tempfile.NamedTemporaryFile(mode="w", dir=cwd, delete=False) as dag_file:
                 dag_text = f'JOB job {submit_filename}\n'
-                dag_text += f'SCRIPT PRE job /bin/bash {preexec} {cwd} {dag_file.name}\n'
+                dag_text += f'SCRIPT PRE job /usr/bin/env bash {preexec} {cwd} {dag_file.name}\n'
                 dag_text += 'RETRY job 100 UNLESS-EXIT 0\n'
                 dag_text += 'VARS job restart_count="$(RETRY)"\n'
 
@@ -2174,7 +2170,7 @@ class HTCaaSCluster(Cluster):
             cwd_arg = cwd+"/arguments"
             temp = ' '.join([str(a) for a in argument])
             temp_file_name = "sub." + os.path.basename(prog)
-            text = """#!/bin/bash
+            text = """#!/usr/bin/env bash
                      MYPWD=%(cwd)s
                      cd $MYPWD
                      input_files=(%(input_files)s )
@@ -2182,7 +2178,7 @@ class HTCaaSCluster(Cluster):
                      do
                         chmod -f +x $i
                      done
-                     /bin/bash %(prog)s %(arguments)s > %(stdout)s
+                     /usr/bin/env bash %(prog)s %(arguments)s > %(stdout)s
                  """
             dico = {'cwd':cwd, 'input_files': ' '.join(input_files + [prog]), 'stdout': stdout, 'prog':prog,
                  'arguments': ' '.join([str(a) for a in argument]),
@@ -2333,7 +2329,7 @@ class HTCaaS2Cluster(Cluster):
 
         else:
             temp_file_name = "sub."+ os.path.basename(prog)
-            text = """#!/bin/bash
+            text = """#!/usr/bin/env bash
          MYPWD=%(cwd)s
          cd $MYPWD
          input_files=(%(input_files)s )
@@ -2341,7 +2337,7 @@ class HTCaaS2Cluster(Cluster):
          do
           chmod -f +x $i
          done
-         /bin/bash %(prog)s %(arguments)s > %(stdout)s
+         /usr/bin/env bash %(prog)s %(arguments)s > %(stdout)s
          """
             dico = {'cwd':cwd, 'input_files': ' '.join(input_files + [prog]), 'stdout': stdout, 'prog':prog,
                  'arguments': ' '.join([str(a) for a in argument]),

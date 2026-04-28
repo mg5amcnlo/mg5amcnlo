@@ -34,9 +34,7 @@ import time
 import tarfile
 import shutil
 import copy
-from six.moves import range
-import six
-StringIO = six
+import io
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -3238,10 +3236,29 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 return
             else:
                 devnull = open(os.devnull,'w')
-                subprocess.call([sys.executable, 'write_param_card.py'],
+
+                result = subprocess.run([sys.executable, 'write_param_card.py'],
+                        cwd=pjoin(self.me_dir, 'bin', 'internal', 'ufomodel'),
+                        stdout=devnull, stderr=subprocess.PIPE)
+
+                returncode = result.returncode
+                stderr_output = result.stderr.decode('utf-8', errors='replace')
+
+                if returncode:
+                    if not MADEVENT:
+                        shutil.copy(pjoin(MG5DIR,'models','sm','write_param_card.py'),
+                              pjoin(self.me_dir,'bin','internal','ufomodel','write_param_card.py'))
+                    elif self.options['mg5_path']:
+                        shutil.copy(pjoin(self.options['mg5_path'],'models','sm','write_param_card.py'),
+                              pjoin(self.me_dir,'bin','internal','ufomodel','write_param_card.py'))
+                    else:
+                        raise RuntimeError("write_param_card.py from your UFO model is crashing. Please update it (or run from Madgraph executable which will fix it for you):\n%s" % stderr_output)
+                    
+                    returncode = subprocess.call([sys.executable, 'write_param_card.py'],                
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'),
                              stdout=devnull)
-                devnull.close()
+                    devnull.close()
+
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
 
             need_mp = self.proc_characteristics['loop_induced']                
@@ -4669,7 +4686,7 @@ already exists and is not a fifo file."""%fifo_path)
         # Now write the card.
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
-        cmd_card = StringIO.StringIO()
+        cmd_card = io.StringIO()
         PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                                                        direct_pythia_input=True,
                                                        use_mg5amc_py8_interface=use_mg5amc_py8_interface)
@@ -4677,7 +4694,7 @@ already exists and is not a fifo file."""%fifo_path)
         # Now setup the preamble to make sure that everything will use the locally
         # installed tools (if present) even if the user did not add it to its
         # environment variables.
-        if 'heptools_install_dir' in self.options:
+        if 'heptools_install_dir' in self.options and self.options['heptools_install_dir']:
             preamble = misc.get_HEPTools_location_setter(
                                      self.options['heptools_install_dir'],'lib')
         else:
@@ -6035,6 +6052,11 @@ tar -czf split_$1.tar.gz split_$1
 
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
+
+        if self.options['heptools_install_dir']:
+            libdir = os.path.abspath(pjoin(self.options['heptools_install_dir'], 'lib'))
+            os.environ['LD_LIBRARY_PATH'] = libdir + ':' + os.environ.get('LD_LIBRARY_PATH','')
+            os.environ['DYLD_LIBRARY_PATH'] = libdir + ':' + os.environ.get('DYLD_LIBRARY_PATH','') 
 
         # environmental variables to be included in make_opts
         self.make_opts_var = {}

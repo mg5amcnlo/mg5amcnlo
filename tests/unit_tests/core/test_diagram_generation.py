@@ -28,9 +28,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # AmplitudeTest
 #===============================================================================

@@ -23,7 +23,6 @@ import os
 import shutil
 import re
 import logging
-from six.moves import range
 import random
 import time
 

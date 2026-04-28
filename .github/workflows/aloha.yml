@@ -19,6 +19,7 @@ on:
 
 env:
   commitmsg: ${{ github.event.head_commit.message }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,7 +36,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_helas_diagrams_gg_wpwmttx
@@ -43,7 +44,7 @@ jobs:
             cd $GITHUB_WORKSPACE
             echo "import model MSSM_SLHA2" > cmd
             ./bin/mg5_aMC cmd
-            ./tests/test_manager.py -pP -t0 test_aloha.* -e test_short_mssm_subset_creation
+            ./tests/test_manager.py -pP -t0 test_aloha.*  testIO_aloha.*-e test_short_mssm_subset_creation
 
   test_excluded:
     # excluded due to side effect
@@ -53,7 +54,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_short_mssm_subset_creation

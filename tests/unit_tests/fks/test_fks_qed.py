@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 import sys
 import os
-from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -41,7 +40,7 @@ class TestFKSQED(unittest.TestCase):
     def setUp(self):
         # the model
         if not hasattr(self, 'mymodel'):
-            TestFKSQED.mymodel = import_ufo.import_model('sm')
+            TestFKSQED.mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
             #remove third and fourth generation of quarks, and the muon
             particles_to_rm = [3, 4, 13]
             for p in particles_to_rm:

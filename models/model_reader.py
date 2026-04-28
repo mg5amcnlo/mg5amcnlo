@@ -33,8 +33,6 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc
-import six
-
 ZERO = 0
 
 #===============================================================================
@@ -81,7 +79,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-            if isinstance(param_card, six.string_types):
+            if isinstance(param_card, str):
                 # Check that param_card exists
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error("No such file %s" % param_card)
@@ -271,6 +269,23 @@ class ModelReader(loop_base_objects.LoopModel):
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))
         
+        # Evaluate wavefunction CT coupling expressions (loop models only).
+        # These couplings have dict-valued expressions (Laurent series) and are
+        # not included in model['couplings'], so they must be evaluated
+        # separately here so that zero-valued ones (e.g. massless b-quark loops
+        # when MB=0) are properly removed during model restriction.
+        wf_ct_exprs = dict.get(self, 'wf_ct_coupling_exprs', {})
+        if wf_ct_exprs:
+            wf_ct_values = {}
+            for name, expr in wf_ct_exprs.items():
+                try:
+                    exec("locals()['%s'] = %s" % (name, expr), globals(), all_params)
+                    wf_ct_values[name] = complex(all_params[name])
+                except Exception:
+                    pass
+            if wf_ct_values:
+                self.get('coupling_dict').update(wf_ct_values)
+
         return all_params
     
     def get_mass(self, pdg_code):

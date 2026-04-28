@@ -1,4 +1,4 @@
-        DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
+        DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,IFLAV,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -32,15 +32,16 @@ C
 C ARGUMENTS 
 C  
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER IMODE
+      INTEGER IMODE, IFLAV
 C  
 C LOCAL VARIABLES 
 C  
       INTEGER I,ITYPE,LP,IPROC
       double precision Qscale
 %(pdf_vars)s      
-      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
+      DOUBLE PRECISION XPQ(-7:7),PD(0:MAXFLAVPERPROC)
       DOUBLE PRECISION DSIGUU,R,RCONF
+      INTEGER FLAVOR(NEXTERNAL)
 
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
@@ -65,7 +66,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      INTEGER          IPSEL
+      INTEGER          IPSEL, IPSEL_SHIFT ! link between PD and IPSEL
       COMMON /SubProc/ IPSEL
 C     MINCFIG has this config number
       integer           mincfig, maxcfig
@@ -86,8 +87,9 @@ C     Common blocks
 c
 c     local
 c
-	   double precision P1(0:3, nexternal)
+       double precision P1(0:3, nexternal)
       integer channel
+      double precision rwgt_value
 C  
 C DATA
 C  
@@ -111,7 +113,7 @@ C       Set up process information from file symfact
              NFACT=IFACT
           ENDIF
         ENDDO
-	DSIG%(proc_id)s = NFACT
+    DSIG%(proc_id)s = NFACT
  10     CLOSE(LUN)
         RETURN
  20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
@@ -124,41 +126,50 @@ C     Continue only if IMODE is 0, 4 or 5
 ## if( nogrouping) {
       ! for no grouping update the scale here (done in main autodsig for grouping  
       call update_scale_coupling(PP, WGT)
-## }	 
+## }     
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
-	 if(frame_id.ne.6)then
+     if(frame_id.ne.6)then
            call boost_to_frame(PP, frame_id, P1)
          else
            P1 = PP
          endif
 
+     %(get_flavor)s
+
      channel = %(get_channel)s
-	 call ranmar(RHEL)
-	 call ranmar(RCOL)
-         CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
+     
+     call ranmar(RHEL)
+     call ranmar(RCOL)
 
-
-		 IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN		 
-		      DSIG%(proc_id)s = DSIGUU*CONV
-			else
-		      DSIG%(proc_id)s = 0.0d0
-			endif
-			RETURN
-		 ENDIF
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
-         IPSEL=0
-         DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+         IPSEL = 0 
+         DO WHILE (R.GT.0D0)
             IPSEL=IPSEL+1
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
-	 
-         DSIGUU=DSIGUU*REWGT(PP,1)
+
+      %(start_ipsel_for_IFLAV)s
+      IPSEL = IPSEL + IPSEL_SHIFT
+      DSIGUU=DSIGUU*REWGT(PP,1)
+      rwgt_value=REWGT(PP,1)
+
+     CALL SMATRIX%(proc_id)s(P1, IFLAV, RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
+         
+     DSIGUU = DSIGUU* rwgt_value
+     
+         IF (IMODE.EQ.5) THEN
+            IF (DSIGUU.LT.1D199) THEN        
+              DSIG%(proc_id)s = DSIGUU*CONV
+            else
+              DSIG%(proc_id)s = 0.0d0
+            endif
+            RETURN
+         ENDIF
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d,1)
@@ -167,7 +178,7 @@ C        Apply the bias weight specified in the run card (default is 1.0)
 
          IF (DSIGUU.LT.1D199) THEN
 c           Set sign of dsig based on sign of PDF and matrix element
-            DSIG%(proc_id)s=DSIGN(%(conv)spd(0)*DSIGUU,DSIGUU*PD(IPSEL))
+            DSIG%(proc_id)s=DSIGN(%(conv)spd(0)*DSIGUU,DSIGUU*PD(IPSEL-IPSEL_SHIFT))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0
@@ -188,7 +199,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, IFLAV_VEC, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -231,6 +242,7 @@ C
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
       INTEGER IMIRROR_VEC(*)
       INTEGER ICONF_VEC(*)
+      INTEGER IFLAV_VEC(*)
       INTEGER VECSIZE_USED
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)      
@@ -304,6 +316,9 @@ c
 	   double precision P1(0:3, nexternal)
 	   integer ivec, curr_warp, iwarp, NB_WARP_USED
 	   integer channels(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+	   integer igraph(VECSIZE_MEMMAX)
+	   common/vec_igraph/igraph
 C  
 C DATA
 C  
@@ -315,9 +330,9 @@ C ----------
       selected_col(:) = 0 
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
-	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
-	RETURN
-      ENDIF	   
+    NFACT = DSIG%(proc_id)s(all_pp(0,1,1),iflav_vec(1), all_wgt(1), IMODE)
+    RETURN
+      ENDIF    
 
 C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
@@ -325,26 +340,26 @@ C     Continue only if IMODE is 0, 4 or 5
 %(passcuts_begin)s
 %(pdf_lines_vec)s
 
-	 
+     
          IF (IMODE.EQ.4)THEN
             ALL_OUT(:) = ALL_PD(0,:)
             RETURN
          ENDIF
 
-	 DO CURR_WARP=1, NB_WARP_USED
-	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
-	     IB(1) = 1
-	     IB(2) = 2
-	   else
-	     IB(1) = 2
-	     IB(2) = 1	   
-	   endif
-	   DO IWARP=1, WARP_SIZE
-	      IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
-c        Do not need those three here. do I?	 
-	      XBK(:) = ALL_XBK(:,IVEC)
-c	      CM_RAP = ALL_CM_RAP(IVEC)
-	      Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+     DO CURR_WARP=1, NB_WARP_USED
+       if(IMIRROR_VEC(CURR_WARP).EQ.1)then
+         IB(1) = 1
+         IB(2) = 2
+       else
+         IB(1) = 2
+         IB(2) = 1     
+       endif
+       DO IWARP=1, WARP_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+c        Do not need those three here. do I?     
+          XBK(:) = ALL_XBK(:,IVEC)
+c         CM_RAP = ALL_CM_RAP(IVEC)
+          Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
 
 C     Select a flavor combination (need to do here for right sign)
@@ -359,7 +374,7 @@ C     Select a flavor combination (need to do here for right sign)
 
        ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
 
-	 if(frame_id.ne.6)then
+     if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
          else
            p_multi(:,:,IVEC) = ALL_PP(:,:,IVEC)
@@ -368,7 +383,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO ! end loop on IWARP/IVEC	 
 	 ENDDO ! end loop on the CURR_WARP
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, iflav_vec, hel_rand, col_rand, channels, igraph, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO CURR_WARP=1, NB_WARP_USED
@@ -391,18 +406,18 @@ C     Select a flavor combination (need to do here for right sign)
 			RETURN
 		 ENDIF
 
-	 XBK(:) = ALL_XBK(:,IVEC)
-c	 CM_RAP = ALL_CM_RAP(IVEC)
-	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+     XBK(:) = ALL_XBK(:,IVEC)
+c    CM_RAP = ALL_CM_RAP(IVEC)
+     Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
-	 if(frame_id.ne.6)then
+     if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, P1)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-C	 call restore_cl_val_to(ivec)
+C    call restore_cl_val_to(ivec)
 c         DSIGUU=DSIGUU*REWGT(P1,ivec)
-	  DSIGUU=DSIGUU*ALL_RWGT(IVEC)
+      DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,%(numproc)d, IVEC)
@@ -437,19 +452,22 @@ C       Call UNWGT to unweight and store events
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, out, selected_hel, selected_col, VECSIZE_USED)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, IFLAV_VEC, hel_rand, col_rand, channels, igraph, out, selected_hel, selected_col, VECSIZE_USED)
 %(OMP_LIB)s
      implicit none
 
      include 'nexternal.inc'
-     include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
      include 'maxamps.inc'
+     include 'cluster.inc'  ! for IGRAPHS common block (MLM per-event color selection); also defines VECSIZE_MEMMAX via vector.inc
      INTEGER                 NCOMB
      PARAMETER (             NCOMB=%(ncomb)d)
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
+     integer IFLAV_VEC(VECSIZE_MEMMAX)
      integer channels(VECSIZE_MEMMAX)
+C    Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+     integer igraph(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
@@ -462,36 +480,37 @@ C       Call UNWGT to unweight and store events
 
 %(OMP_PREFIX)s
       DO IVEC=1, VECSIZE_USED
-      	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
-     &	                         hel_rand(IVEC),
+         call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
+     &                           IFLAV_VEC(IVEC), 
+     &                           hel_rand(IVEC),
      &                           col_rand(IVEC),
-     &				 channels(IVEC),
+     &               channels(IVEC),
      &                           IVEC,
-     &				 out(IVEC),
-     &				 selected_hel(IVEC),
-     &				 selected_col(IVEC)
-     &				 )
+     &               out(IVEC),
+     &               selected_hel(IVEC),
+     &               selected_col(IVEC)
+     &               )
       ENDDO
 %(OMP_POSTFIX)s
 
      return
      end
 
-	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
+    integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
 c         if hel>0 return the helicity of particule ipart for the selected helicity configuration
 c         if hel=0 return the number of helicity state possible for that particle 
-	  implicit none
-	  integer hel,i, ipart
-	  Include 'nexternal.inc'
-	  integer one_nhel(nexternal)
-	  INTEGER                 NCOMB
-	  PARAMETER (             NCOMB=%(ncomb)d)
-	  INTEGER NHEL(NEXTERNAL,0:NCOMB)
-	  %(helicity_lines)s
+      implicit none
+      integer hel,i, ipart
+      Include 'nexternal.inc'
+      integer one_nhel(nexternal)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=%(ncomb)d)
+      INTEGER NHEL(NEXTERNAL,0:NCOMB)
+      %(helicity_lines)s
 
-	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
-	  return
-	  end
+      get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
+      return
+      end
 
 
 %(ADDITIONAL_FCT)s

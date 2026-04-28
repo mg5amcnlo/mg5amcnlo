@@ -32,9 +32,6 @@ import models as ufomodels
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card
 from madgraph import MG5DIR
-import six
-from six.moves import range
-
 pjoin =os.path.join
 logger = logging.getLogger('madgraph.model')
 
@@ -61,7 +58,7 @@ class UFOModel(object):
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR('Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.')
-        if isinstance(model.all_particles[0].mass, six.string_types):
+        if isinstance(model.all_particles[0].mass, str):
             raise USRMODERROR('Base Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.') 
                                  
@@ -216,7 +213,7 @@ class UFOModel(object):
         """convert param to string in order to have it written correctly for the 
         UFO file"""
 
-        if isinstance(param, six.string_types): 
+        if isinstance(param, str): 
             return "'%s'" % param.replace("\\", "\\\\").replace('\'', '\\\'').replace('\"', '\\\"')
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
@@ -267,6 +264,9 @@ class UFOModel(object):
             text = """%s = %s(""" % (obj.name, obj.__class__.__name__)
             
             
+        # All three attribute names used across different UFO models for Goldstone bosons
+        goldstone_attrs = ('goldstoneboson', 'GoldstoneBoson', 'goldstone')
+
         for data in args:
             if data in self.translate:
                 data = self.translate[data]
@@ -286,12 +286,18 @@ class UFOModel(object):
                     setattr(obj, data, None)
                 else:
                     raise
+            # Normalize the goldstone attribute: if the canonical name from
+            # require_args_all is any of the three known goldstone attribute
+            # names (UFO models use different conventions), and it is False,
+            # check the other two alternatives.  This handles external models
+            # regardless of which convention they follow.
+            if data in goldstone_attrs and not expr:
+                if any(getattr(obj, a, False) for a in goldstone_attrs):
+                    expr = True
             name =str(data)
             if name in self.translate:
                 name = self.translate[name]            
-            #if data == 'lhablock':
-            #    print data, type(self.format_param(getattr(obj, data)))
-            text += '%s%s = %s,\n' % (' ' * nb_space,name, self.format_param(getattr(obj, data)))
+            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(expr))
             nb_space += add_space
 
         if hasattr(obj, 'get_all'):
@@ -312,13 +318,20 @@ class UFOModel(object):
             name =str(data)
             if name in ['partial_widths', 'loop_particles']:
                 continue
+            # Skip all goldstone attribute variants.  The canonical one (whichever
+            # name is in require_args_all) has already been normalized and written
+            # by the args loop above; emitting the others would produce duplicate or
+            # contradictory output.
+            if name in goldstone_attrs:
+                continue
             if name in self.translate:
                 name = self.translate[name] 
             if not nb_space:
                 add_space = len(text)
             else:
                 add_space = 0
-            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(getattr(obj, data)))
+            val = getattr(obj, data)
+            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(val))
             nb_space += add_space
             
         text = text[:-2] + ')\n\n'
@@ -960,7 +973,7 @@ from object_library import all_propagators, Propagator
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR('Add-on Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.')
-        if isinstance(model.all_particles[0].mass, six.string_types):
+        if isinstance(model.all_particles[0].mass, str):
             raise USRMODERROR('Add-on Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.') 
     

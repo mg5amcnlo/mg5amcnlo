@@ -16,9 +16,7 @@
 """Unit test library for the save model routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
-
+import io
 import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
@@ -32,7 +30,7 @@ class IOSaveModel(unittest.TestCase):
     def test_error_particle_save(self):
         """Test error raising for particle save"""
 
-        fsock = StringIO.StringIO('')
+        fsock = io.StringIO('')
 
         my_part_list = "This is not a particle list"
 
@@ -74,7 +72,7 @@ class IOSaveModel(unittest.TestCase):
                                                       'is_part':True,
                                                       'self_antipart':False})])
 
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         save_model.save_particles(fsock, mypartlist)
 
         goal_str = "particles = [\n%s,%s]" % (str(mypartlist[0]),
@@ -85,7 +83,7 @@ class IOSaveModel(unittest.TestCase):
     def test_error_interaction_save(self):
         """Test error raising for interaction save"""
 
-        fsock = StringIO.StringIO('')
+        fsock = io.StringIO('')
 
         my_inter_list = "This is not an interaction list"
 
@@ -121,7 +119,7 @@ class IOSaveModel(unittest.TestCase):
                                     (1, 1):'g11'},
                        'orders':{'QCD':1, 'QED':1}})])
 
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         save_model.save_interactions(fsock, myinterlist)
 
         goal_str = "interactions = [\n%s]" % str(myinterlist[0])

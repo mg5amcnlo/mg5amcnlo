@@ -25,8 +25,6 @@ import sys
 import logging
 import time
 import tests.IOTests as IOTests
-from six.moves import range
-
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -507,6 +505,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
             target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
         
         cmd = """
+        set apply_flavor_grouping False
         import model sm
         generate w+ w- > w+ w- @0
         output matchbox %(path)s/TEST --postpone_model

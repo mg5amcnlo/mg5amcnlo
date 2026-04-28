@@ -22,9 +22,6 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # ParticleTest
 #===============================================================================
@@ -382,10 +379,10 @@ class InteractionTest(unittest.TestCase):
     'particles': [6,6,6,6],
     'color': [c0 = 1 f(1,2,3),c1 = 1 d(1,2,3)],
     'lorentz': ['L1', 'L2'],
-    'couplings': {(c0, L1): g00,
-                  (c0, L2): g01,
-                  (c1, L1): g10,
-                  (c1, L2): g11}
+    'couplings': {(c0, L1,): g00,
+                  (c0, L2,): g01,
+                  (c1, L1,): g10,
+                  (c1, L2,): g11}
     'orders': {'QCD': 1, 'QED': 1},
     'loop_particles': [[]],
     'type': 'base',
@@ -1001,6 +998,148 @@ class ModelTest2(unittest.TestCase):
                 found += 1
         self.assertEqual(found, 2)
 
+    def test_merge_flavor(self):
+        """Check that merging particles is working"""
+        
+        ## this is some sanyty check that the default merging was going ok
+        self.assertEqual(len(self.model.get('interactions')), 39)
+        self.assertEqual(len(self.model.get('unmerged_interactions')), 29)
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in self.model.get('unmerged_interactions'):
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+            
+
+        model = copy.deepcopy(self.model)
+        n_particles = len(model['particles']) -3 # default merging is _quark, _lepton, _neutrino
+
+        ##
+        ## Check that unmerging is working 
+        ##
+        model.unmerge_flavors()
+        self.assertEqual(len(model.get('interactions')), 56)       
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertEqual(len(model['particles']), n_particles)
+        
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertNotIn(81, pdg_codes)
+        self.assertNotIn(82, pdg_codes)
+        self.assertNotIn(83, pdg_codes) 
+        self.assertEqual(model.get('merged_particles'), {})
+        if hasattr(model, 'unmerged_interactions'):
+            self.assertEqual(model['unmerged_interactions'], [])
+
+        # check that merged particles does not have interactions anymore
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in model['interactions']:
+            #print(inter)
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(81, parts)
+            self.assertNotIn(-81, parts)
+            self.assertNotIn(82, parts)
+            self.assertNotIn(-82, parts)
+            self.assertNotIn(83, parts)
+            self.assertNotIn(-83, parts)
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+
+        # check that unmerged twice is ok
+        model.unmerge_flavors()
+        self.assertEqual(len(model.get('interactions')), 56)       
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertEqual(len(model['particles']), n_particles)
+        
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertNotIn(81, pdg_codes)
+        self.assertNotIn(82, pdg_codes)
+        self.assertNotIn(83, pdg_codes) 
+        self.assertEqual(model.get('merged_particles'), {})
+        if hasattr(model, 'unmerged_interactions'):
+            self.assertEqual(model['unmerged_interactions'], [])
+
+        # check that merged particles does not have interactions anymore
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in model['interactions']:
+            #print(inter)
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(81, parts)
+            self.assertNotIn(-81, parts)
+            self.assertNotIn(82, parts)
+            self.assertNotIn(-82, parts)
+            self.assertNotIn(83, parts)
+            self.assertNotIn(-83, parts)
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+
+
+
+        ##
+        ## Check that merging is working
+        ##
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+
+        
+        model.merge_flavor([1,2,3,4])
+
+        # check that particles are kept in top of the merged one
+        self.assertEqual(len(model['particles']), n_particles +1)
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertIn(81, pdg_codes)
+
+        # check that original particles does not have interactions anymore
+        has_inter_81 = 0
+        has_inter_n81 = 0
+        for inter in model['interactions']:
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(1, parts)
+            self.assertNotIn(2, parts)
+            self.assertNotIn(3, parts)
+            self.assertNotIn(4, parts)
+            if 81 in parts:
+                has_inter_81 += 1
+            if -81 in parts:
+                has_inter_n81 += 1
+        self.assertEqual(has_inter_81, has_inter_n81)
+        self.assertEqual(has_inter_81, 5)
+
+        # check that unmerged vertex are kept
+        self.assertTrue(hasattr(model, 'unmerged_interactions'))
+        self.assertEqual(len(model.unmerged_interactions), 16)
+
+
+
+
+
+
 #===============================================================================
 # ModelTest
 #===============================================================================
@@ -1062,7 +1201,8 @@ class LegTest(unittest.TestCase):
                       'from_group':False,
                       'onshell':None,                       
                       'loop_line':False,
-                      'polarization':[]}
+                      'polarization':[],
+                      'flavor':[]}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -1144,7 +1284,8 @@ class LegTest(unittest.TestCase):
     'from_group': False,
     'loop_line': False,
     'onshell': None,
-    'polarization': []
+    'polarization': [],
+    'flavor': []
 }"""
         
         self.assertEqual(goal, str(self.myleg))
@@ -1210,7 +1351,8 @@ class MultiLegTest(unittest.TestCase):
 
         self.mydict = {'ids':[3, 2, 5],
                       'state':True,
-                      'polarization':[]}
+                      'polarization':[],
+                      'flavor':[]}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
 
@@ -1286,7 +1428,8 @@ class MultiLegTest(unittest.TestCase):
         goal ="""{
     'ids': [3, 2, 5],
     'state': True,
-    'polarization': []
+    'polarization': [],
+    'flavor': []
 }"""
         self.assertEqual(goal, str(self.my_multi_leg))
 
