@@ -5120,7 +5120,7 @@ c Lower bound on xi_i_fks
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       if (softtest) then
-         if(xi_i_fks_fix.gt.xiimax)then
+         if(xi_i_fks_fix/xiimax .gt. 1d0+stiny)then
             xjac=-102
             return
          endif
