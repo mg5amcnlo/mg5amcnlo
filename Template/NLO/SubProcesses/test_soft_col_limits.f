@@ -629,7 +629,7 @@ c$$$         write (*,*) '2',p_lab(:,2)
       include 'fks_info.inc'
       double precision ZERO,    one
       parameter       (ZERO=0d0,one=1d0)
-      integer iconfig_in,bs_min,bs_max,fks_loop
+      integer iconfig_in,bs_min,bs_max,fks_loop,ifks
       double precision mass_jfks
       double precision pmass(nexternal)
       integer         nndim
@@ -688,8 +688,17 @@ c
          bs_max=iconfig_in
       endif
 
-      soft_limit_is_zero=.not.(need_color_links_D(nFKSprocess).or.
-     $                         need_charge_links_D(nFKSprocess))
+      ! If one of the FKS configuration with the same i-fks and j-fks as
+      ! the current one, but it has a soft singularity,
+      ! soft_limit_is_zero should be set to false.
+      soft_limit_is_zero=.True.
+      do ifks=1,fks_configs
+         if (fks_i_d(ifks).ne.i_fks) cycle
+         if (fks_j_d(ifks).ne.j_fks) cycle
+         soft_limit_is_zero=soft_limit_is_zero .and.
+     $        (.not.(need_color_links_D(ifks) .or.
+     $               need_charge_links_D(ifks)))
+      enddo
       
       end
 
