@@ -158,7 +158,96 @@ class TestImportUFO(unittest.TestCase):
         output = fct(model, Zee)    
         self.assertEqual(output, [(0,1,0,0), (2,1,0,0)])
 
+    def test_reshape_FFV_coeff_gamma5_and_vector(self):
+        """test that Gamma5(1,-1)*Gamma(3,2,-1) and Gamma(3,2,1) are handled correctly"""
 
+        import models as ufomodels
+        path = os.path.join(_file_path, '..', 'input_files', 'DM_pion')
+        ufo_model = ufomodels.load_model(path, decay=False)
+        ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model, FFV=False)
+        model = ufo2mg5_converter.load_model()
+
+        fct = import_ufo.UFOMG5Converter.reshape_FFV_coeff
+
+        def find_interaction(model, l1, l2=None):
+            """find the interaction with the given lorentz structure"""
+            for interaction in model.get('interactions'):
+                names = [l for l in interaction['lorentz']]
+                if l1 in names:
+                    if l2 is None and len(interaction['lorentz']) == 1:
+                        return interaction
+                    if l2 is not None and l2 in names:
+                        return interaction
+            raise Exception('No interaction found with %s and %s' % (l1, l2))
+
+        # Verify that DM_pion has the expected structures
+        # FFV1 = Gamma(3,2,1), FFV2 = Gamma5(-1,1)*Gamma(3,2,-1)
+        lor1 = model.get_lorentz('FFV1')
+        lor2 = model.get_lorentz('FFV2')
+        self.assertEqual(lor1.get('structure'), 'Gamma(3,2,1)')
+        self.assertEqual(lor2.get('structure'), 'Gamma5(-1,1)*Gamma(3,2,-1)')
+
+        # Test: interaction with Gamma(3,2,1) and Gamma5(-1,1)*Gamma(3,2,-1)
+        # Gamma(3,2,1) -> (R=1, L=1), Gamma5*Gamma -> (R=1, L=-1)
+        inter = find_interaction(model, 'FFV1', 'FFV2')
+        output = fct(model, inter)
+        self.assertEqual(output, [(1, 1, 0, 0), (1, -1, 0, 0)])
+
+    def test_reshape_FFV_coeff_unknown_structure_ignored(self):
+        """test that unrecognized FFV Lorentz structures are ignored (return None)
+        instead of raising an exception, so the interaction is handled later
+        in flavor merging (e.g. tensor operators from TopEffTh)"""
+
+        import madgraph.core.base_objects as base_objects
+
+        # Create a minimal mock model with an unrecognized FFV Lorentz structure
+        # (e.g. a tensor/derivative coupling like P(3,1)*Gamma(-1,2,1))
+        class MockLorentz:
+            def __init__(self, name, spins, structure):
+                self._d = {'name': name, 'spins': spins, 'structure': structure}
+            def get(self, key):
+                return self._d[key]
+
+        class MockModel:
+            def __init__(self, lors):
+                self._d = {l.get('name'): l for l in lors}
+            def get_lorentz(self, name):
+                return self._d[name]
+
+        fct = import_ufo.UFOMG5Converter.reshape_FFV_coeff
+
+        # Test with one recognized (ProjM) and one unrecognized (tensor) FFV structure
+        lor_known = MockLorentz('FFV_L', [2, 2, 3], 'Gamma(3,2,-1)*ProjM(-1,1)')
+        lor_tensor = MockLorentz('FFV_T', [2, 2, 3], 'P(3,1)*Gamma(-1,2,1)')
+        mock_model = MockModel([lor_known, lor_tensor])
+        inter = base_objects.Interaction({
+            'id': 1,
+            'lorentz': ['FFV_L', 'FFV_T'],
+            'couplings': {(0, 0): 'GC_1', (0, 1): 'GC_2'},
+            'orders': {},
+            'color': [],
+            'particles': base_objects.ParticleList(),
+        })
+        output = fct(mock_model, inter)
+        self.assertIsNone(output,
+            "Expected None for unknown FFV Lorentz structure, got %s" % repr(output))
+
+        # Test with an FFV structure using a sum that contains an unknown term
+        lor_sum = MockLorentz('FFV_SUM', [2, 2, 3],
+                              'Gamma(3,2,1) + P(-1,3)*P(3,1)*Gamma(-1,2,1)')
+        lor_projm = MockLorentz('FFV_L2', [2, 2, 3], 'Gamma(3,2,-1)*ProjM(-1,1)')
+        mock_model2 = MockModel([lor_sum, lor_projm])
+        inter2 = base_objects.Interaction({
+            'id': 2,
+            'lorentz': ['FFV_SUM', 'FFV_L2'],
+            'couplings': {(0, 0): 'GC_1', (0, 1): 'GC_2'},
+            'orders': {},
+            'color': [],
+            'particles': base_objects.ParticleList(),
+        })
+        output2 = fct(mock_model2, inter2)
+        self.assertIsNone(output2,
+            "Expected None when a sum contains an unknown term, got %s" % repr(output2))
 
 
 

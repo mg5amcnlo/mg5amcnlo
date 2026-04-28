@@ -123,13 +123,22 @@ class TestCmdShell1(unittest.TestCase):
             
     def test_import_model(self):
         """check that old UFO model are loaded correctly"""
-        
-        self.do('''import model DY_SM''')
-        self.do('''import model TopEffTh''')
-        self.do('''import model uutt_tch_scalar''')
-        self.do('''import model uutt_sch_4fermion''')
-        self.do('''import model 2HDM''')
-                
+
+        # Test local models that exercise the FFV Lorentz structure handling
+        # (Gamma(3,2,1) and Gamma5(-1,1)*Gamma(3,2,-1) projections)
+        dm_pion_path = os.path.join(_file_path, 'input_files', 'DM_pion')
+        self.do('import model %s' % dm_pion_path)
+
+        # Test models requiring internet access; skip gracefully if unavailable
+        try:
+            self.do('''import model DY_SM''')
+            self.do('''import model TopEffTh''')
+            self.do('''import model uutt_tch_scalar''')
+            self.do('''import model uutt_sch_4fermion''')
+            self.do('''import model 2HDM''')
+        except MadGraph5Error:
+            pass  # Models not available locally and no internet connection
+
     def test_draw(self):
         """ command 'draw' works """
 

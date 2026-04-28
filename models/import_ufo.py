@@ -1013,14 +1013,26 @@ class UFOMG5Converter(object):
                         return 1
             if " - " in lor:
                 p1, p2 = lor.split(" - ")
-                c1, c2, s1, s2 = projection(p1, spin)
-                c3, c4, s3, s4 = projection(p2, spin)
+                r1 = projection(p1, spin)
+                if r1 is None:
+                    return None
+                r2 = projection(p2, spin)
+                if r2 is None:
+                    return None
+                c1, c2, s1, s2 = r1
+                c3, c4, s3, s4 = r2
                 return c1-c3, c2-c4, s1-s3, s2-s4
             elif " + " in lor:
                 p1, p2 = lor.split(" + ")
-                c1,c2, s1, s2 = projection(p1, spin)
-                c3,c4, s3, s4 = projection(p2, spin)
-                return c1+c3, c2+c4, s1+s3, s2+s4   
+                r1 = projection(p1, spin)
+                if r1 is None:
+                    return None
+                r2 = projection(p2, spin)
+                if r2 is None:
+                    return None
+                c1, c2, s1, s2 = r1
+                c3, c4, s3, s4 = r2
+                return c1+c3, c2+c4, s1+s3, s2+s4
             elif "ProjP(-1,1)" in lor:
                 return get_coeff(lor), 0, 0, 0
             elif "ProjM(-1,1)" in lor:
@@ -1040,10 +1052,10 @@ class UFOMG5Converter(object):
 
                 return projection(lor, spin)
 
-
-
             elif spin != [2,2,1]:
-                raise Exception("Not implemented")
+                # Unknown FFV Lorentz structure: ignore this interaction's
+                # projection (it will be handled correctly in flavor merging)
+                return None
             # BELOW IS FOR FD GAUGE SUPPORT (projection on PROJP(2,1) and PROJM(2,1)
             elif "ProjP(2,1)" in lor:
                 return 0,0 , get_coeffS(lor), 0
@@ -1053,12 +1065,14 @@ class UFOMG5Converter(object):
                 a = get_coeffI(lor)
                 return a, a
             else:
-                misc.sprint(lor)
-                raise Exception("Not implemented") 
-            
+                return None
+
         all_c = []
         for lor in lorentzs:
-            c1, c2, cs1, cs2 = projection(lor.get('structure'), lor.get('spins'))
+            result = projection(lor.get('structure'), lor.get('spins'))
+            if result is None:
+                return None
+            c1, c2, cs1, cs2 = result
             all_c.append((c1,c2,cs1,cs2))
         
         #avoid useless trigger if already  in the right basis
