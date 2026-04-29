@@ -5177,9 +5177,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # handling of the flavor:
         all_flav = matrix_element.get_external_flavors_with_iden()
         replace_dict['max_flavor'] = len(all_flav)
-        replace_dict['get_flavor_matrix'] = '' 
+        replace_dict['get_flavor_matrix'] = ''
+
+        # The Python flavor tuples store raw PDG codes (needed for check_flavor),
+        # but the Fortran FLV_COUPLING % PARTNER array is indexed by 1-based
+        # position within the merged particle group.  Build a mapping so that
+        # each PDG code is converted to its group position before being written
+        # into the DATA statement.
+        model = matrix_element.get('processes')[0].get('model')
+        pdg_to_group_pos = {}
+        for members in model.get('merged_particles').values():
+            for pos, pdg in enumerate(members, 1):
+                pdg_to_group_pos[pdg] = pos
+
         for i, flav in enumerate(all_flav):
-            replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join([str(f) for f in flav[0]]))
+            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+            replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
         
         # information for computing the correct symmetry factor for each flavor
         data = matrix_element.get('processes')[0].get_final_ids_after_decay()
