@@ -643,7 +643,7 @@ C             Store amplitudes for reuse
       RETURN
       END
 
-SUBROUTINE RESHUFFLE_MOMENTA%(proc_id)s(P,PMASS,P_RESH)
+      SUBROUTINE RESHUFFLE_MOMENTA%(proc_id)s(P,PMASS,P_RESH)
       IMPLICIT NONE
 C
 C     CONSTANT
@@ -658,7 +658,8 @@ C
 C
 C     LOCALS
 C
-      LOGICAL FS, RESHUFFLE
+      LOGICAL RESHUFFLE
+      INTEGER OPTION
       INTEGER I, J, CNT_ONIA, CNT_ELEM, NELEM, MAP(NEXTERNAL)
       PARAMETER (NELEM = NEXTERNAL-NONIA-2)
 
@@ -682,7 +683,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-      FS = .TRUE.
+      OPTION = 1
 
       RESHUFFLE = .FALSE.
       DO I = 3, NEXTERNAL
@@ -700,7 +701,7 @@ C     ----------
         STOP
       ENDIF
 
-      IF (FS) THEN
+      IF (OPTION > 0) THEN
 C     FINAL-STATE MOMENTUM RESHUFFLING
         DO I = 1, NEXTERNAL
           PAUX = P(0:3,1)+P(0:3,2)
@@ -732,11 +733,11 @@ C     FINAL-STATE MOMENTUM RESHUFFLING
         DO I = NONIA-1, 1, -1
           HAD_PIN(0:3,I) = HAD_PIN(0:3,I+1) + HAD_P(0:3,I)
           HAD_MIN(I) = MASS(HAD_PIN(0:3,I))
-          PAR_MIN(I) = PHI(HAD_MIN(I),PAR_M(I),PAR_MIN(I+1),HAD_M(I),HAD_MIN(I+1))
+          PAR_MIN(I) = PHI(HAD_MIN(I),PAR_M(I),PAR_MIN(I+1),HAD_M(I),HAD_MIN(I+1),OPTION)
         ENDDO
 
         HAD_SQRTS = PCOM(0,1)+PCOM(0,2)
-        PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC)
+        PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC,OPTION)
 
         PAR_PIN(0,1) = EPSILON(PAR_SQRTS,PAR_MIN(1),MREC)
         PAR_PIN(1:3,1) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_PIN(1:3,1)/MAX(SQRT(PABS2(HAD_PIN(0:3,1))),TINY)
@@ -864,22 +865,39 @@ C         ----------
           RETURN
         END
 
-        DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2)
+        DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2,OPTION)
           IMPLICIT NONE
 C
 C         ARGUMENTS
 C
-          REAL*8 M,MP1,MP2,M1,M2
+          INTEGER    OPTION
+          REAL*8     M,MP1,MP2,M1,M2
+C
+C         LOCALS
+C
+          REAL*8     N
+          PARAMETER (N=100D0)
 
 C         ----------
 C         BEGIN CODE
 C         ----------
-          IF (M.GE.(MP1+MP2)) THEN
-            PHI = M
+          IF (OPTION == 1) THEN
+            PHI = 0.5D0*(M+MP1+MP2+SQRT((M-MP1-MP2)**2+(M1+M2-MP1-MP2)**2/N))
+          ELSE IF (OPTION == 2) THEN
+            IF (M.GE.(MP1+MP2)) THEN
+              PHI = M
+            ELSE
+              PHI = (MP1+MP2)
+            ENDIF
+          ELSE IF (OPTION == 3) THEN
+            IF (M.GE.(MP1+MP2)) THEN
+              PHI = M
+            ELSE
+              PHI = MAX((MP1+MP2)/(M1+M2)*M, MP1+MP2)
+            ENDIF
           ELSE
-            PHI = (MP1+MP2)/(M1+M2)*M
-          ENDIF
-          RETURN
+            STOP 1
+          END IF
         END
 
         SUBROUTINE BOOST(PREF, DIRECTION, P, PBOOST)
