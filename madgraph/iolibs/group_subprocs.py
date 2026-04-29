@@ -525,9 +525,26 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
+        # before was now handling special error when flavor drop subset
+        #return helas_objects.HelasMatrixElementList(\
+        #    sum([group.get('matrix_elements') for group in self], []))
 
-        return helas_objects.HelasMatrixElementList(\
-            sum([group.get('matrix_elements') for group in self], []))
+        last_error = None
+        to_sum = helas_objects.HelasMatrixElementList()
+        for group in self:       
+            try: 
+                to_add = group.get('matrix_elements')
+            except helas_objects.HelasMatrixElement.NoFlavorError as error:
+                misc.sprint("Warning: no diagram left for group %s after flavor restriction, skipping group"%(group.get('name')))
+                last_error = error
+                continue
+            except Exception as error:
+                raise error
+            to_sum+= to_add
+        if not to_sum and last_error:
+            raise last_error
+
+        return to_sum
 
     def get_used_lorentz(self):
         """Return the list of ALOHA routines used in these matrix elements"""

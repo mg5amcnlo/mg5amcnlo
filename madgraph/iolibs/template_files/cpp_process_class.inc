@@ -14,7 +14,7 @@ public:
   virtual void initProc(string param_card_name); 
 
   // Calculate flavour-independent parts of cross section.
-  virtual void sigmaKin();
+  virtual void sigmaKin(int* flv);
 
   // Evaluate sigmaHat(sHat). 
   virtual double sigmaHat();
@@ -61,5 +61,8 @@ private:
   vector<double*> p;
   // Initial particle ids
   int id1, id2;
+
+  // function to compute missing symmetry factors after flavor consolidation
+  int broken_sym(int* flavor);
 
 };

@@ -28,6 +28,7 @@
     }
     void Parameters_%(model_name)s::setIndependentCouplings(){
 	%(set_independent_couplings)s
+    %(set_flv_couplings)s
     }
     void Parameters_%(model_name)s::setDependentParameters(){
 	%(set_dependent_parameters)s

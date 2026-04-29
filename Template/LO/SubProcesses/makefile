@@ -1,5 +1,5 @@
 include ../../Source/make_opts
-FFLAGS+= -w
+FFLAGS+= -w -I ../../Source/DHELAS/ -I ../../Source/MODEL
 
 # Load additional dependencies of the bias module, if present
 ifeq (,$(wildcard ../bias_dependencies))

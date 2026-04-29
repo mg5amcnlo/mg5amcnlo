@@ -9,6 +9,7 @@ IREGIDIR= ./IREGI/src/
 include make_opts
 
 # Source files
+FFLAGS += -I ./MODEL -I ./DHELAS
 
 PROCESS= hfill.o matrix.o myamp.o 
 DSAMPLE = dsample.o ranmar.o DiscreteSampler.o StringCast.o %(additional_dsample)s

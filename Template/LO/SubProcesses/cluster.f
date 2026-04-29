@@ -199,6 +199,7 @@ c                       daughter1, daughter2
 c     output:
 c            true if no errors
 c**************************************************************************
+      use model_object
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
