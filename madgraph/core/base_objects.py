@@ -299,6 +299,13 @@ class Particle(PhysicsObject):
             else:
                 mystr = mystr + '    \'' + prop + '\': ' + \
                         repr(self[prop]) + ',\n'
+        # Also show extra UFO quantum numbers (e.g. LeptonNumber, Y) not in sorted_keys
+        standard_keys = set(self.get_sorted_keys())
+        for prop in sorted(k for k in self.keys() if k not in standard_keys):
+            if isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + repr(self[prop]) + ',\n'
         mystr = mystr.rstrip(',\n')
         mystr = mystr + '\n}'
 
@@ -1495,6 +1502,20 @@ class Model(PhysicsObject):
         new_part['charge'] = particles[0].get('charge') # might not be the same for all particles !
         if any(p.get('charge') != particles[0].get('charge') for p in particles):
             self['conserved_charge'].discard('charge')
+        # handle all conserved quantum numbers (LeptonNumber, Y, etc.)
+        for charge in list(self['conserved_charge']):
+            if charge == 'charge':
+                continue  # already handled above
+            values = []
+            for p in particles:
+                try:
+                    values.append(p.get(charge))
+                except Exception:
+                    values.append(None)
+            if all(v is not None and v == values[0] for v in values):
+                new_part.set(charge, values[0], force=True)
+            else:
+                self['conserved_charge'].discard(charge)
         # handle all parameter that have to be the same
         iden_param = ['mass', 'spin', 'color', 'width', 'line', 'propagator', 'is_part', 'self_antipart','type', 'counterterm']
         for param in iden_param:
@@ -1503,10 +1524,10 @@ class Model(PhysicsObject):
                 raise Exception("all merged particles should have the same %s: %s" % (param, [p.get(param) for p in particles]))
         if new_part.get('self_antipart'):
             new_part['antiname'] = name
-            anti_part = Particle(new_part)
+            anti_part = copy.deepcopy(new_part)
         else:
             new_part['antiname'] = '_anti'+name
-            anti_part = Particle(new_part)
+            anti_part = copy.deepcopy(new_part)
             anti_part['is_part'] = False
 
         self['merged_particles'][pdg_code] = ids

@@ -3616,6 +3616,9 @@ This implies that with decay chains:
                                      % nb_unpropagating)
 
         elif args[0] == 'particles':
+            conserved = self._curr_model.get('conserved_charge')
+            if conserved:
+                print("Conserved charges in the current model: %s" % ', '.join(sorted(conserved)))
             for arg in args[1:]:
                 if arg.isdigit() or (arg[0] == '-' and arg[1:].isdigit()):
                     particle = self._curr_model.get_particle(abs(int(arg)))
