@@ -19,7 +19,7 @@ void CPPProcess::initProc(string param_card_name) {
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-void CPPProcess::sigmaKin() { 
+void CPPProcess::sigmaKin( int* flavor) { 
     // Set the parameters which change event by event
     pars->setDependentParameters();
     pars->setDependentCouplings();
@@ -49,3 +49,29 @@ double CPPProcess::sigmaHat() {
 // Evaluate |M|^2 for each subprocess
 
 %(all_sigmaKin)s
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2 for each subprocess
+
+int CPPProcess::broken_sym(int* flavor)
+{
+    int old_factor = %(get_old_symmmetry_value)s;
+    %(get_pid)s
+    int nincoming = %(nincoming)d;
+    for (int i = 0; i < (nexternal - nincoming); i++)
+    {
+        if(pid[i] == 0)
+            continue;
+        int n_tot = 1;
+        for (int j = i + 1; j < (nexternal - nincoming); j++)
+        {
+            if((pid[i] == pid[j]) && (flavor[nincoming + i] == flavor[nincoming + j]))
+            {
+                pid[j] = 0;
+                n_tot = n_tot + 1;
+                old_factor = old_factor / n_tot;
+            }
+        }
+    }
+    return old_factor;
+}

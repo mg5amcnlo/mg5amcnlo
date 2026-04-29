@@ -1,5 +1,7 @@
 %(python_information)s
   subroutine %(f2py_prefix)sf77_smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  use model_object
+  use aloha_object
   IMPLICIT NONE
 C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
@@ -14,6 +16,7 @@ CF2PY double precision, intent(in) :: SCALE2
   integer npdg, nhel, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
+  integer flavor(%(maxpart)i),I
   include 'coupl.inc'
   
   
@@ -24,6 +27,8 @@ CF2PY double precision, intent(in) :: SCALE2
   else
        CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
   endif
+
+%(flavormapping)s
 
 %(smatrixhel)s
 
@@ -41,6 +46,8 @@ CF2PY INTENT(IN) :: PATH
       
       
       subroutine %(f2py_prefix)sf77_CHANGE_PARA(name, value)
+      use model_object
+      use aloha_object
       implicit none
 CF2PY intent(in) :: name
 CF2PY intent(in) :: value
@@ -69,6 +76,7 @@ CF2PY intent(in) :: value
      call coup()
     return 
     end
+      
       
 
     subroutine %(f2py_prefix)sf77_get_pdg_order(PDG, ALLPROC)

@@ -7,6 +7,7 @@ c**                                                                    **
 c************************************************************************
 
       subroutine setpara(param_name)
+      use model_object
       implicit none
 
       character*(*) param_name

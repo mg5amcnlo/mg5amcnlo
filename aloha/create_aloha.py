@@ -90,6 +90,8 @@ class AbstractRoutine(object):
 
     def write(self, output_dir, language='Fortran', mode='self', combine=True, options=None, **opt):
         """ write the content of the object """
+        # Set loop_mode based on the tag of this specific routine
+        aloha.loop_mode = any(t.startswith('L') for t in self.tag)
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag, options)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -1120,7 +1122,8 @@ class AbstractALOHAModel(dict):
             realname = name + ''.join(tag)
             if (realname, outgoing) in self:
                 continue # already computed
-            
+            # Set loop_mode correctly for each routine based on its tag
+            aloha.loop_mode = any(t.startswith('L') for t in tag)
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:

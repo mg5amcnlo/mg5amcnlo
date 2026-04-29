@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
+SUBROUTINE SMATRIX%(proc_id)s(P, IFLAV, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -37,6 +37,7 @@ C
     double precision RCOL ! random number for selecting helicity
     integer channel ! channel to keep for the multi-channel
     integer ivec ! for using the correct coupling
+    integer iflav
 c
 c   output argument
 c
@@ -58,7 +59,8 @@ C
         REAL*8 T,MATRIX%(proc_id)s
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
-        INTEGER JC(NEXTERNAL),II
+        INTEGER FLAVOR(NEXTERNAL,%(max_flavor)s),II
+        %(get_flavor_matrix)s
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
         INTEGER NGOOD
         INTEGER J, JJ
@@ -108,15 +110,15 @@ c       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
 C  To be able to control when the matrix<i> subroutine can add entries to the grid for the MC over helicity configuration
    LOGICAL ALLOW_HELICITY_GRID_ENTRIES
    COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES
-
+C
+C  FUNCTION
+C
+   INTEGER BROKEN_SYM%(proc_id)s
 C ----------
 C BEGIN CODE
 C ----------
 
     NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
-    DO I=1,NEXTERNAL
-       JC(I) = +1
-    ENDDO
      
     IF (multi_channel) THEN
         DO I=1,NDIAGS
@@ -137,7 +139,7 @@ C ----------
     IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),FLAVOR(1,IFLAV),I,AMP2, JAMP2, IVEC)
             %(beam_polarization)s
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
 			  call DS_add_entry('Helicity',I,T)
@@ -184,7 +186,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),FLAVOR(1,IFLAV),I,AMP2, JAMP2, IVEC)
 
             %(beam_polarization)s
 c           Always one helicity at a time
@@ -236,14 +238,14 @@ c         Set right sign for ANS, based on sign of chosen helicity
 	    endif
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    ANS=ANS/DBLE(IDEN)*BROKEN_SYM%(proc_id)s(FLAVOR(1,IFLAV))
 
     call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
     END
 
 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,FLAVOR, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -252,6 +254,8 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
+    use aloha_object
+    use model_object
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -280,7 +284,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL)
-    INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+    INTEGER NHEL(NEXTERNAL), FLAVOR(NEXTERNAL)
     INTEGER IHEL
     INTEGER IVEC
 C  
@@ -291,7 +295,7 @@ C
     INTEGER CF(NCOLOR*(NCOLOR+1)/2)
     INTEGER DENOM, CF_INDEX
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
-    COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
+    type(aloha) W(NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -422,6 +426,49 @@ JAMP(:,:) = (0d0,0d0)
            enddo	
        endif
     enddo   
+
+    return
+    end
+    
+
+    INTEGER FUNCTION BROKEN_SYM%(proc_id)s(FLAV)
+       implicit none
+       include 'nexternal.inc'
+       INTEGER FLAV(NEXTERNAL)
+       INTEGER PID(NINCOMING+1:NEXTERNAL)
+       INTEGER I,J
+       INTEGER N_BROK, N_TOT
+       INTEGER OLD_FACTOR
+       %(get_pid)s
+
+c     get old symmetry factor
+       OLD_FACTOR = 1
+       do I=NINCOMING+1, NEXTERNAL
+          if (PID(I).eq.0) cycle
+          N_tot=1
+          do J = I+1,NEXTERNAL
+             if (PID(I).eq.PID(J))then
+               PID(J) = 0
+               N_TOT = N_TOT+1
+               OLD_FACTOR = OLD_FACTOR*N_TOT
+             endif
+          enddo
+       enddo
+
+            %(get_pid)s
+c     get new symmetry factor
+       do I=NINCOMING+1, NEXTERNAL
+          if (PID(I).eq.0) cycle
+          N_TOT=1
+          do J = I+1,NEXTERNAL
+             if (PID(I).eq.PID(J).and.FLAV(I).EQ.FLAV(J))then
+                PID(J) = 0
+                N_TOT = N_TOT + 1
+                OLD_FACTOR = OLD_FACTOR/N_TOT
+             endif
+         enddo
+     enddo
+    BROKEN_SYM%(proc_id)s = OLD_FACTOR
 
     return
     end

@@ -14,7 +14,8 @@ C
 C
 C Modules
 C
-      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
 C
       IMPLICIT NONE
 C
@@ -362,10 +363,10 @@ C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK subroutine of Mad
 	  %(complex_dp_format)s AMP(NBORNAMPS)
 	  common/%(proc_prefix)sAMPS/AMP
 ## }
-	  %(complex_dp_format)s W(20,NWAVEFUNCS)
+	  type(aloha) W(NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W  
 
-      %(complex_mp_format)s MPW(20,NWAVEFUNCS)
+      type(mp_aloha) MPW(NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/MPW
 
 	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
@@ -718,7 +719,7 @@ C the split_order summed value I=0 is used in ML5 code.
 DO I=0,NSQSO_BORN
   BORNBUFF(I)=0.0d0
 ENDDO
-CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,IC,BORNBUFF(0))
 DO I=0,NSQSO_BORN
   ANS(0,I)=BORNBUFF(I)
 ENDDO

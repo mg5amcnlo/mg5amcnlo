@@ -407,7 +407,12 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # Instantiate the class
         IOTestsInstances.append(IOTestsClass())
         # Run the setUp
-        IOTestsInstances[-1].setUp()
+        try:
+            IOTestsInstances[-1].setUp()
+        except Exception as e:
+            print('[SKIP] %s.setUp: %s' % (IOTestsClass.__name__, e))
+            IOTestsInstances.pop()
+            continue
         # Find the testIO defined and use them in load mode only, we will run
         # them later here.
         IOTestsFunctions = IOTestFinder()

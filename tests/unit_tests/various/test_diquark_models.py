@@ -42,7 +42,7 @@ class TestColorSextetModel(unittest.TestCase):
 
     def setUp(self):
         m_path = import_ufo.find_ufo_path('sextet_diquarks')
-        self.base_model = import_ufo.import_model(m_path)
+        self.base_model = import_ufo.import_model(m_path, options={'apply_flavor_grouping':False})
     
     def test_uu_to_six_g(self):
         """Test the process u u > six g against literature expression"""
@@ -360,7 +360,7 @@ class TestColorTripletModel(unittest.TestCase):
 
     def setUp(self):
         m_path = import_ufo.find_ufo_path('triplet_diquarks')
-        self.base_model = import_ufo.import_model(m_path)
+        self.base_model = import_ufo.import_model(m_path, options={'apply_flavor_grouping':False})
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
         # Set top quark mass to 0 to compare with literature expression

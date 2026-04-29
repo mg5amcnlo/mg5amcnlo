@@ -74,3 +74,5 @@ check_sa_born_splitOrders.f
 models/*.tgz
 tests/status
 nsqso_born.inc
+tests/input_files/IOTestsComparison_BackUp/
+tests/input_files/IOTestsComparison/**/*.BackUp

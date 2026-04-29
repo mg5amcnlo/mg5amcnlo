@@ -1,4 +1,6 @@
       subroutine idenparts(iden_part,itree,sprop,forcebw,prwidth)
+      use model_object
+      implicit none
 c
 c     Keep track of identical particles to map radiation processes
 c     (i.e., not use BW for such processes).

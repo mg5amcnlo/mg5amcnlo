@@ -280,7 +280,7 @@ class External(MathsObject):
 
     @staticmethod
     def format_name(*nums):
-        return f'W(1,{nums[0]})'
+        return f'W({nums[0]})'
     
     def get_id(self):
         """ return the id of the particle under consideration """
@@ -332,7 +332,7 @@ class Internal(MathsObject):
 
     @staticmethod
     def format_name(*nums):
-        return f'W(1,{nums[0]})'
+        return f'W({nums[0]})'
 
 class Amplitude(MathsObject):
     '''Class for storing Amplitudes'''
@@ -793,7 +793,7 @@ def split_amps(line, new_amps, gauge):
         if i == 0:
             occur = []
             for a in amp.args:
-                if "W(1," in a:
+                if "W(" in a:
                     tmp = collections.defaultdict(int)
                     tmp[a] += 1
                     occur.append(tmp)
@@ -831,7 +831,7 @@ def split_amps(line, new_amps, gauge):
             args = amp.args[:]   
             # Remove wav and get its index
             wcontract = args.pop(to_remove)
-            windex = wcontract.split(',')[1].split(')')[0]
+            windex = wcontract.split('(')[1].split(')')[0]
             windices.append(windex)
             amp_result,  args[-1]  =  args[-1], 'TMP(1)'
             

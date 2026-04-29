@@ -35,6 +35,8 @@ C
       REAL*8 MATELEM, MATELEMS(0:NSPLITORDERS)        
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /%(nexternal)d*1/
 
       integer NChosen
       character*20 chosen_so_indices(NSPLITORDERS)
@@ -110,7 +112,7 @@ c
 c     
 c     Now we can call the matrix element!
 c
-      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,MATELEMS)
+      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,FLAVOR,MATELEMS)
       MATELEM=MATELEMS(0)
       %(printout_sqorders)s
 c
