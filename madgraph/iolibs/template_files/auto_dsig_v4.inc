@@ -153,7 +153,14 @@ C     Select a flavor combination (need to do here for right sign)
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
 
+## if( nogrouping) {
+C     Non-group mode: all flavor PDFs were already computed (no IFLAV gating).
+C     Derive IFLAV from the sampled IPSEL so SMATRIX uses the correct coupling.
+      %(ipsel_to_iflav)s
+      IPSEL_SHIFT = 0
+## } else {
       %(start_ipsel_for_IFLAV)s
+## }
       IPSEL = IPSEL + IPSEL_SHIFT
       DSIGUU=DSIGUU*REWGT(PP,1)
       rwgt_value=REWGT(PP,1)
@@ -369,6 +376,11 @@ C     Select a flavor combination (need to do here for right sign)
           IPSEL=IPSEL+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
+## if( nogrouping) {
+C     Non-group mode: set per-event IFLAV_VEC from sampled IPSEL so that
+C     SMATRIX_MULTI uses the correct coupling for each event.
+       %(ipsel_to_iflav_vec)s
+## }
        %(get_channel_vec)s
 
 

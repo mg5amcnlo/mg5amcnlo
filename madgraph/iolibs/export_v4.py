@@ -2078,7 +2078,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     all_flv = list(matrix_element.get_external_flavors_with_iden())
                     for nb_flavor in range(len(all_flv)):
                         process_line = proc.base_string()
-                        pdf_lines += 'if(iflav.eq.%d) then\n' % (nb_flavor+1)
+                        if subproc_group:
+                            # Subprocess group: gate PDF computation on IFLAV so
+                            # that only the processes for the selected flavor group
+                            # contribute.  SELECT_GROUPING (the real one, not the
+                            # dummy stub) sets IFLAV correctly before calling DSIG.
+                            pdf_lines += 'if(iflav.eq.%d) then\n' % (nb_flavor+1)
                         for one_flv in all_flv[nb_flavor]:
                             pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                             pdf_lines = pdf_lines + "\nPD(IPROC)="
@@ -2110,7 +2115,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             # Remove last "*" from pdf_lines
                             pdf_lines = pdf_lines[:-1] + "\n"
                             pdf_lines += 'PD(0)=PD(0)+DABS(PD(IPROC))\n'
-                        pdf_lines += ' endif\n'
+                        if subproc_group:
+                            pdf_lines += ' endif\n'
                         # this is for the lepton collisions with electron luminosity 
                         # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
                         if dressed_lep:
@@ -5374,6 +5380,59 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['start_ipsel_for_IFLAV'] += '    ipsel_shift = %d\n' % ipsel
             ipsel += len(flv)
         replace_dict['start_ipsel_for_IFLAV'] += ' ENDIF\n'
+
+        # For the non-group (nogrouping) case: IFLAV must be derived from the
+        # sampled IPSEL rather than being set by the dummy SELECT_GROUPING stub
+        # (which always returns IFLAV=1 and would therefore miss u/c-type quarks).
+        # The scalar pdf_lines are generated in IFLAV-group order so the mapping
+        # is a simple threshold test on the cumulative count of processes per group.
+        ipsel_to_iflav = '\nC Derive IFLAV from the sampled IPSEL\n'
+        ipsel_cumul = 0
+        for i, flv in enumerate(all_flv):
+            ipsel_cumul += len(flv)
+            ipsel_to_iflav += ' %sIF (IPSEL.LE.%d) THEN\n' % ('ELSE' if i != 0 else '', ipsel_cumul)
+            ipsel_to_iflav += '    IFLAV = %d\n' % (i + 1)
+        ipsel_to_iflav += ' ENDIF\n'
+        replace_dict['ipsel_to_iflav'] = ipsel_to_iflav
+
+        # For the vectorized (DSIG_VEC) non-group path: after the per-event IPSEL
+        # sampling we override IFLAV_VEC(IVEC) so that SMATRIX uses the coupling
+        # structure that corresponds to the chosen process.  The vectorized
+        # pdf_lines iterate via get_external_flavors() (flat order), which may
+        # interleave d-type and u-type processes.  We compute the per-IPROC IFLAV
+        # from that ordering and generate an IF chain.
+        all_flv_flat = list(matrix_element.get_external_flavors())
+        flv_to_iflav = {}
+        for i, flv_group in enumerate(all_flv):
+            for flv in flv_group:
+                flv_to_iflav[tuple(flv)] = i + 1
+        proc_iflav_vec = [flv_to_iflav[tuple(flv)] for flv in all_flv_flat]
+
+        if len(all_flv) > 1:
+            # Build an IF chain by grouping consecutive IPROC entries with the
+            # same IFLAV to keep the generated Fortran concise.
+            iflav_vec_code = '\nC Derive IFLAV_VEC(IVEC) from IPSEL (all-flavor vectorized path)\n'
+            groups = []
+            start = 1
+            prev = proc_iflav_vec[0]
+            for k, iv in enumerate(proc_iflav_vec[1:], start=2):
+                if iv != prev:
+                    groups.append((start, k - 1, prev))
+                    start = k
+                    prev = iv
+            groups.append((start, len(proc_iflav_vec), prev))
+            for j, (s, e, iv) in enumerate(groups):
+                prefix = 'IF' if j == 0 else 'ELSEIF'
+                if s == e:
+                    iflav_vec_code += ' %s (IPSEL.EQ.%d) THEN\n' % (prefix, s)
+                else:
+                    iflav_vec_code += \
+                        ' %s (IPSEL.GE.%d .AND. IPSEL.LE.%d) THEN\n' % (prefix, s, e)
+                iflav_vec_code += '     IFLAV_VEC(IVEC) = %d\n' % iv
+            iflav_vec_code += ' ENDIF\n'
+            replace_dict['ipsel_to_iflav_vec'] = iflav_vec_code
+        else:
+            replace_dict['ipsel_to_iflav_vec'] = ''
 
 
         if writer:
