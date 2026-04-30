@@ -1,5 +1,5 @@
-C Onia P-state version
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
+C MadSONS P-state version
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,P_RESH,HEL,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -10,12 +10,12 @@ C
       PARAMETER (NCOMB=%(ncomb)d)
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: HEL
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
 
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
       INTEGER HEL
 C
 C GLOBAL VARIABLES
@@ -26,12 +26,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-      CALL %(proc_prefix)sSMATRIX(P,ANS)
+      CALL %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
       USERHEL=-1
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
 C
 %(info_lines)s
 C
@@ -60,9 +60,9 @@ C
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
 C
 C LOCAL VARIABLES
 C
@@ -151,7 +151,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
               IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                 CYCLE
               ENDIF
-              T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))
+              T=%(proc_prefix)sMATRIX(P,P_RESH,NHEL(1,IHEL),JC(1))
               IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                 ANS=ANS+T
               ENDIF
@@ -175,7 +175,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
       END
 
 
-      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,P_RESH,NHEL,IC)
       USE DUAL_VARIABLES
 C
 %(info_lines)s
@@ -453,7 +453,7 @@ C
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
       INTEGER NHEL
       DOUBLE PRECISION ALPHAS
       real*8 pi
@@ -469,9 +469,9 @@ C     the include file with the values of the parameters and masses
       G = 2*DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, P_RESH, NHEL, ANS)
       else
-        CALL %(proc_prefix)sSMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, P_RESH, ANS)
       endif
       return
       end
@@ -637,7 +637,11 @@ C     FINAL-STATE MOMENTUM RESHUFFLING
         PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC,OPTION)
 
         PAR_PIN(0,1) = EPSILON(PAR_SQRTS,PAR_MIN(1),MREC)
-        PAR_PIN(1:3,1) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_PIN(1:3,1)/MAX(SQRT(PABS2(HAD_PIN(0:3,1))),TINY)
+        IF (SQRT(PABS2(HAD_PIN(0:3,1))).GT.TINY) THEN
+          PAR_PIN(1:3,1) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_PIN(1:3,1)/SQRT(PABS2(HAD_PIN(0:3,1)))
+        ELSE
+          PAR_PIN(1:3,1) = 0D0
+        ENDIF
 
         PAR_KX(0) = EPSILON(PAR_SQRTS,MREC,PAR_MIN(1))
         PAR_KX(1:3) = PI(PAR_SQRTS,PAR_MIN(1),MREC)*HAD_KX(1:3)/SQRT(PABS2(HAD_KX))
