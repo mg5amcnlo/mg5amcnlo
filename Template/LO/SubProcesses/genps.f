@@ -702,7 +702,7 @@ c         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
 c         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
          call set_peaks
 c     Initialize dsig (needed for subprocess group running mode)
-         dum=dsig(0,0,1)
+         dum=dsig(0,1,0,1)
 
       return
       end

@@ -5406,12 +5406,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return
         end
 
-        SUBROUTINE SELECT_GROUPING(IMIRROR, IPROC, ICONF, WGT, IWARP)
+        SUBROUTINE SELECT_GROUPING(IMIRROR, IFLAV, IPROC, ICONF, WGT, IWARP)
         Integer imirror
+        integer iflav
         integer iproc
         integer iconf
         double precision WGT
         integer iwarp
+        IFLAV = 1
         return 
         end
         

@@ -204,7 +204,9 @@ c               all_wgt(i) = all_wgt(i)*fx
                endif
 
                if (VECSIZE_USED.le.1) then
-                  all_fx(1) = dsig(all_p, all_wgt,0)
+                  call select_grouping(imirror_vec(1),iflav_vec(1),
+     &               iproc, iconf_vec(1), all_wgt, 1)
+                  all_fx(1) = dsig(all_p, iflav_vec(1), all_wgt,0)
                   ivec=0
                   ilock=0
                   iwarp=1 
@@ -2264,7 +2266,7 @@ c            enddo
 c            close(26)
 
 c     Update weights in dsig (needed for subprocess group mode)
-            xdum=dsig(0,0,2)
+            xdum=dsig(0,1,0,2)
 c
 c     Add test to see if we have achieved desired accuracy 
 c     Allow minimum itmin iterations
