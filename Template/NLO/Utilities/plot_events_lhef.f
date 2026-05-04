@@ -8,8 +8,8 @@ c  reweight0.inc dbook.inc
       program plot_events
       implicit none
       integer maxevt,ifile,i,npart,itype
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

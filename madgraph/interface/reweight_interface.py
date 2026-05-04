@@ -1306,7 +1306,7 @@ class ReweightInterface(extended_cmd.Cmd):
             event_to_sud.set_initial_mass_to_zero()
             event_to_sud.check_kinematics_only()
 
-            gstr=event.aqcd*2.*pi
+            gstr = math.sqrt(4*pi*event.aqcd)
             sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
 
             # Read in the event momenta into np array in the order which is defined in the process directory

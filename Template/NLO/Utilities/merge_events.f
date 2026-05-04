@@ -4,8 +4,8 @@ c gfortran -I../SubProcesses/P0_<anydir> -o merge_events
 c merge_events.f handling_lhe_events.f fill_MC_mshell.f
       implicit none
       integer maxevt,ifile,ofile,i,j,npart,mgfile
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

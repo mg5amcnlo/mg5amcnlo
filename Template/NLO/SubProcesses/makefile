@@ -12,9 +12,6 @@ endif
 # Files for the read40 combiner of top drawer files
 READ40=read40.o
 
-# Files to collect all the events in the separate integration channels into a single file
-COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o orderstags_glob.o
-
 %.o : %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
 %.o : %.for
@@ -22,10 +19,6 @@ COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o orderstag
 
 read40: $(READ40)
 	$(FC) $(LDFLAGS) -o read40 $(READ40)
-
-collect_events: $(COLLECT_EVENTS) $(LIBS)
-	$(FC) -o collect_events $(COLLECT_EVENTS) $(LINKLIBS) $(LDFLAGS)
-	rm handling_lhe_events.o
 
 printalpha: printalpha.o 
 	$(FC) -o printalpha printalpha.o  $(llhapdf) $(STDLIB)

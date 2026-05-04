@@ -4867,7 +4867,8 @@ This implies that with decay chains:
         args.insert(0, 'process')
         self.do_add(" ".join(args))
 
-    def extract_process(self, line, proc_number = 0, overall_orders = {}):
+    def extract_process(self, line, proc_number = 0, overall_orders = {},
+                        avoid_squared_orders=False):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
@@ -5001,14 +5002,14 @@ This implies that with decay chains:
                     orders[name] = value
                 elif type == "==":
                     constrained_orders[name] = (value, type)
-                    if name not in squared_orders:
+                    if not avoid_squared_orders and name not in squared_orders:
                         squared_orders[name] = (2 * value,'==')
                     if True:#name not in orders:
                         orders[name] = value
                     
                 elif type == ">":
                     constrained_orders[name] = (value, type)
-                    if name not in squared_orders:
+                    if not avoid_squared_orders and name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
             
             line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
@@ -5787,10 +5788,10 @@ This implies that with decay chains:
 
         if min_index > -1:
             core_process = self.extract_process(line[:min_index], proc_number,
-                                                overall_orders)
+                                                overall_orders, avoid_squared_orders=True)
         else:
             core_process = self.extract_process(line, proc_number,
-                                                overall_orders)
+                                                overall_orders, avoid_squared_orders=True)
 
         #level_down = False
 

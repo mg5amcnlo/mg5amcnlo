@@ -317,6 +317,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('various','cluster.py'),
           pjoin('various','systematics.py'),          
           pjoin('various','lhe_parser.py'),
+          pjoin('various','collect_events.py'),
           pjoin('madevent','sum_html.py'),
           pjoin('madevent','gen_crossxhtml.py'),          
           pjoin('iolibs','files.py'),

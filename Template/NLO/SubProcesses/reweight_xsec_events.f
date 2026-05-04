@@ -1,10 +1,10 @@
       program reweight_xsec_events
-c Given a LH file that contains an <rwgt> part, computes the scale 
-c and/or PDF dependence through reweighting. A new file is created,
-c which does not contain the <rwgt> part, but retains only the 
-c information on the maximum and minimum weights due to scale
-c and PDF variations
-c Compile with makefile_rwgt
+c     Given a LH file that contains an <rwgt> part, computes the scale 
+c     and/or PDF dependence through reweighting. A new file is created,
+c     which does not contain the <rwgt> part, but retains only the 
+c     information on the maximum and minimum weights due to scale
+c     and PDF variations
+c     Compile with makefile_rwgt
       use extra_weights
       implicit none
       include "run.inc"
@@ -21,20 +21,20 @@ c Compile with makefile_rwgt
       character*20 parm(20)
       character*80 event_file,fname1
       character*1000 buff
-c Parameters
+c     Parameters
       integer    izero
       parameter (izero=0)
-c Common blocks
+c     Common blocks
       character*7         pdlabel,epa_label
       integer       lhaid
       common/to_pdf/lhaid,pdlabel,epa_label
-c Common blocks for the orders tags
+c     Common blocks for the orders tags
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
-c Les Houches Event File info:
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+c     Les Houches Event File info:
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),MOTHUP(2,MAXNUP)
@@ -42,8 +42,8 @@ c Les Houches Event File info:
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,PUP(5,MAXNUP)
      $     ,VTIMUP(MAXNUP),SPINUP(MAXNUP)
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
-c
-      call setrun                !Sets up run parameters
+c     
+      call setrun               !Sets up run parameters
 
       write(*,*) 'Enter event file name'
       read(*,*) event_file
@@ -52,13 +52,13 @@ c
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        if (store_rwgt_info)then
-           isave = -9
-        else
-           isave=9
-        endif
+         if (store_rwgt_info)then
+            isave = -9
+         else
+            isave=9
+         endif
       else
-        isave=0
+         isave=0
       endif
 
       if(do_rwgt_scale)then
@@ -86,8 +86,8 @@ c
                write (*,*) "Including central PDF for "
      $              //lhaPDFsetname(nn)
             endif
-c Load all the PDF sets (the 1st one has already by loaded by the call
-c to "setrun")
+c     Load all the PDF sets (the 1st one has already by loaded by the call
+c     to "setrun")
             if (nn.gt.1) then
                call initpdfsetbynamem(nn,lhaPDFsetname(nn))
                if (lpdfvar(nn)) then
@@ -106,7 +106,7 @@ c to "setrun")
                stop
             endif
          enddo
-c start with central member of the first set
+c     start with central member of the first set
          call InitPDFm(1,0)
       endif
 
@@ -135,27 +135,27 @@ c start with central member of the first set
      $        ,ipartner_lhe,scale1_lhe,scale2_lhe,kwgtinfo,kexternal
      $        ,jwgtnumpartn,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $        ,wgtpdfmax
-        if(kwgtinfo.ne.-5)then
-           write (*,*) 'This event file cannot be reweighted [2]',i
-           write (*,*) kwgtinfo
-           stop 1
-        endif
-        if(i.eq.1)then
-          saved_weight=abs(XWGTUP)
-        else
-          unweighted=unweighted.and.
-     #               abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
-        endif
+         if(kwgtinfo.ne.-5)then
+            write (*,*) 'This event file cannot be reweighted [2]',i
+            write (*,*) kwgtinfo
+            stop 1
+         endif
+         if(i.eq.1)then
+            saved_weight=abs(XWGTUP)
+         else
+            unweighted=unweighted.and.
+     #abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
+         endif
       enddo
 
       write(*,*)'  '
       if(unweighted)then
-        write(*,*)'The events appear to be unweighted'
-        write(*,*)' Will store the ratios of recomputed weights'
-        write(*,*)' over reference weights'
+         write(*,*)'The events appear to be unweighted'
+         write(*,*)' Will store the ratios of recomputed weights'
+         write(*,*)' over reference weights'
       else
-        write(*,*)'The events appear to be weighted'
-        write(*,*)' Will store recomputed weights'
+         write(*,*)'The events appear to be weighted'
+         write(*,*)' Will store recomputed weights'
       endif
 
       rewind(34)
@@ -174,7 +174,7 @@ c start with central member of the first set
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
-c To keep track of the accumulated results:
+c     To keep track of the accumulated results:
       do kk=1,dyn_scale(0)
          if (lscalevar(kk)) then
             do ii=1,nint(scalevarF(0))
@@ -196,13 +196,13 @@ c To keep track of the accumulated results:
          endif
       enddo
 
-c Determine the flavor map between the NLO and Born
+c     Determine the flavor map between the NLO and Born
       call find_iproc_map()
       do i=1,maxevt
          SCALUP_a=-1d0
          call read_lhef_event(ifile,
-     &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
+     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
          if(buff(1:1).ne.'#')then
             write(*,*)'This event file cannot be reweighted [3]',i
             stop
@@ -212,7 +212,7 @@ c Determine the flavor map between the NLO and Born
      $        ,jwgtnumpartn,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $        ,wgtpdfmax
 
-c Do the actual reweighting.
+c     Do the actual reweighting.
          call fill_wgt_info_from_rwgt_lines
          if (do_rwgt_scale)call reweight_scale_ext
          if (do_rwgt_pdf)  call reweight_pdf_ext
@@ -223,8 +223,8 @@ c Do the actual reweighting.
      $        ,mexternal,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $        ,wgtpdfmax
 
-c renormalize all the scale & PDF weights to have the same normalization
-c as XWGTUP
+c     renormalize all the scale & PDF weights to have the same normalization
+c     as XWGTUP
          if(do_rwgt_scale)then
             do oo=0,n_orderstags
                do kk=1,dyn_scale(0)
@@ -253,9 +253,9 @@ c as XWGTUP
             enddo
          endif
 
-c Keep track of the accumulated results:
-C  put in xsecScale_acc only the 0th entry of wgtxsecmu, ie
-C  the entry inclusive on the various orderstag
+c     Keep track of the accumulated results:
+C     put in xsecScale_acc only the 0th entry of wgtxsecmu, ie
+C     the entry inclusive on the various orderstag
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                if (lscalevar(kk)) then
@@ -284,7 +284,7 @@ C  the entry inclusive on the various orderstag
                endif
             enddo
          endif
-c Write event to disk:
+c     Write event to disk:
          call write_lhef_event(ofile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
@@ -296,7 +296,7 @@ c Write event to disk:
       close(34)
       close(35)
 
-c Write the accumulated results to a file
+c     Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
       if (do_rwgt_scale) then
          write (34,*) "scale variations:"
@@ -331,7 +331,7 @@ c Write the accumulated results to a file
 
       end
 
-c Dummy subroutine (normally used with vegas/mint when resuming plots)
+c     Dummy subroutine (normally used with vegas/mint when resuming plots)
       subroutine resume()
       end
 
@@ -344,7 +344,7 @@ c Dummy subroutine (normally used with vegas/mint when resuming plots)
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
+     #sqrtshat,shat
 
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
@@ -361,33 +361,33 @@ c Dummy subroutine (normally used with vegas/mint when resuming plots)
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
-c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
-c same for event and counterevents
-c This is the rapidity that enters in the arguments of the sinh() and
-c cosh() of the boost, in such a way that
-c       y(k)_lab = y(k)_tilde - ybst_til_tolab
-c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
-c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
-c c.m. frame respectively
+c     rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
+c     same for event and counterevents
+c     This is the rapidity that enters in the arguments of the sinh() and
+c     cosh() of the boost, in such a way that
+c     y(k)_lab = y(k)_tilde - ybst_til_tolab
+c     where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
+c     four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
+c     c.m. frame respectively
       ybst_til_tolab=-ycm_cnt(0)-0.5d0*log(ebeam(1)/ebeam(2))
       if(icountevts.eq.-100)then
-c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
-        xbk(1)=xbjrk_ev(1)
-        xbk(2)=xbjrk_ev(2)
-c shat=2*k1.k2 -- consistency of this assignment with momenta checked
-c in phspncheck_nocms
-        shat=shat_ev
-        sqrtshat=sqrtshat_ev
-c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to 
-c k_1+k_2 c.m. frame
-        ybst_til_tocm=ycm_ev-ycm_cnt(0)
+c     set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
+         xbk(1)=xbjrk_ev(1)
+         xbk(2)=xbjrk_ev(2)
+c     shat=2*k1.k2 -- consistency of this assignment with momenta checked
+c     in phspncheck_nocms
+         shat=shat_ev
+         sqrtshat=sqrtshat_ev
+c     rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to 
+c     k_1+k_2 c.m. frame
+         ybst_til_tocm=ycm_ev-ycm_cnt(0)
       else
-c do the same as above for the counterevents
-        xbk(1)=xbjrk_cnt(1,icountevts)
-        xbk(2)=xbjrk_cnt(2,icountevts)
-        shat=shat_cnt(icountevts)
-        sqrtshat=sqrtshat_cnt(icountevts)
-        ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
+c     do the same as above for the counterevents
+         xbk(1)=xbjrk_cnt(1,icountevts)
+         xbk(2)=xbjrk_cnt(2,icountevts)
+         shat=shat_cnt(icountevts)
+         sqrtshat=sqrtshat_cnt(icountevts)
+         ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
       endif
       return
       end
@@ -405,15 +405,16 @@ c do the same as above for the counterevents
       call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
-     &        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i),(bjx(j,i),j=1
-     &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
-     &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i)
+     $        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i)
+     $        ,(bjx(j,i),j=1 ,2),(scales2(j,i),j=1,3),g_strong(i)
+     $        ,(momenta_conf(j),j=1 ,2),itype(i),nFKS(i),idum,idum,idum
+     $        ,wgts(1,i),bias_wgt(i)
          do ii=1,2
             do j=1,nexternal
                do k=0,3
                   if (momenta_conf(ii).gt.0) then
                      momenta_m(k,j,ii,i)=momenta_str(k,j
-     $                                               ,momenta_conf(ii))
+     $                    ,momenta_conf(ii))
                   else
                      momenta_m(k,j,ii,i)=-99d0
                      exit
@@ -447,10 +448,11 @@ c do the same as above for the counterevents
          mu2_q=scales2(1,i)
 
          do iamp=0, amp_split_size
-            ! loop over the various coupling combinations.
-            ! iamp=0 just keeps everything
-            if (iamp.ne.0) orderstag_this = get_orders_tag_from_amp_pos(iamp)
-            ! filter the weights with the correct order
+! loop over the various coupling combinations.
+! iamp=0 just keeps everything
+            if (iamp.ne.0) orderstag_this =
+     $           get_orders_tag_from_amp_pos(iamp)
+! filter the weights with the correct order
             if (iamp.ne.0.and.orderstag_this.ne.orderstag(i)) cycle
 
             do dd=1,dyn_scale(0)
@@ -458,13 +460,13 @@ c do the same as above for the counterevents
                do kr=1,nint(scalevarR(0))
                   if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
                   mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
-c Update the strong coupling
+c     Update the strong coupling
                   g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
                enddo
                do kf=1,nint(scalevarF(0))
                   if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                   mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
-c call the PDFs
+c     call the PDFs
                   if (lpp(1).eq.2 .and. lpp(2).eq.2) then
                      xlum(kf)=photonpdfsquare(bjx(1,i),bjx(2,i))
                   else
@@ -486,15 +488,16 @@ c call the PDFs
                   if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                   do kr=1,nint(scalevarR(0))
                      if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
-                     iwgt=iwgt+1   ! increment the iwgt for the wgts() array
-                     call weight_lines_allocated(nexternal,max_contr,iwgt
-     $                   ,max_iproc)
-c add the weights to the array
+                     iwgt=iwgt+1 ! increment the iwgt for the wgts() array
+                     call weight_lines_allocated(nexternal,max_contr
+     $                    ,iwgt,max_iproc)
+c     add the weights to the array
                      wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
-     $                   *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
-     $                   /mu2_q))*g(kr)**QCDpower(i)
-                     wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
-     &                          sqrt(mu2_r(kr)),sqrt(scales2(2,i)),wgtcpower)
+     $                    *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
+     $                    /mu2_q))*g(kr)**QCDpower(i)
+                     wgts(iwgt,i)=wgts(iwgt,i)
+     $                    *rwgt_muR_dep_fac(sqrt(mu2_r(kr))
+     $                    ,sqrt(scales2(2,i)),wgtcpower)
                   enddo
                enddo
             enddo
@@ -527,9 +530,9 @@ c add the weights to the array
                mu2_q=scales2(1,i)
                mu2_r=scales2(2,i)
                mu2_f=scales2(3,i)
-c alpha_s
+c     alpha_s
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
-c call the PDFs
+c     call the PDFs
                if (lpp(1).eq.2 .and. lpp(2).eq.2) then
                   xlum=photonpdfsquare(bjx(1,i),bjx(2,i))
                else
@@ -538,14 +541,14 @@ c call the PDFs
                   pd=pdg(1,i)
                   if (pd.eq.21) pd=0
                   xlum=xlum*
-     &               PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
+     &                 PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
                   LP=SIGN(1,LPP(2))
                   pd=pdg(2,i)
                   if (pd.eq.21) pd=0
                   xlum=xlum*
-     &                PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
+     &                 PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
                endif
-c add the weights to the array
+c     add the weights to the array
                wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
@@ -553,7 +556,7 @@ c add the weights to the array
             enddo
          enddo
       enddo
-c reset to the 0th member of the 1st set
+c     reset to the 0th member of the 1st set
       call InitPDFm(1,0)
       return
       end
@@ -582,7 +585,7 @@ c reset to the 0th member of the 1st set
             else
                wgtxsecmu(oo,1,1,kk)=0d0
             endif
-        enddo
+         enddo
       enddo
       do nn=1,lhaPDFid(0)
          if (lpdfvar(nn)) then
@@ -598,7 +601,7 @@ c reset to the 0th member of the 1st set
          if (do_rwgt_scale) then
             do oo=0,n_orderstags
                if (oo.ne.0) orderstag_this = orderstags_glob(oo)
-               ! filter the weights with the correct order
+! filter the weights with the correct order
                if (oo.ne.0.and.orderstag_this.ne.orderstag(i)) cycle
                do kk=1,dyn_scale(0)
                   if (lscalevar(kk)) then
@@ -645,7 +648,7 @@ c reset to the 0th member of the 1st set
          c_mu2_r=scales2(2,ic)
          c_mu2_f=scales2(3,ic)
       else
-c need to recompute the scales using the momenta
+c     need to recompute the scales using the momenta
          dynamical_scale_choice=dyn_scale(dd)
          do i=1,nexternal
             do j=0,3
@@ -661,3 +664,4 @@ c     reset the default dynamical_scale_choice
       endif
       return
       end
+      

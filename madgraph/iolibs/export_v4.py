@@ -1903,35 +1903,33 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
         if ninitial == 1:
-            all_flv = list(matrix_element.get_external_flavors_with_iden())
             if vector:
-                # Close the vector loops opened above (no PDFs to fetch for decays)
-                pdf_lines += "ENDDO ! IWARP LOOP\n"
-                pdf_lines += "ENDDO ! CURRWARP LOOP\n"
-                # Set ALL_PD for ALL flavor combinations across all IVEC.
-                # No iflav conditioning here (matches ninitial==2 vector pattern):
-                # IPSEL will randomly select the flavor, then GET_FLAVOR maps it.
-                pdf_lines += "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
+                # For vectorized decay (ninitial==1), there are no PDF lookups:
+                # the PDF factor is always 1.  We must still initialize
+                # NB_WARP_USED (used by the template's own loops) and fill
+                # ALL_PD (not PD) so that the vectorized DSIG_VEC function
+                # works correctly.
+                pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+        IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+        ENDIF
+        ALL_PD(0,:) = 0d0
+        IPROC = 0
+"""
                 for i, proc in enumerate(processes):
                     process_line = proc.base_string()
-                    for grp in all_flv:
-                        for one_flv in grp:
-                            pdf_lines += "IPROC=IPROC+1 ! " + process_line
-                            pdf_lines += "\nDO IVEC=1, VECSIZE_USED\n"
-                            pdf_lines += "ALL_PD(IPROC,IVEC)=1d0\n"
-                            pdf_lines += "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
-                            pdf_lines += "ENDDO\n"
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines = pdf_lines + "\nALL_PD(IPROC,:)=1d0\n"
+                    pdf_lines = pdf_lines + "\nALL_PD(0,:)=ALL_PD(0,:)+ALL_PD(IPROC,:)\n"
             else:
                 pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
                 for i, proc in enumerate(processes):
                     process_line = proc.base_string()
-                    for nb_flavor in range(len(all_flv)):
-                        pdf_lines += 'if(iflav.eq.%d) then\n' % (nb_flavor + 1)
-                        for one_flv in all_flv[nb_flavor]:
-                            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                            pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
-                            pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
-                        pdf_lines += ' endif\n'
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                    pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
