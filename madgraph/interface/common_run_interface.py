@@ -6582,7 +6582,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
             # check that only quark/gluon/photon are in initial beam if lpp=+-1
-            pdg_in_p = list(range(-6,7))+[21,22]
+            pdg_in_p = list(range(-6,7))+[21,22, 81, -81]
             if isinstance(self.run_card['lpp1'],int) and isinstance(self.run_card['lpp2'],int):
                 if(abs(self.run_card['lpp1'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
                or (abs(self.run_card['lpp2'])==1 and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):

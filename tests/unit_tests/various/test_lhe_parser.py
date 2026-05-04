@@ -122,6 +122,8 @@ class TestEvent(unittest.TestCase):
         # check that first data structure for get_all_momenta is constructed correctly
         # here all particles are considered different
         mother = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=1)
+        misc.sprint(mother.keys())
+        misc.sprint(mother[11]) 
         self.assertEqual(mother, {-11: {(0, 1): [2], (3, 3): [3], (2, 2): [4]}, 11: {(0, 1): [5], (3, 3): [6], (2, 2): [7]}})
 
         mother2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=1)
@@ -336,7 +338,7 @@ class TESTLHEParser(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = unittest.debug
+        debugging = getattr(unittest, 'debug', False)
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_test")
             if os.path.exists(self.path):
@@ -696,7 +698,7 @@ class TESTLHEParserNLO(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = unittest.debug
+        debugging = getattr(unittest, 'debug', False)
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_nlo_test")
             if os.path.exists(self.path):

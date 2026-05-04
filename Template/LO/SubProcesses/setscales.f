@@ -3,6 +3,7 @@ c----------------------------------------------------------------------
 c     This is the USER-FUNCTION to calculate the renormalization
 c     scale on event-by-event basis.
 c----------------------------------------------------------------------      
+      use model_object
       implicit none
       real*8   alphas
       external alphas
@@ -100,6 +101,7 @@ c----------------------------------------------------------------------
 c     This is the USER-FUNCTION to calculate the factorization 
 c     scales^2 on event-by-event basis.
 c----------------------------------------------------------------------      
+      use model_object    
       implicit none
 
 c     INCLUDE and COMMON

@@ -1336,6 +1336,18 @@ class DecayModel(model_reader.ModelReader):
                 except:
                     pass
 
+        if self.get('merged_particles'):
+            self.unmerge_flavors()
+            if 'particles' in list(init_dict.keys()):
+                particles = init_dict['particles'].__class__()
+                for p in init_dict['particles']:
+                    if abs(p.get('pdg_code')) not in self.get('merged_particles'):
+                        particles.append(p)
+                self.set('particles',particles, force)
+    
+            self['particle_dict'] = {}
+            self.get('particle_dict')            
+    
         
     def default_setup(self):
         """The particles is changed to ParticleList"""
@@ -4157,6 +4169,8 @@ class Channel(base_objects.Diagram):
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
+                    if isinstance(v, base_objects.FLV_Coupling):
+                        v = v.get_all_couplings()[0]
                     lorentz_factor += abs(eval(v))**2 * lor_value**2
 
                 apx_m *= lorentz_factor
@@ -4256,6 +4270,8 @@ class Channel(base_objects.Diagram):
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
 
+                    if isinstance(v, base_objects.FLV_Coupling):
+                        v = v.get_all_couplings()[0]
                     lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
 
                 apx_m *= lorentz_factor

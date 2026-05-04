@@ -629,8 +629,10 @@ c     External
 c
       double precision lambda,dot,dsig
       logical passcuts
-
-
+c
+c      local
+c
+      integer dummyflavor
 c
 c     global
 c
@@ -649,7 +651,7 @@ c
       common /to_invar/ Minvar
 
 
-
+        dummyflavor=0
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -702,7 +704,7 @@ c         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
 c         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
          call set_peaks
 c     Initialize dsig (needed for subprocess group running mode)
-         dum=dsig(0,0,1)
+         dum=dsig(0,dummyflavor,0,1)
 
       return
       end
@@ -1815,6 +1817,7 @@ c     find the boost momenta --sum of particles--
       end
 
       double precision function get_channel_cut(p, config)
+      use model_object
       implicit none
 
       include 'maxconfigs.inc'

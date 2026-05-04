@@ -4804,16 +4804,16 @@ class RunCardLO(RunCard):
                     self.display_block.append('fixed_fact_scale')
                     self.display_block.append('pdlabel')
 
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22,81,-81]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
             
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22,81,-81]):
                 # check for e p collision
-                if any(id  in beam_id for id in [11,-11,13,-13]):
+                if any(id  in beam_id for id in [11,-11,13,-13, 82,-82]):
                     self.display_block.append('beam_pol')
-                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13]):
+                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13,82,-82]):
                         self['lpp1'] = 0  
                         self['lpp2'] = 1 
                         self['ebeam1'] = '1k'  
@@ -4832,7 +4832,7 @@ class RunCardLO(RunCard):
                     self['ebeam2'] = '6500'
                     self['pdlabel'] = 'edff'
             
-            elif any(id in beam_id for id in [11,-11,13,-13]):
+            elif any(id in beam_id for id in [11,-11,13,-13,82,-82]):
                 self['lpp1'] = 0
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
@@ -4894,31 +4894,31 @@ class RunCardLO(RunCard):
                 self.display_block.append('eva_pdf')
 
             # automatic polarisation of the beam if neutrino beam  
-            if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
+            if any(id  in beam_id for id in [12,-12,14,-14,16,-16, 83,-83]):
                 self.display_block.append('beam_pol')
-                if any(id  in beam_id_split[0] for id in [12,14,16]):
+                if any(id  in beam_id_split[0] for id in [12,14,16,83]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = -100
-                    if not all(id  in [12,14,16] for id in beam_id_split[0]):
+                    if not all(id  in [12,14,16,83] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1]. %s')
-                elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[0] for id in [-12,-14,-16,-83]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = 100
-                    if not all(id  in [-12,-14,-16] for id in beam_id_split[0]):
+                    if not all(id  in [-12,-14,-16,-83] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
-                if any(id  in beam_id_split[1] for id in [12,14,16]):
+                if any(id  in beam_id_split[1] for id in [12,14,16,83]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = -100
-                    if not all(id  in [12,14,16] for id in beam_id_split[1]):
+                    if not all(id  in [12,14,16,83] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
-                elif any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[1] for id in [-12,-14,-16,-83]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
-                    if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
+                    if not all(id  in [-12,-14,-16,-83] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
         # Check if need matching
@@ -4946,7 +4946,7 @@ class RunCardLO(RunCard):
                     else:
                         idsmax.remove(i)
                 for j in idsmax:
-                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21]:
+                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21,81,-81]:
                         break
                 else:
                     # all are jet => matching is ON
@@ -5004,7 +5004,7 @@ class RunCardLO(RunCard):
                 elif proc[0].get('orders')['QCD'] != 0:
                     no_qcd = False 
                 #misc.sprint(proc.get_order())
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22,82] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
@@ -5077,16 +5077,16 @@ class RunCardLO(RunCard):
                 for pdg in ids:
                     if pdg == 22:
                         one_proc_cut['a'] +=1
-                    elif abs(pdg) <= self['maxjetflavor'] or pdg == 21:
+                    elif abs(pdg) <= self['maxjetflavor'] or pdg in [21, 81, -81]:
                         one_proc_cut['j'] += 1
                         one_proc_cut['J'] += 1
                     elif abs(pdg) <= 5:
                         one_proc_cut['b'] += 1
                         one_proc_cut['J'] += 1
-                    elif abs(pdg) in [11,13,15]:
+                    elif abs(pdg) in [11,13,15,82]:
                         one_proc_cut['l'] += 1
                         one_proc_cut['L'] += 1
-                    elif abs(pdg) in [12,14,16]:
+                    elif abs(pdg) in [12,14,16,83]:
                         one_proc_cut['n'] += 1
                         one_proc_cut['L'] += 1 
                     elif str(oneproc.get('model').get_particle(pdg)['mass']) != 'ZERO':

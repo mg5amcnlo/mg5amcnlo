@@ -1,4 +1,5 @@
       SUBROUTINE %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS)
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -116,6 +117,7 @@ C ----------
 	  end
 
       SUBROUTINE %(proc_prefix)sSLOOPMATRIX(P_USER,ANSRETURNED)
+      USE ALOHA_OBJECT
 C  
 %(info_lines)s
 C
@@ -223,6 +225,8 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  INTEGER NATTEMPTS
 	  DATA NATTEMPTS/0/
 	  DATA IC/NEXTERNAL*1/
+	  INTEGER FLAVOR(NEXTERNAL)
+	  DATA FLAVOR /NEXTERNAL*1/
 	  %(real_dp_format)s BUFFR(3),TEMP(3),TEMP1,TEMP2
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -302,7 +306,7 @@ C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHE
 	  common/%(proc_prefix)sUSERCHOICE/USERHEL
 
       %(dp_born_amps_decl)s	  
-	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  INTEGER VALIDH
 	  common/%(proc_prefix)sWFCTS/W  
 	  common/%(proc_prefix)sVALIDH/VALIDH

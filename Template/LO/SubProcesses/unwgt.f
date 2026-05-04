@@ -3,6 +3,7 @@ C**************************************************************************
 C     Determines if region needs to be investigated in case of large
 c     weight events.
 C**************************************************************************
+      use model_object
       IMPLICIT NONE
 c
 c     Constant
@@ -464,6 +465,7 @@ c      close(lun)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
+      use model_object    
       IMPLICIT NONE
 c
 c     Constants

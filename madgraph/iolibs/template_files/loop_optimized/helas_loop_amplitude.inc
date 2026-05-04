@@ -1,4 +1,5 @@
       SUBROUTINE %(proc_prefix)sLOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
+      USE ALOHA_OBJECT
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NLOOPLINE
@@ -70,9 +71,9 @@ C
 	  common/%(proc_prefix)sAMPL/AMPL
 ## }
 
-	  %(complex_dp_format)s W(20,NWAVEFUNCS)
+	  type(aloha) W(NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W
-      %(complex_mp_format)s MP_W(20,NWAVEFUNCS)
+      type(mp_aloha) MP_W(NWAVEFUNCS)
       common/%(proc_prefix)sMP_W/MP_W
 
 	  %(real_dp_format)s LSCALE 
@@ -114,9 +115,9 @@ C For loop-induced processes, we must reduce this loop amplitude if it contribut
 		    MP_PL(I,J)=0.0e+0_16		    
 		  ENDIF
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+            PL(I,J)=PL(I,J)-W(WE(K))%%P(I)
 			IF (DOING_QP) THEN
-		      MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)	    
+		      MP_PL(I,J)=MP_PL(I,J)-MP_W(WE(K))%%P(I)
 		    ENDIF
           ENDDO
           TEMP=TEMP+PAIRING(J)

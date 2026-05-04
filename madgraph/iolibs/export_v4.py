@@ -781,10 +781,10 @@ C
         SOURCE directory. It is different for loop_induced processes and 
         also depends on the value of the 'output_dependencies' option"""
         
-        return ['$(LIBDIR)libdhelas.$(libext)',
+        return ['$(LIBDIR)libmodel.$(libext)',
+                '$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
                 '$(LIBDIR)libgammaUPC.$(libext)',
-                '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
 
@@ -795,7 +795,7 @@ C
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
-        set_of_lib = ' '.join(['$(LIBRARIES)']+self.get_source_libraries_list())
+        set_of_lib = ' '.join(self.get_source_libraries_list()+['$(LIBRARIES)'])
         if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL; make
 MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
@@ -951,11 +951,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         lines = []
+        real_iproc = -1
         for iproc, proc in enumerate(matrix_element.get('processes')):
+            real_iproc += 1
             legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
-                         (iproc + 1, numproc+1, nexternal,
+            ids = [l.get('id') for l in legs]
+            has_merged_particles = False
+            if self.model and 'merged_particles' in self.model:
+                has_merged_particles = any([id in self.model['merged_particles'] for id in ids])
+            if has_merged_particles:
+                allow_flavor = matrix_element.get_external_flavors_with_iden()
+                for flavor in sum(allow_flavor,[]):
+                    ids = [l.get('id') for l in legs]
+                    for i,id in enumerate(ids):
+                        if id in self.model['merged_particles']:
+                            ids[i] = flavor[i] #self.model['merged_particles'][id][flavor[i]-1]
+                        if -id in self.model['merged_particles']:
+                           ids[i] = -flavor[i] #self.model['merged_particles'][-id][flavor[i]-1] 
+                    lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
+                         (real_iproc + 1, numproc+1, nexternal,
+                          ",".join([str(id) for id in ids])))    
+                    real_iproc += 1                 
+            else:
+                lines.append("DATA (IDUP(i,%d,%d),i=1,%d)/%s/" % \
+                         (real_iproc + 1, numproc+1, nexternal,
                           ",".join([str(l.get('id')) for l in legs])))
+            
             if iproc == 0 and numproc == 0:
                 for i in [1, 2]:
                     lines.append("DATA (MOTHUP(%d,i),i=1,%2r)/%s/" % \
@@ -1000,10 +1021,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     #===========================================================================
     # write_maxamps_file
     #===========================================================================
-    def write_maxamps_file(self, writer, maxamps, maxflows,
+    def write_maxamps_file(self, writer, maxamps, maxflows, max_flav_per_proc,
                            maxproc,maxsproc):
         """Write the maxamps.inc file for MG4."""
 
+        file = "       integer    maxamps, maxflow, maxproc, maxsproc, maxflavperproc\n"
+        file = file + "parameter (maxamps=%d, maxflow=%d)\n" % \
+               (maxamps, maxflows)
+        file = file + "parameter (maxproc=%d, maxsproc=%d)\n" % \
+               (maxproc, maxsproc)
+        file += "parameter (maxflavperproc=%d)" % max_flav_per_proc
+
+        # Write the file
+        writer.writelines(file)
+
+        return True
+
+
+
+        raise Exception("This function is deprecated. maxamps.inc is no longer used in MG5_aMC.")
         file = "       integer    maxamps, maxflow, maxproc, maxsproc\n"
         file = file + "parameter (maxamps=%d, maxflow=%d)\n" % \
                (maxamps, maxflows)
@@ -1137,6 +1173,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def get_helicity_lines(self, matrix_element,array_name='NHEL', add_nb_comb=False):
         """Return the Helicity matrix definition lines for this matrix element"""
+
+        #misc.sprint(matrix_element.get_external_nhel())
 
         helicity_line_list = []
         i = 0            
@@ -1899,6 +1937,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
+            for one_initial_state in initial_states:
+                for i,pdg in enumerate(list(one_initial_state)):
+                    if hasattr(self.model, 'merged_particles'):
+                        if pdg in self.model['merged_particles']:
+                            one_initial_state.remove(pdg)
+                            one_initial_state += self.model['merged_particles'][pdg]
+                        elif -pdg in self.model['merged_particles']:
+                            one_initial_state.remove(pdg)
+                            one_initial_state += [-i for i in self.model['merged_particles'][-pdg]]
+
+
             if tuple(initial_states) in [([-11],[11]), ([11],[-11]), ([-13],[13]),([13],[-13])]:
                 dressed_lep = True
             else:
@@ -2047,64 +2096,99 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
                 for proc in processes:
-                    process_line = proc.base_string()
-                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines = pdf_lines + "\nPD(IPROC)="
-                    comp_list = []
-                    for ibeam in [1, 2]:
-                        initial_state = proc.get_initial_pdg(ibeam)
-                        if initial_state in list(pdf_codes.keys()):
-                            pdf_lines = pdf_lines + "%s%d*" % \
-                                        (pdf_codes[initial_state], ibeam)
-                            comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
-                        else:
-                            pdf_lines = pdf_lines + "1d0*"
-                            comp_list.append("DUMMY")
-                    # Remove last "*" from pdf_lines
-                    pdf_lines = pdf_lines[:-1] + "\n"
-
-                    # this is for the lepton collisions with electron luminosity 
-                    # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
-                    if dressed_lep:
-                        pdf_lines += "if (pdlabel.eq.'dressed')" + \
-                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
-                             tuple(comp_list)
-                    pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
-                    
-                    if not dressed_lep:
-                        ee_pdf_definition_lines = ""
+                    all_flv = list(matrix_element.get_external_flavors_with_iden())
+                    for nb_flavor in range(len(all_flv)):
+                        process_line = proc.base_string()
+                        pdf_lines += 'if(iflav.eq.%d) then\n' % (nb_flavor+1)
+                        for one_flv in all_flv[nb_flavor]:
+                            pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                            pdf_lines = pdf_lines + "\nPD(IPROC)="
+                            comp_list = []
+                            for ibeam in [1, 2]:
+                                initial_state = proc.get_initial_pdg(ibeam)
+                                if abs(initial_state) in model.get('merged_particles'):
+                                    flv = proc.get_initial_flavor(ibeam)
+                                    if len(flv) == 0:
+                                        sign = 1 if initial_state > 0 else -1
+                                        initial_state = sign * one_flv[ibeam-1]
+                                    elif len(flv) ==1:
+                                        initial_state = flv[0]
+                                    else:
+                                        # Grouped process: multiple specific quarks are
+                                        # possible; use the one specified by this flavor
+                                        # combination.
+                                        sign = 1 if initial_state > 0 else -1
+                                        initial_state = sign * one_flv[ibeam-1]
+                                
+                                if initial_state in list(pdf_codes.keys()):
+                                    pdf_lines = pdf_lines + "%s%d*" % \
+                                                (pdf_codes[initial_state], ibeam)
+                                    comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
+                                else:
+                                    pdf_lines = pdf_lines + "1d0*"
+                                    comp_list.append("DUMMY")
+                            
+                            # Remove last "*" from pdf_lines
+                            pdf_lines = pdf_lines[:-1] + "\n"
+                            pdf_lines += 'PD(0)=PD(0)+DABS(PD(IPROC))\n'
+                        pdf_lines += ' endif\n'
+                        # this is for the lepton collisions with electron luminosity 
+                        # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                        if dressed_lep:
+                            pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                                "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                                tuple(comp_list)
+                            pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
+                        
+                        if not dressed_lep:
+                            ee_pdf_definition_lines = ""
             else:
                 # Add up PDFs for the different initial state particles
                 pdf_lines += "ENDDO ! IWARP LOOP\n"
                 pdf_lines += "ENDDO ! CURRWARP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
                 for proc in processes:
-                    comp_list = []
-                    process_line = proc.base_string()
-                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines += '\n   DO IVEC=1, VECSIZE_USED'
-                    pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
-                    for ibeam in [1, 2]:
-                        initial_state = proc.get_initial_pdg(ibeam)
-                        if initial_state in list(pdf_codes.keys()):
-                            pdf_lines = pdf_lines + "%s%d(IVEC)*" % \
-                                        (pdf_codes[initial_state], ibeam)
-                            comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
-                        else:
-                            pdf_lines = pdf_lines + "1d0*"
-                            comp_list.append("DUMMY")
-                    # Remove last "*" from pdf_lines
-                    pdf_lines = pdf_lines[:-1] + "\n"
-                    # this is for the lepton collisions with electron luminosity 
-                    # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
-                    if dressed_lep:
-                        pdf_lines += "if (pdlabel.eq.'dressed')" + \
-                             "ALL_PD(IPROC,IVEC)=ee_comp_prod(%s_components(1,IVEC),%s_components(1,IVEC))\n" % \
-                             tuple(comp_list)
-                    pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
-                    pdf_lines += '\n    ENDDO\n'
-                    if not dressed_lep:
-                        ee_pdf_definition_lines = ""
+                    for nb_flavor in range(matrix_element.get_nb_flavors()):
+                        comp_list = []
+                        process_line = proc.base_string()
+                        pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                        pdf_lines += '\n   DO IVEC=1, VECSIZE_USED'
+                        pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
+                        for ibeam in [1, 2]:
+                            initial_state = proc.get_initial_pdg(ibeam)
+                            if abs(initial_state) in model.get('merged_particles'):
+                                flv = proc.get_initial_flavor(ibeam)
+                                if len(flv) == 0:
+                                    sign = 1 if initial_state > 0 else -1
+                                    initial_state = sign * matrix_element.get_external_flavors()[nb_flavor][ibeam-1]
+                                elif len(flv) ==1:
+                                    initial_state = flv[0]
+                                else:
+                                    # Grouped process: multiple specific quarks are
+                                    # possible; use the one specified by this flavor
+                                    # combination.
+                                    sign = 1 if initial_state > 0 else -1
+                                    initial_state = sign * matrix_element.get_external_flavors()[nb_flavor][ibeam-1]
+
+                            if initial_state in list(pdf_codes.keys()):
+                                pdf_lines = pdf_lines + "%s%d(IVEC)*" % \
+                                            (pdf_codes[initial_state], ibeam)
+                                comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
+                            else:
+                                pdf_lines = pdf_lines + "1d0*"
+                                comp_list.append("DUMMY")
+                        # Remove last "*" from pdf_lines
+                        pdf_lines = pdf_lines[:-1] + "\n"
+                        # this is for the lepton collisions with electron luminosity 
+                        # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                        if dressed_lep:
+                            pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                                "ALL_PD(IPROC,IVEC)=ee_comp_prod(%s_components(1,IVEC),%s_components(1,IVEC))\n" % \
+                                tuple(comp_list)
+                        pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
+                        pdf_lines += '\n    ENDDO\n'
+                        if not dressed_lep:
+                            ee_pdf_definition_lines = ""
 
         # Remove last line break from the return variables                
         if vector:
@@ -2542,9 +2626,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 "5." + MG5_version['version'])
         
         
-        # Add file in SubProcesses
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
+       
 
         if model['running_elements']:
             fsock = open( pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 'r')
@@ -2560,9 +2642,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
-        if self.format == 'standalone':
-            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+
                         
         # Add file in Source
         shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
@@ -2593,6 +2673,55 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 #"""
 #        writer.write(text)
 #        return
+
+
+    def write_check_sa(self, fsock, matrix_element, proc_prefix):
+
+        if self.format != 'standalone':
+            return
+    
+        template = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f')).read()
+
+        
+        all_flavors  = matrix_element.get_external_flavors(all_perm=False)
+        # Use legs_with_decays so that the PDG list covers all external particles
+        # of the combined process (including decay products), matching the length
+        # of each flavor tuple returned by get_external_flavors.
+        all_pdgs = [l.get('id') for l in matrix_element.get('processes')[0].get('legs_with_decays')]
+        map_all_flv = {}
+        for i, flv1 in  enumerate(all_flavors):
+            coup = matrix_element.get_coupling_for_flv(flv1, self.model)
+            if coup in map_all_flv:
+                map_all_flv[coup].append(flv1)
+            else:
+                map_all_flv[coup] = [flv1]
+ 
+        pdg_to_flv_index = {}
+        for i, opts in self.model.merged_particles.items():
+            for j, pdg in enumerate(opts):
+                pdg_to_flv_index[pdg] = j+1
+
+        all_flavors = [flv[0] for flv in map_all_flv.values()]
+        maxflavor = len(all_flavors )
+        flavor_text = ['        FLAVOR(:,:) =1']
+        for i in range(1, maxflavor+1):
+            for j in range(1,1+len(all_flavors[i-1])):
+                if all_flavors[i-1][j-1] != 1:
+                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
+                    flavor_text.append('FLAVOR(%d,%d) = %d ! PDG = %d' % (j,i,pdg_to_flv_index[all_flavors[i-1][j-1]], all_flavors[i-1][j-1]))
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg))
+                elif abs(all_pdgs[j-1]) in self.model.get('merged_particles'):
+                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg)) 
+                else:
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i, all_pdgs[j-1]))
+                    
+                    
+
+        flavor_text = '\n        '.join(flavor_text)
+        fsock.write(template % {'maxflavor':maxflavor, 'flavor_def': flavor_text,
+                                'proc_prefix':proc_prefix})
+
 
     #===========================================================================
     # export model files
@@ -2720,6 +2849,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
+        flavor_text= "  flavor(:) = 1\n"
+        flavor_text += " do i =1, npdg\n"
+        nb = 0
+        for pdg, pids in self.model['merged_particles'].items():
+            for pid in pids:
+                if nb !=0:
+                    flavor_text += ' else'
+                else:
+                    flavor_text += ' '
+                nb += 1
+                flavor_text += 'if (abs(pdgs(i)).eq.%i)then\n flavor(i) = abs(%i)\n pdgs(i) = Sign(%i, pdgs(i))\n' % (pid, pid, pdg)
+        if nb>0:
+            flavor_text += 'endif\n'
+        flavor_text += " enddo\n"
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
@@ -2732,6 +2875,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     text.append('       if (npdg.eq.%i)then' % n_ext)
                 else:
                     text.append('       else if (npdg.eq.%i)then' % n_ext)
+
             for ii,pdgs in enumerate(current_id):
                 pid = current_pid[ii]
                 condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
@@ -2739,11 +2883,17 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, ii))
                 else:
                     text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,ii))
-                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[(pdgs,pid)][0])
+                text.append(' call %ssmatrixhel(p, nhel, flavor, ans)' % self.prefix_info[(pdgs,pid)][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
             text.append('endif')
+
+        all_prefix = set([k[0] for k in self.prefix_info.values()])
+        setpara_for_each_matrix = ''
+        for prefix in all_prefix:
+            setpara_for_each_matrix += " CALL %sINITIALISEMODEL(PATH)\n" % prefix
+
 
         params = self.get_model_parameter(self.model)
         parameter_setup =[]
@@ -2803,9 +2953,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
+                          'flavormapping': flavor_text,
+                          'setpara_for_each_matrix':setpara_for_each_matrix,
                           'nhel': all_nhel,
                           'f2py_prefix': f2py_prefix
                           }
+        
+
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
@@ -2931,6 +3085,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         logger.info('Creating files in directory %s' % dirpath)
 
+
+
+
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
@@ -2952,7 +3109,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
                 self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
-                
+        
+        template = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'),'r')
+        text = template.read()
+        template.close()
+        fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
+        fsock.write(text)   
+        fsock.close()
+
+        #important to put that first
+        if self.format == 'standalone':
+            filename2 = pjoin(dirpath, 'check_sa.f')
+            self.write_check_sa(writers.FortranWriter(filename2), matrix_element, proc_prefix)
+
+
         replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
@@ -2998,6 +3168,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         filename = pjoin(dirpath, 'ngraphs.inc')
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
+        
+
 
         # Generate diagrams
         if not 'noeps' in self.opt['output_options'] or self.opt['output_options']['noeps'] != 'True':
@@ -3013,6 +3185,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc']
+        if self.format == 'standalone':
+            linkfiles = ['coupl.inc']   
 
         if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
@@ -3220,6 +3394,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
             else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
+        data = matrix_element.get('processes')[0].get_final_ids_after_decay()
+        replace_dict['get_pid'] = ' PID = %s' % (data)
+        replace_dict['get_old_symmmetry_value'] = 1
+        done = []
+        for value in data:
+            if value not in done:
+                done.append(value)
+                replace_dict['get_old_symmmetry_value'] *= math.factorial(data.count(value)) 
 
         replace_dict['template_file'] = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
         replace_dict['template_file2'] = pjoin(_file_path, \
@@ -3963,7 +4145,7 @@ c     channel position
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
 
-        if ninitial < 1 or ninitial > 2:
+        if ninitial not in [1,2]:
             raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
 
         replace_dict = {}
@@ -4243,7 +4425,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if opt and isinstance(opt['output_options'], dict) and \
                                        'vector_size' in opt['output_options']:
-            misc.sprint(opt['output_options']['vector_size'])
             self.opt['vector_size'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['vector_size'], int, 'vector_size')
         else:
@@ -4509,10 +4690,24 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                              matrix_element)
 
         filename = pjoin(Ppath, 'maxamps.inc')
+        nb_flavor_per_proc = matrix_element.get_nb_flavors()
+        # Compute actual MAXPROC: for merged processes each flavor combination
+        # generates a separate IDUP row, so MAXPROC must cover all of them.
+        nb_idup_rows = 0
+        for proc in matrix_element.get('processes'):
+            legs = proc.get_legs_with_decays()
+            ids = [l.get('id') for l in legs]
+            if self.model and 'merged_particles' in self.model and \
+                    any(abs(id) in self.model['merged_particles'] for id in ids):
+                nb_idup_rows += len(list(sum(
+                    matrix_element.get_external_flavors_with_iden(), [])))
+            else:
+                nb_idup_rows += 1
         self.write_maxamps_file(writers.FortranWriter(filename),
                            len(matrix_element.get('diagrams')),
                            ncolor,
-                           len(matrix_element.get('processes')),
+                           nb_flavor_per_proc,
+                           max(1, nb_idup_rows),
                            1)
 
         filename = pjoin(Ppath, 'mg.sym')
@@ -5000,6 +5195,32 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['nb_spin_state2'] = s2
 
 
+        # handling of the flavor:
+        all_flav = matrix_element.get_external_flavors_with_iden()
+        replace_dict['max_flavor'] = len(all_flav)
+        replace_dict['get_flavor_matrix'] = ''
+
+        # The Python flavor tuples store raw PDG codes (needed for check_flavor),
+        # but the Fortran FLV_COUPLING % PARTNER array is indexed by 1-based
+        # position within the merged particle group.  Build a mapping so that
+        # each PDG code is converted to its group position before being written
+        # into the DATA statement.
+        model = matrix_element.get('processes')[0].get('model')
+        pdg_to_group_pos = {}
+        for members in model.get('merged_particles').values():
+            for pos, pdg in enumerate(members, 1):
+                pdg_to_group_pos[pdg] = pos
+
+        for i, flav in enumerate(all_flav):
+            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+            replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
+        
+        # information for computing the correct symmetry factor for each flavor
+        data = matrix_element.get('processes')[0].get_final_ids_after_decay()
+        replace_dict['get_pid'] = ' PID = %s' % (data)
+
+
+
         if writer:
             file = open(replace_dict['template_file']).read()
             file = file % replace_dict
@@ -5102,6 +5323,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['pdf_lines_vec'] = pdf_lines
 
 
+        all_flv = matrix_element.get_external_flavors_with_iden()
+
         # Lines that differ between subprocess group and regular
         if proc_id:
             replace_dict['numproc'] = int(proc_id)
@@ -5156,7 +5379,34 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             replace_dict['read_write_good_hel'] = ""
             context['nogrouping'] = False
+
+
+        # extract which flavor to specify
+        replace_dict['get_flavor'] = '\nC Not used anymore, just passed the flavor id instead'
+        for i,flv in enumerate(all_flv):
+            replace_dict['get_flavor'] += 'C %sIF (IFLAV.eq.%d) THEN\n' % ('ELSE' if i != 0 else '',i+1)
+            replace_dict['get_flavor'] += 'C    FLAVOR = %s \n' % list(flv[0])
+        replace_dict['get_flavor'] += 'C ENDIF\n'
         
+        replace_dict['start_ipsel_for_IFLAV'] = '\nC set minimum ipsel for this IFLAV\n'
+        ipsel = 0
+        for i, flv in enumerate(all_flv):
+            replace_dict['start_ipsel_for_IFLAV'] += ' %sIF (IFLAV.eq.%d) THEN\n' % ('ELSE' if i != 0 else '',i+1)
+            replace_dict['start_ipsel_for_IFLAV'] += '    ipsel_shift = %d\n' % ipsel
+            ipsel += len(flv)
+        replace_dict['start_ipsel_for_IFLAV'] += ' ENDIF\n'
+        replace_dict['maxflavor'] = len(all_flv)
+        replace_dict['get_flavor_matrix'] = ''
+        pdg_to_group_pos = {}
+        for members in self.model.get('merged_particles').values():
+            for pos, pdg in enumerate(members, 1):
+                pdg_to_group_pos[pdg] = pos
+        for i, flav in enumerate(all_flv):
+            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+            replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
+        
+
+
         if writer:
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -5248,17 +5498,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         lines = """function get_color(ipdg)
         implicit none
         integer get_color, ipdg
-
-        if(ipdg.eq.%d)then
-        get_color=%d
-        return
-        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get_color())
-
-        for part_id in particle_ids[1:]:
-            lines += """else if(ipdg.eq.%d)then
+        """ 
+        for i, part_id in enumerate(particle_ids[:]):
+            lines += """%s if(ipdg.eq.%d)then
             get_color=%d
             return
-            """ % (part_id, model.get_particle(part_id).get_color())
+            """ % ('else' if i else '', part_id, model.get_particle(part_id).get_color())
+            if abs(part_id) in model['merged_particles']:
+                for pdg in model['merged_particles'][abs(part_id)]:
+                   lines += """else if(ipdg.eq.%(sign)s%(pdg)d)then
+                        get_color=%(sign)s%(color)d
+                        return
+                        """ % {'sign': '-' if part_id < 0 else '',
+                               'pdg': pdg,
+                               'color': model.get_particle(part_id).get_color()}   
+                  
+
         # Dummy particle for multiparticle vertices with pdg given by
         # first code not in the model
         lines += """else if(ipdg.eq.%d)then
@@ -6443,11 +6698,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                    subproc_group)
 
         filename = 'maxamps.inc'
+        # get number of non identical flavor for each matrix element file
+        #for me in matrix_elements:
+            #misc.sprint(me.get_external_flavors_with_iden())
+            #misc.sprint(me.get_nb_flavors())
+        #misc.sprint([me.get_nb_flavors() for me in matrix_elements])
+
+        nb_flavor_per_proc = [me.get_nb_flavors() for me in matrix_elements]
+        #misc.sprint(os.getcwd(), nb_flavor_per_proc)
         self.write_maxamps_file(writers.FortranWriter(filename),
                            maxamps,
                            maxflows,
-                           max([len(me.get('processes')) for me in \
-                                matrix_elements]),
+                           max(nb_flavor_per_proc),
+                           max([me.get_nb_flavors() for me in \
+                                matrix_elements]), # THis is max(flavor*process) 
                            len(matrix_elements))
 
         # Note that mg.sym is not relevant for this case
@@ -6578,10 +6842,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             data = {"num": iproc + 1,
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()}
             call_dsig_proc_lines.append(\
-                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,IFLAV,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC,IMIRROR_VEC,VECSIZE_USED) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC,IMIRROR_VEC,IFLAV_VEC,VECSIZE_USED) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
@@ -6617,6 +6881,23 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         replace_dict['call_to_local_get_helicities'] = "\n".join(get_helicity)
         replace_dict['definition_of_local_get_nhel'] = "\n".join(get_nhel)
 
+        # Generate get_flavor dispatch for the grouped case
+        # Each subprocess has its own GET_FLAVOR<N> subroutine (from matrix element template)
+        # The wrapper get_flavor(iflav, iproc, flavor) dispatches based on iproc
+        get_flavor_decl = []
+        get_flavor_call = []
+        for iproc in range(len(matrix_elements)):
+            get_flavor_decl.append("   external get_flavor%i" % (iproc + 1))
+            if iproc == 0:
+                get_flavor_call.append(' if(iproc.eq.1)then')
+            else:
+                get_flavor_call.append(' elseif(iproc.eq.%d)then' % (iproc + 1))
+            get_flavor_call.append("   call get_flavor%i(iflav, flavor)" % (iproc + 1))
+        get_flavor_call.append(' endif')
+
+        replace_dict['call_to_local_get_flavor'] = "\n".join(get_flavor_call)
+        replace_dict['definition_of_local_get_flavor'] = "\n".join(get_flavor_decl)
+
         if writer:
             file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()
@@ -6637,12 +6918,49 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         lines = []
         bool_dict = {True: '.true.', False: '.false.'}
         matrix_elements = subproc_group.get('matrix_elements')
-        lines.append("DATA (MIRRORPROCS(I),I=1,%d)/%s/" % \
-                     (len(matrix_elements),
-                      ",".join([bool_dict[me.get('has_mirror_process')] for \
-                                me in matrix_elements])))
+        for i, me in enumerate(matrix_elements):
+            flavors = me.get_external_flavors_with_iden()
+            ids = me.get('processes')[0].get_initial_ids()
+            if me.get('has_mirror_process'):
+                lines.append("DATA (MIRRORPROCS(%i,I),I=1,%d)/%s/" % \
+                            (i+1, len(flavors),
+                      ",".join(['.true.' for flv in flavors])))
+            elif len(ids)==2 and ids[0] == ids[1]:
+                # if flavor of the two initial state are not the same, we need to set to False
+                lines.append("DATA (MIRRORPROCS(%i,I),I=1,%d)/%s/" % \
+                            (i+1, len(flavors),
+                      ",".join([bool_dict[(flv[0][0] != flv[0][1])] for flv in flavors])))
+            else:
+                lines.append("DATA (MIRRORPROCS(%i,I),I=1,%d)/%s/" % \
+                        (i+1, len(flavors),
+                      ",".join(['.false.' for flv in flavors]))) 
+                
+
+        lines.append("DATA NB_FLAV /%s/" % (
+                      ",".join([str(len(me.get_external_flavors_with_iden())) for \
+                                me in matrix_elements]))) 
         # Write the file
         writer.writelines(lines)
+
+    #===========================================================================
+    # write_maxamps_file
+    #===========================================================================
+    def write_maxamps_file(self, writer, maxamps, maxflows, max_flav_per_proc,
+                           maxproc,maxsproc):
+        """Write the maxamps.inc file for MG4."""
+
+        file = "       integer    maxamps, maxflow, maxproc, maxsproc, maxflavperproc\n"
+        file = file + "parameter (maxamps=%d, maxflow=%d)\n" % \
+               (maxamps, maxflows)
+        file = file + "parameter (maxproc=%d, maxsproc=%d)\n" % \
+               (maxproc, maxsproc)
+        file += "parameter (maxflavperproc=%d)" % max_flav_per_proc
+
+        # Write the file
+        writer.writelines(file)
+
+        return True
+
 
     #===========================================================================
     # write_addmothers
@@ -6914,7 +7232,7 @@ class UFO_model_to_mg4(object):
     
     def __init__(self, model, output_path, opt=None):
         """ initialization of the objects """
-        
+
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
@@ -6927,6 +7245,8 @@ class UFO_model_to_mg4(object):
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep_noloop = []  # (name, expression, type)
         self.coups_indep_loop = []  # (name, expression, type)
+        self.coups_flv_dep = []    # (name, object, [couplings])
+        self.coups_flv_indep = []  # (name, object, [couplings])  
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
@@ -7071,12 +7391,14 @@ class UFO_model_to_mg4(object):
                     used_running_key.update(set(key))
             else:
                 self.coups_indep_noloop += [c for c in coup_list if
-                                     (not wanted_couplings or c.name in \
-                                      wanted_couplings) and \
+                                     (not wanted_couplings \
+                                      or c.name in wanted_couplings \
+                                      or f"-{c.name}" in wanted_couplings) and \
                                       not any([tag in c.name.lower() for tag in ['uv', 'r2']])]
                 self.coups_indep_loop += [c for c in coup_list if
-                                     (not wanted_couplings or c.name in \
-                                      wanted_couplings) and \
+                                     (not wanted_couplings \
+                                      or c.name in wanted_couplings \
+                                      or f"-{c.name}" in wanted_couplings) and \
                                       any([tag in c.name.lower() for tag in ['uv', 'r2']])]
 
         # keep track of all couplings (for backward compatibility and/or tests
@@ -7098,6 +7420,18 @@ class UFO_model_to_mg4(object):
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
             self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
+
+        # Handle flavor couplings
+        # strategy picke one of the actual coupling and check if this is a running one or not
+        flavor_couplings = [c for c in wanted_couplings if isinstance(c, base_objects.FLV_Coupling)]
+        deps = [c.name for c in self.coups_dep]
+        for one_flv in flavor_couplings:
+            one_coupling = one_flv.get_one_coupling()
+            if one_coupling in deps:
+                self.coups_flv_dep.append( one_flv)
+            else:
+                self.coups_flv_indep.append(one_flv)
+
             
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
@@ -7151,6 +7485,7 @@ class UFO_model_to_mg4(object):
         self.create_ewa()
         
         # definition of the coupling.
+        self.create_couplings_flavor_merged()
         self.create_actualize_mp_ext_param_inc()
         self.create_coupl_inc()
         self.create_write_couplings()
@@ -7383,16 +7718,35 @@ C
         if self.coups_indep:
             c_list = [coupl.name for coupl in self.coups_indep_noloop + self.coups_indep_loop]  
             if c_list:
-                fsock.writelines('double complex '+', '.join(c_list)+'\n') 
+                fsock.writelines('double complex, target :: '+', '.join(c_list)+'\n') 
 
+        # Write the flavor couplings 
+        if self.coups_flv_indep:
+            c_list = [coupl.name for coupl in self.coups_flv_indep]
+            fsock.writelines('type(flv_coupling) '+', '.join(c_list)+'\n')
+
+        # Write the dependent coupling 
         if self.vector_size and not self.opt['loop_induced']:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         
         if c_list:
-            fsock.writelines('double complex '+', '.join(c_list)+'\n')   
-        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
+            fsock.writelines('double complex, target :: '+', '.join(c_list)+'\n')  
+
+        # Write the flavor dependent couplings
+        if self.vector_size and not self.opt['loop_induced']:
+            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_flv_dep]
+        else:
+            c_list = [coupl.name for coupl in self.coups_flv_dep] 
+        
+        if c_list:
+            fsock.writelines('type(flv_coupling) '+', '.join(c_list)+'\n')
+            if self.opt['loop_induced']:
+                raise Exception('Flavor coupling are not supported for loop induced process for the moment')  
+
+
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop + self.coups_flv_dep + self.coups_flv_indep]       
 
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
@@ -7563,7 +7917,8 @@ C
                             set(itertools.chain.from_iterable(allCTparameters)))
 
         # All used CT couplings
-        w_coupls = [coupl.lower() for coupl in wanted_couplings]
+        w_coupls = [coupl.lower() for coupl in wanted_couplings if isinstance(coupl,str)]
+        logger.debug('wanted_couplings: CTparan not supporting merging -> will be problematic for NLO')
         allUsedCTCouplings = [coupl for coupl in 
               self.model.map_CTcoup_CTparam.keys() if coupl.lower() in w_coupls]
         
@@ -7756,7 +8111,11 @@ C
         nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
-        for i in range(nb_coup_indep_noloop):
+        # For flavor merged couplings, (only dp so far) we need to add the new datastructure
+        # and initialise those correctly.
+        self.create_couplings_flavor_merged()
+
+        for i in range(nb_coup_indep_noloop):            
             ##### For the independent couplings, we compute the double and multiple
             ##### precision ones together
             # For the EW sudakov approximation, because of the numerical derivatives
@@ -7792,14 +8151,116 @@ C
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
                                            dp=False, mp=True, vec=self.vector_size*self.nb_warp)
         
-        
+    
+    def create_couplings_flavor_merged(self):
+        """ create the flavor merged couplings """
+
+        template = """
+       MODULE MODEL_OBJECT
+       type coupptr ! needed to have an array of pointer
+           SEQUENCE
+           double complex, pointer :: p
+       end type coupptr
+
+       TYPE FLV_COUPLING
+         SEQUENCE
+         INTEGER :: PARTNER(%(max_flavor)i)
+         INTEGER :: PARTNER2(%(max_flavor)i)
+         TYPE(COUPPTR) :: VAL(%(max_flavor)i)
+         END TYPE FLV_COUPLING
+         END MODULE MODEL_OBJECT
+
+
+         subroutine init_flv_couplings()
+            use model_object
+            implicit none
+            %(include_vector)s
+            include 'coupl.inc'
+            %(loop_decl)s
+
+            %(def_flv)s
+        end subroutine init_flv_couplings
+            """
+
+        def _get_k1_k2(key):
+            keys = [i for i in key if i != 0]
+            if len(keys) == 2:
+                return keys[0], keys[1]
+            elif len(keys) == 1:
+                k = keys[0]
+                if key[0] == k:
+                    return k, 1
+                else:
+                    return 1, k
+            else:
+                raise Exception('Flavor coupling with more than 2 flavors is not supported for the moment')
+
+        def_flv = []
+        for coupl in self.coups_flv_indep:
+            for key, c in coupl.flavors.items():
+                k1, k2 = _get_k1_k2(key)
+                def_flv.append('%(name)s %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                def_flv.append('%(name)s %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                def_flv.append('%(name)s %% VAL(%(in)i) %%p  =>  %(coupl)s' % {'name': coupl.name, 'in': k1, 'coupl': c})
+
+        # For alpha_s-dependent flavor couplings the underlying coupling and the
+        # FLV_COUPLING itself are both declared as arrays of size VECSIZE_MEMMAX.
+        # A scalar pointer cannot be associated to the whole array, so we use a
+        # do-loop to point each FLV_COUPLING(j) % VAL(k) % p to its corresponding
+        # coupling array element.
+        if self.coups_flv_dep:
+            if self.vector_size:
+                loop_lines = []
+                for coupl in self.coups_flv_dep:
+                    for key, c in coupl.flavors.items():
+                        k1, k2 = _get_k1_k2(key)
+                        loop_lines.append('%(name)s(j_flv_init) %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                        loop_lines.append('%(name)s(j_flv_init) %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                        loop_lines.append('%(name)s(j_flv_init) %% VAL(%(in)i) %%p  =>  %(coupl)s(j_flv_init)' % {'name': coupl.name, 'in': k1, 'coupl': c})
+                def_flv.append('do j_flv_init = 1, VECSIZE_MEMMAX')
+                def_flv.extend(['  ' + l for l in loop_lines])
+                def_flv.append('end do')
+            else:
+                # Non-vectorized dep couplings: same scalar pointer assignment as indep
+                for coupl in self.coups_flv_dep:
+                    for key, c in coupl.flavors.items():
+                        k1, k2 = _get_k1_k2(key)
+                        def_flv.append('%(name)s %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                        def_flv.append('%(name)s %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
+                        def_flv.append('%(name)s %% VAL(%(in)i) %%p  =>  %(coupl)s' % {'name': coupl.name, 'in': k1, 'coupl': c})
+
+        # max size needed for the couplings
+        max_flavor = max([len(ids) for ids in self.model['merged_particles'].values()], default=0)
+
+        if self.vector_size:
+            include_vector = "include \'../vector.inc\'\n"
+            loop_decl = 'integer j_flv_init' if self.coups_flv_dep else ''
+        else:
+            include_vector = ''
+            loop_decl = ''
+        replace = {'max_flavor': max_flavor,
+                   'include_vector': include_vector,
+                   'loop_decl': loop_decl,
+                   'def_flv': '\n'.join(def_flv)}
+        fsock = self.open('flavor_couplings.f', format='fortran')
+        fsock.writelines(template % replace)
+
+        fsock.close()
+
+        # get the list of matrix couplings
+        #for interactions in self.model['interactions']:
+            # is it too late?
+
+
+
+
     def create_couplings_main(self, nb_def_by_file=25):
         """ create couplings.f """
 
         fsock = self.open('couplings.f', format='fortran')
         
         fsock.writelines("""subroutine coup()
-
+                            use model_object
                             implicit none
                             double precision PI, ZERO
                             logical READLHA
@@ -7870,10 +8331,13 @@ C
 
             fsock.writelines('\nendif\n')
 
+        if self.coups_flv_dep or self.coups_flv_indep:
+            fsock.writelines('call init_flv_couplings()\n')
+
         fsock.writelines('''\n return \n end\n''')
 
         fsock.writelines("""subroutine update_as_param(%(args)s)
-
+                            use model_object
                             implicit none
                             %(args_dep)s
                             double precision PI, ZERO
@@ -7982,6 +8446,7 @@ C
 
         fsock.writelines("""subroutine update_as_param2(mu_r2,as2 %(args)s)
 
+                            use model_object
                             implicit none
                             
                             double precision PI
@@ -8447,7 +8912,7 @@ C
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')
         fsock.writelines("""subroutine %(mp)scoup%(nb_file)s( %(args)s)
-          
+          use model_object
           implicit none
           %(def_args)s
           include \'model_functions.inc\'"""% {'mp': 'mp_' if mp and not dp else '',
@@ -9648,7 +10113,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        text = 'MODEL = flavor_couplings.o couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
         
         if self.opt['export_format'].startswith('standalone'):
@@ -10180,14 +10645,21 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         self.write_phasespace_file(writers.FortranWriter(filename),
                            nconfigs)
                            
-
-        filename = pjoin(Ppath, 'maxamps.inc')
+        nb_flavor_per_proc = matrix_elements.get_nb_flavors()
         self.write_maxamps_file(writers.FortranWriter(filename),
                            maxamps,
                            maxflows,
-                           max([len(me.get('processes')) for me in \
-                                matrix_elements]),
+                           nb_flavor_per_proc,
+                           nb_flavor_per_proc, # THis is max(flavor*process) 
                            len(matrix_elements))
+        
+        #filename = pjoin(Ppath, 'maxamps.inc')
+        #self.write_maxamps_file(writers.FortranWriter(filename),
+        #                   maxamps,
+        #                   maxflows,
+        #                   max([len(me.get('processes')) for me in \
+        #                        matrix_elements]),
+        #                   len(matrix_elements))
 
         filename = pjoin(Ppath, 'mirrorprocs.inc')
         self.write_mirrorprocs(writers.FortranWriter(filename),
