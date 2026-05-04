@@ -1865,12 +1865,33 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
         if ninitial == 1:
-            pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
-            for i, proc in enumerate(processes):
-                process_line = proc.base_string()
-                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
-                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
+            if vector:
+                # For vectorized decay (ninitial==1), there are no PDF lookups:
+                # the PDF factor is always 1.  We must still initialize
+                # NB_WARP_USED (used by the template's own loops) and fill
+                # ALL_PD (not PD) so that the vectorized DSIG_VEC function
+                # works correctly.
+                pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+        IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
+        WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
+     &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
+        STOP
+        ENDIF
+        ALL_PD(0,:) = 0d0
+        IPROC = 0
+"""
+                for i, proc in enumerate(processes):
+                    process_line = proc.base_string()
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines = pdf_lines + "\nALL_PD(IPROC,:)=1d0\n"
+                    pdf_lines = pdf_lines + "\nALL_PD(0,:)=ALL_PD(0,:)+ALL_PD(IPROC,:)\n"
+            else:
+                pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
+                for i, proc in enumerate(processes):
+                    process_line = proc.base_string()
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines = pdf_lines + "\nPD(IPROC)=1d0\n"
+                    pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
