@@ -9265,13 +9265,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # That applies only if there is more than one subprocess of course.
             if self._curr_amps[0].get_ninitial() == 1 and \
                                                      len(self._curr_amps)>1:
-                
+                # Always turn off grouping for decay processes with multiple
+                # subprocesses, so that individual branching ratios can be
+                # computed correctly. This is necessary when flavor-merged
+                # particles (e.g. a jet particle replacing individual quarks)
+                # are used, as they would otherwise merge channels with
+                # different couplings into a single subprocess, making it
+                # impossible to recover the individual partial widths.
                 processes = [amp.get('process') for amp in self._curr_amps if 'process' in  list(amp.keys())]
-                if len(set(proc.get('id') for proc in processes))!=len(processes):
-                    # Special warning for loop-induced
-                    if any(proc['perturbation_couplings'] != [] for proc in
-                               processes) and self._export_format == 'madevent':
-                        logger.warning("""
+                # Special warning for loop-induced
+                if any(proc['perturbation_couplings'] != [] for proc in
+                           processes) and self._export_format == 'madevent':
+                    logger.warning("""
 || The loop-induced decay process you have specified contains several
 || subprocesses and, in order to be able to compute individual branching ratios, 
 || MG5_aMC will *not* group them. Integration channels will also be considered
@@ -9282,7 +9287,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 || branching ratios independently can be specified using the syntax:
 ||   -> add process <proc_def>
 """)
-                    group_processes = False
+                group_processes = False
         else:
             group_processes = True
     
