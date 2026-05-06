@@ -745,8 +745,8 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
            endif
          endif
       enddo
-      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
-      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
+      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass*2d0)
+      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass*2d0)
       end
 
       

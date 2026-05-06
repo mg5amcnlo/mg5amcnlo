@@ -5120,17 +5120,16 @@ c     Returns the eikonal factor
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
-
       real*8 phat_i_fks(0:3)
-
       double precision zero,pmass(nexternal),tiny
       parameter(zero=0d0)
-      parameter(tiny=1d-6)
+      parameter(tiny=1d-8)
       include "pmass.inc"
 
 c Define the reduced momentum for i_fks
       softcol=0
       if (1d0-y_ij_fks.lt.tiny)softcol=2
+
       if(p_i_fks_cnt(0,softcol).lt.0d0)then
          if(xi_i_fks.eq.0.d0)then
             write (*,*) 'Error #1 in eikonal_reduced', softcol,xi_i_fks

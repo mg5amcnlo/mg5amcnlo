@@ -4662,14 +4662,14 @@ C dressed lepton stuff
       endif                     ! firsttime
       xjac0=1d0
       xpswgt0=1d0
-
+      
 !     given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
 
       call generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
 
 ! given Born momenta, return x's and jac corresponding to tau_born and y_born.
-      call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot
+      call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot,pb(0,1)
      $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
 
       if (xjac0.lt.0d0) goto 222
@@ -4712,18 +4712,22 @@ C dressed lepton stuff
       jac=xjac0
       return
  222  continue
+      write (*,*) 'WARNING in inverse phase-space:'/
+     $     /' point could not be inverted'
+      write (*,*) pass,xjac0
       jac=-222
       return
       end
 
-      subroutine generate_tau_y_wrapper_inverse(j_fks,
-     $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
+      subroutine generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth
+     $     ,totmass,stot,pb,rndx,tau_born,ycm_born,ycmhat,xjac)
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'run.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),totmass
-     $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac
+     $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac,pb(0:3,nexternal
+     $     -1)
       integer itree_c(2,-max_branch:-1),j_fks
       integer ns_channel, nt_channel, ionebody, nbranch
       logical one_body
@@ -4764,23 +4768,23 @@ c     not a Breit Wigner
          endif
 c     Generate the rapditity of the Born system (tau and ycm input)
       else
-         call compute_tau_y_epem_inverse(j_fks,one_body,totmass,stot,
+         call compute_tau_y_epem_inverse(j_fks,one_body,totmass,pb,stot,
      &        tau_born)
       endif
       end
 
-      subroutine compute_tau_y_epem_inverse(j_fks,one_body,fksmass,stot,
-     &     tau)
+      subroutine compute_tau_y_epem_inverse(j_fks,one_body,fksmass,pb
+     $     ,stot,tau)
       implicit none
       include 'nexternal.inc'
       integer j_fks
       logical one_body
-      double precision fksmass,stot,tau,ycm,ycmhat
+      double precision fksmass,stot,tau,ycm,ycmhat,pb(0:3,nexternal-1),dot
       if (j_fks.le.nincoming) then
          if(one_body)then
             tau=fksmass**2/stot
          else
-            tau=max((0.85d0)**2,fksmass**2/stot)
+            tau=2d0*dot(pb(0:3,1),pb(0:3,2))/stot
          endif
       else
 c     For e+e- collisions, set tau to one and y to zero
@@ -5045,9 +5049,16 @@ c     Jacobian due to delta() of tau_born
       omx2bar2 = 1d0-x2bar2
       if(1-tau_born.gt.1.d-8)then ! prevent numerical inaccuracies.
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
-     &            ( cosh(ycm_born)*(1-tau_born) )
+     &        ( cosh(ycm_born)*(1-tau_born) )
+c$$$         write (*,*) 'CHECK',1d0-tau_born,':',yij_sol,-sinh(ycm)*(1+tau)/
+c$$$     &        ( cosh(ycm)*(1-tau) ),tau,ycm,yijdir
       else
-         xjac=-341d0
+         yij_sol=yijdir
+c$$$         yij_sol=-sinh(ycm)*(1+tau)/
+c$$$     &        ( cosh(ycm)*(1-tau) )
+c$$$         yij_sol=-((1d0+tau)*sinh(ycm)/cosh(ycm))/(1d0-tau)
+c$$$         write (*,*) tau_born,1-tau_born,ycm_born
+c$$$         xjac=-341d0
          return
       endif
       if(abs(yij_sol).gt.1.d0)then
@@ -5120,7 +5131,7 @@ c Lower bound on xi_i_fks
       xinorm=xiimax-xiimin
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       if (softtest) then
-         if(xi_i_fks_fix/xiimax .gt. 1d0+stiny)then
+         if(xi_i_fks/xiimax .gt. 1d0+stiny)then
             xjac=-102
             return
          endif
@@ -5130,16 +5141,6 @@ c Lower bound on xi_i_fks
 
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
-      
-      bstfact=sqrt( (2-xi_i_fks*(1-yijdir))*(2-xi_i_fks*(1+yijdir)) )
-      shy_bst=-xi_i_fks*sqrt(1-yijdir**2)/(2*sqrt(1-xi_i_fks))
-      chy_bst=bstfact/(2*sqrt(1-xi_i_fks))
-      chy_bstmo=chy_bst-1.d0
-      cosphi_i_fks=cos(phi_i_fks)
-      sinphi_i_fks=sin(phi_i_fks)
-      xdir_t(1)=cosphi_i_fks
-      xdir_t(2)=sinphi_i_fks
-      xdir_t(3)=zero
       
 c Boost the xp momenta from the lab frame to the reduced frame.      
       ybst=log(omega)+ycm
@@ -5152,6 +5153,15 @@ c Boost the xp momenta from the lab frame to the reduced frame.
       enddo
 
 c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
+      bstfact=sqrt( (2-xi_i_fks*(1-yijdir))*(2-xi_i_fks*(1+yijdir)) )
+      shy_bst=-xi_i_fks*sqrt(1-yijdir**2)/(2*sqrt(1-xi_i_fks))
+      chy_bst=bstfact/(2*sqrt(1-xi_i_fks))
+      chy_bstmo=chy_bst-1.d0
+      cosphi_i_fks=cos(phi_i_fks)
+      sinphi_i_fks=sin(phi_i_fks)
+      xdir_t(1)=cosphi_i_fks
+      xdir_t(2)=sinphi_i_fks
+      xdir_t(3)=zero
       do i=3,nexternal
          if (i.lt.i_fks) then
             call boostwdir2(chy_bst,shy_bst,chy_bstmo,xdir_t,
@@ -5167,7 +5177,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       p_born(3,1)=p_born(0,1)
       p_born(0,2)=p_born(0,1)
       p_born(3,2)=-p_born(0,1)
-
+      
       xpswgt=xpswgt*shat
       xpswgt=xpswgt/(4*pi)**3/(1-xi_i_fks)
       xpswgt=abs(xpswgt)
@@ -5535,6 +5545,16 @@ c
          if ( totalmass.gt.sqrtshat_born )then
             write (*,*) 'WARNING #33 in genps_fks.f (inverse)',i
      $           ,totalmass,sqrtshat_born,s(i)
+
+            
+            do j=1,nexternal-1
+               write (*,*) j,pb(0:3,j)
+            enddo
+            write (*,*) sum(pb(0:3,1:2),dim=2)
+            write (*,*) sum(pb(0:3,3:nexternal-1),dim=2)
+            stop 1
+            
+            
             xjac0 = -4
             pass=.false.
             return
