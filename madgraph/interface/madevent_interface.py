@@ -2980,13 +2980,42 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             # ungroup resutls (that we need here). Note that initial particles
             # grouping are not at the same stage as final particle grouping
             nb_output = len(ids) / (len(set([p[0] for p in ids])))
-            results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
-            result = float(results.strip().split(' ')[0])
-            for particles in ids:
+            results_text = open(pjoin(P_path, run_name + '_results.dat')).read()
+            result = float(results_text.split('\n')[0].strip().split(' ')[0])
+
+            # Try to use per-leshouche-row subprocess weights stored in results.dat
+            # by the grouped DSIG function.  These are written as an XML block
+            # <subprocess_weights>w1\nw2\n...</subprocess_weights> and correctly
+            # account for flavor-merged particles (e.g. pdg=81 representing j j).
+            sub_weights = None
+            wgt_match = re.search(
+                r'<subprocess_weights>(.*?)</subprocess_weights>',
+                results_text, re.DOTALL)
+            if wgt_match:
                 try:
-                    particle_dict[particles[0]].append([particles[1:], result/nb_output])
-                except KeyError:
-                    particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
+                    parsed = [float(x) for x in wgt_match.group(1).split()]
+                    if len(parsed) == len(ids):
+                        sub_weights = parsed
+                except Exception:
+                    pass
+
+            if sub_weights is not None:
+                for i, particles in enumerate(ids):
+                    try:
+                        particle_dict[particles[0]].append(
+                            [particles[1:], result * sub_weights[i]])
+                    except KeyError:
+                        particle_dict[particles[0]] = [
+                            [particles[1:], result * sub_weights[i]]]
+            else:
+                # Fallback: divide equally among all subprocesses (legacy behaviour)
+                for particles in ids:
+                    try:
+                        particle_dict[particles[0]].append(
+                            [particles[1:], result / nb_output])
+                    except KeyError:
+                        particle_dict[particles[0]] = [
+                            [particles[1:], result / nb_output]]
     
         if not os.path.exists(pjoin(self.me_dir, 'Events', run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', run_name))
@@ -6129,7 +6158,10 @@ tar -czf split_$1.tar.gz split_$1
         # set random number
         if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])
-            self.reset_iseed_in_run_card()
+            self.run_card['iseed'] = 0
+            # Reset seed in run_card to 0, to ensure that following runs
+            # will be statistically independent
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'), template=pjoin(self.me_dir, 'Cards','run_card.dat'))
             time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
             self.configured = time_mod
