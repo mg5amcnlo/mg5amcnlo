@@ -302,7 +302,12 @@ c           Transmit jet PDG code
          endif
 c        Fallback: if the flavor is still unresolved (merged flavor +-81),
 c        derive it from the actual PDG of the connected external particle.
-         if(iabs(ipdg(imo)).eq.81) then
+c        Skip this for W interactions (|PDG|=24): the W changes quark flavor
+c        at the vertex, so the beam-particle PDG differs from the IS propagator
+c        PDG.  Leaving ipdg(imo)=+-81 causes isparton(81)=.false. which
+c        correctly excludes the W vertex from QCD alpha_s/Sudakov reweighting.
+         if(iabs(ipdg(imo)).eq.81.and.
+     $        iabs(idda1).ne.24.and.iabs(idda2).ne.24) then
             i=ipart(1,imo)
             if(i.ge.1.and.i.le.nexternal.and.
      $           ipdg(ishft(1,i-1)).ne.0.and.
@@ -453,7 +458,12 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
 
 c     Fallback: if the flavor is still unresolved (merged flavor +-81),
 c     derive it from the actual PDG of the connected external particle.
-      if(iabs(ipdg(imo)).eq.81) then
+c     Skip this for W interactions (|PDG|=24): the W changes quark flavor
+c     at the vertex, so the connected external particle PDG differs from
+c     the propagator PDG.  Leaving ipdg(imo)=+-81 causes isparton(81)=.false.
+c     which correctly excludes the W vertex from QCD alpha_s/Sudakov reweighting.
+      if(iabs(ipdg(imo)).eq.81.and.
+     $     iabs(idda1).ne.24.and.iabs(idda2).ne.24) then
          i=ipart(1,imo)
          if(i.ge.1.and.i.le.nexternal.and.
      $        ipdg(ishft(1,i-1)).ne.0.and.
