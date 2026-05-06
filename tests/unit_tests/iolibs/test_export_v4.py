@@ -10128,8 +10128,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         mg4_model = export_v4.UFO_model_to_mg4(self.mymodel,'/dev/null')
         
         #check that they are no crash for normal model
-        mg4_model.pass_parameter_to_case_insensitive()
-        
+        mg4_model.pass_parameter_to_case_insensitive()        
         # edit model in order to add new parameter with name: CW / Cw / Mz / Mz2
         CW = base_objects.ParamCardVariable('CW', 100, 'MASS', 40)
         CWc = base_objects.ModelVariable( 'CW', 'Mz**2 * Mz2' , 'real')
@@ -10155,6 +10154,45 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
 
         self.assertEqual(Mzc.name,'mz__2')
         
+
+    def test_create_get_color(self):
+        """Test that create_get_color generates get_color.f with select case."""
+        import tempfile
+        import shutil
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            opt = {'export_format': 'madevent', 'mp': False,
+                   'complex_mass': False, 'loop_induced': False,
+                   'output_options': {}}
+            mg4_model = export_v4.UFO_model_to_mg4(self.mymodel, tmpdir, opt)
+            mg4_model.create_get_color()
+
+            get_color_f = open(os.path.join(tmpdir, 'get_color.f')).read()
+
+            # Verify select case is used
+            self.assertIn('SELECT CASE', get_color_f)
+            self.assertIn('END SELECT', get_color_f)
+
+            # Verify get_color and get_spin functions are present
+            self.assertIn('FUNCTION GET_COLOR(IPDG)', get_color_f)
+            self.assertIn('FUNCTION GET_SPIN(IPDG)', get_color_f)
+
+            # Verify all SM particle PDGs are present
+            # gluon (21), photon (22), Z (23), W (24),
+            # quarks 1-6 and their anti-particles
+            for pdg in [21, 22, 23, 24, 1, 2, 3, 4, 5, 6,
+                        -1, -2, -3, -4, -5, -6]:
+                self.assertIn('CASE(%d)' % pdg, get_color_f)
+
+            # Verify dummy particle case is present
+            self.assertIn('dummy particle', get_color_f)
+
+            # Verify error handling
+            self.assertIn('CASE DEFAULT', get_color_f)
+            self.assertIn('STOP 1', get_color_f)
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 if __name__ == '__main__':
