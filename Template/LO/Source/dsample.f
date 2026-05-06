@@ -715,8 +715,8 @@ c     Global: common block shared with the grouped DSIG function
 c
       INTEGER NREL_SPROC_STORE
       DOUBLE PRECISION REL_SPROC_STORE(1024)
-      DATA NREL_SPROC_STORE /0/
       COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      DATA NREL_SPROC_STORE /0/
 
       if (NREL_SPROC_STORE.gt.0) then
         write(outUnit,'(A)') '<subprocess_weights>'

@@ -358,6 +358,8 @@ class OneResult(object):
     def parse_xml_results(self, xml):
         """ Parse the xml part of the results.dat file."""
 
+        # Wrap in a <root> element so minidom can handle multiple top-level XML
+        # fragments (e.g. <run_statistics> and <subprocess_weights> coexisting).
         dom = minidom.parseString('<root>%s</root>' % xml)
                     
         statistics_node = dom.getElementsByTagName("run_statistics")
