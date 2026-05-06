@@ -620,10 +620,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                    matrix_element, sqsorders_list,
                                    fortran_model)
 
-        filename = 'get_color.f'
-        self.write_colors_file(writers.FortranWriter(filename),
-                               matrix_element)
-
         filename = 'nexternal.inc'
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),

@@ -328,8 +328,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'maxconfigs.inc')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P0_epem_epem',
+                                                    'Source',
+                                                    'MODEL',
                                                     'get_color.f')))
         if misc.which('gs'):
             self.assertFalse(os.path.exists(os.path.join(self.out_dir,
@@ -1316,8 +1316,8 @@ C
                                                     'P2_gg_qq',
                                                     'maxconfigs.inc')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P2_gg_qq',
+                                                    'Source',
+                                                    'MODEL',
                                                     'get_color.f')))
         # Check that the Source directory compiles
         status = subprocess.call(['make'],

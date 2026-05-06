@@ -190,9 +190,11 @@ class FortranWriter(FileWriter):
                      r'^do(?!\s+\d+)\s+': (r'^enddo\s*$', 2),
                      '^subroutine': (r'^end\s*$', 0),
                      '^module': (r'^end\s*$', 0),
-                     'function': (r'^end\s*$', 0)}
+                     'function': (r'^end\s*$', 0),
+                     r'^select\s+case': (r'^end\s+select\s*$', 2)}
     single_indents = {r'^else\s*$':-2,
-                      r'^else\s*if.+then\s*$':-2}
+                      r'^else\s*if.+then\s*$':-2,
+                      r'^case\s*(\(.+\)|default)\s*$': -2}
     number_re = re.compile(r'^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'

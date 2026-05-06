@@ -4671,10 +4671,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                              mapconfigs,
                              matrix_element)
 
-        filename = pjoin(Ppath, 'get_color.f')
-        self.write_colors_file(writers.FortranWriter(filename),
-                               matrix_element)
-
         filename = pjoin(Ppath, 'decayBW.inc')
         self.write_decayBW_file(writers.FortranWriter(filename),
                            s_and_t_channels)
@@ -6665,10 +6661,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                    maxflows,
                                    matrix_elements)
 
-        filename = 'get_color.f'
-        self.write_colors_file(writers.FortranWriter(filename),
-                               matrix_elements)
-
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),
                                            subproc_diagrams_for_config)
@@ -7518,6 +7510,8 @@ class UFO_model_to_mg4(object):
         # The param_card.dat        
         self.create_param_card()
         
+        # The get_color/get_spin functions
+        self.create_get_color()
 
         # All the standard files
         self.copy_standard_file()
@@ -10129,7 +10123,7 @@ c         segments from -DABS(tiny*Ga) to Ga
         
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = flavor_couplings.o couplings.o lha_read.o printout.o rw_para.o'
-        text += ' model_functions.o '
+        text += ' model_functions.o get_color.o '
         
         if self.opt['export_format'].startswith('standalone'):
             text += ' alfas_functions.o '
@@ -10181,7 +10175,51 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock.writelines('\n'.join(lines))                
         
  
-    
+    def create_get_color(self):
+        """Create get_color.f in Source/MODEL with get_color and get_spin
+        functions covering all particles in the model, using select case."""
+
+        fsock = self.open('get_color.f', format='fortran')
+
+        particle_dict = self.model.get('particle_dict')
+        particle_ids = sorted(particle_dict.keys())
+        dummy_pdg = self.model.get_first_non_pdg()
+
+        lines = "function get_color(ipdg)\n"
+        lines += "implicit none\n"
+        lines += "integer get_color, ipdg\n"
+        lines += "select case (ipdg)\n"
+        for pdg in particle_ids:
+            lines += "case(%d)\n" % pdg
+            lines += "get_color=%d\n" % particle_dict[pdg].get_color()
+        lines += "case(%d)\n" % dummy_pdg
+        lines += "c This is dummy particle used in multiparticle vertices\n"
+        lines += "get_color=2\n"
+        lines += "case default\n"
+        lines += "write(*,*)'Error: No color given for pdg ',ipdg\n"
+        lines += "stop 1\n"
+        lines += "end select\n"
+        lines += "end\n"
+
+        lines += "\n"
+        lines += "function get_spin(ipdg)\n"
+        lines += "implicit none\n"
+        lines += "integer get_spin, ipdg\n"
+        lines += "select case (ipdg)\n"
+        for pdg in particle_ids:
+            lines += "case(%d)\n" % pdg
+            lines += "get_spin=%d\n" % particle_dict[pdg].get('spin')
+        lines += "case(%d)\n" % dummy_pdg
+        lines += "c This is dummy particle used in multiparticle vertices\n"
+        lines += "get_spin=-2\n"
+        lines += "case default\n"
+        lines += "write(*,*)'Error: No spin given for pdg ',ipdg\n"
+        lines += "stop 1\n"
+        lines += "end select\n"
+        lines += "end\n"
+
+        fsock.writelines(lines)
+
     def create_ident_card(self):
         """ create the ident_card.dat """
     
