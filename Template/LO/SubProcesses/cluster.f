@@ -676,15 +676,18 @@ c     initialize index map
       enddo
       mt2last=0
       minpt2ij=1.0d37
-c     Map merged flavor particles (PDG=81) to their actual quark flavors
+c     Map merged flavor particles (PDG=81) to their actual quark flavors.
+c     flavor(i) can be positive (quark) or negative (antiquark merged flavor),
+c     so use iabs(flavor(i)) as the quark PDG magnitude and let the sign of
+c     the diagram entry (tmppdg) determine the final sign.
       do i=1,nexternal
-         if(flavor(i).ge.1.and.flavor(i).le.5)then
+         if(iabs(flavor(i)).ge.1.and.iabs(flavor(i)).le.5)then
                do igraph=1,n_max_cg
                tmppdg=ipdgcl(ishft(1,i-1),igraph,iproc)
                   if(tmppdg.eq.81.or.(tmppdg.gt.0.and.tmppdg.le.5)) then
-                     ipdgcl(ishft(1,i-1),igraph,iproc)=flavor(i)
+                     ipdgcl(ishft(1,i-1),igraph,iproc)=iabs(flavor(i))
                   else if(tmppdg.eq.-81.or.(tmppdg.lt.0.and.tmppdg.ge.-5))then
-                     ipdgcl(ishft(1,i-1),igraph,iproc)=-flavor(i)
+                     ipdgcl(ishft(1,i-1),igraph,iproc)=-iabs(flavor(i))
                   endif
                enddo
          endif

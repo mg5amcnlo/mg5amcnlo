@@ -300,6 +300,16 @@ c           Transmit jet PDG code
      $              ipdg(imo)=idda1
             endif
          endif
+c        Fallback: if the flavor is still unresolved (merged flavor +-81),
+c        derive it from the actual PDG of the connected external particle.
+         if(iabs(ipdg(imo)).eq.81) then
+            i=ipart(1,imo)
+            if(i.ge.1.and.i.le.nexternal.and.
+     $           ipdg(ishft(1,i-1)).ne.0.and.
+     $           iabs(ipdg(ishft(1,i-1))).ne.81) then
+               ipdg(imo)=ipdg(ishft(1,i-1))
+            endif
+         endif
          if (btest(mlevel,4))
      $        write(*,*) ' -> ',(ipart(i,imo),i=1,2),
      $        ' (',ipdg(imo),')'
@@ -439,6 +449,17 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
          write(*,*) "failed for ipartupdate."
          write(*,*) "Please retry without MLM/default dynamical scale"
          stop 3
+      endif
+
+c     Fallback: if the flavor is still unresolved (merged flavor +-81),
+c     derive it from the actual PDG of the connected external particle.
+      if(iabs(ipdg(imo)).eq.81) then
+         i=ipart(1,imo)
+         if(i.ge.1.and.i.le.nexternal.and.
+     $        ipdg(ishft(1,i-1)).ne.0.and.
+     $        iabs(ipdg(ishft(1,i-1))).ne.81) then
+            ipdg(imo)=ipdg(ishft(1,i-1))
+         endif
       endif
       
       if (btest(mlevel,4)) then
