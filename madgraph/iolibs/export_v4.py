@@ -5400,13 +5400,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['maxflavor'] = len(all_flv)
         replace_dict['get_flavor_matrix'] = ''
         pdg_to_group_pos = {}
-        for members in self.model.get('merged_particles').values():
-            for pos, pdg in enumerate(members, 1):
-                pdg_to_group_pos[pdg] = pos
-        for i, flav in enumerate(all_flv):
-            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
-            replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
-        
+        if self.model:
+            for members in self.model.get('merged_particles').values():
+                for pos, pdg in enumerate(members, 1):
+                    pdg_to_group_pos[pdg] = pos
+            for i, flav in enumerate(all_flv):
+                flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+                replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
+            
 
 
         if writer:
