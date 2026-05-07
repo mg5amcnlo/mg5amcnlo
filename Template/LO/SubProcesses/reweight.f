@@ -228,6 +228,23 @@ c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
       return
       end
 
+      integer function w_flip_flavor(iflav)
+c**************************************************
+c   At a W vertex the quark generation flips within
+c   the CKM-diagonal generation pair (leading order):
+c     1 (d) <-> 2 (u)
+c     3 (s) <-> 4 (c)
+c     5 (b) <-> 6 (t)
+c   Input must be a positive quark flavor (1-6).
+c   The formula ieor(iflav-1,1)+1 XORs the lowest bit
+c   of the zero-based index, swapping adjacent pairs.
+c**************************************************
+      implicit none
+      integer iflav
+      w_flip_flavor=ieor(iflav-1,1)+1
+      return
+      end
+
       integer function resolve_merged_flavor(idmo,idda1,idda2,iconn,ipdg)
 c**************************************************
 c   Resolve merged flavor mother (PDG = ±81, i.e. +81/-81) with
@@ -240,12 +257,28 @@ c**************************************************
 
       integer idmo,idda1,idda2,iconn
       integer ipdg(n_max_cl), absda1, absda2, idext
+      integer w_flip_flavor
+      external w_flip_flavor
 
       resolve_merged_flavor=idmo
       if(iabs(idmo).ne.81) return
 
-c     W changes flavor at the vertex; keep unresolved.
-      if(iabs(idda1).eq.24.or.iabs(idda2).eq.24) return
+c     W vertex: generation-pair flip (1<->2, 3<->4, 5<->6).
+c     The non-W daughter carries the partner flavor; flip it to get mother.
+      if(iabs(idda1).eq.24.or.iabs(idda2).eq.24) then
+         if(iabs(idda2).eq.24) then
+            absda1=iabs(idda1)
+            if(absda1.ge.1.and.absda1.le.6) then
+               resolve_merged_flavor=sign(w_flip_flavor(absda1),idmo)
+            endif
+         else
+            absda2=iabs(idda2)
+            if(absda2.ge.1.and.absda2.le.6) then
+               resolve_merged_flavor=sign(w_flip_flavor(absda2),idmo)
+            endif
+         endif
+         return
+      endif
 
       absda1=iabs(idda1)
       absda2=iabs(idda2)
@@ -266,6 +299,9 @@ c     Use unambiguous daughter flavor when possible.
       endif
 
 c     Fall back to connected external line flavor.
+c     ishft(1,iconn-1) builds a 1-bit mask selecting the external line
+c     at position iconn in the combined external-particle bitmask used by
+c     the clustering arrays.
       if(iconn.ge.1.and.iconn.le.nexternal) then
          idext=ipdg(ishft(1,iconn-1))
          if(iabs(idext).ge.1.and.iabs(idext).le.6.and.
