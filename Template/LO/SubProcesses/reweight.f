@@ -228,6 +228,55 @@ c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
       return
       end
 
+      integer function resolve_merged_flavor(idmo,idda1,idda2,iconn,ipdg)
+c**************************************************
+c   Resolve merged flavor mother (PDG = +-81) with
+c   a vertex-aware strategy.
+c**************************************************
+      implicit none
+
+      include 'ncombs.inc'
+      include 'nexternal.inc'
+
+      integer idmo,idda1,idda2,iconn
+      integer ipdg(n_max_cl), abs1, abs2, idext
+
+      resolve_merged_flavor=idmo
+      if(iabs(idmo).ne.81) return
+
+c     W changes flavor at the vertex; keep unresolved.
+      if(iabs(idda1).eq.24.or.iabs(idda2).eq.24) return
+
+      abs1=iabs(idda1)
+      abs2=iabs(idda2)
+
+c     Use unambiguous daughter flavor when possible.
+      if(abs1.ge.1.and.abs1.le.6.and..not.(abs2.ge.1.and.abs2.le.6))then
+         resolve_merged_flavor=sign(abs1,idmo)
+         return
+      endif
+      if(abs2.ge.1.and.abs2.le.6.and..not.(abs1.ge.1.and.abs1.le.6))then
+         resolve_merged_flavor=sign(abs2,idmo)
+         return
+      endif
+      if(abs1.ge.1.and.abs1.le.6.and.abs2.ge.1.and.abs2.le.6.and.
+     $   abs1.eq.abs2) then
+         resolve_merged_flavor=sign(abs1,idmo)
+         return
+      endif
+
+c     Fall back to connected external line flavor.
+      if(iconn.ge.1.and.iconn.le.nexternal) then
+         idext=ipdg(ishft(1,iconn-1))
+         if(iabs(idext).ge.1.and.iabs(idext).le.6.and.
+     $      iabs(idext).ne.81) then
+            resolve_merged_flavor=sign(iabs(idext),idmo)
+         endif
+      endif
+
+      return
+      end
+
 
       subroutine ipartupdate(p,imo,ida1,ida2,ipdg,ipart)
 c**************************************************
@@ -257,6 +306,8 @@ c     the hardest and ipart(2) is the softest.
       external isqcd
       integer get_color
       external get_color 
+      integer resolve_merged_flavor
+      external resolve_merged_flavor
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -300,21 +351,9 @@ c           Transmit jet PDG code
      $              ipdg(imo)=idda1
             endif
          endif
-c        Fallback: if the flavor is still unresolved (merged flavor +-81),
-c        derive it from the actual PDG of the connected external particle.
-c        Skip this for W interactions (|PDG|=24): the W changes quark flavor
-c        at the vertex, so the beam-particle PDG differs from the IS propagator
-c        PDG.  Leaving ipdg(imo)=+-81 causes isparton(81)=.false. which
-c        correctly excludes the W vertex from QCD alpha_s/Sudakov reweighting.
-         if(iabs(ipdg(imo)).eq.81.and.
-     $        iabs(idda1).ne.24.and.iabs(idda2).ne.24) then
-            i=ipart(1,imo)
-            if(i.ge.1.and.i.le.nexternal.and.
-     $           ipdg(ishft(1,i-1)).ne.0.and.
-     $           iabs(ipdg(ishft(1,i-1))).ne.81) then
-               ipdg(imo)=ipdg(ishft(1,i-1))
-            endif
-         endif
+c        Vertex-aware fallback for unresolved merged flavor (+-81).
+          ipdg(imo)=resolve_merged_flavor(ipdg(imo),idda1,idda2,
+     $         ipart(1,imo),ipdg)
          if (btest(mlevel,4))
      $        write(*,*) ' -> ',(ipart(i,imo),i=1,2),
      $        ' (',ipdg(imo),')'
@@ -456,21 +495,9 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
          stop 3
       endif
 
-c     Fallback: if the flavor is still unresolved (merged flavor +-81),
-c     derive it from the actual PDG of the connected external particle.
-c     Skip this for W interactions (|PDG|=24): the W changes quark flavor
-c     at the vertex, so the connected external particle PDG differs from
-c     the propagator PDG.  Leaving ipdg(imo)=+-81 causes isparton(81)=.false.
-c     which correctly excludes the W vertex from QCD alpha_s/Sudakov reweighting.
-      if(iabs(ipdg(imo)).eq.81.and.
-     $     iabs(idda1).ne.24.and.iabs(idda2).ne.24) then
-         i=ipart(1,imo)
-         if(i.ge.1.and.i.le.nexternal.and.
-     $        ipdg(ishft(1,i-1)).ne.0.and.
-     $        iabs(ipdg(ishft(1,i-1))).ne.81) then
-            ipdg(imo)=ipdg(ishft(1,i-1))
-         endif
-      endif
+c     Vertex-aware fallback for unresolved merged flavor (+-81).
+      ipdg(imo)=resolve_merged_flavor(ipdg(imo),idda1,idda2,
+     $     ipart(1,imo),ipdg)
       
       if (btest(mlevel,4)) then
         write(*,*) 'XY -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
