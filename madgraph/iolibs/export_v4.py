@@ -5132,6 +5132,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Set proc_id
         replace_dict['proc_id'] = proc_id
+        nexternal, ninitial = matrix_element.get_nexternal_ninitial()
 
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
@@ -5487,7 +5488,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['maxflavor'] = len(all_flv)
         replace_dict['get_flavor_matrix'] = ''
         pdg_to_group_pos = {}
-        merged_particles = self.model.get('merged_particles') or {}
+        model = self.model or matrix_element.get('processes')[0].get('model')
+        merged_particles = (model.get('merged_particles') or {}) if model else {}
         for members in merged_particles.values():
             for pos, pdg in enumerate(members, 1):
                 pdg_to_group_pos[pdg] = pos

@@ -10235,8 +10235,9 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
         self.assertEqual(self._evaluate_broken_symmetry(sym_same, [2, -2, 1, -1, 1, -1]), 1)
 
     def test_madevent_template_uses_decay_aware_broken_symmetry_metadata(self):
-        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
-                              'matrix_madevent_group_v4.inc')).read()
+        with open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                        'matrix_madevent_group_v4.inc')) as stream:
+            template = stream.read()
         self.assertIn('%(broken_sym_ncomponents)d', template)
         self.assertIn('%(broken_sym_nentries)d', template)
         self.assertIn('%(broken_sym_component_starts)s', template)
