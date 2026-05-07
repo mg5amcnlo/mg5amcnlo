@@ -950,6 +950,8 @@ class TestMultiLanguageComparison(unittest.TestCase):
         # output_language must at least contain a Summary line.
         text = process_checks.output_language(results)
         self.assertIn('Summary', text)
+        self.assertIn('F/Py rel.diff.', text)
+        self.assertIn('C++/Py rel.diff.', text)
 
     def test_check_language_gg_ttx_cpp_ps_point(self):
         """g g > t t~: Fortran SA and C++ SA must agree within 1e-4 rel.
@@ -1006,6 +1008,7 @@ class TestMultiLanguageComparison(unittest.TestCase):
         text = process_checks.output_language(results)
         self.assertIn('Passed', text,
                       'output_language reported failure for g g > t t~:\n' + text)
+        self.assertIn('F/Py rel.diff.', text)
 
 
 if __name__ == '__main__':

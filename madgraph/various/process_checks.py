@@ -4305,6 +4305,8 @@ def output_language(comparison_results, output='text'):
                fixed_string_length("C++ SA", col_size) +
                fixed_string_length("Python", col_size) +
                fixed_string_length("F/C++ rel.diff.", col_size) +
+               fixed_string_length("F/Py rel.diff.", col_size) +
+               fixed_string_length("C++/Py rel.diff.", col_size) +
                "Result")
 
     def _fmt(v):
@@ -4332,12 +4334,16 @@ def output_language(comparison_results, output='text'):
         me_py  = val_py['m2']  if val_py  is not None else None
 
         diff = _reldiff(me_f, me_cpp)
+        diff_f_py = _reldiff(me_f, me_py)
+        diff_cpp_py = _reldiff(me_cpp, me_py)
 
         row = ('\n' + fixed_string_length(proc, proc_col_size) +
                fixed_string_length(_fmt(me_f),   col_size) +
                fixed_string_length(_fmt(me_cpp),  col_size) +
                fixed_string_length(_fmt(me_py),   col_size) +
-               fixed_string_length(_fmt_diff(diff), col_size))
+               fixed_string_length(_fmt_diff(diff), col_size) +
+               fixed_string_length(_fmt_diff(diff_f_py), col_size) +
+               fixed_string_length(_fmt_diff(diff_cpp_py), col_size))
 
         if me_f is None and me_cpp is None:
             no_check_proc += 1
