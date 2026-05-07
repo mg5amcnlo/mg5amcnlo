@@ -4166,6 +4166,17 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract JAMP lines
         jamp_lines, nb = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        process = matrix_element.get('processes')[0]
+        sym_data = self._get_broken_symmetry_data(process, ninitial)
+        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+        replace_dict['broken_sym_nentries'] = sym_data['nentries']
+        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
+        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
+        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
+        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
+        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
+        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)

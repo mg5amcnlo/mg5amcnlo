@@ -286,25 +286,39 @@ class IOExportPythonTest(unittest.TestCase):
             ans = ans + t
             self.helEvals.append([hel, t.real / denominator ])
         # Apply flavor-dependent symmetry factor (broken_sym) for merged
-        # processes.  For a merged matrix element the denominator includes the
-        # identical-particle factorial of the *base* process.  When the actual
-        # runtime flavor has a different set of identical final-state particles,
-        # a correction factor must be applied, exactly as in the Fortran/C++
-        # BROKEN_SYM function:  ans = ans * broken_sym / denominator.
+        # processes, following the same decay-aware component/block logic as
+        # Fortran/C++ templates.
         if flavor is not None:
-            _sym_pid = list([2, -2])
-            _sym_factor = 1
-            _ninitial = 2
-            for _i in range(len(_sym_pid)):
-                if _sym_pid[_i] == 0:
-                    continue
-                _n_tot = 1
-                for _j in range(_i + 1, len(_sym_pid)):
-                    if _sym_pid[_i] == _sym_pid[_j] and flavor[_ninitial + _i] == flavor[_ninitial + _j]:
-                        _sym_pid[_j] = 0
-                        _n_tot += 1
-                        _sym_factor = _sym_factor // _n_tot
-            ans = ans * _sym_factor / denominator
+            _comp_beg = list([1])
+            _comp_end = list([2])
+            _comp_old = list([1])
+            _pid_list = list([2, -2])
+            _block_start = list([3, 4])
+            _block_len = list([1, 1])
+            _pid_work = list(_pid_list)
+            _total_factor = 1
+            for _icomp in range(1):
+                _old_factor = _comp_old[_icomp]
+                for _i in range(_comp_beg[_icomp] - 1, _comp_end[_icomp]):
+                    if _pid_work[_i] == 0:
+                        continue
+                    _n_tot = 1
+                    for _j in range(_i + 1, _comp_end[_icomp]):
+                        if _pid_work[_i] != _pid_work[_j]:
+                            continue
+                        if _block_len[_i] != _block_len[_j]:
+                            continue
+                        _same_block = True
+                        for _k in range(_block_len[_i]):
+                            if flavor[_block_start[_i] - 1 + _k] != flavor[_block_start[_j] - 1 + _k]:
+                                _same_block = False
+                                break
+                        if _same_block:
+                            _pid_work[_j] = 0
+                            _n_tot += 1
+                            _old_factor = _old_factor // _n_tot
+                _total_factor *= _old_factor
+            ans = ans * _total_factor / denominator
         else:
             ans = ans / denominator
         return ans.real
@@ -392,6 +406,18 @@ class IOExportPythonTest(unittest.TestCase):
                           split('\n')
 
         self.assertEqual(matrix_methods, goal_method)
+
+    def test_python_template_uses_decay_aware_broken_symmetry_metadata(self):
+        with open(os.path.join(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                               'matrix_method_python.inc')) as stream:
+            template = stream.read()
+        self.assertIn('%(broken_sym_ncomponents)d', template)
+        self.assertIn('%(broken_sym_component_starts)s', template)
+        self.assertIn('%(broken_sym_component_ends)s', template)
+        self.assertIn('%(broken_sym_component_old_factors)s', template)
+        self.assertIn('%(broken_sym_pid_list)s', template)
+        self.assertIn('%(broken_sym_block_starts)s', template)
+        self.assertIn('%(broken_sym_block_lengths)s', template)
         
 
     def test_run_python_matrix_element(self):
@@ -698,4 +724,3 @@ class IOExportPythonTest(unittest.TestCase):
                                         subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
                          ['self.amp2[0]+=abs(amp[0]*amp[0].conjugate())', 'self.amp2[1]+=abs(amp[1]*amp[1].conjugate())', 'self.amp2[2]+=abs(amp[2]*amp[2].conjugate())'])
-
