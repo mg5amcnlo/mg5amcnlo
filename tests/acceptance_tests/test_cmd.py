@@ -327,6 +327,10 @@ class TestCmdShell2(unittest.TestCase,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'maxconfigs.inc')))
+        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_epem_epem',
+                                                    'get_color.f')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Source',
                                                     'MODEL',
