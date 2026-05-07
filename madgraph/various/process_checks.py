@@ -3913,6 +3913,7 @@ def check_language(process_definition, param_card=None, options=None,
         ``'process'``       – :class:`base_objects.Process`,
         ``'value_fortran'`` – ``{'m2': float}`` or ``None``,
         ``'value_cpp'``     – ``{'m2': float}`` or ``None``,
+        ``'value_python'``  – ``{'m2': float}`` or ``None``,
         ``'momenta'``       – phase-space point (list of 4-vectors) or ``None``.
     """
     import madgraph.iolibs.export_v4 as export_v4
@@ -4204,6 +4205,22 @@ def check_language(process_definition, param_card=None, options=None,
 
             out_cpp_text = sa_cpp_output_cache.get(sa_key)
 
+        # ── Python point evaluation (informational; does not affect pass/fail)
+        me_py_val = None
+        momenta = None
+        sa_text_for_momenta = out_f_text if out_f_text else out_cpp_text
+        if sa_text_for_momenta:
+            _, momenta = _parse_sa_output(sa_text_for_momenta)
+        if momenta:
+            try:
+                evaluator_py = MatrixElementEvaluator(model, param_card,
+                                                      auth_skipping=False,
+                                                      reuse=True, cmd=cmd)
+                me_py_val, _ = evaluator_py.evaluate_matrix_element(me, p=momenta)
+            except Exception as err:
+                logger.info("Language check: Python evaluation failed for %s: %s"
+                            % (proc.nice_string(), err))
+
         # ── per-flavor comparison ─────────────────────────────────────────────
         # Parse ALL PDG blocks from both SA outputs and match by PDG tuple so
         # that merged-particle processes (e.g. _quark _anti_quark > z g) are
@@ -4224,7 +4241,8 @@ def check_language(process_definition, param_card=None, options=None,
                 'process_label':  proc.base_string(),
                 'value_fortran':  None,
                 'value_cpp':      None,
-                'momenta':        None,
+                'value_python':   {'m2': me_py_val} if me_py_val is not None else None,
+                'momenta':        momenta,
             })
         else:
             for key in all_keys:
@@ -4241,7 +4259,8 @@ def check_language(process_definition, param_card=None, options=None,
                     'process_label':  label,
                     'value_fortran':  {'m2': me_f_val}   if me_f_val   is not None else None,
                     'value_cpp':      {'m2': me_cpp_val} if me_cpp_val is not None else None,
-                    'momenta':        None,
+                    'value_python':   {'m2': me_py_val}  if me_py_val  is not None else None,
+                    'momenta':        momenta,
                 })
 
     clean_added_globals(ADDED_GLOBAL)
@@ -4249,7 +4268,11 @@ def check_language(process_definition, param_card=None, options=None,
 
 
 def output_language(comparison_results, output='text'):
-    """Present the results of a Fortran SA / C++ SA language cross-check.
+    """Present language-check results with Fortran SA / C++ SA cross-checking.
+
+    The pass/fail decision remains based on the Fortran-vs-C++ relative
+    difference only. The Python value is reported as an additional comparison
+    point at the same phase-space point when available.
 
     Parameters
     ----------
@@ -4280,6 +4303,7 @@ def output_language(comparison_results, output='text'):
     res_str = (fixed_string_length(process_header, proc_col_size) +
                fixed_string_length("Fortran SA", col_size) +
                fixed_string_length("C++ SA", col_size) +
+               fixed_string_length("Python", col_size) +
                fixed_string_length("F/C++ rel.diff.", col_size) +
                "Result")
 
@@ -4301,15 +4325,18 @@ def output_language(comparison_results, output='text'):
         proc    = entry.get('process_label', entry['process'].base_string())
         val_f   = entry['value_fortran']
         val_cpp = entry['value_cpp']
+        val_py  = entry.get('value_python')
 
         me_f   = val_f['m2']   if val_f   is not None else None
         me_cpp = val_cpp['m2'] if val_cpp is not None else None
+        me_py  = val_py['m2']  if val_py  is not None else None
 
         diff = _reldiff(me_f, me_cpp)
 
         row = ('\n' + fixed_string_length(proc, proc_col_size) +
                fixed_string_length(_fmt(me_f),   col_size) +
                fixed_string_length(_fmt(me_cpp),  col_size) +
+               fixed_string_length(_fmt(me_py),   col_size) +
                fixed_string_length(_fmt_diff(diff), col_size))
 
         if me_f is None and me_cpp is None:

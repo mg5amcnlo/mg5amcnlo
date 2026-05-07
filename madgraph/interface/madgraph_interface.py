@@ -4778,7 +4778,7 @@ This implies that with decay chains:
             text += 'Flavor grouping check results:\n'
             text += process_checks.output_flavor(flavor_result) + '\n'
         if language_result:
-            text += 'Language comparison results (Fortran SA / C++ SA):\n'
+            text += 'Language comparison results (Python / Fortran SA / C++ SA):\n'
             text += process_checks.output_language(language_result) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'

@@ -898,9 +898,8 @@ class TestMultiLanguageComparison(unittest.TestCase):
         """check_language() must return Passed for e+ e- > a a when at least
         one compiled backend (gfortran or g++) is available.
 
-        The new check_language compares Fortran SA vs C++ SA only (no Python).
-        Both backends use the same fixed energy so RAMBO produces identical
-        momenta and the matrix elements can be compared directly.
+        The check compares Fortran SA vs C++ SA for pass/fail and also reports
+        a Python matrix-element value at the same phase-space point.
         """
         model = self.model
 
@@ -925,10 +924,10 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
         entry = results[0]
-        # New API: only Fortran and C++ backends (no Python).
+        # API includes Fortran, C++, and Python entries.
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
-        self.assertNotIn('value_python', entry)
+        self.assertIn('value_python', entry)
 
         if not (self.has_fortran or self.has_cpp):
             self.skipTest('No compiled backend available')
@@ -943,6 +942,10 @@ class TestMultiLanguageComparison(unittest.TestCase):
             self.assertLess(rel, 1e-4,
                             'Fortran/C++ disagree: F=%g C++=%g rel=%g'
                             % (me_f, me_cpp, rel))
+
+        # Python value should be available when at least one SA backend ran.
+        if me_f is not None or me_cpp is not None:
+            self.assertIsNotNone(entry['value_python'])
 
         # output_language must at least contain a Summary line.
         text = process_checks.output_language(results)
@@ -979,8 +982,8 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1, 'Expected exactly one subprocess result')
 
         entry = results[0]
-        # New API: no Python key.
-        self.assertNotIn('value_python', entry)
+        # API includes Python key in addition to Fortran/C++.
+        self.assertIn('value_python', entry)
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
 
