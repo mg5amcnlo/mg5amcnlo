@@ -28,6 +28,7 @@ import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
 
 import madgraph.iolibs.export_cpp as export_cpp
+import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
@@ -2276,14 +2277,32 @@ class BrokenSymmetryCPPExportTest(unittest.TestCase):
 
     def test_cpp_export_decay_chain_broken_symmetry_metadata(self):
         model = import_ufo.import_model('sm')
-        core_proc = self._make_process(model, [2, -2], [23, 23],
-                                       [(23, [1, -1]), (23, [4, -4])])
-        amplitude = diagram_generation.DecayChainAmplitude(core_proc)
-        matrix_element = helas_objects.HelasDecayChainProcess(amplitude).\
-            combine_decay_chain_processes()[0]
-        cpp_writer = helas_call_writer.CPPUFOHelasCallWriter(model)
-        exporter = export_cpp.OneProcessExporterPythia8(matrix_element, cpp_writer)
-        replace_dict = exporter.get_process_function_definitions(write=False)
-        self.assertEqual(replace_dict['broken_sym_ncomponents'], 3)
-        self.assertEqual(replace_dict['broken_sym_component_old_factors'], '2,1,1')
-        self.assertEqual(replace_dict['broken_sym_block_lengths'], '2,2,1,1,1,1')
+        decay_process = self._make_process(model, [2, -2], [23, 23],
+                                           [(23, [1, -1]), (23, [4, -4])])
+        sym_data = export_v4.ProcessExporterFortran._get_broken_symmetry_data(decay_process, 2)
+        replace_dict = {
+            'process_lines': '',
+            'model_name': 'sm',
+            'initProc_lines': '',
+            'reset_jamp_lines': '',
+            'sigmaKin_lines': '',
+            'sigmaHat_lines': 'return 0.;',
+            'all_sigmaKin': '',
+            'nexternal': 6,
+            'nincoming': 2,
+            'broken_sym_ncomponents': sym_data['ncomponents'],
+            'broken_sym_nentries': sym_data['nentries'],
+            'broken_sym_component_starts': ",".join(str(v) for v in sym_data['component_starts']),
+            'broken_sym_component_ends': ",".join(str(v) for v in sym_data['component_ends']),
+            'broken_sym_component_old_factors': ",".join(str(v) for v in sym_data['component_old_factors']),
+            'broken_sym_pid_list': ",".join(str(v) for v in sym_data['pid_list']),
+            'broken_sym_block_starts': ",".join(str(v) for v in sym_data['block_starts']),
+            'broken_sym_block_lengths': ",".join(str(v) for v in sym_data['block_lengths'])
+        }
+        template_path = pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                              'cpp_process_function_definitions.inc')
+        with open(template_path) as stream:
+            rendered = stream.read() % replace_dict
+        self.assertIn('const int n_components = 3;', rendered)
+        self.assertIn('const int comp_old[n_components] = {2,1,1};', rendered)
+        self.assertIn('const int block_len[n_entries] = {2,2,1,1,1,1};', rendered)
