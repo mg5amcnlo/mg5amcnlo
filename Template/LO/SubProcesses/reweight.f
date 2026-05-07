@@ -230,7 +230,7 @@ c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
 
       integer function resolve_merged_flavor(idmo,idda1,idda2,iconn,ipdg)
 c**************************************************
-c   Resolve merged flavor mother (PDG = +-81) with
+c   Resolve merged flavor mother (PDG = ±81, i.e. +81/-81) with
 c   a vertex-aware strategy.
 c**************************************************
       implicit none
@@ -239,7 +239,7 @@ c**************************************************
       include 'nexternal.inc'
 
       integer idmo,idda1,idda2,iconn
-      integer ipdg(n_max_cl), abs1, abs2, idext
+      integer ipdg(n_max_cl), absda1, absda2, idext
 
       resolve_merged_flavor=idmo
       if(iabs(idmo).ne.81) return
@@ -247,21 +247,21 @@ c**************************************************
 c     W changes flavor at the vertex; keep unresolved.
       if(iabs(idda1).eq.24.or.iabs(idda2).eq.24) return
 
-      abs1=iabs(idda1)
-      abs2=iabs(idda2)
+      absda1=iabs(idda1)
+      absda2=iabs(idda2)
 
 c     Use unambiguous daughter flavor when possible.
-      if(abs1.ge.1.and.abs1.le.6.and..not.(abs2.ge.1.and.abs2.le.6))then
-         resolve_merged_flavor=sign(abs1,idmo)
+      if(absda1.ge.1.and.absda1.le.6.and..not.(absda2.ge.1.and.absda2.le.6))then
+         resolve_merged_flavor=sign(absda1,idmo)
          return
       endif
-      if(abs2.ge.1.and.abs2.le.6.and..not.(abs1.ge.1.and.abs1.le.6))then
-         resolve_merged_flavor=sign(abs2,idmo)
+      if(absda2.ge.1.and.absda2.le.6.and..not.(absda1.ge.1.and.absda1.le.6))then
+         resolve_merged_flavor=sign(absda2,idmo)
          return
       endif
-      if(abs1.ge.1.and.abs1.le.6.and.abs2.ge.1.and.abs2.le.6.and.
-     $   abs1.eq.abs2) then
-         resolve_merged_flavor=sign(abs1,idmo)
+      if(absda1.ge.1.and.absda1.le.6.and.absda2.ge.1.and.absda2.le.6.and.
+     $   absda1.eq.absda2) then
+         resolve_merged_flavor=sign(absda1,idmo)
          return
       endif
 
