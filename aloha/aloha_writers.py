@@ -754,7 +754,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write('   flv_index2 = F2 %flv_index\n')
                 out.write('   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0d0)then  \n %s\n  return\nendif\n' % fail)
             else:
-                incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[i] == 'F'][0]
+                incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
                 outgoing = self.outgoing
                 out.write('  F%i %% FLV_INDEX = F%i %% FLV_INDEX\n' % (outgoing, incoming))
 
@@ -771,7 +771,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             out.write('   if(flv_index1.eq.0.or.flv_index2.eq.0)then  \n %s\n  return\nendif\n' % fail)
             out.write('   if(MCOUP %% PARTNER(flv_index1).ne.flv_index2)then \n %s\n return\n endif\n' %fail)
         else:
-            incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[i] == 'F'][0]
+            incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
             if incoming %2 == 1:
                 outgoing = self.outgoing
                 out.write('   flv_index%i = F%i %%flv_index\n' % (incoming, incoming))
@@ -1888,7 +1888,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out.write('   int flv_index2 = F2.flv_index;\n')
                 out.write('   if(flv_index1 != flv_index2 || flv_index1 == -1){  \n %s\n  return;\n}\n' % fail)
             else:
-                incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[i] == 'F'][0]
+                incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
                 outgoing = self.outgoing
                 out.write('  F%i.flv_index = F%i.flv_index;\n' % (outgoing, incoming))
 
@@ -1917,7 +1917,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 for i in range(1,nb_coupling+1):
                     out.write(' if(zero_coup%i ==0){COUP%i = *MCOUP%i.val[flv_index1];}\n' % (i,i,i))
         else:
-            incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[i] == 'F'][0]
+            incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
             if incoming %2 == 1:
                 outgoing = self.outgoing
                 out.write('   int flv_index%i = F%i.flv_index;\n' % (incoming, incoming))
