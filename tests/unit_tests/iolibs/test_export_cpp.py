@@ -2247,4 +2247,43 @@ class IOExportMatchBox(unittest.TestCase,
         self.assertFileContains('test.cc', goal_string, partial=True)
 
 
+class BrokenSymmetryCPPExportTest(unittest.TestCase):
+    """Ensure C++ exporter receives decay-aware broken symmetry metadata."""
 
+    def _make_process(self, model, initial_ids, final_ids, decays):
+        legs = base_objects.LegList()
+        for i, pid in enumerate(initial_ids + final_ids, 1):
+            legs.append(base_objects.Leg({'id': pid,
+                                          'state': i > len(initial_ids),
+                                          'number': i}))
+        process = base_objects.Process({'legs': legs,
+                                        'model': model,
+                                        'is_decay_chain': bool(decays)})
+        decay_chains = base_objects.ProcessList()
+        for parent_id, decay_finals in decays:
+            decay_legs = base_objects.LegList([base_objects.Leg({'id': parent_id,
+                                                                 'state': False,
+                                                                 'number': 1})])
+            for j, pid in enumerate(decay_finals, 2):
+                decay_legs.append(base_objects.Leg({'id': pid,
+                                                    'state': True,
+                                                    'number': j}))
+            decay_chains.append(base_objects.Process({'legs': decay_legs,
+                                                      'model': model,
+                                                      'is_decay_chain': True}))
+        process.set('decay_chains', decay_chains)
+        return process
+
+    def test_cpp_export_decay_chain_broken_symmetry_metadata(self):
+        model = import_ufo.import_model('sm')
+        core_proc = self._make_process(model, [2, -2], [23, 23],
+                                       [(23, [1, -1]), (23, [4, -4])])
+        amplitude = diagram_generation.DecayChainAmplitude(core_proc)
+        matrix_element = helas_objects.HelasDecayChainProcess(amplitude).\
+            combine_decay_chain_processes()[0]
+        cpp_writer = helas_call_writer.CPPUFOHelasCallWriter(model)
+        exporter = export_cpp.OneProcessExporterPythia8(matrix_element, cpp_writer)
+        replace_dict = exporter.get_process_function_definitions(write=False)
+        self.assertEqual(replace_dict['broken_sym_ncomponents'], 3)
+        self.assertEqual(replace_dict['broken_sym_component_old_factors'], '2,1,1')
+        self.assertEqual(replace_dict['broken_sym_block_lengths'], '2,2,1,1,1,1')

@@ -203,6 +203,82 @@ class ProcessExporterFortran(VirtualExporter):
         self.proc_characteristic = banner_mod.ProcCharacteristic()
         # call mother class
         super(ProcessExporterFortran,self).__init__(dir_path, opt)
+
+    @staticmethod
+    def _get_broken_symmetry_data(process, ninitial):
+        """Return decay-aware symmetry metadata for broken_sym generation."""
+
+        def sort_decay_chains_by_leg(proc):
+            decay_chains = copy.copy(proc.get('decay_chains'))
+            sorted_decay_chains = []
+            for leg in proc.get_final_legs():
+                init_ids = [d.get('legs')[0].get('id') for d in decay_chains]
+                if leg.get('id') in init_ids:
+                    sorted_decay_chains.append(decay_chains.pop(init_ids.index(leg.get('id'))))
+            return sorted_decay_chains
+
+        def recurse(proc, next_flav_index):
+            components = []
+            current_entries = []
+            decay_chains = sort_decay_chains_by_leg(proc)
+            for leg in proc.get_final_legs():
+                decay = None
+                for i, candidate in enumerate(decay_chains):
+                    if candidate.get('legs')[0].get('id') == leg.get('id'):
+                        decay = decay_chains.pop(i)
+                        break
+                if decay:
+                    start = next_flav_index
+                    child_components, next_flav_index = recurse(decay, next_flav_index)
+                    end = next_flav_index - 1
+                    components.extend(child_components)
+                else:
+                    start = next_flav_index
+                    end = next_flav_index
+                    next_flav_index += 1
+                current_entries.append({
+                    'pid': leg.get('id'),
+                    'start': start,
+                    'length': end - start + 1
+                })
+            components.insert(0, current_entries)
+            return components, next_flav_index
+
+        components, _ = recurse(process, ninitial + 1)
+
+        comp_starts = []
+        comp_ends = []
+        comp_old_factors = []
+        pid_list = []
+        block_starts = []
+        block_lengths = []
+        entry_idx = 1
+        for entries in components:
+            comp_starts.append(entry_idx)
+            counts = {}
+            old_factor = 1
+            for entry in entries:
+                pid = entry['pid']
+                counts[pid] = counts.get(pid, 0) + 1
+                pid_list.append(pid)
+                block_starts.append(entry['start'])
+                block_lengths.append(entry['length'])
+                entry_idx += 1
+            for multiplicity in counts.values():
+                old_factor *= math.factorial(multiplicity)
+            comp_old_factors.append(old_factor)
+            comp_ends.append(entry_idx - 1)
+
+        return {
+            'ncomponents': len(components),
+            'nentries': len(pid_list),
+            'component_starts': comp_starts,
+            'component_ends': comp_ends,
+            'component_old_factors': comp_old_factors,
+            'pid_list': pid_list,
+            'block_starts': block_starts,
+            'block_lengths': block_lengths
+        }
         
         
     #===========================================================================
@@ -3396,14 +3472,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
             else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
-        data = matrix_element.get('processes')[0].get_final_ids_after_decay()
-        replace_dict['get_pid'] = ' PID = %s' % (data)
-        replace_dict['get_old_symmmetry_value'] = 1
-        done = []
-        for value in data:
-            if value not in done:
-                done.append(value)
-                replace_dict['get_old_symmmetry_value'] *= math.factorial(data.count(value)) 
+        process = matrix_element.get('processes')[0]
+        sym_data = self._get_broken_symmetry_data(process, ninitial)
+        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+        replace_dict['broken_sym_nentries'] = sym_data['nentries']
+        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
+        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
+        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
+        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
+        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
+        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
 
         replace_dict['template_file'] = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
         replace_dict['template_file2'] = pjoin(_file_path, \
