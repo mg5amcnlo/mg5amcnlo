@@ -10234,6 +10234,18 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
         self.assertEqual(self._evaluate_broken_symmetry(sym_diff, [2, -2, 1, -1, 4, -4]), 2)
         self.assertEqual(self._evaluate_broken_symmetry(sym_same, [2, -2, 1, -1, 1, -1]), 1)
 
+    def test_madevent_template_uses_decay_aware_broken_symmetry_metadata(self):
+        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                              'matrix_madevent_group_v4.inc')).read()
+        self.assertIn('%(broken_sym_ncomponents)d', template)
+        self.assertIn('%(broken_sym_nentries)d', template)
+        self.assertIn('%(broken_sym_component_starts)s', template)
+        self.assertIn('%(broken_sym_component_ends)s', template)
+        self.assertIn('%(broken_sym_component_old_factors)s', template)
+        self.assertIn('%(broken_sym_pid_list)s', template)
+        self.assertIn('%(broken_sym_block_starts)s', template)
+        self.assertIn('%(broken_sym_block_lengths)s', template)
+
 
 if __name__ == '__main__':
         """Write out pkl file with helas diagram for test_configs_8fs

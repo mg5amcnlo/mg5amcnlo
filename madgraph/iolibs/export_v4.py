@@ -5287,7 +5287,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # into the DATA statement.
         model = matrix_element.get('processes')[0].get('model')
         pdg_to_group_pos = {}
-        for members in model.get('merged_particles').values():
+        merged_particles = model.get('merged_particles') or {}
+        for members in merged_particles.values():
             for pos, pdg in enumerate(members, 1):
                 pdg_to_group_pos[pdg] = pos
 
@@ -5296,8 +5297,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
         
         # information for computing the correct symmetry factor for each flavor
-        data = matrix_element.get('processes')[0].get_final_ids_after_decay()
-        replace_dict['get_pid'] = ' PID = %s' % (data)
+        process = matrix_element.get('processes')[0]
+        sym_data = self._get_broken_symmetry_data(process, ninitial)
+        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+        replace_dict['broken_sym_nentries'] = sym_data['nentries']
+        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
+        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
+        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
+        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
+        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
+        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
 
 
 
@@ -5478,7 +5487,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['maxflavor'] = len(all_flv)
         replace_dict['get_flavor_matrix'] = ''
         pdg_to_group_pos = {}
-        for members in self.model.get('merged_particles').values():
+        merged_particles = self.model.get('merged_particles') or {}
+        for members in merged_particles.values():
             for pos, pdg in enumerate(members, 1):
                 pdg_to_group_pos[pdg] = pos
         for i, flav in enumerate(all_flv):
