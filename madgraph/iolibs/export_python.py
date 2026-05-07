@@ -128,9 +128,9 @@ class ProcessExporterPython(object):
 
             # Information for the flavor-dependent symmetry factor (broken_sym),
             # using the same decay-aware component/block logic as Fortran/C++.
-            from madgraph.iolibs import export_v4 as export_fortran
+            from madgraph.iolibs import export_v4
             process = matrix_element.get('processes')[0]
-            sym_data = export_fortran.ProcessExporterFortran._get_broken_symmetry_data(
+            sym_data = export_v4.ProcessExporterFortran._get_broken_symmetry_data(
                 process, ninitial)
             replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
             replace_dict['broken_sym_component_starts'] = repr(list(sym_data['component_starts']))
