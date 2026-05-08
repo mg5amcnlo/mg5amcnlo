@@ -10196,23 +10196,24 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
             old_factor = sym_data['component_old_factors'][icomp]
             start = sym_data['component_starts'][icomp] - 1
             end = sym_data['component_ends'][icomp] - 1
-            for i in range(start, end + 1):
-                if pid_work[i] == 0:
-                    continue
-                n_tot = 1
-                for j in range(i + 1, end + 1):
-                    if pid_work[i] != pid_work[j]:
+            if old_factor > 1:
+                for i in range(start, end + 1):
+                    if pid_work[i] == 0:
                         continue
-                    same = sym_data['block_lengths'][i] == sym_data['block_lengths'][j]
-                    for k in range(sym_data['block_lengths'][i]):
-                        if flavor[sym_data['block_starts'][i] - 1 + k] != \
-                           flavor[sym_data['block_starts'][j] - 1 + k]:
-                            same = False
-                            break
-                    if same:
-                        pid_work[j] = 0
-                        n_tot += 1
-                        old_factor //= n_tot
+                    n_tot = 1
+                    for j in range(i + 1, end + 1):
+                        if pid_work[i] != pid_work[j]:
+                            continue
+                        same = sym_data['block_lengths'][i] == sym_data['block_lengths'][j]
+                        for k in range(sym_data['block_lengths'][i]):
+                            if flavor[sym_data['block_starts'][i] - 1 + k] != \
+                               flavor[sym_data['block_starts'][j] - 1 + k]:
+                                same = False
+                                break
+                        if same:
+                            pid_work[j] = 0
+                            n_tot += 1
+                            old_factor //= n_tot
             total *= old_factor
         return total
 
@@ -10231,7 +10232,14 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
                                        [(23, [1, -1]), (23, [1, -1])])
         sym_diff = export_v4.ProcessExporterFortran._get_broken_symmetry_data(proc_diff, 2)
         sym_same = export_v4.ProcessExporterFortran._get_broken_symmetry_data(proc_same, 2)
-        self.assertEqual(self._evaluate_broken_symmetry(sym_diff, [2, -2, 1, -1, 4, -4]), 2)
+        # proc_diff: two Z bosons decay to *different* specific particles (d vs c).
+        # Their decay sub-tree fingerprints differ, so COMP_OLD[0]=1 and
+        # no runtime correction is applied -> BROKEN_SYM = 1.
+        self.assertEqual(sym_diff['component_old_factors'][0], 1)
+        self.assertEqual(self._evaluate_broken_symmetry(sym_diff, [2, -2, 1, -1, 4, -4]), 1)
+        # proc_same: both Z bosons decay identically -> COMP_OLD[0]=2.
+        # Runtime check: same block -> old_factor reduces to 1 -> BROKEN_SYM = 1.
+        self.assertEqual(sym_same['component_old_factors'][0], 2)
         self.assertEqual(self._evaluate_broken_symmetry(sym_same, [2, -2, 1, -1, 1, -1]), 1)
 
     def test_madevent_template_uses_decay_aware_broken_symmetry_metadata(self):

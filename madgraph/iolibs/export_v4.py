@@ -229,22 +229,31 @@ class ProcessExporterFortran(VirtualExporter):
                         break
                 if decay:
                     start = next_flav_index
-                    child_components, next_flav_index = recurse(decay, next_flav_index)
+                    child_components, child_fingerprints, next_flav_index = \
+                        recurse(decay, next_flav_index)
                     end = next_flav_index - 1
                     components.extend(child_components)
+                    # Fingerprint encodes the entire decay sub-tree so that
+                    # two entries with the same PID but different decay
+                    # products are not counted as identical when computing
+                    # the symmetry factor COMP_OLD.
+                    fingerprint = (leg.get('id'), tuple(child_fingerprints))
                 else:
                     start = next_flav_index
                     end = next_flav_index
                     next_flav_index += 1
+                    fingerprint = (leg.get('id'),)
                 current_entries.append({
                     'pid': leg.get('id'),
                     'start': start,
-                    'length': end - start + 1
+                    'length': end - start + 1,
+                    'fingerprint': fingerprint,
                 })
             components.insert(0, current_entries)
-            return components, next_flav_index
+            current_fingerprints = [e['fingerprint'] for e in current_entries]
+            return components, current_fingerprints, next_flav_index
 
-        components, _ = recurse(process, ninitial + 1)
+        components, _, _ = recurse(process, ninitial + 1)
 
         comp_starts = []
         comp_ends = []
@@ -255,16 +264,23 @@ class ProcessExporterFortran(VirtualExporter):
         entry_idx = 1
         for entries in components:
             comp_starts.append(entry_idx)
-            counts = {}
+            # Count identical entries by (pid, full-decay-tree fingerprint).
+            # Two entries with the same top-level PID but different decay
+            # sub-trees are NOT identical and must not contribute to the
+            # over-counting factor.  Using only the PID (old behaviour) was
+            # wrong: e.g. two Z bosons decaying to _quark and _lepton were
+            # both counted as PID=23 giving COMP_OLD=2, even though the base
+            # IDEN already treats them as distinguishable.
+            fp_counts = {}
             old_factor = 1
             for entry in entries:
-                pid = entry['pid']
-                counts[pid] = counts.get(pid, 0) + 1
-                pid_list.append(pid)
+                key = entry['fingerprint']
+                fp_counts[key] = fp_counts.get(key, 0) + 1
+                pid_list.append(entry['pid'])
                 block_starts.append(entry['start'])
                 block_lengths.append(entry['length'])
                 entry_idx += 1
-            for multiplicity in counts.values():
+            for multiplicity in fp_counts.values():
                 old_factor *= math.factorial(multiplicity)
             comp_old_factors.append(old_factor)
             comp_ends.append(entry_idx - 1)

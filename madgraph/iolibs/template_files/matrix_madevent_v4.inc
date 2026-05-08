@@ -350,6 +350,7 @@ endif
       TOTAL_FACTOR = 1
       DO ICOMP=1,NCOMP
          OLD_FACTOR = COMP_OLD(ICOMP)
+         IF (COMP_OLD(ICOMP).GT.1) THEN
          DO I=COMP_BEG(ICOMP),COMP_END(ICOMP)
             IF (PID_WORK(I).EQ.0) CYCLE
             N_TOT = 1
@@ -371,6 +372,7 @@ endif
                ENDIF
             ENDDO
          ENDDO
+         ENDIF
          TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR
       ENDDO
       BROKEN_SYM%(proc_id)s = TOTAL_FACTOR

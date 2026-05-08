@@ -2304,5 +2304,5 @@ class BrokenSymmetryCPPExportTest(unittest.TestCase):
         with open(template_path) as stream:
             rendered = stream.read() % replace_dict
         self.assertIn('const int n_components = 3;', rendered)
-        self.assertIn('const int comp_old[n_components] = {2,1,1};', rendered)
+        self.assertIn('const int comp_old[n_components] = {1,1,1};', rendered)
         self.assertIn('const int block_len[n_entries] = {2,2,1,1,1,1};', rendered)

@@ -1738,6 +1738,8 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        # Absolute value check (apply_flavor_grouping=False reference)
+        self.assertAlmostEqual(flavor_value/1.4452059645560334e-15, 1.0, places=5)
 
         #######################################################################
         cmd[0] = 'set apply_flavor_grouping False' 
@@ -1746,14 +1748,41 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/2.8904119291120669e-15, 1.0, places=5)
 
         #######################################################################
+        # Two Z bosons decaying to different quark/lepton species: tests that
+        # the decay-tree fingerprint fix correctly sets COMP_OLD=1 for the
+        # no-grouping case (preventing a spurious factor of 2).
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z z, z > u u~, z > e+ e-'
         flavor_value = self.run_standalone(cmd)
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/1.3222299076541260e-14, 1.0, places=5)
+
+        #######################################################################
+        # Two Z bosons decaying to different quarks (both merge to _quark):
+        # tests that no-grouping COMP_OLD=1 while grouping COMP_OLD=2 with
+        # runtime correction, giving the same physical result.
+        cmd[0] = 'set apply_flavor_grouping False'
+        cmd[2] = 'generate e+ e- > z z, z > d d~, z > s s~'
+        flavor_value = self.run_standalone(cmd)
+        cmd[0] = 'set apply_flavor_grouping True'
+        unflavor_value = self.run_standalone(cmd)
+        self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/1.5703482894659815e-14, 1.0, places=5)
+
+        #######################################################################
+        # Two Z bosons decaying to identical quarks (COMP_OLD=2 in both cases).
+        cmd[0] = 'set apply_flavor_grouping False'
+        cmd[2] = 'generate e+ e- > z z, z > u u~, z > u u~'
+        flavor_value = self.run_standalone(cmd)
+        cmd[0] = 'set apply_flavor_grouping True'
+        unflavor_value = self.run_standalone(cmd)
+        self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/1.0543959064905002e-14, 1.0, places=5)
 
         #######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
@@ -1762,6 +1791,7 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/1.9524089070808569e-14, 1.0, places=5)
 
         #######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
@@ -1770,6 +1800,7 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/1.9524089070808569e-14, 1.0, places=5)
         #######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z a, z > mu+ mu-, a > u u~'
@@ -1777,6 +1808,7 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/2.6032118761078096e-14, 1.0, places=5)
         #######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z a, z > mu+ mu-, a > t t~'
@@ -1784,6 +1816,7 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/3.9704302268721535e-14, 1.0, places=5)
         ######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z z h, z > u u~, z > e+ e-, h > b b~'
@@ -1792,6 +1825,7 @@ P1_qq_wp_wp_lvl
         unflavor_value = self.run_standalone(cmd)
 
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/2.1127915184144537e-27, 1.0, places=5)
         ######################################################################
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-'
@@ -1800,8 +1834,6 @@ P1_qq_wp_wp_lvl
         unflavor_value = self.run_standalone(cmd)
 
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
-
-
 
     def test_save_load(self):
         """ check that we can use standard MG4 name """

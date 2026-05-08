@@ -71,6 +71,8 @@ int CPPProcess::broken_sym(int* flavor)
     for (int icomp = 0; icomp < n_components; icomp++)
     {
         int old_factor = comp_old[icomp];
+        if (comp_old[icomp] > 1)
+        {
         for (int i = comp_beg[icomp] - 1; i < comp_end[icomp]; i++)
         {
             if (pid_work[i] == 0)
@@ -93,6 +95,7 @@ int CPPProcess::broken_sym(int* flavor)
                     old_factor = old_factor / n_tot;
                 }
             }
+        }
         }
         total_factor = total_factor * old_factor;
     }
