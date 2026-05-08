@@ -812,7 +812,7 @@ class DiagramGenerationTest(unittest.TestCase):
         cmd.do_import('model sm')
         model = cmd._curr_model
 
-        # This process must be rejected: no concrete quark-flavor assignment can conserve Q.
+        # This process must be rejected: no concrete quark-flavor assignment can conserve charge.
         invalid_legs = base_objects.LegList([
             base_objects.Leg({'id':21, 'state':False}),
             base_objects.Leg({'id':21, 'state':False}),
@@ -826,7 +826,7 @@ class DiagramGenerationTest(unittest.TestCase):
         self.assertRaises(InvalidCmd, invalid_amp.generate_diagrams)
         self.assertEqual(len(invalid_amp.get('diagrams')), 0)
 
-        # This process must remain allowed: at least one flavor assignment conserves Q.
+        # This process must remain allowed: at least one flavor assignment conserves charge.
         valid_legs = base_objects.LegList([
             base_objects.Leg({'id':81, 'state':False}),
             base_objects.Leg({'id':-81, 'state':False}),

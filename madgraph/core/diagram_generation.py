@@ -625,7 +625,7 @@ class Amplitude(base_objects.PhysicsObject):
                         signed_values.append(-float(val))
                     else:
                         signed_values.append(float(val))
-                totals = set(prev + val for prev in totals for val in signed_values)
+                totals = set(round(prev + val, 12) for prev in totals for val in signed_values)
 
             if not any(abs(total) <= 1e-10 for total in totals):
                 if not returndiag:

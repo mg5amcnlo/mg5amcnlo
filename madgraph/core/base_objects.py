@@ -385,8 +385,8 @@ class Particle(PhysicsObject):
                 for v in value:
                     if not isinstance(v, (int, float)):
                         raise self.PhysicsObjectError("Charge entry %s is not numeric" % repr(v))
-            elif not isinstance(value, (int, float)):
-                raise self.PhysicsObjectError("Charge %s is not a number" % repr(value))
+            elif not isinstance(value, float):
+                raise self.PhysicsObjectError("Charge %s is not a float" % repr(value))
 
         if name == 'propagating':
             if not isinstance(value, bool):
@@ -1515,7 +1515,14 @@ class Model(PhysicsObject):
 
         new_part['name'] = name
         new_part['pdg_code'] = pdg_code
-        charge_values = sorted(set(float(p.get('charge')) for p in particles))
+        charge_values = set()
+        for p in particles:
+            p_charge = p.get('charge')
+            if isinstance(p_charge, tuple):
+                charge_values.update(round(float(v), 12) for v in p_charge)
+            else:
+                charge_values.add(round(float(p_charge), 12))
+        charge_values = sorted(charge_values)
         if len(charge_values) == 1:
             new_part['charge'] = charge_values[0]
         else:
@@ -1761,7 +1768,12 @@ class Model(PhysicsObject):
         new_part['name'] = name
         new_part['antiname'] = name 
         new_part['pdg_code'] = pdg_code
-        charge_values = sorted(set([float(particle.get('charge')), -float(particle.get('charge'))]))
+        charge_values = set()
+        part_charge = particle.get('charge')
+        part_charge_values = part_charge if isinstance(part_charge, tuple) else (part_charge,)
+        for val in part_charge_values:
+            charge_values.update([round(float(val), 12), round(-float(val), 12)])
+        charge_values = sorted(charge_values)
         if len(charge_values) == 1:
             new_part['charge'] = charge_values[0]
         else:
