@@ -895,7 +895,7 @@ class UFOMG5Converter(object):
             else:
                 return '%s*(%s)' %(coeff1,expr1)
 
-        lorentz_structures = ['Gamma(3,2,-1)*ProjP(-1,1)','Gamma(3,2,-1)*ProjM(-1,1)']
+        lorentz_structures = ['Gamma(3,2,-1)*ProjP(-1,1)','Gamma(3,2,-1)*ProjM(-1,1)', 'ProjP(2,1)', 'ProjM(2,1)']
         proj = []
         for structure in lorentz_structures:
             lorentz = [l for l in self.model['lorentz'] if l.get('structure') == structure]
