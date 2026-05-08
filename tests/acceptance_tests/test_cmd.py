@@ -39,6 +39,8 @@ _pickle_path =os.path.join(_file_path, 'input_files')
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 from tests import test_manager
 
+_v4_model_path = os.path.join(MG5DIR, 'tests', 'input_files', 'full_sm')
+
 #===============================================================================
 # TestCmd
 #===============================================================================
@@ -432,6 +434,14 @@ class TestCmdShell2(unittest.TestCase,
         self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
+    def test_import_model_v4_requires_debug(self):
+        """Test that importing a v4 model is now debug-only."""
+
+        self.assertRaises(InvalidCmd, self.do, 'import model_v4 %s' % _v4_model_path)
+        self.do('import model_v4 %s --debug' % _v4_model_path)
+        self.assertTrue(self.cmd._curr_model)
+        self.assertTrue(self.cmd._model_v4_path)
+
     def test_check_generate_optimize(self):
         """Test that errors are raised appropriately for output"""
 
@@ -459,6 +469,16 @@ class TestCmdShell2(unittest.TestCase,
         os.system('cp -rf %s %s' % (
                             TestCmdShell1.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
+        proc_card_path = os.path.join(self.out_dir, 'Cards', 'proc_card.dat')
+        with open(proc_card_path) as proc_card_file:
+            proc_card = proc_card_file.read()
+        proc_card = proc_card.replace('sm           \n', '%s\n' % _v4_model_path)
+        proc_card = proc_card.replace('L+ e+mu+\n', 'L+ e+\n')
+        proc_card = proc_card.replace('L- e-mu-\n', 'L- e-\n')
+        proc_card = proc_card.replace('vl vevm\n', 'vl ve\n')
+        proc_card = proc_card.replace('vl~ ve~vm~\n', 'vl~ ve~\n')
+        with open(proc_card_path, 'w') as proc_card_file:
+            proc_card_file.write(proc_card)
     
         self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
@@ -470,12 +490,12 @@ class TestCmdShell2(unittest.TestCase,
             raise
         os.chdir(pwd)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_ll_vlvl')))
+                                              'SubProcesses', 'P1_emep_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P1_ll_vlvl',
+                                                    'P1_emep_vlvl',
                                                     'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
@@ -489,7 +509,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmtree(self.out_dir)
 
         self.do('set group_subprocesses False')
-        self.do('import model_v4 sm')
+        self.do('import model sm')
         self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s' % self.out_dir)
         self.do('set group_subprocesses True')

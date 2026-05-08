@@ -356,10 +356,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("")
         logger.info("      Type 'display modellist' to have the list of all model available.",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model_v4 MODEL [--modelname] :",'$MG:BOLD')
-        logger.info("      Import an MG4 model.")
+        logger.info("   import model_v4 MODEL --debug [--modelname] :",'$MG:BOLD')
+        logger.info("      Import an MG4 model in debug mode only.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
+        logger.info("      This deprecated command is no longer supported in normal user mode.")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :",'$MG:BOLD')
@@ -1270,12 +1271,17 @@ class CheckValidForCmd(cmd.CheckCmd):
         
         modelname = False
         prefix = True
+        debug = False
         if '-modelname' in args:
             args.remove('-modelname')
             modelname = True
         elif '--modelname' in args:
             args.remove('--modelname')
             modelname = True
+
+        if '--debug' in args:
+            args.remove('--debug')
+            debug = True
             
         if '--noprefix' in args:
             args.remove('--noprefix')
@@ -1331,6 +1337,12 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if modelname:
             args.append('-modelname')
+
+        if args[0] == 'model_v4' and not debug:
+            raise self.InvalidCmd(
+                'The "import model_v4" command is deprecated and no longer '
+                'available in normal user mode. If you really need it for '
+                'debugging, use "import model_v4 MODEL --debug".')
 
 
 
@@ -5863,10 +5875,6 @@ This implies that with decay chains:
             # Import model
             if args[0].endswith('_v4'):
                 logger.critical("Support for V4 model is deprecated and known to not be fully working in this version of MG5aMC. Please consider to use an older (Long Term Stable) version if you can not use UFO model")
-                if not force:
-                    ans = self.ask("Do you want to continue anyway?", "stop", ["continue", "stop"], timeout=20)
-                    if ans == "stop":
-                        return
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
             else:
@@ -6114,7 +6122,7 @@ This implies that with decay chains:
         if self._mgme_dir:
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model, precmd=True)
-            line = self.exec_cmd('import model_v4 %s -modelname' % \
+            line = self.exec_cmd('import model_v4 %s --debug -modelname' % \
                                  (reader.model), precmd=True, force=True)
         else:
             logging.error('No MG_ME installation detected')

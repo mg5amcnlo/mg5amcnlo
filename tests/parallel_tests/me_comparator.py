@@ -436,7 +436,7 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
+        v5_string = "import model_v4 %s --debug\n" % os.path.join(self.model_dir, model)
         v5_string += "set automatic_html_opening False\n"
         couplings = MERunner.get_coupling_definitions(orders)
 
@@ -1073,4 +1073,3 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-
