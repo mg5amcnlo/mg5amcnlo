@@ -379,8 +379,14 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError("Line type %s is unknown" % value)
 
         if name == 'charge':
-            if not isinstance(value, float):
-                raise self.PhysicsObjectError("Charge %s is not a float" % repr(value))
+            if isinstance(value, tuple):
+                if not value:
+                    raise self.PhysicsObjectError("Charge tuple %s is empty" % repr(value))
+                for v in value:
+                    if not isinstance(v, (int, float)):
+                        raise self.PhysicsObjectError("Charge entry %s is not numeric" % repr(v))
+            elif not isinstance(value, (int, float)):
+                raise self.PhysicsObjectError("Charge %s is not a number" % repr(value))
 
         if name == 'propagating':
             if not isinstance(value, bool):
@@ -458,6 +464,11 @@ class Particle(PhysicsObject):
     def get_charge(self):
         """Return the charge code with a correct minus sign"""
 
+        if isinstance(self['charge'], tuple):
+            values = tuple(float(v) for v in self['charge'])
+            if not self['is_part']:
+                return tuple(-v for v in values)
+            return values
         if not self['is_part']:
             return - self['charge']
         else:
@@ -467,6 +478,11 @@ class Particle(PhysicsObject):
         """Return the charge code of the antiparticle with a correct minus sign
         """
 
+        if isinstance(self['charge'], tuple):
+            values = tuple(float(v) for v in self['charge'])
+            if self['is_part']:
+                return tuple(-v for v in values)
+            return values
         if self['is_part']:
             return - self['charge']
         else:
@@ -1499,9 +1515,11 @@ class Model(PhysicsObject):
 
         new_part['name'] = name
         new_part['pdg_code'] = pdg_code
-        new_part['charge'] = particles[0].get('charge') # might not be the same for all particles !
-        if any(p.get('charge') != particles[0].get('charge') for p in particles):
-            self['conserved_charge'].discard('charge')
+        charge_values = sorted(set(float(p.get('charge')) for p in particles))
+        if len(charge_values) == 1:
+            new_part['charge'] = charge_values[0]
+        else:
+            new_part['charge'] = tuple(charge_values)
         # handle all conserved quantum numbers (LeptonNumber, Y, etc.)
         for charge in list(self['conserved_charge']):
             if charge == 'charge':
@@ -1743,9 +1761,11 @@ class Model(PhysicsObject):
         new_part['name'] = name
         new_part['antiname'] = name 
         new_part['pdg_code'] = pdg_code
-        new_part['charge'] = particle.get('charge') # will not be the same 
-        if particle.get('charge') != 0:
-            self['conserved_charge'].discard('charge')
+        charge_values = sorted(set([float(particle.get('charge')), -float(particle.get('charge'))]))
+        if len(charge_values) == 1:
+            new_part['charge'] = charge_values[0]
+        else:
+            new_part['charge'] = tuple(charge_values)
         new_part['self_antipart'] = True
         # handle all parameter that have to be the same
         iden_param = ['mass', 'spin', 'color', 'width', 'line', 'propagator', 'is_part', 'type', 'counterterm']
