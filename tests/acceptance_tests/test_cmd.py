@@ -1830,10 +1830,37 @@ P1_qq_wp_wp_lvl
         cmd[0] = 'set apply_flavor_grouping False'
         cmd[2] = 'generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-'
         flavor_value = self.run_standalone(cmd)
-        cmd.insert(0, 'set apply_flavor_grouping True')
+        cmd[0] = 'set apply_flavor_grouping True'
         unflavor_value = self.run_standalone(cmd)
 
         self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        self.assertAlmostEqual(flavor_value/2.1127915184144537e-27, 1.0, places=5)
+        
+        ######################################################################
+        cmd[0] = 'set apply_flavor_grouping False'
+        cmd[2] = 'generate e+ e- > t t~ z, z > e+ e-, (t > z t, z > e+ e- ), (t~ > t~ z, z > e+ e- )'
+        flavor_value = self.run_standalone(cmd)
+        cmd[0] = 'set apply_flavor_grouping True'
+        unflavor_value = self.run_standalone(cmd)
+        
+        self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        ######################################################################
+        cmd[0] = 'set apply_flavor_grouping False'
+        cmd[2] = 'generate e+ e- > t t~ z, z > e+ e-, (t > z t, z > e+ e- ), (t~ > t~ z, z > mu+ mu- )'
+        flavor_value = self.run_standalone(cmd)
+        cmd[0] = 'set apply_flavor_grouping True'
+        unflavor_value = self.run_standalone(cmd)
+
+        self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+        ######################################################################
+        cmd[0] = 'set apply_flavor_grouping False'
+        cmd[2] = 'generate e+ e- > t t~ z, z > d d~, (t > z t, z > e+ e- ), (t~ > t~ z, z > mu+ mu- )'
+        flavor_value = self.run_standalone(cmd)
+        cmd[0] = 'set apply_flavor_grouping True'
+        unflavor_value = self.run_standalone(cmd)
+
+        self.assertAlmostEqual(flavor_value/unflavor_value, 1.0, places=5)
+
 
     def test_save_load(self):
         """ check that we can use standard MG4 name """
