@@ -961,14 +961,7 @@ class OneProcessExporterCPP(object):
         replace_dict['nincoming'] = nincoming
         process = self.matrix_elements[0].get('processes')[0]
         sym_data = ProcessExporterFortran._get_broken_symmetry_data(process, nincoming)
-        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
-        replace_dict['broken_sym_nentries'] = sym_data['nentries']
-        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
-        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
-        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
-        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
-        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
-        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
+        ProcessExporterFortran._fill_broken_sym_replace_dict(replace_dict, sym_data)
     
         if write:
             file = self.read_template_file(self.process_definition_template) %\

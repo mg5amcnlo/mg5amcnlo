@@ -295,8 +295,28 @@ class ProcessExporterFortran(VirtualExporter):
             'block_starts': block_starts,
             'block_lengths': block_lengths
         }
-        
-        
+
+    @staticmethod
+    def _fill_broken_sym_replace_dict(replace_dict, sym_data):
+        """Populate *replace_dict* with the eight broken_sym_* Fortran DATA
+        keys that are consumed by the BROKEN_SYM function in every matrix
+        template.  Centralised here so that callers never drift out of sync.
+        """
+        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+        replace_dict['broken_sym_nentries'] = sym_data['nentries']
+        replace_dict['broken_sym_component_starts'] = \
+            ",".join(str(v) for v in sym_data['component_starts'])
+        replace_dict['broken_sym_component_ends'] = \
+            ",".join(str(v) for v in sym_data['component_ends'])
+        replace_dict['broken_sym_component_old_factors'] = \
+            ",".join(str(v) for v in sym_data['component_old_factors'])
+        replace_dict['broken_sym_pid_list'] = \
+            ",".join(str(v) for v in sym_data['pid_list'])
+        replace_dict['broken_sym_block_starts'] = \
+            ",".join(str(v) for v in sym_data['block_starts'])
+        replace_dict['broken_sym_block_lengths'] = \
+            ",".join(str(v) for v in sym_data['block_lengths'])
+
     #===========================================================================
     # process exporter fortran switch between group and not grouped
     #===========================================================================
@@ -3490,14 +3510,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
-        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
-        replace_dict['broken_sym_nentries'] = sym_data['nentries']
-        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
-        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
-        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
-        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
-        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
-        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
+        self._fill_broken_sym_replace_dict(replace_dict, sym_data)
 
         replace_dict['template_file'] = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
         replace_dict['template_file2'] = pjoin(_file_path, \
@@ -4185,14 +4198,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
-        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
-        replace_dict['broken_sym_nentries'] = sym_data['nentries']
-        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
-        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
-        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
-        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
-        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
-        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
+        self._fill_broken_sym_replace_dict(replace_dict, sym_data)
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
@@ -5327,14 +5333,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # information for computing the correct symmetry factor for each flavor
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
-        replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
-        replace_dict['broken_sym_nentries'] = sym_data['nentries']
-        replace_dict['broken_sym_component_starts'] = ",".join(str(v) for v in sym_data['component_starts'])
-        replace_dict['broken_sym_component_ends'] = ",".join(str(v) for v in sym_data['component_ends'])
-        replace_dict['broken_sym_component_old_factors'] = ",".join(str(v) for v in sym_data['component_old_factors'])
-        replace_dict['broken_sym_pid_list'] = ",".join(str(v) for v in sym_data['pid_list'])
-        replace_dict['broken_sym_block_starts'] = ",".join(str(v) for v in sym_data['block_starts'])
-        replace_dict['broken_sym_block_lengths'] = ",".join(str(v) for v in sym_data['block_lengths'])
+        self._fill_broken_sym_replace_dict(replace_dict, sym_data)
 
 
 

@@ -1708,7 +1708,6 @@ P1_qq_wp_wp_lvl
 
     def run_standalone(self,commands):
 
-        devnull = open(os.devnull,'w')
         for command in commands:
             self.do(command)
         self.do('output standalone %s -f' % self.out_dir)
@@ -1716,9 +1715,8 @@ P1_qq_wp_wp_lvl
         for pdir in misc.glob('P*', pjoin(self.out_dir, 'SubProcesses')):
             Pdir = pdir
             break 
-        subprocess.call(['make', 'check'], cwd=Pdir, stdout=devnull)
-        #stdout = proc.communicate()[0].decode('utf8')
-        misc.sprint(os.listdir(Pdir)) 
+        subprocess.call(['make', 'check'], cwd=Pdir, stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL)
         stdout = subprocess.Popen(['./check'], cwd=Pdir,
                             stdout=subprocess.PIPE).communicate()[0].decode('utf8')
         value = None
