@@ -3388,6 +3388,26 @@ END"""
         
         
     
+    def test_short_multiple_lorentz_subset_explicit_combine_mixed_spins(self):
+        """test explicit combined cpp fallback for mixed-spin Lorentz structures"""
+
+        helas_suite = create_aloha.AbstractALOHAModel('sm', explicit_combine=True)
+        helas_suite.add_Lorentz_object([self.Lorentz(name='SVS1',
+                                                     spins=[1, 3, 1],
+                                                     structure='P(2,1) - P(2,3)')])
+        requested_routines = [(('VVS1', 'SSS1', 'VSS1', 'SVS1'), (), 0)]
+
+        helas_suite.compute_subset(requested_routines)
+
+        self.assertIn(('VVS1', 0), helas_suite)
+        self.assertEqual(helas_suite[('VVS1', 0)].combined,
+                         [('SSS1', 'VSS1', 'SVS1')])
+
+        routine_h, routine_c = helas_suite[('VVS1', 0)].write(output_dir=None,
+                                                              language='CPP')
+        self.assertIn('VVS1_SSS1_VSS1_SVS1_0', routine_h)
+        self.assertIn('VVS1_SSS1_VSS1_SVS1_0', routine_c)
+
     def test_short_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
