@@ -479,7 +479,6 @@ class UFOModelConverterCPP(object):
 
         template_files = []
         for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
-            misc.sprint("Reading ALOHA template file %s" % filename)
             file = open(filename, 'r')
             template_file_string = ""
             while file:
