@@ -1723,7 +1723,7 @@ P1_qq_wp_wp_lvl
         for line in stdout.split('\n'):
             if 'Matrix element' in line:
                 value = line.split('=')[1]
-                value = float(value. split('GeV')[0])
+                value = float(value.split('GeV')[0])
         return value
 
     def test_decay_chain_symmetry_factor(self):

@@ -301,6 +301,8 @@ class ProcessExporterFortran(VirtualExporter):
         """Populate *replace_dict* with the eight broken_sym_* Fortran DATA
         keys that are consumed by the BROKEN_SYM function in every matrix
         template.  Centralised here so that callers never drift out of sync.
+        Also used by the C++ and Python exporters which keep the individual
+        DATA keys in their own templates.
         """
         replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
         replace_dict['broken_sym_nentries'] = sym_data['nentries']
@@ -316,6 +318,91 @@ class ProcessExporterFortran(VirtualExporter):
             ",".join(str(v) for v in sym_data['block_starts'])
         replace_dict['broken_sym_block_lengths'] = \
             ",".join(str(v) for v in sym_data['block_lengths'])
+
+    @staticmethod
+    def _make_broken_sym_fortran_function(func_name, sym_data,
+                                          nexternal_decl='include'):
+        """Return the complete Fortran BROKEN_SYM function as a string.
+
+        This single implementation is shared by all Fortran matrix templates
+        via the %(broken_sym_function)s placeholder, eliminating copy-paste
+        duplication.
+
+        Args:
+            func_name      : full Fortran function name, e.g. 'BROKEN_SYM1'
+                             or 'MYSMATRIX_BROKEN_SYM'.
+            sym_data       : dict returned by _get_broken_symmetry_data.
+            nexternal_decl : 'include' (default) to emit
+                             "include 'nexternal.inc'", or an integer to emit
+                             an explicit PARAMETER (NEXTERNAL=N) declaration
+                             (used by templates that lack the include file).
+        """
+        lines = [
+            '      INTEGER FUNCTION %s(FLAV)' % func_name,
+        ]
+        if nexternal_decl == 'include':
+            lines.append("      include 'nexternal.inc'")
+        else:
+            lines.append('      INTEGER NEXTERNAL')
+            lines.append('      PARAMETER (NEXTERNAL=%d)' % int(nexternal_decl))
+        lines += [
+            '      INTEGER FLAV(NEXTERNAL)',
+            '      INTEGER I,J,K,ICOMP',
+            '      INTEGER N_TOT, OLD_FACTOR, TOTAL_FACTOR',
+            '      INTEGER NCOMP, NENTRIES',
+            '      PARAMETER (NCOMP=%d)' % sym_data['ncomponents'],
+            '      PARAMETER (NENTRIES=%d)' % sym_data['nentries'],
+            '      INTEGER COMP_BEG(NCOMP), COMP_END(NCOMP), COMP_OLD(NCOMP)',
+            '      INTEGER PID_LIST(NENTRIES), PID_WORK(NENTRIES)',
+            '      INTEGER BLOCK_START(NENTRIES), BLOCK_LEN(NENTRIES)',
+            '      LOGICAL SAME_BLOCK',
+            '      DATA COMP_BEG /%s/' % ','.join(
+                str(v) for v in sym_data['component_starts']),
+            '      DATA COMP_END /%s/' % ','.join(
+                str(v) for v in sym_data['component_ends']),
+            '      DATA COMP_OLD /%s/' % ','.join(
+                str(v) for v in sym_data['component_old_factors']),
+            '      DATA PID_LIST /%s/' % ','.join(
+                str(v) for v in sym_data['pid_list']),
+            '      DATA BLOCK_START /%s/' % ','.join(
+                str(v) for v in sym_data['block_starts']),
+            '      DATA BLOCK_LEN /%s/' % ','.join(
+                str(v) for v in sym_data['block_lengths']),
+            '',
+            '      PID_WORK = PID_LIST',
+            '      TOTAL_FACTOR = 1',
+            '      DO ICOMP=1,NCOMP',
+            '         OLD_FACTOR = COMP_OLD(ICOMP)',
+            '         IF (COMP_OLD(ICOMP).GT.1) THEN',
+            '         DO I=COMP_BEG(ICOMP),COMP_END(ICOMP)',
+            '            IF (PID_WORK(I).EQ.0) CYCLE',
+            '            N_TOT = 1',
+            '            DO J=I+1,COMP_END(ICOMP)',
+            '               IF (PID_WORK(I).EQ.PID_WORK(J)) THEN',
+            '                  SAME_BLOCK = .TRUE.',
+            '                  IF (BLOCK_LEN(I).NE.BLOCK_LEN(J)) SAME_BLOCK = .FALSE.',
+            '                  DO K=1,BLOCK_LEN(I)',
+            '                     IF (FLAV(BLOCK_START(I)+K-1).NE.'
+            'FLAV(BLOCK_START(J)+K-1)) THEN',
+            '                        SAME_BLOCK = .FALSE.',
+            '                     ENDIF',
+            '                  ENDDO',
+            '                  IF (SAME_BLOCK) THEN',
+            '                     PID_WORK(J) = 0',
+            '                     N_TOT = N_TOT + 1',
+            '                     OLD_FACTOR = OLD_FACTOR/N_TOT',
+            '                  ENDIF',
+            '               ENDIF',
+            '            ENDDO',
+            '         ENDDO',
+            '         ENDIF',
+            '         TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR',
+            '      ENDDO',
+            '      %s = TOTAL_FACTOR' % func_name,
+            '      return',
+            '      end',
+        ]
+        return '\n'.join(lines)
 
     #===========================================================================
     # process exporter fortran switch between group and not grouped
@@ -3511,6 +3598,17 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
         self._fill_broken_sym_replace_dict(replace_dict, sym_data)
+        if matrix_template == 'matrix_standalone_msP_v4.inc':
+            bs_func_name = 'BROKEN_SYM_PROD'
+            bs_nexternal = replace_dict['nexternal']
+        elif matrix_template == 'matrix_standalone_msF_v4.inc':
+            bs_func_name = 'BROKEN_SYM'
+            bs_nexternal = 'include'
+        else:
+            bs_func_name = replace_dict['proc_prefix'] + 'BROKEN_SYM'
+            bs_nexternal = 'include'
+        replace_dict['broken_sym_function'] = \
+            self._make_broken_sym_fortran_function(bs_func_name, sym_data, bs_nexternal)
 
         replace_dict['template_file'] = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
         replace_dict['template_file2'] = pjoin(_file_path, \
@@ -4199,6 +4297,12 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
         self._fill_broken_sym_replace_dict(replace_dict, sym_data)
+        if 'group' in self.matrix_file:
+            bs_func_name = 'BROKEN_SYM' + str(replace_dict['proc_id'])
+        else:
+            bs_func_name = replace_dict.get('proc_prefix', '') + 'BROKEN_SYM'
+        replace_dict['broken_sym_function'] = \
+            self._make_broken_sym_fortran_function(bs_func_name, sym_data)
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
@@ -5334,6 +5438,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         process = matrix_element.get('processes')[0]
         sym_data = self._get_broken_symmetry_data(process, ninitial)
         self._fill_broken_sym_replace_dict(replace_dict, sym_data)
+        replace_dict['broken_sym_function'] = \
+            self._make_broken_sym_fortran_function(
+                'BROKEN_SYM' + str(proc_id), sym_data)
 
 
 

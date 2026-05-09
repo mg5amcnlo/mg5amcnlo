@@ -10243,16 +10243,11 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
         self.assertEqual(self._evaluate_broken_symmetry(sym_same, [2, -2, 1, -1, 1, -1]), 1)
 
     def test_madevent_template_uses_decay_aware_broken_symmetry_metadata(self):
-        placeholders = (
-            '%(broken_sym_ncomponents)d',
-            '%(broken_sym_nentries)d',
-            '%(broken_sym_component_starts)s',
-            '%(broken_sym_component_ends)s',
-            '%(broken_sym_component_old_factors)s',
-            '%(broken_sym_pid_list)s',
-            '%(broken_sym_block_starts)s',
-            '%(broken_sym_block_lengths)s'
-        )
+        # After centralisation the Fortran templates delegate the BROKEN_SYM
+        # function body to a Python generator; the templates themselves must
+        # contain the %(broken_sym_function)s placeholder and the 'BROKEN_SYM'
+        # identifier (used for the forward declaration before the main SMATRIX
+        # subroutine).
         for template_name in ('matrix_madevent_group_v4.inc',
                               'matrix_madevent_v4.inc',
                               'matrix_madevent_group_v4_hel.inc',
@@ -10261,8 +10256,7 @@ class BrokenSymmetryDecayChainTest(unittest.TestCase):
                             template_name)) as stream:
                 template = stream.read()
             self.assertIn('BROKEN_SYM', template)
-            for placeholder in placeholders:
-                self.assertIn(placeholder, template)
+            self.assertIn('%(broken_sym_function)s', template)
 
 
 if __name__ == '__main__':
