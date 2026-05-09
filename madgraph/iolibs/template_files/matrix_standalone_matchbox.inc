@@ -275,5 +275,6 @@ C ----------
          ENDIF
          TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR
       ENDDO
+      %(proc_prefix)sBROKEN_SYM = TOTAL_FACTOR
    return
    end

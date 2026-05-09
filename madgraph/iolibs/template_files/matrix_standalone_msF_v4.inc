@@ -211,5 +211,6 @@ C
          ENDIF
          TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR
       ENDDO
+      BROKEN_SYM = TOTAL_FACTOR
    return
    end

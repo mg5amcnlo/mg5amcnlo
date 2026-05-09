@@ -491,6 +491,6 @@ JAMP(:,:) = (0d0,0d0)
        ENDIF
        TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR
     ENDDO
-
+    BROKEN_SYM%(proc_id)s = TOTAL_FACTOR
     return
     end
