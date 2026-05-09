@@ -1114,6 +1114,11 @@ class ModelTest2(unittest.TestCase):
         self.assertIn(3, pdg_codes)
         self.assertIn(4, pdg_codes)
         self.assertIn(81, pdg_codes)
+        merged_quark = model.get_particle(81)
+        self.assertTrue(isinstance(merged_quark.get('charge'), tuple))
+        self.assertEqual(len(merged_quark.get('charge')), 2)
+        self.assertEqual(set([round(c * 3) for c in merged_quark.get('charge')]), set([-1, 2]))
+        self.assertIn('charge', model.get('conserved_charge'))
 
         # check that original particles does not have interactions anymore
         has_inter_81 = 0

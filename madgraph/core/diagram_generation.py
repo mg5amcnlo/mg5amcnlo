@@ -607,7 +607,7 @@ class Amplitude(base_objects.PhysicsObject):
         # Finally check that charge (conserve by all interactions) of the process
         #is globally conserve for this process.
         for charge in model.get('conserved_charge'):
-            total = 0
+            totals = set([0.0])
             for leg in legs:
                 part = model.get('particle_dict')[leg.get('id')]
                 try:
@@ -617,13 +617,17 @@ class Amplitude(base_objects.PhysicsObject):
                         value = getattr(part, charge)
                     except AttributeError:
                         value = 0
-                        
-                if (leg.get('id') != part['pdg_code']) != leg['state']:
-                    total -= value
-                else:
-                    total += value
 
-            if abs(total) > 1e-10:
+                values = value if isinstance(value, tuple) else (value,)
+                signed_values = []
+                for val in values:
+                    if (leg.get('id') != part['pdg_code']) != leg['state']:
+                        signed_values.append(-float(val))
+                    else:
+                        signed_values.append(float(val))
+                totals = set(round(prev + val, 12) for prev in totals for val in signed_values)
+
+            if not any(abs(total) <= 1e-10 for total in totals):
                 if not returndiag:
                     self['diagrams'] = res
                     raise InvalidCmd('No %s conservation for this process ' % charge)
@@ -2257,4 +2261,3 @@ def expand_list_list(mylist):
 
 
     return res
-

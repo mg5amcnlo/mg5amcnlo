@@ -804,6 +804,39 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertRaises(InvalidCmd, self.myamplitude.generate_diagrams)
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
 
+    def test_diagram_generation_merged_charge_tuple(self):
+        """Check merged-flavor charge tuples allow/forbid processes correctly."""
+
+        import madgraph.interface.master_interface as Cmd
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('model sm')
+        model = cmd._curr_model
+
+        # This process must be rejected: no concrete quark-flavor assignment can conserve charge.
+        invalid_legs = base_objects.LegList([
+            base_objects.Leg({'id':21, 'state':False}),
+            base_objects.Leg({'id':21, 'state':False}),
+            base_objects.Leg({'id':24, 'state':True}),
+            base_objects.Leg({'id':24, 'state':True}),
+            base_objects.Leg({'id':81, 'state':True}),
+            base_objects.Leg({'id':-81, 'state':True})
+        ])
+        invalid_proc = base_objects.Process({'legs': invalid_legs, 'model': model})
+        invalid_amp = diagram_generation.Amplitude({'process': invalid_proc})
+        self.assertRaises(InvalidCmd, invalid_amp.generate_diagrams)
+        self.assertEqual(len(invalid_amp.get('diagrams')), 0)
+
+        # This process must remain allowed: at least one flavor assignment conserves charge.
+        valid_legs = base_objects.LegList([
+            base_objects.Leg({'id':81, 'state':False}),
+            base_objects.Leg({'id':-81, 'state':False}),
+            base_objects.Leg({'id':24, 'state':True})
+        ])
+        valid_proc = base_objects.Process({'legs': valid_legs, 'model': model})
+        valid_amp = diagram_generation.Amplitude({'process': valid_proc})
+        valid_amp.generate_diagrams()
+        self.assertGreater(len(valid_amp.get('diagrams')), 0)
+
     def test_diagram_generation_photons(self):
         """Test the number of diagram generated for uu~>na with n up to 6"""
 
@@ -3860,4 +3893,3 @@ class TestDiagramTag(unittest.TestCase):
                 self.assertEqual(dtag,
                                  diagram_generation.DiagramTag(\
                                      dtag.diagram_from_tag(self.base_model)))
-

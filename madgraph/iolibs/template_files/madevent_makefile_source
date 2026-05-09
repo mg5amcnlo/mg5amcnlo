@@ -121,14 +121,14 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 
 cleanSource: # Clean builds: fortran in this Source
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
-	cd PDF; make clean; cd ..
-	cd PDF/gammaUPC; make clean; cd ../../
+	if [ -d PDF ]; then cd PDF; make clean; cd ..; fi
+	if [ -d PDF/gammaUPC ]; then cd PDF/gammaUPC; make clean; cd ../../; fi
 	cd DHELAS; make clean; cd ..
-	cd CERNLIB; make clean; cd ..
+	if [-d CERNLIB ]; then cd CERNLIB; make clean; cd ..; fi
 	cd MODEL; make clean; cd ..
 	if [ -d RUNNING ]; then cd RUNNING; make clean; cd ..; fi
-	cd BIAS/dummy; make clean; cd ../..
-	cd BIAS/ptj_bias; make clean; cd ../..
+	if [ -d BIAS/dummy ]; then cd BIAS/dummy; make clean; cd ../..; fi
+	if [ -d BIAS/ptj_bias ]; then cd BIAS/ptj_bias; make clean; cd ../..; fi
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
 

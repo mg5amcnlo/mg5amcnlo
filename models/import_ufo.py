@@ -688,6 +688,18 @@ class UFOMG5Converter(object):
 
 
         if aloha.unitary_gauge == 3:
+            # Pre-optimize FFV interactions before goldstone merging so that
+            # interactions like Z-cbar-c (which has a G0 coupling via ymc != 0)
+            # get FFV-optimized first. Without this, goldstone merging adds an
+            # FFS coupling making len(couplings)==3, causing reshape_FFV_coeff
+            # to skip optimization. During merge_flavor the coupling indices
+            # (0,0),(0,1) then map to different lorentz structures for charm
+            # vs the other quarks, producing wrong couplings (e.g. GC_51 instead
+            # of GC_FFV_2) at flavor entry (4,4,0).
+            for interaction in list(self.interactions):
+                self.optimise_interaction(interaction)
+                if not interaction['couplings']:
+                    self.interactions.remove(interaction)
             self.merge_all_goldstone_with_vector()
 
     
@@ -1092,10 +1104,9 @@ class UFOMG5Converter(object):
 
         def is_trivial_coefficient(coef):
             """
-            coef = [(A,B,C,D), (E,F,G,H)]
+            coef = [(A,B,C,D), ...]  — one entry per lorentz structure
             """
-            first, second = coef
-            return is_trivial_quadruple(first) and is_trivial_quadruple(second)
+            return all(is_trivial_quadruple(t) for t in coef)
 
 
 

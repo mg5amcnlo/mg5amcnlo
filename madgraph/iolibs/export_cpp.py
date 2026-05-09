@@ -422,8 +422,13 @@ class UFOModelConverterCPP(object):
 
         # Read in the template .h and .cc files, stripped of compiler
         # commands and namespaces
-        template_h_files = self.read_aloha_template_files(ext = 'h')
-        template_cc_files = self.read_aloha_template_files(ext = 'cc')
+        import aloha
+        if aloha.unitary_gauge == 3:
+            template_h_files = self.read_aloha_template_files(ext = 'fd_h')
+            template_cc_files = self.read_aloha_template_files(ext = 'fd_cc')
+        else:
+            template_h_files = self.read_aloha_template_files(ext = 'h')
+            template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
         aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'),
                                                       explicit_combine=True)

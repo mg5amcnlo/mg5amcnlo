@@ -26,8 +26,12 @@ int main(int argc, char** argv){
   process.initProc("../../Cards/param_card.dat");
 
   // Centre-of-mass energy: use argv[1] if provided, else default 1000 GeV
-  double energy = 1500.0;
+  double energy = 1000.0;
   if(argc > 1) energy = atof(argv[1]);
+  double total_mass = 0.0;
+  vector<double> masses = process.getMasses();
+  for(unsigned int i = 0; i < masses.size(); ++i) total_mass += masses[i];
+  if(energy <= 2.0 * total_mass) energy = 2.0 * total_mass;
   double weight;
 
   // Get phase space point (RAMBO with fixed seed -> reproducible)

@@ -725,9 +725,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.offshell and aloha.unitary_gauge == 3: # FD gauge
             type = self.particles[self.outgoing-1]
             if type in ["S","V"]: 
-                out.write("      DO I = 3, 7\n")
-                out.write(" %(type)s%(out)s(I) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
-                out.write(" ENDDO\n")      
+                out.write(" %(type)s%(out)s %% W(:) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
 
         # Returning result
         return out.getvalue()
@@ -820,7 +818,11 @@ class ALOHAWriterForFortran(WriteALOHA):
             # a flat integer offset (+momentum_size) into a plain COMPLEX*16
             # array; now all wavefunctions (including those inside loop ALOHA
             # routines) are passed as type(aloha) objects.
-            return '%s %% W(%s)' % (match.group('var'), int(match.group('num')))
+            shift = 0
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4 # In FD gauge Scalar indices goes to 5 (not 1)
+                           # to complement the vector 1-4
+            return '%s %% W(%s)' % (match.group('var'), int(match.group('num'))+ shift)
               
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
@@ -1617,7 +1619,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             shift =  -1
             if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
-                shift += 4 # In FD gauge Scalar indices goes to 4 (not 0)
+                shift += 4 # In FD gauge Scalar indices go after vector ones
                            # to complement the vector 0-3
             return '%s.W[%s]' % (match.group('var'), int(match.group('num')) + shift)
               
@@ -1780,9 +1782,16 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         return out.getvalue()
 
-    def get_foot_txt(self):
+    def get_foot_txt(self, combine=False):
         """Prototype for language specific footer"""
-        return '}\n'
+        text = ''
+        if not combine and aloha.unitary_gauge == 3:
+            if self.outgoing and 'P1N' not in self.tag:
+                name = self.particles[self.outgoing-1]
+                if name.startswith(('V', 'S')):
+                    text += '    multiply_propagator_factor(%(name)s%(i)s, M%(i)s, %(name)s%(i)s);\n' % \
+                            {'name': name, 'i': self.outgoing}
+        return text + '}\n'
 
     def get_momenta_txt(self):
         """Define the Header of the fortran file. This include
@@ -1826,6 +1835,10 @@ class ALOHAWriterForCPP(WriteALOHA):
                                              ''.join(p) % dict_energy))
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
+            if aloha.unitary_gauge == 3 and type in ['S', 'V']:
+                for i in range(self.type_to_size[type] - 2):
+                    out.write('    %s%s.W[%s] = std::complex<double>(0.,0.);\n' %
+                              (type, self.outgoing, i))
 
         
         # Returning result
@@ -2060,8 +2073,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                 
             for ind in numerator.listindices():
                 self.momentum_size = 0
+                helas_index = self.pass_to_HELAS(ind)
+                if aloha.unitary_gauge == 3 and self.outname[0] == 'S':
+                    helas_index += 4
                 out.write('    %s.W[%d]= %s*%s;\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind), coeff,
+                                        helas_index, coeff,
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
@@ -2145,7 +2161,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             elif i==1:
                 if self.offshell:
                     type = self.particles[self.offshell-1]
-                    self.declaration.add(('list_complex','%stmp' % type))
+                    self.declaration.add(('aloha%s' % type,'%stmp' % type))
                 else:
                     type = ''
                     self.declaration.add(('complex','%stmp' % type))
@@ -2173,7 +2189,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         #self.declaration.discard
         text.write(self.get_declaration_txt(add_i=False))
         text.write(routine.getvalue())
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
         text = text.getvalue()
         return text
@@ -2949,4 +2965,3 @@ class WriterFactory(object):
 #        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
 #        ff.write(unknow_fct_template % dico)
 #        ff.close()
-

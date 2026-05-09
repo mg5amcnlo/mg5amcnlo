@@ -958,7 +958,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             ids = [l.get('id') for l in legs]
             has_merged_particles = False
             if self.model and 'merged_particles' in self.model:
-                has_merged_particles = any([id in self.model['merged_particles'] for id in ids])
+                has_merged_particles = any([abs(id) in self.model['merged_particles'] for id in ids])
             if has_merged_particles:
                 allow_flavor = matrix_element.get_external_flavors_with_iden()
                 for flavor in sum(allow_flavor,[]):
