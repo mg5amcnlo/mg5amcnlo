@@ -196,8 +196,7 @@ C
                   SAME_BLOCK = .TRUE.
                   IF (BLOCK_LEN(I).NE.BLOCK_LEN(J)) SAME_BLOCK = .FALSE.
                   DO K=1,BLOCK_LEN(I)
-                     IF (FLAV(BLOCK_START(I)+K-1).NE.
-     $                   FLAV(BLOCK_START(J)+K-1)) THEN
+                     IF (FLAV(BLOCK_START(I)+K-1).NE.FLAV(BLOCK_START(J)+K-1)) THEN
                         SAME_BLOCK = .FALSE.
                      ENDIF
                   ENDDO
