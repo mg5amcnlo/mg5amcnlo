@@ -337,72 +337,22 @@ class ProcessExporterFortran(VirtualExporter):
                              an explicit PARAMETER (NEXTERNAL=N) declaration
                              (used by templates that lack the include file).
         """
-        lines = [
-            '      INTEGER FUNCTION %s(FLAV)' % func_name,
-        ]
+        template_path = pjoin(_file_path, 'iolibs', 'template_files',
+                              'fortran_matrix_broken_sym_fct.inc')
+        template = open(template_path).read()
+
         if nexternal_decl == 'include':
-            lines.append("      include 'nexternal.inc'")
+            nexternal_lines = "      include 'nexternal.inc'"
         else:
-            lines.append('      INTEGER NEXTERNAL')
-            lines.append('      PARAMETER (NEXTERNAL=%d)' % int(nexternal_decl))
-        lines += [
-            '      INTEGER FLAV(NEXTERNAL)',
-            '      INTEGER I,J,K,ICOMP',
-            '      INTEGER N_TOT, OLD_FACTOR, TOTAL_FACTOR',
-            '      INTEGER NCOMP, NENTRIES',
-            '      PARAMETER (NCOMP=%d)' % sym_data['ncomponents'],
-            '      PARAMETER (NENTRIES=%d)' % sym_data['nentries'],
-            '      INTEGER COMP_BEG(NCOMP), COMP_END(NCOMP), COMP_OLD(NCOMP)',
-            '      INTEGER PID_LIST(NENTRIES), PID_WORK(NENTRIES)',
-            '      INTEGER BLOCK_START(NENTRIES), BLOCK_LEN(NENTRIES)',
-            '      LOGICAL SAME_BLOCK',
-            '      DATA COMP_BEG /%s/' % ','.join(
-                str(v) for v in sym_data['component_starts']),
-            '      DATA COMP_END /%s/' % ','.join(
-                str(v) for v in sym_data['component_ends']),
-            '      DATA COMP_OLD /%s/' % ','.join(
-                str(v) for v in sym_data['component_old_factors']),
-            '      DATA PID_LIST /%s/' % ','.join(
-                str(v) for v in sym_data['pid_list']),
-            '      DATA BLOCK_START /%s/' % ','.join(
-                str(v) for v in sym_data['block_starts']),
-            '      DATA BLOCK_LEN /%s/' % ','.join(
-                str(v) for v in sym_data['block_lengths']),
-            '',
-            '      PID_WORK = PID_LIST',
-            '      TOTAL_FACTOR = 1',
-            '      DO ICOMP=1,NCOMP',
-            '         OLD_FACTOR = COMP_OLD(ICOMP)',
-            '         IF (COMP_OLD(ICOMP).GT.1) THEN',
-            '         DO I=COMP_BEG(ICOMP),COMP_END(ICOMP)',
-            '            IF (PID_WORK(I).EQ.0) CYCLE',
-            '            N_TOT = 1',
-            '            DO J=I+1,COMP_END(ICOMP)',
-            '               IF (PID_WORK(I).EQ.PID_WORK(J)) THEN',
-            '                  SAME_BLOCK = .TRUE.',
-            '                  IF (BLOCK_LEN(I).NE.BLOCK_LEN(J)) SAME_BLOCK = .FALSE.',
-            '                  DO K=1,BLOCK_LEN(I)',
-            '                     IF (FLAV(BLOCK_START(I)+K-1).NE.'
-            'FLAV(BLOCK_START(J)+K-1)) THEN',
-            '                        SAME_BLOCK = .FALSE.',
-            '                     ENDIF',
-            '                  ENDDO',
-            '                  IF (SAME_BLOCK) THEN',
-            '                     PID_WORK(J) = 0',
-            '                     N_TOT = N_TOT + 1',
-            '                     OLD_FACTOR = OLD_FACTOR/N_TOT',
-            '                  ENDIF',
-            '               ENDIF',
-            '            ENDDO',
-            '         ENDDO',
-            '         ENDIF',
-            '         TOTAL_FACTOR = TOTAL_FACTOR*OLD_FACTOR',
-            '      ENDDO',
-            '      %s = TOTAL_FACTOR' % func_name,
-            '      return',
-            '      end',
-        ]
-        return '\n'.join(lines)
+            nexternal_lines = ('      INTEGER NEXTERNAL\n'
+                               '      PARAMETER (NEXTERNAL=%d)' % int(nexternal_decl))
+
+        replace_dict = {
+            'func_name': func_name,
+            'nexternal_decl': nexternal_lines,
+        }
+        ProcessExporterFortran._fill_broken_sym_replace_dict(replace_dict, sym_data)
+        return template % replace_dict
 
     #===========================================================================
     # process exporter fortran switch between group and not grouped
