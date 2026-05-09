@@ -1619,7 +1619,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             shift =  -1
             if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
-                shift += self.type_to_size['V'] - 3 # In FD gauge Scalar indices go after vector ones
+                shift += 4 # In FD gauge Scalar indices go after vector ones
                            # to complement the vector 0-3
             return '%s.W[%s]' % (match.group('var'), int(match.group('num')) + shift)
               
@@ -2075,7 +2075,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 self.momentum_size = 0
                 helas_index = self.pass_to_HELAS(ind)
                 if aloha.unitary_gauge == 3 and self.outname[0] == 'S':
-                    helas_index += self.type_to_size['V'] - 3
+                    helas_index += 4
                 out.write('    %s.W[%d]= %s*%s;\n' % (self.outname, 
                                         helas_index, coeff,
                                         self.write_obj(numerator.get_rep(ind))))

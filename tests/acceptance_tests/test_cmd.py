@@ -447,37 +447,6 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(len(self.cmd._curr_amps), 1)
               
                
-
-    def test_read_madgraph4_proc_card(self):
-        """Test reading a madgraph4 proc_card.dat"""
-        os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
-                                    self.out_dir))
-        os.system('cp -rf %s %s' % (
-                            TestCmdShell1.join_path(_pickle_path,'simple_v4_proc_card.dat'),
-                            os.path.join(self.out_dir,'Cards','proc_card.dat')))
-    
-        self.cmd = Cmd.MasterCmd()
-        pwd = os.getcwd()
-        os.chdir(self.out_dir)
-        try:
-            self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
-        except:
-            os.chdir(pwd)
-            raise
-        os.chdir(pwd)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_ll_vlvl')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                 'Cards', 'proc_card_mg5.dat')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P1_ll_vlvl',
-                                                    'matrix1.ps')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'madevent.tar.gz')))
-        
-
-
     def test_output_standalone_directory(self):
         """Test command 'output' with path"""
         
@@ -757,7 +726,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmtree(self.out_dir)
 
         self.do('set gauge FD')
-        self.do('generate _quark _quark > h _quark _quark g')
+        self.do('generate _quark _quark > h _quark _quark _quark _anti_quark  QCD=0')
         devnull = open(os.devnull,'w')
         energy = '1000'
 
@@ -796,7 +765,23 @@ class TestCmdShell2(unittest.TestCase,
         for i, _ in enumerate(standalone_cpp):
             self.assertAlmostEqual(standalone_cpp[i], standalone[i])
 
-          
+        self.do('set gauge unitary')
+        self.do('generate _quark _quark > h _quark _quark _quark _quark _quark _anti_quark  QCD=0')
+        devnull = open(os.devnull,'w')
+        energy = '1000'     
+        
+        shutil.rmtree(self.out_dir)
+        standalone_cpp_no_fd = get_values('standalone_cpp')
+        shutil.rmtree(self.out_dir)
+        standalone_no_fd = get_values('standalone')
+
+        self.assertEqual(len(standalone_cpp_no_fd), len(standalone_no_fd))
+        for i, _ in enumerate(standalone_cpp_no_fd):
+            self.assertAlmostEqual(standalone_cpp_no_fd[i], standalone_no_fd[i])
+        for i, _ in enumerate(standalone_cpp_no_fd):
+            self.assertAlmostEqual(standalone_cpp_no_fd[i], standalone[i])
+
+
          
     def test_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""

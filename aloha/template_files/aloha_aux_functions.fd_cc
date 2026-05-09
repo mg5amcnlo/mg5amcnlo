@@ -1,5 +1,6 @@
 #include <cmath>
 #include <complex>
+#include "aloha_aux_functions.h"
 
 using namespace std;
 
@@ -13,10 +14,60 @@ std::ostream& operator<<(std::ostream& os, const ALOHAOBJ& obj) {
     for (int i = 0; i < 4; ++i) os << obj.p[i] <<  " " ;
     os << " ]\n";
     os << "W = [ ";
-    for (int i = 0; i < 4; ++i) os << obj.W[i] << " " ;
+    for (int i = 0; i < 5; ++i) os << obj.W[i] << " " ;
     os << " ]\n";
     return os;
 }
+
+void define_gauge_dir(const complex<double> q[5], double n[5]) {
+  double qabs2 = real(q[1]) * real(q[1]) + real(q[2]) * real(q[2]) +
+                 real(q[3]) * real(q[3]);
+  if (qabs2 > 0.) {
+    double qabs = sqrt(qabs2);
+    n[0] = Sgn(1., real(q[0]));
+    n[1] = -real(q[1]) / qabs;
+    n[2] = -real(q[2]) / qabs;
+    n[3] = -real(q[3]) / qabs;
+    n[4] = 0.;
+  } else {
+    n[0] = Sgn(1., real(q[0]));
+    n[1] = 0.;
+    n[2] = 0.;
+    n[3] = Sgn(-1., real(q[0]));
+    n[4] = 0.;
+  }
+}
+
+void multiply_propagator_factor(const ALOHAOBJ &win, double m, ALOHAOBJ &wout) {
+  static const complex<double> cI(0., 1.);
+  complex<double> q[5], w0[5], w1[5], js1, js2;
+  double n[5], nq;
+
+  for (int i = 0; i < 4; ++i) {
+    wout.p[i] = win.p[i];
+    q[i] = -win.p[i];
+  }
+  q[4] = -cI * m;
+
+  define_gauge_dir(q, n);
+
+  for (int i = 0; i < 5; ++i) {
+    w0[i] = win.W[i];
+  }
+
+  nq = n[0] * real(q[0]) - n[1] * real(q[1]) - n[2] * real(q[2]) -
+       n[3] * real(q[3]);
+
+  js1 = (n[0] * w0[0] - n[1] * w0[1] - n[2] * w0[2] - n[3] * w0[3]) / nq;
+  js2 = (q[0] * w0[0] - q[1] * w0[1] - q[2] * w0[2] - q[3] * w0[3] -
+         conj(q[4]) * w0[4]) / nq;
+
+  for (int i = 0; i < 5; ++i) {
+    wout.W[i] = w0[i] - q[i] * js1 - n[i] * js2;
+  }
+  wout.flv_index = win.flv_index;
+}
+
 #include <complex>
 #include <cmath> 
 #include "aloha_aux_functions.h"
@@ -213,6 +264,7 @@ void oxxxxx(double p[4], double fmass, int nhel, int nsf, int flv, ALOHAOBJ &fo)
 using namespace std;
 void sxxxxx(double p[4],int nss, ALOHAOBJ &sc){
   sc.W[0] = complex<double>(1.00,0.00);
+  sc.W[4] = complex<double>(1.00,0.00);
   
 for ( int i =0; i<4;i++){
     sc.p[i] = nss*p[i];    

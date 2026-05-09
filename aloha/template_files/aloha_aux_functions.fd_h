@@ -6,12 +6,15 @@ double Sgn(double e,double f);
 
 struct ALOHAOBJ{
      double p[4];
-     std::complex<double> W[4];
+     std::complex<double> W[5];
      int flv_index =1;
 
      public:
         //ALOHAOBJ(double p[4], std::complex<double> W[4], int flav):p(p), W(W), flav(flav){};
-        inline ALOHAOBJ() {};
+        inline ALOHAOBJ() {
+            for (int i = 0; i < 4; ++i) p[i] = 0.;
+            for (int i = 0; i < 5; ++i) W[i] = std::complex<double>(0., 0.);
+        };
 };
 //ALOHAOBJ::ALOHAOBJ() {}
 
@@ -22,9 +25,14 @@ struct ALOHAOBJ2D{
 
      public:
         //ALOHAOBJ(double p[4], std::complex<double> W[4], int flav):p(p), W(W), flav(flav){};
-        inline ALOHAOBJ2D() {};
+        inline ALOHAOBJ2D() {
+            for (int i = 0; i < 4; ++i) p[i] = 0.;
+            for (int i = 0; i < 16; ++i) W[i] = std::complex<double>(0., 0.);
+        };
 };
 //ALOHAOBJ2D::ALOHAOBJ2D() {}
+void define_gauge_dir(const std::complex<double> q[5], double n[5]);
+void multiply_propagator_factor(const ALOHAOBJ &win, double m, ALOHAOBJ &wout);
 
 #endif
 #ifndef i_guard
