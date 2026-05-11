@@ -817,7 +817,7 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_MC_subt_term(p,passcuts,probne)
+      subroutine compute_MC_subt_term(p,p_lab,p_cms,passcuts,probne)
       use extra_weights
       use kinematics_module
       implicit none
@@ -841,7 +841,8 @@ c$$$  include 'madfks_mcatnlo.inc'
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
-     $     ,y,z(2),p_cm(0:3,nexternal)
+     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac
+     $     ,amp_split_gfunc(amp_split_size)
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -865,26 +866,24 @@ c$$$  include 'madfks_mcatnlo.inc'
       integer get_orders_tag
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+      logical                calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
       logical include_gfun
 !     If .true., multiplies MC subtraction terms by S_ev
       logical UseSfun
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
       if (p(0,1).le.0d0) return
-c$$$  if(UseSfun)then
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-c$$$  else
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
-c$$$  endif
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
-      call boost_n1_to_its_cms(p,p_cm,ybst)
+      amp_split_mc(1:amp_split_size)=0d0
       nFKSprocess_save=nFKSprocess
       do iFKS=1,fks_configs
          nFKSprocess=iFKS
          ! This sets i_fks and j_fks to correspond to the ones in
          ! nFKSprocess (which here is iFKS).
          call fks_inc_chooser()
-         call leshouche_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
      &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
@@ -893,18 +892,29 @@ c$$$  endif
             include_gfun=.false.
          endif
 !     compute kinematic variables
-         xi=get_xi_from_p(i_fks,j_fks,p_cm)
-         y=get_yij_from_p(i_fks,j_fks,p_cm)
-         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cm,p_born
+         xi=get_xi_from_p(i_fks,j_fks,p_cms)
+         y=get_yij_from_p(i_fks,j_fks,p_cms)
+         ! call the inverse phase-space. This will update the Born
+         ! momenta, and the corresponding phase-space jacobian for the
+         ! n+1-body. Note: if the random numbers are not generated flat
+         ! (they are flat here), also the jacobian from importance
+         ! sampling should be included.
+         !     inputs are: ndim,iconfig,p
+         !     outputs are: xx,jac (also updates pborn common block)
+         jac=1d0
+         call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
+         CalculatedBorn=.false.
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
          do iconnect=1,n_connect
             if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
             call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
             do iamp=1, amp_split_size
                if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
-!     re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
+!     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
+!     Also, include the difference in phase-space Jacobian factors.
                amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
-     $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
+     $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)*jac/wgt
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
                wgtcpower=0d0
@@ -922,48 +932,67 @@ c$$$  endif
                call add_wgt(13,orders,-wgt1,0d0,0d0)
             enddo
          enddo
+         amp_split_gfunc=0d0
+         if (include_gfun) then
+            call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
+     $           ,sevmc_Sev,jac/wgt*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
+     $           ,nFKSprocess.eq.nFKSprocess_save)
+         endif
       enddo
       nFKSprocess=nFKSprocess_save
       call fks_inc_chooser()
-      call leshouche_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-      
-c$$$  call compute_xmcsubt_complete(p,probne,gfactsf,gfactcl,flagmc
-c$$$  $     ,lzone,z_shower,nofpartners,xmcxsec)
-c$$$  if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
-c$$$  if (passcuts .and. flagmc) then
-c$$$  do i=1,nofpartners
-c$$$  if(lzone(i))then
-c$$$  call get_mc_lum(j_fks,z_shower(i),xi_i_fks_ev,xlum_mc_fact)
-c$$$  do iamp=1, amp_split_size
-c$$$  if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
-c$$$  call amp_split_pos_to_orders(iamp, orders)
-c$$$  QCD_power=orders(qcd_pos)
-c$$$  wgtcpower=0d0
-c$$$  if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-c$$$  orders_tag=get_orders_tag(orders)
-c$$$  amp_pos=iamp
-c$$$  g22=g**(QCD_power)
-c$$$  wgt1=sevmc*f_MC_S*xlum_mc_fact*
-c$$$  &               amp_split_xmcxsec(iamp,i)/g22
-c$$$  call add_wgt(12,orders,wgt1,0d0,0d0)
-c$$$  wgt1=sevmc*f_MC_H*xlum_mc_fact*
-c$$$  &               amp_split_xmcxsec(iamp,i)/g22
-c$$$  call add_wgt(13,orders,-wgt1,0d0,0d0)
-c$$$  enddo
-c$$$  endif
-c$$$  enddo
-c$$$  endif
-c$$$  if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
-c$$$  $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-c$$$  n_MC_subt_diverge=n_MC_subt_diverge+1
-c$$$  endif
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
       end
 
+      subroutine compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
+     $     ,sevmc_Sev,jac_ratio,include_gfun_for_Sevent)
+      use extra_weights
+      use kinematics_module
+      implicit none
+      include "nexternal.inc"
+      include 'orders.inc'
+      double precision xi,y,sevmc_Hev,sevmc_Sev,xi_con(0:2),y_con(0:2)
+     $     ,f_MC_H_con(0:2),f_MC_S_con(0:2),g22,wgt1,gfact_con(0:2)
+      integer i,iamp,orders(nsplitorders)
+      logical include_gfun_for_Sevent
+      double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      integer get_orders_tag
+      f_MC_H_con(0:2)=[f_s_MC_H,f_c_MC_H,f_sc_MC_H]
+      f_MC_S_con(0:2)=[f_s_MC_S,f_c_MC_S,f_sc_MC_S]
+      xi_con(0:2)=[0d0,xi,0d0]
+      y_con(0:2)=[y,1d0,1d0]
+      ! TODO: check sign for soft-collinear contribution
+      gfact_con(0:2)=(1d0-gfactsf)*[1d0,(1d0-gfactcl),-(1d0-gfactcl)]
+      do i=0,2   ! soft, collinear, and, soft-collinear
+         if (f_MC_H_con(i).eq.0d0 .and. f_MC_S_con(i).eq.0d0) cycle
+         call set_cms_stuff(i)
+         amp_split(iamp)=0d0
+         call sreal(p1_cnt(0,1,i),xi_con(i),y_con(i),dum)
+         do iamp=1, amp_split_size
+            if (amp_split(iamp).eq.0d0) cycle
+            call amp_split_pos_to_orders(iamp, orders)
+            QCD_power=orders(qcd_pos)
+            wgtcpower=0d0
+            if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+            orders_tag=get_orders_tag(orders)
+            amp_pos=iamp
+            g22=g**(QCD_power)
+            wgt1=amp_split(iamp)/g22*jac_ratio/(xi**2*(1d0-y))*gfact_con(i)
+            call add_wgt(8+i,orders,-wgt1*f_MC_H_con(i)*sevmc_Hev,0d0,0d0)
+            if (include_gfun_for_Sevent) then
+               call add_wgt(4+i,orders, wgt1*f_MC_S_con(i)*sevmc_Sev,0d0,0d0)
+            endif
+         enddo
+      enddo
+      end
 
+      
       logical function pdg_equal(pdg1,pdg2)
 c Returns .true. if the lists of PDG codes --'pdg1' and 'pdg2'-- are
 c equal.

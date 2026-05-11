@@ -973,7 +973,8 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,passcuts_nbody,probne)
+                  call compute_MC_subt_term(p,p_lab,p_cms
+     $                 ,passcuts_nbody,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter

@@ -896,44 +896,6 @@ c     positivity check
       end
       
 
-      subroutine compute_MCsubtraction_from_gfun(xi,y,amp_split_gfunc)
-      use kinematics_module
-      implicit none
-      include "nexternal.inc"
-      include 'orders.inc'
-      double precision zero,one
-      parameter (zero=0d0,one=1d0)
-      integer izero,ione,itwo
-      parameter (izero=0,ione=1,itwo=2)
-      double precision xi,y
-      integer iFKS
-      double precision amp_split_gfunc(amp_split_size)
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision dum,amp_split_s(amp_split_size),
-     $     amp_split_c(amp_split_size),amp_split_sc(amp_split_size)
-      amp_split_gfunc(1:amp_split_size) = 0d0
-      call set_cms_stuff(izero)
-      call sreal(p1_cnt(0,1,0),zero,y,dum)
-      amp_split_s(1:amp_split_size) = amp_split(1:amp_split_size)
-      call set_cms_stuff(ione)
-      call sreal(p1_cnt(0,1,1),xi,one,dum)
-      amp_split_c(1:amp_split_size) = amp_split(1:amp_split_size)
-      call set_cms_stuff(itwo)
-      call sreal(p1_cnt(0,1,2),zero,one,dum)
-      amp_split_sc(1:amp_split_size) = amp_split(1:amp_split_size)
-      amp_split_gfunc(1:amp_split_size) = (1d0-gfactsf)
-     $     *(amp_split_s(1:amp_split_size)+(1d0-gfactcl)
-     $     *(amp_split_c(1:amp_split_size)
-     $     -amp_split_sc(1:amp_split_size)))
-     $     /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they should
-                            ! not depend on 'kl', but rather on 'ij'
-      return
-      end
-
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,p_born
