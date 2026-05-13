@@ -549,19 +549,19 @@ c Finalize PS point
       return
       end
 
-      subroutine update_fks_dir(nFKS)
-      implicit none
-      include 'run.inc'
-      integer nFKS
-      integer              nFKSprocess
-      common/c_nFKSprocess/nFKSprocess
-      nFKSprocess=nFKS
-      call fks_inc_chooser()
-      call leshouche_inc_chooser()
-      call setcuts
-      call setfksfactor(.false.)
-      return
-      end
+c$$$      subroutine update_fks_dir(nFKS)
+c$$$      implicit none
+c$$$      include 'run.inc'
+c$$$      integer nFKS
+c$$$      integer              nFKSprocess
+c$$$      common/c_nFKSprocess/nFKSprocess
+c$$$      nFKSprocess=nFKS
+c$$$      call fks_inc_chooser()
+c$$$      call leshouche_inc_chooser()
+c$$$      call setcuts
+c$$$      call setfksfactor(.false.)
+c$$$      return
+c$$$      end
       
       subroutine setup_ini_fin_FKS_map(ini_fin_FKS_map)
       implicit none

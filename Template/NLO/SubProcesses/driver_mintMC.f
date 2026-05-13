@@ -973,7 +973,7 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,p_lab,p_cms
+                  call compute_MC_subt_term(p,p_lab,p_cms,jac
      $                 ,passcuts_nbody,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
@@ -1367,29 +1367,6 @@ c     include all quarks (except top quark) and the gluon.
       return
       end
 
-
-      subroutine update_fks_dir(nFKS)
-      use process_module
-      use kinematics_module
-      implicit none
-      include 'nexternal.inc'
-      include 'run.inc'
-      integer nFKS
-      integer              nFKSprocess
-      common/c_nFKSprocess/nFKSprocess
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      double precision pmass(nexternal)
-      common /to_mass/pmass
-      nFKSprocess=nFKS
-      call fks_inc_chooser()
-      call leshouche_inc_chooser()
-      call setcuts
-      call setfksfactor(.true.)
-      call RealToBornMapping(i_fks)
-      call fill_father_and_ileg(i_fks,j_fks,pmass(j_fks))
-      return
-      end
 
       subroutine update_vegas_x(xx,x)
       use mint_module

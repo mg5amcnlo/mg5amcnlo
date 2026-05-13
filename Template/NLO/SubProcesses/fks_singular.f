@@ -817,9 +817,10 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_MC_subt_term(p,p_lab,p_cms,passcuts,probne)
+      subroutine compute_MC_subt_term(p,p_lab,p_cms,wgt,passcuts,probne)
       use extra_weights
       use kinematics_module
+      use mint_module
       implicit none
 c     This subroutine computes the MonteCarlo subtraction terms and adds
 c     their values to the list of weights using the add_wgt subroutine. It
@@ -836,13 +837,12 @@ c$$$  include 'madfks_mcatnlo.inc'
       include 'born_nhel.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nofpartners,i,iconnect,iFKS,n_connect
-     $     ,nFKSprocess_save
+      integer nofpartners,i,iconnect,n_connect,nFKSprocess_save
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
      $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac
-     $     ,amp_split_gfunc(amp_split_size)
+     $     ,amp_split_gfunc(amp_split_size),wgt,xx(ndimmax)
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -877,13 +877,12 @@ c$$$  include 'madfks_mcatnlo.inc'
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
-      amp_split_mc(1:amp_split_size)=0d0
       nFKSprocess_save=nFKSprocess
-      do iFKS=1,fks_configs
-         nFKSprocess=iFKS
+      do nFKSprocess=1,fks_configs
          ! This sets i_fks and j_fks to correspond to the ones in
-         ! nFKSprocess (which here is iFKS).
-         call fks_inc_chooser()
+         ! nFKSprocess.
+         call update_fks_dir(nFKSprocess)
+c$$$         call fks_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
      &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
@@ -940,10 +939,34 @@ c$$$  include 'madfks_mcatnlo.inc'
          endif
       enddo
       nFKSprocess=nFKSprocess_save
-      call fks_inc_chooser()
+      call update_fks_dir(nFKSprocess)
+c$$$      call fks_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
+      return
+      end
+
+      subroutine update_fks_dir(nFKS)
+      use process_module
+      use kinematics_module
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      integer nFKS
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+      nFKSprocess=nFKS
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(.true.)
+      call RealToBornMapping(i_fks)
+      call fill_father_and_ileg(i_fks,j_fks,pmass(j_fks))
       return
       end
 
@@ -954,14 +977,19 @@ c$$$  include 'madfks_mcatnlo.inc'
       implicit none
       include "nexternal.inc"
       include 'orders.inc'
+      include 'coupl.inc'
       double precision xi,y,sevmc_Hev,sevmc_Sev,xi_con(0:2),y_con(0:2)
      $     ,f_MC_H_con(0:2),f_MC_S_con(0:2),g22,wgt1,gfact_con(0:2)
+     $     ,jac_ratio,dum
       integer i,iamp,orders(nsplitorders)
       logical include_gfun_for_Sevent
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer get_orders_tag
       f_MC_H_con(0:2)=[f_s_MC_H,f_c_MC_H,f_sc_MC_H]
       f_MC_S_con(0:2)=[f_s_MC_S,f_c_MC_S,f_sc_MC_S]
@@ -969,7 +997,7 @@ c$$$  include 'madfks_mcatnlo.inc'
       y_con(0:2)=[y,1d0,1d0]
       ! TODO: check sign for soft-collinear contribution
       gfact_con(0:2)=(1d0-gfactsf)*[1d0,(1d0-gfactcl),-(1d0-gfactcl)]
-      do i=0,2   ! soft, collinear, and, soft-collinear
+      do i=0,2   ! soft, collinear, and soft-collinear
          if (f_MC_H_con(i).eq.0d0 .and. f_MC_S_con(i).eq.0d0) cycle
          call set_cms_stuff(i)
          amp_split(iamp)=0d0
@@ -7913,7 +7941,7 @@ c     reset the default dynamical_scale_choice
       double precision       ch_i,ch_j,ch_m
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type,j_pdg
+     &     i_type,j_type,m_type,j_pdg
       i_type=particle_type_d(iFKS,i_fks)
       j_type=particle_type_d(iFKS,j_fks)
       ch_i=particle_charge_d(iFKS,i_fks)
