@@ -3317,6 +3317,12 @@ class RunCard(ConfigFile):
         else:
             return value
 
+    def mod_inc_iseed(self, value):
+        """A negative iseed in the run_card is preserved across runs (so the
+        same seed can be reused), but the Fortran code expects a non-negative
+        seed, so export the absolute value to the include file."""
+        return abs(value)
+
     def edit_dummy_fct_from_file(self, filelist, outdir):
         """
         filelist is a list of input files (given by the user)

@@ -6128,7 +6128,9 @@ tar -czf split_$1.tar.gz split_$1
         
         # set random number
         if self.run_card['iseed'] != 0:
-            self.random = int(self.run_card['iseed'])
+            # negative iseed: keep it in the run_card across runs and use its
+            # absolute value as the actual seed for the Fortran code
+            self.random = abs(int(self.run_card['iseed']))
             self.reset_iseed_in_run_card()
             time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])

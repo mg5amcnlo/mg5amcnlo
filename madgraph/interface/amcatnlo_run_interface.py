@@ -1904,10 +1904,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     def update_random_seed(self):
-        """Update random number seed with the value from the run_card. 
+        """Update random number seed with the value from the run_card.
         If this is 0, update the number according to a fresh one.
-        If a specific seed is set, reset it to 0 in the run_card after use
-        to ensure that subsequent runs will be statistically independent."""
+        If a positive seed is set, reset it to 0 in the run_card after use
+        to ensure that subsequent runs will be statistically independent.
+        A negative seed is preserved in the run_card across runs and its
+        absolute value is used as the actual seed for the Fortran code."""
         iseed = self.run_card['iseed']
         if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
@@ -1915,6 +1917,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             randinit.close()
         else:
             self.reset_iseed_in_run_card()
+            iseed = abs(iseed)
         randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
         randinit.write('r=%d' % iseed)
         randinit.close()
