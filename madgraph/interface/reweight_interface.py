@@ -1548,30 +1548,60 @@ class ReweightInterface(extended_cmd.Cmd):
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
 
+    def _get_revert_merged_for(self, model):
+        """Return the {individual_pdg: merged_pdg} mapping for a given model.
+
+        The merged PDG codes (81 for jets, 82 for charged leptons, ...) are
+        defined inside the model object itself (model['merged_particles'])
+        when apply_flavor_grouping is on. For models where flavor grouping
+        is not applied -- automatically the case for any loop / perturbative
+        model, and also the case for every reweight model load since the
+        reweight forces apply_flavor_grouping=False -- the dict is empty
+        and we return None, so callers treat event PDGs as-is (the
+        pre-flavor-grouping behavior)."""
+        if model is None:
+            return None
+        merged = model.get('merged_particles')
+        if not merged:
+            return None
+        rm = {}
+        for key, value in merged.items():
+            for val in value:
+                rm[val] = key
+        return rm
+
     def calculate_matrix_element(self, event, hypp_id, scale2=0):
         """routine to return the matrix element"""
-        
+
         if self.has_nlo:
-            nb_retry, sleep = 10, 60 
+            nb_retry, sleep = 10, 60
         else:
-            nb_retry, sleep = 5, 20 
-        
-        if not hasattr(self, 'revert_merged'):
-            if self.model['merged_particles']:
-                self.revert_merged = {}
-                for key, value in self.model['merged_particles'].items():
-                    for val in value:
-                        self.revert_merged[val] = key
-            else:
-                self.revert_merged = None   
+            nb_retry, sleep = 5, 20
+
+        # The merged-particle mapping is taken from the model that built the
+        # id_to_path being looked up: id_to_path is from the original model
+        # (self.original_model), id_to_path_second from self.model (the
+        # second-model load overwrote self.model). When apply_flavor_grouping
+        # is off (the default in reweight contexts, and the automatic case
+        # for any loop/perturbative model), merged_particles is empty for
+        # both and revert_merged stays None -- giving the pre-flavor-grouping
+        # behavior (raw event PDGs everywhere).
+        is_virtual_tag = isinstance(hypp_id, str) and hypp_id.startswith('V')
+        use_original = (not self.second_model and not self.second_process and
+                        not self.dedicated_path) or hypp_id == 0 or is_virtual_tag
+        if use_original:
+            relevant_model = getattr(self, 'original_model', None) or self.model
+        else:
+            relevant_model = self.model
+        self.revert_merged = self._get_revert_merged_for(relevant_model)
 
         tag_orig, order = event.get_tag_and_order(None)
         tag, order = event.get_tag_and_order(self.revert_merged)
         if self.keep_ordering:
             old_tag = tuple(tag)
-            tag = (tag[0], tuple(order[1])) 
-        
-        if isinstance(hypp_id, str) and hypp_id.startswith('V'):
+            tag = (tag[0], tuple(order[1]))
+
+        if is_virtual_tag:
             tag = (tag,'V')
             hypp_id = int(hypp_id[1:])
         #    base = "rw_mevirt"
@@ -1579,18 +1609,18 @@ class ReweightInterface(extended_cmd.Cmd):
         #    base = "rw_me"
 
         if (not self.second_model and not self.second_process and not self.dedicated_path) or hypp_id==0:
-            if tag in self.id_to_path: 
+            if tag in self.id_to_path:
                 orig_order, Pdir, hel_dict = self.id_to_path[tag]
             else:
                 cross_tag = self.get_crossing_tag(tag)
-                orig_order, Pdir, hel_dict = self.id_to_path[cross_tag] 
+                orig_order, Pdir, hel_dict = self.id_to_path[cross_tag]
         else:
             try:
                 orig_order, Pdir, hel_dict = self.id_to_path_second[tag]
             except KeyError:
                 cross_tag = self.get_crossing_tag(tag)
                 if cross_tag:
-                    orig_order, Pdir, hel_dict = self.id_to_path[cross_tag] 
+                    orig_order, Pdir, hel_dict = self.id_to_path[cross_tag]
                 elif self.options['allow_missing_finalstate']:
                     return 0.0
                 else:
@@ -1615,17 +1645,18 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.helicity_reweighting = False
 
         # add helicity information
-        event_pos2order, orderevent_2pos = event.get_mapping(orig_order, merged_map=self.revert_merged)        
+        event_pos2order, orderevent_2pos = event.get_mapping(orig_order, merged_map=self.revert_merged)
         hel_order = event.get_helicity(orig_order, merged_map=self.revert_merged)
         if self.helicity_reweighting and 9 not in hel_order:
-            nhel = hel_dict[tuple(hel_order)]                
+            nhel = hel_dict[tuple(hel_order)]
 
         else:
             nhel = -1
 
 
         pdg = list(orig_order[0])+list(orig_order[1])
-        if any(p in self.model['merged_particles'] for p in  pdg):
+        relevant_merged = relevant_model.get('merged_particles') if relevant_model else {}
+        if relevant_merged and any(p in relevant_merged for p in pdg):
             pdg = event.get_pdg(all_p[0])
 
         # For 2>N pass in the center of mass frame
@@ -1727,7 +1758,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.revert_merged:
             for i in range(len(mytag)):
                 if mytag[i] in self.revert_merged:
-                    mytag[i] = self.revert_merged[mytag[i]] 
+                    mytag[i] = self.revert_merged[mytag[i]]
                 if -mytag[i] in self.revert_merged:
                     mytag[i] = -self.revert_merged[-mytag[i]]
         mytag.sort()
@@ -1827,8 +1858,15 @@ class ReweightInterface(extended_cmd.Cmd):
                                                     self.model, real_only=True, ewsudakov=self.inc_sudakov)
                 else:
                     commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
-        if not self.keep_ordering:
-            commandline = commandline.replace('add process', 'add process --no_crossing') 
+        # --no_crossing skips the generation of crossed subprocesses (e.g.
+        # u~ g > h u~ when u g > h u is already there). That's fine when
+        # flavor grouping is on, because the merged matrix element handles
+        # all signs internally. Without flavor grouping, however, the
+        # crossed subprocesses must be generated as separate entries --
+        # otherwise antiparticle events have nothing to match against in
+        # id_to_path. Only emit --no_crossing when both conditions hold.
+        if not self.keep_ordering and self._reweight_use_flavor_grouping():
+            commandline = commandline.replace('add process', 'add process --no_crossing')
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         try:
@@ -2431,22 +2469,80 @@ class ReweightInterface(extended_cmd.Cmd):
              
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
-        
+
         loop = False
 
         logger.info('detected model: %s. Loading...' % name)
         model_path = name
 
+        # Decide whether to ask for flavor grouping. We prefer it on
+        # (matches the rest of MG5) but the loop machinery does not
+        # support it yet, so for any reweight that touches a loop
+        # process we force it off for every model loaded -- otherwise
+        # the original (LO) model would end up with merged PDGs (e.g.
+        # 81 for jets) in id_to_path while the loop model's
+        # id_to_path_second would have raw PDGs, and the two would not
+        # agree.
+        apply_flavor_grouping = self._reweight_use_flavor_grouping()
+        import_options = {'apply_flavor_grouping': apply_flavor_grouping}
         # Import model
         base_model = import_ufo.import_model(name, decay=False,
-                                               complex_mass_scheme=complex_mass)
-    
+                                               complex_mass_scheme=complex_mass,
+                                               options=import_options)
+
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
-        
+
+        # Keep a handle on the first (original) model loaded. self.model
+        # gets overwritten when a second model is loaded for
+        # second_model / second_process / dedicated_path; we still want
+        # to consult the original model's merged_particles when looking
+        # up id_to_path (built from the original model).
+        if getattr(self, 'original_model', None) is None:
+            self.original_model = base_model
         self.model = base_model
         self.mg5cmd._curr_model = self.model
+        # Propagate the flavor-grouping decision to the main MG5
+        # interface so the subsequent `import model` command (issued
+        # from create_standalone_directory) uses the same convention.
+        try:
+            self.mg5cmd.options['apply_flavor_grouping'] = apply_flavor_grouping
+        except Exception:
+            pass
         self.mg5cmd.process_model()
+
+    def _reweight_use_flavor_grouping(self):
+        """Return whether flavor grouping should be applied when loading
+        models for this reweight. We default to the user's MG5 setting
+        (True unless changed) but force it off as soon as we see any
+        signal that the reweight involves a loop / perturbative
+        computation -- since the loop output cannot use merged particles
+        and a mixed convention between id_to_path (original model) and
+        id_to_path_second (second model) breaks the tag lookup."""
+        try:
+            default = bool(self.mg5cmd.options.get('apply_flavor_grouping', True))
+        except Exception:
+            default = True
+        if not default:
+            return False
+
+        def _looks_like_loop(text):
+            return text and ('[' in text)
+
+        if getattr(self, 'has_nlo', False):
+            return False
+        if self.second_process:
+            if any(_looks_like_loop(p) for p in self.second_process):
+                return False
+        proc_card = self.banner.get('proc_card') if self.banner else None
+        if proc_card:
+            for line in proc_card:
+                stripped = line.strip()
+                if (stripped.startswith('generate') or
+                        re.search(r'^\s*add\s+process', stripped)):
+                    if _looks_like_loop(stripped):
+                        return False
+        return default
         
 
     def save_to_pickle(self):
