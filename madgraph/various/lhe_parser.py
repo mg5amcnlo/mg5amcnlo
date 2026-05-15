@@ -2829,7 +2829,6 @@ class Event(list):
               for easier development debug output allow to return internal variable for the unittest to check
         """  
 
-        misc.sprint(self)
         p = self.get_momenta(get_order, allow_reversed, merged_map=merged_map)
 
         # When the ME legs use merged-particle IDs, event PDGs need the same
