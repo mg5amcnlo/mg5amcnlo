@@ -1542,7 +1542,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 return ans
 
         # check special case for external wavefunction
-        assert( len(self.get('mothers'))!=0)
+        assert len(self.get('mothers')) != 0, \
+            "propagate_flavor_tag called on external wavefunction; " \
+            "caller must use tag_external_flavor or ensure externals are pre-tagged"
         try:
             del self[tag_name]
         except:
@@ -3704,7 +3706,10 @@ class HelasDiagram(base_objects.PhysicsObject):
         # loop below, so they remain un-tagged when propagate_flavor_tag tries
         # to access them — triggering an AssertionError.
         # Fix: before the main loop, walk the full ancestor tree of every
-        # wavefunction and tag any external ancestor not already in the list.
+        # wavefunction *and amplitude* and tag any external ancestor not
+        # already in the list.  Amplitudes must be included because decay-chain
+        # insertion (insert_decay) can rewrite amplitude mothers to wavefunctions
+        # that live outside self['wavefunctions'].
         def _tag_external_ancestors(wf):
             """Recursively tag external (no-mothers) wavefunctions."""
             if len(wf.get('mothers')) == 0:
@@ -3714,11 +3719,10 @@ class HelasDiagram(base_objects.PhysicsObject):
                     _tag_external_ancestors(m)
 
         wf_in_list = set(id(wfct) for wfct in self['wavefunctions'])
-        for wfct in self['wavefunctions']:
-            if len(wfct.get('mothers')) > 0:
-                for m in wfct.get('mothers'):
-                    if id(m) not in wf_in_list:
-                        _tag_external_ancestors(m)
+        for obj in list(self['wavefunctions']) + list(self['amplitudes']):
+            for m in obj.get('mothers'):
+                if id(m) not in wf_in_list:
+                    _tag_external_ancestors(m)
 
         if debug:misc.sprint(len(self['wavefunctions']), len(self['amplitudes']), [id(w) for w in self['wavefunctions']], [id(w) for w in self['amplitudes']])
         for wfct in self['wavefunctions']:
