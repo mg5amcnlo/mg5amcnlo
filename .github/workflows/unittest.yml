@@ -393,10 +393,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen 
+      - name: test one of the test testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_ppw_fksall testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen -t0
+            ./tests/test_manager.py testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_ppw_fksall testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen -t0
 
   unittest_18_3:
     # The type of runner that the job will run on
