@@ -55,7 +55,11 @@ def load_model(name, decay=False):
         if path in sys.modules:
             old =  sys.modules[path]
             modelname = os.path.basename(os.path.dirname(old.__file__))
-            if modelname != name:
+            # compare against basename(name) so a full path like
+            # '/foo/bar/sm' still matches the cached 'sm' model and we
+            # don't drop the internals (which would orphan live class
+            # instances and break pickling / isinstance checks)
+            if modelname != os.path.basename(name):
                 del sys.modules[path]
  
 
@@ -84,7 +88,13 @@ def load_model(name, decay=False):
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
         if sys_path != model_path:
             raise Exception('name %s already consider as a python library cann\'t be reassigned(%s!=%s)' % \
-                (path_split[-1], model_path, sys_path)) 
+                (path_split[-1], model_path, sys_path))
+        # same model already loaded: return the cached package and skip
+        # the wipe below. Wiping internals (object_library, particles, ...)
+        # without re-executing __init__.py orphans live class instances,
+        # which breaks pickling (used by the FKS multiprocessing pool) and
+        # isinstance checks across loads.
+        return sys.modules[path_split[-1]]
 
     # remove any link to previous model
     for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card',
@@ -93,13 +103,6 @@ def load_model(name, decay=False):
             del sys.modules[name]
         except Exception:
             continue
-    # also drop the cached model package so __init__.py re-executes and
-    # repopulates the internal modules we just removed; otherwise the
-    # internals stay orphaned and live class instances become unpicklable
-    try:
-        del sys.modules[path_split[-1]]
-    except KeyError:
-        pass
 
     with misc.TMP_variable(sys, 'path', [os.sep.join(path_split[:-1]),os.sep.join(path_split)]):
         try:
