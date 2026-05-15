@@ -93,6 +93,13 @@ def load_model(name, decay=False):
             del sys.modules[name]
         except Exception:
             continue
+    # also drop the cached model package so __init__.py re-executes and
+    # repopulates the internal modules we just removed; otherwise the
+    # internals stay orphaned and live class instances become unpicklable
+    try:
+        del sys.modules[path_split[-1]]
+    except KeyError:
+        pass
 
     with misc.TMP_variable(sys, 'path', [os.sep.join(path_split[:-1]),os.sep.join(path_split)]):
         try:
