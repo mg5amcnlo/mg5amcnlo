@@ -709,7 +709,7 @@ class IOTestManager(unittest.TestCase):
                             print(colored%(34,'Consider creating it with '+
                                             './test_manager.py -U %s'%test_name))
                             exit(0)
-                    goal = open(comparison_path).read()%misc.get_pkg_info()
+                    goal = misc.apply_template(open(comparison_path).read(), misc.get_pkg_info())
                     if not verbose:
                         self.assertFileContains(open(file_path), goal)
                     else:
@@ -755,15 +755,18 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    # So that if % appear, we cast them to %% which are not formatted.
-                    target = target.replace('%','%%')
+                    # apply_template only consumes %(name)<spec> placeholders,
+                    # so bare '%' characters (e.g., Fortran type accessors like
+                    # W(I)%P) are left alone — no need to escape them as '%%'.
                     # So that the version and date is automatically updated
-                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
-                                                           %misc.get_pkg_info(),
-                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
-                    target = target.replace('v%(version)s (%(date)s)'\
-                                                           %misc.get_pkg_info(),
-                                                      'v%(version)s (%(date)s)')
+                    target = target.replace(
+                        misc.apply_template('MadGraph5_aMC@NLO v. %(version)s, %(date)s',
+                                            misc.get_pkg_info()),
+                        'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
+                    target = target.replace(
+                        misc.apply_template('v%(version)s (%(date)s)',
+                                            misc.get_pkg_info()),
+                        'v%(version)s (%(date)s)')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

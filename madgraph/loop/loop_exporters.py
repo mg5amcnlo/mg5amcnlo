@@ -1426,8 +1426,8 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
             
             file = open(os.path.join(self.template_dir,\
                                              'helas_loop_amplitude.inc')).read()
-            file = file % replace_dict
-            files.append(file)   
+            file = misc.apply_template(file, replace_dict)
+            files.append(file)
         
         file="\n".join(files)
         
@@ -2338,8 +2338,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['include_vector'] = '' 
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
- 
-        file = file % replace_dict
+
+        file = misc.apply_template(file, replace_dict)
 
         FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
                                                     coef_format=replace_dict['complex_dp_format'],\
@@ -2535,9 +2535,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
         else:
             replace_dict['include_vector'] = ''
-                    
-        file = file % replace_dict
- 
+
+        file = misc.apply_template(file, replace_dict)
+
         # Write the file
         writer.writelines(file,context=context)
 
@@ -2656,8 +2656,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                            replace_dict['nmultichannel_configs']        
         
         
-        file = open(os.path.join(self.template_dir,\
-                                 'compute_color_flows.inc')).read()%replace_dict
+        file = misc.apply_template(
+            open(os.path.join(self.template_dir,
+                              'compute_color_flows.inc')).read(),
+            replace_dict)
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
@@ -3235,8 +3237,8 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-        file = file % replace_dict
-        
+        file = misc.apply_template(file, replace_dict)
+
         # Write the file
         writer.writelines(file)
 

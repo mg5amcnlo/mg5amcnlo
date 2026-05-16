@@ -115,9 +115,9 @@ C For loop-induced processes, we must reduce this loop amplitude if it contribut
 		    MP_PL(I,J)=0.0e+0_16		    
 		  ENDIF
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)-W(WE(K))%%P(I)
+            PL(I,J)=PL(I,J)-W(WE(K))%P(I)
 			IF (DOING_QP) THEN
-		      MP_PL(I,J)=MP_PL(I,J)-MP_W(WE(K))%%P(I)
+		      MP_PL(I,J)=MP_PL(I,J)-MP_W(WE(K))%P(I)
 		    ENDIF
           ENDDO
           TEMP=TEMP+PAIRING(J)

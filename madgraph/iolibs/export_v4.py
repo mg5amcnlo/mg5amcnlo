@@ -4263,7 +4263,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         
         if writer:
             file = open(replace_dict['template_file']).read()
-            file = file % replace_dict
+            file = misc.apply_template(file, replace_dict)
             # Write the file
             writer.writelines(file)
             return len([call for call in helas_calls if call.find('#') != 0]),ncolor
@@ -5408,10 +5408,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if writer:
             file = open(replace_dict['template_file']).read()
-            file = file % replace_dict
+            file = misc.apply_template(file, replace_dict)
             # Add the split orders helper functions.
-            file = file + '\n' + open(replace_dict['template_file2'])\
-                                                            .read()%replace_dict
+            file = file + '\n' + misc.apply_template(
+                open(replace_dict['template_file2']).read(), replace_dict)
             # Write the file
             writer.writelines(file)
             return len([call for call in helas_calls if call.find('#') != 0]), ncolor
@@ -6439,10 +6439,11 @@ c           This is dummy particle used in multiparticle vertices
         
         #set maxpup (number of @X in the process card)
             
-        text = open(path).read() % {'param_card_name':card, 'maxpup':nb_proc+1}
+        text = misc.apply_template(open(path).read(),
+                                   {'param_card_name':card, 'maxpup':nb_proc+1})
         #the +1 is just a security. This is not needed but I feel(OM) safer with it.
         writer.write(text)
-        
+
         return True
 
 
@@ -8397,9 +8398,9 @@ C
         for coupl in self.coups_flv_indep:
             for key, c in coupl.flavors.items():
                 k1, k2 = _get_k1_k2(key)
-                def_flv.append('%(name)s %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                def_flv.append('%(name)s %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                def_flv.append('%(name)s %% VAL(%(in)i) %%p  =>  %(coupl)s' % {'name': coupl.name, 'in': k1, 'coupl': c})
+                def_flv.append(misc.apply_template('%(name)s % PARTNER(%(in)i) = %(out)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                def_flv.append(misc.apply_template('%(name)s % PARTNER2(%(out)i) = %(in)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                def_flv.append(misc.apply_template('%(name)s % VAL(%(in)i) %p  =>  %(coupl)s', {'name': coupl.name, 'in': k1, 'coupl': c}))
 
         # For alpha_s-dependent flavor couplings the underlying coupling and the
         # FLV_COUPLING itself are both declared as arrays of size VECSIZE_MEMMAX.
@@ -8412,9 +8413,9 @@ C
                 for coupl in self.coups_flv_dep:
                     for key, c in coupl.flavors.items():
                         k1, k2 = _get_k1_k2(key)
-                        loop_lines.append('%(name)s(j_flv_init) %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                        loop_lines.append('%(name)s(j_flv_init) %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                        loop_lines.append('%(name)s(j_flv_init) %% VAL(%(in)i) %%p  =>  %(coupl)s(j_flv_init)' % {'name': coupl.name, 'in': k1, 'coupl': c})
+                        loop_lines.append(misc.apply_template('%(name)s(j_flv_init) % PARTNER(%(in)i) = %(out)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                        loop_lines.append(misc.apply_template('%(name)s(j_flv_init) % PARTNER2(%(out)i) = %(in)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                        loop_lines.append(misc.apply_template('%(name)s(j_flv_init) % VAL(%(in)i) %p  =>  %(coupl)s(j_flv_init)', {'name': coupl.name, 'in': k1, 'coupl': c}))
                 def_flv.append('do j_flv_init = 1, VECSIZE_MEMMAX')
                 def_flv.extend(['  ' + l for l in loop_lines])
                 def_flv.append('end do')
@@ -8423,9 +8424,9 @@ C
                 for coupl in self.coups_flv_dep:
                     for key, c in coupl.flavors.items():
                         k1, k2 = _get_k1_k2(key)
-                        def_flv.append('%(name)s %% PARTNER(%(in)i) = %(out)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                        def_flv.append('%(name)s %% PARTNER2(%(out)i) = %(in)i' % {'name': coupl.name, 'in': k1, 'out': k2})
-                        def_flv.append('%(name)s %% VAL(%(in)i) %%p  =>  %(coupl)s' % {'name': coupl.name, 'in': k1, 'coupl': c})
+                        def_flv.append(misc.apply_template('%(name)s % PARTNER(%(in)i) = %(out)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                        def_flv.append(misc.apply_template('%(name)s % PARTNER2(%(out)i) = %(in)i', {'name': coupl.name, 'in': k1, 'out': k2}))
+                        def_flv.append(misc.apply_template('%(name)s % VAL(%(in)i) %p  =>  %(coupl)s', {'name': coupl.name, 'in': k1, 'coupl': c}))
 
         # max size needed for the couplings
         max_flavor = max([len(ids) for ids in self.model['merged_particles'].values()], default=0)
@@ -9719,8 +9720,8 @@ c         segments from -DABS(tiny*Ga) to Ga
           endif
           end""")
         if self.opt['mp']:
-            fsock.writelines("""
-              
+            fsock.writelines(misc.apply_template("""
+
               %(complex_mp_format)s function mp_cond(condition,truecase,falsecase)
               implicit none
               %(complex_mp_format)s condition,truecase,falsecase
@@ -9897,9 +9898,9 @@ c         segments from -DABS(tiny*Ga) to Ga
               type(mp_b0f_node),pointer::item1
               integer::icomp
               find=.false.
-              nullify(item%%parent)
-              nullify(item%%left)
-              nullify(item%%right)
+              nullify(item%parent)
+              nullify(item%left)
+              nullify(item%right)
               if(.not.associated(head))then
                  head => item
                  return
@@ -9908,24 +9909,24 @@ c         segments from -DABS(tiny*Ga) to Ga
               do
                  icomp=mp_b0f_node_compare(item,item1)
                  if(icomp.lt.0)then
-                    if(.not.associated(item1%%left))then
-                       item1%%left => item
-                       item%%parent => item1
+                    if(.not.associated(item1%left))then
+                       item1%left => item
+                       item%parent => item1
                        exit
                     else
-                       item1 => item1%%left
+                       item1 => item1%left
                     endif
                  elseif(icomp.gt.0)then
-                    if(.not.associated(item1%%right))then
-                       item1%%right => item
-                       item%%parent => item1
+                    if(.not.associated(item1%right))then
+                       item1%right => item
+                       item%parent => item1
                        exit
                      else
-                       item1 => item1%%right
+                       item1 => item1%right
                      endif
                  else
                      find=.true.
-                     item%%value=item1%%value
+                     item%value=item1%value
                      exit
                  endif
               enddo
@@ -9935,11 +9936,11 @@ c         segments from -DABS(tiny*Ga) to Ga
               integer function mp_b0f_node_compare(item1,item2) result(res)
               implicit none
               type(mp_b0f_node),pointer,intent(in)::item1,item2
-              res=mp_complex_compare(item1%%p2,item2%%p2)
+              res=mp_complex_compare(item1%p2,item2%p2)
               if(res.ne.0)return
-              res=mp_complex_compare(item1%%m22,item2%%m22)
+              res=mp_complex_compare(item1%m22,item2%m22)
               if(res.ne.0)return
-              res=mp_complex_compare(item1%%m12,item2%%m12)
+              res=mp_complex_compare(item1%m12,item2%m12)
               return
               end
 
@@ -10036,19 +10037,19 @@ c         segments from -DABS(tiny*Ga) to Ga
                     init=1
                  endif
                  allocate(item)
-                 item%%p2=p2
-                 item%%m12=m12
-                 item%%m22=m22
+                 item%p2=p2
+                 item%m12=m12
+                 item%m22=m22
                  find=.false.
                  call mp_b0f_search(item, b0f_bt, find)
                  if(find)then
-                    mp_b0f=item%%value
+                    mp_b0f=item%value
                     deallocate(item)
                     return
                  else
                     logterms=mp_log_trajectory(100,p2,m12,m22)
                     mp_b0f=-LOG(p2/m22)+logterms
-                    item%%value=mp_b0f
+                    item%value=mp_b0f
                     return
                  endif
               else
@@ -10211,7 +10212,7 @@ c         segments from -DABS(tiny*Ga) to Ga
               else
                  mp_arg=log(comnum/abs(comnum))/imm
               endif
-              end"""%{'complex_mp_format':self.mp_complex_format,'real_mp_format':self.mp_real_format})
+              end""", {'complex_mp_format':self.mp_complex_format,'real_mp_format':self.mp_real_format}))
 
 
         #check for the file functions.f

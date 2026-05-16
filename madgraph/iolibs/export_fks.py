@@ -5079,7 +5079,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
                                                 for dd in self.dirstopdg])
 
         outfile = open(fname ,'w')
-        outfile.write(template % replace_dict)
+        outfile.write(misc.apply_template(template, replace_dict))
         outfile.close()
 
     def get_pdg_tuple(self, pdgs, nincoming, sortfinal):
