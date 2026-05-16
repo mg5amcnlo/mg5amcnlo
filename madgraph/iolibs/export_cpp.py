@@ -1131,8 +1131,8 @@ class OneProcessExporterCPP(object):
                 // Mirror back
                 perm[0]=0;
                 perm[1]=1;
-                flavor[0] = flavor[1];
-                flavor[1] = flv_tmp;
+                flavor[1] = flavor[0];
+                flavor[0] = flv_tmp;
                 // Calculate matrix elements
                 """
                 
