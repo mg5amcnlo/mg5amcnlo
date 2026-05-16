@@ -28,7 +28,7 @@ pjoin = os.path.join
 class UFOError(Exception): pass
 
 def load_model(name, decay=False):
-    
+
     # avoid final '/' in the path
     if name.endswith('/'):
         name = name[:-1]
@@ -94,7 +94,17 @@ def load_model(name, decay=False):
         # without re-executing __init__.py orphans live class instances,
         # which breaks pickling (used by the FKS multiprocessing pool) and
         # isinstance checks across loads.
-        return sys.modules[path_split[-1]]
+        cached = sys.modules[path_split[-1]]
+        # If we previously switched to a different model, sys.modules
+        # entries for this model's internals (e.g. 'object_library') may
+        # have been overwritten or deleted. Restore them from the cached
+        # package so pickle can find the class objects bound to the
+        # cached instances.
+        for path in internal_files:
+            sub = getattr(cached, path, None)
+            if sub is not None:
+                sys.modules[path] = sub
+        return cached
 
     # remove any link to previous model
     for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card',
