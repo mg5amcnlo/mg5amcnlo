@@ -88,7 +88,7 @@ C     row-level information to apply the identical-particle correction.
 C     
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
-C      entries with ref_helicity_grid%%n_tot_entries
+C      entries with ref_helicity_grid%n_tot_entries
       TYPE(SAMPLEDDIMENSION) REF_HELICITY_GRID
 C     
 C     GLOBAL VARIABLES
@@ -215,7 +215,7 @@ C          already updated by another matrix<i>, so we make sure that
 C          the reference grid is empty.
           REF_HELICITY_GRID = DS_GET_DIMENSION(REF_GRID,'Helicity')
           IF((DS_GET_DIM_STATUS('Helicity').EQ.1)
-     $     .AND.(REF_HELICITY_GRID%%N_TOT_ENTRIES.EQ.0)) THEN
+     $     .AND.(REF_HELICITY_GRID%N_TOT_ENTRIES.EQ.0)) THEN
 C           If we finished the initialization we can update the grid
 C            so as to start sampling over it.
 C           However the grid will now be filled by dsample with

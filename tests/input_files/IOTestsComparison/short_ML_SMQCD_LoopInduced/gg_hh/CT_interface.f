@@ -252,7 +252,7 @@ C     ----------
         DO J=1,NLOOPLINE
           PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)-DBLE(W(WE(K))%%W(1+I))
+            PL(I,J)=PL(I,J)-DBLE(W(WE(K))%W(1+I))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO
@@ -355,7 +355,7 @@ C     ----------
         DO J=1,NLOOPLINE
           PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)-DBLE(W(WE(K))%%W(1+I))
+            PL(I,J)=PL(I,J)-DBLE(W(WE(K))%W(1+I))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO

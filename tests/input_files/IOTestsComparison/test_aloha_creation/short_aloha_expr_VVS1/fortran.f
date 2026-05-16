@@ -13,12 +13,12 @@ implicit none
  type(aloha) V1
  type(aloha) V2
  complex*16 vertex
-P1(:) = V1 %% P (:)
- TMP0 = (V2 %% W(1)*P1(0)-V2 %% W(2)*P1(1)-V2 %% W(3)*P1(2)-V2 %% W(4)*P1(3))
- TMP1 = (P1(0)*V1 %% W(1)-P1(1)*V1 %% W(2)-P1(2)*V1 %% W(3)-P1(3)*V1 %% W(4))
- TMP2 = (V2 %% W(1)*V1 %% W(1)-V2 %% W(2)*V1 %% W(2)-V2 %% W(3)*V1 %% W(3)-V2 %% W(4)*V1 %% W(4))
+P1(:) = V1 % P (:)
+ TMP0 = (V2 % W(1)*P1(0)-V2 % W(2)*P1(1)-V2 % W(3)*P1(2)-V2 % W(4)*P1(3))
+ TMP1 = (P1(0)*V1 % W(1)-P1(1)*V1 % W(2)-P1(2)*V1 % W(3)-P1(3)*V1 % W(4))
+ TMP2 = (V2 % W(1)*V1 % W(1)-V2 % W(2)*V1 % W(2)-V2 % W(3)*V1 % W(3)-V2 % W(4)*V1 % W(4))
  TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
- vertex = COUP*S3 %% W(1)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
+ vertex = COUP*S3 % W(1)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
  end
 
 

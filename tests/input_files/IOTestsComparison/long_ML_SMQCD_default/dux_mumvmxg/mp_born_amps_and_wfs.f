@@ -176,11 +176,11 @@ C         Amplitude(s) for UVCT diagram with ID 17
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS
-            DO J=1,SIZE(W(I,H)%%W)
-              DPW(I,H)%%W(J)=W(I,H)%%W(J)
+            DO J=1,SIZE(W(I,H)%W)
+              DPW(I,H)%W(J)=W(I,H)%W(J)
             ENDDO
-            DPW(I,H)%%P = W(I,H)%%P
-            DPW(I,H)%%FLV_INDEX = W(I,H)%%FLV_INDEX
+            DPW(I,H)%P = W(I,H)%P
+            DPW(I,H)%FLV_INDEX = W(I,H)%FLV_INDEX
           ENDDO
 C         Same for the counterterms amplitudes
           DO I=1,NCTAMPS

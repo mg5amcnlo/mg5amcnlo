@@ -18,18 +18,18 @@ implicit none
  type(aloha) V2
  real*8 W2
  complex*16 denom
-P1(:) = V1 %% P (:)
-    V2%%P(:) = +V1%%P(:)+S3%%P(:)
-P2(:) = -V2 %% P (:)
+P1(:) = V1 % P (:)
+    V2%P(:) = +V1%P(:)+S3%P(:)
+P2(:) = -V2 % P (:)
  TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
- TMP1 = (P2(0)*V1 %% W(1)-P2(1)*V1 %% W(2)-P2(2)*V1 %% W(3)-P2(3)*V1 %% W(4))
+ TMP1 = (P2(0)*V1 % W(1)-P2(1)*V1 % W(2)-P2(2)*V1 % W(3)-P2(3)*V1 % W(4))
  TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
  FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
     denom = COUP/(FCT1)
-    V2%%W(1)= denom*M2*S3 %% W(1)*mdl_dWZ*(-P1(0)*TMP1+V1 %% W(1)*TMP2)
-    V2%%W(2)= denom*M2*S3 %% W(1)*mdl_dWZ*(-P1(1)*TMP1+V1 %% W(2)*TMP2)
-    V2%%W(3)= denom*M2*S3 %% W(1)*mdl_dWZ*(-P1(2)*TMP1+V1 %% W(3)*TMP2)
-    V2%%W(4)= denom*M2*S3 %% W(1)*mdl_dWZ*(-P1(3)*TMP1+V1 %% W(4)*TMP2)
+    V2%W(1)= denom*M2*S3 % W(1)*mdl_dWZ*(-P1(0)*TMP1+V1 % W(1)*TMP2)
+    V2%W(2)= denom*M2*S3 % W(1)*mdl_dWZ*(-P1(1)*TMP1+V1 % W(2)*TMP2)
+    V2%W(3)= denom*M2*S3 % W(1)*mdl_dWZ*(-P1(2)*TMP1+V1 % W(3)*TMP2)
+    V2%W(4)= denom*M2*S3 % W(1)*mdl_dWZ*(-P1(3)*TMP1+V1 % W(4)*TMP2)
  end
 
 

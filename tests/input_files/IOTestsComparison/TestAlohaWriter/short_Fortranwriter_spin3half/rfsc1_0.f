@@ -10,8 +10,8 @@ implicit none
  type(aloha) S3
  complex*16 TMP0
  complex*16 vertex
- TMP0 = (F2 %% W(3)*(-R1 %% W(1)+R1 %% W(6)+R1 %% W(13)+CI*(R1 %% W(10)))-F2 %% W(4)*(R1 %% W(2)+R1 %% W(14)-R1 %% W(5)+CI*(R1 %% W(9))))
- vertex = COUP*(-CI * TMP0*S3 %% W(1))
+ TMP0 = (F2 % W(3)*(-R1 % W(1)+R1 % W(6)+R1 % W(13)+CI*(R1 % W(10)))-F2 % W(4)*(R1 % W(2)+R1 % W(14)-R1 % W(5)+CI*(R1 % W(9))))
+ vertex = COUP*(-CI * TMP0*S3 % W(1))
  end
 
 

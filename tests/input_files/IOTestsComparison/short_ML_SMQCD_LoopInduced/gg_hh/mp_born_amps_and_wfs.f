@@ -130,11 +130,11 @@ C         Counter-term amplitude(s) for loop diagram number 11
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS
-            DO J=1,SIZE(W(I)%%W)
-              DPW(I)%%W(J)=W(I)%%W(J)
+            DO J=1,SIZE(W(I)%W)
+              DPW(I)%W(J)=W(I)%W(J)
             ENDDO
-            DPW(I)%%P = W(I)%%P
-            DPW(I)%%FLV_INDEX = W(I)%%FLV_INDEX
+            DPW(I)%P = W(I)%P
+            DPW(I)%FLV_INDEX = W(I)%FLV_INDEX
           ENDDO
 C         Same for the counterterms amplitudes
           DO I=1,NCTAMPS
