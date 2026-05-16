@@ -6754,22 +6754,22 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 subproc_number=group_number)
                 calls,ncolor = replace_dict['return_value']
                 tfile = open(replace_dict['template_file']).read()
-                file = tfile % replace_dict
+                file = misc.apply_template(tfile, replace_dict)
                 # Add the split orders helper functions.
-                file = file + '\n' + open(replace_dict['template_file2'])\
-                                                            .read()%replace_dict
+                file = file + '\n' + misc.apply_template(
+                    open(replace_dict['template_file2']).read(), replace_dict)
                 # Write the file
                 writer = writers.FortranWriter(filename)
                 writer.writelines(file)
-                
+
                 #
                 # write the dedicated template for helicity recycling
                 #
-                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read() 
-                file = tfile % replace_dict
+                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read()
+                file = misc.apply_template(tfile, replace_dict)
                 # Add the split orders helper functions.
-                file = file + '\n' + open(replace_dict['template_file2'])\
-                                                            .read()%replace_dict
+                file = file + '\n' + misc.apply_template(
+                    open(replace_dict['template_file2']).read(), replace_dict)
                 # Write the file
                 writer = writers.FortranWriter('template_matrix%d.f' % (ime+1))
                 writer.uniformcase = False
