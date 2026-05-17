@@ -1729,7 +1729,7 @@ This will take effect only in a NEW terminal
         """ check the validity of the line"""
 
         if args and args[0] == 'madweight':
-            raise self.InvalidCmd('output madweight is no longer supported')
+            raise self.InvalidCmd('output madweight is no longer supported; please use a different output mode')
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
