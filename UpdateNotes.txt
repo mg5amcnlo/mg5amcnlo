@@ -20,7 +20,7 @@ ANNOUNCEMENT:
     RF: Refactored the code that collects all the events from the various channels
         into a single event file at the end of an MC@NLO run.
     OM: Remove the dependency on the six package
-    MZ+LJ: Bug fix in ew_sudkavov (one in the color matrix and one in the value for alphas)
+    MZ+LJ: Bug fixes in ew_sudkavov (one in the color matrix and one in the value for alphas)
     OM: Fix a couple of issue with the linking of the heptools library (especially on ubuntu)
     RR: Extended propagator support for polarised boson (https://arxiv.org/abs/2512.10015)
         See https://github.com/mg5amcnlo/mg5amcnlo/pull/215 for simple instructions
