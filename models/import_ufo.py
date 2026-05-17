@@ -337,7 +337,8 @@ def import_full_model(model_path, decay=False, prefix=''):
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py', 'coupling_orders.py']
+                       'propagators.py', 'coupling_orders.py',
+                       'CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -346,7 +347,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py','CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']:
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)

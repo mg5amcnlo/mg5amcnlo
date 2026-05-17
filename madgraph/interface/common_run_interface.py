@@ -4551,10 +4551,59 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.proc_characteristics
 
 
+    @staticmethod
+    def patch_lhapdf_info_file(pdfset_dir):
+        """Inject AlphaS_FlavorScheme / AlphaS_NumFlavors into a PDF set
+        .info file when the keys are missing but their non-AlphaS_*
+        counterparts are present. Older LHAPDF metadata sometimes ships
+        without these keys, which makes recent LHAPDF abort at PDF load
+        time (e.g. when setting up the shower or MadSpin at NLO).
+        """
+        if not pdfset_dir or not os.path.isdir(pdfset_dir):
+            return
+        try:
+            info_names = [n for n in os.listdir(pdfset_dir) if n.endswith('.info')]
+        except OSError:
+            return
+        for name in info_names:
+            path = pjoin(pdfset_dir, name)
+            try:
+                with open(path, 'r') as f:
+                    content = f.read()
+            except (OSError, IOError):
+                continue
+            present = set()
+            mirror = {}
+            for line in content.split('\n'):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#') or ':' not in stripped:
+                    continue
+                key = stripped.split(':', 1)[0].strip()
+                present.add(key)
+                if key in ('FlavorScheme', 'NumFlavors'):
+                    mirror[key] = stripped.split(':', 1)[1].strip()
+            extra = []
+            if 'AlphaS_FlavorScheme' not in present and 'FlavorScheme' in mirror:
+                extra.append('AlphaS_FlavorScheme: %s' % mirror['FlavorScheme'])
+            if 'AlphaS_NumFlavors' not in present and 'NumFlavors' in mirror:
+                extra.append('AlphaS_NumFlavors: %s' % mirror['NumFlavors'])
+            if not extra:
+                continue
+            logger.info('Patching LHAPDF metadata in %s: adding %s',
+                        path, ', '.join(e.split(':')[0] for e in extra))
+            try:
+                with open(path, 'a') as f:
+                    if content and not content.endswith('\n'):
+                        f.write('\n')
+                    f.write('\n'.join(extra) + '\n')
+            except (OSError, IOError) as e:
+                logger.debug('Could not patch %s: %s', path, e)
+
+
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
-        """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
+        """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list
         into lib/PDFsets.
-        if require_local is False, just ensure that the pdf is in pdfsets_dir 
+        if require_local is False, just ensure that the pdf is in pdfsets_dir
         """
 
         if not hasattr(self, 'lhapdf_pdfsets'):
@@ -4653,7 +4702,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
                 elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
                     files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
-            
+
+            self.patch_lhapdf_info_file(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset))
+
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
