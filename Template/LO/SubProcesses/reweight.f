@@ -1452,7 +1452,7 @@ c   Since we use pdf reweighting, need to know particle identities
 c     Guard against invalid subprocess selection (can happen if IPSEL is unset)
       if (ipsel.lt.1.or.ipsel.gt.maxproc) then
          if (btest(mlevel,0)) write(*,*) 'rewgt: invalid ipsel=',ipsel,
-     $        ' (valid range 1..',maxproc,')'
+     $        ' (valid range 1 to ',maxproc,')'
          rewgt = 0d0
          return
       endif
