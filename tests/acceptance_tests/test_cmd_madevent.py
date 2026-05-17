@@ -923,7 +923,8 @@ class TestMECmdShell(unittest.TestCase):
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
-        target = 0.003795
+        #target = 0.003795
+        target =0.003837 # value from v3.7.2 for 250k events
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
