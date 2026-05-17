@@ -1032,44 +1032,6 @@ jobs:
 
 
 
-  acceptancetest_65:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore-pip-cache
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_tt_semi
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_tt_semi -pA -t0 -l INFO
-
-
-
-  acceptancetest_66:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore-pip-cache
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_zh
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_zh -pA -t0 -l INFO
-
-
-
   acceptancetest_67:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04

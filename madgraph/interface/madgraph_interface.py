@@ -1728,6 +1728,9 @@ This will take effect only in a NEW terminal
     def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
+        if args and args[0] == 'madweight':
+            raise self.InvalidCmd('output madweight is no longer supported')
+
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         elif args:
@@ -1776,8 +1779,8 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight',
-                      'matchbox', 'plugin']:
+                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp',
+                       'matchbox', 'plugin']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1942,11 +1945,6 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
                 auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))                
-        elif self._export_format == 'madweight':
-            name_dir = lambda i: 'PROC_MW_%s_%s' % \
-                                    (self._curr_model['name'], i)
-            auto_path = lambda i: pjoin(self.writing_dir,
-                                               name_dir(i))
         elif self._export_format in ['matchbox_cpp', 'matchbox']:
             name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
                                     (self._curr_model['name'], i)
@@ -3034,7 +3032,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
-                          'matrix', 'standalone_rw', 'madweight'] 
+                          'matrix', 'standalone_rw']
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
                                             'matchbox_cpp', 'matchbox']
     _set_options = ['group_subprocesses',
@@ -9359,7 +9357,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
-        config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         if self._export_format == 'plugin':
             options = {'check': self._export_plugin.check, 'exporter':self._export_plugin.exporter, 'output':self._export_plugin.output}
@@ -9916,7 +9913,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.do_save('options %s' % filename.replace(' ', r'\ '), check=False, \
                     to_keep = to_keep)
 
-        elif self._export_format in ['madevent', 'madweight']:          
+        elif self._export_format in ['madevent']:
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', r'\ '), check=False,
@@ -9932,7 +9929,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                     flaglist,
                                     **add_options)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:
