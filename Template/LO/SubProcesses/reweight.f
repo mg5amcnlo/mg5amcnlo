@@ -1449,6 +1449,11 @@ c   Since we use pdf reweighting, need to know particle identities
       endif
 
       if (use_syst.and.igraphs(1).eq.0) igraphs(1) = iconfig ! happens if use_syst=T BUT fix scale
+c     Guard against invalid subprocess selection (can happen if IPSEL is unset)
+      if (ipsel.lt.1.or.ipsel.gt.maxproc) then
+         rewgt = 0d0
+         return
+      endif
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)

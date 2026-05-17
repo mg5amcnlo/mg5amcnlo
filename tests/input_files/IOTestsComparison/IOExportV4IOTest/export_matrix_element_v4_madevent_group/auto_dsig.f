@@ -199,15 +199,13 @@ C     ENDIF
 C     Select a flavor combination (need to do here for right sign)
       CALL RANMAR(R)
       IPSEL = 0
-      DO WHILE (R.GT.0D0.AND.IPSEL.LT.MAXFLAVPERPROC)
+      DO WHILE (R.GT.0D0)
         IPSEL=IPSEL+1
         R=R-DABS(PD(IPSEL))/PD(0)
       ENDDO
-      IF (IPSEL.LE.0) IPSEL = 1
 
 
 C     set minimum ipsel for this IFLAV
-      IPSEL_SHIFT = 0
       IF (IFLAV.EQ.1) THEN
         IPSEL_SHIFT = 0
       ENDIF
@@ -643,6 +641,4 @@ C      particle
       GET_NHEL1 = NHEL(IPART, IABS(HEL))
       RETURN
       END
-
-
 
