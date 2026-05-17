@@ -24,7 +24,7 @@ ANNOUNCEMENT:
     OM: Fix a couple of issue with the linking of the heptools library (especially on ubuntu)
     RR: Extended propagator support for polarised boson (https://arxiv.org/abs/2512.10015)
         See https://github.com/mg5amcnlo/mg5amcnlo/pull/215 for simple instructions
-    OM: Cleaner version on how MLM select color for events
+    OM: Cleaner version of how MLM selects color for events
     Team: include all bug fix from 3.5.14 (see below)
         Note slightly different handling of default parameter when a parameter is not within the run_card
 
