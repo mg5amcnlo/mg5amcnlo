@@ -292,6 +292,12 @@ class TestCmdLoop(unittest.TestCase):
         try:
             self.setup_logFile_for_logger('madgraph.check_cmd')
             cwd = os.getcwd()
+            # Disable flavor grouping so multiparticles like l- expand to
+            # individual flavors (e-, mu-) rather than the merged _lepton PDG.
+            # Merged particles are not supported for CMS checks and would cause
+            # only a single merged process to be tested instead of all flavor
+            # combinations.
+            self.do('set apply_flavor_grouping False')
             # Change this when we will make the CMS-ready EW model the default
             self.do('import model sm')
             self.do('define l- = e- mu-')
