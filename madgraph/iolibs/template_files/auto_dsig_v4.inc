@@ -163,12 +163,13 @@ C     Continue only if IMODE is 0, 4 or 5
      call ranmar(RCOL)
 
 C     Select a flavor combination (need to do here for right sign)
-         CALL RANMAR(R)
-         IPSEL = 0 
-         DO WHILE (R.GT.0D0)
-            IPSEL=IPSEL+1
-            R=R-DABS(PD(IPSEL))/PD(0)
-         ENDDO
+          CALL RANMAR(R)
+          IPSEL = 0 
+          DO WHILE (R.GT.0D0.AND.IPSEL.LT.MAXFLAVPERPROC)
+             IPSEL=IPSEL+1
+             R=R-DABS(PD(IPSEL))/PD(0)
+          ENDDO
+          IF (IPSEL.LE.0) IPSEL = 1
 
       %(start_ipsel_for_IFLAV)s
       IPSEL = IPSEL + IPSEL_SHIFT

@@ -5574,6 +5574,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['get_flavor'] += 'C ENDIF\n'
         
         replace_dict['start_ipsel_for_IFLAV'] = '\nC set minimum ipsel for this IFLAV\n'
+        replace_dict['start_ipsel_for_IFLAV'] += ' IPSEL_SHIFT = 0\n'
         ipsel = 0
         for i, flv in enumerate(all_flv):
             replace_dict['start_ipsel_for_IFLAV'] += ' %sIF (IFLAV.eq.%d) THEN\n' % ('ELSE' if i != 0 else '',i+1)
