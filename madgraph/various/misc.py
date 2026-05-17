@@ -1008,7 +1008,19 @@ def call(arg, *args, **opt):
 @check_system_error()
 def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
-    return subprocess.Popen(arg, *args, **opt)
+    try:
+        return subprocess.Popen(arg, *args, **opt)
+    except ValueError as error:
+        if 'I/O operation on closed file' not in str(error):
+            raise
+        # In some CI/threaded contexts sys.__stdout__ can be closed while a
+        # subprocess is started with stderr=STDOUT and no explicit stdout.
+        # Retry with explicit /dev/null redirection in that case.
+        if opt.get('stderr') == subprocess.STDOUT and opt.get('stdout') is None:
+            retry_opt = dict(opt)
+            retry_opt['stdout'] = subprocess.DEVNULL
+            return subprocess.Popen(arg, *args, **retry_opt)
+        raise
 
 @check_system_error()
 def call_stdout(arg, *args, **opt):
@@ -2638,5 +2650,4 @@ def tqdm(iterator, **opts):
 #    return newfile(*args)
 #__builtin__.file = newfile
 #__builtin__.open = newopen
-
 

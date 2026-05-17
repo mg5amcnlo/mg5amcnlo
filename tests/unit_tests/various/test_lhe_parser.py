@@ -869,3 +869,90 @@ class TESTLHEParserNLO(unittest.TestCase):
 
         for cevent in evt3.nloweight.cevents:
             self.assertIn(len(cevent), (4,5))
+
+
+class TestBasicEventCompatibility(unittest.TestCase):
+    """Compatibility tests for NLO_PARTIALWEIGHT.BasicEvent in reweight paths."""
+
+    # Minimal LHE event: 2 initial-state (q qbar), 2 final-state (mu- mu+)
+    _event_str = """
+    4      1 +1.0 100.0 0.01 0.1
+    2  -1    0    0  501    0 +0.0 +0.0 +100.0 100.0 0.0 0.0 1.0
+   -2  -1    0    0    0  501 +0.0 +0.0 -100.0 100.0 0.0 0.0 1.0
+   13   1    1    2    0    0 +10.0 +20.0 +30.0  50.0 0.0 0.0 1.0
+  -13   1    1    2    0    0 -10.0 -20.0 -30.0  50.0 0.0 0.0 1.0
+"""
+
+    def _make_basic_event(self, pdgs):
+        """Build a BasicEvent whose PDGs are given, using a no-merge (real) wgt config."""
+        from madgraph.various.lhe_parser import FourMomentum
+
+        class _FakeWgt:
+            def __init__(self, pdg_list):
+                self.pdgs = list(pdg_list)
+                self.born_related = 1
+                self.real_related = 2
+                self.momenta_config = 2  # == real_related  => constructor skips merge
+                self.to_merge_pdg = [1, 2]
+                self.merge_new_pdg = 21
+                self.type = 1
+
+        event = lhe_parser.Event(self._event_str)
+        momenta = [
+            FourMomentum(100.0, 0.0, 0.0,  100.0),   # initial 1
+            FourMomentum(100.0, 0.0, 0.0, -100.0),   # initial 2
+            FourMomentum( 50.0, 10.0, 20.0,  30.0),  # final 1
+            FourMomentum( 50.0,-10.0,-20.0, -30.0),  # final 2
+        ]
+        return lhe_parser.NLO_PARTIALWEIGHT.BasicEvent(momenta, [_FakeWgt(pdgs)], event)
+
+    def test_identity_mapping(self):
+        """PDGs in the event match the requested order exactly: identity mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]))
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_reordered_final_state(self):
+        """Requesting a permuted final-state order returns the correct mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request final state (-13, 13) instead of (13, -13)
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        # event pos 2 holds pdg 13 -> should map to position 3 (second final)
+        # event pos 3 holds pdg -13 -> should map to position 2 (first final)
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 3, 3: 2})
+        self.assertEqual(out2, {0: 0, 1: 1, 3: 2, 2: 3})
+
+    def test_out1_out2_are_inverse(self):
+        """out1 and out2 must be exact inverses of each other."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        for k in out1:
+            self.assertEqual(out2[out1[k]], k)
+        for k in out2:
+            self.assertEqual(out1[out2[k]], k)
+
+    def test_allow_reversed_initial_state(self):
+        """When the initial-state order is flipped, allow_reversed should recover."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request initial (-2, 2) — reversed from the event's (2, -2)
+        out1, out2 = be.get_mapping(([-2, 2], [13, -13]), allow_reversed=True)
+        # After reversal the request becomes (2, -2) so initial positions swap
+        self.assertEqual(out1, {0: 1, 1: 0, 2: 2, 3: 3})
+        self.assertEqual(out2, {1: 0, 0: 1, 2: 2, 3: 3})
+
+    def test_merged_map_remapping(self):
+        """With merged_map, merged PDG codes are transparently remapped."""
+        # The event stores merged PDG 100 for the quark, but the request uses real PDG 2
+        be = self._make_basic_event([100, -100, 13, -13])
+        merged_map = {100: 2}   # 100 -> 2, and by antiparticle convention -100 -> -2
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]), merged_map=merged_map)
+        # Should still produce an identity mapping once PDGs are remapped
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_get_helicity_accepts_merged_map_kwarg(self):
+        """BasicEvent.get_helicity must accept merged_map for reweight compatibility."""
+        be = self._make_basic_event([100, -100, 13, -13])
+        hel = be.get_helicity(([2, -2], [13, -13]), merged_map={100: 2})
+        self.assertEqual(hel, [9, 9, 9, 9])

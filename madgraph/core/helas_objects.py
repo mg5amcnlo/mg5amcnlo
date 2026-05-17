@@ -5400,7 +5400,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
            flag those diagrams with has_flavor attribute set to True.
            Such that all those with has_flavor = False can be trimmed later on.
         """
-        misc.sprint('checking flavor for all diagrams:', real_pdgs, debug)
+        if debug: misc.sprint('checking flavor for all diagrams:', real_pdgs)
         for i, diag in enumerate(self.get('diagrams')):
             if not diag.has_flavor:
                 if diag.check_flavor(real_pdgs, model, debug=debug):

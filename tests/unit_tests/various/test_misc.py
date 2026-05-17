@@ -16,6 +16,8 @@
 
 from __future__ import absolute_import
 import unittest
+import subprocess
+from unittest import mock
 import madgraph.various.misc as misc
 class TEST_misc(unittest.TestCase):
     
@@ -130,3 +132,12 @@ class TEST_misc(unittest.TestCase):
         a = set(['a', 'b'])
         self.assertEqual(a.pop(), 'a')
         self.assertEqual(len(a), 1)
+
+    def test_popen_with_closed_sys_stdout_and_stderr_stdout(self):
+        class ClosedStdout(object):
+            def fileno(self):
+                raise ValueError('I/O operation on closed file')
+
+        with mock.patch('sys.__stdout__', ClosedStdout()):
+            proc = misc.Popen(['echo', 'ok'], stdout=None, stderr=subprocess.STDOUT)
+            self.assertEqual(proc.wait(), 0)

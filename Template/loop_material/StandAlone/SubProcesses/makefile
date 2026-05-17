@@ -9,7 +9,6 @@ else
     ROOT = ..
 endif
 LIBDIR = $(abspath $(ROOT))/lib/
-FFLAGS += -I$(ROOT)/Source/MODEL -I$(ROOT)/Source/DHELAS
 
 PROG   = check
 all : $(PROG)
@@ -23,6 +22,7 @@ POLYNOMIAL_OPTIMIZATION = -O3
 POLYNOMIAL_BOUNDS_CHECK =
 
 include $(ROOT)/Source/make_opts
+FFLAGS += -I$(ROOT)/Source/MODEL -I$(ROOT)/Source/DHELAS
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
 SHELL = /bin/bash
 

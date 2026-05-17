@@ -3617,9 +3617,9 @@ class NLO_PARTIALWEIGHT(object):
         def get_pdg_code(self):
             return self.pdgs
             
-        def get_tag_and_order(self):
+        def get_tag_and_order(self, merged_particle=None):
             """ return the tag and order for this basic event""" 
-            (initial, _), _ = self.event.get_tag_and_order()
+            (initial, _), _ = self.event.get_tag_and_order(merged_particle)
             order = self.get_pdg_code()
             
             
@@ -3627,25 +3627,87 @@ class NLO_PARTIALWEIGHT(object):
             initial.sort()
             out.sort()
             return (tuple(initial), tuple(out)), order
+
+        def get_mapping(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
+            """return (event_pos2order, orderevent_2pos); allow_crossing is ignored for API compatibility"""
+
+            _ = allow_crossing
+
+            if merged_map:
+                def map_pdg(x):
+                    try:
+                        return merged_map[x]
+                    except KeyError:
+                        try:
+                            return -merged_map[-x]
+                        except KeyError:
+                            return x
+            else:
+                def map_pdg(x):
+                    return x
+
+            out1 = {}
+            out2 = {}
+            order = [list(get_order[0]), list(get_order[1])]
+            pdgs = self.get_pdg_code()
+            for pos, pdg in enumerate(pdgs):
+                pdg = map_pdg(pdg)
+                if pos < len(get_order[0]):
+                    try:
+                        ind = order[0].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = ind
+                    order[0][ind] = 0
+                else:
+                    try:
+                        ind = order[1].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = len(order[0]) + ind
+                    order[1][ind] = 0
+
+                out1[pos] = position
+                out2[position] = pos
+            return out1, out2
         
-        def get_momenta(self, get_order, allow_reversed=True):
+        def get_momenta(self, get_order, allow_reversed=True, merged_map=None):
             """return the momenta vector in the order asked for"""
              
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
             out = [''] *(len(order[0])+len(order[1]))
             pdgs = self.get_pdg_code()
+            if merged_map:
+                def map_pdg(x):
+                    try:
+                        return merged_map[x]
+                    except KeyError:
+                        try:
+                            return -merged_map[-x]
+                        except KeyError:
+                            return x
+            else:
+                def map_pdg(x):
+                    return x
             for pos, part in enumerate(self):
+                pdg = map_pdg(pdgs[pos])
                 if pos < len(get_order[0]): #initial
                     try:
-                        ind = order[0].index(pdgs[pos])
+                        ind = order[0].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error   
                             
@@ -3654,14 +3716,14 @@ class NLO_PARTIALWEIGHT(object):
                     order[0][ind] = 0             
                 else: #final   
                     try:
-                        ind = order[1].index(pdgs[pos])
+                        ind = order[1].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error     
                     position = len(order[0]) + ind
@@ -3671,17 +3733,21 @@ class NLO_PARTIALWEIGHT(object):
                 
             return out
 
-        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None):
             """ same as get_momenta but return all valid permutation of the final state 
                     where identical particle does NOT have the same parent
                     for easier development debug output allow to return internal variable for the unittest to check
             """  
 
 
-            return [self.get_momenta(get_order, allow_reversed)]
+            return [self.get_momenta(get_order, allow_reversed, merged_map=merged_map)]
             
             
-        def get_helicity(self, *args):
+        def get_helicity(self, get_order=None, allow_reversed=True, merged_map=None):
+            """Return default helicities; keep signature compatible with Event.get_helicity."""
+            _ = (allow_reversed, merged_map)
+            if get_order:
+                return [9] * (len(get_order[0]) + len(get_order[1]))
             return [9] * len(self)
         
         @property
@@ -4091,4 +4157,3 @@ if '__main__' == __name__:
     
     
     
-
