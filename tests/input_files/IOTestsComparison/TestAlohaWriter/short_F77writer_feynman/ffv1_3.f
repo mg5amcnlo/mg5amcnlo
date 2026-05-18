@@ -17,7 +17,7 @@ implicit none
 P3(:) = -V3 % P (:)
    flv_index1 = F1 %flv_index
    flv_index2 = F2 %flv_index
-   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0d0)then  
+   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0)then  
  V3%W(:) = (0d0,0d0)
   return
 endif
