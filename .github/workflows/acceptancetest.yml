@@ -1127,6 +1127,7 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_ML_check_brs_gd_gd -pA -t0 -l INFO
+            ./tests/test_manager.py test_generate_output_semicolon_preserves_loop_process -pA -t0 -l INFO
 
 
 
