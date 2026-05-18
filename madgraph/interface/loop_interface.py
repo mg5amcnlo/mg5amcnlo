@@ -304,10 +304,6 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             coupling_type = [coupling_type,]
 
         active_interface = getattr(self, 'current_interface', None)
-        def restore_active_interface():
-            if active_interface and hasattr(self, 'change_principal_cmd') and \
-                        getattr(self, 'current_interface', None) != active_interface:
-                self.change_principal_cmd(active_interface)
 
 ##        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
 ##            c = ' '.join(coupling_type)
@@ -324,7 +320,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             # switch), all previously valid multiparticle definitions must survive.
             saved_multiparticles = copy.deepcopy(self._multiparticles)
             self.exec_cmd(" import model %s" % (model_name), precmd=False)
-            restore_active_interface()
+            if active_interface and hasattr(self, 'change_principal_cmd') and \
+                        getattr(self, 'current_interface', None) != active_interface:
+                self.change_principal_cmd(active_interface)
             self._multiparticles = saved_multiparticles
         
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
@@ -370,7 +368,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     #self.history.move_to_last('generate')
                     #last_command = self.history[-1]
                     self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=False)
-                    restore_active_interface()
+                    if active_interface and hasattr(self, 'change_principal_cmd') and \
+                        getattr(self, 'current_interface', None) != active_interface:
+                        self.change_principal_cmd(active_interface)
                     #self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
