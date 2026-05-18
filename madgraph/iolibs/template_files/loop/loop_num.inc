@@ -60,7 +60,7 @@ C
 
   DO H=1,NCOMB
   IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL %(proc_prefix)sLOOPNUMHEL(-Q,BUFF,H)
+    CALL %(proc_prefix)sLOOPNUMHEL(Q,BUFF,H)
 	%(dp_squaring)s
   ENDIF
   ENDDO
@@ -208,7 +208,7 @@ C       This is just to compute the wfs in quad prec
 
   DO H=1,NCOMB
   IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL %(proc_prefix)sMPLOOPNUMHEL(-QPQ,BUFF,H)
+    CALL %(proc_prefix)sMPLOOPNUMHEL(QPQ,BUFF,H)
 	%(mp_squaring)s
   ENDIF
   ENDDO

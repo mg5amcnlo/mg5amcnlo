@@ -587,6 +587,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         self.cuttools_dir=cuttools_dir
         self.tir_dir=tir_dir
         self.loop_optimized_output = cmd.options['loop_optimized_output']
+        if not self.loop_optimized_output:
+            logger.warning('The default MadLoop standalone backend is inconsistent '
+                           'with current momentum conventions; using optimized '
+                           'backend for this check.')
+            self.loop_optimized_output = True
         # Set proliferate to true if you want to keep the produced directories
         # and eventually reuse them if possible
         self.proliferate=True
@@ -4362,9 +4367,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         model = multiprocess_unit.get('model')
 
         # Initialize matrix element evaluation
-        # For loop checks, always use the optimized backend in both gauges.
-        # This comparison is meant to test gauge consistency, not backend
-        # differences between optimized/non-optimized outputs.
+        # For the unitary gauge, open loops should not be used
         loop_optimized_bu = cmd.options['loop_optimized_output']
         if processes_unit.get('squared_orders'):
             if processes_unit.get('perturbation_couplings') in [[],['QCD']]:
@@ -4373,8 +4376,8 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
                 raise InvalidCmd("The gauge test cannot be performed for "+
                   " a process with more than QCD corrections and which"+
                   " specifies squared order constraints.")
-        elif processes_unit.get('perturbation_couplings')!=[]:
-            cmd.options['loop_optimized_output'] = True
+        else:
+            cmd.options['loop_optimized_output'] = False
             
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:

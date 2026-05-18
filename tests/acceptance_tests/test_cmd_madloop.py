@@ -32,8 +32,10 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.various.process_checks as process_checks
 import madgraph.various.misc as misc
 import tests.IOTests as IOTests
+import aloha
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -210,6 +212,57 @@ class TestCmdLoop(unittest.TestCase):
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+    def test_ML_check_permutation_epem_ttx_default_vs_optimized(self):
+        """Compare loop default and optimized outputs for e+ e- > t t~ [virt=QCD]."""
+
+        try:
+            cmd = os.getcwd()
+            self.do('import model loop_sm')
+            self.do('set gauge Feynman')
+            self.assertEqual(cmd, os.getcwd())
+
+            pdef = self.interface.extract_process('e+ e- > t t~ [virt=QCD]')
+            in_ids = [l.get('ids')[0] for l in pdef.get('legs') if not l.get('state')]
+            out_ids = [l.get('ids')[0] for l in pdef.get('legs') if l.get('state')]
+            proc = pdef.get_process(in_ids, out_ids)
+            options = {'energy': 1000, 'events': None, 'skip_evt': 0}
+            cuttools_dir = pjoin(MG5DIR, 'vendor', 'CutTools')
+            old_loop_opt = self.interface.options['loop_optimized_output']
+            old_unitary = aloha.unitary_gauge
+            aloha.unitary_gauge = False
+
+            try:
+                self.interface.options['loop_optimized_output'] = False
+                evaluator_default = process_checks.LoopMatrixElementEvaluator(
+                    cuttools_dir=cuttools_dir, tir_dir={}, cmd=self.interface,
+                    model=pdef.get('model'), param_card=None,
+                    auth_skipping=False, reuse=False, output_path=MG5DIR)
+                default_res = process_checks.get_value(
+                    proc, evaluator_default, options=options)
+
+                self.interface.options['loop_optimized_output'] = True
+                evaluator_optimized = process_checks.LoopMatrixElementEvaluator(
+                    cuttools_dir=cuttools_dir, tir_dir={}, cmd=self.interface,
+                    model=pdef.get('model'), param_card=None,
+                    auth_skipping=False, reuse=False, output_path=MG5DIR)
+                optimized_res = process_checks.get_value(
+                    proc, evaluator_optimized, p=default_res['p'], options=options)
+            finally:
+                process_checks.clean_up(MG5DIR)
+                self.interface.options['loop_optimized_output'] = old_loop_opt
+                aloha.unitary_gauge = old_unitary
+
+            default_val = default_res['value']['m2']
+            optimized_val = optimized_res['value']['m2']
+            rel_diff = abs(default_val - optimized_val) / max(abs(optimized_val), 1.0e-99)
+            self.assertLess(
+                rel_diff, 1.0e-6,
+                msg='default and optimized loop outputs disagree: '
+                    'default=%s optimized=%s rel_diff=%s' % (
+                        default_val, optimized_val, rel_diff))
+        except:
+            raise
 
     def test_ML_check_timing_epem_ttx(self):
         """ Test that check timing e+ e- > t t~ works fine """
@@ -568,7 +621,5 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
                     pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
                     'PRINT_MADLOOP_BANNER')
         
-
-
 
 
