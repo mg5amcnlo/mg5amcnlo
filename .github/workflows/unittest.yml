@@ -601,3 +601,70 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_q_polynomial test_hepmc_parser -t0
+
+
+  unittest_29:
+    # Tests in tests/unit_tests not previously bound to any CI job:
+    # color algebra, base/diagram object merging, miscellaneous I/O and drawing
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: misc unit tests not previously covered
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_cf_computation test_CF_simple test_merge_flavor test_diagram_generation_merged_charge_tuple test_fks_ppzz_in_RS test_check_import_model test_schedular test_create_get_color test_dummy_fcts test_helas_comparison_unmerged test_popen_with_closed_sys_stdout_and_stderr_stdout test_shower_card_write testIO_Loop_sqso_uux_ddx -t0
+
+
+  unittest_30:
+    # Uncovered unit tests in tests/unit_tests/various/test_lhe_parser.py
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: lhe_parser unit tests not previously covered
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_allow_reversed_initial_state test_boost_to_restframe test_get_helicity_accepts_merged_map_kwarg test_identity_mapping test_merged_map_remapping test_out1_out2_are_inverse test_parse_event_nlo test_reordered_final_state test_y_eta_massless -t0
+
+
+  unittest_31:
+    # Uncovered unit tests in tests/unit_tests/various/test_process_checks.py
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: process_checks unit tests not previously covered
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
+
+
+  unittest_32:
+    # Uncovered unit tests in tests/unit_tests/various/test_import_ufo.py
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: import_ufo unit tests not previously covered
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_fd_gauge_import test_get_symmetric_color test_get_symmetric_lorentz test_merge_iden_couplings_with_minus test_remove_interactions2 test_remove_interactions3 test_reshape_FFV_coeff test_reshape_FFV_coeff_gamma5_and_vector test_reshape_FFV_coeff_unknown_structure_ignored -t0
+
+
+  unittest_33:
+    # Uncovered unit tests in tests/unit_tests/fks/test_ewsudakov.py
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: ewsudakov unit tests not previously covered
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov -t0
