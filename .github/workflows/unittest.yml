@@ -606,6 +606,8 @@ jobs:
   unittest_29:
     # Tests in tests/unit_tests not previously bound to any CI job:
     # color algebra, base/diagram object merging, miscellaneous I/O and drawing
+    # NOTE: test_fks_ppzz_in_RS is intentionally omitted — it downloads the
+    # RS UFO model from madgraph.mi.infn.it, which still uses Py2 iteritems().
     runs-on: ubuntu-latest
 
     steps:
@@ -615,7 +617,7 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_cf_computation test_CF_simple test_merge_flavor test_diagram_generation_merged_charge_tuple test_fks_ppzz_in_RS test_check_import_model test_schedular test_create_get_color test_dummy_fcts test_helas_comparison_unmerged test_popen_with_closed_sys_stdout_and_stderr_stdout test_shower_card_write testIO_Loop_sqso_uux_ddx -t0
+            ./tests/test_manager.py test_cf_computation test_CF_simple test_merge_flavor test_diagram_generation_merged_charge_tuple test_check_import_model test_schedular test_create_get_color test_dummy_fcts test_helas_comparison_unmerged test_popen_with_closed_sys_stdout_and_stderr_stdout test_shower_card_write testIO_Loop_sqso_uux_ddx -t0
 
 
   unittest_30:
