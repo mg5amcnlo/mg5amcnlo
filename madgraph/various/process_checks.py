@@ -4539,16 +4539,15 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # to be used there (the widths should be recycled from those of the NWA run).
     if options['recompute_width'] in ['first_time', 'always'] and has_FRdecay:
         modelname = cmd._curr_model.get('modelpath+restriction')
-        # Preserve apply_flavor_grouping from the interface options so that
-        # the model used for MadWidth matches what the user requested.
-        import_opts = {}
-        if hasattr(cmd, 'options'):
-            import_opts['apply_flavor_grouping'] = cmd.options.get(
-                                                    'apply_flavor_grouping', True)
+        # Preserve apply_flavor_grouping only when explicitly configured by
+        # the caller. Otherwise let import_model use its own default behavior.
+        import_model_kwargs = {'decay': True, 'complex_mass_scheme': False}
+        if hasattr(cmd, 'options') and isinstance(cmd.options, dict) and \
+                                 'apply_flavor_grouping' in cmd.options:
+            import_model_kwargs['options'] = {
+                'apply_flavor_grouping': cmd.options['apply_flavor_grouping']}
         with misc.MuteLogger(['madgraph'], ['INFO']):
-            model = import_ufo.import_model(modelname, decay=True,
-                                            complex_mass_scheme=False,
-                                            options=import_opts)
+            model = import_ufo.import_model(modelname, **import_model_kwargs)
         multiprocess_nwa.set('model', model)
 
     run_options = copy.deepcopy(options)
