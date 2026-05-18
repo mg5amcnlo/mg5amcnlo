@@ -2952,8 +2952,8 @@ c$$$      endif
       else
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*x(2)**2
-         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       endif
+      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       
 c
 c Compute costh_i_fks
@@ -3129,8 +3129,8 @@ c$$$      endif
       else
          xi_i_hat=x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
-         xjac=xjac*2d0*x(1)
       endif
+      xjac=xjac*2d0*x(1)
 c
 c Initial state variables are different for events and counterevents. Update them here.
 c

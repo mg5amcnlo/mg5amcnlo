@@ -5,6 +5,7 @@ c**************************************************************************
       use extra_weights
       use mint_module
       use FKSParams
+      use process_module
       implicit none
 C
 C     CONSTANTS
@@ -79,7 +80,8 @@ c stats for granny_is_res
 
       logical useitmax
       common/cuseitmax/useitmax
-
+      include 'leshouche_decl.inc'
+      include 'born_nhel.inc'
 C-----
 C  BEGIN CODE
 C-----
@@ -187,7 +189,17 @@ c     Prepare the MINT folding
       ifold_energy=ndim-2
       ifold_yij=ndim-1
       ifold_phi=ndim
-c      
+c
+
+      ! initialise the global, but process dependent, information in the process module.
+      call init_process_module_global(shower_mc,abrv,nexternal,nincoming
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used,ickkw)
+      ! Also put all the n-body process dependent stuff here. It does
+      ! not depend on PS point or FKS config, so all global information.
+      call init_process_module_nbody_wrapper()
+
+
+      
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
@@ -345,7 +357,7 @@ c timing statistics
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,p_lab(0:3
      $     ,nexternal) ,p_cms(0:3,nexternal)
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
-     $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked
+     $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked,dum
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
       data firsttime/.true./
@@ -476,6 +488,7 @@ c The n+1-body contributions (including counter terms)
          call update_fks_dir(iFKS)
          call generate_momenta(nndim,iconfig,jac,x,p,p_lab,p_cms)
          if (p_born(0,1).lt.0d0) cycle
+         call init_process_module_n1body_wrapper(dum)
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
@@ -928,3 +941,54 @@ c
       lbw(0)=0
       end
 c
+      subroutine init_process_module_nbody_wrapper()
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      external get_color
+      double precision mass(1:nexternal-1),get_mass_from_id
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,max_bcol)
+      include 'born_leshouche.inc'
+      do i=1,nexternal-1
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      call init_process_module_nbody(nexternal-1,mass,colour
+     $     ,max_bcol,valid_dipole)
+      
+      end
+
+      
+      subroutine init_process_module_n1body_wrapper(dum)
+      use process_module
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      integer iFKS,colour(1:nexternal),i,j,k,get_color,dum
+      double precision mass(1:nexternal),get_mass_from_id
+      external get_color
+      external get_mass_from_id
+      logical valid_dipole(1:nexternal,1:nexternal)
+      integer icolup(1:2,1:nexternal)
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     dummy(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,dummy,niprocs
+      do i=1,nexternal
+         mass(i)=get_mass_from_id(idup(i,1))
+         colour(i)=get_color(idup(i,1))
+      enddo
+      valid_dipole=.false.
+      call init_process_module_n1body(nexternal,mass,colour
+     $     ,maxflow,valid_dipole)
+      end
