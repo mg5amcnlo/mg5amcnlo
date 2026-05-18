@@ -173,7 +173,7 @@ class TestCmdLoop(unittest.TestCase):
 
         with self.assertRaises(InvalidCmd) as ctx:
             self.interface.exec_cmd(
-                'generate e+ e- > t t~ [virt=QCD]; output bad>path',
+                'import model sm;generate e+ e- > t t~ [virt=QCD]; output bad>path',
                 precmd=True,
                 errorhandling=False
             )
