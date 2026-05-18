@@ -104,6 +104,19 @@ def load_model(name, decay=False):
             sub = getattr(cached, path, None)
             if sub is not None:
                 sys.modules[path] = sub
+        # if decay info is requested, ensure it's attached to the cached
+        # package — sm/__init__.py does not set all_decays itself
+        # (see commented-out line), the full-load tail below does. We
+        # must do the same on the cache-hit path so compute_widths sees
+        # the partial-width data.
+        if decay:
+            dec_name = '%s.decays' % path_split[-1]
+            try:
+                __import__(dec_name)
+            except ImportError:
+                pass
+            else:
+                cached.all_decays = sys.modules[dec_name].all_decays
         return cached
 
     # remove any link to previous model
