@@ -94,15 +94,17 @@ class TestMECmdShell(unittest.TestCase):
 
         if self.path != pjoin(MG5DIR, "tmp_test"):
             shutil.rmtree(self.path)
-        if self.stdout not in [sys.stdout, sys.stderr] and not self.stdout.closed:
+        stdout = getattr(self, 'stdout', None)
+        if stdout not in [None, sys.stdout, sys.stderr] and not stdout.closed:
             self.stdout.close() 
 
     def get_stdout(self):
+        stdout = getattr(self, 'stdout', None)
         if logging.getLogger('madgraph').level >= 20:
-            if self.stdout.closed:
+            if stdout is None or stdout.closed:
                 self.stdout = open(os.devnull, 'w')
         elif getattr(sys.stdout, 'closed', False):
-            if self.stdout.closed or self.stdout == sys.stdout:
+            if stdout is None or stdout.closed or stdout == sys.stdout:
                 self.stdout = open(os.devnull, 'w')
         else:
             self.stdout = sys.stdout
@@ -192,7 +194,6 @@ class TestMECmdShell(unittest.TestCase):
                 fsock.write('1\n')         # Suppress Amplitude 1=yes
                 fsock.write('0\n')         # Helicity Sum/event 0=exact
                 fsock.write('      86\n')
-            fsock.close()
             
         stdout = self.get_stdout()
         return_code = subprocess.Popen(
