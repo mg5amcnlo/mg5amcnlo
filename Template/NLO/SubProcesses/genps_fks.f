@@ -2198,9 +2198,8 @@ c$$$
          y_ij_fks = y_ij_fks_fix
       else
          y_ij_fks = 1d0-2d0*x(2)**2
-         xjac=xjac*2d0*x(2)*2d0
       endif
-      
+      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
 
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
@@ -2259,8 +2258,8 @@ c$$$
       else
          xi_i_hat=x(1)**2
          xi_i_fks=xi_i_hat*xiimax
-         xjac=xjac*2d0*x(1)
       endif
+      if (.not.softtest) xjac=xjac*2d0*x(1)
 
 
       
@@ -2496,9 +2495,8 @@ c$$$      xjac=xjac*2d0*x(2)*2d0
          stop 1
       else
          y_ij_fks = 1d0-2d0*x(2)**2
-         xjac=xjac*2d0*x(2)*2d0
       endif
-
+      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
       
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
@@ -2605,6 +2603,7 @@ c
       if(icountevts.eq.0)then
          xi_i_fks=0d0
          isolsign=1
+         if (x(1).le.rat_xi .and. .not. softtest) xjac=xjac*2d0*x(1)/rat_xi
       elseif (softtest) then
          if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
@@ -2953,7 +2952,7 @@ c$$$      endif
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*x(2)**2
       endif
-      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+      if (.not. colltest) xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       
 c
 c Compute costh_i_fks
@@ -3130,7 +3129,7 @@ c$$$      endif
          xi_i_hat=x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
       endif
-      xjac=xjac*2d0*x(1)
+      if (.not. softtest) xjac=xjac*2d0*x(1)
 c
 c Initial state variables are different for events and counterevents. Update them here.
 c
