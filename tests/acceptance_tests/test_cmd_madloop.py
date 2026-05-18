@@ -168,6 +168,20 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+    def test_generate_output_semicolon_preserves_loop_process(self):
+        """Regression test for combined generate/output in one command line."""
+
+        with self.assertRaises(InvalidCmd) as ctx:
+            self.interface.exec_cmd(
+                'generate e+ e- > t t~ [virt=QCD]; output bad>path',
+                precmd=True,
+                errorhandling=False
+            )
+
+        self.assertIn('not allowed in the output path', str(ctx.exception))
+        self.assertNotIn('No processes generated', str(ctx.exception))
+        self.assertTrue(self.interface._curr_amps)
+
     def test_ML_check_full_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
         
@@ -554,7 +568,6 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
                     pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
                     'PRINT_MADLOOP_BANNER')
         
-
 
 
 
