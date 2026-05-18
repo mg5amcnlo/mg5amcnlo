@@ -36,16 +36,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_sqso1
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_cross_sqso1 -pP -t0 -l INFO
 
@@ -58,16 +57,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_4_e500
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_4_e500 -pP -t0 -l INFO
 
@@ -79,16 +77,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_6_e500
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_6_e500 -pP -t0 -l INFO
 
@@ -100,16 +97,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_6_e90
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_6_e90 -pP -t0 -l INFO
 
@@ -122,16 +118,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_pol
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py  test_short_cross_pol -pP -t0 -l INFO
 
@@ -144,16 +139,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_sm1
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_cross_sm1 -pP -t0 -l INFO
 
@@ -166,16 +160,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_ppgogo_amcatnlo_nlo
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py  test_short_amcatnlo_int_nlo -pP -t0 -l INFO
 
@@ -187,16 +180,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_ppgogo_amcatnlo_nlo
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_ppgogo_amcatnlo_nlo -pP -t0 -l INFO
 
@@ -207,14 +199,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       - name: test test_short_cross_gauge
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_cross_gauge -pP -t0 -l INFO
 
@@ -225,14 +216,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       - name: test test_short_gauge
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_gauge -pP -t0 -l INFO
 
@@ -243,13 +233,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       - name: test test_short_gauge_loop
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_gauge_loop -pP -t0 -l INFO

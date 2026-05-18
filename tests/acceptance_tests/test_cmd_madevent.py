@@ -94,8 +94,19 @@ class TestMECmdShell(unittest.TestCase):
 
         if self.path != pjoin(MG5DIR, "tmp_test"):
             shutil.rmtree(self.path)
-        if logging.getLogger('madgraph').level <= 20:
+        if self.stdout not in [sys.stdout, sys.stderr] and not self.stdout.closed:
             self.stdout.close() 
+
+    def get_stdout(self):
+        if logging.getLogger('madgraph').level >= 20:
+            if self.stdout.closed:
+                self.stdout = open(os.devnull, 'w')
+        elif getattr(sys.stdout, 'closed', False):
+            if self.stdout.closed or self.stdout == sys.stdout:
+                self.stdout = open(os.devnull, 'w')
+        else:
+            self.stdout = sys.stdout
+        return self.stdout
     
     def generate(self, process, model):
         """Create a process"""
@@ -169,10 +180,11 @@ class TestMECmdShell(unittest.TestCase):
             run_card.write(pjoin(self.out_dir, 'Cards', 'run_card.dat'))
             
             # Compile the code
-            subprocess.Popen(['make'], cwd=pjoin(self.out_dir, 'Source'), stdout=self.stdout, stderr=self.stdout).wait()
+            stdout = self.get_stdout()
+            subprocess.Popen(['make'], cwd=pjoin(self.out_dir, 'Source'), stdout=stdout, stderr=stdout).wait()
             subprocess.Popen(['make', 'madevent_forhel'],                         
                              cwd=pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq'),
-                             stdout=self.stdout, stderr=self.stdout).wait()
+                             stdout=stdout, stderr=stdout).wait()
             with open(pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq', 'run_config.txt'), 'w') as fsock:  
                 fsock.write('1000 5 3\n')  
                 fsock.write('0.1\n')       # Accuracy
@@ -182,11 +194,12 @@ class TestMECmdShell(unittest.TestCase):
                 fsock.write('      86\n')
             fsock.close()
             
+        stdout = self.get_stdout()
         return_code = subprocess.Popen(
             ['./madevent_forhel'],
             cwd=pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq'),
             stdin=open(pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq', 'run_config.txt')),
-            stdout=self.stdout, stderr=self.stdout
+            stdout=stdout, stderr=stdout
         ).wait()
             
         self.assertEqual(return_code, 0)
