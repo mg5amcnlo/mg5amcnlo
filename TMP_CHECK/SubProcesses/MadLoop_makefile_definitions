@@ -1,0 +1,13 @@
+LINK_LOOP_LIBS = -L$(LIBDIR) -lcts -liregi
+LOOP_LIBS = $(LIBDIR)libcts.$(libext) $(LIBDIR)libiregi.$(libext)
+DYLOOP_LIBS = 
+LOOP_INCLUDE = 
+LOOP_PREFIX = P
+DOTO = %.o
+DOTF = %.f
+LINK_MADLOOP_LIB = -L$(LIBDIR) -lMadLoop
+MADLOOP_LIB = $(LIBDIR)libMadLoop.$(libext)
+RPATH_LIBS = 
+
+$(MADLOOP_LIB):
+	cd ..; make -f makefile_MadLoop OLP_static
