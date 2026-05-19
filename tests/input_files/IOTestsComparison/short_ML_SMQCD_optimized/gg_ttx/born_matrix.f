@@ -314,6 +314,7 @@ C     ROUTINE FOR F2PY to read the benchmark point.
 
 
       SUBROUTINE ML5_0_GET_VALUE_INTERNAL(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      USE MODEL_OBJECT
 C     This routine is the real value but can not be in the interface
 C     due to f2py not knowing how to handle the couplings common block
       USE MODEL_OBJECT
@@ -462,4 +463,5 @@ C     ----------
       ML5_0_BROKEN_SYM = TOTAL_FACTOR
       RETURN
       END
+
 

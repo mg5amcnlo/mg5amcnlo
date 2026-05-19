@@ -618,6 +618,7 @@ C     JAMPs contributing to orders QCD=4 QED=0
       END
 
       SUBROUTINE GET_VALUE(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      USE MODEL_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANT
@@ -767,6 +768,7 @@ C     ----------
       BROKEN_SYM = TOTAL_FACTOR
       RETURN
       END
+
 
 
 C     Set of functions to handle the array indices of the split orders

@@ -352,6 +352,7 @@ C     JAMPs contributing to orders QCD=2
       END
 
       SUBROUTINE ML5_0_GET_VALUE(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      USE MODEL_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANT
@@ -501,6 +502,7 @@ C     ----------
       ML5_0_BROKEN_SYM = TOTAL_FACTOR
       RETURN
       END
+
 
 
 C     Set of functions to handle the array indices of the split orders
