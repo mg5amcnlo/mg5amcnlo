@@ -3126,14 +3126,14 @@ Parameters              %(params)s\n\
                 if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
                     nborn += 1
 
-            if nborn > 1:
-                raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
-                        " the Born has more than one coupling combination, found %d)" % nborn)
+            ###MZif nborn > 1:
+            ###    raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+            ###            " the Born has more than one coupling combination, found %d)" % nborn)
 
             # now we can see if the process has a LO1
             has_lo1 = bool(nborn)
             if has_lo1:
-                lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+                lo1_pos = 1## MZ squared_orders_born.index(tuple(born_orders)) + 1
             else:
                 lo1_pos = -100
 
@@ -3380,6 +3380,7 @@ Parameters              %(params)s\n\
         # now the jamp for the sudakov me
         # NOTE: this ASSUMES that the splitorders of the sudakov and of the born me
         # are the same
+        print('SUDAKOV', replace_dict['process_lines'])
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
@@ -3387,6 +3388,8 @@ Parameters              %(params)s\n\
         else:
             squared_orders, amp_orders = sudakov_me.get_split_orders_mapping()
             # safety check
+            print(replace_dict['nAmpSplitOrders'],replace_dict['nSqAmpSplitOrders'],replace_dict['nSplitOrders'],
+                                len(amp_orders),len(squared_orders),len(split_orders))
             if replace_dict['nAmpSplitOrders'] != len(amp_orders) or \
                replace_dict['nSqAmpSplitOrders'] != len(squared_orders) or \
                replace_dict['nSplitOrders'] != len(split_orders):

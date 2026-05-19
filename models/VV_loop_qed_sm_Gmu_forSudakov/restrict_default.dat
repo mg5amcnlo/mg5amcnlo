@@ -1,0 +1,109 @@
+###################################
+## INFORMATION FOR SMINPUTS
+###################################
+Block SMINPUTS 
+    2 1.166370e-05 # Gf 
+    3 1.184000e-01 # aS 
+    6 1.720000e+02 # ymt 
+
+###################################
+## INFORMATION FOR MASS
+###################################
+Block MASS 
+    6 1.720000e+02 # MT 
+   23 9.118760e+01 # MZ 
+   24 8.041900e+01 # MW 
+   25 1.200000e+02 # MH 
+##  Not dependent paramater.
+## Those values should be edited following analytical the 
+## analytical expression. Some generator could simply ignore 
+## those values and use the analytical expression
+  22 0.000000 # A : 0.0 
+  21 0.000000 # G : 0.0 
+  12 0.000000 # ve : 0.0 
+  14 0.000000 # vm : 0.0 
+  16 0.000000 # vt : 0.0 
+  11 0.000000 # e- : 0.0 
+  13 0.000000 # m- : 0.0 
+  15 0.000000 # tt- : 0.0 
+  2 0.000000 # u : 0.0 
+  4 0.000000 # c : 0.0 
+  1 0.000000 # d : 0.0 
+  3 0.000000 # s : 0.0 
+  5 0.000000 # b : 0.0 
+
+###################################
+## INFORMATION FOR DECAY
+###################################
+DECAY   6 1.508336e+00 
+DECAY  23 2.495200e+00 
+DECAY  24 2.085000e+00 
+DECAY  25 5.753088e-03 
+##  Not dependent paramater.
+## Those values should be edited following analytical the 
+## analytical expression. Some generator could simply ignore 
+## those values and use the analytical expression
+DECAY  22 0.000000 # A : 0.0 
+DECAY  21 0.000000 # G : 0.0 
+DECAY  12 0.000000 # ve : 0.0 
+DECAY  14 0.000000 # vm : 0.0 
+DECAY  16 0.000000 # vt : 0.0 
+DECAY  11 0.000000 # e- : 0.0 
+DECAY  13 0.000000 # m- : 0.0 
+DECAY  15 0.000000 # tt- : 0.0 
+DECAY  2 0.000000 # u : 0.0 
+DECAY  4 0.000000 # c : 0.0 
+DECAY  1 0.000000 # d : 0.0 
+DECAY  3 0.000000 # s : 0.0 
+DECAY  5 0.000000 # b : 0.0 
+
+###################################
+## INFORMATION FOR DIM6
+###################################
+Block DIM6 
+    1 1.000000e+03 # Lambda 
+    4 4.00e-01 # cpWB 
+    7 7.000e-01 # cWWW 
+    8 8.0e-01 # cG 
+    9 9.0e-01 # cpG 
+   10 10.0e-01 # cpW 
+   11 11.0e-01 # cpBB 
+   20 0.1e0  # gset0->>> set it to 0!!!
+
+###################################
+## INFORMATION FOR DIM62F
+###################################
+Block DIM62F 
+    10 10e-01 # cpqMi
+    11 11e-01 # cpq3i
+    12 12e-01 # cpQ3
+    13 13e-01 # cpQM
+    14 14e-01 # cpu
+    15 15e-01 # cpt
+    16 16e-01 # cpd
+    19 19e-01 # ctp
+    22 22e-01 # ctZ
+    23 23e-01 # ctW
+
+###################################
+## INFORMATION FOR TADPOLE
+###################################
+Block TADPOLE 
+    1 3.000000e-01 # ntadpole
+    
+    
+     
+#===========================================================
+# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)
+#===========================================================
+
+Block QNUMBERS 250  # G0 
+        1 0  # 3 times electric charge
+        2 3  # number of spin states (2S+1)
+        3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
+        4 0  # Particle/Antiparticle distinction (0=own anti)
+Block QNUMBERS 251  # G+ 
+        1 3  # 3 times electric charge
+        2 3  # number of spin states (2S+1)
+        3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
+        4 1  # Particle/Antiparticle distinction (0=own anti)

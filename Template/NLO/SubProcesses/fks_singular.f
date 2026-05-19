@@ -214,7 +214,7 @@ c   approximation
       endif
 
       ! sud_mod = 0
-      do sud_mod = 0,1
+      do sud_mod = 1,1
 
        call sborn(p_born,wgt_c)
        call sudakov_wrapper(p_born)
@@ -235,7 +235,7 @@ c   approximation
         ! the EW sudakov amp_split has the same positions of 
         ! those for the Born
         if (has_lo1) then
-          orders_ew(qed_pos)=orders_ew(qed_pos)+2
+          orders_ew(qed_pos)=orders_ew(qed_pos)!+2
           QCD_power=orders_ew(qcd_pos)
           wgtcpower=0d0
           !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
