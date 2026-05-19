@@ -709,7 +709,7 @@ jobs:
             ./tests/test_manager.py test_uuxddx_SplitOrders_vs_stored_ML5 -pP -t0 -l INFO
             
 
-   test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6:
+  test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6:
     # bin/generate_events with an explicit run name, default HERWIG6 shower.
     runs-on: ubuntu-22.04
 
@@ -724,7 +724,7 @@ jobs:
             ./tests/test_manager.py  test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6 -pP -t0 -l INFO
             
 
-   test_long_sm_vs_stored_ML5_gg_zccx:
+  test_long_sm_vs_stored_ML5_gg_zccx:
     # bin/generate_events with an explicit run name, default HERWIG6 shower.
     runs-on: ubuntu-22.04
 
@@ -739,7 +739,7 @@ jobs:
             ./tests/test_manager.py test_long_sm_vs_stored_ML5_gg_zccx -pP -t0 -l INFO
             
 
-   test_long_sm_vs_stored_HCR_uxu_zz_QED:
+  test_long_sm_vs_stored_HCR_uxu_zz_QED:
     # bin/generate_events with an explicit run name, default HERWIG6 shower.
     runs-on: ubuntu-22.04
 
@@ -754,7 +754,7 @@ jobs:
             ./tests/test_manager.py long_sm_vs_stored_HCR_uxu_zz_QED -pP -t0 -l INFO
             
 
-   test_long_sm_vs_stored_HCR_uxu_zz_QCD:
+  test_long_sm_vs_stored_HCR_uxu_zz_QCD:
     # bin/generate_events with an explicit run name, default HERWIG6 shower.
     runs-on: ubuntu-22.04
 
