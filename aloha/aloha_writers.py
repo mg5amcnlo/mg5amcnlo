@@ -746,7 +746,7 @@ class ALOHAWriterForFortran(WriteALOHA):
 
                 out.write('   flv_index1 = F1 %flv_index\n')
                 out.write('   flv_index2 = F2 %flv_index\n')
-                out.write('   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0d0)then  \n %s\n  return\nendif\n' % fail)
+                out.write('   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0)then  \n %s\n  return\nendif\n' % fail)
             else:
                 incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
                 outgoing = self.outgoing

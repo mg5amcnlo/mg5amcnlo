@@ -162,7 +162,6 @@ class Event:
         if model is None:
             return cls._pdg_to_merged
         merged = model.get('merged_particles')
-        misc.sprint(merged)
         if not merged:
             return cls._pdg_to_merged
 
@@ -1042,10 +1041,8 @@ class AllMatrixElement(dict):
         # get the branching ratio associated to a process
        
         def branching_ratio_for_pdg(pid, lhaid, proc):
-            misc.sprint('get BR for %s > %s' % (pid, lhaid[1:]))
             if any(abs(fid) in proc.get('model').get('merged_particles') for fid in lhaid):
                 pids = [l.get('id') for l in proc.get('legs')]
-                misc.sprint('initial pids', pids)
                 for i,fid in enumerate(pids):
                     if abs(fid) in proc.get('model').get('merged_particles'):
                         l = proc.get('legs')[i]
@@ -1057,7 +1054,6 @@ class AllMatrixElement(dict):
                             pids[i] = [-x for x in proc.get('model').get('merged_particles')[abs(fid)]]
                     else:
                         pids[i] = [fid]
-                misc.sprint(pids)    
 
                 all_combinations = list(itertools.product(*pids))
                 br = 0
@@ -2886,8 +2882,6 @@ class decay_all_events(object):
         for ((nbody, pid, finals),decays) in nbody_to_decay.items():
             if len(decays) == 1:
                 continue  
-            misc.sprint(nbody, pid, finals, len(decays))
-            misc.sprint(type(decays[0]))
             mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
             
             # create an object for the validation, keeping the ratio between
@@ -5011,7 +5005,7 @@ class decay_all_events(object):
 class decay_all_events_onshell(decay_all_events):
     """special mode for onshell production"""
 
-    #@misc.mute_logger()
+    @misc.mute_logger()
     @misc.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -5153,7 +5147,6 @@ class decay_all_events_onshell(decay_all_events):
         # remove decay with 0 branching ratio.
         #mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        misc.sprint("generating directory *****************************************************************************")
         commandline = 'output standalone %s --prefix=int' % pjoin(path_me,'madspin_me')
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
