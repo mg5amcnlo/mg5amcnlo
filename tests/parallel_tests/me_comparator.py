@@ -468,6 +468,7 @@ class MG5_UFO_Runner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
+        misc.sprint("proc_card.dat content:\n%s" % v5_string)
         return v5_string
 
 class MG5_UFO_gauge_Runner(MG5Runner):

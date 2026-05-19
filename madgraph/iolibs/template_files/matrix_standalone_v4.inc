@@ -266,6 +266,7 @@ C     ROUTINE FOR F2PY to read the benchmark point.
 
 
       SUBROUTINE %(proc_prefix)sGET_value_internal(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      use model_object
 C     This routine is the real value but can not be in the interface
 C     due to f2py not knowing how to handle the couplings common block
       use model_object

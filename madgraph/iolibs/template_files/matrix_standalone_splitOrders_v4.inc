@@ -304,6 +304,7 @@ C ----------
       END
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL, FLAVOR ,ANS)
+      use model_object
       IMPLICIT NONE
 C
 C CONSTANT
