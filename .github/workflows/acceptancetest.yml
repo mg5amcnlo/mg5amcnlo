@@ -517,7 +517,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
@@ -525,6 +525,25 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_ufo_aloha -pA -t0 -l INFO
+
+
+  acceptancetest_spin2_standalone:
+    # Regression test for spin-2 wavefunction storage in standalone
+    # Fortran output (loop_smgrav: p p > w+ y). Guards against the
+    # TYPE(ALOHA)/TYPE(ALOHA2D) layout mismatch that overruns the
+    # caller's wavefunction slot when TXXXXX writes 16 complex into
+    # a 4-complex aloha element.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_standalone_spin2_loop_smgrav
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_spin2_loop_smgrav -pA -t0 -l INFO
 
 
 

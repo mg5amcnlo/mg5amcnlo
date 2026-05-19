@@ -653,7 +653,69 @@ class TestCmdShell2(unittest.TestCase,
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
-    
+
+    def test_standalone_spin2_loop_smgrav(self):
+        """Regression test for spin-2 wavefunction storage in standalone
+        Fortran output. ALOHA generates the tensor wavefunction routines
+        TXXXXX / VVT2_* with a TYPE(ALOHA2D) (W(16)) parameter, but the
+        caller's matrix.f stores every slot in a single TYPE(ALOHA)
+        array; when TYPE(ALOHA) holds only W(4) the tensor routine
+        overruns the slot and clobbers the caller's stack. This test
+        compiles and runs ./check for p p > w+ y in loop_smgrav and
+        asserts that the matrix element is the physical reference value
+        (~16.95 GeV^0) rather than the order-of-magnitude-larger value
+        produced by the stack corruption (~2.5e4 in our local repro)."""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        model_path = pjoin(MG5DIR, 'tests', 'input_files', 'loop_smgrav')
+        self.do('import model %s' % model_path)
+        self.do('generate p p > w+ y')
+        self.do('output standalone %s ' % self.out_dir)
+
+        # Pin down whichever P*_udx_wpy directory the exporter chose
+        # (depends on flavor-grouping defaults).
+        sub_root = pjoin(self.out_dir, 'SubProcesses')
+        proc_candidates = [d for d in os.listdir(sub_root)
+                           if d.endswith('_udx_wpy') and d.startswith('P')]
+        self.assertTrue(proc_candidates,
+                        'No P*_udx_wpy subprocess directory generated')
+        proc_dir = pjoin(sub_root, proc_candidates[0])
+
+        # aloha_functions.f (which contains TXXXXX/IXXXXX/OXXXXX/VXXXXX)
+        # and the tensor-vertex routine VVT2_0 must have been generated.
+        for f in ['aloha_functions.f', 'VVT2_0.f']:
+            self.assertTrue(
+                os.path.isfile(pjoin(self.out_dir, 'Source', 'DHELAS', f)),
+                '%s missing under Source/DHELAS' % f)
+
+        devnull = open(os.devnull, 'w')
+        # Build libdhelas / libmodel
+        subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                        cwd=pjoin(self.out_dir, 'Source'))
+        # Build the standalone check binary
+        subprocess.call(['make', 'check'], stdout=devnull, stderr=devnull,
+                        cwd=proc_dir)
+        self.assertTrue(os.path.isfile(pjoin(proc_dir, 'check')),
+                        './check did not build for p p > w+ y in loop_smgrav')
+
+        # Run ./check and parse the matrix-element value
+        p = subprocess.Popen('./check', stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, cwd=proc_dir, shell=True)
+        (log_output, _err) = p.communicate()
+        log_output = log_output.decode()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)
+        self.assertTrue(me_groups,
+                        'check binary did not print a matrix-element value')
+        # Reference value at the default 1 TeV check_sa PS point;
+        # tolerance is generous because this is a regression guard, not
+        # a precision check.
+        self.assertAlmostEqual(float(me_groups.group('value')),
+                               16.953243100346082, places=3)
+
     def test_standalone_cpp(self):
         """test that standalone cpp is working"""
 
