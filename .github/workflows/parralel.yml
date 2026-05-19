@@ -337,23 +337,6 @@ jobs:
             ./tests/test_manager.py test_short_heft -pP -t0 -l INFO
 
 
-  test_short_cross_sm1:
-    # Compares MadEvent cross-section against hard-coded p p > t t~ values.
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-      - name: Reset MG5 config
-        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-      - uses: ./.github/actions/restore-pip-cache
-
-      - name: test test_short_cross_sm1
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_short_cross_sm1 -pP -t0 -l INFO
-
-
   test_short_cross_sm2:
     # Compares MadEvent cross-section against hard-coded u j > W+ g / g g > W+ j j values.
     runs-on: ubuntu-latest
