@@ -751,7 +751,7 @@ jobs:
       - name: test test_decay
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py long_sm_vs_stored_HCR_uxu_zz_QED -pP -t0 -l INFO
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_uxu_zz_QED -pP -t0 -l INFO
             
 
   test_long_sm_vs_stored_HCR_uxu_zz_QCD:
@@ -766,6 +766,6 @@ jobs:
       - name: test test_decay
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py long_sm_vs_stored_HCR_uxu_zz_QCD -pP -t0 -l INFO
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_uxu_zz_QCD -pP -t0 -l INFO
             
 
