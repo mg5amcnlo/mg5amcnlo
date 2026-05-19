@@ -75,6 +75,19 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
+C     Per-leshouche-row weight accumulator, shared with
+C      output_subprocess_weights in dsample.f.  The grouped DSIG path
+C      (super_auto_dsig_group_v4.inc) fills this differently; the
+C      non-grouped path used for decay widths has no such mechanism, so we
+C      accumulate here the per-coupling-group contribution (split equally
+C      inside a group of identical-coupling flavors).  Without this,
+C      calculate_decay_widths divides a merged subprocess equally among its
+C      flavors and reports the up/down-type average instead of the true
+C      per-flavor partial widths.
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      INTEGER IRELROW
 %(define_subdiag_lines)s
       include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
@@ -101,6 +114,16 @@ C ----------
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
+C       Initialise the per-leshouche-row weight accumulator.  One entry per
+C        flavor combination (= MAXPROC rows in leshouche.inc).
+        IF (MAXPROC.LE.1024) THEN
+          NREL_SPROC_STORE = MAXPROC
+          DO IRELROW=1,MAXPROC
+            REL_SPROC_STORE(IRELROW) = 0D0
+          ENDDO
+        ELSE
+          NREL_SPROC_STORE = 0
+        ENDIF
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         NFACT=1
@@ -200,6 +223,20 @@ c           Set sign of dsig based on sign of PDF and matrix element
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
+C       Accumulate the contribution of the selected coupling group, split
+C        equally among its identical-coupling leshouche rows.  PD(0) is the
+C        number of such rows, IPSEL_SHIFT their offset in leshouche order.
+C        output_subprocess_weights normalises this to fractions so that
+C        calculate_decay_widths splits the total width per flavor.
+        IF(IMODE.EQ.0.AND.PD(0).GT.0D0
+     &     .AND.IPSEL_SHIFT.GE.0
+     &     .AND.IPSEL_SHIFT+NINT(PD(0)).LE.NREL_SPROC_STORE)THEN
+          DO IRELROW=1,NINT(PD(0))
+            REL_SPROC_STORE(IPSEL_SHIFT+IRELROW) =
+     &        REL_SPROC_STORE(IPSEL_SHIFT+IRELROW)
+     &        + DABS(DSIG%(proc_id)s*WGT)/PD(0)
+          ENDDO
+        ENDIF
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events

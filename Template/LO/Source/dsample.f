@@ -710,6 +710,7 @@ c
 c     Local
 c
       integer i
+      double precision relsum, relout
 c
 c     Global: common block shared with the grouped DSIG function
 c
@@ -719,9 +720,23 @@ c
       DATA NREL_SPROC_STORE /0/
 
       if (NREL_SPROC_STORE.gt.0) then
+c       Write fractions of the total.  The grouped DSIG path already stores
+c       normalised weights (sum = 1) so this is a no-op there; the
+c       non-grouped path accumulates raw per-group sums that need it.  The
+c       common block is left untouched (idempotent across repeated calls
+c       and safe if accumulation continues afterwards).
+        relsum = 0d0
+        do i=1,NREL_SPROC_STORE
+          relsum = relsum + REL_SPROC_STORE(i)
+        enddo
         write(outUnit,'(A)') '<subprocess_weights>'
         do i=1,NREL_SPROC_STORE
-          write(outUnit,'(E20.10)') REL_SPROC_STORE(i)
+          if (relsum.gt.0d0) then
+            relout = REL_SPROC_STORE(i)/relsum
+          else
+            relout = REL_SPROC_STORE(i)
+          endif
+          write(outUnit,'(E20.10)') relout
         enddo
         write(outUnit,'(A)') '</subprocess_weights>'
       endif
