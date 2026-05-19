@@ -521,3 +521,115 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_short_ML5_sm_vs_stored_ML4 -pP -t0 -l INFO
+
+
+  # ---------------------------------------------------------------------------
+  # tests/parallel_tests/test_cmd_amcatnlo.py shower-driven short tests.
+  # HERWIG6 / PYTHIA6 sources ship in Template/NLO/MCatNLO/{srcHerwig,srcPythia}
+  # and StdHEP is built on demand from vendor/StdHEP, so restore_all is enough.
+  # ---------------------------------------------------------------------------
+
+  test_short_generate_events_nlo_hw6_stdhep:
+    # NLO event generation, showered with HERWIG6, output as StdHEP.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_hw6_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_nlo_hw6_stdhep -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_hw6_split:
+    # NLO event generation split into multiple HERWIG6 shower sub-jobs.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_hw6_split
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_nlo_hw6_split -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_py6_stdhep:
+    # NLO event generation, showered with PYTHIA6 (PYTHIA6Q), output as StdHEP.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_py6_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_nlo_py6_stdhep -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_py6pt_stdhep:
+    # NLO event generation, showered with PYTHIA6PT, output as StdHEP.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_py6pt_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_nlo_py6pt_stdhep -pP -t0 -l INFO
+
+
+  test_short_check_generate_events_nlo_py6pt_fsr:
+    # Negative test: PYTHIA6PT must refuse to shower a process with final-state radiation.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_check_generate_events_nlo_py6pt_fsr
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_check_generate_events_nlo_py6pt_fsr -pP -t0 -l INFO
+
+
+  test_short_generate_events_shower_scripts:
+    # Exercises bin/generate_events + bin/shower with HERWIG6 hep and top output,
+    # including nsplit_jobs > 1 splitting.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_shower_scripts
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_shower_scripts -pP -t0 -l INFO
+
+
+  test_short_generate_events_name:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_name
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_generate_events_name -pP -t0 -l INFO
