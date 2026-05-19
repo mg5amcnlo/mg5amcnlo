@@ -1261,16 +1261,28 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
         if any([any([tag.startswith('L') for tag in d[1]]) for d in wanted_lorentz]):
-            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
+            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f',
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
             if aloha.unitary_gauge !=3:
-                cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                cp(MG5DIR + '/aloha/template_files/aloha_functions.f',
                                                  write_dir+'/aloha_functions.f')
             else:
-                cp(MG5DIR + '/aloha/template_files/aloha_functions_fd.f', 
+                cp(MG5DIR + '/aloha/template_files/aloha_functions_fd.f',
                                                  write_dir+'/aloha_functions.f')
+
+        # For models with tensor (spin-2) or Rarita-Schwinger (spin-3/2)
+        # particles, ALOHA generates routines whose tensor parameter is
+        # TYPE(ALOHA2D) (W(16)), but the caller's wavefunction array
+        # stores all slots as TYPE(ALOHA). Make TYPE(ALOHA) share the
+        # TYPE(ALOHA2D) memory layout *only in this model's DHELAS copy*
+        # so the tensor routine no longer overruns its slot. Models
+        # without tensors keep the compact TYPE(ALOHA) %W(4) layout.
+        if self.model and any(p.get('spin') in [4, 5]
+                              for p in self.model.get('particles') if p):
+            self._widen_aloha_type(pjoin(write_dir, 'aloha_functions.f'))
+
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
         # Make final link in the Process
@@ -1279,6 +1291,38 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Re-establish original aloha mode
         aloha.mp_precision=old_aloha_mp
     
+
+    @staticmethod
+    def _widen_aloha_type(aloha_file):
+        """Extend TYPE(ALOHA) %W to 16 complex (matching TYPE(ALOHA2D))
+        so a uniform TYPE(ALOHA) wavefunction array can safely hold
+        tensor wavefunctions written by TXXXXX/VVT2_*. Only used for
+        models that contain spin-2 or spin-3/2 particles.
+
+        Operates in place on the just-copied aloha_functions.f, so the
+        rest of the install (and other models) keep the compact %W(4)
+        layout for free."""
+        import re
+        with open(aloha_file) as fh:
+            text = fh.read()
+        # Patch the TYPE ALOHA block (and its MP_ALOHA mirror) to use
+        # the same %W size as the TYPE ALOHA2D block. Touch only the
+        # %W declaration; leave %P / %flv_index alone.
+        def _bump(match):
+            block = match.group(0)
+            block = re.sub(r'double complex\s*::\s*W\(\d+\)',
+                           'double complex::W(16)', block)
+            block = re.sub(r'complex\*32\s*::\s*W\(\d+\)',
+                           'complex*32 :: W(16)', block)
+            return block
+        text = re.sub(
+            r'TYPE\s+ALOHA\s*\n.*?END\s+TYPE\s+ALOHA\s*\n',
+            _bump, text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(
+            r'TYPE\s+MP_ALOHA\s*\n.*?END\s+TYPE\s+MP_ALOHA\s*\n',
+            _bump, text, flags=re.IGNORECASE | re.DOTALL)
+        with open(aloha_file, 'w') as fh:
+            fh.write(text)
 
     #===========================================================================
     # Helper functions

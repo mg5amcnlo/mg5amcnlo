@@ -11,17 +11,9 @@ C distribution.
 C
 C###############################################################################
            module ALOHA_OBJECT
-C             ALOHA and ALOHA2D share the same layout (W(16)) so that
-C             a single TYPE(ALOHA) array can hold every spin slot. The
-C             tensor (spin-2) routines declare their tensor parameter as
-C             TYPE(ALOHA2D) (16 complex %W) while non-tensor parameters
-C             use TYPE(ALOHA); with matching offsets the tensor routine
-C             no longer overruns the 4/5-complex slot and clobbers caller
-C             stack variables (see ERROR #1 in born.f for p p > w+ y in
-C             loop_smgrav).
               TYPE ALOHA
                  SEQUENCE
-                 double complex::W(16)
+                 double complex::W(5)
                  double precision :: P(0:3)
                  integer :: flv_index
               END TYPE ALOHA

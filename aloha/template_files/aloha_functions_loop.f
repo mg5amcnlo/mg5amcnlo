@@ -11,16 +11,9 @@ C distribution.
 C
 C###############################################################################
       module ALOHA_OBJECT
-C        ALOHA / ALOHA2D (and MP_ALOHA / MP_ALOHA2D) share the same
-C        layout (W(16)) so a single TYPE(ALOHA) array at the caller can
-C        hold any spin: tensor routines declare their tensor parameter
-C        as TYPE(ALOHA2D) (16 complex %W) while other parameters use
-C        TYPE(ALOHA). With matching layouts the tensor routine no longer
-C        overruns the 4-complex slot and clobbers caller stack vars
-C        (manifested as ERROR #1 in born.f for p p > w+ y in loop_smgrav).
          TYPE ALOHA
             SEQUENCE
-            double complex::W(16)
+            double complex::W(4)
             double complex :: P(0:3)
             integer :: flv_index
          END TYPE ALOHA
@@ -32,7 +25,7 @@ C        (manifested as ERROR #1 in born.f for p p > w+ y in loop_smgrav).
          END TYPE ALOHA2D
          TYPE MP_ALOHA
             SEQUENCE
-            complex*32 :: W(16)
+            complex*32 :: W(4)
             complex*32 :: P(0:3)
             integer :: flv_index
          END TYPE MP_ALOHA

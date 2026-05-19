@@ -11,19 +11,9 @@ C distribution.
 C
 C###############################################################################
       module ALOHA_OBJECT
-C        ALOHA and ALOHA2D share the same memory layout (W(16)) so that
-C        wavefunction arrays can hold any spin: when a process has a
-C        tensor (spin-2) or Rarita-Schwinger (spin-3/2) leg, ALOHA-
-C        generated routines declare the tensor parameter as TYPE(ALOHA2D)
-C        while other parameters stay TYPE(ALOHA) -- the caller stores
-C        every slot in a single TYPE(ALOHA) array. The two types must
-C        therefore start at the same offset for %W and %P, otherwise the
-C        tensor routine would write 16 complex into a 4-complex slot
-C        and clobber the caller's stack (observed as ERROR #1 in born.f
-C        for p p > w+ y in the loop_smgrav model).
          TYPE ALOHA
             SEQUENCE
-            double complex::W(16)
+            double complex::W(4)
             double precision :: P(0:3)
             integer :: flv_index
          END TYPE ALOHA
