@@ -204,20 +204,22 @@ C
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
-      double precision bwcutoff 
-C  
+      double precision bwcutoff
+%(flavor_mask_decl)s
+C
 C GLOBAL VARIABLES
-C  
+C
       include 'coupl.inc'
 %(global_variable)s
-C  
+C
 C COLOR DATA
-C  
+C
 %(color_data_lines)s
 C ----------
 C BEGIN CODE
 C ----------
 bwcutoff=15 ! use if $ syntax is defined in the process
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 

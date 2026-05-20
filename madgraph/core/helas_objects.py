@@ -5497,8 +5497,109 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         if final_len == 0:
             raise self.NoFlavorError("No diagram left after trimming for flavor!")
-        
-    
+
+
+    def compute_flavor_masks(self):
+        """Compute per-diagram, per-amplitude and per-wavefunction flavor
+        bitmasks. Bit i of a mask is set iff the object contributes for
+        self.get_external_flavors()[i].
+
+        Sets the integer key 'flavor_mask' on every HelasDiagram, HelasAmplitude
+        and HelasWavefunction reachable from self.get('diagrams').
+
+        Returns the list of allowed-flavor tuples used to define the bit order
+        (same object as self.get_external_flavors()). Returns [] if the ME has
+        no merged-particle flavor variants (single flavor / nothing to mask).
+        """
+
+        if not self.get('processes'):
+            return []
+        model = self.get('processes')[0].get('model')
+        allowed_flavors = self.get_external_flavors()
+        if not allowed_flavors:
+            return []
+
+        # 1) Per-diagram mask via existing diag.check_flavor primitive.
+        # IMPORTANT: diag.check_flavor only resets the 'flavortag' attribute on
+        # *its own* wavefunctions+amplitudes. propagate_flavor_tag then reads
+        # mothers' flavortag and trusts it as up-to-date. When a diagram's
+        # amplitude has a mother wavefunction owned by a *different* diagram
+        # (cross-diagram dependency via the reuse_outdated_wavefunctions
+        # graph), that mother retains the flavortag from whichever flavor we
+        # last checked it against — producing the WRONG answer here.
+        #
+        # Fix: clear flavortag globally before each diagram check so every
+        # check starts from a clean slate. The cost is O(N_wfs) per check,
+        # which is negligible at generation time.
+        all_wfs_amps = self.get_all_wavefunctions() + self.get_all_amplitudes()
+        for diag in self.get('diagrams'):
+            diag_mask = 0
+            for flav_idx, flavor in enumerate(allowed_flavors):
+                for wfct in all_wfs_amps:
+                    try:
+                        del wfct['flavortag']
+                    except Exception:
+                        pass
+                if diag.check_flavor(flavor, model):
+                    diag_mask |= (1 << flav_idx)
+            diag['flavor_mask'] = diag_mask
+            for amp in diag.get('amplitudes'):
+                amp['flavor_mask'] = diag_mask
+
+        # 2) Initialise every wavefunction mask to 0, then OR each amplitude's
+        # mask into all reachable ancestor wavefunctions via the 'mothers'
+        # chain. A wavefunction contributes for flavor f iff some downstream
+        # amplitude contributes for f.
+        for diag in self.get('diagrams'):
+            for wf in diag.get('wavefunctions'):
+                wf['flavor_mask'] = 0
+
+        for diag in self.get('diagrams'):
+            for amp in diag.get('amplitudes'):
+                amp_mask = amp['flavor_mask']
+                if amp_mask == 0:
+                    continue
+                stack = list(amp.get('mothers'))
+                while stack:
+                    wf = stack.pop()
+                    existing = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+                    new_mask = existing | amp_mask
+                    if new_mask == existing:
+                        # No new bits, ancestors are already covered.
+                        continue
+                    wf['flavor_mask'] = new_mask
+                    stack.extend(wf.get('mothers'))
+
+        # 3) Clean up the 'flavortag' side effect left by diag.check_flavor on
+        # wavefunctions and amplitudes. Same cleanup pattern as
+        # get_external_flavors.
+        for wfct in self.get_all_wavefunctions() + self.get_all_amplitudes():
+            try:
+                del wfct['flavortag']
+            except Exception:
+                pass
+
+        return allowed_flavors
+
+    def flavor_mask_is_trivial(self):
+        """Return True if every diagram in this ME contributes for every
+        allowed flavor (mask == all-ones). In that case the IAND guard would
+        always pass and the emitter should skip emitting masks entirely.
+        Assumes compute_flavor_masks() has been called.
+        """
+
+        allowed = self['allowed_flavors']
+        if not allowed:
+            return True
+        all_ones = (1 << len(allowed)) - 1
+        for diag in self.get('diagrams'):
+            if 'flavor_mask' not in diag:
+                return True  # masks not computed; treat as trivial
+            if diag['flavor_mask'] != all_ones:
+                return False
+        return True
+
+
     def check_helicity(self, helicity):
         """check if any feynman diagram is compatible with the given helicity"""
 

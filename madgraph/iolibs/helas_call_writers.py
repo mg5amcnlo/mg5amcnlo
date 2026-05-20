@@ -1034,21 +1034,53 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         helicity, i.e. W(i) vs W(i,H).
         """
         self.hel_sum = hel_sum
+        # Flavor-mask emission state. The exporter sets these around its call
+        # to get_matrix_element_calls when the optimization is active. When
+        # use_flavor_mask is True and an object carries a non-trivial
+        # 'flavor_mask' key, the emitted CALL is prefixed with an IAND guard
+        # checking CURRENT_FLAV_BIT against {WF,AMP}_FLAVOR_MASK arrays.
+        self.use_flavor_mask = False
+        self.me_n_flavors = 0
         super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
         """ Returns the string for accessing the wavefunction with number in
         argument. Typical output is {prefix}(1,{number}) """
-        
+
         if self.hel_sum:
             return '%s%s,H)'%(prefix, number)
         else:
-            return '%s%s)'%(prefix, number)       
+            return '%s%s)'%(prefix, number)
+
+    def _flavor_mask_prefix(self, obj, kind):
+        """Return an 'IF (IAND(...)) ' prefix for a CALL line, or '' if the
+        guard is not needed (feature disabled, no mask on object, or mask is
+        all-ones for this ME). kind is 'wf' or 'amp'."""
+
+        if not self.use_flavor_mask or self.me_n_flavors <= 0:
+            return ''
+        if 'flavor_mask' not in obj:
+            return ''
+        mask = obj['flavor_mask']
+        all_ones = (1 << self.me_n_flavors) - 1
+        if mask == all_ones:
+            return ''
+        array = 'WF_FLAVOR_MASK' if kind == 'wf' else 'AMP_FLAVOR_MASK'
+        idx = obj.get('number')
+        return 'IF (IAND(%s(%d), CURRENT_FLAV_BIT) .NE. 0) ' % (array, idx)
+
+    def get_wavefunction_call(self, wavefunction, **opt):
+        call = super(FortranUFOHelasCallWriter, self).get_wavefunction_call(
+                                                            wavefunction, **opt)
+        if not call:
+            return call
+        prefix = self._flavor_mask_prefix(wavefunction, 'wf')
+        return prefix + call if prefix else call
 
     def get_amplitude_call(self, amplitude,**opts):
-        """ We overwrite this function here because we must call 
+        """ We overwrite this function here because we must call
         set_octet_majorana_coupling_sign for all wavefunction taking part in
-        this loopHelasAmplitude. This is not necessary in the optimized mode"""        
+        this loopHelasAmplitude. This is not necessary in the optimized mode"""
 
         # Special feature: For octet Majorana fermions, need an extra
         # minus sign in the FVI (and FSI?) wavefunction in UFO
@@ -1057,9 +1089,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             for lwf in amplitude.get('wavefunctions'):
                 lwf.set_octet_majorana_coupling_sign()
             amplitude.set('coupling',amplitude.get_couplings())
-        
-        return super(FortranUFOHelasCallWriter, self).get_amplitude_call(
-                                                               amplitude,**opts)         
+
+        call = super(FortranUFOHelasCallWriter, self).get_amplitude_call(
+                                                               amplitude,**opts)
+        if not call:
+            return call
+        prefix = self._flavor_mask_prefix(amplitude, 'amp')
+        return prefix + call if prefix else call
         
 
 
