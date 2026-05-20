@@ -3549,7 +3549,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         def _fmt_int8_2d(name, matrix):
             items = []
             for row in matrix:
-                items.extend('%d_8' % v for v in row)
+                for v in row:
+                    # INTEGER*8 is signed; convert unsigned 64-bit values that
+                    # have the high bit set to their two's-complement equivalent
+                    # so gfortran does not reject them with "integer too big".
+                    if v >= (1 << 63):
+                        v -= (1 << 64)
+                    items.append('%d_8' % v)
             return '      DATA %s / %s /' % (name, ', '.join(items))
 
         def _fmt_int_array(name, values):
