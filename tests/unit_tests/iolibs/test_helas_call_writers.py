@@ -929,7 +929,28 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
-        
+
+    def test_UFO_fortran_flavor_mask_prefix_uses_index_bits(self):
+        """Flavor-mask guard should check wf/amp index bits."""
+
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(
+            self.mybasemodel)
+        fortran_model.use_flavor_mask = True
+        fortran_model.me_n_flavors = 3
+
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'IF (IAND(CURRENT_WF_MASK(2), ISHFT(1_8, 5)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+
 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""
@@ -1134,4 +1155,3 @@ w[9]= VVVV5_2(w[0],w[3],w[4],GC_57,CMASS_mdl_MW)
 amp[11]= VVV1_0(w[2],w[1],w[9],GC_4)"""
         
         self.assertEqual(solution.split('\n'), result)        
-
