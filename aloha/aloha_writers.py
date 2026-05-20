@@ -2214,7 +2214,9 @@ class ALOHAWriterForPython(WriteALOHA):
             shift = 0
         else:
             shift = -1 + self.momentum_size
-            
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4
+             
         return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
 
     def change_var_format(self, name): 
@@ -2337,6 +2339,9 @@ class ALOHAWriterForPython(WriteALOHA):
     def get_foot_txt(self):
         if not self.offshell:
             return '    return vertex\n\n'
+        elif aloha.unitary_gauge == 3 and self.outname.startswith(('V','S')):
+            return '    %(out)s = wavefunctions.multiply_propagator_factor(%(out)s, M%(num)s)\n    return %(out)s\n\n' % \
+                   {'out': self.outname, 'num': self.outgoing}
         else:
             return '    return %s\n\n' % (self.outname)
             
@@ -2620,4 +2625,3 @@ class WriterFactory(object):
 #        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
 #        ff.write(unknow_fct_template % dico)
 #        ff.close()
-

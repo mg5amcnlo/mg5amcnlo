@@ -77,7 +77,7 @@ from madgraph.iolibs.files import cp
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
-     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx, sfdxxx, vfdxxxx
 import io
 import io as StringIO
 file = io.FileIO
@@ -3513,7 +3513,7 @@ def check_lorentz_process(process, evaluator,options=None):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
+def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, param_card=None, 
                                options=None, tir={}, output_path=None,
                                cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
@@ -3601,7 +3601,32 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
                                                             evaluator, momentum,
-                                                            options=options)  
+                                                            options=options)
+        output_fd = None
+        if processes_fd is not None:
+            multiprocess_fd = processes_fd
+            model = multiprocess_fd.get('model')
+            aloha.unitary_gauge = 3
+            cmd.options['loop_optimized_output'] = True
+            if multiprocess_fd.get('perturbation_couplings')==[]:
+                evaluator = MatrixElementEvaluator(model, param_card,
+                                           cmd= cmd, auth_skipping = False, reuse = False)
+            else:
+                evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
+                                               cmd= cmd, model=model,
+                                               param_card=param_card,
+                                               auth_skipping = False,
+                                               output_path=output_path,
+                                               reuse = False)
+
+            if not cmass_scheme and multiprocess_fd.get('perturbation_couplings')==[]:
+                for particle in evaluator.full_model.get('particles'):
+                    if particle.get('width') != 'ZERO':
+                        evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+            output_fd = run_multiprocs_no_crossings(get_value, multiprocess_fd,
+                                                                 evaluator, momentum,
+                                                                 options=options)
         output = [processes_unit]        
         for data in output_f:
             local_dico = {}
@@ -3609,6 +3634,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             local_dico['value_feynm'] = data['value']
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
+            if output_fd is not None:
+                local_dico['value_fd'] = [d['value'] for d in output_fd
+                                          if d['process'] == data['process']][0]
             output.append(local_dico)
         
         if processes_feynm.get('perturbation_couplings')!=[] and not reuse:
@@ -5043,16 +5071,19 @@ def output_unitary_feynman(comparison_results, output='text'):
     no_check_proc_list = []
 
     col_size = 18
+    use_fd = any('value_fd' in comp for comp in comparison_results)
+    gauge_columns = [("Unitary", 'value_unit'), ("Feynman", 'value_feynm')]
+    if use_fd:
+        gauge_columns.append(("FD", 'value_fd'))
 
-    res_str = fixed_string_length(process_header, proc_col_size) + \
-              fixed_string_length("Unitary", col_size) + \
-              fixed_string_length("Feynman", col_size) + \
-              fixed_string_length("Relative diff.", col_size) + \
-              "Result"
+    res_str = fixed_string_length(process_header, proc_col_size)
+    for label, _ in gauge_columns:
+        res_str += fixed_string_length(label, col_size)
+    res_str += fixed_string_length("Relative diff.", col_size) + "Result"
 
     for one_comp in comparison_results:
         proc = one_comp['process']
-        data = [one_comp['value_unit'], one_comp['value_feynm']]
+        data = [one_comp[key] for _, key in gauge_columns]
         
         
         if data[0] == 'pass':
@@ -5068,10 +5099,10 @@ def output_unitary_feynman(comparison_results, output='text'):
         # diff will be negative if there is no abs
         diff = (max_val - min_val) / abs(max_val) 
         
-        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
-                   fixed_string_length("%1.10e" % values[0], col_size) + \
-                   fixed_string_length("%1.10e" % values[1], col_size) + \
-                   fixed_string_length("%1.10e" % diff, col_size)
+        res_str += '\n' + fixed_string_length(proc, proc_col_size)
+        for value in values:
+            res_str += fixed_string_length("%1.10e" % value, col_size)
+        res_str += fixed_string_length("%1.10e" % diff, col_size)
                    
         if diff < 1e-8:
             pass_proc += 1
@@ -5089,7 +5120,7 @@ def output_unitary_feynman(comparison_results, output='text'):
         # is empty.
         if len(data[0]['jamp'])>0:
             for k in range(len(data[0]['jamp'][0])):
-                sum = [0, 0]
+                sum = [0] * len(data)
                 # loop over helicity
                 for j in range(len(data[0]['jamp'])):
                     #values for the different lorentz boost
@@ -5103,10 +5134,10 @@ def output_unitary_feynman(comparison_results, output='text'):
                     continue
                 diff = (max_val - min_val) / max_val 
             
-                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size) + \
-                           fixed_string_length("%1.10e" % sum[0], col_size) + \
-                           fixed_string_length("%1.10e" % sum[1], col_size) + \
-                           fixed_string_length("%1.10e" % diff, col_size)
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size)
+                for value in sum:
+                    tmp_str += fixed_string_length("%1.10e" % value, col_size)
+                tmp_str += fixed_string_length("%1.10e" % diff, col_size)
                        
                 if diff > 1e-10:
                     if not len(failed_proc_list) or failed_proc_list[-1] != proc:
