@@ -2541,6 +2541,7 @@ class FlavorMaskReorderOptionsTest(unittest.TestCase):
         self.assertTrue(exporter.use_flavor_mask)
         self.assertFalse(exporter.use_flavor_reorder)
 
+        # Keep compatibility with the historical typo alias `--maks`.
         exporter = export_v4.ProcessExporterFortranSA(
             opt={'output_options': {'maks': 'False'}})
         self.assertFalse(exporter.use_flavor_mask)

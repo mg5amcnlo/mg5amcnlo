@@ -2823,6 +2823,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             if v is not None:
                 self.use_flavor_mask = v
         elif 'maks' in self.cmd_options:
+            # Backward-compatible alias for historical typo seen in command
+            # examples (`--maks=False`).
             v = _parse_bool_opt(self.cmd_options['maks'])
             if v is not None:
                 self.use_flavor_mask = v
