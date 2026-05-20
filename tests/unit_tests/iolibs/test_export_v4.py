@@ -2537,23 +2537,23 @@ class FlavorMaskReorderOptionsTest(unittest.TestCase):
         self.assertTrue(exporter.use_flavor_reorder)
 
         exporter = export_v4.ProcessExporterFortranSA(
-            cmd_options={'reorder-flavor': 'False'})
+            opt={'output_options': {'reorder-flavor': 'False'}})
         self.assertTrue(exporter.use_flavor_mask)
         self.assertFalse(exporter.use_flavor_reorder)
 
         exporter = export_v4.ProcessExporterFortranSA(
-            cmd_options={'maks': 'False'})
+            opt={'output_options': {'maks': 'False'}})
         self.assertFalse(exporter.use_flavor_mask)
         self.assertTrue(exporter.use_flavor_reorder)
 
         exporter = export_v4.ProcessExporterFortranSA(
-            cmd_options={'mask': 'False', 'reorder-flavor': 'False'})
+            opt={'output_options': {'mask': 'False', 'reorder-flavor': 'False'}})
         self.assertFalse(exporter.use_flavor_mask)
         self.assertFalse(exporter.use_flavor_reorder)
 
     def test_reorder_runs_when_mask_is_off(self):
         exporter = export_v4.ProcessExporterFortranSA(
-            cmd_options={'mask': 'False', 'reorder-flavor': 'True'})
+            opt={'output_options': {'mask': 'False', 'reorder-flavor': 'True'}})
         matrix_element = self.DummyMatrixElement()
 
         decl, setup, n_flavors = exporter._get_flavor_mask_blocks(matrix_element)
