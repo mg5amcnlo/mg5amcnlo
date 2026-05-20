@@ -1042,6 +1042,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # runtime FLAVOR(NEXTERNAL) entry.
         self.use_flavor_mask = False
         self.me_n_flavors = 0
+        self.me_active_flavor_mask = None
         super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
@@ -1064,12 +1065,18 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             return ''
         mask = obj['flavor_mask']
         all_ones = (1 << self.me_n_flavors) - 1
-        if mask == all_ones:
+        active_mask = getattr(self, 'me_active_flavor_mask', None)
+        if active_mask is None:
+            active_mask = all_ones
+        if mask == active_mask:
             return ''
         idx = obj.get('number')
+        array = 'CURRENT_WF_MASK' if kind == 'wf' else 'CURRENT_AMP_MASK'
+        if kind == 'wf' and 'guard_amp_number' in obj:
+            idx = obj.get('guard_amp_number')
+            array = 'CURRENT_AMP_MASK'
         if not isinstance(idx, int) or idx <= 0:
             return ''
-        array = 'CURRENT_WF_MASK' if kind == 'wf' else 'CURRENT_AMP_MASK'
         word = (idx - 1) // 64 + 1
         bit = (idx - 1) % 64
         return 'IF (IAND(%s(%d), ISHFT(1_8, %d)) .NE. 0) ' % (array, word, bit)

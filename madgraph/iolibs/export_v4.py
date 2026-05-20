@@ -3460,9 +3460,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Build the Fortran declaration / DATA block and the runtime flavor
         bit lookup block for the per-call flavor-mask optimization.
 
-        Returns (decl_block, setup_block, n_flavors). When the optimization is
-        inactive for this matrix element, returns ('', '', 0) and does not
-        mutate the matrix element.
+        Returns (decl_block, setup_block, n_flavors, active_flavor_mask). When
+        the optimization is inactive for this matrix element, returns
+        ('', '', 0, 0) and does not mutate the matrix element.
 
         Inactive cases:
           - self.use_flavor_mask is False (toggle disabled);
@@ -3473,14 +3473,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """
 
         if not getattr(self, 'use_flavor_mask', False):
-            return ('', '', 0)
+            return ('', '', 0, 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
         n_flavors = len(allowed_flavors)
         if n_flavors == 0:
-            return ('', '', 0)
+            return ('', '', 0, 0)
         if matrix_element.flavor_mask_is_trivial():
-            return ('', '', 0)
+            return ('', '', 0, 0)
 
         all_amps = matrix_element.get_all_amplitudes()
         all_wfs = matrix_element.get_all_wavefunctions()
@@ -3501,6 +3501,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             idx = amp.get('number') - 1
             if 0 <= idx < n_amps:
                 amp_masks[idx] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+        active_flavor_mask = 0
+        for amp_mask in amp_masks:
+            active_flavor_mask |= amp_mask
 
         nwords_wf = (n_wfs + 63) // 64
         nwords_amp = (n_amps + 63) // 64
@@ -3606,7 +3609,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         ]
         setup_block = '\n'.join(setup_lines)
 
-        return (decl_block, setup_block, n_flavors)
+        return (decl_block, setup_block, n_flavors, active_flavor_mask)
 
     #===========================================================================
     # write_matrix_element_v4
@@ -3644,13 +3647,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # the data/decl/setup blocks, and configure the helas writer so it
         # prefixes each per-call CALL with an IAND guard. The try/finally
         # ensures we never leak the writer state into the next matrix element.
-        mask_decl, mask_setup, n_flavors = \
+        mask_decl, mask_setup, n_flavors, active_flavor_mask = \
                 self._get_flavor_mask_blocks(matrix_element)
         replace_dict['flavor_mask_decl'] = mask_decl
         replace_dict['flavor_mask_setup'] = mask_setup
 
         fortran_model.use_flavor_mask = (n_flavors > 0)
         fortran_model.me_n_flavors = n_flavors
+        fortran_model.me_active_flavor_mask = active_flavor_mask
         try:
             # Extract helas calls
             helas_calls = fortran_model.get_matrix_element_calls(\
@@ -3658,6 +3662,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         finally:
             fortran_model.use_flavor_mask = False
             fortran_model.me_n_flavors = 0
+            fortran_model.me_active_flavor_mask = None
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 

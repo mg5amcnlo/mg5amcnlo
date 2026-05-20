@@ -950,6 +950,16 @@ class UFOHELASCallWriterTest(unittest.TestCase):
             fortran_model._flavor_mask_prefix(
                 {'number': 1, 'flavor_mask': 7}, 'wf'),
             '')
+        fortran_model.me_n_flavors = 4
+        fortran_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
 
 
     def test_UFO_Python_helas_call_writer(self):

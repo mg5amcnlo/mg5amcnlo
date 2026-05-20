@@ -5550,25 +5550,42 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # mask into all reachable ancestor wavefunctions via the 'mothers'
         # chain. A wavefunction contributes for flavor f iff some downstream
         # amplitude contributes for f.
+        #
+        # Also track which final amplitudes each wavefunction can feed. If a
+        # wavefunction contributes to exactly one amplitude, the call writer can
+        # reuse that amplitude guard for the wavefunction call.
+        wf_amp_sinks = {}
         for diag in self.get('diagrams'):
             for wf in diag.get('wavefunctions'):
                 wf['flavor_mask'] = 0
+                wf.pop('guard_amp_number', None)
 
         for diag in self.get('diagrams'):
             for amp in diag.get('amplitudes'):
                 amp_mask = amp['flavor_mask']
                 if amp_mask == 0:
                     continue
+                amp_num = amp.get('number')
                 stack = list(amp.get('mothers'))
+                seen = set()
                 while stack:
                     wf = stack.pop()
+                    wf_id = id(wf)
+                    if wf_id in seen:
+                        continue
+                    seen.add(wf_id)
+                    if amp_num is not None:
+                        wf_amp_sinks.setdefault(wf_id, set()).add(amp_num)
                     existing = wf['flavor_mask'] if 'flavor_mask' in wf else 0
                     new_mask = existing | amp_mask
-                    if new_mask == existing:
-                        # No new bits, ancestors are already covered.
-                        continue
-                    wf['flavor_mask'] = new_mask
+                    if new_mask != existing:
+                        wf['flavor_mask'] = new_mask
                     stack.extend(wf.get('mothers'))
+
+        for wf in self.get_all_wavefunctions():
+            sinks = wf_amp_sinks.get(id(wf))
+            if sinks and len(sinks) == 1:
+                wf['guard_amp_number'] = next(iter(sinks))
 
         # 3) Clean up the 'flavortag' side effect left by diag.check_flavor on
         # wavefunctions and amplitudes. Same cleanup pattern as
