@@ -1038,7 +1038,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # to get_matrix_element_calls when the optimization is active. When
         # use_flavor_mask is True and an object carries a non-trivial
         # 'flavor_mask' key, the emitted CALL is prefixed with an IAND guard
-        # checking CURRENT_FLAV_BIT against {WF,AMP}_FLAVOR_MASK arrays.
+        # checking an index bit against CURRENT_{WF,AMP}_MASK selected for the
+        # runtime FLAVOR(NEXTERNAL) entry.
         self.use_flavor_mask = False
         self.me_n_flavors = 0
         super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
@@ -1065,9 +1066,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         all_ones = (1 << self.me_n_flavors) - 1
         if mask == all_ones:
             return ''
-        array = 'WF_FLAVOR_MASK' if kind == 'wf' else 'AMP_FLAVOR_MASK'
         idx = obj.get('number')
-        return 'IF (IAND(%s(%d), CURRENT_FLAV_BIT) .NE. 0) ' % (array, idx)
+        if not isinstance(idx, int) or idx <= 0:
+            return ''
+        array = 'CURRENT_WF_MASK' if kind == 'wf' else 'CURRENT_AMP_MASK'
+        word = (idx - 1) // 64 + 1
+        bit = (idx - 1) % 64
+        return 'IF (IAND(%s(%d), ISHFT(1_8, %d)) .NE. 0) ' % (array, word, bit)
 
     def get_wavefunction_call(self, wavefunction, **opt):
         call = super(FortranUFOHelasCallWriter, self).get_wavefunction_call(

@@ -3488,8 +3488,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         n_wfs = len(all_wfs)
 
         # Mask values are indexed by the object's 'number' attribute (1-based,
-        # contiguous). Build the dense arrays accordingly so the IAND lookup
-        # in the emitted CALLs matches.
+        # contiguous). Build dense arrays, then transpose to per-flavor
+        # bitsets over wf/amp indices. Runtime then picks the current flavor's
+        # row once, and each CALL checks one index bit.
         wf_masks = [0] * n_wfs
         for wf in all_wfs:
             idx = wf.get('number') - 1
@@ -3500,6 +3501,25 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             idx = amp.get('number') - 1
             if 0 <= idx < n_amps:
                 amp_masks[idx] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+
+        nwords_wf = (n_wfs + 63) // 64
+        nwords_amp = (n_amps + 63) // 64
+
+        wf_index_masks = [[0] * nwords_wf for _ in range(n_flavors)]
+        for wf_idx, wf_mask in enumerate(wf_masks):
+            word = wf_idx // 64
+            bit = wf_idx % 64
+            for flav_idx in range(n_flavors):
+                if (wf_mask >> flav_idx) & 1:
+                    wf_index_masks[flav_idx][word] |= (1 << bit)
+
+        amp_index_masks = [[0] * nwords_amp for _ in range(n_flavors)]
+        for amp_idx, amp_mask in enumerate(amp_masks):
+            word = amp_idx // 64
+            bit = amp_idx % 64
+            for flav_idx in range(n_flavors):
+                if (amp_mask >> flav_idx) & 1:
+                    amp_index_masks[flav_idx][word] |= (1 << bit)
 
         nexternal = len(allowed_flavors[0])
         # allowed_flavors stores raw (positive) PDG codes, but at runtime the
@@ -3523,8 +3543,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 pos = pdg_to_group_pos.get(abs(int(p)), int(p))
                 flav_table_flat.append(pos)
 
-        def _fmt_int8_array(name, values):
-            items = ['%d_8' % v for v in values]
+        def _fmt_int8_2d(name, matrix):
+            items = []
+            for row in matrix:
+                items.extend('%d_8' % v for v in row)
             return '      DATA %s / %s /' % (name, ', '.join(items))
 
         def _fmt_int_array(name, values):
@@ -3534,16 +3556,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         decl_lines = [
             'C     Flavor-mask machinery (compute_flavor_masks).',
             '      INTEGER NMASK_FLAV, NMASK_WF, NMASK_AMP',
+            '      INTEGER NWORDS_WF, NWORDS_AMP',
             '      PARAMETER (NMASK_FLAV=%d)' % n_flavors,
             '      PARAMETER (NMASK_WF=%d, NMASK_AMP=%d)' % (n_wfs, n_amps),
-            '      INTEGER*8 WF_FLAVOR_MASK(NMASK_WF)',
-            '      INTEGER*8 AMP_FLAVOR_MASK(NMASK_AMP)',
-            '      INTEGER*8 CURRENT_FLAV_BIT',
-            '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
+            '      PARAMETER (NWORDS_WF=%d, NWORDS_AMP=%d)' % (nwords_wf, nwords_amp),
+            '      INTEGER*8 WF_INDEX_MASK(NWORDS_WF, NMASK_FLAV)',
+            '      INTEGER*8 AMP_INDEX_MASK(NWORDS_AMP, NMASK_FLAV)',
+            '      INTEGER*8 CURRENT_WF_MASK(NWORDS_WF)',
+            '      INTEGER*8 CURRENT_AMP_MASK(NWORDS_AMP)',
+            '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
             '      LOGICAL FLAV_MATCH',
             '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
-            _fmt_int8_array('WF_FLAVOR_MASK', wf_masks),
-            _fmt_int8_array('AMP_FLAVOR_MASK', amp_masks),
+            _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
+            _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
             _fmt_int_array('FLAV_TABLE', flav_table_flat),
         ]
         decl_block = '\n'.join(decl_lines)
@@ -3568,7 +3593,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '        WRITE(*,*) \'Unknown flavor in MATRIX:\', FLAVOR',
             '        STOP',
             '      ENDIF',
-            '      CURRENT_FLAV_BIT = ISHFT(1_8, FLAV_IDX_LOOKUP-1)',
+            '      DO MASK_K = 1, NWORDS_WF',
+            '        CURRENT_WF_MASK(MASK_K) = WF_INDEX_MASK(MASK_K, FLAV_IDX_LOOKUP)',
+            '      ENDDO',
+            '      DO MASK_K = 1, NWORDS_AMP',
+            '        CURRENT_AMP_MASK(MASK_K) = AMP_INDEX_MASK(MASK_K, FLAV_IDX_LOOKUP)',
+            '      ENDDO',
             'C     Zero-initialise AMP so that JAMP reads 0 from any slot whose',
             'C     CALL is skipped by the IAND guard below. Without this, AMP',
             'C     would carry uninitialised stack data into JAMP.',
