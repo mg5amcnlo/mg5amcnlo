@@ -2779,6 +2779,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # runtime. Set to False to revert to the unconditional emission.
     use_flavor_mask = True
 
+    # When True, reorder diagrams by flavor coverage so early-exit GOTOs can
+    # skip remaining blocks once all amplitudes needed for the current flavor
+    # are computed. Independent of use_flavor_mask.
+    use_flavor_reorder = True
+
     # When True, append a Fortran comment to each wavefunction CALL listing
     # the AMP(i) values that transitively depend on that wavefunction.
     # Independent of use_flavor_mask. Off by default so existing fixtures stay
@@ -2817,6 +2822,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             v = _parse_bool_opt(self.cmd_options['mask'])
             if v is not None:
                 self.use_flavor_mask = v
+        elif 'maks' in self.cmd_options:
+            v = _parse_bool_opt(self.cmd_options['maks'])
+            if v is not None:
+                self.use_flavor_mask = v
+
+        # Honor `--reorder-flavor=True|False` independently of masking.
+        if 'reorder-flavor' in self.cmd_options:
+            v = _parse_bool_opt(self.cmd_options['reorder-flavor'])
+            if v is not None:
+                self.use_flavor_reorder = v
+        elif 'reorder_flavor' in self.cmd_options:
+            v = _parse_bool_opt(self.cmd_options['reorder_flavor'])
+            if v is not None:
+                self.use_flavor_reorder = v
 
         # Honor `--annotate-helas=True|False`. When on, each wavefunction CALL
         # is followed by a `! amps: AMP(i), ...` comment listing every
@@ -3488,11 +3507,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         mutate the matrix element.
 
         Inactive cases:
-          - self.use_flavor_mask is False (toggle disabled);
+          - both self.use_flavor_mask and self.use_flavor_reorder are False;
           - the matrix element has no merged-particle flavor variants
             (compute_flavor_masks returns []);
           - every per-diagram mask is all-ones, so no per-call guard would
-            ever fire.
+            ever fire and reordering is trivial.
 
         Two emission strategies are chosen at generation time per matrix
         element:
@@ -3513,7 +3532,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         least 5 guards (below that the upfront IAND cost dominates).
         """
 
-        if not getattr(self, 'use_flavor_mask', False):
+        use_flavor_mask = getattr(self, 'use_flavor_mask', False)
+        use_flavor_reorder = getattr(self, 'use_flavor_reorder', False)
+
+        if not (use_flavor_mask or use_flavor_reorder):
             return ('', '', 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
@@ -3528,7 +3550,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # flavor's amplitudes have all been computed. Must run BEFORE
         # reuse_outdated_wavefunctions (which the writer triggers on the
         # final list), so the W() slot allocator adapts to the new order.
-        matrix_element.reorder_diagrams_by_flavor()
+        if use_flavor_reorder:
+            matrix_element.reorder_diagrams_by_flavor()
 
         all_amps = matrix_element.get_all_amplitudes()
         all_wfs = matrix_element.get_all_wavefunctions()
@@ -3577,8 +3600,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # IAND saved per duplicate, breakeven is roughly N_total >= 2*N_unique;
         # we use 2 for the multiplier and require at least 3 guards to amortise
         # the setup loop overhead.
-        hoist = (n_total_guards >= 3) and (n_total_guards >= 2 * n_unique) \
-                                       and n_unique > 0
+        hoist = use_flavor_mask and (n_total_guards >= 3) and \
+                (n_total_guards >= 2 * n_unique) and n_unique > 0
 
         # Build the FLAVOR->bit lookup table (shared between both paths).
         # allowed_flavors stores raw (positive) PDG codes, but at runtime the
@@ -3643,10 +3666,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '        STOP',
             '      ENDIF',
             '      CURRENT_FLAV_BIT = ISHFT(1_8, FLAV_IDX_LOOKUP-1)',
-            'C     Zero-initialise AMP so that JAMP reads 0 from any slot',
-            'C     whose CALL is skipped by the IAND guard below.',
-            '      AMP(:) = (0D0, 0D0)',
         ]
+        if use_flavor_mask:
+            flav_setup.extend([
+                'C     Zero-initialise AMP so that JAMP reads 0 from any slot',
+                'C     whose CALL is skipped by the IAND guard below.',
+                '      AMP(:) = (0D0, 0D0)',
+            ])
         if emit_blocks:
             flav_setup.extend([
                 'C     Precompute one boolean per block: TRUE iff this block''s'
@@ -3705,7 +3731,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 '      ENDDO',
             ]
             setup_block = '\n'.join(setup_lines)
-        else:
+        elif use_flavor_mask:
             # Dense path: PARAMETER mask arrays, single-consumer wfs aliased
             # to amps. wf indices may be sparser than wf.number, hence the
             # 'wf_mask_index' attribute set above.
@@ -3727,6 +3753,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             if n_wf_slots > 0:
                 decl_lines.append(_fmt_int8_param('WF_FLAVOR_MASK',
                                               'NMASK_WF', nonalias_wf_masks))
+            decl_lines.extend(block_decl_lines)
+            decl_block = '\n'.join(decl_lines)
+            setup_block = '\n'.join(flav_setup)
+        else:
+            decl_lines = [
+                '      INTEGER, PARAMETER :: NMASK_FLAV=%d' % n_flavors,
+                _fmt_int_param('FLAV_TABLE', 'NEXTERNAL, NMASK_FLAV',
+                                                         flav_table_flat),
+                '      INTEGER*8 CURRENT_FLAV_BIT',
+                '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
+                '      LOGICAL FLAV_MATCH',
+            ]
             decl_lines.extend(block_decl_lines)
             decl_block = '\n'.join(decl_lines)
             setup_block = '\n'.join(flav_setup)
@@ -3774,7 +3812,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         replace_dict['flavor_mask_decl'] = mask_decl
         replace_dict['flavor_mask_setup'] = mask_setup
 
-        fortran_model.use_flavor_mask = (n_flavors > 0)
+        fortran_model.use_flavor_mask = (n_flavors > 0 and
+                                         getattr(self, 'use_flavor_mask', False))
         fortran_model.me_n_flavors = n_flavors
         # Optional: annotate each wavefunction CALL with the list of AMP(i)
         # that transitively depend on it. Independent of the mask gate.

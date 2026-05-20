@@ -2500,6 +2500,69 @@ class FullHelasOutputIOTest(IOTests.IOTestManager,
             writer = writers.FortranWriter(pjoin(self.IOpath,'matrix_%s.f'%name))
             process_exporter.write_matrix_element_v4(
                                            writer,matrix_element,fortran_model)
+
+
+class FlavorMaskReorderOptionsTest(unittest.TestCase):
+
+    class DummyMatrixElement(dict):
+
+        def __init__(self):
+            dict.__init__(self)
+            self['processes'] = [{'model': {'merged_particles': {1: [1, 2]}}}]
+            self._all_amps = [{'number': 1, 'flavor_mask': 1},
+                              {'number': 2, 'flavor_mask': 2}]
+            self._all_wfs = [{'number': 1, 'flavor_mask': 1},
+                             {'number': 2, 'flavor_mask': 2}]
+            self.reorder_calls = 0
+
+        def compute_flavor_masks(self):
+            return [(1,), (2,)]
+
+        def flavor_mask_is_trivial(self):
+            return False
+
+        def reorder_diagrams_by_flavor(self):
+            self.reorder_calls += 1
+            self['block_covers'] = [1, 2]
+
+        def get_all_amplitudes(self):
+            return self._all_amps
+
+        def get_all_wavefunctions(self):
+            return self._all_wfs
+
+    def test_standalone_mask_and_reorder_options(self):
+        exporter = export_v4.ProcessExporterFortranSA()
+        self.assertTrue(exporter.use_flavor_mask)
+        self.assertTrue(exporter.use_flavor_reorder)
+
+        exporter = export_v4.ProcessExporterFortranSA(
+            cmd_options={'reorder-flavor': 'False'})
+        self.assertTrue(exporter.use_flavor_mask)
+        self.assertFalse(exporter.use_flavor_reorder)
+
+        exporter = export_v4.ProcessExporterFortranSA(
+            cmd_options={'maks': 'False'})
+        self.assertFalse(exporter.use_flavor_mask)
+        self.assertTrue(exporter.use_flavor_reorder)
+
+        exporter = export_v4.ProcessExporterFortranSA(
+            cmd_options={'mask': 'False', 'reorder-flavor': 'False'})
+        self.assertFalse(exporter.use_flavor_mask)
+        self.assertFalse(exporter.use_flavor_reorder)
+
+    def test_reorder_runs_when_mask_is_off(self):
+        exporter = export_v4.ProcessExporterFortranSA(
+            cmd_options={'mask': 'False', 'reorder-flavor': 'True'})
+        matrix_element = self.DummyMatrixElement()
+
+        decl, setup, n_flavors = exporter._get_flavor_mask_blocks(matrix_element)
+
+        self.assertEqual(matrix_element.reorder_calls, 1)
+        self.assertEqual(n_flavors, 2)
+        self.assertIn('BLK_DONE', decl)
+        self.assertNotIn('AMP_FLAVOR_MASK', decl)
+        self.assertNotIn('AMP(:) = (0D0, 0D0)', setup)
         
 #===============================================================================
 # FullHelasOutputTest
