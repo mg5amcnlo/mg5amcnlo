@@ -1104,6 +1104,66 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         prefix = self._flavor_mask_prefix(wavefunction, 'wf')
         return prefix + call if prefix else call
 
+    # Label used by GOTOs emitted between flavor-blocks; placed right before
+    # the JAMP construction so a satisfied flavor skips all remaining blocks.
+    _FLAVOR_GOTO_LABEL = '1000'
+
+    def get_matrix_element_calls(self, matrix_element):
+        """Same as the base implementation, with one addition: when
+        matrix_element has been reordered by reorder_diagrams_by_flavor and
+        carries 'diag_block_boundaries', emit
+        'IF (BLK_DONE(K)) GOTO <label>' after each non-final block, and a
+        '<label> CONTINUE' line at the very end so the JAMP block in the
+        template runs unconditionally afterwards."""
+
+        # Defer to base class for loop matrix elements and other paths we
+        # don't reorder.
+        if isinstance(matrix_element,
+                      loop_helas_objects.LoopHelasMatrixElement):
+            return super(FortranUFOHelasCallWriter,
+                         self).get_matrix_element_calls(matrix_element)
+
+        boundaries = matrix_element['diag_block_boundaries'] \
+                if 'diag_block_boundaries' in matrix_element else []
+        if not boundaries or len(boundaries) < 2:
+            return super(FortranUFOHelasCallWriter,
+                         self).get_matrix_element_calls(matrix_element)
+
+        # The reorder stores a permutation in 'diag_order' (list of original
+        # diagram positions) rather than mutating the diagram list itself.
+        # That preserves color_basis indexing (which keys on original
+        # positions) so JAMP still wires to the correct amplitude numbers.
+        # Here, build the reordered diagram list for emission and slot
+        # reuse on the fly.
+        all_diags = matrix_element.get('diagrams')
+        diag_order = matrix_element['diag_order'] \
+                                  if 'diag_order' in matrix_element \
+                                  else list(range(len(all_diags)))
+        diagrams_list = [all_diags[i] for i in diag_order]
+        matrix_element.reuse_outdated_wavefunctions(diagrams_list)
+
+        # The last entry of `boundaries` is the total diagram count (end of
+        # the final block). No GOTO needed there; the very next code is
+        # JAMP, which we want to fall into. Convert to a set of positions
+        # at which to emit a GOTO, indexed by 1..NBLOCKS-1.
+        goto_positions = {}  # diag_index_1based -> block_index_1based
+        for k, pos in enumerate(boundaries[:-1], start=1):
+            goto_positions[pos] = k
+
+        res = []
+        for i, diagram in enumerate(diagrams_list, start=1):
+            res.extend([self.get_wavefunction_call(wf) for
+                                       wf in diagram.get('wavefunctions')])
+            res.append("# Amplitude(s) for diagram number %d"
+                       % diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                res.append(self.get_amplitude_call(amplitude))
+            if i in goto_positions:
+                res.append("      IF (BLK_DONE(%d)) GOTO %s"
+                           % (goto_positions[i], self._FLAVOR_GOTO_LABEL))
+        res.append(" %s CONTINUE" % self._FLAVOR_GOTO_LABEL)
+        return res
+
     def get_amplitude_call(self, amplitude,**opts):
         """ We overwrite this function here because we must call
         set_octet_majorana_coupling_sign for all wavefunction taking part in

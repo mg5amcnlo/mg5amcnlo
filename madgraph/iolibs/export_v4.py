@@ -3523,6 +3523,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if matrix_element.flavor_mask_is_trivial():
             return ('', '', 0)
 
+        # Reorder diagrams so that small-flavor diagrams are emitted first,
+        # enabling GOTO early-exit through the JAMP section once the current
+        # flavor's amplitudes have all been computed. Must run BEFORE
+        # reuse_outdated_wavefunctions (which the writer triggers on the
+        # final list), so the W() slot allocator adapts to the new order.
+        matrix_element.reorder_diagrams_by_flavor()
+
         all_amps = matrix_element.get_all_amplitudes()
         all_wfs = matrix_element.get_all_wavefunctions()
         n_amps = len(all_amps)
@@ -3601,6 +3608,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     'RESHAPE( (/ %s /), (/ %s /) )'
                     % (name, dims, ', '.join(items), dims))
 
+        # Block / GOTO machinery (reorder_diagrams_by_flavor). If reorder
+        # produced more than one block, we precompute BLK_DONE(K) once per
+        # MATRIX call: TRUE iff every flavor whose contributing diagrams are
+        # all emitted by the end of block K covers the current flavor.
+        block_covers = matrix_element['block_covers'] \
+                                if 'block_covers' in matrix_element else []
+        # Only useful if at least one block ends *before* the last diagram,
+        # i.e. there is at least one GOTO opportunity. If
+        # block_covers is empty or has a single block covering everything,
+        # the writer won't emit any GOTO; we still emit BLK_DONE arrays
+        # when len(block_covers) >= 2 so the writer can reference them.
+        emit_blocks = len(block_covers) >= 2
+
         # Shared FLAVOR -> bit setup. Used by both paths.
         flav_setup = [
             'C     Resolve input FLAVOR(NEXTERNAL) -> bit in CURRENT_FLAV_BIT.',
@@ -3627,6 +3647,26 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             'C     whose CALL is skipped by the IAND guard below.',
             '      AMP(:) = (0D0, 0D0)',
         ]
+        if emit_blocks:
+            flav_setup.extend([
+                'C     Precompute one boolean per block: TRUE iff this block''s'
+                ' cover',
+                'C     includes the current flavor (so we can early-exit via '
+                'GOTO).',
+                '      DO BLK_I = 1, NBLOCKS',
+                '        BLK_DONE(BLK_I) = '
+                'IAND(BLK_COVERS(BLK_I), CURRENT_FLAV_BIT) .NE. 0',
+                '      ENDDO',
+            ])
+
+        block_decl_lines = []
+        if emit_blocks:
+            block_decl_lines = [
+                '      INTEGER, PARAMETER :: NBLOCKS=%d' % len(block_covers),
+                _fmt_int8_param('BLK_COVERS', 'NBLOCKS', block_covers),
+                '      LOGICAL BLK_DONE(NBLOCKS)',
+                '      INTEGER BLK_I',
+            ]
 
         if hoist:
             # Hoisted path: precompute one LOGICAL per distinct mask value.
@@ -3643,7 +3683,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
             decl_lines = [
                 'C     Flavor-mask machinery (hoisted path: %d guards over '
-                '%d unique masks).' % (n_total_guards, n_unique),
+                '%d unique masks, %d block(s)).' %
+                       (n_total_guards, n_unique, len(block_covers) or 1),
                 '      INTEGER, PARAMETER :: NMASK_FLAV=%d' % n_flavors,
                 '      INTEGER, PARAMETER :: NUNIQUE=%d' % n_unique,
                 _fmt_int8_param('UNIQUE_MASKS', 'NUNIQUE', sorted_masks),
@@ -3653,7 +3694,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
                 '      LOGICAL FLAV_MATCH',
                 '      LOGICAL FLAV_OK(NUNIQUE)',
-            ]
+            ] + block_decl_lines
             decl_block = '\n'.join(decl_lines)
 
             setup_lines = list(flav_setup) + [
@@ -3671,7 +3712,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             n_wf_slots = len(nonalias_wf_masks)
             decl_lines = [
                 'C     Flavor-mask machinery (dense path: %d guards, '
-                '%d unique masks).' % (n_total_guards, n_unique),
+                '%d unique masks, %d block(s)).' %
+                       (n_total_guards, n_unique, len(block_covers) or 1),
                 '      INTEGER, PARAMETER :: NMASK_FLAV=%d' % n_flavors,
                 '      INTEGER, PARAMETER :: NMASK_WF=%d, NMASK_AMP=%d'
                                                   % (max(n_wf_slots,1), n_amps),
@@ -3685,6 +3727,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             if n_wf_slots > 0:
                 decl_lines.append(_fmt_int8_param('WF_FLAVOR_MASK',
                                               'NMASK_WF', nonalias_wf_masks))
+            decl_lines.extend(block_decl_lines)
             decl_block = '\n'.join(decl_lines)
             setup_block = '\n'.join(flav_setup)
 

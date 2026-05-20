@@ -5637,6 +5637,188 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             for wf in diag.get('wavefunctions'):
                 wf['transitive_amps'] = tuple(sorted(wf['transitive_amps']))
 
+    def reorder_diagrams_by_flavor(self):
+        """Reorder this matrix element's diagrams so that diagrams
+        contributing to small-flavor sets are emitted first, enabling an
+        early-exit GOTO through the JAMP construction once the current
+        flavor's amplitudes have all been computed.
+
+        Algorithm:
+          1. For each allowed flavor f, collect the set of diagrams that
+             contribute (diag.flavor_mask has bit f set).
+          2. Sort flavors by ascending diagram count (ties broken by
+             original index).
+          3. Walk the sorted flavors. Block K is the set of diagrams
+             contributing to flavor_order[K] that are not yet emitted.
+          4. Greedy topological sort: within the desired block ordering,
+             respect cross-diagram wavefunction dependencies (a diagram
+             whose amps/wfs have a mother owned by another diagram must be
+             emitted after that other diagram).
+
+        Side effects:
+          - self['diagrams'] is replaced by a HelasDiagramList in the new
+            order. Diagram objects themselves are not mutated; only their
+            list ordering changes. reuse_outdated_wavefunctions, called
+            later by the writer, will adapt the W() slot reuse to the new
+            emission order.
+          - self['diag_block_boundaries'] is stored as a list of 1-based
+            diagram positions where each block ends.
+          - self['block_covers'] is stored as a list of int (one per block)
+            holding the cumulative cover-mask: OR of (1 << f) for every
+            flavor whose contributing diagrams are all emitted by the end
+            of that block.
+
+        Returns the number of blocks, or 0 if no reorder was performed
+        (single diagram, no masks, or all diagrams already in block 1).
+        """
+
+        diagrams = list(self.get('diagrams'))
+        n_diags = len(diagrams)
+        if n_diags <= 1:
+            return 0
+        if not any('flavor_mask' in d for d in diagrams):
+            return 0
+
+        allowed_flavors = self['allowed_flavors']
+        n_flavors = len(allowed_flavors)
+        if n_flavors == 0:
+            return 0
+
+        # 1) Per-flavor contributing-diagram sets.
+        flav_diags = [set() for _ in range(n_flavors)]
+        for i, diag in enumerate(diagrams):
+            mask = diag['flavor_mask'] if 'flavor_mask' in diag else 0
+            for f in range(n_flavors):
+                if mask & (1 << f):
+                    flav_diags[f].add(i)
+
+        # 2) Sort flavors by ascending diagram count (ties: original index).
+        flav_order = sorted(range(n_flavors),
+                            key=lambda f: (len(flav_diags[f]), f))
+
+        # 3) Build cross-diagram dependency map. diag A depends on diag B
+        # if any wf/amp in A has a mother that's owned by B's wavefunctions
+        # list. Externals (no mothers) and wfs from outside any diagram are
+        # ignored.
+        wf_to_diag = {}
+        for i, diag in enumerate(diagrams):
+            for wf in diag['wavefunctions']:
+                wf_to_diag[id(wf)] = i
+        deps = [set() for _ in range(n_diags)]
+        for i, diag in enumerate(diagrams):
+            for obj in list(diag['wavefunctions']) + list(diag['amplitudes']):
+                for m in obj.get('mothers'):
+                    j = wf_to_diag.get(id(m))
+                    if j is not None and j != i:
+                        deps[i].add(j)
+
+        # 4) Closure-based block assignment. For each flavor F in
+        # flav_order, the minimum set of diagrams we must emit to satisfy
+        # F is the dependency closure of flav_diags[F]. A diagram belongs
+        # to block K iff it first appears in the closure of flav_order[K]
+        # (i.e. it isn't already covered by earlier flavors). This keeps
+        # the very first block as small as possible: only the transitive
+        # closure of the smallest-flavor's diagrams.
+        def closure(seed):
+            closed = set(seed)
+            stack = list(seed)
+            while stack:
+                i = stack.pop()
+                for d in deps[i]:
+                    if d not in closed:
+                        closed.add(d)
+                        stack.append(d)
+            return closed
+
+        diag_to_block = {}
+        cumulative = set()
+        for K, f in enumerate(flav_order):
+            clos = closure(flav_diags[f])
+            for d in clos - cumulative:
+                diag_to_block[d] = K
+            cumulative |= clos
+        # Any diagram never reached by any flavor's closure (mask==0) goes
+        # to a sentinel last block. They're never executed but must still
+        # be present in the emitted code if their wfs are needed.
+        for i in range(n_diags):
+            if i not in diag_to_block:
+                diag_to_block[i] = n_flavors
+
+        # 5) Greedy topological sort prioritised by diag_to_block (smaller
+        # block index first), then by original diagram index for stable
+        # output. Topology is still respected: a diagram is only picked
+        # once all of its dependencies have been emitted.
+        emitted = set()
+        available = set(i for i in range(n_diags) if not deps[i])
+        new_order = []
+        while available:
+            i = min(available, key=lambda x: (diag_to_block[x], x))
+            available.remove(i)
+            new_order.append(i)
+            emitted.add(i)
+            for j in range(n_diags):
+                if j not in emitted and j not in available \
+                                          and deps[j].issubset(emitted):
+                    available.add(j)
+        if len(new_order) != n_diags:
+            # Cycle (shouldn't happen for valid Feynman diagram graphs).
+            # Fall back to no reorder.
+            return 0
+
+        # 5) Walk new_order, track which flavors become "fully covered". A
+        # block ends at the position where one or more flavors have all
+        # their contributing diagrams emitted. Flavors with disjoint
+        # contributing-diagram sets but the same count are interleaved in
+        # flav_order, so at each position we scan ALL still-unsatisfied
+        # flavors instead of breaking on the first miss.
+        diag_block_boundaries = []
+        block_covers = []
+        new_order_set_progress = set()
+        cum_mask = 0
+        satisfied = set()
+        for pos, didx in enumerate(new_order):
+            new_order_set_progress.add(didx)
+            block_advanced = False
+            for f in flav_order:
+                if f in satisfied:
+                    continue
+                if flav_diags[f].issubset(new_order_set_progress):
+                    cum_mask |= (1 << f)
+                    satisfied.add(f)
+                    block_advanced = True
+            if block_advanced:
+                # Boundaries are 1-based diagram positions; collapse multiple
+                # flavors closing at the same position into a single block.
+                if diag_block_boundaries \
+                                  and diag_block_boundaries[-1] == pos + 1:
+                    block_covers[-1] = cum_mask
+                else:
+                    diag_block_boundaries.append(pos + 1)
+                    block_covers.append(cum_mask)
+
+        if not diag_block_boundaries:
+            return 0
+        # If every flavor's diagrams end at the very last position, the
+        # reorder gives no GOTO opportunity (one block).
+        if len(diag_block_boundaries) == 1 and \
+                diag_block_boundaries[0] == n_diags:
+            # Still record so the structure is consistent, but no GOTOs
+            # will be emitted (no block boundary before the last).
+            pass
+
+        # IMPORTANT: do *not* mutate self['diagrams']. The color basis
+        # stored on the matrix element (generate_color_amplitudes at
+        # helas_objects.py: indexed by *original* diagram position) would
+        # then point at the wrong diagrams and JAMP would wire to the
+        # wrong amplitude numbers. Instead, record the new permutation as
+        # a list of original-position indices; the writer reorders its
+        # emission iteration and passes the reordered list to
+        # reuse_outdated_wavefunctions.
+        self['diag_order'] = new_order
+        self['diag_block_boundaries'] = diag_block_boundaries
+        self['block_covers'] = block_covers
+        return len(diag_block_boundaries)
+
     def flavor_mask_is_trivial(self):
         """Return True if every diagram in this ME contributes for every
         allowed flavor (mask == all-ones). In that case the IAND guard would
