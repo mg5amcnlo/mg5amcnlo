@@ -3643,6 +3643,10 @@ def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, pa
             # Clean temporary folders created for the running of the loop processes
             clean_up(output_path)
 
+        # Avoid leaking generated Python matrix-element classes/wavefunctions
+        # across subsequent checks (e.g. lorentz/permutation) with different gauges.
+        clean_added_globals(ADDED_GLOBAL)
+
         # Reset the original global variable loop_optimized_output.
         cmd.options['loop_optimized_output'] = loop_optimized_bu
 

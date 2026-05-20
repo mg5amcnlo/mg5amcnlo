@@ -4577,7 +4577,7 @@ This implies that with decay chains:
             else:
                 self.do_set('gauge Feynman', log=False)
                 myprocdef_feyn = self.extract_process(line)
-            if myprocdef.get('perturbation_couplings') == []:
+            if args[0] == 'full' and myprocdef.get('perturbation_couplings') == []:
                 if gauge == 'FD':
                     myprocdef_fd = myprocdef
                 else:
