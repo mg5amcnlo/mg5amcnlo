@@ -5570,7 +5570,26 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     wf['flavor_mask'] = new_mask
                     stack.extend(wf.get('mothers'))
 
-        # 3) Clean up the 'flavortag' side effect left by diag.check_flavor on
+        # 3) Single-consumer aliasing. When a wavefunction's mask equals some
+        # amplitude's mask, the IAND check on either gives the same answer —
+        # so we can drop the wf from WF_FLAVOR_MASK entirely and reuse the
+        # amplitude's entry at emission time. Build a value -> amp.number
+        # lookup keyed by mask, then stamp 'mask_amp_alias' on each matching
+        # wf. We pick the lowest amp number for determinism.
+        amp_mask_to_num = {}
+        for diag in self.get('diagrams'):
+            for amp in diag.get('amplitudes'):
+                m = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+                if m not in amp_mask_to_num \
+                                  or amp_mask_to_num[m] > amp.get('number'):
+                    amp_mask_to_num[m] = amp.get('number')
+        for diag in self.get('diagrams'):
+            for wf in diag.get('wavefunctions'):
+                m = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+                if m in amp_mask_to_num:
+                    wf['mask_amp_alias'] = amp_mask_to_num[m]
+
+        # 4) Clean up the 'flavortag' side effect left by diag.check_flavor on
         # wavefunctions and amplitudes. Same cleanup pattern as
         # get_external_flavors.
         for wfct in self.get_all_wavefunctions() + self.get_all_amplitudes():
@@ -5580,6 +5599,43 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 pass
 
         return allowed_flavors
+
+    def compute_wf_transitive_amps(self):
+        """For every wavefunction reachable from self.get('diagrams'), stamp
+        the key 'transitive_amps' as a sorted tuple of amp.get('number') for
+        every downstream HelasAmplitude that has this wavefunction as a
+        transitive mother. Used as a Fortran comment annotation
+        (`--annotate-helas=True`) to make matrix.f reviewable: each wf line
+        shows which AMP(i) values ultimately consume it.
+        """
+
+        # Reset to an empty set on every reachable wavefunction.
+        for diag in self.get('diagrams'):
+            for wf in diag.get('wavefunctions'):
+                wf['transitive_amps'] = set()
+
+        # For each amplitude, walk reverse-DAG via 'mothers' and record this
+        # amp's number into every ancestor wavefunction's set. The early-exit
+        # 'already in set' check keeps the walk linear in the DAG edges.
+        for diag in self.get('diagrams'):
+            for amp in diag.get('amplitudes'):
+                amp_num = amp.get('number')
+                stack = list(amp.get('mothers'))
+                while stack:
+                    wf = stack.pop()
+                    bucket = wf['transitive_amps'] if 'transitive_amps' in wf else None
+                    if bucket is None:
+                        bucket = set()
+                        wf['transitive_amps'] = bucket
+                    if amp_num in bucket:
+                        continue
+                    bucket.add(amp_num)
+                    stack.extend(wf.get('mothers'))
+
+        # Freeze each set to a sorted tuple so emission is deterministic.
+        for diag in self.get('diagrams'):
+            for wf in diag.get('wavefunctions'):
+                wf['transitive_amps'] = tuple(sorted(wf['transitive_amps']))
 
     def flavor_mask_is_trivial(self):
         """Return True if every diagram in this ME contributes for every

@@ -1041,6 +1041,9 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # checking CURRENT_FLAV_BIT against {WF,AMP}_FLAVOR_MASK arrays.
         self.use_flavor_mask = False
         self.me_n_flavors = 0
+        # When True and a wavefunction carries a 'transitive_amps' key, append
+        # a `! amps: AMP(i), AMP(j), ...` comment to its CALL line.
+        self.annotate_helas = False
         super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
@@ -1053,9 +1056,19 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             return '%s%s)'%(prefix, number)
 
     def _flavor_mask_prefix(self, obj, kind):
-        """Return an 'IF (IAND(...)) ' prefix for a CALL line, or '' if the
-        guard is not needed (feature disabled, no mask on object, or mask is
-        all-ones for this ME). kind is 'wf' or 'amp'."""
+        """Return an 'IF (...) ' prefix for a CALL line, or '' if no guard is
+        needed. Three guard shapes, chosen by what the exporter stamped on
+        the object during _get_flavor_mask_blocks:
+
+          - 'unique_mask_id' (hoisted path): IF (FLAV_OK(K)) — K indexes the
+            precomputed boolean array, computed once per MATRIX call.
+          - 'mask_amp_alias' (dense path, single-consumer wf):
+            IF (IAND(AMP_FLAVOR_MASK(N), CURRENT_FLAV_BIT) .NE. 0) — N is
+            the amp number whose mask this wf shares.
+          - 'wf_mask_index' (dense path, non-aliased wf) / amp.number for
+            amps: plain WF_FLAVOR_MASK / AMP_FLAVOR_MASK IAND.
+
+        kind is 'wf' or 'amp'."""
 
         if not self.use_flavor_mask or self.me_n_flavors <= 0:
             return ''
@@ -1065,15 +1078,29 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         all_ones = (1 << self.me_n_flavors) - 1
         if mask == all_ones:
             return ''
-        array = 'WF_FLAVOR_MASK' if kind == 'wf' else 'AMP_FLAVOR_MASK'
-        idx = obj.get('number')
-        return 'IF (IAND(%s(%d), CURRENT_FLAV_BIT) .NE. 0) ' % (array, idx)
+        if 'unique_mask_id' in obj:
+            return 'IF (FLAV_OK(%d)) ' % obj['unique_mask_id']
+        if kind == 'wf' and 'mask_amp_alias' in obj:
+            return ('IF (IAND(AMP_FLAVOR_MASK(%d), CURRENT_FLAV_BIT) .NE. 0) '
+                    % obj['mask_amp_alias'])
+        if kind == 'wf':
+            idx = obj['wf_mask_index'] if 'wf_mask_index' in obj \
+                                                            else obj.get('number')
+            return ('IF (IAND(WF_FLAVOR_MASK(%d), CURRENT_FLAV_BIT) .NE. 0) '
+                    % idx)
+        return ('IF (IAND(AMP_FLAVOR_MASK(%d), CURRENT_FLAV_BIT) .NE. 0) '
+                % obj.get('number'))
 
     def get_wavefunction_call(self, wavefunction, **opt):
         call = super(FortranUFOHelasCallWriter, self).get_wavefunction_call(
                                                             wavefunction, **opt)
         if not call:
             return call
+        if self.annotate_helas and 'transitive_amps' in wavefunction:
+            amps = wavefunction['transitive_amps']
+            if amps:
+                call = call + '  ! amps: ' + ', '.join(
+                                            'AMP(%d)' % a for a in amps)
         prefix = self._flavor_mask_prefix(wavefunction, 'wf')
         return prefix + call if prefix else call
 

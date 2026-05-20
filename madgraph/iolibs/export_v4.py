@@ -2779,6 +2779,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # runtime. Set to False to revert to the unconditional emission.
     use_flavor_mask = True
 
+    # When True, append a Fortran comment to each wavefunction CALL listing
+    # the AMP(i) values that transitively depend on that wavefunction.
+    # Independent of use_flavor_mask. Off by default so existing fixtures stay
+    # byte-identical.
+    annotate_helas = False
+
     def __init__(self, *args,**opts):
         """add the format information compare to standard init"""
 
@@ -2796,16 +2802,33 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # disables the per-call IAND guards (emits the bare HELAS sequence
         # exactly as before the optimization landed). Anything that isn't an
         # explicit truthy/falsy token is ignored.
+        def _parse_bool_opt(token):
+            if isinstance(token, bool):
+                return token
+            if isinstance(token, str):
+                t = token.strip().lower()
+                if t in ('false', '0', 'no', 'off'):
+                    return False
+                if t in ('true', '1', 'yes', 'on'):
+                    return True
+            return None
+
         if 'mask' in self.cmd_options:
-            val = self.cmd_options['mask']
-            if isinstance(val, bool):
-                self.use_flavor_mask = val
-            elif isinstance(val, str):
-                token = val.strip().lower()
-                if token in ('false', '0', 'no', 'off'):
-                    self.use_flavor_mask = False
-                elif token in ('true', '1', 'yes', 'on'):
-                    self.use_flavor_mask = True
+            v = _parse_bool_opt(self.cmd_options['mask'])
+            if v is not None:
+                self.use_flavor_mask = v
+
+        # Honor `--annotate-helas=True|False`. When on, each wavefunction CALL
+        # is followed by a `! amps: AMP(i), ...` comment listing every
+        # downstream amplitude that depends on this wavefunction.
+        if 'annotate-helas' in self.cmd_options:
+            v = _parse_bool_opt(self.cmd_options['annotate-helas'])
+            if v is not None:
+                self.annotate_helas = v
+        elif 'annotate_helas' in self.cmd_options:
+            v = _parse_bool_opt(self.cmd_options['annotate_helas'])
+            if v is not None:
+                self.annotate_helas = v
 
     def copy_template(self, model):
         """Additional actions needed for setup of Template
@@ -3470,6 +3493,24 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             (compute_flavor_masks returns []);
           - every per-diagram mask is all-ones, so no per-call guard would
             ever fire.
+
+        Two emission strategies are chosen at generation time per matrix
+        element:
+
+          - Dense path: per-wf/per-amp INTEGER*8 mask arrays
+            (WF_FLAVOR_MASK / AMP_FLAVOR_MASK), with single-consumer wfs
+            aliased to their amp's slot to compact the wf array.
+
+          - Hoisted path: one INTEGER*8 array of distinct mask values
+            (UNIQUE_MASKS), one LOGICAL array (FLAV_OK) holding the
+            precomputed IAND result for each unique mask, computed once per
+            MATRIX call. Each guard becomes IF (FLAV_OK(K)) instead of
+            IF (IAND(...) .NE. 0). Saves the redundant IAND for processes
+            where many wfs/amps share a small set of mask values.
+
+        Heuristic: hoist iff the number of distinct non-trivial masks is at
+        least 3x smaller than the total number of guards, and there are at
+        least 5 guards (below that the upfront IAND cost dominates).
         """
 
         if not getattr(self, 'use_flavor_mask', False):
@@ -3485,70 +3526,83 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         all_amps = matrix_element.get_all_amplitudes()
         all_wfs = matrix_element.get_all_wavefunctions()
         n_amps = len(all_amps)
-        n_wfs = len(all_wfs)
+        all_ones = (1 << n_flavors) - 1
 
-        # Mask values are indexed by the object's 'number' attribute (1-based,
-        # contiguous). Build the dense arrays accordingly so the IAND lookup
-        # in the emitted CALLs matches.
-        wf_masks = [0] * n_wfs
-        for wf in all_wfs:
-            idx = wf.get('number') - 1
-            if 0 <= idx < n_wfs:
-                wf_masks[idx] = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+        # Distinct non-trivial masks and per-guard counts decide whether to
+        # hoist. amps always get a guard slot keyed by their own mask;
+        # aliased wfs do not contribute new entries because they share an
+        # amp's mask.
         amp_masks = [0] * n_amps
+        amp_guards = 0
         for amp in all_amps:
             idx = amp.get('number') - 1
+            m = amp['flavor_mask'] if 'flavor_mask' in amp else 0
             if 0 <= idx < n_amps:
-                amp_masks[idx] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+                amp_masks[idx] = m
+            if m != all_ones:
+                amp_guards += 1
 
-        nexternal = len(allowed_flavors[0])
+        # Non-aliased wfs (i.e. wfs whose mask doesn't match any amp's mask)
+        # need their own WF_FLAVOR_MASK slot. Count them and build a compact
+        # mapping wf -> 1-based wf-mask index for the dense path.
+        nonalias_wf_masks = []
+        wf_guards = 0
+        for wf in all_wfs:
+            m = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+            if m == all_ones:
+                continue  # no guard at all
+            wf_guards += 1
+            if 'mask_amp_alias' in wf:
+                continue  # reuses an amp slot
+            nonalias_wf_masks.append(m)
+            wf['wf_mask_index'] = len(nonalias_wf_masks)  # 1-based
+
+        n_total_guards = amp_guards + wf_guards
+        distinct_masks = set()
+        for m in amp_masks:
+            if m != all_ones:
+                distinct_masks.add(m)
+        for m in nonalias_wf_masks:
+            distinct_masks.add(m)
+        n_unique = len(distinct_masks)
+        # Heuristic: hoist when each unique mask is referenced often enough
+        # that one upfront IAND saves more than one IAND per guard. With 1
+        # IAND saved per duplicate, breakeven is roughly N_total >= 2*N_unique;
+        # we use 2 for the multiplier and require at least 3 guards to amortise
+        # the setup loop overhead.
+        hoist = (n_total_guards >= 3) and (n_total_guards >= 2 * n_unique) \
+                                       and n_unique > 0
+
+        # Build the FLAVOR->bit lookup table (shared between both paths).
         # allowed_flavors stores raw (positive) PDG codes, but at runtime the
-        # caller fills FLAVOR(NEXTERNAL) with the *group position* within each
-        # merged-particle group (1..N) — the same convention HELAS's ixxxxx
-        # uses as its flv argument and the same convention the existing
-        # GET_FLAVOR / FLAV_COUPLING tables use in madevent. So FLAV_TABLE
-        # below must hold group positions, not PDG codes.
+        # caller fills FLAVOR(NEXTERNAL) with the *group position* within
+        # each merged-particle group (1..N).
         model = matrix_element.get('processes')[0].get('model')
         merged_particles = model.get('merged_particles') or {}
         pdg_to_group_pos = {}
         for members in merged_particles.values():
             for pos, pdg in enumerate(members, 1):
                 pdg_to_group_pos[pdg] = pos
-        # FLAV_TABLE laid out column-major: FLAV_TABLE(NEXTERNAL, NMASK_FLAV).
-        # Fortran DATA without explicit indices iterates fastest in the first
-        # dimension, so we emit (leg, flavor) tuples with leg-first ordering.
         flav_table_flat = []
         for flavor in allowed_flavors:
             for p in flavor:
                 pos = pdg_to_group_pos.get(abs(int(p)), int(p))
                 flav_table_flat.append(pos)
 
-        def _fmt_int8_array(name, values):
+        def _fmt_int8_param(name, size_name, values):
+            # PARAMETER + array constructor: compile-time constant.
             items = ['%d_8' % v for v in values]
-            return '      DATA %s / %s /' % (name, ', '.join(items))
+            return ('      INTEGER*8, PARAMETER :: %s(%s) = (/ %s /)'
+                    % (name, size_name, ', '.join(items)))
 
-        def _fmt_int_array(name, values):
+        def _fmt_int_param(name, dims, values):
             items = [str(v) for v in values]
-            return '      DATA %s / %s /' % (name, ', '.join(items))
+            return ('      INTEGER, PARAMETER :: %s(%s) = '
+                    'RESHAPE( (/ %s /), (/ %s /) )'
+                    % (name, dims, ', '.join(items), dims))
 
-        decl_lines = [
-            'C     Flavor-mask machinery (compute_flavor_masks).',
-            '      INTEGER NMASK_FLAV, NMASK_WF, NMASK_AMP',
-            '      PARAMETER (NMASK_FLAV=%d)' % n_flavors,
-            '      PARAMETER (NMASK_WF=%d, NMASK_AMP=%d)' % (n_wfs, n_amps),
-            '      INTEGER*8 WF_FLAVOR_MASK(NMASK_WF)',
-            '      INTEGER*8 AMP_FLAVOR_MASK(NMASK_AMP)',
-            '      INTEGER*8 CURRENT_FLAV_BIT',
-            '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
-            '      LOGICAL FLAV_MATCH',
-            '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
-            _fmt_int8_array('WF_FLAVOR_MASK', wf_masks),
-            _fmt_int8_array('AMP_FLAVOR_MASK', amp_masks),
-            _fmt_int_array('FLAV_TABLE', flav_table_flat),
-        ]
-        decl_block = '\n'.join(decl_lines)
-
-        setup_lines = [
+        # Shared FLAVOR -> bit setup. Used by both paths.
+        flav_setup = [
             'C     Resolve input FLAVOR(NEXTERNAL) -> bit in CURRENT_FLAV_BIT.',
             '      FLAV_IDX_LOOKUP = 0',
             '      DO MASK_I = 1, NMASK_FLAV',
@@ -3569,12 +3623,70 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '        STOP',
             '      ENDIF',
             '      CURRENT_FLAV_BIT = ISHFT(1_8, FLAV_IDX_LOOKUP-1)',
-            'C     Zero-initialise AMP so that JAMP reads 0 from any slot whose',
-            'C     CALL is skipped by the IAND guard below. Without this, AMP',
-            'C     would carry uninitialised stack data into JAMP.',
+            'C     Zero-initialise AMP so that JAMP reads 0 from any slot',
+            'C     whose CALL is skipped by the IAND guard below.',
             '      AMP(:) = (0D0, 0D0)',
         ]
-        setup_block = '\n'.join(setup_lines)
+
+        if hoist:
+            # Hoisted path: precompute one LOGICAL per distinct mask value.
+            sorted_masks = sorted(distinct_masks)
+            mask_to_id = {m: i + 1 for i, m in enumerate(sorted_masks)}
+            for amp in all_amps:
+                m = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+                if m != all_ones and m in mask_to_id:
+                    amp['unique_mask_id'] = mask_to_id[m]
+            for wf in all_wfs:
+                m = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+                if m != all_ones and m in mask_to_id:
+                    wf['unique_mask_id'] = mask_to_id[m]
+
+            decl_lines = [
+                'C     Flavor-mask machinery (hoisted path: %d guards over '
+                '%d unique masks).' % (n_total_guards, n_unique),
+                '      INTEGER, PARAMETER :: NMASK_FLAV=%d' % n_flavors,
+                '      INTEGER, PARAMETER :: NUNIQUE=%d' % n_unique,
+                _fmt_int8_param('UNIQUE_MASKS', 'NUNIQUE', sorted_masks),
+                _fmt_int_param('FLAV_TABLE', 'NEXTERNAL, NMASK_FLAV',
+                                                         flav_table_flat),
+                '      INTEGER*8 CURRENT_FLAV_BIT',
+                '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
+                '      LOGICAL FLAV_MATCH',
+                '      LOGICAL FLAV_OK(NUNIQUE)',
+            ]
+            decl_block = '\n'.join(decl_lines)
+
+            setup_lines = list(flav_setup) + [
+                'C     Precompute one boolean per distinct mask.',
+                '      DO MASK_I = 1, NUNIQUE',
+                '        FLAV_OK(MASK_I) = '
+                'IAND(UNIQUE_MASKS(MASK_I), CURRENT_FLAV_BIT) .NE. 0',
+                '      ENDDO',
+            ]
+            setup_block = '\n'.join(setup_lines)
+        else:
+            # Dense path: PARAMETER mask arrays, single-consumer wfs aliased
+            # to amps. wf indices may be sparser than wf.number, hence the
+            # 'wf_mask_index' attribute set above.
+            n_wf_slots = len(nonalias_wf_masks)
+            decl_lines = [
+                'C     Flavor-mask machinery (dense path: %d guards, '
+                '%d unique masks).' % (n_total_guards, n_unique),
+                '      INTEGER, PARAMETER :: NMASK_FLAV=%d' % n_flavors,
+                '      INTEGER, PARAMETER :: NMASK_WF=%d, NMASK_AMP=%d'
+                                                  % (max(n_wf_slots,1), n_amps),
+                _fmt_int8_param('AMP_FLAVOR_MASK', 'NMASK_AMP', amp_masks),
+                _fmt_int_param('FLAV_TABLE', 'NEXTERNAL, NMASK_FLAV',
+                                                         flav_table_flat),
+                '      INTEGER*8 CURRENT_FLAV_BIT',
+                '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J',
+                '      LOGICAL FLAV_MATCH',
+            ]
+            if n_wf_slots > 0:
+                decl_lines.append(_fmt_int8_param('WF_FLAVOR_MASK',
+                                              'NMASK_WF', nonalias_wf_masks))
+            decl_block = '\n'.join(decl_lines)
+            setup_block = '\n'.join(flav_setup)
 
         return (decl_block, setup_block, n_flavors)
 
@@ -3621,6 +3733,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         fortran_model.use_flavor_mask = (n_flavors > 0)
         fortran_model.me_n_flavors = n_flavors
+        # Optional: annotate each wavefunction CALL with the list of AMP(i)
+        # that transitively depend on it. Independent of the mask gate.
+        fortran_model.annotate_helas = getattr(self, 'annotate_helas', False)
+        if fortran_model.annotate_helas:
+            matrix_element.compute_wf_transitive_amps()
         try:
             # Extract helas calls
             helas_calls = fortran_model.get_matrix_element_calls(\
@@ -3628,6 +3745,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         finally:
             fortran_model.use_flavor_mask = False
             fortran_model.me_n_flavors = 0
+            fortran_model.annotate_helas = False
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
