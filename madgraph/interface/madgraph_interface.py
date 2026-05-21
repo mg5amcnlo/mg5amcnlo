@@ -4580,7 +4580,7 @@ This implies that with decay chains:
             has_initial_multileg = any((not leg.get('state')) and len(leg.get('ids')) > 1
                                        for leg in myprocdef.get('legs'))
             if myprocdef.get('perturbation_couplings') == [] and \
-               (args[0] == 'full' or (args[0] == 'gauge' and has_initial_multileg)):
+               (args[0] == 'full' or (args[0] == 'gauge')):
                 if gauge == 'FD':
                     myprocdef_fd = myprocdef
                 else:

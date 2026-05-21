@@ -3606,27 +3606,27 @@ def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, pa
         if processes_fd is not None:
             multiprocess_fd = processes_fd
             model = multiprocess_fd.get('model')
-            aloha.unitary_gauge = 3
-            cmd.options['loop_optimized_output'] = True
-            if multiprocess_fd.get('perturbation_couplings')==[]:
-                evaluator = MatrixElementEvaluator(model, param_card,
-                                           cmd= cmd, auth_skipping = False, reuse = False)
-            else:
-                evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
-                                               cmd= cmd, model=model,
-                                               param_card=param_card,
-                                               auth_skipping = False,
-                                               output_path=output_path,
-                                               reuse = False)
+            with misc.TMP_variable(aloha, 'unitary_gauge', 3):
+                cmd.options['loop_optimized_output'] = True
+                if multiprocess_fd.get('perturbation_couplings')==[]:
+                    evaluator = MatrixElementEvaluator(model, param_card,
+                                            cmd= cmd, auth_skipping = False, reuse = False)
+                else:
+                    evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
+                                                cmd= cmd, model=model,
+                                                param_card=param_card,
+                                                auth_skipping = False,
+                                                output_path=output_path,
+                                                reuse = False)
 
-            if not cmass_scheme and multiprocess_fd.get('perturbation_couplings')==[]:
-                for particle in evaluator.full_model.get('particles'):
-                    if particle.get('width') != 'ZERO':
-                        evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+                if not cmass_scheme and multiprocess_fd.get('perturbation_couplings')==[]:
+                    for particle in evaluator.full_model.get('particles'):
+                        if particle.get('width') != 'ZERO':
+                            evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
-            output_fd = run_multiprocs_no_crossings(get_value, multiprocess_fd,
-                                                                 evaluator, momentum,
-                                                                 options=options)
+                output_fd = run_multiprocs_no_crossings(get_value, multiprocess_fd,
+                                                                    evaluator, momentum,
+                                                                    options=options)
         output = [processes_unit]        
         for data in output_f:
             local_dico = {}
