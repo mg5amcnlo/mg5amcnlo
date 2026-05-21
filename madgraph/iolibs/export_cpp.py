@@ -1143,6 +1143,44 @@ class OneProcessExporterCPP(object):
             if isinstance(idx, int) and idx > 0:
                 amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
 
+        grouped_flavors = [list(group)
+                           for group in matrix_element.get_external_flavors_with_iden()]
+        if grouped_flavors and not (
+                len(grouped_flavors) == len(allowed_flavors) and all(
+                    len(group) == 1 and tuple(group[0]) == tuple(flavor)
+                    for group, flavor in zip(grouped_flavors, allowed_flavors))):
+            flavor_to_idx = {tuple(flavor): idx
+                             for idx, flavor in enumerate(allowed_flavors)}
+            runtime_flavors = []
+            group_bitsets = []
+            for group in grouped_flavors:
+                runtime_flavors.append(tuple(group[0]))
+                bits = 0
+                for flavor in group:
+                    bits |= (1 << flavor_to_idx[tuple(flavor)])
+                group_bitsets.append(bits)
+
+            grouped_wf_masks = []
+            for mask in wf_masks:
+                grouped_mask = 0
+                for group_idx, bits in enumerate(group_bitsets):
+                    if mask & bits:
+                        grouped_mask |= (1 << group_idx)
+                grouped_wf_masks.append(grouped_mask)
+
+            grouped_amp_masks = []
+            for mask in amp_masks:
+                grouped_mask = 0
+                for group_idx, bits in enumerate(group_bitsets):
+                    if mask & bits:
+                        grouped_mask |= (1 << group_idx)
+                grouped_amp_masks.append(grouped_mask)
+
+            wf_masks = grouped_wf_masks
+            amp_masks = grouped_amp_masks
+            allowed_flavors = runtime_flavors
+            n_flavors = len(allowed_flavors)
+
         active_flavor_mask = 0
         for amp_mask in amp_masks:
             active_flavor_mask |= amp_mask
@@ -1164,6 +1202,15 @@ class OneProcessExporterCPP(object):
                     pos = obj_idx % 64
                     amp_index_masks[flav_idx][word] |= (1 << pos)
 
+        active_wf_index_masks = [0] * nwords_wf
+        active_amp_index_masks = [0] * nwords_amp
+        for flav_mask in wf_index_masks:
+            for word, value in enumerate(flav_mask):
+                active_wf_index_masks[word] |= value
+        for flav_mask in amp_index_masks:
+            for word, value in enumerate(flav_mask):
+                active_amp_index_masks[word] |= value
+
         def fmt_uint64_2d(dtype, name, matrix):
             rows = ['{%s}' % ', '.join('%dULL' % v for v in row) for row in matrix]
             return '%s %s[%d][%d] = {%s};' % (
@@ -1172,15 +1219,32 @@ class OneProcessExporterCPP(object):
         model = matrix_element.get('processes')[0].get('model')
         merged_particles = model.get('merged_particles') or {}
         pdg_to_group_index = {}
-        for members in merged_particles.values():
+        max_group_size = 0
+        for merged_id, members in merged_particles.items():
+            members = list(members)
+            if members:
+                max_group_size = max(max_group_size, len(members))
+                # C++ flavor indices are 0-based (first merged member -> 0).
+                pdg_to_group_index[int(merged_id)] = 0
+                pdg_to_group_index[-int(merged_id)] = 0
             for pos, pdg in enumerate(members):
+                pdg = int(pdg)
                 pdg_to_group_index[pdg] = pos
+                pdg_to_group_index[-pdg] = pos
 
         flav_rows = []
         for flavor in allowed_flavors:
             row = []
             for p in flavor:
-                row.append(str(pdg_to_group_index.get(int(p), 0)))
+                p = int(p)
+                if p in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[p]))
+                elif abs(p) in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[abs(p)]))
+                elif max_group_size and 1 <= abs(p) <= max_group_size:
+                    row.append(str(abs(p) - 1))
+                else:
+                    row.append('0')
             flav_rows.append('{%s}' % ', '.join(row))
         decl_lines = [
             '// Flavor-mask machinery (compute_flavor_masks).',
@@ -1193,13 +1257,17 @@ class OneProcessExporterCPP(object):
                           amp_index_masks),
             'static const int flav_table[%d][%d] = {%s};' % (
                 n_flavors, len(allowed_flavors[0]), ', '.join(flav_rows)),
+            'static const unsigned long long active_wf_mask[%d] = {%s};' % (
+                nwords_wf, ', '.join('%dULL' % v for v in active_wf_index_masks)),
+            'static const unsigned long long active_amp_mask[%d] = {%s};' % (
+                nwords_amp, ', '.join('%dULL' % v for v in active_amp_index_masks)),
             'unsigned long long current_wf_mask[nwords_wf];',
             'unsigned long long current_amp_mask[nwords_amp];',
         ]
 
         setup_lines = [
-            'for (int mask_k = 0; mask_k < nwords_wf; ++mask_k) current_wf_mask[mask_k] = 0ULL;',
-            'for (int mask_k = 0; mask_k < nwords_amp; ++mask_k) current_amp_mask[mask_k] = 0ULL;',
+            'for (int mask_k = 0; mask_k < nwords_wf; ++mask_k) current_wf_mask[mask_k] = active_wf_mask[mask_k];',
+            'for (int mask_k = 0; mask_k < nwords_amp; ++mask_k) current_amp_mask[mask_k] = active_amp_mask[mask_k];',
             'int flav_idx_lookup = -1;',
             'for (int mask_i = 0; mask_i < nmask_flav; ++mask_i) {',
             '  bool flav_match = true;',
