@@ -983,7 +983,6 @@ C
             '          CURRENT_AMP_MASK(MASK_K) = AMP_INDEX_MASK(MASK_K, FLAV_IDX_LOOKUP)',
             '        ENDDO',
             '      ENDIF',
-            '      AMP(:) = (0D0, 0D0)',
         ]
         setup_block = '\n'.join(setup_lines)
 
