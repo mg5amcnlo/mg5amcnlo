@@ -716,6 +716,37 @@ class TestCmdShell2(unittest.TestCase,
         self.assertAlmostEqual(float(me_groups.group('value')),
                                16.953243100346082, places=3)
 
+    def test_standalone_wwjj(self):
+        """test that standalone cpp is working"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('generate p p  > w+ w- j j  QCD=0')
+        self.do('output standalone %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_QQx_WpWmQQx',
+                               'check.log')
+        # Check that check_sa.cc compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_QQx_WpWmQQx'))
+        
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_QQx_WpWmQQx'), shell=True)
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.findall(log_output)
+
+        self.assertTrue(me_groups)
+        misc.sprint(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 6.4739191,5)
     def test_standalone_cpp(self):
         """test that standalone cpp is working"""
 
