@@ -724,20 +724,25 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('generate p p  > w+ w- j j  QCD=0')
         self.do('output standalone %s ' % self.out_dir)
-        devnull = open(os.devnull,'w')
-    
-        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_QQx_WpWmQQx',
-                               'check.log')
+
+        sub_root = os.path.join(self.out_dir, 'SubProcesses')
+        proc_candidates = [d for d in os.listdir(sub_root)
+                           if d.startswith('P') and 'qqx' in d.lower()
+                           and 'wpwm' in d.lower()]
+        self.assertTrue(proc_candidates,
+                        'No P*_qqx_wpwmqqx subprocess directory generated')
+        proc_dir = os.path.join(sub_root, sorted(proc_candidates)[0])
+        logfile = os.path.join(proc_dir, 'check.log')
+
         # Check that check_sa.cc compiles
-        subprocess.call(['make'],
-                        stdout=devnull, stderr=devnull, 
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_QQx_WpWmQQx'))
-        
-        subprocess.call('./check', 
-                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_QQx_WpWmQQx'), shell=True)
+        with open(os.devnull, 'w') as devnull:
+            subprocess.call(['make'],
+                            stdout=devnull, stderr=devnull, 
+                            cwd=proc_dir)
+            with open(logfile, 'w') as logsock:
+                subprocess.call('./check', stdout=logsock,
+                                stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
     
         log_output = open(logfile, 'r').read()
         me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
