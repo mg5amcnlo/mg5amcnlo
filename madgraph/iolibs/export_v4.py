@@ -800,6 +800,41 @@ C
             return 1
         return f
 
+    def _compress_mask_list_to_flavor_groups(self, matrix_element, allowed_flavors,
+                                             object_masks):
+        """Project per-flavor masks onto coupling-equivalent flavor groups."""
+
+        grouped_flavors = [list(group)
+                           for group in matrix_element.get_external_flavors_with_iden()]
+        if not grouped_flavors:
+            return allowed_flavors, object_masks
+
+        if len(grouped_flavors) == len(allowed_flavors) and all(
+                len(group) == 1 and tuple(group[0]) == tuple(flavor)
+                for group, flavor in zip(grouped_flavors, allowed_flavors)):
+            return allowed_flavors, object_masks
+
+        flavor_to_idx = {tuple(flavor): idx
+                         for idx, flavor in enumerate(allowed_flavors)}
+        runtime_flavors = []
+        group_bitsets = []
+        for group in grouped_flavors:
+            runtime_flavors.append(tuple(group[0]))
+            bits = 0
+            for flavor in group:
+                bits |= (1 << flavor_to_idx[tuple(flavor)])
+            group_bitsets.append(bits)
+
+        grouped_masks = []
+        for mask in object_masks:
+            grouped_mask = 0
+            for group_idx, bits in enumerate(group_bitsets):
+                if mask & bits:
+                    grouped_mask |= (1 << group_idx)
+            grouped_masks.append(grouped_mask)
+
+        return runtime_flavors, grouped_masks
+
     def _get_flavor_mask_blocks(self, matrix_element):
         """Return declaration/setup blocks for per-call flavor masks."""
 
@@ -830,9 +865,17 @@ C
             if isinstance(idx, int) and idx > 0:
                 amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
 
+        runtime_flavors, wf_masks = self._compress_mask_list_to_flavor_groups(
+            matrix_element, allowed_flavors, wf_masks)
+        _, amp_masks = self._compress_mask_list_to_flavor_groups(
+            matrix_element, allowed_flavors, amp_masks)
+        n_flavors = len(runtime_flavors)
+
         active_flavor_mask = 0
         for amp_mask in amp_masks:
             active_flavor_mask |= amp_mask
+        if active_flavor_mask == 0:
+            active_flavor_mask = (1 << n_flavors) - 1
         if active_flavor_mask == 0:
             active_flavor_mask = (1 << n_flavors) - 1
 
@@ -851,11 +894,20 @@ C
                     pos = obj_idx % 64
                     amp_index_masks[word][flav_idx] |= (1 << pos)
 
+        active_wf_index_masks = [0] * nwords_wf
+        active_amp_index_masks = [0] * nwords_amp
+        for word in range(nwords_wf):
+            for flav_idx in range(n_flavors):
+                active_wf_index_masks[word] |= wf_index_masks[word][flav_idx]
+        for word in range(nwords_amp):
+            for flav_idx in range(n_flavors):
+                active_amp_index_masks[word] |= amp_index_masks[word][flav_idx]
+
         model = matrix_element.get('processes')[0].get('model')
         pdg_to_group_pos, max_group_size = self._build_flavor_group_lookup(model)
 
         flav_table_flat = []
-        for flavor in allowed_flavors:
+        for flavor in runtime_flavors:
             for p in flavor:
                 pos = self._map_flavor_to_group_pos(
                     p, pdg_to_group_pos, max_group_size)
@@ -885,11 +937,15 @@ C
             '      INTEGER*8 AMP_INDEX_MASK(NWORDS_AMP, NMASK_FLAV)',
             '      INTEGER*8 CURRENT_WF_MASK(NWORDS_WF)',
             '      INTEGER*8 CURRENT_AMP_MASK(NWORDS_AMP)',
+            '      INTEGER*8 ACTIVE_WF_MASK(NWORDS_WF)',
+            '      INTEGER*8 ACTIVE_AMP_MASK(NWORDS_AMP)',
             '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
             '      LOGICAL FLAV_MATCH',
             '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
             _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
             _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
+            _fmt_int8_2d('ACTIVE_WF_MASK', [active_wf_index_masks]),
+            _fmt_int8_2d('ACTIVE_AMP_MASK', [active_amp_index_masks]),
             _fmt_int_array('FLAV_TABLE', flav_table_flat),
         ]
         decl_block = '\n'.join(decl_lines)
@@ -909,12 +965,15 @@ C
             '          EXIT',
             '        ENDIF',
             '      ENDDO',
+            'C     If the lookup misses, keep all active calls enabled. HELAS',
+            'C     still checks flavor compatibility internally, so this is a',
+            'C     safe fallback for grouped flavor tables and MadSpin probes.',
             '      IF (FLAV_IDX_LOOKUP .EQ. 0) THEN',
             '        DO MASK_K = 1, NWORDS_WF',
-            '          CURRENT_WF_MASK(MASK_K) = 0_8',
+            '          CURRENT_WF_MASK(MASK_K) = ACTIVE_WF_MASK(MASK_K)',
             '        ENDDO',
             '        DO MASK_K = 1, NWORDS_AMP',
-            '          CURRENT_AMP_MASK(MASK_K) = 0_8',
+            '          CURRENT_AMP_MASK(MASK_K) = ACTIVE_AMP_MASK(MASK_K)',
             '        ENDDO',
             '      ELSE',
             '        DO MASK_K = 1, NWORDS_WF',
@@ -3694,6 +3753,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 if (amp_mask >> flav_idx) & 1:
                     amp_index_masks[word][flav_idx] |= (1 << bit)
 
+        active_wf_index_masks = [0] * nwords_wf
+        active_amp_index_masks = [0] * nwords_amp
+        for word in range(nwords_wf):
+            for flav_idx in range(n_flavors):
+                active_wf_index_masks[word] |= wf_index_masks[word][flav_idx]
+        for word in range(nwords_amp):
+            for flav_idx in range(n_flavors):
+                active_amp_index_masks[word] |= amp_index_masks[word][flav_idx]
+
         nexternal = len(allowed_flavors[0])
         # allowed_flavors stores raw (positive) PDG codes, but at runtime the
         # caller fills FLAVOR(NEXTERNAL) with the *group position* within each
@@ -3740,11 +3808,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '      INTEGER*8 AMP_INDEX_MASK(NWORDS_AMP, NMASK_FLAV)',
             '      INTEGER*8 CURRENT_WF_MASK(NWORDS_WF)',
             '      INTEGER*8 CURRENT_AMP_MASK(NWORDS_AMP)',
+            '      INTEGER*8 ACTIVE_WF_MASK(NWORDS_WF)',
+            '      INTEGER*8 ACTIVE_AMP_MASK(NWORDS_AMP)',
             '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
             '      LOGICAL FLAV_MATCH',
             '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
             _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
             _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
+            _fmt_int8_2d('ACTIVE_WF_MASK', [active_wf_index_masks]),
+            _fmt_int8_2d('ACTIVE_AMP_MASK', [active_amp_index_masks]),
             _fmt_int_array('FLAV_TABLE', flav_table_flat),
         ]
         decl_block = '\n'.join(decl_lines)
@@ -3765,12 +3837,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '          EXIT',
             '        ENDIF',
             '      ENDDO',
+            'C     If the lookup misses, keep all active calls enabled. HELAS',
+            'C     still checks flavor compatibility internally, so this is a',
+            'C     safe fallback for grouped flavor tables and MadSpin probes.',
             '      IF (FLAV_IDX_LOOKUP .EQ. 0) THEN',
             '        DO MASK_K = 1, NWORDS_WF',
-            '          CURRENT_WF_MASK(MASK_K) = 0_8',
+            '          CURRENT_WF_MASK(MASK_K) = ACTIVE_WF_MASK(MASK_K)',
             '        ENDDO',
             '        DO MASK_K = 1, NWORDS_AMP',
-            '          CURRENT_AMP_MASK(MASK_K) = 0_8',
+            '          CURRENT_AMP_MASK(MASK_K) = ACTIVE_AMP_MASK(MASK_K)',
             '        ENDDO',
             '      ELSE',
             '        DO MASK_K = 1, NWORDS_WF',
