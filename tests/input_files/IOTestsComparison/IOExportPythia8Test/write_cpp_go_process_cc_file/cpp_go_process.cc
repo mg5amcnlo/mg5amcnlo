@@ -203,8 +203,10 @@ void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[],
   // Calculate wavefunctions for all processes
   int i, j; 
 
+
   double BWCUTOFF = 15; 
   // Calculate all wavefunctions
+
   ixxxxx(p[perm[0]], mME[0], hel[0], +1, flavor[0], w[0]); 
   oxxxxx(p[perm[1]], mME[1], hel[1], -1, flavor[1], w[1]); 
   ixxxxx(p[perm[2]], mME[2], hel[2], -1, flavor[2], w[2]); 

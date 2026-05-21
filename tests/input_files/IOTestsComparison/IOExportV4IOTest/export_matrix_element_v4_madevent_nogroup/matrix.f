@@ -335,6 +335,7 @@ C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 
+
       DOUBLE PRECISION FK_ZERO
       SAVE FK_ZERO
 
@@ -370,6 +371,8 @@ C     ----------
         FK_ZERO = 0D0
       ENDIF
 
+
+      AMP(:) = (0D0,0D0)
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
       CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1,W(3))
@@ -474,6 +477,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
       BROKEN_SYM = TOTAL_FACTOR
       RETURN
       END
+
 
 C     Set of functions to handle the array indices of the split orders
 

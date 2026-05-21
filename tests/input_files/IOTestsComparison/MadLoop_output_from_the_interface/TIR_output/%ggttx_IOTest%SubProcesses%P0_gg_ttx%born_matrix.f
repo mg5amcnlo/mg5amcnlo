@@ -294,6 +294,7 @@ C
       TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+
 C     
 C     FUNCTION
 C     
@@ -314,6 +315,7 @@ C     1 T(2,1,3,4)
 C     ----------
 C     BEGIN CODE
 C     ----------
+
       CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1,W(1))
       CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1,W(2))
       CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1, FLAVOR(3),W(3))

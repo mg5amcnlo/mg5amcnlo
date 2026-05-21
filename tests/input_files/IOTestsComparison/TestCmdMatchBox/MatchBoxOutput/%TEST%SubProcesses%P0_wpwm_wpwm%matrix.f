@@ -184,6 +184,7 @@ C
       TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+
 C     
 C     GLOBAL VARIABLES
 C     
@@ -198,6 +199,7 @@ C     1 ColorOne()
 C     ----------
 C     BEGIN CODE
 C     ----------
+
       CALL VXXXXX(P(0,1),MDL_MW,NHEL(1),-1,W(1))
       CALL VXXXXX(P(0,2),MDL_MW,NHEL(2),-1,W(2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1,W(3))
@@ -287,6 +289,7 @@ C
       TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+
 C     
 C     GLOBAL VARIABLES
 C     
@@ -301,6 +304,7 @@ C     1 ColorOne()
 C     ----------
 C     BEGIN CODE
 C     ----------
+
       CALL VXXXXX(P(0,1),MDL_MW,NHEL(1),-1,W(1))
       CALL VXXXXX(P(0,2),MDL_MW,NHEL(2),-1,W(2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1,W(3))
@@ -418,4 +422,5 @@ C     Amplitude(s) for diagram number 7
       MG5_0_BROKEN_SYM = TOTAL_FACTOR
       RETURN
       END
+
 

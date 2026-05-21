@@ -265,6 +265,7 @@ C
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
       DOUBLE PRECISION BWCUTOFF
+
 C     
 C     GLOBAL VARIABLES
 C     
@@ -282,6 +283,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       BWCUTOFF=15  ! use if $ syntax is defined in the process
+
       CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1,W(1))
       CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1,W(2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1,W(3))
