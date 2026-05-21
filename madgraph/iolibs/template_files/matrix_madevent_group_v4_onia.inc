@@ -560,6 +560,7 @@ C     CONSTANT
 C
       INCLUDE 'nexternal.inc'
       INCLUDE 'onia.inc'
+c      INCLUDE 'run.inc'
 C
 C     ARGUMENTS
 C
@@ -569,7 +570,8 @@ C
 C     LOCALS
 C
       LOGICAL RESHUFFLE
-      INTEGER OPTION
+      INTEGER MOM_RESH_TYPE
+      COMMON/TO_MOM_RESH_TYPE/MOM_RESH_TYPE
       INTEGER I, J, CNT_ONIA, CNT_ELEM, NELEM, MAP(NEXTERNAL)
       PARAMETER (NELEM = NEXTERNAL-NONIA-2)
 
@@ -593,7 +595,6 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-      OPTION = 1
 
       RESHUFFLE = .FALSE.
       DO I = 3, NEXTERNAL
@@ -611,7 +612,7 @@ C     ----------
         STOP
       ENDIF
 
-      IF (OPTION > 0) THEN
+      IF (MOM_RESH_TYPE > 0) THEN
 C     FINAL-STATE MOMENTUM RESHUFFLING
         DO I = 1, NEXTERNAL
           PAUX = P(0:3,1)+P(0:3,2)
@@ -643,11 +644,11 @@ C     FINAL-STATE MOMENTUM RESHUFFLING
         DO I = NONIA-1, 1, -1
           HAD_PIN(0:3,I) = HAD_PIN(0:3,I+1) + HAD_P(0:3,I)
           HAD_MIN(I) = MASS(HAD_PIN(0:3,I))
-          PAR_MIN(I) = PHI(HAD_MIN(I),PAR_M(I),PAR_MIN(I+1),HAD_M(I),HAD_MIN(I+1),OPTION)
+          PAR_MIN(I) = PHI(HAD_MIN(I),PAR_M(I),PAR_MIN(I+1),HAD_M(I),HAD_MIN(I+1),MOM_RESH_TYPE)
         ENDDO
 
         HAD_SQRTS = PCOM(0,1)+PCOM(0,2)
-        PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC,OPTION)
+        PAR_SQRTS = PHI(HAD_SQRTS,PAR_MIN(1),MREC,HAD_MIN(1),MREC,MOM_RESH_TYPE)
 
         PAR_PIN(0,1) = EPSILON(PAR_SQRTS,PAR_MIN(1),MREC)
         IF (SQRT(PABS2(HAD_PIN(0:3,1))).GT.TINY) THEN
@@ -779,12 +780,12 @@ C         ----------
           RETURN
         END
 
-        DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2,OPTION)
+        DOUBLE PRECISION FUNCTION PHI(M,MP1,MP2,M1,M2,MOM_RESH_TYPE)
           IMPLICIT NONE
 C
 C         ARGUMENTS
 C
-          INTEGER    OPTION
+          INTEGER    MOM_RESH_TYPE
           REAL*8     M,MP1,MP2,M1,M2
 C
 C         LOCALS
@@ -795,15 +796,15 @@ C
 C         ----------
 C         BEGIN CODE
 C         ----------
-          IF (OPTION == 1) THEN
+          IF (MOM_RESH_TYPE == 1) THEN
             PHI = 0.5D0*(M+MP1+MP2+SQRT((M-MP1-MP2)**2+(M1+M2-MP1-MP2)**2/N))
-          ELSE IF (OPTION == 2) THEN
+          ELSE IF (MOM_RESH_TYPE == 2) THEN
             IF (M.GE.(MP1+MP2)) THEN
               PHI = M
             ELSE
               PHI = (MP1+MP2)
             ENDIF
-          ELSE IF (OPTION == 3) THEN
+          ELSE IF (MOM_RESH_TYPE == 3) THEN
             IF (M.GE.(MP1+MP2)) THEN
               PHI = M
             ELSE
