@@ -308,6 +308,7 @@ if (first) then
 endif
 
 %(flavor_mask_setup)s
+AMP(:) = (0d0,0d0)
 %(helas_calls)s
 %(jamp_lines)s
 

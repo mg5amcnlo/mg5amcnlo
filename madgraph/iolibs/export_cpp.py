@@ -1180,7 +1180,7 @@ class OneProcessExporterCPP(object):
         for flavor in allowed_flavors:
             row = []
             for p in flavor:
-                row.append(str(pdg_to_group_index.get(abs(int(p)), 0)))
+                row.append(str(pdg_to_group_index.get(int(p), 0)))
             flav_rows.append('{%s}' % ', '.join(row))
         decl_lines = [
             '// Flavor-mask machinery (compute_flavor_masks).',

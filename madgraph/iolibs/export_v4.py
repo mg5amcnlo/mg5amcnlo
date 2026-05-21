@@ -767,6 +767,8 @@ C
 
         if not getattr(self, 'use_flavor_mask', False):
             return ('', '', 0, 0)
+        if getattr(self, 'opt', {}).get('hel_recycling', False):
+            return ('', '', 0, 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
         if not allowed_flavors:
@@ -823,7 +825,7 @@ C
         flav_table_flat = []
         for flavor in allowed_flavors:
             for p in flavor:
-                pos = pdg_to_group_pos.get(abs(int(p)), int(p))
+                pos = pdg_to_group_pos.get(int(p), int(p))
                 flav_table_flat.append(pos)
 
         def _fmt_int8_2d(name, matrix):
@@ -3602,6 +3604,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if not getattr(self, 'use_flavor_mask', False):
             return ('', '', 0, 0)
+        if getattr(self, 'format', '') in ('standalone_msP', 'standalone_msF'):
+            return ('', '', 0, 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
         n_flavors = len(allowed_flavors)
@@ -3671,7 +3675,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         flav_table_flat = []
         for flavor in allowed_flavors:
             for p in flavor:
-                pos = pdg_to_group_pos.get(abs(int(p)), int(p))
+                pos = pdg_to_group_pos.get(int(p), int(p))
                 flav_table_flat.append(pos)
 
         def _fmt_int8_2d(name, matrix):
