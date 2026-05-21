@@ -5300,6 +5300,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             allow_triming = True
             self.reset_has_flavor()
 
+        # The init/final-sorted dedup signature built below is only a sound
+        # equivalence key when every leg sharing a signature slot is genuinely
+        # interchangeable.  In a decay-chain matrix element the final legs
+        # belong to distinct decay sub-trees, so two assignments can share the
+        # same sorted final-state multiset yet describe different sub-tree
+        # content (e.g. WW->4j: `w+ > c s~, w- > d u~` vs `w+ > d s~` [invalid]
+        # collapse to one signature).  A cached *False* must therefore not be
+        # trusted to skip a sibling assignment for decay-chain ME (see below).
+        is_decay_chain = bool(self.get('processes')[0].get('decay_chains'))
+
         for one_flavor in itertools.product(*[to_map[abs(id)] for id in pdgs]):
             # get the actual pdg code (with the sign)
             pdg = [one_flavor[i] if id > 0 else -one_flavor[i] for i,id in enumerate(pdgs)]
@@ -5325,11 +5335,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             pdg = tuple(init + final)
             # check if we already computed this one
             if pdg in checked:
-                #if checked[pdg]:
-                if all_perm:
-                   flavor_list.append(one_flavor)
-                continue 
-            
+                if checked[pdg]:
+                    # genuine permutation duplicate of a validated flavor
+                    if all_perm:
+                        flavor_list.append(one_flavor)
+                    continue
+                elif not is_decay_chain:
+                    # known-invalid signature; sound to skip for a plain ME
+                    if all_perm:
+                        flavor_list.append(one_flavor)
+                    continue
+                # decay-chain ME: a cached False may hide a valid sibling
+                # assignment that shares this (too coarse) signature, so fall
+                # through and re-check this specific flavor assignment.
+
             # do the computation
             if self.check_flavor(one_flavor, self.get('processes')[0].get('model')):
                 flavor_list.append(one_flavor)

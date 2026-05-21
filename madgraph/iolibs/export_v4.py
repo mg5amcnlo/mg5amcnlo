@@ -3604,8 +3604,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if not getattr(self, 'use_flavor_mask', False):
             return ('', '', 0, 0)
-        if getattr(self, 'format', '') in ('standalone_msP', 'standalone_msF'):
-            return ('', '', 0, 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
         n_flavors = len(allowed_flavors)
