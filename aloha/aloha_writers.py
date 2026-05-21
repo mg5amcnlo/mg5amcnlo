@@ -2336,10 +2336,12 @@ class ALOHAWriterForPython(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
     
-    def get_foot_txt(self):
+    def get_foot_txt(self, combine=False):
         if not self.offshell:
             return '    return vertex\n\n'
-        elif aloha.unitary_gauge == 3 and self.outname.startswith(('V','S')):
+        elif not combine and aloha.unitary_gauge == 3 and \
+             self.outname.startswith(('V','S')) and \
+             'P1N' not in self.tag:
             return '    %(out)s = wavefunctions.multiply_propagator_factor(%(out)s, M%(num)s)\n    return %(out)s\n\n' % \
                    {'out': self.outname, 'num': self.outgoing}
         else:
@@ -2513,7 +2515,7 @@ class ALOHAWriterForPython(WriteALOHA):
                     text.write("    for i in range(%s,%s):\n" % (self.momentum_size, self.momentum_size+size))
                     text.write("        %(main)s[i] += tmp[i]\n" %{'main': main})
         
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
         #ADD SYMETRY
         if sym:
