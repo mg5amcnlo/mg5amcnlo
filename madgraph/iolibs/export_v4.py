@@ -767,8 +767,6 @@ C
 
         if not getattr(self, 'use_flavor_mask', False):
             return ('', '', 0, 0)
-        if getattr(self, 'opt', {}).get('hel_recycling', False):
-            return ('', '', 0, 0)
 
         allowed_flavors = matrix_element.compute_flavor_masks()
         if not allowed_flavors:

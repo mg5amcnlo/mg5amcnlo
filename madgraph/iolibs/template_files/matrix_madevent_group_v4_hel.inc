@@ -242,6 +242,7 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 
 	%(fake_width_declaration)s
 	logical first
@@ -277,6 +278,7 @@ if (first) then
 	first=.false.
 	%(fake_width_definitions)s
 endif
+%(flavor_mask_setup)s
     AMP(:,:) = (0d0,0d0)
 ${helas_calls}
 
