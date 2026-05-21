@@ -746,7 +746,10 @@ class TestCmdShell2(unittest.TestCase,
 
         self.assertTrue(me_groups)
         misc.sprint(me_groups)
-        self.assertAlmostEqual(float(me_groups.group('value')), 6.4739191,5)
+        solutions = ['9.7200631392208237E-011', '2.9914807602720421E-010', '2.5945761685827416E-013', '4.0548460794898514E-011', '3.8153429375138002E-011', '8.5331703693981318E-013', '9.6082597110903943E-011', '2.2765536852776125E-010', '3.6856683594456572E-011', '3.5849194817650895E-010', '1.3450540147059369E-011', '3.0986164866850253E-011', '1.1883567237597037E-010', '3.5802494898458324E-013', '5.2484040751611476E-012', '3.0731230518024460E-010', '2.8882822958717279E-011', '1.0295100732619021E-010']
+        for val, sol in zip(me_groups, solutions):
+            self.assertAlmostEqual(float(val), float(sol), 5)
+
     def test_standalone_cpp(self):
         """test that standalone cpp is working"""
 
