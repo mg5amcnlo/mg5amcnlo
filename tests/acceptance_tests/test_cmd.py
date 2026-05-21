@@ -1089,6 +1089,17 @@ C
         log = '\n'.join(cm.output)
         self.assertIn('Gauge results (switching between Unitary/Feynman/FD gauge):', log)
         self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_pp_wpwm(self):
+        """Test `check gauge p p > w+ w-` includes FD and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
          
 
     def test_madevent_subproc_group(self):
