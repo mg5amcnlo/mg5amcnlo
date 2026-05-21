@@ -762,6 +762,44 @@ C
             elif token in ('true', '1', 'yes', 'on'):
                 self.use_flavor_mask = True
 
+    def _build_flavor_group_lookup(self, model):
+        """Return (pdg_or_group_id -> group_position, max_group_size)."""
+
+        merged_particles = (model.get('merged_particles') or {}) if model else {}
+        pdg_to_group_pos = {}
+        max_group_size = 0
+
+        for merged_id, members in merged_particles.items():
+            members = list(members)
+            if members:
+                max_group_size = max(max_group_size, len(members))
+                # If a merged pseudo-id appears in a flavor tuple, map it to a
+                # deterministic valid partner index.
+                pdg_to_group_pos[int(merged_id)] = 1
+                pdg_to_group_pos[-int(merged_id)] = 1
+            for pos, pdg in enumerate(members, 1):
+                pdg = int(pdg)
+                pdg_to_group_pos[pdg] = pos
+                pdg_to_group_pos[-pdg] = pos
+
+        return pdg_to_group_pos, max_group_size
+
+    def _map_flavor_to_group_pos(self, flavor, pdg_to_group_pos, max_group_size=0):
+        """Map a raw flavor token to a valid FLV_COUPLING partner index."""
+
+        f = int(flavor)
+        if f in pdg_to_group_pos:
+            return pdg_to_group_pos[f]
+        af = abs(f)
+        if af in pdg_to_group_pos:
+            return pdg_to_group_pos[af]
+        if max_group_size and 1 <= af <= max_group_size:
+            return af
+        # In merged-particle mode, never leak raw merged IDs/PDGs to PARTNER().
+        if pdg_to_group_pos:
+            return 1
+        return f
+
     def _get_flavor_mask_blocks(self, matrix_element):
         """Return declaration/setup blocks for per-call flavor masks."""
 
@@ -814,16 +852,13 @@ C
                     amp_index_masks[word][flav_idx] |= (1 << pos)
 
         model = matrix_element.get('processes')[0].get('model')
-        merged_particles = model.get('merged_particles') or {}
-        pdg_to_group_pos = {}
-        for members in merged_particles.values():
-            for pos, pdg in enumerate(members, 1):
-                pdg_to_group_pos[pdg] = pos
+        pdg_to_group_pos, max_group_size = self._build_flavor_group_lookup(model)
 
         flav_table_flat = []
         for flavor in allowed_flavors:
             for p in flavor:
-                pos = pdg_to_group_pos.get(int(p), int(p))
+                pos = self._map_flavor_to_group_pos(
+                    p, pdg_to_group_pos, max_group_size)
                 flav_table_flat.append(pos)
 
         def _fmt_int8_2d(name, matrix):
@@ -3660,18 +3695,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # GET_FLAVOR / FLAV_COUPLING tables use in madevent. So FLAV_TABLE
         # below must hold group positions, not PDG codes.
         model = matrix_element.get('processes')[0].get('model')
-        merged_particles = model.get('merged_particles') or {}
-        pdg_to_group_pos = {}
-        for members in merged_particles.values():
-            for pos, pdg in enumerate(members, 1):
-                pdg_to_group_pos[pdg] = pos
+        pdg_to_group_pos, max_group_size = self._build_flavor_group_lookup(model)
         # FLAV_TABLE laid out column-major: FLAV_TABLE(NEXTERNAL, NMASK_FLAV).
         # Fortran DATA without explicit indices iterates fastest in the first
         # dimension, so we emit (leg, flavor) tuples with leg-first ordering.
         flav_table_flat = []
         for flavor in allowed_flavors:
             for p in flavor:
-                pos = pdg_to_group_pos.get(int(p), int(p))
+                pos = self._map_flavor_to_group_pos(
+                    p, pdg_to_group_pos, max_group_size)
                 flav_table_flat.append(pos)
 
         def _fmt_int8_2d(name, matrix):
@@ -5771,14 +5803,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # each PDG code is converted to its group position before being written
         # into the DATA statement.
         model = matrix_element.get('processes')[0].get('model')
-        pdg_to_group_pos = {}
-        merged_particles = model.get('merged_particles') or {}
-        for members in merged_particles.values():
-            for pos, pdg in enumerate(members, 1):
-                pdg_to_group_pos[pdg] = pos
+        pdg_to_group_pos, max_group_size = self._build_flavor_group_lookup(model)
 
         for i, flav in enumerate(all_flav):
-            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+            flav_positions = [str(self._map_flavor_to_group_pos(
+                              f, pdg_to_group_pos, max_group_size))
+                              for f in flav[0]]
             replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
 
         # In addition to the IFLAV-indexed FLAVOR table above (one row per
@@ -5791,7 +5821,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['max_flavor_row'] = len(all_flav_flat)
         replace_dict['get_flavor_row_matrix'] = ''
         for i, flav_tuple in enumerate(all_flav_flat):
-            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav_tuple]
+            flav_positions = [str(self._map_flavor_to_group_pos(
+                              f, pdg_to_group_pos, max_group_size))
+                              for f in flav_tuple]
             replace_dict['get_flavor_row_matrix'] += ' DATA (FLAVOR_ROW(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
         
         # information for computing the correct symmetry factor for each flavor
@@ -5980,14 +6012,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['start_ipsel_for_IFLAV'] += ' ENDIF\n'
         replace_dict['maxflavor'] = len(all_flv)
         replace_dict['get_flavor_matrix'] = ''
-        pdg_to_group_pos = {}
         model = self.model or matrix_element.get('processes')[0].get('model')
-        merged_particles = (model.get('merged_particles') or {}) if model else {}
-        for members in merged_particles.values():
-            for pos, pdg in enumerate(members, 1):
-                pdg_to_group_pos[pdg] = pos
+        pdg_to_group_pos, max_group_size = self._build_flavor_group_lookup(model)
         for i, flav in enumerate(all_flv):
-            flav_positions = [str(pdg_to_group_pos.get(f, f)) for f in flav[0]]
+            flav_positions = [str(self._map_flavor_to_group_pos(
+                              f, pdg_to_group_pos, max_group_size))
+                              for f in flav[0]]
             replace_dict['get_flavor_matrix'] += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' % (i+1, ', '.join(flav_positions))
         
 
