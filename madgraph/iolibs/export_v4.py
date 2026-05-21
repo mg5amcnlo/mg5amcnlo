@@ -926,6 +926,13 @@ C
             items = [str(v) for v in values]
             return '      DATA %s / %s /' % (name, ', '.join(items))
 
+        # WF_INDEX_MASK / AMP_INDEX_MASK are declared (NWORDS, NMASK_FLAV).
+        # Fortran DATA fills column-major (first index fastest), so the value
+        # stream must be word-fastest. wf_index_masks/amp_index_masks are
+        # indexed [word][flavor]; transpose to [flavor][word] before emitting.
+        def _transpose(matrix):
+            return [list(col) for col in zip(*matrix)] if matrix else matrix
+
         decl_lines = [
             'C     Flavor-mask machinery (compute_flavor_masks).',
             '      INTEGER NMASK_FLAV, NMASK_WF, NMASK_AMP',
@@ -942,8 +949,8 @@ C
             '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
             '      LOGICAL FLAV_MATCH',
             '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
-            _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
-            _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
+            _fmt_int8_2d('WF_INDEX_MASK', _transpose(wf_index_masks)),
+            _fmt_int8_2d('AMP_INDEX_MASK', _transpose(amp_index_masks)),
             _fmt_int8_2d('ACTIVE_WF_MASK', [active_wf_index_masks]),
             _fmt_int8_2d('ACTIVE_AMP_MASK', [active_amp_index_masks]),
             _fmt_int_array('FLAV_TABLE', flav_table_flat),
@@ -3796,6 +3803,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             items = [str(v) for v in values]
             return '      DATA %s / %s /' % (name, ', '.join(items))
 
+        # WF_INDEX_MASK / AMP_INDEX_MASK are declared (NWORDS, NMASK_FLAV).
+        # Fortran DATA fills column-major (first index fastest), so the value
+        # stream must be word-fastest. wf_index_masks/amp_index_masks are
+        # indexed [word][flavor]; transpose to [flavor][word] before emitting.
+        def _transpose(matrix):
+            return [list(col) for col in zip(*matrix)] if matrix else matrix
+
         decl_lines = [
             'C     Flavor-mask machinery (compute_flavor_masks).',
             '      INTEGER NMASK_FLAV, NMASK_WF, NMASK_AMP',
@@ -3812,8 +3826,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
             '      LOGICAL FLAV_MATCH',
             '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
-            _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
-            _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
+            _fmt_int8_2d('WF_INDEX_MASK', _transpose(wf_index_masks)),
+            _fmt_int8_2d('AMP_INDEX_MASK', _transpose(amp_index_masks)),
             _fmt_int8_2d('ACTIVE_WF_MASK', [active_wf_index_masks]),
             _fmt_int8_2d('ACTIVE_AMP_MASK', [active_amp_index_masks]),
             _fmt_int_array('FLAV_TABLE', flav_table_flat),

@@ -291,7 +291,6 @@ C     for the point with external lines W(0:6,NEXTERNAL)
 C     
 C     Process: u u~ > g g
 C     
-      USE MODEL_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANTS

@@ -233,7 +233,6 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
-    use model_object
     IMPLICIT NONE
 C  
 C CONSTANTS
