@@ -2331,8 +2331,11 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
+                shift = 0
+                if aloha.unitary_gauge == 3 and self.outname.startswith('S'):
+                    shift = 4
                 out.write('    %s[%d]= %s*%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind), coeff, 
+                                        self.pass_to_HELAS(ind) + shift, coeff, 
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
     
@@ -2398,7 +2401,11 @@ class ALOHAWriterForPython(WriteALOHA):
                 self.get_one_momenta_def(i+1, out)             
              
         # define the resulting momenta
-        if self.offshell:
+        bypass = False
+        if 'P1N' in self.tag and self.offshell and \
+           not self.declaration.is_used('P%s' % (self.outgoing)):
+            bypass = True
+        if self.offshell and not bypass:
             type = self.particles[self.outgoing-1]
             out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
             if aloha.loop_mode:
@@ -2412,6 +2419,10 @@ class ALOHAWriterForPython(WriteALOHA):
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
+            if "P1T" in self.tag or "P1L" in self.tag:
+                for i, value in zip(range(1,4), ("1e-30", "0.0", "1e-15")):
+                    out.write("    if abs(P%(P)s[0])*1e-10 > abs(P%(P)s[%(i)s]): P%(P)s[%(i)s] = %(val)s\n"
+                              % {"P": self.outgoing, "i": i, "val": value})
 
                
         # Returning result
