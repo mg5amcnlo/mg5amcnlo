@@ -1670,6 +1670,37 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     generates the C++ Helas call based on the Lorentz structure of
     the interaction."""
 
+    def __init__(self, argument={}, options={}):
+        self.use_flavor_mask = False
+        self.me_n_flavors = 0
+        self.me_active_flavor_mask = None
+        super(CPPUFOHelasCallWriter, self).__init__(argument, options=options)
+
+    def _flavor_mask_prefix(self, obj, kind):
+        """Return an 'if ((...)) ' prefix for a C++ HELAS call, or ''."""
+
+        if not self.use_flavor_mask or self.me_n_flavors <= 0:
+            return ''
+        if 'flavor_mask' not in obj:
+            return ''
+        mask = obj['flavor_mask']
+        all_ones = (1 << self.me_n_flavors) - 1
+        active_mask = getattr(self, 'me_active_flavor_mask', None)
+        if active_mask is None:
+            active_mask = all_ones
+        if mask == active_mask:
+            return ''
+        idx = obj.get('number')
+        array = 'current_wf_mask' if kind == 'wf' else 'current_amp_mask'
+        if kind == 'wf' and 'guard_amp_number' in obj:
+            idx = obj.get('guard_amp_number')
+            array = 'current_amp_mask'
+        if not isinstance(idx, int) or idx <= 0:
+            return ''
+        word = (idx - 1) // 64
+        bit = (idx - 1) % 64
+        return 'if ((%s[%d] & (1ULL << %d)) != 0ULL) ' % (array, word, bit)
+
     def generate_helas_call(self, argument):
         """Routine for automatic generation of C++ Helas calls
         according to just the spin structure of the interaction.
@@ -2096,6 +2127,21 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                          (njamp, export_cpp.OneProcessExporterGPU.coeff(*coeff)))
 
         return res
+
+    def get_wavefunction_call(self, wavefunction, **opt):
+        call = super(CPPUFOHelasCallWriter, self).get_wavefunction_call(
+                                                            wavefunction, **opt)
+        if not call:
+            return call
+        prefix = self._flavor_mask_prefix(wavefunction, 'wf')
+        return prefix + call if prefix else call
+
+    def get_amplitude_call(self, amplitude):
+        call = super(CPPUFOHelasCallWriter, self).get_amplitude_call(amplitude)
+        if not call:
+            return call
+        prefix = self._flavor_mask_prefix(amplitude, 'amp')
+        return prefix + call if prefix else call
 
 
 

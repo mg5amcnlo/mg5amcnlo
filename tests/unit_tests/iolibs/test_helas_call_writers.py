@@ -961,6 +961,36 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                 {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
             'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
 
+    def test_UFO_cpp_flavor_mask_prefix_uses_index_bits(self):
+        """C++ flavor-mask guard should check wf/amp index bits."""
+
+        cpp_model = helas_call_writers.CPPUFOHelasCallWriter(self.mybasemodel)
+        cpp_model.use_flavor_mask = True
+        cpp_model.me_n_flavors = 3
+
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'if ((current_wf_mask[1] & (1ULL << 5)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+        cpp_model.me_n_flavors = 4
+        cpp_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+
 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""

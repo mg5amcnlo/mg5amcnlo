@@ -100,6 +100,7 @@ C
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 C
 C GLOBAL VARIABLES
 C
@@ -112,6 +113,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 

@@ -186,6 +186,7 @@ class ProcessExporterFortran(VirtualExporter):
     grouped_mode = False
     jamp_optim = False
     run_card_class = None
+    use_flavor_mask = True
 
     def __init__(self,  dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
@@ -198,6 +199,7 @@ class ProcessExporterFortran(VirtualExporter):
         if opt:
             self.opt.update(opt)
         self.cmd_options = self.opt['output_options']
+        self._configure_flavor_mask_from_cmd_options()
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
@@ -745,6 +747,147 @@ C
         """
         pass
 
+    def _configure_flavor_mask_from_cmd_options(self):
+        """Honor `--mask=True|False` from the output command line."""
+
+        if 'mask' not in self.cmd_options:
+            return
+        val = self.cmd_options['mask']
+        if isinstance(val, bool):
+            self.use_flavor_mask = val
+        elif isinstance(val, str):
+            token = val.strip().lower()
+            if token in ('false', '0', 'no', 'off'):
+                self.use_flavor_mask = False
+            elif token in ('true', '1', 'yes', 'on'):
+                self.use_flavor_mask = True
+
+    def _get_flavor_mask_blocks(self, matrix_element):
+        """Return declaration/setup blocks for per-call flavor masks."""
+
+        if not getattr(self, 'use_flavor_mask', False):
+            return ('', '', 0, 0)
+
+        allowed_flavors = matrix_element.compute_flavor_masks()
+        if not allowed_flavors:
+            return ('', '', 0, 0)
+
+        if matrix_element.flavor_mask_is_trivial():
+            return ('', '', len(allowed_flavors), (1 << len(allowed_flavors)) - 1)
+
+        n_flavors = len(allowed_flavors)
+        n_wfs = matrix_element.get_number_of_wavefunctions()
+        n_amps = matrix_element.get_number_of_amplitudes()
+        nwords_wf = max(1, (n_wfs + 63) // 64)
+        nwords_amp = max(1, (n_amps + 63) // 64)
+
+        wf_masks = [0] * n_wfs
+        amp_masks = [0] * n_amps
+        for wf in matrix_element.get_all_wavefunctions():
+            idx = wf.get('number')
+            if isinstance(idx, int) and idx > 0:
+                wf_masks[idx - 1] = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+        for amp in matrix_element.get_all_amplitudes():
+            idx = amp.get('number')
+            if isinstance(idx, int) and idx > 0:
+                amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+
+        active_flavor_mask = 0
+        for amp_mask in amp_masks:
+            active_flavor_mask |= amp_mask
+        if active_flavor_mask == 0:
+            active_flavor_mask = (1 << n_flavors) - 1
+
+        wf_index_masks = [[0] * n_flavors for _ in range(nwords_wf)]
+        amp_index_masks = [[0] * n_flavors for _ in range(nwords_amp)]
+        for flav_idx in range(n_flavors):
+            bit = 1 << flav_idx
+            for obj_idx, mask in enumerate(wf_masks):
+                if mask & bit:
+                    word = obj_idx // 64
+                    pos = obj_idx % 64
+                    wf_index_masks[word][flav_idx] |= (1 << pos)
+            for obj_idx, mask in enumerate(amp_masks):
+                if mask & bit:
+                    word = obj_idx // 64
+                    pos = obj_idx % 64
+                    amp_index_masks[word][flav_idx] |= (1 << pos)
+
+        model = matrix_element.get('processes')[0].get('model')
+        merged_particles = model.get('merged_particles') or {}
+        pdg_to_group_pos = {}
+        for members in merged_particles.values():
+            for pos, pdg in enumerate(members, 1):
+                pdg_to_group_pos[pdg] = pos
+
+        flav_table_flat = []
+        for flavor in allowed_flavors:
+            for p in flavor:
+                pos = pdg_to_group_pos.get(abs(int(p)), int(p))
+                flav_table_flat.append(pos)
+
+        def _fmt_int8_2d(name, matrix):
+            items = []
+            for row in matrix:
+                for v in row:
+                    if v >= (1 << 63):
+                        v -= (1 << 64)
+                    items.append('%d_8' % v)
+            return '      DATA %s / %s /' % (name, ', '.join(items))
+
+        def _fmt_int_array(name, values):
+            items = [str(v) for v in values]
+            return '      DATA %s / %s /' % (name, ', '.join(items))
+
+        decl_lines = [
+            'C     Flavor-mask machinery (compute_flavor_masks).',
+            '      INTEGER NMASK_FLAV, NMASK_WF, NMASK_AMP',
+            '      INTEGER NWORDS_WF, NWORDS_AMP',
+            '      PARAMETER (NMASK_FLAV=%d)' % n_flavors,
+            '      PARAMETER (NMASK_WF=%d, NMASK_AMP=%d)' % (n_wfs, n_amps),
+            '      PARAMETER (NWORDS_WF=%d, NWORDS_AMP=%d)' % (nwords_wf, nwords_amp),
+            '      INTEGER*8 WF_INDEX_MASK(NWORDS_WF, NMASK_FLAV)',
+            '      INTEGER*8 AMP_INDEX_MASK(NWORDS_AMP, NMASK_FLAV)',
+            '      INTEGER*8 CURRENT_WF_MASK(NWORDS_WF)',
+            '      INTEGER*8 CURRENT_AMP_MASK(NWORDS_AMP)',
+            '      INTEGER FLAV_IDX_LOOKUP, MASK_I, MASK_J, MASK_K',
+            '      LOGICAL FLAV_MATCH',
+            '      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)',
+            _fmt_int8_2d('WF_INDEX_MASK', wf_index_masks),
+            _fmt_int8_2d('AMP_INDEX_MASK', amp_index_masks),
+            _fmt_int_array('FLAV_TABLE', flav_table_flat),
+        ]
+        decl_block = '\n'.join(decl_lines)
+
+        setup_lines = [
+            '      FLAV_IDX_LOOKUP = 0',
+            '      DO MASK_I = 1, NMASK_FLAV',
+            '        FLAV_MATCH = .TRUE.',
+            '        DO MASK_J = 1, NEXTERNAL',
+            '          IF (FLAVOR(MASK_J) .NE. FLAV_TABLE(MASK_J, MASK_I)) THEN',
+            '            FLAV_MATCH = .FALSE.',
+            '            EXIT',
+            '          ENDIF',
+            '        ENDDO',
+            '        IF (FLAV_MATCH) THEN',
+            '          FLAV_IDX_LOOKUP = MASK_I',
+            '          EXIT',
+            '        ENDIF',
+            '      ENDDO',
+            '      IF (FLAV_IDX_LOOKUP .EQ. 0) THEN',
+            '        STOP 1',
+            '      ENDIF',
+            '      DO MASK_K = 1, NWORDS_WF',
+            '        CURRENT_WF_MASK(MASK_K) = WF_INDEX_MASK(MASK_K, FLAV_IDX_LOOKUP)',
+            '      ENDDO',
+            '      DO MASK_K = 1, NWORDS_AMP',
+            '        CURRENT_AMP_MASK(MASK_K) = AMP_INDEX_MASK(MASK_K, FLAV_IDX_LOOKUP)',
+            '      ENDDO',
+        ]
+        setup_block = '\n'.join(setup_lines)
+
+        return (decl_block, setup_block, n_flavors, active_flavor_mask)
+
     #===========================================================================
     # write_pdf_opendata
     #===========================================================================
@@ -976,7 +1119,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     def write_nexternal_madspin(self, writer, nexternal, ninitial):
         """Write the nexternal_prod.inc file for madspin"""
 
-        replace_dict = {}
+        replace_dict = {'flavor_mask_decl':'',
+                        'flavor_mask_setup':''}
 
         replace_dict['nexternal'] = nexternal
         replace_dict['ninitial'] = ninitial
@@ -2791,22 +2935,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.prefix_info = {}
         ProcessExporterFortran.__init__(self, *args, **opts)
 
-        # Honor `--mask=True|False` from the `output` command line. The base
-        # class default is `use_flavor_mask = True`; passing `--mask=False`
-        # disables the per-call IAND guards (emits the bare HELAS sequence
-        # exactly as before the optimization landed). Anything that isn't an
-        # explicit truthy/falsy token is ignored.
-        if 'mask' in self.cmd_options:
-            val = self.cmd_options['mask']
-            if isinstance(val, bool):
-                self.use_flavor_mask = val
-            elif isinstance(val, str):
-                token = val.strip().lower()
-                if token in ('false', '0', 'no', 'off'):
-                    self.use_flavor_mask = False
-                elif token in ('true', '1', 'yes', 'on'):
-                    self.use_flavor_mask = True
-
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
@@ -3508,21 +3636,21 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         nwords_wf = (n_wfs + 63) // 64
         nwords_amp = (n_amps + 63) // 64
 
-        wf_index_masks = [[0] * nwords_wf for _ in range(n_flavors)]
+        wf_index_masks = [[0] * n_flavors for _ in range(nwords_wf)]
         for wf_idx, wf_mask in enumerate(wf_masks):
             word = wf_idx // 64
             bit = wf_idx % 64
             for flav_idx in range(n_flavors):
                 if (wf_mask >> flav_idx) & 1:
-                    wf_index_masks[flav_idx][word] |= (1 << bit)
+                    wf_index_masks[word][flav_idx] |= (1 << bit)
 
-        amp_index_masks = [[0] * nwords_amp for _ in range(n_flavors)]
+        amp_index_masks = [[0] * n_flavors for _ in range(nwords_amp)]
         for amp_idx, amp_mask in enumerate(amp_masks):
             word = amp_idx // 64
             bit = amp_idx % 64
             for flav_idx in range(n_flavors):
                 if (amp_mask >> flav_idx) & 1:
-                    amp_index_masks[flav_idx][word] |= (1 << bit)
+                    amp_index_masks[word][flav_idx] |= (1 << bit)
 
         nexternal = len(allowed_flavors[0])
         # allowed_flavors stores raw (positive) PDG codes, but at runtime the
@@ -4483,9 +4611,20 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
+        mask_decl, mask_setup, n_flavors, active_flavor_mask = \
+                self._get_flavor_mask_blocks(matrix_element)
+        replace_dict['flavor_mask_decl'] = mask_decl
+        replace_dict['flavor_mask_setup'] = mask_setup
+
+        fortran_model.use_flavor_mask = (n_flavors > 0)
+        fortran_model.me_n_flavors = n_flavors
+        fortran_model.me_active_flavor_mask = active_flavor_mask
+        try:
+            helas_calls = fortran_model.get_matrix_element_calls(matrix_element)
+        finally:
+            fortran_model.use_flavor_mask = False
+            fortran_model.me_n_flavors = 0
+            fortran_model.me_active_flavor_mask = None
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
@@ -5422,12 +5561,25 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':'',
-                        'set_amp2_line': 'ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT'}
+                        'set_amp2_line': 'ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT',
+                        'flavor_mask_decl':'',
+                        'flavor_mask_setup':''}
  
  
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
+        mask_decl, mask_setup, n_flavors, active_flavor_mask = \
+                self._get_flavor_mask_blocks(matrix_element)
+        replace_dict['flavor_mask_decl'] = mask_decl
+        replace_dict['flavor_mask_setup'] = mask_setup
+
+        fortran_model.use_flavor_mask = (n_flavors > 0)
+        fortran_model.me_n_flavors = n_flavors
+        fortran_model.me_active_flavor_mask = active_flavor_mask
+        try:
+            helas_calls = fortran_model.get_matrix_element_calls(matrix_element)
+        finally:
+            fortran_model.use_flavor_mask = False
+            fortran_model.me_n_flavors = 0
+            fortran_model.me_active_flavor_mask = None
         if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
             logger.info("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False", '$MG:BOLD')
             ProcessExporterFortranME.done_warning_tchannel = True

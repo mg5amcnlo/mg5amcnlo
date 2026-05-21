@@ -262,11 +262,12 @@ C
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
       COMPLEX*16 AMP(NGRAPHS)
       INTEGER CF_INDEX
-	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 JAMP(NCOLOR,NAMPSO)
 	  COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 C
 C FUNCTION
 C
@@ -283,6 +284,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 

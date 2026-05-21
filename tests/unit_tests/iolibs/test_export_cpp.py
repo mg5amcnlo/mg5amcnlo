@@ -65,7 +65,13 @@ class IOExportPythia8Test(IOTests.IOTestManager, test_file_writers.CheckFileCrea
         test_file_writers is used. We cannot put IOTests.IOTestManager last
         in the hierarchy because the structure requires it to be first always."""
         return test_file_writers.CheckFileCreate.assertFileContains(
-                                                              self,*args,**opts)
+                                                               self,*args,**opts)
+
+    def test_cpp_wavefunction_template_has_flavor_mask_placeholders(self):
+        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                              'cpp_process_wavefunctions.inc')).read()
+        self.assertIn('%(flavor_mask_decl)s', template)
+        self.assertIn('%(flavor_mask_setup)s', template)
 
     def setUp(self):
 
@@ -235,9 +241,9 @@ class IOExportPythia8Test(IOTests.IOTestManager, test_file_writers.CheckFileCrea
                       'orders':{'QSIX':1}}))
 
         myinterlist.append(base_objects.Interaction({
-                      'id': 5,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
+                       'id': 5,
+                       'particles': base_objects.ParticleList(\
+                                             [antiu, \
                                              antiu, \
                                              six]),
                       'color': [color.ColorString([color.K6(2, 0, 1)])],

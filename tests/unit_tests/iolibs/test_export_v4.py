@@ -151,6 +151,24 @@ class IOExportV4IOTest(IOTests.IOTestManager,
         self.myfortranmodel.downcase = False
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
+
+    def test_flavor_mask_placeholders_present_in_nonstandalone_templates(self):
+        template_dir = pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files')
+        template_names = [
+            'matrix_madevent_v4.inc',
+            'matrix_madevent_group_v4.inc',
+            'matrix_madweight_group_v4.inc',
+            'matrix_standalone_msP_v4.inc',
+            'matrix_standalone_msF_v4.inc',
+            'matrix_standalone_matchbox.inc',
+            'matrix_standalone_splitOrders_v4.inc',
+            'matrix_standalone_matchbox_splitOrders_v4.inc',
+        ]
+
+        for template_name in template_names:
+            content = open(pjoin(template_dir, template_name)).read()
+            self.assertIn('%(flavor_mask_decl)s', content)
+            self.assertIn('%(flavor_mask_setup)s', content)
  
     @IOTests.createIOTest() 
     def testIO_export_matrix_element_v4_standalone(self):
