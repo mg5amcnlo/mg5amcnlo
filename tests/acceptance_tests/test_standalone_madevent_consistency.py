@@ -42,7 +42,7 @@ def matrix_element_consistency_test_factory(process, model='sm', tolerance=1e-6)
 
 class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
 
-    debugging = unittest.debug
+    debugging = getattr(unittest, 'debug', False)
 
     def setUp(self):
         self.cmd = cmd_interface.MasterCmd()
@@ -55,7 +55,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         self.madevent_dir = pjoin(self.tmpdir, 'MadEventProcess')
 
     def tearDown(self):
-        if os.path.isdir(self.tmpdir):
+        if not self.debugging and os.path.isdir(self.tmpdir):
             shutil.rmtree(self.tmpdir)
 
     def do(self, line):
@@ -85,7 +85,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
                              % (process, standalone_me, madevent_me))
 
     def _get_single_subprocess_dir(self, root_dir):
-        subproc_dirs = [pjoin(root_dir, name) for name in os.listdir(root_dir)
+        subproc_dirs = [pjoin(root_dir, name) for name in sorted(os.listdir(root_dir))
                         if name.startswith('P') and os.path.isdir(pjoin(root_dir, name))]
         self.assertEqual(len(subproc_dirs), 1,
                          'Expected a single subprocess directory in %s, got %s'
@@ -93,13 +93,10 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         return subproc_dirs[0]
 
     def _run_standalone(self, subproc_dir):
-        devnull = open(os.devnull, 'w')
-        try:
+        with open(os.devnull, 'w') as devnull:
             retcode = subprocess.call(['make', 'check'],
                                       stdout=devnull, stderr=devnull,
                                       cwd=subproc_dir)
-        finally:
-            devnull.close()
         self.assertEqual(retcode, 0, 'Failed to compile standalone check in %s' % subproc_dir)
 
         output = subprocess.Popen(['./check'],
@@ -125,24 +122,18 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
 
     def _run_hacked_madevent(self, subproc_dir, phase_space):
         source_dir = pjoin(self.madevent_dir, 'Source')
-        devnull = open(os.devnull, 'w')
-        try:
+        with open(os.devnull, 'w') as devnull:
             retcode = subprocess.call(['make'],
                                       stdout=devnull, stderr=devnull,
                                       cwd=source_dir)
-        finally:
-            devnull.close()
         self.assertEqual(retcode, 0, 'Failed to compile MadEvent source in %s' % source_dir)
 
         self._write_hacked_driver(pjoin(subproc_dir, 'driver.f'), phase_space)
 
-        devnull = open(os.devnull, 'w')
-        try:
+        with open(os.devnull, 'w') as devnull:
             retcode = subprocess.call(['make', 'madevent'],
                                       stdout=devnull, stderr=devnull,
                                       cwd=subproc_dir)
-        finally:
-            devnull.close()
         self.assertEqual(retcode, 0, 'Failed to compile hacked madevent in %s' % subproc_dir)
 
         output = subprocess.Popen(['./madevent'],
@@ -227,9 +218,8 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             '      END',
             ''])
 
-        driver = open(driver_path, 'w')
-        driver.write('\n'.join(lines))
-        driver.close()
+        with open(driver_path, 'w') as driver:
+            driver.write('\n'.join(lines))
 
 
 class TestStandaloneMadeventMatrixElementConsistency(
@@ -237,10 +227,13 @@ class TestStandaloneMadeventMatrixElementConsistency(
     pass
 
 
-for _process, _model, _tolerance in [
-        ('e+ e- > e+ e-', 'sm', 1e-6)]:
+TEST_CASES = [
+    ('e+ e- > e+ e-', 'sm', 1e-6)]
+
+
+for _process, _model, _tolerance in TEST_CASES:
     setattr(TestStandaloneMadeventMatrixElementConsistency,
             'test_%s' % _sanitize_process_name(_process),
             matrix_element_consistency_test_factory(_process,
-                                                   model=_model,
-                                                   tolerance=_tolerance))
+                                                    model=_model,
+                                                    tolerance=_tolerance))
