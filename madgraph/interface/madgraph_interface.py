@@ -4577,10 +4577,19 @@ This implies that with decay chains:
             else:
                 self.do_set('gauge Feynman', log=False)
                 myprocdef_feyn = self.extract_process(line)
-            has_initial_multileg = any((not leg.get('state')) and len(leg.get('ids')) > 1
-                                       for leg in myprocdef.get('legs'))
             if myprocdef.get('perturbation_couplings') == [] and \
-               (args[0] == 'full' or (args[0] == 'gauge')):
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               0 in self._curr_model.get('gauge'):
+                if gauge == 'axial':
+                    myprocdef_axial = myprocdef
+                else:
+                    self.do_set('gauge axial', log=False)
+                    myprocdef_axial = self.extract_process(line)
+            else:
+                myprocdef_axial = None
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               1 in self._curr_model.get('gauge'):
                 if gauge == 'FD':
                     myprocdef_fd = myprocdef
                 else:
@@ -4595,6 +4604,7 @@ This implies that with decay chains:
                 logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
+                                                myprocdef_axial,
                                                 myprocdef_fd,
                                                 param_card = param_card,
                                                 options=options,
@@ -4750,10 +4760,12 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
+            gauge_labels = ['Unitary', 'Feynman']
+            if any('value_axial' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('Axial')
             if any('value_fd' in res for res in gauge_result_no_brs[1:]):
-                text += 'Gauge results (switching between Unitary/Feynman/FD gauge):\n'
-            else:
-                text += 'Gauge results (switching between Unitary/Feynman gauge):\n'
+                gauge_labels.append('FD')
+            text += 'Gauge results (switching between %s gauge):\n' % '/'.join(gauge_labels)
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'

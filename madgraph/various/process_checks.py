@@ -3513,7 +3513,7 @@ def check_lorentz_process(process, evaluator,options=None):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, param_card=None, 
+def check_unitary_feynman(processes_unit, processes_feynm, processes_axial=None, processes_fd=None, param_card=None, 
                                options=None, tir={}, output_path=None,
                                cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
@@ -3602,6 +3602,31 @@ def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, pa
         output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
                                                             evaluator, momentum,
                                                             options=options)
+        output_axial = None
+        if processes_axial is not None:
+            multiprocess_axial = processes_axial
+            model = multiprocess_axial.get('model')
+            with misc.TMP_variable(aloha, 'unitary_gauge', 2):
+                cmd.options['loop_optimized_output'] = True
+                if multiprocess_axial.get('perturbation_couplings')==[]:
+                    evaluator = MatrixElementEvaluator(model, param_card,
+                                            cmd= cmd, auth_skipping = False, reuse = False)
+                else:
+                    evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
+                                                cmd= cmd, model=model,
+                                                param_card=param_card,
+                                                auth_skipping = False,
+                                                output_path=output_path,
+                                                reuse = False)
+
+                if not cmass_scheme and multiprocess_axial.get('perturbation_couplings')==[]:
+                    for particle in evaluator.full_model.get('particles'):
+                        if particle.get('width') != 'ZERO':
+                            evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+                output_axial = run_multiprocs_no_crossings(get_value, multiprocess_axial,
+                                                                   evaluator, momentum,
+                                                                   options=options)
         output_fd = None
         if processes_fd is not None:
             multiprocess_fd = processes_fd
@@ -3634,6 +3659,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, processes_fd=None, pa
             local_dico['value_feynm'] = data['value']
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
+            if output_axial is not None:
+                local_dico['value_axial'] = [d['value'] for d in output_axial
+                                             if d['process'] == data['process']][0]
             if output_fd is not None:
                 local_dico['value_fd'] = [d['value'] for d in output_fd
                                           if d['process'] == data['process']][0]
@@ -5076,8 +5104,11 @@ def output_unitary_feynman(comparison_results, output='text'):
     no_check_proc_list = []
 
     col_size = 18
+    use_axial = any('value_axial' in comp for comp in comparison_results)
     use_fd = any('value_fd' in comp for comp in comparison_results)
     gauge_columns = [("Unitary", 'value_unit'), ("Feynman", 'value_feynm')]
+    if use_axial:
+        gauge_columns.append(("Axial", 'value_axial'))
     if use_fd:
         gauge_columns.append(("FD", 'value_fd'))
 

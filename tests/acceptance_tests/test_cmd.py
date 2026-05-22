@@ -1076,7 +1076,7 @@ C
             self.do('check gauge e+ e- > ve ve~ w+ w-')
 
         log = '\n'.join(cm.output)
-        self.assertIn('Gauge results (switching between Unitary/Feynman gauge):', log)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
         self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
 
     def test_check_pp_wpwm(self):
@@ -1087,7 +1087,7 @@ C
             self.do('check p p > w+ w-')
 
         log = '\n'.join(cm.output)
-        self.assertIn('Gauge results (switching between Unitary/Feynman/FD gauge):', log)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
         self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
 
     def test_check_gauge_pp_wpwm(self):
@@ -1098,7 +1098,7 @@ C
             self.do('check gauge p p > w+ w-')
 
         log = '\n'.join(cm.output)
-        self.assertIn('Gauge results (switching between Unitary/Feynman/FD gauge):', log)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
         self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
          
 
