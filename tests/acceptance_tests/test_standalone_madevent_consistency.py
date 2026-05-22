@@ -64,7 +64,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
     def check_process(self, process, model='sm', tolerance=1e-6):
         self.do('set automatic_html_opening False')
         self.do('set group_subprocesses False')
-        self.do('set apply_flavor_grouping False')
+        self.do('set apply_flavor_grouping True')
         self.do('import model %s' % model)
         self.do('generate %s' % process)
         self.do('output standalone %s -f' % self.standalone_dir)
@@ -75,14 +75,24 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         madevent_dir = self._get_single_subprocess_dir(
             pjoin(self.madevent_dir, 'SubProcesses'))
 
-        standalone_me, phase_space = self._run_standalone(standalone_dir)
-        madevent_me = self._run_hacked_madevent(madevent_dir, phase_space)
+        standalone_rows, phase_space = self._run_standalone(standalone_dir)
+        madevent_by_iflav = self._run_hacked_madevent(madevent_dir, phase_space)
 
-        scale = max(abs(standalone_me), abs(madevent_me), 1e-99)
-        self.assertLessEqual(abs(standalone_me - madevent_me) / scale,
-                             tolerance,
-                             'Incompatible matrix elements for %s: standalone=%s madevent=%s'
-                             % (process, standalone_me, madevent_me))
+        self.assertEqual(len(standalone_rows), len(madevent_by_iflav),
+                         'Flavor-count mismatch for %s: standalone=%s madevent=%s'
+                         % (process, len(standalone_rows), len(madevent_by_iflav)))
+
+        for iflav, standalone_row in enumerate(standalone_rows, start=1):
+            self.assertIn(iflav, madevent_by_iflav,
+                          'Missing madevent flavor index %s for %s' % (iflav, process))
+            standalone_me = standalone_row['value']
+            madevent_me = madevent_by_iflav[iflav]
+            scale = max(abs(standalone_me), abs(madevent_me), 1e-99)
+            self.assertLessEqual(
+                abs(standalone_me - madevent_me) / scale,
+                tolerance,
+                'Incompatible matrix elements for %s flavor=%s iflav=%s: standalone=%s madevent=%s'
+                % (process, standalone_row['pdg'], iflav, standalone_me, madevent_me))
 
     def _get_single_subprocess_dir(self, root_dir):
         subproc_dirs = [pjoin(root_dir, name) for name in sorted(os.listdir(root_dir))
@@ -104,10 +114,6 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
                                   stderr=subprocess.STDOUT,
                                   cwd=subproc_dir).communicate()[0].decode()
 
-        me_match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)',
-                             output)
-        self.assertTrue(me_match, 'No standalone matrix element found in %s' % subproc_dir)
-
         ps_pattern = re.compile(
             r'^\s*\d+\s+'
             r'(?P<e>[\d\.eE\+-]+)\s+'
@@ -118,7 +124,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         phase_space = [[float(match.group(name)) for name in ('e', 'px', 'py', 'pz')]
                        for match in ps_pattern.finditer(output)]
         self.assertTrue(phase_space, 'No phase-space point found in %s' % subproc_dir)
-        return float(me_match.group('value')), phase_space
+        return self._extract_standalone_flavors(output, subproc_dir), phase_space
 
     def _run_hacked_madevent(self, subproc_dir, phase_space):
         source_dir = pjoin(self.madevent_dir, 'Source')
@@ -140,10 +146,45 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   cwd=subproc_dir).communicate()[0].decode()
-        me_match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)',
-                             output)
-        self.assertTrue(me_match, 'No hacked madevent matrix element found in %s' % subproc_dir)
-        return float(me_match.group('value'))
+        return self._extract_madevent_by_iflav(output, subproc_dir)
+
+    def _extract_standalone_flavors(self, output, subproc_dir):
+        lines = output.splitlines()
+        standalone_rows = []
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped.startswith('PDG'):
+                continue
+            pdg_values = tuple(int(token) for token in re.findall(r'-?\d+', stripped))
+            me_value = None
+            for next_line in lines[index + 1:]:
+                match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)',
+                                  next_line)
+                if match:
+                    me_value = float(match.group('value'))
+                    break
+                if next_line.strip().startswith('PDG'):
+                    break
+            if me_value is not None:
+                standalone_rows.append({'pdg': pdg_values, 'value': me_value})
+        self.assertTrue(standalone_rows, 'No flavor matrix elements found in %s' % subproc_dir)
+        return standalone_rows
+
+    def _extract_madevent_by_iflav(self, output, subproc_dir):
+        lines = output.splitlines()
+        by_iflav = {}
+        current_iflav = None
+        for line in lines:
+            iflav_match = re.search(r'IFLAV\s*=\s*(\d+)', line)
+            if iflav_match:
+                current_iflav = int(iflav_match.group(1))
+                continue
+            me_match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)', line)
+            if me_match and current_iflav is not None:
+                by_iflav[current_iflav] = float(me_match.group('value'))
+                current_iflav = None
+        self.assertTrue(by_iflav, 'No madevent flavor matrix elements found in %s' % subproc_dir)
+        return by_iflav
 
     def _write_hacked_driver(self, driver_path, phase_space):
         lines = [
@@ -151,9 +192,11 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             '      IMPLICIT NONE',
             "      INCLUDE 'genps.inc'",
             "      INCLUDE 'nexternal.inc'",
+            "      INCLUDE 'maxamps.inc'",
             '      REAL*8 ZERO',
             '      PARAMETER (ZERO=0D0)',
-            '      INTEGER SELECTED_HEL, SELECTED_COL, IFLAV, IVEC',
+            '      INTEGER SELECTED_HEL, SELECTED_COL, IFLAV, IVEC, J',
+            '      INTEGER FLAVOR(NEXTERNAL)',
             '      REAL*8 P(0:3,NEXTERNAL), ANS',
             '      REAL*8 POL(2)',
             '      COMMON/TO_POLARIZATION/POL',
@@ -188,7 +231,6 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             '      MAXCFIG=1',
             '      NB_SPIN_STATE(1)=2',
             '      NB_SPIN_STATE(2)=2',
-            '      IFLAV=1',
             '      IVEC=1']
 
         for index, momentum in enumerate(phase_space):
@@ -199,9 +241,14 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
                               ('%.16E' % value).replace('E', 'D')))
 
         lines.extend([
-            '      CALL SMATRIX(P, IFLAV, 0.5D0, 0.5D0, 1, IVEC, ANS,',
-            '     $  SELECTED_HEL, SELECTED_COL)',
-            "      WRITE(*,*) 'Matrix element = ', ANS, ' GeV^',-(2*NEXTERNAL-8)",
+            '      DO IFLAV=1,MAXFLAVPERPROC',
+            '         CALL GET_FLAVOR(IFLAV,FLAVOR)',
+            '         CALL SMATRIX(P, IFLAV, 0.5D0, 0.5D0, 1, IVEC, ANS,',
+            '     $    SELECTED_HEL, SELECTED_COL)',
+            "         WRITE(*,*) 'IFLAV = ', IFLAV",
+            "         WRITE(*,*) 'PDG', (FLAVOR(J),J=1,NEXTERNAL)",
+            "         WRITE(*,*) 'Matrix element = ', ANS, ' GeV^',-(2*NEXTERNAL-8)",
+            '      ENDDO',
             '      END',
             '',
             '      SUBROUTINE OPEN_FILE_LOCAL(LUN,FILENAME,FOPENED)',
