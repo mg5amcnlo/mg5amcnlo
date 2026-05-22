@@ -5621,10 +5621,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return True if every diagram in this ME contributes for every
         allowed flavor (mask == all-ones). In that case the IAND guard would
         always pass and the emitter should skip emitting masks entirely.
-        Assumes compute_flavor_masks() has been called.
+
+        The allowed-flavor list is obtained through get_external_flavors()
+        (the same accessor compute_flavor_masks() relies on), which computes
+        and caches it on demand, so this method does not depend on a prior
+        call having populated the 'allowed_flavors' key. The per-diagram
+        'flavor_mask' keys are still set by compute_flavor_masks(); if they
+        are absent the result is treated as trivial.
         """
 
-        allowed = self['allowed_flavors']
+        allowed = self.get_external_flavors()
         if not allowed:
             return True
         all_ones = (1 << len(allowed)) - 1
