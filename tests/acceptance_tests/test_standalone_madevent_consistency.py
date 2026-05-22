@@ -189,10 +189,12 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
     def _write_hacked_driver(self, driver_path, phase_space):
         lines = [
             '      PROGRAM DRIVER',
+            '      use model_object',
             '      IMPLICIT NONE',
             "      INCLUDE 'genps.inc'",
             "      INCLUDE 'nexternal.inc'",
             "      INCLUDE 'maxamps.inc'",
+            "      INCLUDE 'coupl.inc'",
             '      REAL*8 ZERO',
             '      PARAMETER (ZERO=0D0)',
             '      INTEGER SELECTED_HEL, SELECTED_COL, IFLAV, IVEC, J',
