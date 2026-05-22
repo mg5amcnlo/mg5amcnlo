@@ -4829,9 +4829,10 @@ def get_value(process, evaluator, p=None, options=None):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
+    name = {0:'Feynman', 1:'unitary', 2:'axial', 3:'FD'}[int(aloha.unitary_gauge)]
+
     logger.info("Checking %s in %s gauge" % \
-        ( process.nice_string().replace('Process:', 'process'),
-                               'unitary' if aloha.unitary_gauge else 'feynman'))
+        ( process.nice_string().replace('Process:', 'process'), name))
 
     legs = process.get('legs')
     # Generate a process with these legs
@@ -4845,7 +4846,7 @@ def get_value(process, evaluator, p=None, options=None):
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
         return None
-    
+    logger.debug("number of diagrams %d" % len(amplitude.get('diagrams')))
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
         logging.info("No diagrams for %s" % \
