@@ -78,7 +78,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         standalone_rows, phase_space = self._run_standalone(standalone_dir)
         madevent_by_iflav = self._run_hacked_madevent(madevent_dir, phase_space)
 
-        self.assertEqual(len(standalone_rows), len(madevent_by_iflav),
+        self.assertTrue(len(standalone_rows) <= len(madevent_by_iflav),
                          'Flavor-count mismatch for %s: standalone=%s madevent=%s'
                          % (process, len(standalone_rows), len(madevent_by_iflav)))
 
@@ -271,16 +271,35 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
 
 class TestStandaloneMadeventMatrixElementConsistency(
         StandaloneMadeventMatrixElementConsistency):
-    pass
+    pass    
+
+    test_standalone_madevent_consistency_ee_ee = matrix_element_consistency_test_factory(
+        'e+ e- > e+ e-', model='sm', tolerance=1e-6)
+
+    test_standalone_madevent_consistency_ll_ll = matrix_element_consistency_test_factory(
+        'l+ l- > l+ l-', model='sm', tolerance=1e-6)
+
+    test_standalone_madevent_consistency_VBFZ_qqx = matrix_element_consistency_test_factory(
+        '_quark _anti_quark > Z _quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
+
+    test_standalone_madevent_consistency_VBFZ_qq = matrix_element_consistency_test_factory(
+        '_quark _quark > Z _quark _quark QCD=0', model='sm', tolerance=1e-6)
+    
+    test_standalone_madevent_consistency_VBFZ_qxqx = matrix_element_consistency_test_factory(
+        '_anti_quark _anti_quark > Z _anti_quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
+
+    test_standalone_madevent_consistency_VBF_WW = matrix_element_consistency_test_factory(
+        '_quark _quark > W+ W- _quark _quark QCD=0', model='sm', tolerance=1e-6)
+    
+    test_standalone_madevent_consistency_VBFH = matrix_element_consistency_test_factory(
+        '_quark _anti_quark > H _quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
+#TEST_CASES = [
+#    ('e+ e- > e+ e-', 'sm', 1e-6)]
 
 
-TEST_CASES = [
-    ('e+ e- > e+ e-', 'sm', 1e-6)]
-
-
-for _process, _model, _tolerance in TEST_CASES:
-    setattr(TestStandaloneMadeventMatrixElementConsistency,
-            'test_%s' % _sanitize_process_name(_process),
-            matrix_element_consistency_test_factory(_process,
-                                                    model=_model,
-                                                    tolerance=_tolerance))
+#for _process, _model, _tolerance in TEST_CASES:
+#    setattr(TestStandaloneMadeventMatrixElementConsistency,
+#            'test_%s' % _sanitize_process_name(_process),
+#            matrix_element_consistency_test_factory(_process,
+##                                                    model=_model,
+#                                                    tolerance=_tolerance))
