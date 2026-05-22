@@ -2989,7 +2989,7 @@ class ProcessExporterCPP(VirtualExporter):
         """Generate the Pxxxxx directory for a subprocess in C++ standalone,
         including the necessary .h and .cc files"""
 
-        matrix_element = copy.deepcopy(matrix_element)
+        #matrix_element = copy.deepcopy(matrix_element)
         process_exporter_cpp = self.oneprocessclass(matrix_element,cpp_helas_call_writer)
 
         
