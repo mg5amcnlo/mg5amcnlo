@@ -1,0 +1,246 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+
+from __future__ import absolute_import
+
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+import madgraph.interface.master_interface as cmd_interface
+
+
+pjoin = os.path.join
+
+
+def _sanitize_process_name(process):
+    return re.sub(r'[^A-Za-z0-9]+', '_', process).strip('_').lower()
+
+
+def matrix_element_consistency_test_factory(process, model='sm', tolerance=1e-6):
+    def test(self):
+        self.check_process(process, model=model, tolerance=tolerance)
+    test.__name__ = 'test_%s' % _sanitize_process_name(process)
+    test.__doc__ = 'Check standalone and madevent matrix elements agree for %s.' % process
+    return test
+
+
+class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
+
+    debugging = unittest.debug
+
+    def setUp(self):
+        self.cmd = cmd_interface.MasterCmd()
+        self.cmd.no_notification()
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
+        else:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc_debug_')
+        self.standalone_dir = pjoin(self.tmpdir, 'StandaloneProcess')
+        self.madevent_dir = pjoin(self.tmpdir, 'MadEventProcess')
+
+    def tearDown(self):
+        if os.path.isdir(self.tmpdir):
+            shutil.rmtree(self.tmpdir)
+
+    def do(self, line):
+        self.cmd.exec_cmd(line)
+
+    def check_process(self, process, model='sm', tolerance=1e-6):
+        self.do('set automatic_html_opening False')
+        self.do('set group_subprocesses False')
+        self.do('set apply_flavor_grouping False')
+        self.do('import model %s' % model)
+        self.do('generate %s' % process)
+        self.do('output standalone %s -f' % self.standalone_dir)
+        self.do('output madevent %s -f' % self.madevent_dir)
+
+        standalone_dir = self._get_single_subprocess_dir(
+            pjoin(self.standalone_dir, 'SubProcesses'))
+        madevent_dir = self._get_single_subprocess_dir(
+            pjoin(self.madevent_dir, 'SubProcesses'))
+
+        standalone_me, phase_space = self._run_standalone(standalone_dir)
+        madevent_me = self._run_hacked_madevent(madevent_dir, phase_space)
+
+        scale = max(abs(standalone_me), abs(madevent_me), 1e-99)
+        self.assertLessEqual(abs(standalone_me - madevent_me) / scale,
+                             tolerance,
+                             'Incompatible matrix elements for %s: standalone=%s madevent=%s'
+                             % (process, standalone_me, madevent_me))
+
+    def _get_single_subprocess_dir(self, root_dir):
+        subproc_dirs = [pjoin(root_dir, name) for name in os.listdir(root_dir)
+                        if name.startswith('P') and os.path.isdir(pjoin(root_dir, name))]
+        self.assertEqual(len(subproc_dirs), 1,
+                         'Expected a single subprocess directory in %s, got %s'
+                         % (root_dir, subproc_dirs))
+        return subproc_dirs[0]
+
+    def _run_standalone(self, subproc_dir):
+        devnull = open(os.devnull, 'w')
+        try:
+            retcode = subprocess.call(['make', 'check'],
+                                      stdout=devnull, stderr=devnull,
+                                      cwd=subproc_dir)
+        finally:
+            devnull.close()
+        self.assertEqual(retcode, 0, 'Failed to compile standalone check in %s' % subproc_dir)
+
+        output = subprocess.Popen(['./check'],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  cwd=subproc_dir).communicate()[0].decode()
+
+        me_match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)',
+                             output)
+        self.assertTrue(me_match, 'No standalone matrix element found in %s' % subproc_dir)
+
+        ps_pattern = re.compile(
+            r'^\s*\d+\s+'
+            r'(?P<e>[\d\.eE\+-]+)\s+'
+            r'(?P<px>[\d\.eE\+-]+)\s+'
+            r'(?P<py>[\d\.eE\+-]+)\s+'
+            r'(?P<pz>[\d\.eE\+-]+)',
+            re.MULTILINE)
+        phase_space = [[float(match.group(name)) for name in ('e', 'px', 'py', 'pz')]
+                       for match in ps_pattern.finditer(output)]
+        self.assertTrue(phase_space, 'No phase-space point found in %s' % subproc_dir)
+        return float(me_match.group('value')), phase_space
+
+    def _run_hacked_madevent(self, subproc_dir, phase_space):
+        source_dir = pjoin(self.madevent_dir, 'Source')
+        devnull = open(os.devnull, 'w')
+        try:
+            retcode = subprocess.call(['make'],
+                                      stdout=devnull, stderr=devnull,
+                                      cwd=source_dir)
+        finally:
+            devnull.close()
+        self.assertEqual(retcode, 0, 'Failed to compile MadEvent source in %s' % source_dir)
+
+        self._write_hacked_driver(pjoin(subproc_dir, 'driver.f'), phase_space)
+
+        devnull = open(os.devnull, 'w')
+        try:
+            retcode = subprocess.call(['make', 'madevent'],
+                                      stdout=devnull, stderr=devnull,
+                                      cwd=subproc_dir)
+        finally:
+            devnull.close()
+        self.assertEqual(retcode, 0, 'Failed to compile hacked madevent in %s' % subproc_dir)
+
+        output = subprocess.Popen(['./madevent'],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  cwd=subproc_dir).communicate()[0].decode()
+        me_match = re.search(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)',
+                             output)
+        self.assertTrue(me_match, 'No hacked madevent matrix element found in %s' % subproc_dir)
+        return float(me_match.group('value'))
+
+    def _write_hacked_driver(self, driver_path, phase_space):
+        lines = [
+            '      PROGRAM DRIVER',
+            '      IMPLICIT NONE',
+            "      INCLUDE 'genps.inc'",
+            "      INCLUDE 'nexternal.inc'",
+            '      REAL*8 ZERO',
+            '      PARAMETER (ZERO=0D0)',
+            '      INTEGER SELECTED_HEL, SELECTED_COL, IFLAV, IVEC',
+            '      REAL*8 P(0:3,NEXTERNAL), ANS',
+            '      REAL*8 POL(2)',
+            '      COMMON/TO_POLARIZATION/POL',
+            '      INTEGER ISUM_HEL',
+            '      LOGICAL MULTI_CHANNEL',
+            '      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL',
+            '      LOGICAL INIT_MODE',
+            '      COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE',
+            '      LOGICAL ALLOW_HELICITY_GRID_ENTRIES',
+            '      COMMON/TO_ALLOW_HELICITY_GRID_ENTRIES/ALLOW_HELICITY_GRID_ENTRIES',
+            '      INTEGER MINCFIG, MAXCFIG',
+            '      COMMON/TO_CONFIGS/MINCFIG, MAXCFIG',
+            '      INTEGER NB_SPIN_STATE(2)',
+            '      COMMON /NB_HEL_STATE/ NB_SPIN_STATE',
+            '      CHARACTER*30 PARAM_CARD_NAME',
+            '      COMMON/TO_PARAM_CARD_NAME/PARAM_CARD_NAME',
+            '      REAL*8 PMASS(NEXTERNAL)',
+            '      COMMON/TO_MASS/PMASS',
+            "      PARAM_CARD_NAME='param_card.dat'",
+            '      CALL SETRUN',
+            '      CALL SETPARA(PARAM_CARD_NAME)',
+            "      INCLUDE 'pmass.inc'",
+            '      POL(1)=1D0',
+            '      POL(2)=1D0',
+            '      ISUM_HEL=0',
+            '      MULTI_CHANNEL=.FALSE.',
+            '      HEL_PICKED=0',
+            '      HEL_JACOBIAN=1D0',
+            '      INIT_MODE=.FALSE.',
+            '      ALLOW_HELICITY_GRID_ENTRIES=.FALSE.',
+            '      MINCFIG=1',
+            '      MAXCFIG=1',
+            '      NB_SPIN_STATE(1)=2',
+            '      NB_SPIN_STATE(2)=2',
+            '      IFLAV=1',
+            '      IVEC=1']
+
+        for index, momentum in enumerate(phase_space):
+            iparticle = index + 1
+            for component, value in enumerate(momentum):
+                lines.append('      P(%d,%d)=%s' %
+                             (component, iparticle,
+                              ('%.16E' % value).replace('E', 'D')))
+
+        lines.extend([
+            '      CALL SMATRIX(P, IFLAV, 0.5D0, 0.5D0, 1, IVEC, ANS,',
+            '     $  SELECTED_HEL, SELECTED_COL)',
+            "      WRITE(*,*) 'Matrix element = ', ANS, ' GeV^',-(2*NEXTERNAL-8)",
+            '      END',
+            '',
+            '      SUBROUTINE OPEN_FILE_LOCAL(LUN,FILENAME,FOPENED)',
+            '      IMPLICIT NONE',
+            '      INTEGER LUN',
+            '      LOGICAL FOPENED',
+            '      CHARACTER*(*) FILENAME',
+            '      FOPENED=.FALSE.',
+            "      OPEN(UNIT=LUN,FILE=FILENAME,STATUS='OLD',ERR=10)",
+            '      FOPENED=.TRUE.',
+            '      RETURN',
+            ' 10   CONTINUE',
+            '      RETURN',
+            '      END',
+            ''])
+
+        driver = open(driver_path, 'w')
+        driver.write('\n'.join(lines))
+        driver.close()
+
+
+class TestStandaloneMadeventMatrixElementConsistency(
+        StandaloneMadeventMatrixElementConsistency):
+    pass
+
+
+for _process, _model, _tolerance in [
+        ('e+ e- > e+ e-', 'sm', 1e-6)]:
+    setattr(TestStandaloneMadeventMatrixElementConsistency,
+            'test_%s' % _sanitize_process_name(_process),
+            matrix_element_consistency_test_factory(_process,
+                                                   model=_model,
+                                                   tolerance=_tolerance))
