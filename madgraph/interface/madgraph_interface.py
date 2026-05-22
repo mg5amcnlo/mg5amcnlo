@@ -4577,20 +4577,9 @@ This implies that with decay chains:
             else:
                 self.do_set('gauge Feynman', log=False)
                 myprocdef_feyn = self.extract_process(line)
-            has_massive_vector_leg = False
-            for leg in myprocdef.get('legs'):
-                for pid in leg.get('ids'):
-                    particle = myprocdef.get('model').get_particle(abs(pid))
-                    if particle and particle.get('spin') == 3 and \
-                       str(particle.get('mass')).strip().upper() != 'ZERO':
-                        has_massive_vector_leg = True
-                        break
-                if has_massive_vector_leg:
-                    break
             if myprocdef.get('perturbation_couplings') == [] and \
                (args[0] == 'full' or (args[0] == 'gauge')) and \
-               0 in self._curr_model.get('gauge') and \
-               not has_massive_vector_leg:
+               0 in self._curr_model.get('gauge'):
                 if gauge == 'axial':
                     myprocdef_axial = myprocdef
                 else:
