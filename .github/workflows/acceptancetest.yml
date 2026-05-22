@@ -1844,3 +1844,16 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_ML_gauge_invariance_epem_ttx_all_modes -pA -t0 -l INFO
+            
+
+
+  acceptancetest_madevent_vbf_merged_flavor:
+    # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - name: test madevent_with_merged_flavor
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py  test_madevent_broken_sym_zjj-pA -t0 -l INFO

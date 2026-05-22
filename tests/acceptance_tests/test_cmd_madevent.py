@@ -511,6 +511,60 @@ class TestMECmdShell(unittest.TestCase):
         self.assertLess(err2 / val2, 0.005)
         self.assertLess(err1 / val1, 0.005)
 
+    def test_madevent_broken_sym_zjj(self):
+        """Cross-section and initial-state flavor composition for
+        q q > z q q QCD=0 with q = u d (madevent backend).
+
+        With q a merged u/d multiparticle, the grouped matrix element
+        carries per-flavor identical-particle corrections (the BROKEN_SYM
+        factor) and a per-group symmetry/symfact treatment. This pins the
+        total cross-section and the average number of initial-state u and d
+        quarks per event (two partons per event) so a mis-applied symmetry
+        factor is caught.
+        """
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
+        mg_cmd.exec_cmd('import model sm')
+        mg_cmd.exec_cmd('define q = u d')
+        mg_cmd.exec_cmd('generate q q > z q q QCD=0')
+        mg_cmd.exec_cmd('output %s' % self.run_dir)
+
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        run_card.set('nevents', 1000, user=True)
+        run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+        self.do('launch -f')
+
+        cross = self.cmd_line.results.current['cross']
+        error = self.cmd_line.results.current['error']
+        # Reference 6.124 pb is the sum of the three single-flavor
+        # subprocesses run separately (u u > z u u = 0.353, u d > z u d =
+        # 5.691, d d > z d d = 0.092), i.e. the result free of the merged-q
+        # grouping machinery.
+        self.assertAlmostEqual(cross, 6.124, delta=max(0.1, 5 * error))
+
+        events = lhe_parser.EventFile(pjoin(self.run_dir, 'Events', 'run_01',
+                                            'unweighted_events.lhe.gz'))
+        n_u = n_d = n_events = 0
+        for event in events:
+            n_events += 1
+            for particle in (event[0], event[1]):
+                if abs(particle.pid) == 2:
+                    n_u += 1
+                elif abs(particle.pid) == 1:
+                    n_d += 1
+        self.assertGreater(n_events, 0)
+        # q = u d only: every initial-state parton is a u or a d quark.
+        self.assertEqual(n_u + n_d, 2 * n_events)
+        self.assertAlmostEqual(n_u / n_events, 1.042, delta=0.1)
+        self.assertAlmostEqual(n_d / n_events, 0.958, delta=0.1)
+
     def test_flavor_grouping_consistency(self):
         """Check that the four combinations of 'apply_flavor_grouping' and
         'group_subprocesses' return compatible cross-sections for the
