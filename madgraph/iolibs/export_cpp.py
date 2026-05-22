@@ -1143,44 +1143,6 @@ class OneProcessExporterCPP(object):
             if isinstance(idx, int) and idx > 0:
                 amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
 
-        grouped_flavors = [list(group)
-                           for group in matrix_element.get_external_flavors_with_iden()]
-        if grouped_flavors and not (
-                len(grouped_flavors) == len(allowed_flavors) and all(
-                    len(group) == 1 and tuple(group[0]) == tuple(flavor)
-                    for group, flavor in zip(grouped_flavors, allowed_flavors))):
-            flavor_to_idx = {tuple(flavor): idx
-                             for idx, flavor in enumerate(allowed_flavors)}
-            runtime_flavors = []
-            group_bitsets = []
-            for group in grouped_flavors:
-                runtime_flavors.append(tuple(group[0]))
-                bits = 0
-                for flavor in group:
-                    bits |= (1 << flavor_to_idx[tuple(flavor)])
-                group_bitsets.append(bits)
-
-            grouped_wf_masks = []
-            for mask in wf_masks:
-                grouped_mask = 0
-                for group_idx, bits in enumerate(group_bitsets):
-                    if mask & bits:
-                        grouped_mask |= (1 << group_idx)
-                grouped_wf_masks.append(grouped_mask)
-
-            grouped_amp_masks = []
-            for mask in amp_masks:
-                grouped_mask = 0
-                for group_idx, bits in enumerate(group_bitsets):
-                    if mask & bits:
-                        grouped_mask |= (1 << group_idx)
-                grouped_amp_masks.append(grouped_mask)
-
-            wf_masks = grouped_wf_masks
-            amp_masks = grouped_amp_masks
-            allowed_flavors = runtime_flavors
-            n_flavors = len(allowed_flavors)
-
         active_flavor_mask = 0
         for amp_mask in amp_masks:
             active_flavor_mask |= amp_mask

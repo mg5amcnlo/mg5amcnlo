@@ -755,6 +755,199 @@ class TestCmdShell2(unittest.TestCase,
         for val, sol in zip(me_groups, solutions):
             self.assertAlmostEqual(float(val), float(sol), 5)
 
+    def test_standalone_flavor_mask(self):
+        """Acceptance test for the per-flavor masking optimization.
+
+        Generates p p > j j QCD=0 and, for the q q~ > q q~ subprocess,
+        exercises both the Fortran (standalone) and C++ (standalone_cpp)
+        backends. The check_sa driver is patched to also evaluate two
+        non-representative flavors -- s c~ > s c~ (flavor 3 4 3 4) and
+        s c~ > c c~ (flavor 3 4 4 4) -- and the matrix-element source is
+        patched to print the runtime flavor mask that gates the HELAS
+        calls. The test asserts that
+
+          * s c~ > s c~ reproduces the d u~ > d u~ value (PDG 1 -2 1 -2),
+          * s c~ > c c~ vanishes,
+          * the flavor mask is partial for s c~ > s c~ (a flavor present
+            in the runtime flavor table) and fully on for s c~ > c c~ (a
+            lookup miss that falls back to the safe all-on mask).
+        """
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('generate p p > j j QCD=0')
+        devnull = open(os.devnull, 'w')
+
+        def find_qqx(sub_root):
+            cand = [d for d in os.listdir(sub_root)
+                    if d.startswith('P') and 'QQx' in d and d.endswith('QQx')]
+            self.assertTrue(cand, 'no q q~ > q q~ subprocess in %s' % sub_root)
+            return pjoin(sub_root, sorted(cand)[0])
+
+        def parse_me_by_pdg(text):
+            """Map each PDG tuple printed by check_sa to its matrix element."""
+            result = {}
+            pending = None
+            for line in text.splitlines():
+                line = line.strip()
+                if line.startswith('PDG'):
+                    try:
+                        pending = tuple(int(x) for x in line.split()[1:])
+                    except ValueError:
+                        pending = None
+                elif line.startswith('Matrix element') and pending is not None:
+                    m = re.search(r'=\s*([-+0-9.eE]+)', line)
+                    if m:
+                        result[pending] = float(m.group(1))
+                    pending = None
+            return result
+
+        def parse_mask(text, flavor):
+            """Return (current, active) mask tuples for the MASKDBG line of
+            the given flavor, or None if absent."""
+            flavor = tuple(flavor)
+            for line in text.splitlines():
+                toks = line.split()
+                if len(toks) < 2 or toks[0] != 'MASKDBG':
+                    continue
+                try:
+                    nums = [int(x) for x in toks[1:]]
+                except ValueError:
+                    continue
+                if tuple(nums[:len(flavor)]) != flavor:
+                    continue
+                rest = nums[len(flavor):]
+                if not rest or len(rest) % 4 != 0:
+                    continue
+                nw = len(rest) // 4
+                current = tuple(rest[0:nw]) + tuple(rest[2 * nw:3 * nw])
+                active = tuple(rest[nw:2 * nw]) + tuple(rest[3 * nw:4 * nw])
+                return current, active
+            return None
+
+        def run_check(proc_dir):
+            log = pjoin(proc_dir, 'check.log')
+            with open(log, 'w') as sock:
+                subprocess.call('./check', stdout=sock, stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+            return open(log).read()
+
+        def assert_backend(text, known_flavor, zero_flavor):
+            me = parse_me_by_pdg(text)
+            for pdg in [(1, -2, 1, -2), (3, -4, 3, -4), (3, -4, 4, -4)]:
+                self.assertIn(pdg, me, 'missing PDG %s in check output' % (pdg,))
+            reference = me[(1, -2, 1, -2)]
+            self.assertGreater(reference, 0.0)
+            # s c~ > s c~ must reproduce d u~ > d u~ (flavor universality).
+            self.assertAlmostEqual(me[(3, -4, 3, -4)], reference, places=6)
+            # s c~ > c c~ is not a valid QCD=0 flavor -> vanishes.
+            self.assertAlmostEqual(me[(3, -4, 4, -4)], 0.0, places=10)
+            # Known flavor -> partial mask; lookup miss -> all-on fallback.
+            known = parse_mask(text, known_flavor)
+            self.assertIsNotNone(known, 'no MASKDBG line for %s' % (known_flavor,))
+            self.assertNotEqual(known[0], known[1],
+                                'mask for %s should be partial' % (known_flavor,))
+            miss = parse_mask(text, zero_flavor)
+            self.assertIsNotNone(miss, 'no MASKDBG line for %s' % (zero_flavor,))
+            self.assertEqual(miss[0], miss[1],
+                             'mask for %s should be all-on' % (zero_flavor,))
+
+        # ---- Fortran standalone -------------------------------------
+        self.do('output standalone %s -f' % self.out_dir)
+        proc_dir = find_qqx(pjoin(self.out_dir, 'SubProcesses'))
+
+        check_f = pjoin(proc_dir, 'check_sa.f')
+        src = open(check_f).read()
+        m = re.search(r'MAXFLAVOR=(\d+)\)', src)
+        self.assertTrue(m, 'MAXFLAVOR not found in check_sa.f')
+        nflav = int(m.group(1))
+        src = src.replace('MAXFLAVOR=%d)' % nflav,
+                          'MAXFLAVOR=%d)' % (nflav + 2), 1)
+        extra = []
+        for offset, (flavor, pdg) in enumerate(
+                [((3, 4, 3, 4), (3, -4, 3, -4)),
+                 ((3, 4, 4, 4), (3, -4, 4, -4))]):
+            col = nflav + 1 + offset
+            for leg in range(4):
+                extra.append('        FLAVOR(%d,%d) = %d'
+                             % (leg + 1, col, flavor[leg]))
+                extra.append('        PDG_FOR_FLAVOR(%d,%d) = %d'
+                             % (leg + 1, col, pdg[leg]))
+        loop_marker = '      do I=1, MAXFLAVOR'
+        self.assertIn(loop_marker, src)
+        src = src.replace(loop_marker, '\n'.join(extra) + '\n' + loop_marker, 1)
+        open(check_f, 'w').write(src)
+
+        matrix_f = pjoin(proc_dir, 'matrix.f')
+        src = open(matrix_f).read()
+        amp_marker = '      AMP(:) = (0D0, 0D0)'
+        self.assertIn(amp_marker, src)
+        mask_write = ("      WRITE(*,*) 'MASKDBG', FLAVOR, CURRENT_WF_MASK, "
+                      "ACTIVE_WF_MASK, CURRENT_AMP_MASK, ACTIVE_AMP_MASK\n")
+        src = src.replace(amp_marker, mask_write + amp_marker, 1)
+        open(matrix_f, 'w').write(src)
+
+        subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                        cwd=pjoin(self.out_dir, 'Source'))
+        subprocess.call(['make', 'check'], stdout=devnull, stderr=devnull,
+                        cwd=proc_dir)
+        self.assertTrue(os.path.isfile(pjoin(proc_dir, 'check')),
+                        './check did not build for the Fortran standalone')
+        assert_backend(run_check(proc_dir), (3, 4, 3, 4), (3, 4, 4, 4))
+
+        # ---- C++ standalone -----------------------------------------
+        shutil.rmtree(self.out_dir)
+        self.do('output standalone_cpp %s -f' % self.out_dir)
+        proc_dir = find_qqx(pjoin(self.out_dir, 'SubProcesses'))
+
+        check_cpp = pjoin(proc_dir, 'check_sa.cpp')
+        src = open(check_cpp).read()
+        m = re.search(r'maxflavor\s*=\s*(\d+)', src)
+        self.assertTrue(m, 'maxflavor not found in check_sa.cpp')
+        nflav = int(m.group(1))
+        out_lines = []
+        for line in src.splitlines(keepends=True):
+            stripped = line.lstrip()
+            if stripped.startswith('static const int maxflavor'):
+                line = line.replace('= %d' % nflav, '= %d' % (nflav + 2))
+            elif stripped.startswith('static const int flavor_arr'):
+                line = (line.replace('[%d][4]' % nflav, '[%d][4]' % (nflav + 2))
+                        .replace('}};', '}, {2, 3, 2, 3}, {2, 3, 3, 3}};'))
+            elif stripped.startswith('static const int pdg_arr'):
+                line = (line.replace('[%d][4]' % nflav, '[%d][4]' % (nflav + 2))
+                        .replace('}};', '}, {3, -4, 3, -4}, {3, -4, 4, -4}};'))
+            out_lines.append(line)
+        open(check_cpp, 'w').write(''.join(out_lines))
+
+        cpp_proc = pjoin(proc_dir, 'CPPProcess.cc')
+        src = open(cpp_proc).read()
+        self.assertIn('#include "CPPProcess.h"', src)
+        src = src.replace('#include "CPPProcess.h"',
+                          '#include <iostream>\n#include "CPPProcess.h"', 1)
+        helas_marker = '  ixxxxx(p[perm[0]]'
+        self.assertIn(helas_marker, src)
+        mask_dump = (
+            '  std::cout << "MASKDBG";\n'
+            '  for (int mj = 0; mj < nexternal; ++mj)'
+            ' std::cout << " " << flavor[mj];\n'
+            '  for (int mk = 0; mk < nwords_wf; ++mk)'
+            ' std::cout << " " << current_wf_mask[mk];\n'
+            '  for (int mk = 0; mk < nwords_wf; ++mk)'
+            ' std::cout << " " << active_wf_mask[mk];\n'
+            '  for (int mk = 0; mk < nwords_amp; ++mk)'
+            ' std::cout << " " << current_amp_mask[mk];\n'
+            '  for (int mk = 0; mk < nwords_amp; ++mk)'
+            ' std::cout << " " << active_amp_mask[mk];\n'
+            '  std::cout << std::endl;\n')
+        src = src.replace(helas_marker, mask_dump + helas_marker, 1)
+        open(cpp_proc, 'w').write(src)
+
+        subprocess.call(['make'], stdout=devnull, stderr=devnull, cwd=proc_dir)
+        self.assertTrue(os.path.isfile(pjoin(proc_dir, 'check')),
+                        './check did not build for the C++ standalone')
+        # C++ flavor indices are 0-based: 3 4 3 4 -> 2 3 2 3.
+        assert_backend(run_check(proc_dir), (2, 3, 2, 3), (2, 3, 3, 3))
+
     def test_standalone_cpp(self):
         """test that standalone cpp is working"""
 
