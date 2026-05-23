@@ -26,6 +26,7 @@ logger = logging.getLogger('madgraph.madevent')
 
 import madgraph.interface.master_interface as cmd_interface
 import madgraph.various.misc as misc
+import madgraph.various.process_checks as process_checks
 
 
 pjoin = os.path.join
@@ -70,6 +71,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         self.do('set apply_flavor_grouping True')
         self.do('import model %s' % model)
         self.do('generate %s' % process)
+        generated_process = self.cmd._curr_amps[0].get('process')
         self.do('output standalone %s -f' % self.standalone_dir)
         self.do('output madevent %s -f' % self.madevent_dir)
 
@@ -78,8 +80,11 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         madevent_dir = self._get_single_subprocess_dir(
             pjoin(self.madevent_dir, 'SubProcesses'))
 
-        standalone_rows, phase_space = self._run_standalone(standalone_dir)
-        madevent_by_iflav = self._run_hacked_madevent(madevent_dir, phase_space)
+        standalone_rows, printed_phase_space = self._run_standalone(standalone_dir)
+        seeded_phase_space = self._get_seeded_phase_space(generated_process)
+        self._assert_phase_space_reasonable(
+            printed_phase_space, seeded_phase_space, standalone_dir)
+        madevent_by_iflav = self._run_hacked_madevent(madevent_dir, seeded_phase_space)
 
         self.assertTrue(len(standalone_rows) <= len(madevent_by_iflav),
                          'Flavor-count mismatch for %s: standalone=%s madevent=%s'
@@ -108,14 +113,13 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         return subproc_dirs[0]
 
     def _run_standalone(self, subproc_dir):
-        self._patch_check_sa_momenta_output(pjoin(subproc_dir, 'check_sa.f'))
         with open(os.devnull, 'w') as devnull:
             retcode = subprocess.call(['make', 'check'],
                                       stdout=devnull, stderr=devnull,
                                       cwd=subproc_dir)
         self.assertEqual(retcode, 0, 'Failed to compile standalone check in %s' % subproc_dir)
 
-        output = subprocess.Popen(['./check'],
+        output = subprocess.Popen(['./check', '1000'],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   cwd=subproc_dir).communicate()[0].decode()
@@ -127,23 +131,33 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             r'(?P<py>[\d\.eE\+-]+)\s+'
             r'(?P<pz>[\d\.eE\+-]+)',
             re.MULTILINE)
-        phase_space = [[match.group(name) for name in ('e', 'px', 'py', 'pz')]
+        phase_space = [[float(match.group(name)) for name in ('e', 'px', 'py', 'pz')]
                        for match in ps_pattern.finditer(output)]
         self.assertTrue(phase_space, 'No phase-space point found in %s' % subproc_dir)
         return self._extract_standalone_flavors(output, subproc_dir), phase_space
 
-    def _patch_check_sa_momenta_output(self, check_sa_path):
-        with open(check_sa_path) as check_sa:
-            content = check_sa.read()
-        patched, count = re.subn(
-            r"(^\s*write \(\*,\s*'\(i2,1x,5e15\.7\)'\))",
-            "      write (*,'(i2,1x,5e25.17)')",
-            content,
-            flags=re.MULTILINE)
-        self.assertEqual(count, 1,
-                         'Failed to patch momentum print format in %s' % check_sa_path)
-        with open(check_sa_path, 'w') as check_sa:
-            check_sa.write(patched)
+    def _get_seeded_phase_space(self, process_obj, energy=1000.0):
+        evaluator = process_checks.MatrixElementEvaluator(
+            process_obj.get('model'), cmd=self.cmd)
+        phase_space = process_checks._get_seeded_python_momenta(
+            process_obj, evaluator, energy)
+        self.assertTrue(phase_space,
+                        'Failed to generate seeded phase-space point for %s'
+                        % process_obj.nice_string())
+        return phase_space
+
+    def _assert_phase_space_reasonable(self, printed, seeded, subproc_dir):
+        self.assertEqual(len(printed), len(seeded),
+                         'Mismatch in particle count for printed/seeded phase-space in %s'
+                         % subproc_dir)
+        for ipart, (printed_vec, seeded_vec) in enumerate(zip(printed, seeded), start=1):
+            for icomp, (printed_val, seeded_val) in enumerate(zip(printed_vec, seeded_vec)):
+                tolerance = max(1e-3, 1e-6 * max(abs(seeded_val), 1.0))
+                self.assertLessEqual(
+                    abs(printed_val - seeded_val), tolerance,
+                    'Printed phase-space seems inconsistent in %s at particle=%s component=%s: '
+                    'printed=%s seeded=%s'
+                    % (subproc_dir, ipart, icomp, printed_val, seeded_val))
 
     def _run_hacked_madevent(self, subproc_dir, phase_space):
         source_dir = pjoin(self.madevent_dir, 'Source')
