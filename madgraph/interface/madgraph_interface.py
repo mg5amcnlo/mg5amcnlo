@@ -4759,7 +4759,8 @@ This implies that with decay chains:
             if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\ns"
-            elif not myprocdef.get('perturbation_couplings'):
+            elif ((not args or args[0] != 'language') and
+                  not myprocdef.get('perturbation_couplings')):
                 text = "Note That all width have been set to zero for those checks\n\n"
             else:
                 text = "\n"
