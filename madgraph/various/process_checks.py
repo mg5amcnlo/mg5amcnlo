@@ -57,6 +57,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
+import contextlib
 import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
 import madgraph.various.progressbar as pbar
@@ -3878,6 +3879,117 @@ def output_flavor(comparison_results, output='text'):
 
 
 #===============================================================================
+# Marsaglia-Zaman RNG matching the check_sa Fortran/C++ template seed
+#===============================================================================
+class _Ranmar(object):
+    """Marsaglia-Zaman RNG used in the check_sa Fortran/C++ templates.
+
+    Initialising with the same seeds as the templates (``ij=1802, kl=9373``)
+    and drawing numbers in the same sequence gives identical RAMBO phase-space
+    points, allowing the Python backend in ``check_language`` to compare
+    against Fortran/C++ results without relying on printed momenta.
+    """
+
+    def __init__(self, ij=1802, kl=9373):
+        self.ranu = [0.0] * 98
+        self.rmarin(ij, kl)
+
+    def rmarin(self, ij, kl):
+        i = (ij // 177) % 177 + 2
+        j = ij % 177 + 2
+        k = (kl // 169) % 178 + 1
+        l = kl % 169
+        for ii in range(1, 98):
+            s = 0.0
+            t = 0.5
+            for _ in range(24):
+                m = ((i * j) % 179 * k) % 179
+                i, j, k = j, k, m
+                l = (53 * l + 1) % 169
+                if (l * m) % 64 >= 32:
+                    s += t
+                t *= 0.5
+            self.ranu[ii] = s
+        self.ranc = 362436.0 / 16777216.0
+        self.rancd = 7654321.0 / 16777216.0
+        self.rancm = 16777213.0 / 16777216.0
+        self.iranmr = 97
+        self.jranmr = 33
+
+    def ranmar(self):
+        uni = self.ranu[self.iranmr] - self.ranu[self.jranmr]
+        if uni < 0.0:
+            uni += 1.0
+        self.ranu[self.iranmr] = uni
+        self.iranmr -= 1
+        self.jranmr -= 1
+        if self.iranmr == 0:
+            self.iranmr = 97
+        if self.jranmr == 0:
+            self.jranmr = 97
+        self.ranc -= self.rancd
+        if self.ranc < 0.0:
+            self.ranc += self.rancm
+        uni -= self.ranc
+        if uni < 0.0:
+            uni += 1.0
+        return uni
+
+    def rn(self):
+        out = self.ranmar()
+        while out < 1e-16:
+            out = self.ranmar()
+        return out
+
+
+@contextlib.contextmanager
+def _seeded_rambo_rng(ij=1802, kl=9373):
+    """Context manager that temporarily replaces ``rambo.random_nb`` with a
+    fresh Marsaglia-Zaman RNG seeded with *(ij, kl)*.
+
+    This gives a deterministic RAMBO phase-space point that matches the one
+    produced by the check_sa Fortran/C++ binaries, which use the same seed
+    convention.
+
+    .. warning::
+        This patches a module-level function and is therefore **not
+        thread-safe**.  It should only be used in single-threaded context such
+        as the interactive check command.
+    """
+    rng = _Ranmar(ij, kl)
+    old_random_nb = rambo.random_nb
+    rambo.random_nb = lambda _dummy: rng.rn()
+    try:
+        yield rng
+    finally:
+        rambo.random_nb = old_random_nb
+
+
+def _get_seeded_python_momenta(proc, evaluator_obj, energy_value):
+    """Generate Python momenta with the same RAMBO RNG seed as check_sa.
+
+    Uses :func:`_seeded_rambo_rng` to temporarily replace ``rambo.random_nb``
+    with a fresh Marsaglia-Zaman RNG (seeds ``1802, 9373``) identical to those
+    hard-coded in the Fortran/C++ check_sa templates, so that all three
+    backends in ``check_language`` share the same phase-space point without
+    relying on parsed printed output.
+
+    Returns ``None`` on any error.
+    """
+    if evaluator_obj is None:
+        return None
+    try:
+        with _seeded_rambo_rng(1802, 9373):
+            seeded_options = {'energy': float(energy_value),
+                              'events': None,
+                              'skip_evt': 0}
+            p_seeded, _ = evaluator_obj.get_momenta(proc, seeded_options)
+        return p_seeded
+    except Exception:
+        return None
+
+
+#===============================================================================
 # check_language
 #===============================================================================
 def check_language(process_definition, param_card=None, options=None,
@@ -4005,78 +4117,6 @@ def check_language(process_definition, param_card=None, options=None,
             elif started:
                 break
         return momenta
-
-    class _Ranmar(object):
-        """Marsaglia-Zaman RNG used in check_sa Fortran/C++ templates."""
-
-        def __init__(self, ij=1802, kl=9373):
-            self.ranu = [0.0] * 98
-            self.rmarin(ij, kl)
-
-        def rmarin(self, ij, kl):
-            i = (ij // 177) % 177 + 2
-            j = ij % 177 + 2
-            k = (kl // 169) % 178 + 1
-            l = kl % 169
-            for ii in range(1, 98):
-                s = 0.0
-                t = 0.5
-                for _ in range(24):
-                    m = ((i * j) % 179 * k) % 179
-                    i, j, k = j, k, m
-                    l = (53 * l + 1) % 169
-                    if (l * m) % 64 >= 32:
-                        s += t
-                    t *= 0.5
-                self.ranu[ii] = s
-            self.ranc = 362436.0 / 16777216.0
-            self.rancd = 7654321.0 / 16777216.0
-            self.rancm = 16777213.0 / 16777216.0
-            self.iranmr = 97
-            self.jranmr = 33
-
-        def ranmar(self):
-            uni = self.ranu[self.iranmr] - self.ranu[self.jranmr]
-            if uni < 0.0:
-                uni += 1.0
-            self.ranu[self.iranmr] = uni
-            self.iranmr -= 1
-            self.jranmr -= 1
-            if self.iranmr == 0:
-                self.iranmr = 97
-            if self.jranmr == 0:
-                self.jranmr = 97
-            self.ranc -= self.rancd
-            if self.ranc < 0.0:
-                self.ranc += self.rancm
-            uni -= self.ranc
-            if uni < 0.0:
-                uni += 1.0
-            return uni
-
-        def rn(self):
-            out = self.ranmar()
-            while out < 1e-16:
-                out = self.ranmar()
-            return out
-
-    def _get_seeded_python_momenta(proc, evaluator_obj, energy_value):
-        """Generate Python momenta with the same RAMBO RNG seed as check_sa."""
-        if evaluator_obj is None:
-            return None
-        old_random_nb = rambo.random_nb
-        rng = _Ranmar(1802, 9373)
-        try:
-            rambo.random_nb = lambda _dummy: rng.rn()
-            seeded_options = {'energy': float(energy_value),
-                              'events': None,
-                              'skip_evt': 0}
-            p_seeded, _ = evaluator_obj.get_momenta(proc, seeded_options)
-            return p_seeded
-        except Exception:
-            return None
-        finally:
-            rambo.random_nb = old_random_nb
 
     def _pdg_tuple_to_label(pdg_tuple, m, proc):
         """Convert a tuple of PDG codes to a human-readable process label.
