@@ -898,9 +898,9 @@ class TestMultiLanguageComparison(unittest.TestCase):
         """check_language() must return Passed for e+ e- > a a when at least
         one compiled backend (gfortran or g++) is available.
 
-        The new check_language compares Fortran SA vs C++ SA only (no Python).
-        Both backends use the same fixed energy so RAMBO produces identical
-        momenta and the matrix elements can be compared directly.
+        check_language compares Fortran SA, C++ SA and the pure-Python back-end
+        side by side.  All three use the same RAMBO-generated phase-space
+        point so the matrix-element values must agree.
         """
         model = self.model
 
@@ -925,24 +925,30 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
         entry = results[0]
-        # New API: only Fortran and C++ backends (no Python).
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
-        self.assertNotIn('value_python', entry)
+        self.assertIn('value_python', entry)
 
         if not (self.has_fortran or self.has_cpp):
             self.skipTest('No compiled backend available')
 
         me_f   = entry['value_fortran']['m2'] if entry['value_fortran'] else None
         me_cpp = entry['value_cpp']['m2']      if entry['value_cpp']     else None
+        me_py  = entry['value_python']['m2']   if entry['value_python']  else None
 
-        # If both backends ran they must agree within 1e-4 relative.
-        if me_f is not None and me_cpp is not None:
-            ref = abs(me_f)
-            rel = abs(me_f - me_cpp) / ref if ref > 0 else 0.
+        # Every pair of available backends must agree within 1e-4 relative.
+        for a, b, na, nb in (
+            (me_f,   me_cpp, 'Fortran', 'C++'),
+            (me_f,   me_py,  'Fortran', 'Python'),
+            (me_cpp, me_py,  'C++',     'Python'),
+        ):
+            if a is None or b is None:
+                continue
+            ref = abs(a) if a != 0 else abs(b)
+            rel = abs(a - b) / ref if ref > 0 else 0.
             self.assertLess(rel, 1e-4,
-                            'Fortran/C++ disagree: F=%g C++=%g rel=%g'
-                            % (me_f, me_cpp, rel))
+                            '%s/%s disagree: %s=%g %s=%g rel=%g'
+                            % (na, nb, na, a, nb, b, rel))
 
         # output_language must at least contain a Summary line.
         text = process_checks.output_language(results)
@@ -979,10 +985,9 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1, 'Expected exactly one subprocess result')
 
         entry = results[0]
-        # New API: no Python key.
-        self.assertNotIn('value_python', entry)
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
+        self.assertIn('value_python', entry)
 
         if entry['value_fortran'] is None:
             self.skipTest('Fortran SA evaluation failed')
@@ -991,6 +996,7 @@ class TestMultiLanguageComparison(unittest.TestCase):
 
         me_f   = entry['value_fortran']['m2']
         me_cpp = entry['value_cpp']['m2']
+        me_py  = entry['value_python']['m2'] if entry['value_python'] else None
 
         self.assertGreater(abs(me_cpp), 0., 'C++ ME is zero – unexpected')
         rel_diff = abs(me_f - me_cpp) / abs(me_f)
@@ -998,6 +1004,14 @@ class TestMultiLanguageComparison(unittest.TestCase):
                         'Fortran and C++ SA disagree for g g > t t~: '
                         'F=%g  C++=%g  rel_diff=%g'
                         % (me_f, me_cpp, rel_diff))
+
+        # Python must also agree if it ran successfully.
+        self.assertIsNotNone(me_py, 'Python evaluation failed for g g > t t~')
+        rel_py_f = abs(me_f - me_py) / abs(me_f)
+        self.assertLess(rel_py_f, 1e-4,
+                        'Python and Fortran SA disagree for g g > t t~: '
+                        'Python=%g  F=%g  rel_diff=%g'
+                        % (me_py, me_f, rel_py_f))
 
         # output_language must also report Passed
         text = process_checks.output_language(results)
