@@ -108,6 +108,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         return subproc_dirs[0]
 
     def _run_standalone(self, subproc_dir):
+        self._patch_check_sa_momenta_output(pjoin(subproc_dir, 'check_sa.f'))
         with open(os.devnull, 'w') as devnull:
             retcode = subprocess.call(['make', 'check'],
                                       stdout=devnull, stderr=devnull,
@@ -126,10 +127,23 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             r'(?P<py>[\d\.eE\+-]+)\s+'
             r'(?P<pz>[\d\.eE\+-]+)',
             re.MULTILINE)
-        phase_space = [[float(match.group(name)) for name in ('e', 'px', 'py', 'pz')]
+        phase_space = [[match.group(name) for name in ('e', 'px', 'py', 'pz')]
                        for match in ps_pattern.finditer(output)]
         self.assertTrue(phase_space, 'No phase-space point found in %s' % subproc_dir)
         return self._extract_standalone_flavors(output, subproc_dir), phase_space
+
+    def _patch_check_sa_momenta_output(self, check_sa_path):
+        with open(check_sa_path) as check_sa:
+            content = check_sa.read()
+        patched, count = re.subn(
+            r"(^\s*write \(\*,\s*'\(i2,1x,5e15\.7\)'\))",
+            "      write (*,'(i2,1x,5e25.17)')",
+            content,
+            flags=re.MULTILINE)
+        self.assertEqual(count, 1,
+                         'Failed to patch momentum print format in %s' % check_sa_path)
+        with open(check_sa_path, 'w') as check_sa:
+            check_sa.write(patched)
 
     def _run_hacked_madevent(self, subproc_dir, phase_space):
         source_dir = pjoin(self.madevent_dir, 'Source')
@@ -243,9 +257,12 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         for index, momentum in enumerate(phase_space):
             iparticle = index + 1
             for component, value in enumerate(momentum):
+                if isinstance(value, str):
+                    formatted_value = value.replace('e', 'd').replace('E', 'D')
+                else:
+                    formatted_value = ('%.17E' % value).replace('E', 'D')
                 lines.append('      P(%d,%d)=%s' %
-                             (component, iparticle,
-                              ('%.16E' % value).replace('E', 'D')))
+                             (component, iparticle, formatted_value))
 
         lines.extend([
             '      DO IFLAV=1,MAXFLAVPERPROC',
