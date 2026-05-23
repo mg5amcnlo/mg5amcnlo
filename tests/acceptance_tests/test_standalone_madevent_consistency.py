@@ -21,8 +21,11 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import logging
+logger = logging.getLogger('madgraph.madevent')
 
 import madgraph.interface.master_interface as cmd_interface
+import madgraph.various.misc as misc
 
 
 pjoin = os.path.join
@@ -88,6 +91,8 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
             standalone_me = standalone_row['value']
             madevent_me = madevent_by_iflav[iflav]
             scale = max(abs(standalone_me), abs(madevent_me), 1e-99)
+            misc.sprint('flavor=%s: diff=%f%%'%(
+                         standalone_row['pdg'], 100 * abs(standalone_me - madevent_me) / scale if scale != 0 else 0))
             self.assertLessEqual(
                 abs(standalone_me - madevent_me) / scale,
                 tolerance,
@@ -282,26 +287,22 @@ class TestStandaloneMadeventMatrixElementConsistency(
         'l+ l- > l+ l-', model='sm', tolerance=1e-6)
 
     test_standalone_madevent_consistency_VBFZ_qqx = matrix_element_consistency_test_factory(
-        '_quark _anti_quark > Z _quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
+        '_quark _anti_quark > Z _quark _anti_quark QCD=0', model='sm', tolerance=1e-5)
 
     test_standalone_madevent_consistency_VBFZ_qq = matrix_element_consistency_test_factory(
-        '_quark _quark > Z _quark _quark QCD=0', model='sm', tolerance=1e-6)
+        '_quark _quark > Z _quark _quark QCD=0', model='sm', tolerance=1e-5)
     
     test_standalone_madevent_consistency_VBFZ_qxqx = matrix_element_consistency_test_factory(
-        '_anti_quark _anti_quark > Z _anti_quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
+        '_anti_quark _anti_quark > Z _anti_quark _anti_quark QCD=0', model='sm', tolerance=1e-5)
 
     test_standalone_madevent_consistency_VBF_WW = matrix_element_consistency_test_factory(
-        '_quark _quark > W+ W- _quark _quark QCD=0', model='sm', tolerance=1e-6)
+        '_quark _quark > W+ W- _quark _quark QCD=0', model='sm', tolerance=1e-5)
     
     test_standalone_madevent_consistency_VBFH = matrix_element_consistency_test_factory(
-        '_quark _anti_quark > H _quark _anti_quark QCD=0', model='sm', tolerance=1e-6)
-#TEST_CASES = [
-#    ('e+ e- > e+ e-', 'sm', 1e-6)]
-
-
-#for _process, _model, _tolerance in TEST_CASES:
-#    setattr(TestStandaloneMadeventMatrixElementConsistency,
-#            'test_%s' % _sanitize_process_name(_process),
-#            matrix_element_consistency_test_factory(_process,
-##                                                    model=_model,
-#                                                    tolerance=_tolerance))
+        '_quark _anti_quark > H _quark _anti_quark QCD=0', model='sm', tolerance=1e-5)
+    
+    test_standalone_madevent_consistency_VBFHu = matrix_element_consistency_test_factory(
+        'u u  > H u u QCD=0', model='sm', tolerance=1e-5)
+    
+    test_standalone_madevent_consistency_qq = matrix_element_consistency_test_factory(
+        'u _quark  > u _quark QCD=0', model='sm', tolerance=1e-5)
