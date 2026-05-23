@@ -3628,9 +3628,12 @@ def check_flavor(process_definition, param_card=None, options=None,
     # process share the same matrix class (the merged PDG codes give the same
     # shell_string), and flavor is a runtime argument passed to smatrix, so
     # the class can safely be reused across different flavor evaluations.
+    # Keep reuse disabled here: Matrix_* classes are module globals keyed only
+    # by process shell string, so reusing across the merged/unmerged evaluators
+    # can pick up a class generated with the other model.
     evaluator_merged = MatrixElementEvaluator(merged_model, param_card,
                                               cmd=cmd,
-                                              auth_skipping=False, reuse=True)
+                                              auth_skipping=False, reuse=False)
     if not cmass_scheme and multiprocess.get('perturbation_couplings') == []:
         logger.info('Setting all widths to zero for flavor check')
         for particle in evaluator_merged.full_model.get('particles'):
@@ -3648,7 +3651,7 @@ def check_flavor(process_definition, param_card=None, options=None,
 
     evaluator_unmerged = MatrixElementEvaluator(unmerged_model, param_card,
                                                 cmd=cmd,
-                                                auth_skipping=False, reuse=True)
+                                                auth_skipping=False, reuse=False)
     if not cmass_scheme:
         for particle in evaluator_unmerged.full_model.get('particles'):
             if particle.get('width') != 'ZERO':
@@ -4003,6 +4006,78 @@ def check_language(process_definition, param_card=None, options=None,
                 break
         return momenta
 
+    class _Ranmar(object):
+        """Marsaglia-Zaman RNG used in check_sa Fortran/C++ templates."""
+
+        def __init__(self, ij=1802, kl=9373):
+            self.ranu = [0.0] * 98
+            self.rmarin(ij, kl)
+
+        def rmarin(self, ij, kl):
+            i = (ij // 177) % 177 + 2
+            j = ij % 177 + 2
+            k = (kl // 169) % 178 + 1
+            l = kl % 169
+            for ii in range(1, 98):
+                s = 0.0
+                t = 0.5
+                for _ in range(24):
+                    m = ((i * j) % 179 * k) % 179
+                    i, j, k = j, k, m
+                    l = (53 * l + 1) % 169
+                    if (l * m) % 64 >= 32:
+                        s += t
+                    t *= 0.5
+                self.ranu[ii] = s
+            self.ranc = 362436.0 / 16777216.0
+            self.rancd = 7654321.0 / 16777216.0
+            self.rancm = 16777213.0 / 16777216.0
+            self.iranmr = 97
+            self.jranmr = 33
+
+        def ranmar(self):
+            uni = self.ranu[self.iranmr] - self.ranu[self.jranmr]
+            if uni < 0.0:
+                uni += 1.0
+            self.ranu[self.iranmr] = uni
+            self.iranmr -= 1
+            self.jranmr -= 1
+            if self.iranmr == 0:
+                self.iranmr = 97
+            if self.jranmr == 0:
+                self.jranmr = 97
+            self.ranc -= self.rancd
+            if self.ranc < 0.0:
+                self.ranc += self.rancm
+            uni -= self.ranc
+            if uni < 0.0:
+                uni += 1.0
+            return uni
+
+        def rn(self):
+            out = self.ranmar()
+            while out < 1e-16:
+                out = self.ranmar()
+            return out
+
+    def _get_seeded_python_momenta(proc, evaluator_obj, energy_value):
+        """Generate Python momenta with the same RAMBO RNG seed as check_sa."""
+        if evaluator_obj is None:
+            return None
+        old_random_nb = rambo.random_nb
+        rng = _Ranmar(1802, 9373)
+        try:
+            rambo.random_nb = lambda _dummy: rng.rn()
+            seeded_options = {'energy': float(energy_value),
+                              'events': None,
+                              'skip_evt': 0}
+            p_seeded, _ = evaluator_obj.get_momenta(proc, seeded_options)
+            return p_seeded
+        except Exception:
+            return None
+        finally:
+            rambo.random_nb = old_random_nb
+
     def _pdg_tuple_to_label(pdg_tuple, m, proc):
         """Convert a tuple of PDG codes to a human-readable process label.
 
@@ -4102,13 +4177,10 @@ def check_language(process_definition, param_card=None, options=None,
     has_python = True
     evaluator = None
     try:
+        # Keep reuse disabled to avoid reusing Matrix_* globals generated in a
+        # previous check command with a different model.
         evaluator = MatrixElementEvaluator(model, param_card, cmd=cmd,
-                                           auth_skipping=False, reuse=True)
-        if not cmd.options.get('complex_mass_scheme', False):
-            for particle in evaluator.full_model.get('particles'):
-                if particle.get('width') != 'ZERO':
-                    evaluator.full_model.get('parameter_dict')[
-                        particle.get('width')] = 0.
+                                           auth_skipping=False, reuse=False)
     except Exception as err:
         logger.info("Language check: Python evaluator setup failed: %s" % err)
         has_python = False
@@ -4256,16 +4328,18 @@ def check_language(process_definition, param_card=None, options=None,
         flavors_f   = _parse_all_flavors_dict(out_f_text)   if out_f_text   else _OD()
         flavors_cpp = _parse_all_flavors_dict(out_cpp_text) if out_cpp_text else _OD()
 
-        # Phase-space momenta printed by the SA binary.  Both Fortran and C++
-        # use the same RAMBO seed for the given energy so the points match;
-        # take whichever backend produced output.
-        sa_momenta = None
-        if out_f_text:
-            sa_momenta = _parse_momenta(out_f_text)
-        if not sa_momenta and out_cpp_text:
-            sa_momenta = _parse_momenta(out_cpp_text)
+        # Build the Python phase-space point using the same RAMBO RNG seed as
+        # check_sa (Fortran/C++), so all backends compare on the same point.
+        sa_momenta = _get_seeded_python_momenta(proc, evaluator, energy)
         if not sa_momenta:
-            sa_momenta = None
+            # Fallback to parsing the point printed by SA when seeded generation
+            # is unavailable.
+            if out_f_text:
+                sa_momenta = _parse_momenta(out_f_text)
+            if not sa_momenta and out_cpp_text:
+                sa_momenta = _parse_momenta(out_cpp_text)
+            if not sa_momenta:
+                sa_momenta = None
 
         # Union of PDG keys in order: Fortran first, then any C++-only keys.
         all_keys = list(dict.fromkeys(
