@@ -743,7 +743,16 @@ function UrlExists(url) {
 """ 
 
 def collect_result(cmd, folder_names=[], jobs=None, main_dir=None, apply_symmetry=True):
-    """ """ 
+    """Collect subprocess integration results.
+
+    Args:
+        cmd: MadEvent command interface.
+        folder_names: Optional glob-like folder suffix patterns to read.
+        jobs: Optional explicit job descriptors.
+        main_dir: Optional base directory override for readonly/gridpack modes.
+        apply_symmetry: If False, do not apply symfact.dat multiplicative
+            factors when attaching channel results.
+    """ 
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
