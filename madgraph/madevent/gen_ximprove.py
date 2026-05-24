@@ -85,7 +85,7 @@ class gensym(object):
         
         self.cmd = cmd
         self.run_card = cmd.run_card
-        self.disable_multichannel = self.run_card.get('disable_multichannel', False)
+        self.disable_multichannel = self.run_card.get('disable_multichannel')
         self.me_dir = cmd.me_dir
         
         
@@ -1044,7 +1044,7 @@ class gen_ximprove(object):
         self.nhel = run_card['nhel']
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
-        self.disable_multichannel = run_card.get('disable_multichannel', False)
+        self.disable_multichannel = run_card.get('disable_multichannel')
         
         if self.run_card['refine_evt_by_job'] != -1:
             self.max_request_event = run_card['refine_evt_by_job']
