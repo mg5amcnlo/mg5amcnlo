@@ -286,14 +286,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
 
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
-            # Replace width variables with ZERO for t-channel propagators.
-            # The madevent exporter's custom_helas_call has already rewritten
-            # width args to use the fk_XXX prefix, so the first alternative
-            # handles that path.  The standalone exporter leaves the raw
-            # MDL_W* name, so the second alternative handles that path.
-            call, n = re.subn(
-                r',\s*(?:fk_(?!ZERO)\w+|MDL_W\w+)\s*,',
-                ', ZERO,', str(call), flags=re.I)
+            call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
             if n:
                 self.width_tchannel_set_tozero = True
         return call

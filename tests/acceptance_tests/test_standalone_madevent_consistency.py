@@ -69,6 +69,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         self.do('set automatic_html_opening False')
         self.do('set group_subprocesses False')
         self.do('set apply_flavor_grouping True')
+        self.do('set zerowidth_tchannel False')
         self.do('import model %s' % model)
         self.do('generate %s' % process)
         generated_process = self.cmd._curr_amps[0].get('process')
