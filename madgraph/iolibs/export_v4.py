@@ -795,9 +795,9 @@ C
             return pdg_to_group_pos[af]
         if max_group_size and 1 <= af <= max_group_size:
             return af
-        # In merged-particle mode, never leak raw merged IDs/PDGs to PARTNER().
-        if pdg_to_group_pos:
-            return 1
+        # Keep non-merged particles as their original PDG so downstream
+        # flavor-dependent logic (e.g. reweighting/broken-sym bookkeeping)
+        # still sees the physical flavor assignment.
         return f
 
     def _compress_mask_list_to_flavor_groups(self, matrix_element, allowed_flavors,
