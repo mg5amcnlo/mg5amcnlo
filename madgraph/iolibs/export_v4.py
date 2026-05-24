@@ -989,20 +989,30 @@ C
         if matrix_element.flavor_mask_is_trivial():
             return ('', '', len(allowed_flavors), (1 << len(allowed_flavors)) - 1)
 
-        n_wfs = matrix_element.get_number_of_wavefunctions()
-        n_amps = matrix_element.get_number_of_amplitudes()
+        all_wfs = matrix_element.get_all_wavefunctions()
+        all_amps = matrix_element.get_all_amplitudes()
+        wf_numbers = [wf.get('number') for wf in all_wfs
+                      if isinstance(wf.get('number'), int) and wf.get('number') > 0]
+        amp_numbers = [amp.get('number') for amp in all_amps
+                       if isinstance(amp.get('number'), int) and amp.get('number') > 0]
+        n_wfs = max(matrix_element.get_number_of_wavefunctions(),
+                    len(all_wfs),
+                    max(wf_numbers) if wf_numbers else 0)
+        n_amps = max(matrix_element.get_number_of_amplitudes(),
+                     len(all_amps),
+                     max(amp_numbers) if amp_numbers else 0)
         nwords_wf = max(1, (n_wfs + 63) // 64)
         nwords_amp = max(1, (n_amps + 63) // 64)
 
         wf_masks = [0] * n_wfs
         amp_masks = [0] * n_amps
-        for wf in matrix_element.get_all_wavefunctions():
+        for wf in all_wfs:
             idx = wf.get('number')
-            if isinstance(idx, int) and idx > 0:
+            if isinstance(idx, int) and 0 < idx <= n_wfs:
                 wf_masks[idx - 1] = wf['flavor_mask'] if 'flavor_mask' in wf else 0
-        for amp in matrix_element.get_all_amplitudes():
+        for amp in all_amps:
             idx = amp.get('number')
-            if isinstance(idx, int) and idx > 0:
+            if isinstance(idx, int) and 0 < idx <= n_amps:
                 amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
 
         # madevent collapses coupling-equivalent flavors into one runtime
