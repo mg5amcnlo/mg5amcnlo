@@ -472,7 +472,7 @@ C      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run.inc'
-C     multi_channel controls whether to apply multichannel permutations
+C     multi_channel controls whether to apply multi-channel permutations
       INTEGER ISUM_HEL
       LOGICAL MULTI_CHANNEL
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL

@@ -72,7 +72,7 @@ C     MINCFIG has this config number
       common/to_configs/mincfig, maxcfig
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-C     multi_channel controls whether to apply multichannel symmetry factors
+C     multi_channel controls whether to apply multi-channel symmetry factors
       INTEGER ISUM_HEL
       LOGICAL MULTI_CHANNEL
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL

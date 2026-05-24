@@ -752,6 +752,9 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None, apply_symmetr
         main_dir: Optional base directory override for readonly/gridpack modes.
         apply_symmetry: If False, do not apply symfact.dat multiplicative
             factors when attaching channel results.
+
+    Returns:
+        Combine_results: Aggregated run result object with subprocess entries.
     """ 
 
     run = cmd.results.current['run_name']
