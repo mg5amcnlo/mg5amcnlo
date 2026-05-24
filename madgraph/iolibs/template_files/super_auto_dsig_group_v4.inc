@@ -200,7 +200,7 @@ C      all, then we pick a point based on PDF only.
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
-              DO K=1,NB_FLAV(IPROC)
+              DO K=1,NB_FLAV(I)
                 DO L=1,2
                   TOTWGT=TOTWGT+SELPROC(L,K,I,J)
                   IF(R.LT.TOTWGT)THEN
