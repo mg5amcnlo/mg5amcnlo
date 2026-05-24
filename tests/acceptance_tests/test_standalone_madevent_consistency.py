@@ -114,10 +114,7 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
         return subproc_dirs[0]
 
     def _run_standalone(self, subproc_dir):
-        with open(os.devnull, 'w') as devnull:
-            retcode = subprocess.call(['make', 'check'],
-                                      stdout=devnull, stderr=devnull,
-                                      cwd=subproc_dir)
+        retcode = self._call_with_optional_redirection(['make', 'check'], subproc_dir)
         self.assertEqual(retcode, 0, 'Failed to compile standalone check in %s' % subproc_dir)
 
         output = subprocess.Popen(['./check', '1000'],
@@ -162,18 +159,12 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
 
     def _run_hacked_madevent(self, subproc_dir, phase_space):
         source_dir = pjoin(self.madevent_dir, 'Source')
-        with open(os.devnull, 'w') as devnull:
-            retcode = subprocess.call(['make'],
-                                      stdout=devnull, stderr=devnull,
-                                      cwd=source_dir)
+        retcode = self._call_with_optional_redirection(['make'], source_dir)
         self.assertEqual(retcode, 0, 'Failed to compile MadEvent source in %s' % source_dir)
 
         self._write_hacked_driver(pjoin(subproc_dir, 'driver.f'), phase_space)
 
-        with open(os.devnull, 'w') as devnull:
-            retcode = subprocess.call(['make', 'madevent'],
-                                      stdout=devnull, stderr=devnull,
-                                      cwd=subproc_dir)
+        retcode = self._call_with_optional_redirection(['make', 'madevent'], subproc_dir)
         self.assertEqual(retcode, 0, 'Failed to compile hacked madevent in %s' % subproc_dir)
 
         output = subprocess.Popen(['./madevent'],
@@ -181,6 +172,12 @@ class StandaloneMadeventMatrixElementConsistency(unittest.TestCase):
                                   stderr=subprocess.STDOUT,
                                   cwd=subproc_dir).communicate()[0].decode()
         return self._extract_madevent_by_iflav(output, subproc_dir)
+
+    def _call_with_optional_redirection(self, command, cwd):
+        if logger.isEnabledFor(logging.INFO):
+            return subprocess.call(command, cwd=cwd)
+        with open(os.devnull, 'w') as devnull:
+            return subprocess.call(command, stdout=devnull, stderr=devnull, cwd=cwd)
 
     def _extract_standalone_flavors(self, output, subproc_dir):
         lines = output.splitlines()
