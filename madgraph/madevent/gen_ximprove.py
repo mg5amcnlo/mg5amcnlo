@@ -85,6 +85,8 @@ class gensym(object):
         
         self.cmd = cmd
         self.run_card = cmd.run_card
+        self.disable_multichannel = self.run_card['disable_multichannel'] \
+            if 'disable_multichannel' in self.run_card else False
         self.me_dir = cmd.me_dir
         
         
@@ -530,6 +532,7 @@ class gensym(object):
                    'maxiter': 1,
                    'miniter': 1,
                    'accuracy': self.cmd.opts['accuracy'],
+                   'suppress_amplitude': 0 if self.disable_multichannel else 1,
                    'helicity': run_card['nhel_survey'] if 'nhel_survey' in run_card \
                             else run_card['nhel'],
                    'gridmode': -2,
@@ -904,6 +907,7 @@ For offline investigation, the problematic discarded events are stored in:
                'maxiter': 1,
                'miniter': 1,
                'accuracy': self.cmd.opts['accuracy'],
+               'suppress_amplitude': 0 if self.disable_multichannel else 1,
                'helicity': run_card['nhel_survey'] if 'nhel_survey' in run_card \
                             else run_card['nhel'],
                'gridmode': -2,
@@ -942,7 +946,7 @@ For offline investigation, the problematic discarded events are stored in:
         template ="""         %(event)s         %(maxiter)s           %(miniter)s      !Number of events and max and min iterations
   %(accuracy)s    !Accuracy
   %(gridmode)s       !Grid Adjustment 0=none, 2=adjust
-  1       !Suppress Amplitude 1=yes
+  %(suppress_amplitude)s       !Suppress Amplitude 1=yes
   %(helicity)s        !Helicity Sum/event 0=exact
   %(channel)s      """        
         options['event'] = int(options['event'])
@@ -959,6 +963,7 @@ For offline investigation, the problematic discarded events are stored in:
                    'maxiter': self.cmd.opts['iterations'],
                    'miniter': self.min_iterations,
                    'accuracy': self.cmd.opts['accuracy'],
+                   'suppress_amplitude': 0 if self.disable_multichannel else 1,
                    'helicity': run_card['nhel_survey'] if 'nhel_survey' in run_card \
                                 else run_card['nhel'],
                    'gridmode': 2,
@@ -1040,6 +1045,7 @@ class gen_ximprove(object):
         self.nhel = run_card['nhel']
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
+        self.disable_multichannel = run_card['disable_multichannel'] if 'disable_multichannel' in run_card else False
         
         if self.run_card['refine_evt_by_job'] != -1:
             self.max_request_event = run_card['refine_evt_by_job']
@@ -1073,8 +1079,9 @@ class gen_ximprove(object):
         
         #start the run
         self.handle_seed()
-        self.results = sum_html.collect_result(self.cmd, 
-                                main_dir=pjoin(self.cmd.me_dir,'SubProcesses'))  #main_dir is for gridpack readonly mode
+        self.results = sum_html.collect_result(self.cmd,
+                                main_dir=pjoin(self.cmd.me_dir,'SubProcesses'),
+                                apply_symmetry=not self.disable_multichannel)  #main_dir is for gridpack readonly mode
         if self.gen_events:
             # We run to provide a given number of events
             self.get_job_for_event()
@@ -1148,7 +1155,8 @@ class gen_ximprove(object):
         if self.results:     
             Presults = self.results 
         else:
-            self.results = sum_html.collect_result(self.cmd, None)
+            self.results = sum_html.collect_result(self.cmd, None,
+                                                   apply_symmetry=not self.disable_multichannel)
             Presults = self.results
                 
         for P_comb in Presults:
@@ -1313,6 +1321,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'precision': -goal_lum/nb_split,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    'suppress_amplitude': 0 if self.disable_multichannel else 1,
                     'grid_refinment' : 0,    #no refinment of the grid
                     'base_directory': '',   #should be change in splitted job if want to keep the grid
                     'packet': packet, 
@@ -1470,6 +1479,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'precision': yerr/math.sqrt(nb_split)/(C.get('xsec')+ yerr),
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    'suppress_amplitude': 0 if self.disable_multichannel else 1,
                     'base_directory': C.name if self.keep_grid_for_refine else '',  
                     'grid_refinment' : 1
                     }
@@ -1497,7 +1507,8 @@ class gen_ximprove_v4(gen_ximprove):
         if self.results:     
             Presults = self.results 
         else:
-            self.results = sum_html.collect_result(self.cmd, None)
+            self.results = sum_html.collect_result(self.cmd, None,
+                                                   apply_symmetry=not self.disable_multichannel)
             Presults = self.results
                 
         for P_comb in Presults:
@@ -1948,6 +1959,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'requested_event': needed_event,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    'suppress_amplitude': 0 if self.disable_multichannel else 1,
                     'grid_refinment' : 0,    #no refinment of the grid
                     'base_directory': '',   #should be change in splitted job if want to keep the grid
                     'packet': None, 
@@ -2064,4 +2076,3 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         
 
         
-

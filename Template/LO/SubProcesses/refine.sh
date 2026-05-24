@@ -43,11 +43,11 @@ j=%(directory)s
          echo "    %(precision)s" >> input_sg.txt
      if [[ ! -e ftn25 ]]; then
          echo "2" >> input_sg.txt   # grid refinement
-         echo "1" >> input_sg.txt   # suppress amplitude
+         echo "%(suppress_amplitude)s" >> input_sg.txt   # suppress amplitude
 
      else
          echo "%(grid_refinment)s" >> input_sg.txt
-         echo "1" >> input_sg.txt
+         echo "%(suppress_amplitude)s" >> input_sg.txt
      fi
      echo "%(nhel)s" >> input_sg.txt
      echo "%(channel)s" >> input_sg.txt
@@ -107,4 +107,3 @@ j=%(directory)s
 
 
      cd ../
-
