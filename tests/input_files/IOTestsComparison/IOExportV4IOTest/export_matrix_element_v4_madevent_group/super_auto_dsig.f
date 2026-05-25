@@ -506,6 +506,11 @@ C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       INCLUDE 'vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'coupl.inc'  ! needs VECSIZE_MEMMAX (defined in vector.inc)
       INCLUDE 'run.inc'
+C     multi_channel controls whether to apply multi-channel
+C      permutations
+      INTEGER ISUM_HEL
+      LOGICAL MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
@@ -564,6 +569,10 @@ C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
+        IF (.NOT.MULTI_CHANNEL) THEN
+          SYMCONF(0)=IPROC
+          RETURN
+        ENDIF
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
           READ(LUN,*,ERR=10,END=10) XDUM, ICONF
@@ -1488,3 +1497,4 @@ C     Returns the flavor array for process iproc and flavor index iflav
 
       RETURN
       END
+

@@ -75,6 +75,11 @@ C     MINCFIG has this config number
       COMMON/TO_CONFIGS/MINCFIG, MAXCFIG
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     multi_channel controls whether to apply multi-channel symmetry
+C      factors
+      INTEGER ISUM_HEL
+      LOGICAL MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
@@ -136,6 +141,10 @@ C       flavor combination (= MAXPROC rows in leshouche.inc).
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         NFACT=1
+        IF (.NOT.MULTI_CHANNEL) THEN
+          DSIG = NFACT
+          RETURN
+        ENDIF
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
           READ(LUN,*,ERR=10,END=10) RCONF, IFACT
