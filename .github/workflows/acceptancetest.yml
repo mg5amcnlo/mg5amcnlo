@@ -1816,7 +1816,7 @@ jobs:
             ./tests/test_manager.py -pA TestStandaloneMadeventMatrixElementConsistency
 
   acceptancetest_check_mlm_rwgt:
-    # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
+    # Previously uncovered acceptance test in tests/acceptance_tests/test_MLM_reweight.py
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -1826,4 +1826,3 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py -pA TestMLMReweight 
-
