@@ -142,7 +142,7 @@ def get_channel_count(Pdir):
     if match:
         return int(match.group(1))
     # Alternatively count data lines
-    return text.count('MAPCONFIG(')  - 1  # subtract the (0) line
+    return text.count('MAPCONFIG(') - 1  # subtract the (0) line
 
 
 def get_channel_topology(Pdir):
@@ -299,34 +299,30 @@ def compile_madevent(run_dir, Pdir):
         Name of the compiled binary ('madevent_forhel' or 'madevent'), 
         or None if compilation failed.
     """
-    devnull = open(os.devnull, 'w')
+    with open(os.devnull, 'w') as devnull:
+        # Compile Source libraries
+        ret = subprocess.Popen(
+            ['make'], cwd=pjoin(run_dir, 'Source'),
+            stdout=devnull, stderr=devnull
+        ).wait()
+        if ret != 0:
+            return None
 
-    # Compile Source libraries
-    ret = subprocess.Popen(
-        ['make'], cwd=pjoin(run_dir, 'Source'),
-        stdout=devnull, stderr=devnull
-    ).wait()
-    if ret != 0:
-        devnull.close()
-        return None
+        # Try madevent_forhel first (works with matrix*_orig.f)
+        ret = subprocess.Popen(
+            ['make', 'madevent_forhel'], cwd=Pdir,
+            stdout=devnull, stderr=devnull
+        ).wait()
+        if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent_forhel')):
+            return 'madevent_forhel'
 
-    # Try madevent_forhel first (works with matrix*_orig.f)
-    ret = subprocess.Popen(
-        ['make', 'madevent_forhel'], cwd=Pdir,
-        stdout=devnull, stderr=devnull
-    ).wait()
-    if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent_forhel')):
-        devnull.close()
-        return 'madevent_forhel'
-
-    # Fall back to madevent (works with matrix*.f)
-    ret = subprocess.Popen(
-        ['make', 'madevent'], cwd=Pdir,
-        stdout=devnull, stderr=devnull
-    ).wait()
-    devnull.close()
-    if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent')):
-        return 'madevent'
+        # Fall back to madevent (works with matrix*.f)
+        ret = subprocess.Popen(
+            ['make', 'madevent'], cwd=Pdir,
+            stdout=devnull, stderr=devnull
+        ).wait()
+        if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent')):
+            return 'madevent'
 
     return None
 
