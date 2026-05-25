@@ -17,7 +17,7 @@
 This module provides a factory-style test suite to compare MLM reweighting
 results between apply_flavor_grouping True and False modes. For a given process,
 a specific integration channel is run in each mode and the resulting cross-section
-and REWGT distributions are compared.
+is compared.
 
 The test factory allows easy addition of new processes and channels.
 """
@@ -468,30 +468,6 @@ def run_single_channel(Pdir, channel, npoints=5000, maxiter=5, binary='madevent'
     return result
 
 
-def extract_rewgt_info(log_text):
-    """Extract REWGT-related information from the madevent_forhel log.
-
-    Parses lines matching patterns from the reweight.f debug output
-    (activated with mlevel bits). Returns a dict of statistics.
-    """
-    info = {
-        'rewgt_zero_count': 0,    # Number of events where rewgt=0 (rejected)
-        'cluster_fail_count': 0,  # Number of clustering failures
-        'alphas_reweight_lines': [],
-    }
-
-    for line in log_text.split('\n'):
-        line_stripped = line.strip()
-        # Count cluster failures
-        if 'Fail to cluster' in line_stripped:
-            info['cluster_fail_count'] += 1
-        # Count rewgt=0 rejections
-        if 'rewgt=0' in line_stripped.replace(' ', ''):
-            info['rewgt_zero_count'] += 1
-
-    return info
-
-
 def sigma_difference(value_a, err_a, value_b, err_b):
     """Return |a-b|/sqrt(err_a^2+err_b^2), handling zero-error edge cases."""
     combined_err = math.sqrt(err_a ** 2 + err_b ** 2)
@@ -671,9 +647,6 @@ class TestMLMReweight(MLMReweightTestBase):
     Channel numbers may differ between the two modes because different
     flavor grouping can lead to different diagram topologies being generated.
     """
-
-    tmp_prefix = 'acc_test_mlm_'
-    debug_dir = 'tmp_test_mlm'
 
 
 # Dynamically add test methods from the factory
