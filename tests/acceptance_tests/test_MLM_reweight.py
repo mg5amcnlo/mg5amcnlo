@@ -93,7 +93,7 @@ MLM_TEST_CHANNELS = {
         'npoints': 1000,
         'maxiter': 5,
     },
-    'DY_uu_to_Z_jjjj':{
+    'DY_uu_to_Z_jjjj': {
         'process': 'u u~ > Z d d~ c c~',
         'model': 'sm',
         'defines': [],
@@ -118,25 +118,25 @@ def get_Pdir(run_dir):
 
 def select_Pdir(run_dir, subproc_pattern=None):
     """Select a subprocess directory by pattern.
-    
+
     Args:
         run_dir: the madevent output directory
         subproc_pattern: string pattern to match (e.g. 'P0_uux_uux').
                         If None, returns the first P* directory found.
-    
+
     Returns:
         Absolute path to the selected subprocess directory.
     """
     Pdirs = get_Pdir(run_dir)
     subproc_dir = pjoin(run_dir, 'SubProcesses')
-    
+
     if subproc_pattern is None:
         return pjoin(subproc_dir, sorted(Pdirs)[0])
-    
+
     for d in sorted(Pdirs):
         if subproc_pattern in d or d == subproc_pattern:
             return pjoin(subproc_dir, d)
-    
+
     raise RuntimeError(
         "No subprocess directory matching '%s' found. Available: %s" %
         (subproc_pattern, sorted(Pdirs))
@@ -226,12 +226,12 @@ def get_channel_count(Pdir):
 
 def get_channel_topology(Pdir):
     """Read channel topology info from configs.inc to allow channel matching.
-    
-    Returns a dict mapping config_number -> topology_signature where the 
-    signature is a tuple of (propagator_pdg_ids) that uniquely identifies 
-    the diagram topology. This can be used to match corresponding channels 
+
+    Returns a dict mapping config_number -> topology_signature where the
+    signature is a tuple of (propagator_pdg_ids) that uniquely identifies
+    the diagram topology. This can be used to match corresponding channels
     between apply_flavor_grouping=True/False outputs.
-    
+
     Returns:
         dict: {config_number: topology_signature}
     """
@@ -245,23 +245,23 @@ def get_channel_topology(Pdir):
 
 def find_matching_channels(Pdir_fg_true, Pdir_fg_false):
     """Find corresponding channels between flavor_grouping True and False outputs.
-    
+
     Compares the topology signatures of channels in both modes and returns
     a list of (channel_true, channel_false) pairs that have matching topologies.
-    
+
     Args:
         Pdir_fg_true: subprocess dir path for apply_flavor_grouping=True
         Pdir_fg_false: subprocess dir path for apply_flavor_grouping=False
-    
+
     Returns:
         list of (channel_fg_true, channel_fg_false) tuples
     """
     topo_true = get_channel_topology(Pdir_fg_true)
     topo_false = get_channel_topology(Pdir_fg_false)
-    
+
     matches = []
     used_false = set()
-    
+
     for ch_true, sig_true in sorted(topo_true.items()):
         for ch_false, sig_false in sorted(topo_false.items()):
             if ch_false in used_false:
@@ -270,13 +270,13 @@ def find_matching_channels(Pdir_fg_true, Pdir_fg_false):
                 matches.append((ch_true, ch_false))
                 used_false.add(ch_false)
                 break
-    
+
     return matches
 
 
 def read_results_dat(results_path):
     """Read cross-section and error from a results.dat file.
-    
+
     Returns (xsec, error, nevents) or None if file doesn't exist.
     """
     if not os.path.exists(results_path):
@@ -291,7 +291,13 @@ def read_results_dat(results_path):
     try:
         xsec = float(parts[0])
         error = float(parts[1])
-        nevents = int(float(parts[3])) if len(parts) > 3 else 0
+        if len(parts) > 3:
+            try:
+                nevents = int(parts[3])
+            except ValueError:
+                nevents = int(float(parts[3]))
+        else:
+            nevents = 0
         return (xsec, error, nevents)
     except (ValueError, IndexError):
         return None
@@ -299,7 +305,7 @@ def read_results_dat(results_path):
 
 def generate_process(run_dir, process, model, defines, apply_fg, group_subprocesses=False):
     """Generate a MG5 process output directory.
-    
+
     Args:
         run_dir: output directory path
         process: process string (e.g. 'q q~ > q q~')
@@ -329,7 +335,7 @@ def generate_process(run_dir, process, model, defines, apply_fg, group_subproces
 
 def configure_mlm(run_dir, xqcut):
     """Configure MLM merging parameters in the run card.
-    
+
     Args:
         run_dir: the madevent output directory
         xqcut: the xqcut value for MLM merging
@@ -343,16 +349,16 @@ def configure_mlm(run_dir, xqcut):
 
 def compile_madevent(run_dir, Pdir):
     """Compile madevent binary in the subprocess directory.
-    
+
     Tries to build madevent_forhel first (works with matrix*_orig.f from grouped
     subprocesses). Falls back to madevent (works with matrix*.f from ungrouped).
-    
+
     Args:
-        run_dir: the madevent output directory  
+        run_dir: the madevent output directory
         Pdir: absolute path to the subprocess directory (P*)
-    
+
     Returns:
-        Name of the compiled binary ('madevent_forhel' or 'madevent'), 
+        Name of the compiled binary ('madevent_forhel' or 'madevent'),
         or None if compilation failed.
     """
     with open(os.devnull, 'w') as devnull:
@@ -385,7 +391,7 @@ def compile_madevent(run_dir, Pdir):
 
 def write_run_config(Pdir, channel, npoints=5000, maxiter=5):
     """Write the run_config.txt (input for madevent_forhel via stdin).
-    
+
     The format expected by madevent_forhel (get_user_params) is:
         Line 1: npoints maxiter miniter
         Line 2: accuracy
@@ -393,16 +399,16 @@ def write_run_config(Pdir, channel, npoints=5000, maxiter=5):
         Line 4: suppress_amp (0=no, 1=yes)
         Line 5: helicity (0=exact sum, -1=determine zero hels, N=MC N/event)
         Line 6: config_number (positive = single channel)
-    
+
     A positive config_number selects that single channel (mincfig=maxcfig=config).
     A negative value means integrate all channels from 1 to abs(config).
-    
+
     Args:
         Pdir: subprocess directory path
         channel: the channel (configuration) number to integrate
         npoints: number of phase-space points per iteration
         maxiter: maximum number of iterations
-    
+
     Returns:
         path to the written config file
     """
@@ -420,14 +426,14 @@ def write_run_config(Pdir, channel, npoints=5000, maxiter=5):
 
 def run_single_channel(Pdir, channel, npoints=5000, maxiter=5, binary='madevent'):
     """Run madevent for a single integration channel.
-    
+
     Args:
         Pdir: subprocess directory path (absolute)
         channel: the channel number (positive = single channel)
         npoints: number of PS points per iteration
         maxiter: max iterations
         binary: name of the compiled binary ('madevent' or 'madevent_forhel')
-    
+
     Returns:
         dict with keys: 'xsec', 'error', 'nevents', 'log', 'return_code'
     """
@@ -468,8 +474,8 @@ def run_single_channel(Pdir, channel, npoints=5000, maxiter=5, binary='madevent'
 
 def extract_rewgt_info(log_text):
     """Extract REWGT-related information from the madevent_forhel log.
-    
-    Parses lines matching patterns from the reweight.f debug output 
+
+    Parses lines matching patterns from the reweight.f debug output
     (activated with mlevel bits). Returns a dict of statistics.
     """
     info = {
@@ -546,23 +552,23 @@ class MLMReweightTestBase(unittest.TestCase):
 # ============================================================================
 def make_mlm_channel_test(config_name, config):
     """Factory function that creates a test method for a given MLM channel config.
-    
+
     This creates a test that:
     1. Generates the process with apply_flavor_grouping=True, runs a specific channel
     2. Generates the process with apply_flavor_grouping=False, runs the corresponding channel
     3. Compares cross-sections: they should agree within statistical uncertainty
-    
+
     Args:
         config_name: name for the test (used in method name)
         config: dict with test configuration (see MLM_TEST_CHANNELS)
-    
+
     Returns:
         A test method function.
     """
 
     def test_method(self):
         """Compare MLM REWGT between flavor_grouping True/False for channel %s."""
-        
+
         results = {}
 
         for fg_mode in [True, False]:
@@ -587,7 +593,7 @@ def make_mlm_channel_test(config_name, config):
             # 4. Determine channel count and validate channel choice
             nchan = get_channel_count(Pdir)
             channel = mode_config['channel']
-            
+
             if nchan > 0:
                 self.assertLessEqual(channel, nchan,
                     'Channel %d exceeds available channels (%d) for %s '
@@ -652,11 +658,11 @@ def make_mlm_channel_test(config_name, config):
 # ============================================================================
 class TestMLMReweight(MLMReweightTestBase):
     """Test suite for MLM reweighting comparing apply_flavor_grouping modes.
-    
+
     Tests verify that the REWGT function (from reweight.f linked to cluster.f)
     produces consistent results when running with apply_flavor_grouping=True
     vs False for specified integration channels.
-    
+
     To add a new test case, add an entry to MLM_TEST_CHANNELS above.
     Channel numbers may differ between the two modes because different
     flavor grouping can lead to different diagram topologies being generated.
@@ -675,9 +681,9 @@ for _name, _config in MLM_TEST_CHANNELS.items():
 
 class TestMLMReweightAutoMatch(MLMReweightTestBase):
     """Test suite using automatic channel matching between flavor grouping modes.
-    
+
     Instead of manually specifying channel numbers for each mode, this test
-    generates both outputs, uses topology matching to identify corresponding 
+    generates both outputs, uses topology matching to identify corresponding
     channels, and then compares them.
     """
 
@@ -686,7 +692,7 @@ class TestMLMReweightAutoMatch(MLMReweightTestBase):
 
     def test_mlm_rewgt_auto_match_qq_to_qq(self):
         """Compare MLM REWGT for q q~ > q q~ using automatic channel matching."""
-        
+
         process = 'q q~ > q q~'
         model = 'sm'
         defines = ['q = u d s c', 'q~ = u~ d~ s~ c~']
