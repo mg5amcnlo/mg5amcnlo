@@ -1854,7 +1854,18 @@ jobs:
       - name: test madevent_with_merged_flavor
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_madevent_merged_flavor_uq  test_madevent_broken_sym_zjj -pA -t0 -l INFO
+            ./tests/test_manager.py test_madevent_merged_flavor_uq  test_madevent_flavor_zjj -pA -t0 -l INFO
+
+  acceptancetest_madevent_flavor_zud:
+    # Flavor-grouped u q > Z u q QCD=0 tests (grouped and ungrouped).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - name: test madevent flavor zud (grouped and nogroup)
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madevent_flavor_zud test_madevent_flavor_zud_nogroup -pA -t0 -l INFO
 
   acceptancetest_check_madevent_me_vs_standalone:
     # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
