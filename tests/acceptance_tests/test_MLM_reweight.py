@@ -28,14 +28,11 @@ import unittest
 import os
 import re
 import shutil
-import sys
 import logging
 import tempfile
 import math
 
-import madgraph
 import madgraph.interface.master_interface as MGCmd
-import madgraph.interface.madevent_interface as MECmd
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 
@@ -44,7 +41,6 @@ from madgraph import MG5DIR
 logger = logging.getLogger('test_MLM_reweight')
 
 pjoin = os.path.join
-_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 
 # ============================================================================
@@ -147,22 +143,85 @@ def select_Pdir(run_dir, subproc_pattern=None):
     )
 
 
-def get_channel_count(Pdir):
-    """Read the number of integration channels (configs) from configs.inc.
-    
-    Also returns the mapconfig mapping if available.
-    """
-    configs_path = pjoin(Pdir, 'configs.inc')
+def _normalize_fortran_data_text(text):
+    """Normalize Fortran include content for tolerant DATA parsing."""
+    lines = []
+    for raw in text.splitlines():
+        if not raw:
+            continue
+        # Drop fixed-form full-line comments.
+        if raw[0] in ('c', 'C', '*', '!'):
+            continue
+        # Strip inline comments.
+        line = raw.split('!')[0].strip()
+        if line:
+            lines.append(line)
+    return ' '.join(lines)
+
+
+def _iter_data_assignments(text):
+    """Yield (lhs, rhs) pairs from Fortran DATA statements."""
+    normalized = _normalize_fortran_data_text(text)
+    for match in re.finditer(r'\bDATA\b\s*(.*?)\s*/\s*(.*?)\s*/', normalized, re.I):
+        lhs = match.group(1).strip()
+        rhs = match.group(2).strip()
+        if lhs:
+            yield lhs, rhs
+
+
+def parse_configs_inc(configs_path):
+    """Parse configs.inc and extract mapconfig(0) and SPROP content robustly."""
     if not os.path.exists(configs_path):
-        return 0
+        return {'nconfigs': 0, 'sprop_by_config': {}}
+
     with open(configs_path) as f:
         text = f.read()
-    # mapconfig(0) = N tells us the number of configs
-    match = re.search(r'DATA\s+MAPCONFIG\(0\)\s*/\s*(\d+)\s*/', text, re.I)
-    if match:
-        return int(match.group(1))
-    # Alternatively count data lines
-    return text.count('MAPCONFIG(') - 1  # subtract the (0) line
+
+    nconfigs = 0
+    sprop_by_config = {}
+
+    for lhs, rhs in _iter_data_assignments(text):
+        # Handle direct MAPCONFIG(0) initialization
+        if re.search(r'\bMAPCONFIG\s*\(\s*0\s*\)', lhs, re.I):
+            numbers = re.findall(r'[+-]?\d+', rhs)
+            if numbers:
+                nconfigs = max(nconfigs, int(numbers[0]))
+            continue
+
+        # Handle MAPCONFIG(I),I=0,... packed initialization
+        if re.search(r'\bMAPCONFIG\s*\(\s*I\s*\)', lhs, re.I) and \
+           re.search(r'I\s*=\s*0\s*,', lhs, re.I):
+            numbers = re.findall(r'[+-]?\d+', rhs)
+            if numbers:
+                nconfigs = max(nconfigs, int(numbers[0]))
+            continue
+
+        # Handle SPROP data statements.
+        # Accept both SPROP(I,branch,config) and SPROP(idx,branch,config) forms.
+        sp_match = re.search(
+            r'\bSPROP\s*\(\s*[^,]+,\s*(-?\d+)\s*,\s*(\d+)\s*\)',
+            lhs, re.I
+        )
+        if not sp_match:
+            continue
+
+        config = int(sp_match.group(2))
+        pdgs = [int(x) for x in re.findall(r'[+-]?\d+', rhs)]
+        pdgs = [x for x in pdgs if x != 0]
+        if config not in sprop_by_config:
+            sprop_by_config[config] = []
+        sprop_by_config[config].extend(pdgs)
+
+    if nconfigs == 0 and sprop_by_config:
+        nconfigs = max(sprop_by_config)
+
+    return {'nconfigs': nconfigs, 'sprop_by_config': sprop_by_config}
+
+
+def get_channel_count(Pdir):
+    """Read number of integration channels from configs.inc."""
+    parsed = parse_configs_inc(pjoin(Pdir, 'configs.inc'))
+    return parsed['nconfigs']
 
 
 def get_channel_topology(Pdir):
@@ -176,34 +235,11 @@ def get_channel_topology(Pdir):
     Returns:
         dict: {config_number: topology_signature}
     """
-    configs_path = pjoin(Pdir, 'configs.inc')
-    if not os.path.exists(configs_path):
-        return {}
-    
-    with open(configs_path) as f:
-        text = f.read()
-    
-    # Parse IFOREST entries to extract topology
-    # Format: DATA (IFOREST(I,-1,N),I=1,2) / leg1, leg2 /
+    parsed = parse_configs_inc(pjoin(Pdir, 'configs.inc'))
     topologies = {}
-    
-    # Extract mapconfig to know how many configs
-    nconfigs = 0
-    match = re.search(r'DATA\s+MAPCONFIG\(0\)\s*/\s*(\d+)\s*/', text, re.I)
-    if match:
-        nconfigs = int(match.group(1))
-    
-    # Extract SPROP (s-channel propagator PDGs) for each config
-    # Format: DATA (SPROP(I,-branch,config),I=1,MAXSPROC) /pdg1, pdg2, .../
-    for config in range(1, nconfigs + 1):
-        sprops = []
-        pattern = r'DATA\s*\(SPROP\(I,\s*(-?\d+)\s*,\s*%d\s*\).*?/\s*(.*?)\s*/' % config
-        for m in re.finditer(pattern, text, re.I):
-            branch = int(m.group(1))
-            pdgs = [int(x.strip()) for x in m.group(2).split(',') if x.strip() != '0']
-            sprops.extend(pdgs)
+    for config in range(1, parsed['nconfigs'] + 1):
+        sprops = parsed['sprop_by_config'].get(config, [])
         topologies[config] = tuple(sorted(sprops))
-    
     return topologies
 
 
@@ -399,14 +435,15 @@ def run_single_channel(Pdir, channel, npoints=5000, maxiter=5, binary='madevent'
     config_path = write_run_config(Pdir, channel, npoints, maxiter)
 
     # Run madevent with stdin from config file
-    proc = subprocess.Popen(
-        ['./%s' % binary],
-        cwd=Pdir,
-        stdin=open(config_path),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
-    )
-    stdout, _ = proc.communicate()
+    with open(config_path) as config_in:
+        proc = subprocess.Popen(
+            ['./%s' % binary],
+            cwd=Pdir,
+            stdin=config_in,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        stdout, _ = proc.communicate()
     log_text = stdout.decode('ascii', errors='ignore')
 
     result = {
@@ -454,6 +491,57 @@ def extract_rewgt_info(log_text):
 
 
 # ============================================================================
+# Shared base utilities
+# ============================================================================
+class MLMReweightTestBase(unittest.TestCase):
+    """Shared setup and process-preparation helpers for MLM reweight tests."""
+
+    tmp_prefix = 'acc_test_mlm_'
+    debug_dir = 'tmp_test_mlm'
+
+    def setUp(self):
+        self.debugging = getattr(unittest, 'debug', False)
+        if self.debugging:
+            self.path = pjoin(MG5DIR, self.debug_dir)
+            if os.path.exists(self.path):
+                shutil.rmtree(self.path)
+            os.makedirs(self.path)
+        else:
+            self.path = tempfile.mkdtemp(prefix=self.tmp_prefix)
+
+    def tearDown(self):
+        if not self.debugging:
+            shutil.rmtree(self.path, ignore_errors=True)
+
+    def prepare_mode_run(self, run_dir, process, model, defines, xqcut,
+                         apply_fg, group_subprocesses=False,
+                         subproc_pattern=None, pdir_selector=None):
+        """Generate, configure MLM, choose subprocess, compile, and return run info."""
+        generate_process(
+            run_dir=run_dir,
+            process=process,
+            model=model,
+            defines=defines,
+            apply_fg=apply_fg,
+            group_subprocesses=group_subprocesses
+        )
+        configure_mlm(run_dir, xqcut)
+
+        if pdir_selector:
+            Pdir = pdir_selector(run_dir)
+        else:
+            Pdir = select_Pdir(run_dir, subproc_pattern)
+
+        binary = compile_madevent(run_dir, Pdir)
+        self.assertIsNotNone(
+            binary,
+            'Compilation failed (apply_flavor_grouping=%s, subproc=%s)' %
+            (apply_fg, os.path.basename(Pdir))
+        )
+        return run_dir, Pdir, binary
+
+
+# ============================================================================
 # Test Factory
 # ============================================================================
 def make_mlm_channel_test(config_name, config):
@@ -480,32 +568,21 @@ def make_mlm_channel_test(config_name, config):
         for fg_mode in [True, False]:
             fg_label = 'fg_true' if fg_mode else 'fg_false'
             run_dir = pjoin(self.path, 'MLM_%s_%s' % (config_name, fg_label))
-
-            # 1. Generate process
             mode_config = config[fg_label]
             group_subp = mode_config.get('group_subprocesses',
                                          config.get('group_subprocesses', False))
-            generate_process(
+
+            # 1-3. Generate, configure, select subprocess, compile
+            _, Pdir, binary = self.prepare_mode_run(
                 run_dir=run_dir,
                 process=config['process'],
                 model=config['model'],
                 defines=config.get('defines', []),
+                xqcut=config['xqcut'],
                 apply_fg=fg_mode,
-                group_subprocesses=group_subp
+                group_subprocesses=group_subp,
+                subproc_pattern=mode_config.get('subproc')
             )
-
-            # 2. Configure MLM
-            configure_mlm(run_dir, config['xqcut'])
-
-            # 3. Find subprocess dir and compile
-            mode_config = config[fg_label]
-            Pdir = select_Pdir(run_dir, mode_config.get('subproc'))
-
-            success = compile_madevent(run_dir, Pdir)
-            self.assertTrue(success is not None,
-                'Compilation failed for %s (apply_flavor_grouping=%s, subproc=%s)' %
-                (config_name, fg_mode, os.path.basename(Pdir)))
-            binary = success
 
             # 4. Determine channel count and validate channel choice
             nchan = get_channel_count(Pdir)
@@ -573,7 +650,7 @@ def make_mlm_channel_test(config_name, config):
 # ============================================================================
 # Test Class
 # ============================================================================
-class TestMLMReweight(unittest.TestCase):
+class TestMLMReweight(MLMReweightTestBase):
     """Test suite for MLM reweighting comparing apply_flavor_grouping modes.
     
     Tests verify that the REWGT function (from reweight.f linked to cluster.f)
@@ -585,19 +662,8 @@ class TestMLMReweight(unittest.TestCase):
     flavor grouping can lead to different diagram topologies being generated.
     """
 
-    def setUp(self):
-        self.debugging = getattr(unittest, 'debug', False)
-        if self.debugging:
-            self.path = pjoin(MG5DIR, 'tmp_test_mlm')
-            if os.path.exists(self.path):
-                shutil.rmtree(self.path)
-            os.makedirs(self.path)
-        else:
-            self.path = tempfile.mkdtemp(prefix='acc_test_mlm_')
-
-    def tearDown(self):
-        if not self.debugging:
-            shutil.rmtree(self.path, ignore_errors=True)
+    tmp_prefix = 'acc_test_mlm_'
+    debug_dir = 'tmp_test_mlm'
 
 
 # Dynamically add test methods from the factory
@@ -607,7 +673,7 @@ for _name, _config in MLM_TEST_CHANNELS.items():
     setattr(TestMLMReweight, _test_method_name, _test_method)
 
 
-class TestMLMReweightAutoMatch(unittest.TestCase):
+class TestMLMReweightAutoMatch(MLMReweightTestBase):
     """Test suite using automatic channel matching between flavor grouping modes.
     
     Instead of manually specifying channel numbers for each mode, this test
@@ -615,19 +681,8 @@ class TestMLMReweightAutoMatch(unittest.TestCase):
     channels, and then compares them.
     """
 
-    def setUp(self):
-        self.debugging = getattr(unittest, 'debug', False)
-        if self.debugging:
-            self.path = pjoin(MG5DIR, 'tmp_test_mlm_auto')
-            if os.path.exists(self.path):
-                shutil.rmtree(self.path)
-            os.makedirs(self.path)
-        else:
-            self.path = tempfile.mkdtemp(prefix='acc_test_mlm_auto_')
-
-    def tearDown(self):
-        if not self.debugging:
-            shutil.rmtree(self.path, ignore_errors=True)
+    tmp_prefix = 'acc_test_mlm_auto_'
+    debug_dir = 'tmp_test_mlm_auto'
 
     def test_mlm_rewgt_auto_match_qq_to_qq(self):
         """Compare MLM REWGT for q q~ > q q~ using automatic channel matching."""
@@ -640,49 +695,38 @@ class TestMLMReweightAutoMatch(unittest.TestCase):
         maxiter = 5
 
         Pdirs_by_mode = {}
-        run_dirs = {}
 
         for fg_mode in [True, False]:
             fg_label = 'fg_true' if fg_mode else 'fg_false'
             run_dir = pjoin(self.path, 'MLM_auto_%s' % fg_label)
 
-            generate_process(
-                run_dir=run_dir,
-                process=process,
-                model=model,
-                defines=defines,
-                apply_fg=fg_mode,
-                group_subprocesses=False
-            )
-            configure_mlm(run_dir, xqcut)
-
-            # For fg=True: single merged subprocess
-            # For fg=False: select subprocess with most channels (most topology variety)
-            Pdirs_list = get_Pdir(run_dir)
-            subproc_dir = pjoin(run_dir, 'SubProcesses')
-            
-            if fg_mode:
-                # Use the single merged subprocess
-                Pdir = pjoin(subproc_dir, sorted(Pdirs_list)[0])
-            else:
-                # Select subprocess with most channels
+            def pick_pdir(path):
+                pdirs_list = get_Pdir(path)
+                subproc_dir = pjoin(path, 'SubProcesses')
+                if fg_mode:
+                    return pjoin(subproc_dir, sorted(pdirs_list)[0])
                 best_pdir = None
                 best_nchan = 0
-                for pname in Pdirs_list:
+                for pname in pdirs_list:
                     ppath = pjoin(subproc_dir, pname)
                     nchan = get_channel_count(ppath)
                     if nchan > best_nchan:
                         best_nchan = nchan
                         best_pdir = ppath
-                Pdir = best_pdir or pjoin(subproc_dir, sorted(Pdirs_list)[0])
+                return best_pdir or pjoin(subproc_dir, sorted(pdirs_list)[0])
 
-            success = compile_madevent(run_dir, Pdir)
-            self.assertIsNotNone(success,
-                'Compilation failed (apply_flavor_grouping=%s, subproc=%s)' %
-                (fg_mode, os.path.basename(Pdir)))
+            _, Pdir, binary = self.prepare_mode_run(
+                run_dir=run_dir,
+                process=process,
+                model=model,
+                defines=defines,
+                xqcut=xqcut,
+                apply_fg=fg_mode,
+                group_subprocesses=False,
+                pdir_selector=pick_pdir
+            )
 
-            Pdirs_by_mode[fg_label] = (Pdir, success)  # (path, binary_name)
-            run_dirs[fg_label] = run_dir
+            Pdirs_by_mode[fg_label] = (Pdir, binary)
 
         # Find matching channels
         matches = find_matching_channels(
