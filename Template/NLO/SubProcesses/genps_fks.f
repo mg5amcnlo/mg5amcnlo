@@ -1945,16 +1945,13 @@ c parameters
       parameter (ctiny=5d-7)
 c
       pass=.true.
-c$$$      if(softtest)then
-        sstiny=0.d0
-c$$$      else
-c$$$        sstiny=stiny
-c$$$      endif
-c$$$      if(colltest)then
-        cctiny=0.d0
-c$$$      else
-c$$$        cctiny=ctiny
-c$$$      endif
+      if(softtest .or. colltest)then
+         sstiny=0.d0
+         cctiny=0.d0
+      else
+         sstiny=stiny
+         cctiny=ctiny
+      endif
 
 c
 c FKS for left or right incoming parton
@@ -2158,16 +2155,13 @@ c parameters
       parameter (ximag=(0d0,1d0))
 c
       pass=.true.
-c$$$      if(softtest)then
-c$$$        sstiny=0.d0
-c$$$      else
-c$$$        sstiny=stiny
-c$$$      endif
-c$$$      if(colltest)then
-c$$$        cctiny=0.d0
-c$$$      else
-c$$$        cctiny=ctiny
-c$$$      endif
+      if(softtest .or. colltest)then
+        sstiny=0.d0
+        cctiny=0.d0
+      else
+        sstiny=stiny
+        cctiny=ctiny
+      endif
 c
 c set-up y_ij_fks
 c
@@ -2197,7 +2191,7 @@ c$$$
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
       else
-         y_ij_fks = 1d0-2d0*x(2)**2
+         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
       endif
       if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
 
@@ -2256,7 +2250,7 @@ c$$$
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix*xiimax
       else
-         xi_i_hat=x(1)**2
+         xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xi_i_hat*xiimax
       endif
       if (.not.softtest) xjac=xjac*2d0*x(1)
@@ -2451,16 +2445,13 @@ c
       endif
 c
       pass=.true.
-c$$$      if(softtest)then
-        sstiny=0.d0
-c$$$      else
-c$$$        sstiny=stiny
-c$$$      endif
-c$$$      if(colltest)then
-        cctiny=0.d0
-c$$$      else
-c$$$        cctiny=ctiny
-c$$$      endif
+      if(softtest .or. colltest)then
+         sstiny=0.d0
+         cctiny=0.d0
+      else
+         sstiny=stiny
+         cctiny=ctiny
+      endif
 c
 c set-up y_ij_fks
 c
@@ -2494,7 +2485,7 @@ c$$$      xjac=xjac*2d0*x(2)*2d0
          write (*,*) 'Massive j_fks: should not do collinear tests'
          stop 1
       else
-         y_ij_fks = 1d0-2d0*x(2)**2
+         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
       endif
       if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
       
@@ -2617,12 +2608,12 @@ c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
 c in xi_i_hat respectively. The parameter A is free, but it appears to be 
 c convenient to choose A=rat_xi
          if(x(1).le.rat_xi)then
-            xi_i_hat=x(1)**2/rat_xi
+            xi_i_hat=(sstiny+(1-sstiny)*x(1)**2)/rat_xi
             xi_i_fks=xinorm*xi_i_hat
             isolsign=1
             xjac=xjac*2d0*x(1)/rat_xi
          else
-            xi_i_hat=x(1)
+            xi_i_hat=sstiny+(1-sstiny)*x(1)
             xi_i_fks=-xinorm*xi_i_hat+2*xiimax
             isolsign=-1
          endif
@@ -2819,19 +2810,22 @@ c parameters
       parameter (fks_as_is=.false.)
       double complex ximag
       parameter (ximag=(0d0,1d0))
-      double precision stiny,sstiny,qtiny,zero,ctiny,cctiny
+      double precision stiny,sstiny,qtiny,zero,ctiny,cctiny,vtiny
       parameter (stiny=1d-6)
+      parameter (vtiny=0d0)
       parameter (qtiny=1d-7)
       parameter (zero=0d0)
       parameter (ctiny=5d-7)
 c
       pass=.true.
-c$$$      if(softtest)then
-        sstiny=0.d0
-c$$$      else
-c$$$        sstiny=stiny
-c$$$      endif
-c
+      if(softtest .or. colltest)then
+         sstiny=0.d0
+         cctiny=0.d0
+      else
+         sstiny=stiny
+         cctiny=ctiny
+      endif
+c     
 c FKS for left or right incoming parton
 c
       idir=0
@@ -2902,8 +2896,9 @@ c
 c set-up y_ij_fks
 c
 c$$$      if(colltest)then
+c$$$         cctiny=zero
 c$$$      else
-c$$$        cctiny=ctiny
+c$$$         cctiny=ctiny
 c$$$      endif
 c$$$      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
 c$$$     &     ((.not.softtest) .or. 
@@ -2917,8 +2912,8 @@ c$$$      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
 c$$$     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
 c$$$     &        colltest)  )then
 c$$$         y_ij_fks = y_ij_fks_fix
-c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
-c$$$     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
+c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+vtiny .or.
+c$$$     &        y_ij_fks.lt.y_ij_fks_low-vtiny) then
 c$$$            xjac=-33d0
 c$$$            pass=.false.
 c$$$            return
@@ -2927,8 +2922,8 @@ c$$$      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
 c$$$         y_ij_fks=y_ij_fks_matrix(icountevts)
 c$$$c Check that y_ij_fks is in the allowed range. If not, counter events
 c$$$c cannot be generated
-c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+1d-12 .or.
-c$$$     &        y_ij_fks.lt.y_ij_fks_low-1d-12) then
+c$$$         if ( y_ij_fks.gt.y_ij_fks_upp+vtiny .or.
+c$$$     &        y_ij_fks.lt.y_ij_fks_low-vtiny) then
 c$$$            xjac=-33d0
 c$$$            pass=.false.
 c$$$            return
@@ -2937,6 +2932,7 @@ c$$$      else
 c$$$         write(*,*)'Error #8 in genps_fks.f',icountevts
 c$$$         stop
 c$$$      endif
+c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
 
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
@@ -2950,7 +2946,7 @@ c$$$      endif
          endif
       else
          y_ij_fks = y_ij_fks_upp -
-     &        (y_ij_fks_upp-y_ij_fks_low)*x(2)**2
+     &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
       endif
       if (.not. colltest) xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       
@@ -3105,8 +3101,8 @@ c$$$      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
 c$$$         xi_i_fks=xi_i_fks_matrix(icountevts)
 c$$$c Check that xi_i_fks is in the allowed range. If not, counter events
 c$$$c cannot be generated
-c$$$         if ( xi_i_fks.gt.xiimax+1d-12 .or.
-c$$$     &        xi_i_fks.lt.xiimin-1d-12 ) then
+c$$$         if ( xi_i_fks.gt.xiimax+vtiny .or.
+c$$$     &        xi_i_fks.lt.xiimin-vtiny ) then
 c$$$            xjac=-34d0
 c$$$            pass=.false.
 c$$$            return
@@ -3115,7 +3111,13 @@ c$$$      else
 c$$$         write(*,*)'Error #11 in genps_fks.f',icountevts
 c$$$         stop
 c$$$      endif
+c$$$      xjac=xjac*2d0*x(1)
 
+      if(softtest)then
+        sstiny=0.d0
+      else
+        sstiny=stiny
+      endif
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
       elseif (softtest) then
@@ -3126,7 +3128,7 @@ c$$$      endif
             return
          endif
       else
-         xi_i_hat=x(1)**2
+         xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
       endif
       if (.not. softtest) xjac=xjac*2d0*x(1)

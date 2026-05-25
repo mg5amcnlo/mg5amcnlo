@@ -842,7 +842,8 @@ c$$$  include 'madfks_mcatnlo.inc'
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
      $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac
-     $     ,amp_split_gfunc(amp_split_size),wgt,xx(ndimmax)
+     $     ,amp_split_gfunc(amp_split_size),wgt,xx(ndimmax),factor,vol
+     $     ,vol_save
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -878,6 +879,8 @@ c$$$  include 'madfks_mcatnlo.inc'
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
       nFKSprocess_save=nFKSprocess
+      call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
+      call get_mint_wgt(xx,vol_save)
       do nFKSprocess=1,fks_configs
          ! This sets i_fks and j_fks to correspond to the ones in
          ! nFKSprocess.
@@ -902,6 +905,8 @@ c$$$         call fks_inc_chooser()
          !     outputs are: xx,jac (also updates pborn common block)
          jac=1d0
          call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
+         call get_mint_wgt(xx,vol)
+         
          CalculatedBorn=.false.
          call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,p_born
      $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
@@ -914,6 +919,7 @@ c$$$         call fks_inc_chooser()
 !     Also, include the difference in phase-space Jacobian factors.
                amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
      $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)*jac/wgt
+     $              *vol/vol_save
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
                wgtcpower=0d0
@@ -932,10 +938,10 @@ c$$$         call fks_inc_chooser()
             enddo
          enddo
          amp_split_gfunc=0d0
+         factor=vol/vol_save*jac/wgt*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
          if (include_gfun) then
             call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
-     $           ,sevmc_Sev,jac/wgt*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
-     $           ,nFKSprocess.eq.nFKSprocess_save)
+     $           ,sevmc_Sev,factor,nFKSprocess.eq.nFKSprocess_save)
          endif
       enddo
       nFKSprocess=nFKSprocess_save
