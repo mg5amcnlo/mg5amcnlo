@@ -61,6 +61,8 @@ pjoin = os.path.join
 # can merge diagrams into different topologies. The 'subproc' field uses
 # a pattern to select the subprocess directory (first match is used).
 # Use None to select the first available P* directory.
+# For these tests, fg_false often sets group_subprocesses=True so grouped
+# subprocess structure is comparable with the flavor-grouped fg_true mode.
 
 MLM_TEST_CHANNELS = {
     'qq_to_qq_tchannel': {
@@ -294,7 +296,7 @@ def read_results_dat(results_path):
     try:
         xsec = float(parts[0])
         error = float(parts[1])
-        nevents = int(float(parts[3])) if len(parts) >= 4 else 0
+        nevents = int(parts[3]) if len(parts) >= 4 else 0
         return (xsec, error, nevents)
     except (ValueError, IndexError):
         return None
