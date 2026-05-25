@@ -74,7 +74,7 @@ MLM_TEST_CHANNELS = {
         'xqcut': 20.0,
         'fg_true': {'subproc': None, 'channel': 1},
         'fg_false': {'subproc': None, 'channel': 1, 'group_subprocesses': True},
-        'npoints': 5000,
+        'npoints': 1000,
         'maxiter': 5,
     },
     'qq_to_qq_schannel': {
@@ -84,9 +84,29 @@ MLM_TEST_CHANNELS = {
         'xqcut': 20.0,
         'fg_true': {'subproc': None, 'channel': 2},
         'fg_false': {'subproc': None, 'channel': 2, 'group_subprocesses': True},
-        'npoints': 5000,
+        'npoints': 1000,
         'maxiter': 5,
     },
+    'gg_ttgg': {
+        'process': 'g g > t t~ g g',
+        'model': 'sm',
+        'defines': [],
+        'xqcut': 20.0,
+        'fg_true': {'subproc': None, 'channel': 1},
+        'fg_false': {'subproc': None, 'channel': 1, 'group_subprocesses': True},
+        'npoints': 1000,
+        'maxiter': 5,
+    },
+    'DY_uu_to_Z_jjjj':{
+        'process': 'u u~ > Z d d~ c c~',
+        'model': 'sm',
+        'defines': [],
+        'xqcut': 20.0,
+        'fg_true': {'subproc': None, 'channel': 1},
+        'fg_false': {'subproc': None, 'channel': 1, 'group_subprocesses': True},
+        'npoints': 1000,
+        'maxiter': 5,
+    }
 }
 
 

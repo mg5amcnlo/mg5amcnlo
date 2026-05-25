@@ -88,9 +88,7 @@ jobs:
       - name: test one of the test test_complex_mass_SA/ DYj has no assymetry
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_complex_mass_SA -pA -t0 -l INFO
-            ./tests/test_manager.py -pA test_DY_onejet -l INFO -t0
-
+            ./tests/test_manager.py test_complex_mass_SA test_DY_onejet -pA -t0 -l INFO
 
 
   acceptancetest_11:
@@ -1816,3 +1814,16 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py -pA TestStandaloneMadeventMatrixElementConsistency
+
+  acceptancetest_check_mlm_rwgt:
+    # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+
+      - name: test various MLM processes
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py -pA TestMLMReweight 
+
