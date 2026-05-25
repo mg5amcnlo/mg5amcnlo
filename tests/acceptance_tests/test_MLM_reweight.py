@@ -294,7 +294,7 @@ def read_results_dat(results_path):
     try:
         xsec = float(parts[0])
         error = float(parts[1])
-        nevents = int(float(parts[3])) if len(parts) > 3 else 0
+        nevents = int(float(parts[3])) if len(parts) >= 4 else 0
         return (xsec, error, nevents)
     except (ValueError, IndexError):
         return None
@@ -663,9 +663,6 @@ class TestMLMReweightAutoMatch(MLMReweightTestBase):
     generates both outputs, uses topology matching to identify corresponding
     channels, and then compares them.
     """
-
-    tmp_prefix = 'acc_test_mlm_auto_'
-    debug_dir = 'tmp_test_mlm_auto'
 
     def test_mlm_rewgt_auto_match_qq_to_qq(self):
         """Compare MLM REWGT for q q~ > q q~ using automatic channel matching."""
