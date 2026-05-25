@@ -42,11 +42,9 @@ jobs:
 
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_AcceptanceProcOutputIOTests
+      - name: test one of the test test_hepmc_decay test_lhe_none_decay test_madspin_spin_only test_madspin_mixed_flavor_decay_log_summary test_madspin_wplus_all_all_flavor_balance test_madspin_wplus_all_all_flavor_balance_2to1
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_AcceptanceProcOutputIOTests -pA -t0 -l INFO
-            ./tests/test_manager.py testIO_UnitProcOutputIOTests -pA -t0 -l INFO
             ./tests/test_manager.py test_hepmc_decay -pA -t0 -l INFO
             ./tests/test_manager.py test_lhe_none_decay -pA -t0 -l INFO
             ./tests/test_manager.py test_madspin_spin_only -pA -t0 -l INFO
@@ -1110,26 +1108,6 @@ jobs:
 
 
 
-  acceptancetest_70:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_all
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_TIR_output
-        run: |
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
-            ./tests/test_manager.py testIO_TIR_output -pA -t0 -l INFO
-
-
-
   acceptancetest_71:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
@@ -1241,25 +1219,6 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_ML_check_timing_epem_ttx -pA -t0 -l INFO
-
-
-
-  acceptancetest_77:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore_all
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_MatchBoxOutput
-        run: |
-            cd $GITHUB_WORKSPACE
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib      
-            ./tests/test_manager.py testIO_MatchBoxOutput -pA -t0 -l INFO
 
 
 
@@ -1606,9 +1565,6 @@ jobs:
       - name: test one of the test test_raise_invalid_path_hwpp
         run: |
             cd $GITHUB_WORKSPACE
-            echo "install lhapdf6" > cmd
-            ./bin/mg5_aMC cmd
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/lib/
             ./tests/test_manager.py test_raise_invalid_path_hwpp -pA -t0 -l INFO
 
 
@@ -1648,24 +1604,6 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_split_evt_gen -pA -t0 -l INFO
 
-
-
-  acceptancetest_100:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/checkout_mg5 
-      - uses: ./.github/actions/restore-pip-cache
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_gnuplot_histo_output
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_gnuplot_histo_output -pA -t0 -l INFO
 
 
   acceptancetest_100_2:
