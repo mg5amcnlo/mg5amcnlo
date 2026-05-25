@@ -219,7 +219,10 @@ def parse_configs_inc(configs_path):
 
 
 def get_channel_count(Pdir):
-    """Read number of integration channels from configs.inc."""
+    """Read number of integration channels from configs.inc.
+
+    Returns 0 when configs.inc is missing or no config information is found.
+    """
     parsed = parse_configs_inc(pjoin(Pdir, 'configs.inc'))
     return parsed['nconfigs']
 
@@ -291,13 +294,7 @@ def read_results_dat(results_path):
     try:
         xsec = float(parts[0])
         error = float(parts[1])
-        if len(parts) > 3:
-            try:
-                nevents = int(parts[3])
-            except ValueError:
-                nevents = int(float(parts[3]))
-        else:
-            nevents = 0
+        nevents = int(float(parts[3])) if len(parts) > 3 else 0
         return (xsec, error, nevents)
     except (ValueError, IndexError):
         return None
@@ -361,30 +358,29 @@ def compile_madevent(run_dir, Pdir):
         Name of the compiled binary ('madevent_forhel' or 'madevent'),
         or None if compilation failed.
     """
-    with open(os.devnull, 'w') as devnull:
-        # Compile Source libraries
-        ret = subprocess.Popen(
-            ['make'], cwd=pjoin(run_dir, 'Source'),
-            stdout=devnull, stderr=devnull
-        ).wait()
-        if ret != 0:
-            return None
+    # Compile Source libraries
+    ret = subprocess.Popen(
+        ['make'], cwd=pjoin(run_dir, 'Source'),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    ).wait()
+    if ret != 0:
+        return None
 
-        # Try madevent_forhel first (works with matrix*_orig.f)
-        ret = subprocess.Popen(
-            ['make', 'madevent_forhel'], cwd=Pdir,
-            stdout=devnull, stderr=devnull
-        ).wait()
-        if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent_forhel')):
-            return 'madevent_forhel'
+    # Try madevent_forhel first (works with matrix*_orig.f)
+    ret = subprocess.Popen(
+        ['make', 'madevent_forhel'], cwd=Pdir,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    ).wait()
+    if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent_forhel')):
+        return 'madevent_forhel'
 
-        # Fall back to madevent (works with matrix*.f)
-        ret = subprocess.Popen(
-            ['make', 'madevent'], cwd=Pdir,
-            stdout=devnull, stderr=devnull
-        ).wait()
-        if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent')):
-            return 'madevent'
+    # Fall back to madevent (works with matrix*.f)
+    ret = subprocess.Popen(
+        ['make', 'madevent'], cwd=Pdir,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    ).wait()
+    if ret == 0 and os.path.exists(pjoin(Pdir, 'madevent')):
+        return 'madevent'
 
     return None
 
@@ -490,10 +486,20 @@ def extract_rewgt_info(log_text):
         if 'Fail to cluster' in line_stripped:
             info['cluster_fail_count'] += 1
         # Count rewgt=0 rejections
-        if 'rewgt = 0' in line_stripped or 'rewgt=0' in line_stripped.replace(' ',''):
+        if 'rewgt=0' in line_stripped.replace(' ', ''):
             info['rewgt_zero_count'] += 1
 
     return info
+
+
+def sigma_difference(value_a, err_a, value_b, err_b):
+    """Return |a-b|/sqrt(err_a^2+err_b^2), handling zero-error edge cases."""
+    combined_err = math.sqrt(err_a ** 2 + err_b ** 2)
+    if combined_err > 0:
+        return abs(value_a - value_b) / combined_err
+    if value_a == value_b:
+        return 0.0
+    return float('inf')
 
 
 # ============================================================================
@@ -634,14 +640,12 @@ def make_mlm_channel_test(config_name, config):
             'Zero cross-section for apply_flavor_grouping=False in %s' % config_name)
 
         # Cross-sections should agree within 5 sigma combined uncertainty
-        combined_err = math.sqrt(err_true**2 + err_false**2) if (err_true + err_false) > 0 else 1
-        if combined_err > 0:
-            sigma_diff = abs(xsec_true - xsec_false) / combined_err
-            self.assertLess(sigma_diff, 5,
-                'Cross-sections differ by %.1f sigma between '
-                'apply_flavor_grouping=True (%s +- %s) and '
-                'apply_flavor_grouping=False (%s +- %s) for %s' %
-                (sigma_diff, xsec_true, err_true, xsec_false, err_false, config_name))
+        sigma_diff = sigma_difference(xsec_true, err_true, xsec_false, err_false)
+        self.assertLess(sigma_diff, 5,
+            'Cross-sections differ by %.1f sigma between '
+            'apply_flavor_grouping=True (%s +- %s) and '
+            'apply_flavor_grouping=False (%s +- %s) for %s' %
+            (sigma_diff, xsec_true, err_true, xsec_false, err_false, config_name))
 
     test_method.__doc__ = (
         'Compare MLM REWGT between flavor_grouping True/False for %s '
@@ -777,13 +781,11 @@ class TestMLMReweightAutoMatch(MLMReweightTestBase):
         self.assertGreater(abs(xsec_f), 0,
             'Zero xsec for fg=False channel %d' % ch_false)
 
-        combined_err = math.sqrt(err_t**2 + err_f**2) if (err_t + err_f) > 0 else 1
-        if combined_err > 0:
-            sigma_diff = abs(xsec_t - xsec_f) / combined_err
-            self.assertLess(sigma_diff, 5,
-                'Cross-sections differ by %.1f sigma: '
-                'fg=True ch=%d (%s +- %s) vs fg=False ch=%d (%s +- %s)' %
-                (sigma_diff, ch_true, xsec_t, err_t, ch_false, xsec_f, err_f))
+        sigma_diff = sigma_difference(xsec_t, err_t, xsec_f, err_f)
+        self.assertLess(sigma_diff, 5,
+            'Cross-sections differ by %.1f sigma: '
+            'fg=True ch=%d (%s +- %s) vs fg=False ch=%d (%s +- %s)' %
+            (sigma_diff, ch_true, xsec_t, err_t, ch_false, xsec_f, err_f))
 
 
 # ============================================================================
