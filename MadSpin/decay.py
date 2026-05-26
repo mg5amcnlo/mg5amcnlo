@@ -1152,6 +1152,7 @@ class AllMatrixElement(dict):
                      if id(self[tag]) != id(self[proc.get_initial_final_ids()])]
                          
         finals = []
+        finals_procs = []  # one proc per unique final state, for BR summation
         for proc in proc_list:
             succeed = True # check if the decay is compatible with the process
                            #under consideration.
@@ -1167,6 +1168,7 @@ class AllMatrixElement(dict):
                 tmp.append((pid,dproc.get_final_ids_after_decay()))
             if succeed and tmp not in finals:
                 finals.append(tmp)
+                finals_procs.append(proc)
         
         # Treat Not compatible decay.        
         if to_postpose:
@@ -1186,7 +1188,7 @@ class AllMatrixElement(dict):
         # the decay:
         out = {'path': me_path, 
                'matrix_element': me, 
-               'br': len(finals) * self.get_br(proc),
+               'br': sum(self.get_br(p) for p in finals_procs),
                'finals': finals, 
                'base_order':[l.get('id') for l in me.get_legs_with_decays()] ,
                'decay_struct':self.get_full_process_structure(proc_list),
