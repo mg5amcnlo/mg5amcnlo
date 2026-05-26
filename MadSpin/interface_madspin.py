@@ -1423,7 +1423,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.seed > 30081*30081:
                     self.seed -= 30081*30081        
                 logger.info('Will use seed %s' % (self.seed))
-                misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed), '-p', self.options['nb_core'] ], cwd=decay_dir)     
+                misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed), '-p', self.mg5cmd.options['nb_core']], cwd=decay_dir)
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))     
             if cumul:
                 break
