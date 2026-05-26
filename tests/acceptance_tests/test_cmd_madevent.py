@@ -1218,17 +1218,19 @@ class TestMEfromfile(unittest.TestCase):
         command.close()
         
         fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > e- ve~
         launch
         """)
         fsock.close()
         fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > j j
         launch
         """)
-        fsock.close()                
+        fsock.close()              
         subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
