@@ -3181,52 +3181,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 #        return
 
 
-    def write_check_sa(self, fsock, matrix_element, proc_prefix):
-
-        if self.format != 'standalone':
-            return
-    
-        template = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f')).read()
-
-        
-        all_flavors  = matrix_element.get_external_flavors(all_perm=False)
-        # Use legs_with_decays so that the PDG list covers all external particles
-        # of the combined process (including decay products), matching the length
-        # of each flavor tuple returned by get_external_flavors.
-        all_pdgs = [l.get('id') for l in matrix_element.get('processes')[0].get('legs_with_decays')]
-        map_all_flv = {}
-        for i, flv1 in  enumerate(all_flavors):
-            coup = matrix_element.get_coupling_for_flv(flv1, self.model)
-            if coup in map_all_flv:
-                map_all_flv[coup].append(flv1)
-            else:
-                map_all_flv[coup] = [flv1]
- 
-        pdg_to_flv_index = {}
-        for i, opts in self.model.merged_particles.items():
-            for j, pdg in enumerate(opts):
-                pdg_to_flv_index[pdg] = j+1
-
-        all_flavors = [flv[0] for flv in map_all_flv.values()]
-        maxflavor = len(all_flavors )
-        flavor_text = ['        FLAVOR(:,:) =1']
-        for i in range(1, maxflavor+1):
-            for j in range(1,1+len(all_flavors[i-1])):
-                if all_flavors[i-1][j-1] != 1:
-                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
-                    flavor_text.append('FLAVOR(%d,%d) = %d ! PDG = %d' % (j,i,pdg_to_flv_index[all_flavors[i-1][j-1]], all_flavors[i-1][j-1]))
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg))
-                elif abs(all_pdgs[j-1]) in self.model.get('merged_particles'):
-                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg)) 
-                else:
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i, all_pdgs[j-1]))
-                    
-                    
-
-        flavor_text = '\n        '.join(flavor_text)
-        fsock.write(template % {'maxflavor':maxflavor, 'flavor_def': flavor_text,
-                                'proc_prefix':proc_prefix})
 
 
     #===========================================================================
@@ -4097,9 +4051,47 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # write_check_sa   
     #===========================================================================
     def write_check_sa(self, writer, matrix_element, proc_prefix=''):
-        
+
+        # Compute flavor table for the check_sa template
+        all_flavors = matrix_element.get_external_flavors(all_perm=False)
+        # Use legs_with_decays so that the PDG list covers all external particles
+        # of the combined process (including decay products), matching the length
+        # of each flavor tuple returned by get_external_flavors.
+        all_pdgs = [l.get('id') for l in matrix_element.get('processes')[0].get('legs_with_decays')]
+        map_all_flv = {}
+        for flv1 in all_flavors:
+            coup = matrix_element.get_coupling_for_flv(flv1, self.model)
+            if coup in map_all_flv:
+                map_all_flv[coup].append(flv1)
+            else:
+                map_all_flv[coup] = [flv1]
+
+        pdg_to_flv_index = {}
+        for i, opts in self.model.merged_particles.items():
+            for j, pdg in enumerate(opts):
+                pdg_to_flv_index[pdg] = j + 1
+
+        all_flavors = [flv[0] for flv in map_all_flv.values()]
+        maxflavor = len(all_flavors)
+        flavor_text = ['        FLAVOR(:,:) =1']
+        for i in range(1, maxflavor + 1):
+            for j in range(1, 1 + len(all_flavors[i - 1])):
+                if all_flavors[i - 1][j - 1] != 1:
+                    pdg = all_flavors[i - 1][j - 1] * all_pdgs[j - 1] // abs(all_pdgs[j - 1])
+                    flavor_text.append('FLAVOR(%d,%d) = %d ! PDG = %d' % (j, i, pdg_to_flv_index[all_flavors[i - 1][j - 1]], all_flavors[i - 1][j - 1]))
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, pdg))
+                elif abs(all_pdgs[j - 1]) in self.model.get('merged_particles'):
+                    pdg = all_flavors[i - 1][j - 1] * all_pdgs[j - 1] // abs(all_pdgs[j - 1])
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, pdg))
+                else:
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, all_pdgs[j - 1]))
+        flavor_text = '\n        '.join(flavor_text)
+
         # set replace_dict like if no density matrix
         replace_dict = {'prefix': proc_prefix,
+                        'proc_prefix': proc_prefix,
+                        'maxflavor': maxflavor,
+                        'flavor_def': flavor_text,
                         'use_density': '.false.',
                         'dens_nchanging': 1,
                         'dens_ncomb': 2,
