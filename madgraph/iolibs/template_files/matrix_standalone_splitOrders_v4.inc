@@ -512,6 +512,7 @@ c     POS(N_CHNGING): position of the changing helicity
 c     n_changing: number of changing helicity
 c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
 c     INTER((NCOMB*NCOMB+1)/2i,NSQAMPSO) : all interference term (not the symmetric one)
+      use model_object
       implicit none
 CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
 CF2PY INTENT(IN) :: POS(N_CHANGING)

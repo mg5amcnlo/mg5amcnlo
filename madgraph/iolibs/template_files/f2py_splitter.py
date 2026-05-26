@@ -55,7 +55,11 @@ C      symmetric one)
   INTEGER POS(*)
   INTEGER ALLOW_HEL(*)
   DOUBLE COMPLEX INTER(*)
+  integer flavor(%(maxpart)i),I
 C     Update is done insider the direct density call functions
+
+  flavor(:) = 1
+%(flavormapping)s
 
 %(density_splitter)s
 

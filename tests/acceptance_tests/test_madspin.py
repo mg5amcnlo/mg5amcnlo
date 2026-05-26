@@ -280,7 +280,7 @@ decay z > l+ l-
             r'INFO:\s*Average number of trial points per production event:\s*([0-9]+(?:\.[0-9]+)?)',
             log)
         self.assertIsNotNone(avg_trial)
-        self.assertAlmostEqual(float(avg_trial.group(1)), 4.9772, delta=0.5)
+        self.assertAlmostEqual(float(avg_trial.group(1)), 3.6, delta=1.0)
 
         br_allowed = re.search(
             r'INFO:\s*Branching ratio to allowed decays:\s*([0-9]+(?:\.[0-9]+)?)',

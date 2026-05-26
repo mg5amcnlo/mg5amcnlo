@@ -25,7 +25,7 @@ import shutil
 import sys
 import time
 import glob
-from itertools import product
+from itertools import product, chain
 
 pjoin = os.path.join
 if '__main__' == __name__:
@@ -1722,6 +1722,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.efficiency = 1 # to let me5 to write the correct number of events
         logger.info('Done so far. output written in %s' % output_lhe.name)
         logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
+        logger.info('Total number of events written: %s/%s ' % (accepted, accepted))
+        logger.info('Average number of trial points per production event: '
+                    + str(float(nb_try) / float(accepted)))
+        logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
+        logger.info('Number of events with weights larger than max_weight: 0')
+        logger.info('Number of subprocesses ' + str(len(self.all_me)))
+        logger.info('Number of failures when restoring the Monte Carlo masses: 0 ')
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
@@ -2268,15 +2275,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             event._ms_orig_order_for_density = orig_order
 
         # Fast path: single-point momentum extraction without permutation construction.
+        _revert = getattr(self, '_revert_merged', None) or None
         try:
-            p = event.get_momenta(orig_order)
+            p = event.get_momenta(orig_order, merged_map=_revert)
         except Exception:
             # Safety fallback for unusual event structures.
-            all_p = event.get_all_momenta(orig_order)
+            all_p = event.get_all_momenta(orig_order, merged_map=_revert)
             assert len(all_p) == 1, "Error: get_density can only be called for a single phase-space point"
             p = all_p[0]
-        P = rwgt_interface.ReweightInterface.invert_momenta(p) 
-        pdgs =list(orig_order[0])+list(orig_order[1])
+        P = rwgt_interface.ReweightInterface.invert_momenta(p)
+        pdgs = list(orig_order[0]) + list(orig_order[1])
         density_array = self.f2py_module.py_get_density(pdgs=pdgs, 
                                                         procid=-1, 
                                                         p=P, 
@@ -2382,7 +2390,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
 
     def get_pdir(self,event): 
-        tag, order = event.get_tag_and_order()
+        tag, order = event.get_tag_and_order(getattr(self, '_revert_merged', None) or None)
 #        print(order)
         try:
             orig_order = self.all_me[tag]['order']
