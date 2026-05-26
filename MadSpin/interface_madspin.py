@@ -1722,7 +1722,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.efficiency = 1 # to let me5 to write the correct number of events
         logger.info('Done so far. output written in %s' % output_lhe.name)
         logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
-        logger.info('Total number of events written: %s/%s ' % (accepted, accepted))
+        logger.info('Total number of events written: %s/%s ' % (accepted, nb_event))
         logger.info('Average number of trial points per production event: '
                     + str(float(nb_try) / float(accepted)))
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
