@@ -179,10 +179,10 @@ class LoopExporterFortran(object):
             CTmod = misc.which_lib('mpmodule.mod')
             if CTlib is None:
                 raise InvalidCmd("Could not find the location of the file"+\
-                    " libcts.a in you environment paths.")
+                    " libcts.a in your environment paths.")
             elif CTmod is None:
                 raise InvalidCmd("Could not find the location of the file"+\
-                    " mpmodule.mod in you environment paths.")
+                    " mpmodule.mod in your environment paths.")
             else:
                 logger.info('MG5_aMC is using CutTools installation found at %s.'%\
                                                          os.path.dirname(CTlib))
