@@ -353,8 +353,12 @@ def import_full_model(model_path, decay=False, prefix=''):
         files_list.append(filepath)
     files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge == 1: 
+    if aloha.unitary_gauge == 1:
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 2:
+        # axial gauge removes the goldstones (like unitary) and therefore
+        # must not share the Feynman gauge pickle (which keeps them)
+        pickle_name = 'model_axial.pkl'
     elif aloha.unitary_gauge == 3:
         pickle_name = 'model_FDG.pkl'
     else:

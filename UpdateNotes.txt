@@ -105,6 +105,10 @@ ANNOUNCEMENT:
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
 
 
+3.5.15 (17/4/26):
+  OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
+  OM: Additional fix related to the matchbox template
+
 3.5.14 (10/4/26):
   OM: Fix issue on how Sextet where written within lhef output
   OM: Small change in the way default value are taken if some parameter are not present within the run_card

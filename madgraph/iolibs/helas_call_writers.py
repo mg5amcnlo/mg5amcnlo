@@ -2100,10 +2100,20 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = "w[%d] = "
 
-            call = call + HelasCallWriter.mother_dict[\
+            wf_name = HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()].lower()
-            # Fill out with X up to 6 positions
-            call = call + 'x' * (14 - len(call))
+            fixed_wf_name = None
+            if aloha.unitary_gauge == 3:
+                if argument.get('spin') == 1:
+                    wf_name = 'sfd'
+                elif argument.get('spin') == 3:
+                    fixed_wf_name = 'vfdxxxx'
+            if fixed_wf_name is None:
+                call = call + wf_name
+                # Fill out with X up to 6 positions
+                call = call + 'x' * (14 - len(call))
+            else:
+                call = call + fixed_wf_name
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
