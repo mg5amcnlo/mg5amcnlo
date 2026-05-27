@@ -414,7 +414,7 @@ def which_lib(lib):
             return lib
     else:
         locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
-           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+           ["MG5_LIBRARY_PATH", "DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
                                                   if env_path in os.environ],[])
         for path in locations:
             lib_file = os.path.join(path, lib)
