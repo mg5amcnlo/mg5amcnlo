@@ -1067,7 +1067,51 @@ C
             if part.get('pdg_code') in [250, 251]:
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 2)
-        
+
+    def test_check_gauge_epem_vevex_wpwm(self):
+        """Test `check gauge e+ e- > ve ve~ w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > ve ve~ w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+
+    def test_check_pp_wpwm(self):
+        """Test `check p p > w+ w-` runs and gauge check succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='DEBUG') as cm:
+            self.do('check p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_pp_wpwm(self):
+        """Test `check gauge p p > w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_epem_aa_includes_axial(self):
+        """Test `check gauge e+ e- > a a` includes axial gauge and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > a a')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+         
 
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
