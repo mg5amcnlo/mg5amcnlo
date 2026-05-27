@@ -4480,11 +4480,21 @@ class decay_all_events_density(decay_all_events_onshell):
     #    return ""
     
     def adapt_production(self, line):
-        """If allowing offshell matrix element add * to the decaying particle."""
+        """If allowing offshell matrix element add * to the decaying particle.
+
+        Only particles that the user actually asked MadSpin to decay (i.e. keys
+        of ``self.mscmd.list_branches``) get marked off-shell. Spectator final-
+        state particles -- in particular multiparticle aliases like ``j`` --
+        must be left as-is, otherwise MG5 receives an invalid process string
+        of the form ``... > t* j* ;`` and "Skipping full ME calculation"."""
 
         if self.options['density_pole_approximation']:
              return line
-    
+
+        to_decay = set()
+        if hasattr(self, 'mscmd') and hasattr(self.mscmd, 'list_branches'):
+            to_decay = set(self.mscmd.list_branches.keys())
+
         out = []
         input = line.split(';')
         for oneline in input:
@@ -4502,9 +4512,12 @@ class decay_all_events_density(decay_all_events_onshell):
             particle, final = final[:end], final[end:]
             new_particle = []
             for p in particle.split():
-                new_particle.append('%s*' % p)
+                if p in to_decay:
+                    new_particle.append('%s*' % p)
+                else:
+                    new_particle.append(p)
             out.append("%s > %s %s;" % (init, ' '.join(new_particle), final))
-        misc.sprint(' '.join(out)) 
+        misc.sprint(' '.join(out))
         return ' '.join(out)
 
     
