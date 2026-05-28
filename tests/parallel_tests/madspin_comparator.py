@@ -148,7 +148,7 @@ class MadSpinResult(object):
 _RE_BR = re.compile(r'Branching ratio to allowed decays:\s*([0-9eE.+\-]+)')
 _RE_DENSITY_EFF = re.compile(
     r'MadSpin unweight efficiency:\s*([0-9.]+)\s*'
-    r'\((\d+)\s*accepted\s*/\s*(\d+)\s*trials'
+    r'\((\d+)\s*(?:accepted|written)\s*/\s*(\d+)\s*trials'
 )
 # Decay-chain mode logs "Average number of trial points per production event: X"
 # instead. The inverse of X is the unweighting efficiency.
