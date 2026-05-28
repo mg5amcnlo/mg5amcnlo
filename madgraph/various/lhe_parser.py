@@ -3087,6 +3087,7 @@ class Event(list):
 
 
     nb_reshuffle_issue=0
+    _warned_2to1_reshuffle = False
     def reshuffle_production(self):
         """ particle that need new mass have the "new_mass" attribute
         """
@@ -3100,7 +3101,28 @@ class Event(list):
         old_momenta = [FourMomentum(p) for p in production if p.status!=-1]
         new_masses = [getattr(p, 'new_mass', p.mass) for p in production if p.status!=-1]
         sqrts = self.sqrts
-        
+
+        # 2 -> 1 production: the single final-state mass is fully determined
+        # by sqrt(shat), so RAMBO has no phase-space to redistribute and
+        # mass_shuffle would divide by zero. Skip reshuffling, drop any
+        # new_mass attribute so callers fall back to the original momenta,
+        # and return jac = 1 (treat as narrow-width approximation at the
+        # production-determined virtuality, i.e. equivalent to running with
+        # density_do_reshuffle=False for this event).
+        if len(old_momenta) <= 1:
+            for p in production:
+                if hasattr(p, 'new_mass'):
+                    del p.new_mass
+            if not Event._warned_2to1_reshuffle:
+                import logging as _logging
+                _logging.getLogger('decay.stdout').info(
+                    "PA reshuffling skipped for 2 -> 1 production: there is "
+                    "no phase space to redistribute via RAMBO. Keeping the "
+                    "production-determined virtuality (NWA-style)."
+                )
+                Event._warned_2to1_reshuffle = True
+            return 1
+
         if sum(new_masses,0) <=  sqrts:
             # apply the RAMBO algo
             new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)

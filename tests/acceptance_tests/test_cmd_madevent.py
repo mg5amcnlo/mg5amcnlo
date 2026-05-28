@@ -1306,11 +1306,6 @@ class TestMEfromfile(unittest.TestCase):
         exercises the BR-equalization / loose-decay branch (events with the
         smaller-BR pdg are dropped to keep the output unweighted).
 
-        Note: density_do_reshuffle is disabled because the underlying
-        production is 1 -> 1 (p p > w+/w-) and there is no phase space for
-        the RAMBO mass-shuffle to redistribute. That is a separate concern
-        from the BR-equalization code path this test covers.
-
         Note: the offline (decay_events / madspin_card2) leg of the legacy
         madspin test is intentionally not mirrored here; offline madspin in
         PA mode currently misses some matrix-element entries for mixed
@@ -1355,7 +1350,6 @@ class TestMEfromfile(unittest.TestCase):
 
         fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
         fsock.write("""set spinmode PA
-        set density_do_reshuffle False
         decay w+ > j j
         decay w- > e- ve~
         launch
@@ -1436,7 +1430,6 @@ class TestMEfromfile(unittest.TestCase):
 
         fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
         fsock.write("""set spinmode PA
-        set density_do_reshuffle False
         decay w+ > j j
         decay w- > e- ve~
         launch
@@ -1444,7 +1437,6 @@ class TestMEfromfile(unittest.TestCase):
         fsock.close()
         fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
         fsock.write("""set spinmode PA
-        set density_do_reshuffle False
         decay w+ > j j
         decay w- > j j
         launch
