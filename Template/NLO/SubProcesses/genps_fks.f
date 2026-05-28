@@ -2188,12 +2188,14 @@ c$$$
 c$$$
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
+         xjac=xjac*2d0*x(2)*2d0
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
+         xjac=xjac*2d0*sqrt((1d0-y_ij_fks)/2d0)*2d0 ! compute x(2) from y_ij_fks
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+         xjac=xjac*2d0*x(2)*2d0
       endif
-      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
 
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
@@ -2247,14 +2249,15 @@ c$$$      xjac=xjac*2d0*x(1)
 c$$$
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
+         xjac=xjac*2d0*x(1)
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix*xiimax
+         xjac=xjac*2d0*sqrt(xi_i_fks_fix) ! compute x(1) from xi
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xi_i_hat*xiimax
+         xjac=xjac*2d0*x(1)
       endif
-      if (.not.softtest) xjac=xjac*2d0*x(1)
-
 
       
 c Check that xii is in the allowed range
@@ -2418,7 +2421,7 @@ c local
      $     ,shybst,chybst,chybstmo,xdir(3),veckn,veckbarn ,cosphi_i_fks
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
-     $     ,sinth_mother_fks
+     $     ,sinth_mother_fks,x1
       save xjactmp
       common /virtgranny_boost/shybst,chybst,chybstmo
 c external
@@ -2480,14 +2483,16 @@ c$$$      xjac=xjac*2d0*x(2)*2d0
          write (*,*) 'Massive j_fks: should have no '/
      $        /'(soft-)collinear contribution'
          stop 1
+         xjac=xjac*2d0*x(2)*2d0
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
          write (*,*) 'Massive j_fks: should not do collinear tests'
          stop 1
+         ! do not care about jacobian
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+         xjac=xjac*2d0*x(2)*2d0
       endif
-      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
       
       call getangles(p_born_imother,
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
@@ -2594,7 +2599,7 @@ c
       if(icountevts.eq.0)then
          xi_i_fks=0d0
          isolsign=1
-         if (x(1).le.rat_xi .and. .not. softtest) xjac=xjac*2d0*x(1)/rat_xi
+         if (x(1).le.rat_xi) xjac=xjac*2d0*x(1)/rat_xi
       elseif (softtest) then
          if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
@@ -2603,6 +2608,8 @@ c
          endif
          xi_i_fks=xi_i_fks_fix
          isolsign=1
+         x1=sqrt(xi_i_fks/xinorm*rat_xi) ! compute x(1) from xi
+         if (x1.le.rat_xi) xjac=xjac*2d0*x1/rat_xi
       else
 c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
 c in xi_i_hat respectively. The parameter A is free, but it appears to be 
@@ -2936,6 +2943,7 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
 
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
+         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
          if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
@@ -2944,11 +2952,13 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
             pass=.false.
             return
          endif
+         xjac=xjac*sqrt((y_ij_fks_upp-y_ij_fks)*
+     &        (y_ij_fks_upp-y_ij_fks_low))*2d0 ! compute x(2) from y
       else
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
+         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       endif
-      if (.not. colltest) xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       
 c
 c Compute costh_i_fks
@@ -3113,13 +3123,9 @@ c$$$         stop
 c$$$      endif
 c$$$      xjac=xjac*2d0*x(1)
 
-      if(softtest)then
-        sstiny=0.d0
-      else
-        sstiny=stiny
-      endif
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
+         xjac=xjac*2d0*x(1)
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix
          if(xi_i_fks_fix.gt.xiimax)then
@@ -3127,11 +3133,12 @@ c$$$      xjac=xjac*2d0*x(1)
             pass=.false.
             return
          endif
+         xjac=xjac*2d0*sqrt((xi_i_fks-xiimin)/(xiimax-xiimin)) ! compute x(1) from xi
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
+         xjac=xjac*2d0*x(1)
       endif
-      if (.not. softtest) xjac=xjac*2d0*x(1)
 c
 c Initial state variables are different for events and counterevents. Update them here.
 c
@@ -5040,9 +5047,8 @@ c     Jacobian due to delta() of tau_born
             xjac=-33d0
             return
          endif
-      else
-         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
       endif
+      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
 
       x1bar2 = xbjrk_born(1)**2
       omx1bar2 = 1d0-x1bar2
@@ -5136,9 +5142,8 @@ c Lower bound on xi_i_fks
             xjac=-102
             return
          endif
-      else
-         xjac=xjac*2d0*x(1)
       endif
+      xjac=xjac*2d0*x(1)
 
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
@@ -5212,7 +5217,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       common/sctests/softtest,colltest
       ! y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
-      if (.not. colltest) xjac=xjac*2d0*x(2)*2d0
+      xjac=xjac*2d0*x(2)*2d0
 
       ! x_i_fks
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
@@ -5251,17 +5256,17 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       valid2=x1_2.gt.rat_xi .and. x1_2.lt.1d0
       if (valid1.and. (.not.valid2)) then
          x(1)=x1_1
-         if (.not. softtest) xjac=xjac*2*x(1)/rat_xi
+         xjac=xjac*2*x(1)/rat_xi
       elseif((.not.valid1).and.valid2) then
          x(1)=x1_2
       elseif(valid1.and.valid2) then
          if (ran2().gt.0.5d0) then
             x(1)=x1_1
-            if (.not. softtest) xjac=xjac*2*x(1)/rat_xi
+            xjac=xjac*2*x(1)/rat_xi
          else
             x(1)=x1_2
          endif
-         if (.not. softtest) xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
+         xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
       else
          write (*,*) 'No valid xi_i_fks in inverse '/
      $        /'massive final phase-space.'
@@ -5388,11 +5393,11 @@ c     Phase-space factor for (xii,yij,phii)
       call get_recoil(p_born(0,1),j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
       x(1)=sqrt(xi_i_fks/xiimax)
-      if (.not.softtest) xjac=xjac*2d0*x(1)
+      xjac=xjac*2d0*x(1)
 
 !     random number associated with y_ij_fks
       x(2)=sqrt((1d0-y_ij_fks)/2d0)
-      if (.not.colltest) xjac=xjac*2d0*x(2)*2d0
+      xjac=xjac*2d0*x(2)*2d0
 
 !     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)
