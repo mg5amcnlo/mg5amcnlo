@@ -4,6 +4,9 @@ DEBUG=
 FF=$(FC) $(FFLAGS) $(DEBUG) -std=legacy
 CPP=$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLOPTION)
 CC=$(CXX) $(CFLAGS) $(DEBUG) $(INCLOPTION)
+XDRLIB := $(shell sh -c 'tmp=$$(mktemp "$${TMPDIR:-/tmp}/mg5amc_xdr_link_test_XXXXXX" 2>/dev/null || echo "$${TMPDIR:-/tmp}/mg5amc_xdr_link_test_$$$$"); \
+	printf "int main(void){return 0;}\n" | $(CC) -x c - -o $$tmp -ltirpc >/dev/null 2>&1 && { rm -f $$tmp; echo -ltirpc; } || \
+	{ printf "int main(void){return 0;}\n" | $(CC) -x c - -o $$tmp -lnsl >/dev/null 2>&1 && { rm -f $$tmp; echo -lnsl; } || rm -f $$tmp; }')
 
 $(OBJDIR)/%.o: $(HWSDIR)/%.f
 	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
@@ -50,20 +53,20 @@ PYFILES=$(PYUTI) $(OBJDIR)/$(PYTHIAVER) $(OBJDIR)/madfks_pydriver.o $(OBJDIR)/ma
 
 
 HW_EXE_DEFAULT : $(HWFILES) $(PDFFILES)
-	$(FF) $(LDFLAGS) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 HW_EXE_PDFLIB : $(HWFILES) $(CPDFFILES) 
-	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 HW_EXE_LHAPDF : $(HWFILES) $(LPDFFILES)  
-	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 
 PY_EXE_DEFAULT : $(PYFILES) $(PDFFILES)
-	$(FF) $(LDFLAGS) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 PY_EXE_PDFLIB : $(PYFILES) $(CPDFFILES) 
-	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 PY_EXE_LHAPDF : $(PYFILES) $(LPDFFILES)  
-	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@

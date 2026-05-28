@@ -4569,12 +4569,34 @@ This implies that with decay chains:
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
-                self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)              
             else:
-                myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
                 myprocdef_unit = self.extract_process(line)
+            if gauge == 'feynman':
+                myprocdef_feyn = myprocdef
+            else:
+                self.do_set('gauge Feynman', log=False)
+                myprocdef_feyn = self.extract_process(line)
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               0 in self._curr_model.get('gauge'):
+                if gauge == 'axial':
+                    myprocdef_axial = myprocdef
+                else:
+                    self.do_set('gauge axial', log=False)
+                    myprocdef_axial = self.extract_process(line)
+            else:
+                myprocdef_axial = None
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               1 in self._curr_model.get('gauge'):
+                if gauge == 'FD':
+                    myprocdef_fd = myprocdef
+                else:
+                    self.do_set('gauge FD', log=False)
+                    myprocdef_fd = self.extract_process(line)
+            else:
+                myprocdef_fd = None
 
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
@@ -4582,6 +4604,8 @@ This implies that with decay chains:
                 logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
+                                                myprocdef_axial,
+                                                myprocdef_fd,
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
@@ -4736,7 +4760,12 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
+            gauge_labels = ['Unitary', 'Feynman']
+            if any('value_axial' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('Axial')
+            if any('value_fd' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('FD')
+            text += 'Gauge results (switching between %s gauge):\n' % '/'.join(gauge_labels)
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
