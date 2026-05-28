@@ -4429,11 +4429,26 @@ class decay_all_events_onshell(decay_all_events):
     def compile(self):
         logger.info('Compiling code')
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
+        # Per-instance suffix for the f2py-linked shared library: with the
+        # default ``PROCNAME=`` the makefile produces ``liball_2me.{so,dylib}``
+        # regardless of which madspin_me_<N> subdir we are in, and the
+        # dynamic loader on both Linux (SONAME) and macOS (LC_ID_DYLIB)
+        # caches that library by its baked-in name. So a second MadSpin
+        # call in the same process — even loading a wrapper from a fresh
+        # subdir — would still resolve to the first call's already-loaded
+        # library and report ``undefined symbol`` for any newly-added
+        # matrix element. We override PROCNAME at make time for the 2nd+
+        # call so the resulting library gets a unique SONAME /
+        # install_name and the loader keeps both copies live.
+        ms_run_id = getattr(self.mscmd, '_ms_run_id', 1)
+        make_args = ['all_matrix2py.so']
+        if ms_run_id > 1:
+            make_args.insert(0, 'PROCNAME=_ms%d' % ms_run_id)
         #my_env = os.environ.copy()
         #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me, ms_me_subdir, 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])
-        misc.compile(['all_matrix2py.so'],
+        misc.compile(make_args,
                      cwd=pjoin(self.path_me, ms_me_subdir, 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
 

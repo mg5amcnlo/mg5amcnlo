@@ -217,29 +217,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         """Load the freshly-compiled ``all_matrix2py`` extension under
         ``sp_path``.
 
-        The dynamic loader caches loaded shared libraries, so two MadSpin
-        runs in the same process must each compile and load into
-        *independent* file paths and library identities. This helper:
+        Each MadSpin run compiles its matrix elements into its own
+        ``madspin_me_<N>`` subdir, and (from the second call onwards)
+        ``decay.compile()`` overrides the makefile's ``PROCNAME`` so the
+        resulting Fortran shared library
+        (``liball<PROCNAME>_2me.{so,dylib}``) has a unique SONAME /
+        install_name. The combination of a unique wrapper path *and* a
+        unique dependent-library identity is what stops the dynamic
+        loader from returning the first call's already-loaded matrix
+        elements on the second call.
 
-        - Picks the actual loadable ``.so`` under ``sp_path`` (the
-          ``madspin_me_<N>`` subdir produced by this MadSpin instance).
-        - On macOS, dlopen caches by the dylib's *install_name*, not by
-          file path. The compiled dependency ``liball_2me.dylib`` keeps
-          the same install_name (``@rpath/liball_2me.dylib``) across
-          runs, so even from a fresh ``.so`` path the loader would
-          re-use the first run's library and matrix-element data. We
-          rewrite both the dylib's install_name and the ``.so``'s
-          ``LC_LOAD_DYLIB`` reference with ``install_name_tool`` so the
-          loader treats this run's library as distinct. (On Linux,
-          ``dlopen`` keys by file path after symlink resolution, so the
-          unique ``sp_path`` is already enough.)
-        - Loads the ``.so`` via ``importlib.util.spec_from_file_location``
-          *without* registering it in ``sys.modules`` so the next run
-          can repeat the same dance.
+        This helper just picks the loadable ``.so`` and loads it via
+        ``importlib.util.spec_from_file_location`` to bypass the
+        ``sys.modules`` cache (which would otherwise short-circuit
+        ``__import__('all_matrix2py')`` to the first call's module
+        object).
         """
         import importlib.util
         import glob
-        import subprocess as _subprocess
 
         # The actual loadable file is the cpython-tagged ``.so``; on some
         # builds the unsuffixed ``all_matrix2py.so`` is a 0-byte stub. Pick
@@ -262,20 +257,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         candidates.sort(key=os.path.getsize, reverse=True)
         so_path = candidates[0]
 
-        # macOS-only: make the dependent dylib's install_name unique per
-        # run so dlopen does not collapse our fresh copy with the first
-        # run's already-loaded library. We only need to do this from the
-        # second MadSpin call onwards.
-        if sys.platform == 'darwin' and self._ms_run_id > 1:
-            try:
-                self._uniquify_dylib_install_names(sp_path, so_path)
-            except Exception as exc:
-                logger.warning(
-                    'install_name_tool fixup failed (%s); the second '
-                    'MadSpin call may reuse the first call\'s matrix '
-                    'elements.', exc,
-                )
-
         # Load via spec_from_file_location to bypass the sys.modules cache
         # while keeping the module name as ``all_matrix2py`` (the .so's
         # PyInit_all_matrix2py init symbol is baked in at compile time).
@@ -285,59 +266,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         mymod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mymod)
         return mymod
-
-    def _uniquify_dylib_install_names(self, sp_path, so_path):
-        """Rewrite ``liball*.dylib`` install_names and the ``.so``'s
-        dependency references so they are unique per MadSpin run.
-
-        macOS' two-level namespace identifies dylibs by their
-        ``LC_ID_DYLIB`` install_name (``@rpath/liball_2me.dylib`` by
-        default for MadSpin). Two ``.so`` files at different file paths
-        but depending on dylibs with the same install_name end up sharing
-        the same in-memory library. Patching the install_name (and the
-        matching ``LC_LOAD_DYLIB`` in the ``.so``) gives each run a
-        distinct identity so the loader keeps the libraries separate.
-
-        Uses ``install_name_tool`` (always available on macOS as part of
-        the developer tools / Xcode CLT). On failure logs and lets the
-        caller decide whether to continue; the worst case is the original
-        symptom (stale ME data in the second run).
-        """
-        import subprocess as _subprocess
-        import glob
-
-        dylibs = glob.glob(pjoin(sp_path, 'liball*.dylib'))
-        if not dylibs:
-            return
-        suffix = '_ms%d' % self._ms_run_id
-        for dylib in dylibs:
-            old_basename = os.path.basename(dylib)
-            stem, ext = os.path.splitext(old_basename)
-            new_basename = '%s%s%s' % (stem, suffix, ext)
-            new_dylib = pjoin(sp_path, new_basename)
-
-            if os.path.exists(new_dylib):
-                # Already patched on a previous load; nothing to do.
-                continue
-
-            shutil.move(dylib, new_dylib)
-            # Rewrite the dylib's own install_name.
-            _subprocess.check_call([
-                'install_name_tool', '-id',
-                '@rpath/' + new_basename, new_dylib,
-            ])
-            # Rewrite every .so / dylib in this dir that references the
-            # old install_name.
-            for dependent in glob.glob(pjoin(sp_path, '*.so')) \
-                              + glob.glob(pjoin(sp_path, '*.dylib')):
-                if dependent == new_dylib:
-                    continue
-                _subprocess.call([
-                    'install_name_tool', '-change',
-                    '@rpath/' + old_basename,
-                    '@rpath/' + new_basename,
-                    dependent,
-                ])
 
     def _log_lhe_timers(self):
         if not getattr(lhe_parser, "_ENABLE_LHE_TIMERS", False):
@@ -2783,23 +2711,38 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 return out
         else:
-            sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
-            if sys.path[0] != sp_path:
-                sys.path.insert(0, sp_path)
+            # First time we see a new ``pdir`` for this MadSpin instance:
+            # load the freshly-compiled f2py extension once and cache a
+            # smatrixhel lambda per pdir. The .so / pdg2prefix only need
+            # to be loaded the first time we hit this branch — subsequent
+            # ``pdir``s reuse ``self.f2py_module`` so we don't re-trigger
+            # the spec-from-file-location load (which is fine on Linux
+            # but wasteful, and on macOS would re-walk the install_name
+            # bookkeeping every time).
+            if not hasattr(self, 'f2py_module'):
+                sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+                if sys.path[0] != sp_path:
+                    sys.path.insert(0, sp_path)
 
-            mymod = self._load_f2py_matrix_module(sp_path)
-            self.f2py_module = mymod
+                mymod = self._load_f2py_matrix_module(sp_path)
+                self.f2py_module = mymod
 
+                all_prefix = self.f2py_module.get_prefix()
+                all_pdg, all_procid = self.f2py_module.get_pdg_order()
+                self.pdg2prefix = {}
+                for i, pdg in enumerate(all_pdg):
+                    pdg = tuple([x for x in pdg if x != 0])
+                    self.pdg2prefix[tuple(pdg)] = (str(all_prefix[i].decode()).strip(), i)
 
-            all_prefix = self.f2py_module.get_prefix()
-            all_pdg, all_procid = self.f2py_module.get_pdg_order()
-            self.pdg2prefix = {}
-            for i, pdg in enumerate(all_pdg):
-                pdg = tuple([x for x in pdg if x != 0])
-                self.pdg2prefix[tuple(pdg)] = (str(all_prefix[i].decode()).strip(),i)
-
-
-
+                if self.model_init:
+                    self.model_init = False
+                    with misc.chdir(sp_path):
+                        if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
+                                os.path.exists(pjoin(self.path_me,'param_card.dat')):
+                            mymod.initialise(pjoin(self.path_me,'param_card.dat'))
+                        else:
+                            mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
+            mymod = self.f2py_module
 
             #if Rpath linking is not working the below code can be an alternative:
             #import ctypes
@@ -2810,17 +2753,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             #        break
             # ctypes.CDLL(me_library)
 
-            #mymod = getattr(mymod, 'matrix2py')
-
-            if self.model_init:
-                self.model_init = False
-                with misc.chdir(sp_path):
-                    #with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                        if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
-                                os.path.exists(pjoin(self.path_me,'param_card.dat')):
-                            mymod.initialise(pjoin(self.path_me,'param_card.dat'))
-                        else:
-                            mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
             pdg = list(orig_order[0]) + list(orig_order[1])
             self.all_f2py[pdir] = lambda *args : mymod.smatrixhel(pdg, 0, *args)
             return self.calculate_matrix_element(event)
