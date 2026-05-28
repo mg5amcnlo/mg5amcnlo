@@ -659,11 +659,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 out = self.run_onshell(line, density_method=True)
             self._log_lhe_timers()
             return out
-        elif self.options["spinmode"] in ["PA", "madspin"]:
+        elif self.options["spinmode"] == "PA":
             self.options['density_pole_approximation'] = True
             out = self.run_onshell(line, density_method=True)
             self._log_lhe_timers()
             return out
+        elif self.options["spinmode"] == "madspin":
+            # legacy MadSpin / decay-chain path: fall through to decay_all_events below
+            pass
         elif self.options["spinmode"] == "full":
             if self.options['ME_mode'] in ['auto', 'density']:
                 self.options['density_pole_approximation'] = False 
@@ -1539,6 +1542,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 mg5.exec_cmd("import model %s" % modelpath)      
             evt_decayfile = {}
             br = 1.
+            # pdg -> br_pdg for the "mixed final-state" case (events do not
+            # all share the same set of decaying particles). Filled in the
+            # else-branch below and consumed after the loop to compute the
+            # per-pdg drop probability that equalizes BRs across productions.
+            mixed_pdgs_br = {}
             for pdg, nb_needed in to_decay.items():
                 # muliply by expected effeciency of generation
                 spin = self.model.get_particle(pdg).get('spin')
@@ -1581,11 +1589,47 @@ class MadSpinInterface(extended_cmd.Cmd):
                             pwidth = totwidth
                         br *= (pwidth / totwidth)**nb_mult                      
                 else:
+                    # Mixed case: events do not all share the same final-state
+                    # particles to be decayed. We collect this pdg here and, once
+                    # the loop is done, equalize BRs via the legacy
+                    # add_loose_decay mechanism (drop events sampled to the
+                    # "fake" decay channel so the output stays unweighted).
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
-                    raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
+                    nb_gen = (int(efficiency*nb_needed) + nevents_for_max) \
+                                * self.options['decay_event_mult']
+                    evt_decayfile[pdg], pwidth = self.generate_events(
+                        pdg, nb_gen, mg5, cumul=True, output_width=True)
+                    if pwidth > 1.01*totwidth:
+                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
+                    elif pwidth > totwidth:
+                        pwidth = totwidth
+                    mixed_pdgs_br[pdg] = pwidth / totwidth
+
+        # Equalize branching ratios across mixed productions (legacy
+        # add_loose_decay mechanism): pick max_br as the global BR factor and
+        # drop, per event, with probability 1 - br_pdg / max_br so the output
+        # sample stays unweighted. The banner cross-section is corrected after
+        # the decay loop (below) once the actual number of kept events is
+        # known.
+        drop_prob_per_pdg = {}
+        if mixed_pdgs_br:
+            max_mixed_br = max(mixed_pdgs_br.values())
+            br *= max_mixed_br
+            for pdg, pdg_br in mixed_pdgs_br.items():
+                drop_prob_per_pdg[pdg] = 1.0 - pdg_br / max_mixed_br
+            if any(d > 1e-9 for d in drop_prob_per_pdg.values()):
+                logger.warning(
+                    "Mixed-pdg production processes have different total BRs "
+                    "(per-pdg BR=%s, max=%g). Equalizing by dropping events; "
+                    "the output sample stays unweighted and the banner "
+                    "cross-section reflects the effective BR.",
+                    {k: '%.4g' % v for k, v in mixed_pdgs_br.items()},
+                    max_mixed_br,
+                )
+        mixed_pdgs_set = set(drop_prob_per_pdg.keys())
 
         self.branching_ratio = br
         self.efficiency = 1
@@ -1635,6 +1679,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.efficiency =1.
         nb_try = 0
+        nb_loose_skip = 0  # events dropped to equalize BRs (fake-decay path)
         #nb_event = len(orig_lhe)
         nb_event = orig_lhe.get_banner().run_card['nevents']
 
@@ -1645,6 +1690,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                 production, counterevt = production[0], production[1:]
             if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
                 logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+
+            # BR-equalization: drop this event with probability
+            # 1 - br_pdg / max_br when this production process has a smaller
+            # total BR than the largest one in the mixed sample. Done before
+            # any matrix-element work so dropped events are cheap.
+            if drop_prob_per_pdg:
+                evt_mixed_pdgs = [p.pid for p in production
+                                  if int(p.status) == 1 and p.pid in mixed_pdgs_set]
+                if len(evt_mixed_pdgs) == 1:
+                    drop = drop_prob_per_pdg[evt_mixed_pdgs[0]]
+                    if drop > 0 and random.random() < drop:
+                        nb_loose_skip += 1
+                        continue
+                elif len(evt_mixed_pdgs) > 1:
+                    raise self.InvalidCmd(
+                        "BR equalization for events with more than one "
+                        "mixed-pdg decaying particle is not implemented yet "
+                        "(event %d has pdgs=%s). Please report this case." %
+                        (curr_event, evt_mixed_pdgs))
 
             # Per-production-event cache reused across rejection retries.
             prod_density_cached = None
@@ -1711,18 +1775,123 @@ class MadSpinInterface(extended_cmd.Cmd):
                     wgts[key] *= self.branching_ratio            
             
             output_lhe.write_events(full_evt)
-            
-        output_lhe.write('</LesHouchesEvents>\n')   
+
+        output_lhe.write('</LesHouchesEvents>\n')
         # Log unweighting efficiency (can be turned off)
-        accepted = curr_event + 1
-        eff = float(accepted) / nb_try if nb_try else 0.0
+        n_processed = curr_event + 1
+        n_written = n_processed - nb_loose_skip
+        eff = float(n_written) / nb_try if nb_try else 0.0
         logger.critical(
-            "MadSpin unweight efficiency: %.4f (%d accepted / %d trials, %.2f trials/event)",
-            eff, accepted, nb_try, (1.0 / eff if eff else float("inf"))
+            "MadSpin unweight efficiency: %.4f (%d written / %d trials, %.2f trials/event)",
+            eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
-        self.efficiency = 1 # to let me5 to write the correct number of events
+        if nb_loose_skip > 0:
+            # Rewrite the banner with the corrected cross-section so it
+            # matches the actual sum of kept-event weights. Each kept event
+            # already has wgt = orig_wgt * max_br; we need the banner to read
+            # σ * max_br * (n_written / n_processed) ≈ σ * <br>.
+            br_correction = float(n_written) / n_processed
+            self._rewrite_lhe_banner_cross(output_lhe.name, br_correction,
+                                           n_written=n_written)
+            self.branching_ratio *= br_correction
+            self.cross *= br_correction
+            self.error *= br_correction
+            logger.info(
+                "BR equalization: dropped %d/%d events (effective BR rescale = %.4g).",
+                nb_loose_skip, n_processed, br_correction,
+            )
+            # Downstream sets nb_event = int(original_nb_event * efficiency)
+            # so the kept-fraction needs to be communicated as the efficiency.
+            self.efficiency = br_correction
+        else:
+            self.efficiency = 1 # to let me5 to write the correct number of events
+        # Re-gzip the input events file (gunzipped at the start of this
+        # routine) and the decayed output, matching the legacy MadSpin path
+        # so downstream code (banners, crossx.html) finds the *.lhe.gz files
+        # it expects.
+        try:
+            output_lhe.close()
+        except Exception:
+            pass
+        try:
+            input_evt_path = self.events_file.name
+            if input_evt_path.endswith('.lhe') and os.path.exists(input_evt_path):
+                misc.gzip(input_evt_path)
+        except Exception as exc:
+            logger.warning('Could not re-gzip MadSpin input file %s: %s',
+                           getattr(self.events_file, 'name', '?'), exc)
+        try:
+            decayed_path = output_lhe.name
+            if decayed_path.endswith('.lhe') and os.path.exists(decayed_path):
+                misc.gzip(decayed_path)
+        except Exception as exc:
+            logger.warning('Could not gzip MadSpin decayed output %s: %s',
+                           output_lhe.name, exc)
         logger.info('Done so far. output written in %s' % output_lhe.name)
         logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
+
+    def _rewrite_lhe_banner_cross(self, path, ratio, n_written=None):
+        """Rewrite an already-written LHE file, multiplying every <init> line
+        cross-section / error / xmax by ``ratio`` and (optionally) replacing
+        the ``Number of Events`` entry in the MGGenerationInfo block with
+        ``n_written``. Mirrors decay_all_events.write_banner_information for
+        the PA-mode (run_onshell) code path."""
+
+        tmp_path = path + '.tmp_brfix'
+        shutil.move(path, tmp_path)
+        with open(tmp_path, 'r') as src, open(path, 'w') as dst:
+            in_init = False
+            in_mggen = False
+            for line in src:
+                stripped = line.strip()
+                lstripped = stripped.lower()
+                if lstripped.startswith('<init'):
+                    in_init = True
+                    dst.write(line)
+                    continue
+                if in_init:
+                    if lstripped.startswith('</init'):
+                        in_init = False
+                        dst.write(line)
+                        continue
+                    parts = stripped.split()
+                    if len(parts) == 4:
+                        try:
+                            xsec, xerr, xmax = (float(parts[0]), float(parts[1]), float(parts[2]))
+                            pid = int(parts[3])
+                            dst.write("   %+13.7e %+13.7e %+13.7e %i\n" %
+                                      (ratio*xsec, ratio*xerr, ratio*xmax, pid))
+                            continue
+                        except ValueError:
+                            pass
+                    dst.write(line)
+                    continue
+                # MGGenerationInfo block: update Number of Events and any
+                # ":" -separated numeric field with the BR correction ratio.
+                if lstripped.startswith('<mggenerationinfo'):
+                    in_mggen = True
+                    dst.write(line)
+                    continue
+                if in_mggen:
+                    if lstripped.startswith('</mggenerationinfo'):
+                        in_mggen = False
+                        dst.write(line)
+                        continue
+                    if 'Number of Events' in line and n_written is not None:
+                        dst.write('#  Number of Events        :       %i\n' % n_written)
+                        continue
+                    if ':' in line:
+                        head, tail = line.rsplit(':', 1)
+                        try:
+                            value = float(tail.strip())
+                            dst.write('%s : %s\n' % (head, value * ratio))
+                            continue
+                        except ValueError:
+                            pass
+                    dst.write(line)
+                    continue
+                dst.write(line)
+        os.remove(tmp_path)
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""

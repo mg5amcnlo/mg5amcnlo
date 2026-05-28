@@ -1290,13 +1290,183 @@ class TestMEfromfile(unittest.TestCase):
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
-        
+
         #check the first decayed events for energy-momentum conservation.
-        
-        
+
+
         self.assertEqual(cwd, os.getcwd())
-        
-        
+
+
+    def test_w_production_with_PA_decay(self):
+        """A run to test MadSpin PA (pole-approximation/density) mode on p p > w+ / w-.
+
+        Mirrors test_w_production_with_ms_decay but exercises the new PA path
+        through run_onshell(density_method=True). The madspin card has
+        different BRs for w+ (-> j j) vs w- (-> e- ve~) and therefore
+        exercises the BR-equalization / loose-decay branch (events with the
+        smaller-BR pdg are dropped to keep the output unweighted).
+
+        Note: density_do_reshuffle is disabled because the underlying
+        production is 1 -> 1 (p p > w+/w-) and there is no phase space for
+        the RAMBO mass-shuffle to redistribute. That is a separate concern
+        from the BR-equalization code path this test covers.
+
+        Note: the offline (decay_events / madspin_card2) leg of the legacy
+        madspin test is intentionally not mirrored here; offline madspin in
+        PA mode currently misses some matrix-element entries for mixed
+        w+/w- final states and is tracked as a separate bug.
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        set density_do_reshuffle False
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Parton-level production reference (unchanged from the madspin test).
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR case: BR equalization drops the w- -> e- ve~ events so the
+        # effective BR is ~ (sigma_w+ * BR(w+->jj) + sigma_w- * BR(w-->eve)) / sigma_tot,
+        # matching the legacy madspin result up to MC noise.
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    @unittest.expectedFailure
+    def test_w_production_with_PA_decay_inline_then_offline_known_failure(self):
+        """Known-failing acceptance test: PA-mode MadSpin run inline first
+        with one set of decay channels, then again offline via
+        ``decay_events`` with a different set of channels, on a mixed
+        w+/w- sample.
+
+        Offline PA in this sequence raises ``KeyError: (-24, 1, -2)`` in
+        ``get_pdir`` (via ``calculate_matrix_element_from_density``): the
+        cached f2py-compiled ``all_matrix2py`` from the inline run does
+        not contain the additional production+decay matrix elements needed
+        by the second card (e.g. w- > j j when the first card had
+        w- > e- ve~). The offline pass currently does not regenerate the
+        matrix-element set when reused on the same run directory.
+
+        Mirror of ``test_w_production_with_ms_decay`` (which exercises the
+        same inline+offline sequence on the legacy ``spinmode=madspin``
+        path). Kept in CI as documentation; remove the
+        ``@expectedFailure`` decorator when the underlying bug is fixed.
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        launch -i
+        decay_events run_01
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        set density_do_reshuffle False
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""set spinmode PA
+        set density_do_reshuffle False
+        decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # If/when the offline-PA matrix-element bug is fixed, these
+        # assertions should pass and the @expectedFailure decorator can be
+        # removed.
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+        self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,
+                                 target_event=1000)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
     def test_DY_onejet(self):
         """
         This test is checking that the scale in auto_dsig are correctly assigned
