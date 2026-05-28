@@ -10,6 +10,8 @@ on:
       - 'docs/**'
 #      - '.github/**'
 
+  pull_request:
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -32,6 +34,7 @@ jobs:
   test_short_cross_sqso1:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -54,6 +57,7 @@ jobs:
   test_gauge_4_e500:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -75,6 +79,7 @@ jobs:
   test_gauge_6_e500:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -96,6 +101,7 @@ jobs:
   test_gauge_6_e90:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -118,6 +124,7 @@ jobs:
   test_short_cross_pol:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -140,6 +147,7 @@ jobs:
   test_short_cross_sm1:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -162,6 +170,7 @@ jobs:
   test_short_ppgogo_amcatnlo_nlo:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -183,6 +192,7 @@ jobs:
   test_short_softcol_nlo:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
