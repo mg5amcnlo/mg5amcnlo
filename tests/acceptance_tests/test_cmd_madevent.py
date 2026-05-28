@@ -1300,16 +1300,12 @@ class TestMEfromfile(unittest.TestCase):
     def test_w_production_with_PA_decay(self):
         """A run to test MadSpin PA (pole-approximation/density) mode on p p > w+ / w-.
 
-        Mirrors test_w_production_with_ms_decay but exercises the new PA path
-        through run_onshell(density_method=True). The madspin card has
-        different BRs for w+ (-> j j) vs w- (-> e- ve~) and therefore
-        exercises the BR-equalization / loose-decay branch (events with the
-        smaller-BR pdg are dropped to keep the output unweighted).
-
-        Note: the offline (decay_events / madspin_card2) leg of the legacy
-        madspin test is intentionally not mirrored here; offline madspin in
-        PA mode currently misses some matrix-element entries for mixed
-        w+/w- final states and is tracked as a separate bug.
+        Inline-only counterpart of test_w_production_with_PA_decay_inline_then_offline.
+        Exercises the new PA path through run_onshell(density_method=True).
+        The madspin card has different BRs for w+ (-> j j) vs w- (-> e- ve~)
+        and therefore exercises the BR-equalization / loose-decay branch
+        (events with the smaller-BR pdg are dropped to keep the output
+        unweighted).
         """
 
         cwd = os.getcwd()
@@ -1371,25 +1367,24 @@ class TestMEfromfile(unittest.TestCase):
         self.assertEqual(cwd, os.getcwd())
 
 
-    @unittest.expectedFailure
-    def test_w_production_with_PA_decay_inline_then_offline_known_failure(self):
-        """Known-failing acceptance test: PA-mode MadSpin run inline first
-        with one set of decay channels, then again offline via
-        ``decay_events`` with a different set of channels, on a mixed
-        w+/w- sample.
+    def test_w_production_with_PA_decay_inline_then_offline(self):
+        """PA-mode MadSpin run inline first with one set of decay channels,
+        then again offline via ``decay_events`` with a different set of
+        channels, on a mixed w+/w- sample.
 
-        Offline PA in this sequence raises ``KeyError: (-24, 1, -2)`` in
-        ``get_pdir`` (via ``calculate_matrix_element_from_density``): the
-        cached f2py-compiled ``all_matrix2py`` from the inline run does
-        not contain the additional production+decay matrix elements needed
-        by the second card (e.g. w- > j j when the first card had
-        w- > e- ve~). The offline pass currently does not regenerate the
-        matrix-element set when reused on the same run directory.
+        Mirrors ``test_w_production_with_ms_decay`` (same inline+offline
+        sequence on the legacy ``spinmode=madspin`` path).
 
-        Mirror of ``test_w_production_with_ms_decay`` (which exercises the
-        same inline+offline sequence on the legacy ``spinmode=madspin``
-        path). Kept in CI as documentation; remove the
-        ``@expectedFailure`` decorator when the underlying bug is fixed.
+        Used to raise ``KeyError: (-24, 1, -2)`` in ``get_pdir`` because
+        every MadSpin instance compiled its matrix elements to the same
+        ``madspin_me/SubProcesses/`` directory, and macOS' ``dlopen``
+        caches loaded libraries by install_name
+        (``@rpath/liball_2me.dylib``) — the second run kept reusing the
+        first run's already-loaded matrix elements regardless of what was
+        on disk. Fixed by giving each MadSpinInterface instance a unique
+        ``madspin_me_<N>`` output subdir and patching the dylib's
+        install_name with ``install_name_tool`` so each run gets a fresh
+        in-memory library.
         """
 
         cwd = os.getcwd()
@@ -1447,12 +1442,11 @@ class TestMEfromfile(unittest.TestCase):
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)
 
-        # If/when the offline-PA matrix-element bug is fixed, these
-        # assertions should pass and the @expectedFailure decorator can be
-        # removed.
         self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR card: BR equalization drops part of the w- -> e- ve~ events.
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
                                  target_event=666, delta_event=80)
+        # Identical-BR card: no drops.
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,
                                  target_event=1000)
 

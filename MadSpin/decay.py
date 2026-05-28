@@ -4229,10 +4229,14 @@ class decay_all_events_onshell(decay_all_events):
         
         # 0. clean previous run ------------------------------------------------
         path_me = self.path_me
+        # Each MadSpinInterface instance owns its own ME output subdirectory
+        # (so dlopen cannot return a cached library handle across runs in
+        # the same process — see MadSpinInterface._ms_run_counter).
+        ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         try:
-            shutil.rmtree(pjoin(path_me,'madspin_me'))
-        except Exception: 
-            pass       
+            shutil.rmtree(pjoin(path_me, ms_me_subdir))
+        except Exception:
+            pass
         
         # 1. compute the partial width------------------------------------------
         #self.get_branching_ratio()
@@ -4299,16 +4303,16 @@ class decay_all_events_onshell(decay_all_events):
         # remove decay with 0 branching ratio.
         #mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        commandline = 'output standalone %s --prefix=int' % pjoin(path_me,'madspin_me')
+        commandline = 'output standalone %s --prefix=int' % pjoin(path_me, ms_me_subdir)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
-        logger.info('Done %.4g' % (time.time()-start))  
+        logger.info('Done %.4g' % (time.time()-start))
         self.all_me = {}
         # store information about matrix element
         for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
             me_string = matrix_element.get('processes')[0].shell_string()
-            for me in matrix_element.get('processes'):   
-                dirpath = pjoin(path_me,'madspin_me', 'SubProcesses', "P%s" % me_string)
+            for me in matrix_element.get('processes'):
+                dirpath = pjoin(path_me, ms_me_subdir, 'SubProcesses', "P%s" % me_string)
                 # get the orignal order:
                 initial = []
                 final = [l.get('id') for l in me.get_legs_with_decays()\
@@ -4424,11 +4428,13 @@ class decay_all_events_onshell(decay_all_events):
 
     def compile(self):
         logger.info('Compiling code')
+        ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         #my_env = os.environ.copy()
         #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
-        misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
-                     nb_core=self.mgcmd.options['nb_core'])        
-        misc.compile(['all_matrix2py.so'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
+        misc.compile(cwd=pjoin(self.path_me, ms_me_subdir, 'Source'),
+                     nb_core=self.mgcmd.options['nb_core'])
+        misc.compile(['all_matrix2py.so'],
+                     cwd=pjoin(self.path_me, ms_me_subdir, 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
 
     def save_to_file(self, *args):
