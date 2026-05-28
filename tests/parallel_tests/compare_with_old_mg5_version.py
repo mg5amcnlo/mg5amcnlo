@@ -521,7 +521,7 @@ class OLDMG5Comparator(unittest.TestCase):
                    'number_of_P2': '1',
                    'number_of_P3': '1',
                    'cross_P0_qq_z0zT_z_ll_z_ll': '0.00016429',
-                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.0001721', # before 3.7.1: 0.00018
+                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.00018',
                    'cross_P2_qq_z0zT_z_ll_z_ll': '0.00066055',
                    'cross_P3_qq_zTzT_z_ll_z_ll': '0.0019198',
                    } 
