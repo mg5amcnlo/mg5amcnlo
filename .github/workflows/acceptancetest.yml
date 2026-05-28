@@ -1704,9 +1704,6 @@ jobs:
       - name: test one of the test test_raise_invalid_path_hwpp
         run: |
             cd $GITHUB_WORKSPACE
-            echo "install lhapdf6" > cmd
-            ./bin/mg5_aMC cmd
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/lib/
             ./tests/test_manager.py test_raise_invalid_path_hwpp -pA -t0 -l INFO
 
 
@@ -1863,16 +1860,13 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_tt_ewsudakov
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_ttbar_ewsudakov -pA -t0 -l INFO
 
   acceptancetest_heft:
