@@ -668,6 +668,29 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], True)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
+    def test_hidden_refine_event_reuse_persistence(self):
+        run_card = bannermod.RunCard()
+        self.assertNotIn('keep_previous_refine_events', run_card.user_set)
+
+        hidden = io.StringIO()
+        run_card.write(hidden)
+        self.assertNotIn('keep_previous_refine_events', hidden.getvalue())
+
+        run_card['keep_previous_refine_events'] = True
+        hidden = io.StringIO()
+        run_card.write(hidden)
+        self.assertNotIn('keep_previous_refine_events', hidden.getvalue())
+
+        run_card.user_set.add('keep_previous_refine_events')
+        visible = io.StringIO()
+        run_card.write(visible)
+        self.assertIn('keep_previous_refine_events', visible.getvalue())
+        self.assertIn('True', visible.getvalue())
+
+        reread = bannermod.RunCard(visible.getvalue())
+        self.assertTrue(reread['keep_previous_refine_events'])
+        self.assertIn('keep_previous_refine_events', reread.user_set)
+
 
         run_card.set('lpp1', 1, user=True)
         run_card.set('pdlabel', 'none', user=True)
@@ -1312,4 +1335,3 @@ class TestMadLoopParam(unittest.TestCase):
         for key, value in new.items():
             if key != 'CTLoopLibrary':
                 self.assertEqual(value, param2[key])
-

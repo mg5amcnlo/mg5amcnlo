@@ -1002,6 +1002,54 @@ class gen_ximprove(object):
     def format_variable(*args):
         return bannermod.ConfigFile.format_variable(*args)
 
+    def _reuse_previous_refine_events(self):
+        """Return whether previous refine iterations should be reused."""
+
+        if not hasattr(self, 'run_card') or \
+                'keep_previous_refine_events' not in self.run_card:
+            return isinstance(self, gen_ximprove_share)
+
+        if 'keep_previous_refine_events' in getattr(self.run_card, 'user_set', set()):
+            return self.format_variable(
+                self.run_card['keep_previous_refine_events'], bool)
+
+        return isinstance(self, gen_ximprove_share)
+
+    def _estimate_refine_iteration_events(self, needed_event, iteration_nevents,
+                                          one_iter_nb_event, current_maxwgt,
+                                          old_nunwgt=0, old_maxwgt=0):
+        """Estimate the kept events after deciding whether to reuse old ones."""
+
+        iteration_nevents = max(int(iteration_nevents), 1)
+        one_iter_nb_event = max(float(one_iter_nb_event), 1.0)
+        current_maxwgt = float(current_maxwgt)
+        old_nunwgt = float(old_nunwgt)
+        old_maxwgt = float(old_maxwgt)
+
+        maxwgt = max(current_maxwgt, old_maxwgt)
+        if maxwgt:
+            new_evt = one_iter_nb_event * current_maxwgt / maxwgt
+            nunwgt = old_nunwgt * old_maxwgt / maxwgt
+        else:
+            new_evt = one_iter_nb_event
+            nunwgt = old_nunwgt
+        nunwgt += new_evt
+        efficiency = new_evt / iteration_nevents
+        drop_previous_iteration = False
+
+        if old_nunwgt and efficiency:
+            n_target_one_iter = (needed_event - one_iter_nb_event) / \
+                (one_iter_nb_event / iteration_nevents)
+            n_target_combined = (needed_event - nunwgt) / efficiency
+            if n_target_one_iter < n_target_combined:
+                drop_previous_iteration = True
+                nunwgt = one_iter_nb_event
+                maxwgt = current_maxwgt
+                new_evt = one_iter_nb_event
+                efficiency = one_iter_nb_event / iteration_nevents
+
+        return nunwgt, maxwgt, new_evt, efficiency, drop_previous_iteration
+
 
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
@@ -1313,6 +1361,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'precision': -goal_lum/nb_split,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    'target_event': needed_event,
                     'grid_refinment' : 0,    #no refinment of the grid
                     'base_directory': '',   #should be change in splitted job if want to keep the grid
                     'packet': packet, 
@@ -1515,6 +1564,39 @@ class gen_ximprove_v4(gen_ximprove):
         
         return Presults.xsec, Presults.xerru          
 
+    def combine_refine_iterations(self, pwd, result_path, needed_event):
+        """Merge or discard the previous iteration according to max-weight."""
+
+        previous = pjoin(pwd, 'events.lhe.previous')
+        current = pjoin(pwd, 'events.lhe')
+        if not os.path.exists(previous):
+            return
+
+        old_lhe = lhe_parser.EventFile(previous)
+        old_nunwgt = old_lhe.unweight(None, trunc_error=0.005, log_level=0)
+        old_maxwgt = old_lhe.max_wgt
+
+        result = sum_html.OneResult((os.path.basename(os.path.dirname(pwd)),
+                                     os.path.basename(pwd)[1:]))
+        result.read_results(result_path)
+        nunwgt, maxwgt, _, efficiency, drop_previous_iteration = \
+            self._estimate_refine_iteration_events(
+                needed_event, result.nevents, result.nunwgt, result.maxwgt,
+                old_nunwgt, old_maxwgt)
+
+        if drop_previous_iteration:
+            os.remove(previous)
+        else:
+            files.put_at_end(current, previous)
+            os.remove(previous)
+
+        result.nunwgt = int(nunwgt)
+        result.maxwgt = maxwgt
+        result.wgt = maxwgt
+        result.nw = int(nunwgt / efficiency) if efficiency else 0
+        result.nevents = result.nunwgt
+        result.luminosity = result.nunwgt / result.xsec if result.xsec else 0
+        result.write_results_dat(result_path)
 
 
 
@@ -1667,42 +1749,35 @@ class gen_ximprove_share(gen_ximprove, gensym):
             if needed_event > self.gen_events_security * self.err_goal:
                 needed_event = int(self.gen_events_security * self.err_goal)
         
-        if (Pdir, G) in self.generated_events:
+        reuse_previous = self._reuse_previous_refine_events()
+        if reuse_previous and (Pdir, G) in self.generated_events:
             old_nunwgt, old_maxwgt = self.generated_events[(Pdir, G)]
         else:
             old_nunwgt, old_maxwgt = 0, 0
         
-        if old_nunwgt == 0 and os.path.exists(pjoin(Pdir,"G%s" % G, "events.lhe")):
+        if reuse_previous and old_nunwgt == 0 and \
+                os.path.exists(pjoin(Pdir,"G%s" % G, "events.lhe")):
             # possible for second refine.
             lhe = lhe_parser.EventFile(pjoin(Pdir,"G%s" % G, "events.lhe"))
             old_nunwgt = lhe.unweight(None, trunc_error=0.005, log_level=0)
             old_maxwgt = lhe.max_wgt
-            
-              
-
-        maxwgt = max(grid_calculator.get_max_wgt(), old_maxwgt)
-        new_evt = grid_calculator.get_nunwgt(maxwgt)
-        efficiency = new_evt / sum([R.nevents for R in grid_calculator.results])
-        nunwgt = old_nunwgt * old_maxwgt / maxwgt
-        nunwgt += new_evt
+             
+               
 
         # check the number of event for this iteration alone
         one_iter_nb_event = max(grid_calculator.get_nunwgt(),1)
-        drop_previous_iteration = False
-        # compare the number of events to generate if we discard the previous iteration
-        n_target_one_iter = (needed_event-one_iter_nb_event) / ( one_iter_nb_event/ sum([R.nevents for R in grid_calculator.results])) 
-        n_target_combined = (needed_event-nunwgt) / efficiency
-        if n_target_one_iter < n_target_combined:
-            # the last iteration alone has more event that the combine iteration.
-            # it is therefore interesting to drop previous iteration.          
-            drop_previous_iteration = True
-            nunwgt = one_iter_nb_event
-            maxwgt = grid_calculator.get_max_wgt()
-            new_evt = nunwgt
-            efficiency = ( one_iter_nb_event/ sum([R.nevents for R in grid_calculator.results])) 
-            
+        current_maxwgt = grid_calculator.get_max_wgt()
+        nunwgt, maxwgt, new_evt, efficiency, drop_previous_iteration = \
+            self._estimate_refine_iteration_events(
+                needed_event,
+                sum([R.nevents for R in grid_calculator.results]),
+                one_iter_nb_event,
+                current_maxwgt,
+                old_nunwgt if reuse_previous else 0,
+                old_maxwgt if reuse_previous else 0)
+             
         try:
-            if drop_previous_iteration:
+            if drop_previous_iteration or not reuse_previous:
                 raise IOError
             output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
         except IOError:
@@ -1956,6 +2031,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'miniter': self.min_iter,
                     'precision': -goal_lum/nb_split, # -1*int(needed_event)/C.get('axsec'),
                     'requested_event': needed_event,
+                    'target_event': needed_event,
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
                     'grid_refinment' : 0,    #no refinment of the grid
@@ -2065,8 +2141,16 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                 # run the code
                 cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
                 pwd = pjoin(pwd, 'G%s'%G)
-                # concatanate with old events file
-                files.put_at_end(pjoin(pwd, 'events.lhe'),pjoin(pwd, 'events.lhe.previous'))
+                result_path = pjoin(pwd, 'results.dat')
+                if self._reuse_previous_refine_events():
+                    self.combine_refine_iterations(
+                        pwd, result_path,
+                        j.get('target_event', j['requested_event']))
+                else:
+                    # concatanate with old events file
+                    files.put_at_end(pjoin(pwd, 'events.lhe'),
+                                     pjoin(pwd, 'events.lhe.previous'))
+                    os.remove(pjoin(pwd, 'events.lhe.previous'))
 
             return self.check_events(goal_lum, to_refine, new_jobs, Sdir)
                                  
@@ -2074,4 +2158,3 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         
 
         
-

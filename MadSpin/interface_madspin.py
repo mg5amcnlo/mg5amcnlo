@@ -1352,6 +1352,16 @@ class MadSpinInterface(extended_cmd.Cmd):
            cumul allow to merge all the definition in one run (add process)
                  to generate events according to cross-section
         """
+        def configure_decay_run_card(run_card):
+            run_card["keep_unweight_until_iteration_end"] = (
+                os.environ.get('MS_KEEP_UNWEIGHT', '1') != '0'
+            )
+            run_card.user_set.add("keep_unweight_until_iteration_end")
+            run_card["keep_previous_refine_events"] = (
+                os.environ.get('MS_KEEP_PREVIOUS_REFINE_EVENTS', '1') != '0'
+            )
+            run_card.user_set.add("keep_previous_refine_events")
+
         if not hasattr(self, 'me_int'):
             self.me_int = {}
             
@@ -1417,14 +1427,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     run_card['gridpack'] = True
                     run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
-                    # Mirror the keep_unweight_until_iteration_end knob from
-                    # the inline path below. Env-var override
-                    # MS_KEEP_UNWEIGHT=0 disables it for benchmarking;
-                    # default ON.
-                    run_card["keep_unweight_until_iteration_end"] = (
-                        os.environ.get('MS_KEEP_UNWEIGHT', '1') != '0'
-                    )
-                    run_card.user_set.add("keep_unweight_until_iteration_end")
+                    configure_decay_run_card(run_card)
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
@@ -1474,19 +1477,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
                 run_card["nevents"] = int(1.2*nb_event)
-                # Hidden knob A (keep_unweight_until_iteration_end): harvest
-                # every accepted event the in-flight iteration produces
-                # instead of exiting the moment we reach 0.96*target. The
-                # env-var override MS_KEEP_UNWEIGHT=0 disables it for
-                # benchmarking; default ON.
-                run_card["keep_unweight_until_iteration_end"] = (
-                    os.environ.get('MS_KEEP_UNWEIGHT', '1') != '0'
-                )
-                # Mark as user-set so RunCard.write persists it (default
-                # RunCard.write skips hidden params unless they're in
-                # user_set; bare run_card[X]=Y assignment via __setitem__
-                # does not flip that bit).
-                run_card.user_set.add("keep_unweight_until_iteration_end")
+                configure_decay_run_card(run_card)
                 # Handle the banner of the output file
                 if not self.seed:
                     self.seed = random.randint(0, int(30081*30081))

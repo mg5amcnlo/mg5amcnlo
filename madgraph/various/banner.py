@@ -4352,6 +4352,13 @@ class RunCardLO(RunCard):
                        "iteration runs to completion and every event it "
                        "produces is kept. Used by MadSpin to get the most "
                        "out of the raw decay sample it already generated.")
+        self.add_param("keep_previous_refine_events", False,
+                       include=False, hidden=True,
+                       comment="Python-only knob: when True, refine keeps the "
+                       "previous iteration weighted events when the updated "
+                       "max-weight estimate still makes them worthwhile. "
+                       "Disabled by default for standard madevent runs and "
+                       "enabled by MadSpin for decay-event generation.")
         # The knob above is hidden+include=False (Python-only, not in the
         # Fortran .inc). MadSpin sets it on the temporary decay run_card
         # and is responsible for adding it to ``user_set`` so the write
