@@ -4340,23 +4340,6 @@ class RunCardLO(RunCard):
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
-        # Hidden knob set by MadSpin on the temporary run_card it writes for
-        # decay-event generation -- not relevant to standalone madevent users
-        # so kept hidden and not passed to Fortran (include=False). See
-        # MadSpin/interface_madspin.py:generate_events.
-        self.add_param("keep_unweight_until_iteration_end", False,
-                       include=False, hidden=True,
-                       comment="Python-only knob: when True, gen_ximprove "
-                       "does not exit early once the requested number of "
-                       "unweighted events has been reached; the current "
-                       "iteration runs to completion and every event it "
-                       "produces is kept. Used by MadSpin to get the most "
-                       "out of the raw decay sample it already generated.")
-        # The knob above is hidden+include=False (Python-only, not in the
-        # Fortran .inc). MadSpin sets it on the temporary decay run_card
-        # and is responsible for adding it to ``user_set`` so the write
-        # step actually persists it to run_card.dat -- otherwise madevent
-        # reading the card would see only the default.
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
                        shortcut={'p':1,"p~":-1,'e-':3,'e+':-3,'mu-':4,'mu+':-4, 'no':0},
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
