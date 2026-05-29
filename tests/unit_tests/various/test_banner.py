@@ -668,6 +668,27 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], True)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
+        run_card.set('lpp1', 1, user=True)
+        run_card.set('pdlabel', 'none', user=True)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            run_card.check_validity()
+        run_card.set('pdlabel', 'nn23lo1', user=True)
+        self.assertEqual(run_card['pdlabel'], 'nn23lo1')
+        run_card.check_validity()
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+        # check that for elastisc a a collision we do  not force to use fixed_fac_scale1/2
+        run_card.set('lpp1', 2, user=True)
+        run_card.set('lpp2', 2, user=True)
+        #with self.assertRaises(bannermod.InvalidRunCard):
+        run_card.check_validity()
+        run_card.set('fixed_fac_scale1', False, user=True)
+        run_card.set('fixed_fac_scale2', False, user=True)
+        run_card.check_validity()  # no crashing anymore
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+
     def test_hidden_refine_event_reuse_persistence(self):
         run_card = bannermod.RunCard()
         self.assertNotIn('keep_previous_refine_events', run_card.user_set)
@@ -690,28 +711,6 @@ class TestRunCard(unittest.TestCase):
         reread = bannermod.RunCard(visible.getvalue())
         self.assertTrue(reread['keep_previous_refine_events'])
         self.assertIn('keep_previous_refine_events', reread.user_set)
-
-
-        run_card.set('lpp1', 1, user=True)
-        run_card.set('pdlabel', 'none', user=True)
-        with self.assertRaises(bannermod.InvalidRunCard):
-            run_card.check_validity()
-        run_card.set('pdlabel', 'nn23lo1', user=True)
-        self.assertEqual(run_card['pdlabel'], 'nn23lo1')
-        run_card.check_validity()
-        self.assertEqual(run_card['fixed_fac_scale1'], False)
-        self.assertEqual(run_card['fixed_fac_scale2'], False)
-
-        # check that for elastisc a a collision we do  not force to use fixed_fac_scale1/2
-        run_card.set('lpp1', 2, user=True)
-        run_card.set('lpp2', 2, user=True)
-        #with self.assertRaises(bannermod.InvalidRunCard):
-        run_card.check_validity()
-        run_card.set('fixed_fac_scale1', False, user=True)
-        run_card.set('fixed_fac_scale2', False, user=True)
-        run_card.check_validity()  # no crashing anymore
-        self.assertEqual(run_card['fixed_fac_scale1'], False)
-        self.assertEqual(run_card['fixed_fac_scale2'], False)
 
     def test_guess_entry_fromname(self):
         """ check that the function guess_entry_fromname works as expected

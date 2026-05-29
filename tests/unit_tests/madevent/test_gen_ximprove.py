@@ -24,6 +24,7 @@ import madgraph.various.banner as bannermod
 class DummyRefine(object):
 
     format_variable = staticmethod(bannermod.ConfigFile.format_variable)
+    refine_efficiency_floor = gen_ximprove.gen_ximprove.refine_efficiency_floor
 
 
 class TestGenXImprove(unittest.TestCase):

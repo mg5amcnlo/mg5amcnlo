@@ -985,7 +985,6 @@ For offline investigation, the problematic discarded events are stored in:
         
 class gen_ximprove(object):  
     
-    
     # some hardcoded value which impact the generation
     gen_events_security = 1.2 # multiply the number of requested event by this number for security
     combining_job = 0         # allow to run multiple channel in sequence
@@ -996,6 +995,8 @@ class gen_ximprove(object):
     min_iter = 3    
     max_iter = 9
     keep_grid_for_refine = False        # only apply if needed to split the job
+    refine_efficiency_floor = 1e-12
+    refine_truncation_error = 0.005
 
     #convenient shortcut for the formatting of variable
     @ staticmethod
@@ -1037,7 +1038,7 @@ class gen_ximprove(object):
         efficiency = new_evt / iteration_nevents
         drop_previous_iteration = False
 
-        if old_nunwgt and efficiency:
+        if old_nunwgt and efficiency > self.refine_efficiency_floor:
             n_target_one_iter = (needed_event - one_iter_nb_event) / \
                 (one_iter_nb_event / iteration_nevents)
             n_target_combined = (needed_event - nunwgt) / efficiency
@@ -1573,7 +1574,7 @@ class gen_ximprove_v4(gen_ximprove):
             return
 
         old_lhe = lhe_parser.EventFile(previous)
-        old_nunwgt = old_lhe.unweight(None, trunc_error=0.005, log_level=0)
+        old_nunwgt = old_lhe.unweight(None, trunc_error=self.refine_truncation_error, log_level=0)
         old_maxwgt = old_lhe.max_wgt
 
         result = sum_html.OneResult((os.path.basename(os.path.dirname(pwd)),
@@ -1593,7 +1594,8 @@ class gen_ximprove_v4(gen_ximprove):
         result.nunwgt = int(nunwgt)
         result.maxwgt = maxwgt
         result.wgt = maxwgt
-        result.nw = int(nunwgt / efficiency) if efficiency else 0
+        if efficiency > self.refine_efficiency_floor:
+            result.nw = int(nunwgt / efficiency)
         result.nevents = result.nunwgt
         result.luminosity = result.nunwgt / result.xsec if result.xsec else 0
         result.write_results_dat(result_path)
@@ -1759,7 +1761,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
                 os.path.exists(pjoin(Pdir,"G%s" % G, "events.lhe")):
             # possible for second refine.
             lhe = lhe_parser.EventFile(pjoin(Pdir,"G%s" % G, "events.lhe"))
-            old_nunwgt = lhe.unweight(None, trunc_error=0.005, log_level=0)
+            old_nunwgt = lhe.unweight(None, trunc_error=self.refine_truncation_error, log_level=0)
             old_maxwgt = lhe.max_wgt
              
                
@@ -2150,7 +2152,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     # concatanate with old events file
                     files.put_at_end(pjoin(pwd, 'events.lhe'),
                                      pjoin(pwd, 'events.lhe.previous'))
-                    os.remove(pjoin(pwd, 'events.lhe.previous'))
+                    previous = pjoin(pwd, 'events.lhe.previous')
+                    if os.path.exists(previous):
+                        os.remove(previous)
 
             return self.check_events(goal_lum, to_refine, new_jobs, Sdir)
                                  
