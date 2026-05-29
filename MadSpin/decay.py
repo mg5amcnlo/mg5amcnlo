@@ -2123,6 +2123,7 @@ class decay_all_events(object):
         self.mscmd.update_status('MadSpin: Estimate the maximum weight')
         # Estimation of the maximum weight
         #=================================
+        time_max_weight = time.time()
         if max_weight_arg>0:
             for key in self.all_ME:
                 for mode in self.all_ME['decays']:
@@ -2131,7 +2132,8 @@ class decay_all_events(object):
             logger.info("not needed in helicity mode")
         else:
             #self.get_max_weight_from_1toN()
-            self.get_max_weight_from_event(decay_mapping)  
+            self.get_max_weight_from_event(decay_mapping)
+        logger.critical(f"Time for max-weight estimation: {time.time()-time_max_weight:.2f} sec")
         
         # add probability of not writting events (for multi production with 
         # different decay

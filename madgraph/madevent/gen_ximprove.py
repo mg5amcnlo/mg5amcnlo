@@ -1034,13 +1034,13 @@ class gen_ximprove(object):
         self.run_card = cmd.run_card
         run_card = self.run_card
         self.me_dir = cmd.me_dir
-        
+
         #extract from the run_card the information that we need.
         self.gridpack = run_card['gridpack']
         self.nhel = run_card['nhel']
         if "nhel_refine" in run_card:
             self.nhel = run_card["nhel_refine"]
-        
+
         if self.run_card['refine_evt_by_job'] != -1:
             self.max_request_event = run_card['refine_evt_by_job']
             
@@ -1723,7 +1723,17 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
         # misc.sprint("Adding %s event to %s. Currently at %s" % (new_evt, G, nunwgt))
         # check what to do
-        if nunwgt >= int(0.96*needed_event)+1: # 0.96*1.15=1.10 =real security
+        # MadSpin's hidden "keep_unweight_until_iteration_end" knob disables
+        # the early-exit on having found enough events. Once True we only
+        # exit when step >= max_iter, so the iteration already in flight runs
+        # to completion and we keep every event the raw sample could yield --
+        # the cost is already sunk, so we may as well harvest it.
+        keep_going = False
+        if hasattr(self, 'run_card') and \
+                'keep_unweight_until_iteration_end' in self.run_card:
+            keep_going = self.format_variable(
+                self.run_card['keep_unweight_until_iteration_end'], bool)
+        if not keep_going and nunwgt >= int(0.96*needed_event)+1: # 0.96*1.15=1.10 =real security
             # We did it.
             logger.info("found enough event for %s/G%s" % (os.path.basename(Pdir), G))
             self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
