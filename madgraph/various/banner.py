@@ -4337,6 +4337,10 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
+        self.add_param("allow_event_overshoot", False, include=False,
+                       comment="Python-only final unweighting option. If True, "
+                       "keep all accepted events from the last unweighting pass "
+                       "instead of capping output to nevents.")
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")

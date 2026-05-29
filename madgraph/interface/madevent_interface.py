@@ -3832,7 +3832,8 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         
-        get_wgt = lambda event: event.wgt            
+        get_wgt = lambda event: event.wgt
+        allow_event_overshoot = self.run_card['allow_event_overshoot']
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
         
@@ -3930,6 +3931,7 @@ Beware that this can be dangerous for local multicore runs.""")
             start_unweight= time.perf_counter()
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                          allow_event_overshoot=allow_event_overshoot,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
             logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
@@ -3971,6 +3973,7 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
+                                allow_event_overshoot=allow_event_overshoot,
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                                 proc_charac=self.proc_characteristic)
                 logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
@@ -7327,7 +7330,8 @@ class GridPackCmd(MadEventCmd):
         self.banner.write(pjoin(outdir, self.run_name, 
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        get_wgt = lambda event: event.wgt            
+        get_wgt = lambda event: event.wgt
+        allow_event_overshoot = self.run_card['allow_event_overshoot']
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
         
@@ -7380,6 +7384,7 @@ class GridPackCmd(MadEventCmd):
         self.banner.add_generation_info(sum_xsec, self.nb_event)
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
+                          allow_event_overshoot=allow_event_overshoot,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
         

@@ -1353,10 +1353,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                  to generate events according to cross-section
         """
         def configure_decay_run_card(run_card):
-            run_card["keep_unweight_until_iteration_end"] = (
-                os.environ.get('MS_KEEP_UNWEIGHT', '1') != '0'
-            )
-            run_card.user_set.add("keep_unweight_until_iteration_end")
             run_card["keep_previous_refine_events"] = (
                 os.environ.get('MS_KEEP_PREVIOUS_REFINE_EVENTS', '1') != '0'
             )
