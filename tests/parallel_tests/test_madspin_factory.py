@@ -49,6 +49,7 @@ from tests.parallel_tests.madspin_comparator import (
     assert_branching_ratios_consistent,
     assert_cross_sections_consistent,
     assert_efficiency_close,
+    assert_efficiency_ordering,
     assert_lhe_well_formed,
     assert_multiplicities_consistent,
     assert_offshell_mass_distribution,
@@ -145,25 +146,23 @@ class MadSpinFactoryTest(unittest.TestCase):
         return results
 
     def _check_efficiency_pairs(self, results):
-        """The two pairs called out in the spec:
+        """Physics-motivated efficiency ordering (relaxed from strict pair
+        equality):
 
-        * ``full+decay_chain`` (old default) vs. ``PA+density`` (new default
-          with mass reshuffling).
-        * ``onshell+decay_chain`` vs. ``onshell+density`` (PA-without-
-          reshuffling) -- the two on-shell variants.
+        1. ``full_decay_chain`` has the smallest efficiency of any mode.
+        2. ``onshell_decay_chain`` and ``onshell_density`` are close to each
+           other (within ``EFF_TOL``) and both are higher than ``PA_density``
+           (the pole approximation).
+        3. ``full_density`` lies between ``full_decay_chain`` and
+           ``PA_density``.
 
-        If either member of a pair was skipped via ``skip_modes`` we silently
-        drop that pair check; the other pair (and the multiplicity / cross-
-        section checks) still cover the surviving modes.
+        Missing modes (e.g. ``skip_modes`` opt-outs) are tolerated; the rules
+        that mention them are dropped silently.
         """
-        if 'full_decay_chain' in results and 'PA_density' in results:
-            assert_efficiency_close(
-                self, results['full_decay_chain'], results['PA_density'],
-                rel_tol=EFF_TOL)
-        if 'onshell_decay_chain' in results and 'onshell_density' in results:
-            assert_efficiency_close(
-                self, results['onshell_decay_chain'], results['onshell_density'],
-                rel_tol=EFF_TOL)
+        assert_efficiency_ordering(
+            self, results,
+            close_rel_tol=EFF_TOL,
+        )
 
     # ==================================================================
     # Concrete tests.

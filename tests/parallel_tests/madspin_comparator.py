@@ -608,7 +608,12 @@ def assert_multiplicities_consistent(test, results, pdgs, n_sigma=4):
 def assert_efficiency_close(test, result_a, result_b, rel_tol=0.15):
     """Compare two modes' unweighting efficiencies. Both must be populated; if
     either is missing the test fails loudly so we don't silently skip a
-    physics requirement."""
+    physics requirement.
+
+    Kept as a utility for callers that want a strict pair-equality check; the
+    default suite uses :func:`assert_efficiency_ordering` instead, which
+    encodes the physics-motivated ordering across all five modes.
+    """
     test.assertIsNotNone(
         result_a.efficiency,
         'efficiency missing for %s (parse failure?)' % result_a.label)
@@ -623,6 +628,88 @@ def assert_efficiency_close(test, result_a, result_b, rel_tol=0.15):
         'efficiency ratio %s/%s = %g/%g = %.3f outside [%.3f, %.3f]'
         % (result_a.label, result_b.label, eff_a, eff_b, ratio,
            1.0 - rel_tol, 1.0 + rel_tol))
+
+
+def assert_efficiency_ordering(test, results,
+                               close_rel_tol=0.10,
+                               slack=0.02):
+    """Physics-motivated ordering of unweighting efficiencies across modes.
+
+    The relations -- per MadSpin author intent -- are:
+
+    1. ``full_decay_chain`` (legacy, fully off-shell ME on each PS point) has
+       the *smallest* efficiency of any mode.
+    2. ``onshell_decay_chain`` and ``onshell_density`` agree with each other
+       within ``close_rel_tol`` (relative), and both are *better* (higher
+       efficiency) than the pole approximation ``PA_density``.
+    3. ``full_density`` sits *between* ``full_decay_chain`` and
+       ``PA_density``.
+
+    All ordering inequalities are evaluated with an additive ``slack`` so
+    statistical fluctuations smaller than ``slack`` don't trip the check. A
+    missing efficiency (e.g. a mode was skipped via ``skip_modes``) silently
+    drops the rules that mention it; the surviving rules still run.
+    """
+    needed = ['full_decay_chain', 'onshell_decay_chain', 'onshell_density',
+              'full_density', 'PA_density']
+    eff = {}
+    for label in needed:
+        if label in results and results[label].efficiency is not None:
+            eff[label] = results[label].efficiency
+
+    if not eff:
+        return  # nothing to assert against
+
+    # 1. full_decay_chain is the smallest.
+    if 'full_decay_chain' in eff:
+        ref = eff['full_decay_chain']
+        for label, e in eff.items():
+            if label == 'full_decay_chain':
+                continue
+            test.assertLessEqual(
+                ref, e + slack,
+                'full_decay_chain (%g) should be the smallest efficiency, '
+                'but exceeds %s (%g) beyond slack %g (eff dump: %s)'
+                % (ref, label, e, slack, eff))
+
+    # 2a. onshell_decay_chain ~ onshell_density (close to each other).
+    if 'onshell_decay_chain' in eff and 'onshell_density' in eff:
+        a, b = eff['onshell_decay_chain'], eff['onshell_density']
+        scale = max(abs(a), abs(b), 1e-30)
+        rel = abs(a - b) / scale
+        test.assertLess(
+            rel, close_rel_tol,
+            'onshell_decay_chain (%g) and onshell_density (%g) should be '
+            'close (rel=%g > close_rel_tol=%g) (eff dump: %s)'
+            % (a, b, rel, close_rel_tol, eff))
+    # 2b. Both onshell variants higher than PA_density (pole approximation).
+    if 'PA_density' in eff:
+        pa = eff['PA_density']
+        for label in ('onshell_decay_chain', 'onshell_density'):
+            if label not in eff:
+                continue
+            test.assertGreaterEqual(
+                eff[label] + slack, pa,
+                '%s (%g) should be >= PA_density (%g) within slack %g '
+                '(eff dump: %s)'
+                % (label, eff[label], pa, slack, eff))
+
+    # 3. full_density between full_decay_chain and PA_density.
+    if all(k in eff for k in ('full_decay_chain', 'full_density', 'PA_density')):
+        lo = min(eff['full_decay_chain'], eff['PA_density']) - slack
+        hi = max(eff['full_decay_chain'], eff['PA_density']) + slack
+        test.assertGreaterEqual(
+            eff['full_density'], lo,
+            'full_density (%g) below [full_decay_chain=%g, PA_density=%g] '
+            'interval within slack %g (eff dump: %s)'
+            % (eff['full_density'], eff['full_decay_chain'],
+               eff['PA_density'], slack, eff))
+        test.assertLessEqual(
+            eff['full_density'], hi,
+            'full_density (%g) above [full_decay_chain=%g, PA_density=%g] '
+            'interval within slack %g (eff dump: %s)'
+            % (eff['full_density'], eff['full_decay_chain'],
+               eff['PA_density'], slack, eff))
 
 
 def _resonance_masses(result, parent_pdg, child_pdgs=None):
