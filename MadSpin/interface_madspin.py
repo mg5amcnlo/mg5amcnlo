@@ -1490,14 +1490,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 param_card = self.banner['slha']
                 open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                 self.seed += 1
-                time_chan = time.time()
                 me5_cmd.exec_cmd("generate_events run_01 -f")
-                logger.critical(
-                    "Time for decay channel %s (pdg=%s, branch %d): %.2f sec",
-                    name, pdg, i, time.time() - time_chan,
-                )
                 if output_width:
-                    if cumul:
+                    if cumul:    
                         width += me5_cmd.results.current['cross']
                     else:
                         width *= me5_cmd.results.current['cross']
@@ -1505,7 +1500,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     logger.critical('The number of event generated is only %s/%s. This typically indicates that you need specify cut on the decay process.',me5_cmd.results.current['nb_event'], run_card["nevents"])
                     logger.critical('We strongly suggest that you cancel/discard this run.')
                 me5_cmd.exec_cmd("exit")
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))
+                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))        
             else:
                 if not self.seed:
                     if hasattr(self, 'mother'):
