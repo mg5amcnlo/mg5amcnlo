@@ -1700,10 +1700,7 @@ class MultiEventFile(EventFile):
         else:
             proc_charac = None
 
-        enforce_event_target = bool(
-            opts.get('event_target') and not opts.get('allow_event_overshoot', False)
-        )
-        if enforce_event_target:
+        if 'event_target' in opts and opts['event_target']:
             if 'normalization' in opts:
                 if opts['normalization'] == 'sum':
                     new_wgt = sum(self.across)/opts['event_target']
