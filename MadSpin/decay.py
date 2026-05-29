@@ -3516,7 +3516,15 @@ class decay_all_events(object):
                 if nb < cut:
                     if key[0]=='full':
                         path=key[1]
-                        end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
+                        # 7 fields to match driver.f's read(*,*) of
+                        # mode, BWcut, Ecollider, temp, frame_id, beampol(1), beampol(2)
+                        # since the beampol pair was added (commit b1ae8448f).
+                        # Sending fewer numbers leaves the Fortran process blocked
+                        # in stdin read while Python blocks in stdout readline below,
+                        # deadlocking any cleanup that fires (only triggered when
+                        # len(self.calculator) > max_running_process, which happens
+                        # on processes with many decay subprocess variants -- ttbar).
+                        end_signal="5 0 0 0 0 0 0\n"  # before closing, write down the seed
                         external.stdin.write(end_signal.encode())
                         external.stdin.flush()
                         external.stdout.flush()
@@ -4183,7 +4191,9 @@ class decay_all_events(object):
             except Exception:
                 pass
             else:
-                stdin_text="5 0 0 0 0"
+                # 7 fields + newline to match driver.f's read(*,*) protocol
+                # (see comment on the analogous end_signal in loadfortran).
+                stdin_text="5 0 0 0 0 0 0\n"
                 try:
                     external.stdin.write(stdin_text)
                 except Exception:
