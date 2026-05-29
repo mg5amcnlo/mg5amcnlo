@@ -149,7 +149,8 @@ class MadSpinFactoryTest(unittest.TestCase):
         """Physics-motivated efficiency ordering (relaxed from strict pair
         equality):
 
-        1. ``full_decay_chain`` has the smallest efficiency of any mode.
+        1. (dropped on PR #292 after the 10k-event ttbar run; see
+           ``assert_efficiency_ordering`` for rationale.)
         2. ``onshell_decay_chain`` and ``onshell_density`` are close to each
            other (within ``EFF_TOL``) and both are higher than ``PA_density``
            (the pole approximation).
