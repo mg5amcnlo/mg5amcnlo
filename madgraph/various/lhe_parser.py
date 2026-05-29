@@ -816,13 +816,14 @@ class EventFile(object):
                 self.write('</eventgroup>\n')
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
-                 event_target=0, log_level=logging.INFO, normalization='average'):
+                 event_target=0, log_level=logging.INFO, normalization='average',
+                 keep_overshoot=False):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
         trunc_error allow for dynamical partial unweighting
         event_target reweight for that many event with maximal trunc_error.
-        (stop to write event when target is reached)
+        (stop to write event when target is reached but if keep_overshoot is True)
         """
         self.parsing = 'wgt_only'
 
@@ -955,7 +956,7 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                        if outputpath and (event_target == 0 or nb_keep <= event_target):
+                        if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = written_weight(max(wgt, max_wgt))
                             try:
                                 outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
@@ -968,7 +969,7 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                        if outputpath and (event_target == 0 or nb_keep <= event_target):
+                        if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
                             try:
                                 outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
@@ -988,7 +989,7 @@ class EventFile(object):
                         event.wgt = written_weight(max(wgt, max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt 
-                        if event_target ==0 or nb_keep <= event_target:
+                        if event_target ==0 or keep_overshoot or nb_keep <= event_target:
                             if outputpath:                         
                                 outfile.write(str(event))
 
@@ -997,7 +998,7 @@ class EventFile(object):
                         event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                        if outputpath and (event_target ==0 or nb_keep <= event_target):
+                        if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
                             outfile.write(str(event))
             
             if event_target and nb_keep > event_target:
@@ -1030,7 +1031,7 @@ class EventFile(object):
 #        logger.log(log_level, "Final maximum weight used for final "+\
 #                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
             
-        if event_target:
+        if event_target and not keep_overshoot:
             nb_events_unweighted = nb_keep
             nb_keep = min( event_target, nb_keep)
         else:
@@ -1717,6 +1718,8 @@ class MultiEventFile(EventFile):
         elif 'write_init' in opts and opts['write_init']:
             self.define_init_banner(0,0, proc_charac=proc_charac)
             del opts['write_init']
+
+
         force_header_only = EventFile._can_use_header_only_initialize(get_wgt)
         old_force = getattr(self, '_force_header_only_initialize', False)
         old_fast = getattr(self, '_force_fast_unweight_wgt_only', False)

@@ -4336,6 +4336,7 @@ class RunCardLO(RunCard):
         self.add_param("gridpack", False)
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
+        self.add_param("allow_overshoot_events", False, hidden=True, include=False, comment="allow to write more events than requested instead of trashing the last ones.")
         self.add_param("iseed", 0)
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
