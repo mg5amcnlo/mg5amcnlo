@@ -4337,10 +4337,6 @@ class RunCardLO(RunCard):
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
-        self.add_param("allow_event_overshoot", False, include=False,
-                       comment="Python-only final unweighting option. If True, "
-                       "keep all accepted events from the last unweighting pass "
-                       "instead of capping output to nevents.")
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
@@ -4578,6 +4574,8 @@ class RunCardLO(RunCard):
         self.add_param('issgridfile', '', hidden=True)
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
+        self.add_param('job_strategy_refine_share', False, hidden=True, include=True,
+                       comment='Enable job_strategy=2 refine/share iteration mode independently of job_strategy.')
         self.add_param('hard_survey', 0, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
         self.add_param('tmin_for_channel', -1., hidden=True, comment='limit the non-singular reach of --some-- channel of integration related to T-channel diagram')
         self.add_param("second_refine_treshold", 0.9, hidden=True, include=False, comment="set a treshold to bypass the use of a second refine. if the ratio of cross-section after survey by the one of the first refine is above the treshold, the  second refine will not be done.")

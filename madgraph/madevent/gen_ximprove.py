@@ -1065,7 +1065,10 @@ class gen_ximprove(object):
             return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
             return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
-        elif cmd.run_card["job_strategy"] == 2:
+        elif cmd.run_card["job_strategy"] == 2 or \
+                ('job_strategy_refine_share' in cmd.run_card and
+                 gen_ximprove.format_variable(
+                     cmd.run_card['job_strategy_refine_share'], bool)):
             return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         else:
             return super(gen_ximprove, cls).__new__(gen_ximprove_v4)
