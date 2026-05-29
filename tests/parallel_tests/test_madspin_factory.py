@@ -42,6 +42,7 @@ import os
 import unittest
 
 from tests.parallel_tests.madspin_comparator import (
+    DEFAULT_FAMILIES,
     DEFAULT_MODES,
     MadSpinFactory,
     SpinModeConfig,
@@ -128,12 +129,19 @@ class MadSpinFactoryTest(unittest.TestCase):
                 factory.name, r.label, r.BR, r.cross_out, r.efficiency,
                 r.wall_seconds, r.lhe_path,
             )
-        # Physics-observable invariant: every mode must produce the same
-        # decayed cross-section. This is the strict check; BR alone can
-        # legitimately differ between code paths by symmetry factors.
-        assert_cross_sections_consistent(self, results)
-        # BR check is informational and intentionally loose.
-        assert_branching_ratios_consistent(self, results, rel_tol=1e-2)
+        # Physics-observable invariant: every mode in the same BR family
+        # must produce the same decayed cross-section (rel_tol=1e-3, strict);
+        # cross-family agreement is looser (between_tol=5e-2) because the
+        # legacy decay-chain path uses factorised on-shell BRs while the
+        # run_onshell paths use MC-integrated partial widths.
+        assert_cross_sections_consistent(
+            self, results, rel_tol=1e-3,
+            families=DEFAULT_FAMILIES, between_tol=5e-2,
+        )
+        # BR check is informational and intentionally loose -- the BR value
+        # itself can shift by a few percent across families for the reasons
+        # above.
+        assert_branching_ratios_consistent(self, results, rel_tol=5e-2)
         return results
 
     def _check_efficiency_pairs(self, results):

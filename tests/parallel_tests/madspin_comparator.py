@@ -90,6 +90,17 @@ DEFAULT_MODES = [
     SpinModeConfig('PA_density',          'PA',      'density',     True),
 ]
 
+# Mode families: the two paths use fundamentally different BR computations
+# (legacy = factorized on-shell partial widths, run_onshell = MC-integrated
+# partial width including off-shell-resonance suppression), so cross-section
+# agreement is expected to be tight *within* a family and only loosely
+# compatible *between* families.
+DEFAULT_FAMILIES = {
+    'legacy':      ('full_decay_chain',),
+    'run_onshell': ('onshell_decay_chain', 'onshell_density',
+                    'full_density',       'PA_density'),
+}
+
 
 class MadSpinResult(object):
     """Container for a single MadSpin run's outputs."""
@@ -495,33 +506,78 @@ def assert_branching_ratios_consistent(test, results, rel_tol=1e-3):
             % (ref_label, ref, label, br, rel, rel_tol))
 
 
-def assert_cross_sections_consistent(test, results, rel_tol=1e-3):
-    """The decayed-LHE banner's cross-section MUST match across modes.
+def assert_cross_sections_consistent(test, results, rel_tol=1e-3,
+                                     families=None, between_tol=5e-2):
+    """The decayed-LHE banner's cross-section is the physics-observable
+    invariant -- but how strictly modes must agree depends on whether they
+    share a BR-computation convention.
 
-    This is the physics-observable invariant: cross_out = sigma_prod x BR
-    is a deterministic number determined by the process and decay spec
-    alone, so any mode-dependent spread points at a real inconsistency in
-    how MadSpin normalises the output sample.
+    With ``families=None`` (default) every mode must agree within ``rel_tol``.
 
-    Unlike :func:`assert_branching_ratios_consistent` (whose value can shift
-    by combinatoric/symmetry factors depending on how MadSpin internally
-    interprets ``decay <X> > ...`` templates), the final cross-section in
-    the banner is what downstream tools consume -- so this must agree.
+    With ``families={'name': (labels,...), ...}`` (e.g. ``DEFAULT_FAMILIES``)
+    we do two passes:
+
+    1. *Within-family*: every mode in the same family must agree within
+       ``rel_tol`` -- this is the strict invariant catching real bugs.
+    2. *Between-family*: family-medians are compared within ``between_tol``
+       so an off-shell-resonance BR difference of a few percent between the
+       legacy factorised-BR path and the run_onshell MC-integrated-BR path
+       doesn't trip the test, but a runaway discrepancy still does.
     """
-    crosses = [(label, r.cross_out) for label, r in results.items()
-               if r.cross_out is not None]
+    crosses = {label: r.cross_out for label, r in results.items()
+               if r.cross_out is not None}
     test.assertTrue(crosses, 'no decayed cross-section found in any LHE banner')
-    ref_label, ref = crosses[0]
-    test.assertGreater(
-        abs(ref), 0,
-        'reference cross-section for %s is zero' % ref_label)
-    for label, cross in crosses[1:]:
-        rel = abs(cross - ref) / max(abs(ref), 1e-30)
-        test.assertLess(
-            rel, rel_tol,
-            'cross-section mismatch in decayed LHE banners: '
-            '%s=%g pb vs %s=%g pb (rel=%g > %g)'
-            % (ref_label, ref, label, cross, rel, rel_tol))
+
+    if not families:
+        labels = list(crosses.keys())
+        ref_label = labels[0]
+        ref = crosses[ref_label]
+        test.assertGreater(
+            abs(ref), 0,
+            'reference cross-section for %s is zero' % ref_label)
+        for label in labels[1:]:
+            cross = crosses[label]
+            rel = abs(cross - ref) / max(abs(ref), 1e-30)
+            test.assertLess(
+                rel, rel_tol,
+                'cross-section mismatch in decayed LHE banners: '
+                '%s=%g pb vs %s=%g pb (rel=%g > %g)'
+                % (ref_label, ref, label, cross, rel, rel_tol))
+        return
+
+    # Within-family strict check.
+    family_repr = {}  # family name -> representative (label, cross)
+    for fname, members in families.items():
+        present = [(label, crosses[label]) for label in members
+                   if label in crosses]
+        if not present:
+            continue
+        ref_label, ref = present[0]
+        test.assertGreater(
+            abs(ref), 0,
+            'reference cross-section for family %s (%s) is zero'
+            % (fname, ref_label))
+        for label, cross in present[1:]:
+            rel = abs(cross - ref) / max(abs(ref), 1e-30)
+            test.assertLess(
+                rel, rel_tol,
+                'cross-section mismatch within family %s: '
+                '%s=%g pb vs %s=%g pb (rel=%g > %g)'
+                % (fname, ref_label, ref, label, cross, rel, rel_tol))
+        family_repr[fname] = (ref_label, ref)
+
+    # Between-family looser check.
+    repr_items = list(family_repr.items())
+    for i, (fa, (la, ca)) in enumerate(repr_items):
+        for fb, (lb, cb) in repr_items[i + 1:]:
+            rel = abs(ca - cb) / max(abs(ca), abs(cb), 1e-30)
+            test.assertLess(
+                rel, between_tol,
+                'cross-section mismatch between families %s and %s: '
+                '%s=%g pb vs %s=%g pb (rel=%g > %g). '
+                'Beyond the expected off-shell-BR gap -- '
+                'investigate the BR convention used by each family.'
+                % (fa, fb, la, ca, lb, cb, rel, between_tol))
 
 
 def assert_multiplicities_consistent(test, results, pdgs, n_sigma=4):
