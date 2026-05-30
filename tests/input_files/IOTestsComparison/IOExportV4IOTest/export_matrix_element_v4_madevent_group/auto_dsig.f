@@ -463,12 +463,13 @@ C         Select a flavor combination (need to do here for right sign)
           IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
           DSIGUU = ALL_OUT(IVEC)
           IF (IMODE.EQ.5) THEN
+            DSIGUU = DSIGUU*ALL_RWGT(IVEC)
             IF (DSIGUU.LT.1D199) THEN
               ALL_OUT(IVEC) = DSIGUU*CONV
             ELSE
               ALL_OUT(IVEC) = 0.0D0
             ENDIF
-            RETURN
+            GOTO 100
           ENDIF
 
           XBK(:) = ALL_XBK(:,IVEC)
@@ -506,6 +507,7 @@ C           Call UNWGT to unweight and store events
             CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1
      $       , SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
           ENDIF
+ 100    CONTINUE
         ENDDO
       ENDDO
 
