@@ -1418,6 +1418,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     run_card['systematics_program'] = 'False'
                     run_card['use_syst'] = False
                     run_card.__setitem__('allow_overshoot_events', True, change_userdefine=True)
+                    run_card.__setitem__('refine_evt_by_job', 5000, change_userdefine=True)
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
@@ -1466,8 +1467,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                         run_card = self.run_card 
                 else:
                     run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
-                run_card["nevents"] = int(.8*nb_event)
+                run_card["nevents"] = int(0.8*nb_event)
                 run_card.__setitem__('allow_overshoot_events', True, change_userdefine=True)
+                run_card.__setitem__('refine_evt_by_job', 5000, change_userdefine=True)
                 # Handle the banner of the output file
                 if not self.seed:
                     self.seed = random.randint(0, int(30081*30081))
