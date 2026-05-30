@@ -2427,7 +2427,11 @@ class ReweightInterface(extended_cmd.Cmd):
                              'rwgt_name': None})
         
         if keep_name:
-            self.options['rwgt_name'] = previous_options.get('rwgt_name', obj['rwgt_name'])
+            self.options['rwgt_name'] = (
+                previous_options['rwgt_name']
+                if previous_options.get('rwgt_name') is not None
+                else obj['rwgt_name']
+            )
 
 
         self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
