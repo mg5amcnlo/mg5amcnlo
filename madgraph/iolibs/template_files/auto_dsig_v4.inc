@@ -443,7 +443,11 @@ C     Select a flavor combination (need to do here for right sign)
 
 
        CALL GET_FLAVOR%(proc_id)s(IFLAV_VEC(IVEC), FLAVOR)
-       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       if (IMODE.eq.0) then
+         ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       else
+         ALL_RWGT(IVEC) = 1d0
+       endif
 
      if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))

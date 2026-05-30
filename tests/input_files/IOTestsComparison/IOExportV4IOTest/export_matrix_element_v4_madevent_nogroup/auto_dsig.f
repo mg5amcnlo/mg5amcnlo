@@ -558,7 +558,11 @@ C         Select a flavor combination (need to do here for right sign)
 
 
           CALL GET_FLAVOR(IFLAV_VEC(IVEC), FLAVOR)
-          ALL_RWGT(IVEC) = REWGT(ALL_PP(0,1,IVEC),FLAVOR,IVEC)
+          IF (IMODE.EQ.0) THEN
+            ALL_RWGT(IVEC) = REWGT(ALL_PP(0,1,IVEC),FLAVOR,IVEC)
+          ELSE
+            ALL_RWGT(IVEC) = 1D0
+          ENDIF
 
           IF(FRAME_ID.NE.6)THEN
             CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P_MULTI(0
