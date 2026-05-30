@@ -2421,15 +2421,13 @@ class ReweightInterface(extended_cmd.Cmd):
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
-        if 'rwgt_info' in self.options:
-            self.options = {'rwgt_info': self.options['rwgt_info']}
-        else: 
-            self.options = {}
+        previous_options = dict(self.options)
+        self.options = dict(previous_options)
         self.options.update({'curr_dir': os.path.realpath(os.getcwd()),
-                        'rwgt_name': None})
+                             'rwgt_name': None})
         
         if keep_name:
-            self.options['rwgt_name'] = obj['rwgt_name']
+            self.options['rwgt_name'] = previous_options.get('rwgt_name', obj['rwgt_name'])
 
 
         self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
