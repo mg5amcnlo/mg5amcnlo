@@ -414,7 +414,7 @@ def which_lib(lib):
             return lib
     else:
         locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
-           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+           ["MG5_LIBRARY_PATH", "DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
                                                   if env_path in os.environ],[])
         for path in locations:
             lib_file = os.path.join(path, lib)
@@ -2007,11 +2007,25 @@ class EasterEgg(object):
         "*                                                          *\n" + \
         "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
 
+    towel_day_banner = "*      .---------.                                         *\n" + \
+        "*      |  DON'T  |    The Guide: you're reading it.        *\n" + \
+        "*      |  PANIC  |    Type 'help' for in-line help.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*      .---------.                                         *\n" + \
+        "*      |~~~~~~~~~|    The Towel: useful for wrapping       *\n" + \
+        "*      |~ TOWEL ~|    your phase space cuts, or just       *\n" + \
+        "*      |~~~~~~~~~|    crying when your job crashes.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*         ) ) )                                            *\n" + \
+        "*        ( ( (        A cup of tea: feed its Brownian      *\n" + \
+        "*      .-------.-.    motion to The Infinite Improbability *\n" + \
+        "*      |  tea  |-'    Drive (the Monte Carlo integration)  *\n" + \
+        "*      '-------'      to obtain cross sections (probably). *\n"
 
 
-
-
-    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
+    special_banner = {(4,5): May4_banner, (25,5): towel_day_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):

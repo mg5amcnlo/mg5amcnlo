@@ -1055,6 +1055,22 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
+
+    @test_aloha.set_global(unitary=3)
+    def test_UFO_Python_helas_call_writer_fd(self):
+        """Test automatic generation of UFO helas calls in Python in FD gauge"""
+
+        python_model = helas_call_writers.PythonUFOHelasCallWriter(
+            self.mybasemodel)
+
+        result = python_model.get_matrix_element_calls(self.mymatrixelement)
+        solution = ['w[0] = vfdxxxx(p[0],zero,hel[0],-1)',
+                    'w[1] = vfdxxxx(p[1],wmas,hel[1],-1)',
+                    'w[2] = vfdxxxx(p[2],zero,hel[2],+1)',
+                    'w[3] = vfdxxxx(p[3],wmas,hel[3],+1)',
+                    'w[4] = vfdxxxx(p[4],zmas,hel[4],+1)']
+
+        self.assertEqual(solution, result[:5])
         
 
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):

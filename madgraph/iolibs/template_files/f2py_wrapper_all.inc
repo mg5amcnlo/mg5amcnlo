@@ -36,9 +36,9 @@ C     symmetric one)
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in), dimension(n_changing):: pos(n_changing)
+CF2PY integer, intent(in), dimension(*):: pos
 CF2PY integer, intent(in) :: npdg
-CF2PY integer INTENT(IN) :: N_CHANGING
+CF2PY integer, intent(in), optional, depend(pos) :: n_changing=len(pos)
 CF2PY integer, INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY integer INTENT(IN) :: N_COMB
 CF2PY double precision INTENT(IN) :: ALPHAS
@@ -67,8 +67,9 @@ C     symmetric one)
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in):: procid
+CF2PY integer, intent(in), dimension(*):: pos
 CF2PY integer, intent(in) :: npdg
-CF2PY INTENT(IN) :: N_CHANGING
+CF2PY integer, intent(in), optional, depend(pos) :: n_changing=len(pos)
 CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY INTENT(IN) :: N_COMB
       INTEGER PDGS(*)

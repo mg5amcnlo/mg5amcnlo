@@ -711,7 +711,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.me_dir = pjoin(os.getcwd(),me_dir)
             
-        self.options = options
+        self.options = dict(options)
         
         self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 

@@ -3956,7 +3956,8 @@ Beware that this can be dangerous for local multicore runs.""")
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
             logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
             misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
             
@@ -3997,7 +3998,8 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                                proc_charac=self.proc_characteristic)
+                                proc_charac=self.proc_characteristic,
+                                keep_overshoot=self.run_card['allow_overshoot_events'])
                 logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
                 misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
 
@@ -4012,6 +4014,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
                    
         self.results.add_detail('nb_event', nb_event)
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
@@ -7385,7 +7388,8 @@ class GridPackCmd(MadEventCmd):
                     else:
                         nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current.get('axsec')),self.run_card['nevents'], self.nb_event, self.gridpack_cross, sum_axsec)
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event, 
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
                     partials_info.append((pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
@@ -7406,7 +7410,8 @@ class GridPackCmd(MadEventCmd):
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
         
         
         if partials:
