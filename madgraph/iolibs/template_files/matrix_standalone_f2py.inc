@@ -49,7 +49,7 @@ CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 	  END
        
        
-      REAL*8 FUNCTION PY_%(proc_prefix)sMATRIX(P,NHEL,IC)
+      REAL*8 FUNCTION PY_%(proc_prefix)sMATRIX(P,NHEL)
 C  
 C
 C Returns amplitude squared -- no average over initial state/symmetry factor
@@ -67,12 +67,13 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
 C
 C  FUNCTIONS
 C
       real*8 %(proc_prefix)sMATRIX
-      PY_%(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX(P,NHEL,IC)
+      PY_%(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX(P,NHEL,FLAVOR)
       END
 
       SUBROUTINE PY_%(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)

@@ -1468,7 +1468,7 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
             new_helascalls_file = new_helascalls_file % helascalls_replace_dict
             helascalls_files.append(new_helascalls_file)
         # Setup the call to these HELASCALLS subroutines in loop_matrix.f
-        helascalls_calls = [ "CALL %s%s_%d(%s,NHEL,H,IC)"%\
+        helascalls_calls = [ "CALL %s%s_%d(%s,NHEL,H)"%\
               (replace_dict['proc_prefix'] ,bunch_name,a+1,momenta_array_name) \
                                           for a in range(len(helascalls_files))]
         replace_dict[entry_name]='\n'.join(helascalls_calls)

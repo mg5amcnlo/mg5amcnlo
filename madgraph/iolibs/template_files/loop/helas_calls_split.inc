@@ -1,4 +1,4 @@
-      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H)
       USE ALOHA_OBJECT
 C  
       IMPLICIT NONE
@@ -24,13 +24,15 @@ C
 C ARGUMENTS
 C
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
 	  INTEGER H
 C
 C LOCAL VARIABLES
 C
 	  INTEGER FLAVOR(NEXTERNAL)
 	  DATA FLAVOR /NEXTERNAL*1/
+      INTEGER IC(NEXTERNAL)
+      DATA IC /NEXTERNAL*1/
 C  
 C GLOBAL VARIABLES
 C  

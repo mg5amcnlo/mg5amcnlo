@@ -235,7 +235,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
       END
 
 
-      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,FLAVOR,RES)
+      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,FLAVOR,RES)
       use model_object
 C
 %(info_lines)s
@@ -269,7 +269,7 @@ C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
       INTEGER FLAVOR(NEXTERNAL)
       REAL*8 RES(NSQAMPSO)
 C
@@ -300,7 +300,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-       call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+       call %(proc_prefix)sGET_AMP(P,NHEL,FLAVOR,AMP)
 c      WRITE (*,*) '  -> AMP = ', AMP
        call %(proc_prefix)sGET_JAMP(AMP,JAMP)
 c      WRITE (*,*) '  -> JAMP = ', JAMP
@@ -332,7 +332,7 @@ CF2PY INTENT(OUT) :: IDEN_STAR
        END
 
 
-SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,FLAVOR,AMP)
       use model_object
 C
 %(process_lines)s
@@ -340,7 +340,6 @@ C
 CF2PY INTENT(OUT) :: AMP
 CF2PY INTENT(IN) :: NHEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
-CF2PY INTENT(IN) :: IC
 CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
 
       use aloha_object
@@ -360,8 +359,10 @@ C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
       INTEGER FLAVOR(NEXTERNAL)
+      INTEGER IC(NEXTERNAL)
+      DATA IC /NEXTERNAL*1/
 C
 C LOCAL VARIABLES
 C
@@ -634,8 +635,6 @@ c
       PARAMETER (NGRAPHS=%(ngraphs)d)
       INTEGER    NCOLOR
       PARAMETER (NCOLOR=%(ncolor)d)
-      INTEGER IC(NEXTERNAL)
-
       DOUBLE COMPLEX AMP(NGRAPHS)
       DOUBLE COMPLEX, ALLOCATABLE:: JAMP(:,:,:)
       integer, save :: s_ncomb = -1
@@ -654,12 +653,11 @@ C ----------
         allocate(jamp(ncolor, NAMPSO, N_COMB))
         s_ncomb=n_comb
       endif
-      IC(:)=1
       do I = 1, N_COMB
          do N = 1, N_CHANGING
             NHEL(POS(N)) = ALLOW_HEL((I-1)*N_CHANGING+N)
          enddo
-         call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+         call %(proc_prefix)sGET_AMP(P,NHEL,FLAVOR,AMP)
          call %(proc_prefix)sGET_JAMP(AMP,JAMP(1,1,I))
       enddo
 

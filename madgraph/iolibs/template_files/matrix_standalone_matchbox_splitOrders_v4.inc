@@ -175,7 +175,7 @@ C ----------
 
 	  END
  
-      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,RES)
+      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,RES)
 C  
 %(info_lines)s
 C
@@ -204,7 +204,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
 	  REAL*8 RES(NSQAMPSO)
 C  
 C LOCAL VARIABLES 
@@ -218,6 +218,8 @@ C
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
       COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP  
       COMPLEX*16 W(18,NWAVEFUNCS)
+      INTEGER IC(NEXTERNAL)
+      DATA IC /NEXTERNAL*1/
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 %(flavor_mask_decl)s
