@@ -155,10 +155,10 @@ C      I+20.
 C     QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM
 C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       REAL*8 QP_RES(3,0:NSQUAREDSO,MAXSTABILITYLENGTH)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), FLAVOR(NEXTERNAL)
       INTEGER NATTEMPTS
       DATA NATTEMPTS/0/
-      DATA IC/NEXTERNAL*1/
+      DATA FLAVOR/NEXTERNAL*1/
       REAL*8 HELSAVED(3,NCOMB)
       INTEGER ITEMP
       LOGICAL LTEMP
@@ -712,7 +712,8 @@ C     the split_order summed value I=0 is used in ML5 code.
       DO I=0,NSQSO_BORN
         BORNBUFF(I)=0.0D0
       ENDDO
-      CALL ML5_0_SMATRIXHEL_SPLITORDERS(P_USER,USERHEL,IC,BORNBUFF(0))
+      CALL ML5_0_SMATRIXHEL_SPLITORDERS(P_USER,USERHEL,FLAVOR
+     $ ,BORNBUFF(0))
       DO I=0,NSQSO_BORN
         ANS(0,I)=BORNBUFF(I)
       ENDDO
@@ -958,7 +959,7 @@ C         Handle the possible requirement of specific polarizations
 
 C         Helas calls for the born amplitudes and counterterms
 C          associated to given loops
-          CALL ML5_0_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
+          CALL ML5_0_HELAS_CALLS_AMPB_1(P,NHEL,H)
  2000     CONTINUE
           CT_REQ_SO_DONE=.TRUE.
 
@@ -968,7 +969,7 @@ C         In general, only wavefunction renormalization counterterms
 C         (if needed by the loop UFO model) are of this type.
 C         Quite often and in principle for all loop UFO models from 
 C         FeynRules, there are none of these type of counterterms.
-          CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
+          CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H)
  3000     CONTINUE
           UVCT_REQ_SO_DONE=.TRUE.
 
@@ -990,7 +991,7 @@ C         FeynRules, there are none of these type of counterterms.
             ENDDO
           ENDDO
 
-          CALL ML5_0_COEF_CONSTRUCTION_1(P,NHEL,H,IC)
+          CALL ML5_0_COEF_CONSTRUCTION_1(P,NHEL,H)
  4000     CONTINUE
           LOOP_REQ_SO_DONE=.TRUE.
 
@@ -1037,7 +1038,7 @@ C      evaluation.
           S(I_SO,J)=.TRUE.
         ENDDO
         IF (FILTER_SO.AND.SQSO_TARGET.NE.I_SO) GOTO 5001
-        CALL ML5_0_LOOP_CT_CALLS_1(P,NHEL,H,IC)
+        CALL ML5_0_LOOP_CT_CALLS_1(P,NHEL,H)
         GOTO 5001
  5000   CONTINUE
         CTCALL_REQ_SO_DONE=.TRUE.

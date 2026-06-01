@@ -303,10 +303,10 @@ C         Handle the possible requirement of specific polarizations
 
 
           IF (COMPUTE_INTEGRAND_IN_QP) THEN
-            CALL MG5_1_MP_HELAS_CALLS_AMPB_1(MP_P,NHEL,H,IC)
+            CALL MG5_1_MP_HELAS_CALLS_AMPB_1(MP_P,NHEL,H)
             CONTINUE
           ELSE
-            CALL MG5_1_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
+            CALL MG5_1_HELAS_CALLS_AMPB_1(P,NHEL,H)
             CONTINUE
           ENDIF
 
@@ -392,11 +392,11 @@ C            containers (but only those needed)
 
           IF (COMPUTE_INTEGRAND_IN_QP) THEN
 
-            CALL MG5_1_MP_COEF_CONSTRUCTION_1(MP_P,NHEL,H,IC)
+            CALL MG5_1_MP_COEF_CONSTRUCTION_1(MP_P,NHEL,H)
 
           ELSE
 
-            CALL MG5_1_COEF_CONSTRUCTION_1(P,NHEL,H,IC)
+            CALL MG5_1_COEF_CONSTRUCTION_1(P,NHEL,H)
 
 C           Copy back to the coefficients computed in DP in the QP
 C            containers
