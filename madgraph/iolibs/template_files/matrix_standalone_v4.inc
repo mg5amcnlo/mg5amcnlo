@@ -141,7 +141,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
                     IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                         CYCLE
                     ENDIF
-                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1),FLAVOR(1))
+                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),FLAVOR(1))
                     IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                         ANS=ANS+T
                     ENDIF
