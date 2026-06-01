@@ -78,7 +78,6 @@ C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER FLAVOR(NEXTERNAL)
-      INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
@@ -120,9 +119,6 @@ C ----------
 C BEGIN CODE
 C ----------
       IF(USERHEL.EQ.-1) NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
 C     When spin-2 particles are involved, the Helicity filtering is dangerous for the 2->1 topology.
 C     This is because depending on the MC setup the initial PS points have back-to-back initial states
 C     for which some of the spin-2 helicity configurations are zero. But they are no longer zero

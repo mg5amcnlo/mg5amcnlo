@@ -92,7 +92,6 @@ C
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T(NSQAMPSO), BUFF
       INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
@@ -109,16 +108,13 @@ C ----------
 C BEGIN CODE
 C ----------
       NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
 	  DO I=1,NSQAMPSO
       	ANS(I) = 0D0	  
 	  ENDDO
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
            IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
+               CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO			
                 ANS(I)=ANS(I)+T(I)
