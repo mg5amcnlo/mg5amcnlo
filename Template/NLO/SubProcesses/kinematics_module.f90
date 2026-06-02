@@ -633,7 +633,7 @@ contains
   subroutine compute_gfun()
     implicit none
     include 'fks_powers.inc'
-    double precision :: gfactsf,gfactcl,gfactazi,delta
+    double precision :: delta
     double precision,parameter :: ymin=0.9d0
     double precision alsf,besf
     common/cgfunsfp/alsf,besf
