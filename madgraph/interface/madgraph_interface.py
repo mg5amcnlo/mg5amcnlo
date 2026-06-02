@@ -498,8 +498,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      --jamp_optim=[True|False]: [madevent(default:True)|standalone(default:False)] allows a more efficient code computing the color-factor.")
         logger.info("      --t_strategy: [madevent] allows to change ordering strategy for t-channel.")
         logger.info("      --hel_recycling=False: [madevent] forbids helicity recycling optimization")
-        logger.info("      --mask=True: [madevent|standalone] enable flavor-mask optimization for grouped/merged flavors (default:False).")
-        logger.info("      --prefix=int|proc: prefix matrix-element routine names (int: M<n>_, proc: process name).")
+        logger.info("      --mask=False: [madevent|standalone] disable flavor-mask optimization for grouped/merged flavors (default:True).")
+        logger.info("      --prefix=int|proc: [standalone] prefix matrix-element routine names (int: M<n>_, proc: process name); generates f2py python-linkable routines.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
@@ -2606,7 +2606,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
                                                  '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1',
-                                                 '--mask=True', '--prefix=']):
+                                                 '--mask=False', '--prefix=']):
         "Complete the output command"
 
         possible_format = list(self._export_formats)
