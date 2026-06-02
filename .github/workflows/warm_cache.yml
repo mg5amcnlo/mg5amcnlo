@@ -261,9 +261,13 @@ jobs:
          if: steps.cache-contur.outputs.cache-hit != 'true'
          uses: ./.github/actions/restore_heptools_pythia8
 
-       - name: Install contur into cache dir 
+       - name: Install contur into cache dir
          if: steps.cache-contur.outputs.cache-hit != 'true'
          run: |
+               # YODA's python extension build needs Cython (no longer shipped by
+               # default on the GitHub runner image); without it rivet aborts at
+               # YODA, before FastJet is installed, leaving NLO builds broken.
+               sudo pip install Cython
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
                echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
@@ -271,6 +275,15 @@ jobs:
                echo "install rivet" > cmd
                echo "install contur" >> cmd
                ./bin/mg5_aMC cmd
+
+       - name: Verify rivet/fastjet landed in the cache
+         if: steps.cache-contur.outputs.cache-hit != 'true'
+         run: |
+               # mg5_aMC exits 0 even when "install rivet" fails, so guard the
+               # cache here: a missing fastjet-config means NLO subprocesses cannot
+               # compile (fastjet/ClusterSequence.hh). Fail loudly instead of
+               # saving an incomplete heptools cache.
+               test -x /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config
 
        #- name: Delete pythia8 cache (include in contur cache)
        #  run: |
