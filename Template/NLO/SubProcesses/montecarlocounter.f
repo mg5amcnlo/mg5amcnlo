@@ -4535,12 +4535,14 @@ c Shower scale
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
-c Consistency check
+c Consistency check (skipped for decay processes: shat != 2*p1.p2)
+      if(nincoming.eq.2)then
       shattmp=2d0*dot(pp(0,1),pp(0,2))
       if(abs(shattmp/shat-1d0).gt.1d-5)then
          write(*,*)'Error in assign_emsca: inconsistent shat'
          write(*,*)shattmp,shat
          stop
+      endif
       endif
 
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)

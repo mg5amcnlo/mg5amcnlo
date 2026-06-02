@@ -1980,7 +1980,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
             if self.ninitial == 1:
-                raise aMCatNLOError('Decay processes can only be run at fixed order.')
+                logger.warning(
+                    "\n" + "!" * 78 + "\n"
+                    "!!  WARNING: bypassing the 'Decay processes can only be run at fixed\n"
+                    "!!  order' restriction. Generating unweighted (NLO+PS) events for a\n"
+                    "!!  1 -> N decay process is NOT a validated/supported configuration:\n"
+                    "!!  the MC@NLO subtraction and the unweighting are designed for\n"
+                    "!!  production (2 -> N) kinematics, so the resulting decay events and\n"
+                    "!!  their weights may be physically WRONG. Use at your own risk.\n"
+                    + "!" * 78)
             mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
                          'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()

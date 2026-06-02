@@ -2343,6 +2343,11 @@ class Event(list):
                             raise
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
+                elif not mother:
+                    # decay event with no explicit mother (flat 1->N record,
+                    # e.g. fixed-order LHE output): the product descends
+                    # directly from the decaying particle.
+                    setattr(new_particle, tag, this_particle)
                 else:
                     raise Exception("Something weird happens. Please report it for investigation")
         # Need to correct the color information of the particle

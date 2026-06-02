@@ -428,9 +428,76 @@ class MECmdShell(IOTests.IOTestManager):
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
             self.assertIn(nb_final, [4,5])
-        self.assertEqual(nb_event, nevents)        
+        self.assertEqual(nb_event, nevents)
 
-        
+    def test_madspin_density_decay_atNLO(self):
+        """check that p p > z j [QCD] can be decayed with Z > j j at NLO
+        decay precision (decay_precision=NLO). NLO decays generate the extra
+        real-emission channel (Z > j j g), so some Z's decay to 3 partons.
+        decay_precision=NLO is only allowed for the density-based spin modes;
+        here we rely on the default spinmode=PA (density-based)."""
+
+        nevents = 20
+        text = """
+        set crash_on_error True --no_save
+        generate p p > z j
+        output %s
+        launch
+        madspin=ON
+        shower=OFF
+        set nevents %s
+        decay z > j j QCD=0
+        launch -i
+        decay_events run_01
+        add madspin --after_line=banner set decay_precision=NLO
+        """ % (self.path, nevents)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        orig_lhe = pjoin(self.path,'Events','run_01','unweighted_events.lhe.gz')
+        # run_01_decayed_1 : default LO decay; run_01_decayed_2 : NLO decay
+        lhe_nlo = pjoin(self.path,'Events','run_01_decayed_2','unweighted_events.lhe.gz')
+
+        self.assertTrue(os.path.exists(orig_lhe))
+        self.assertTrue(os.path.exists(lhe_nlo))
+
+        mz = 91.188
+        wz = 2.4414
+        nb_event = 0
+        nb_three_body = 0
+        for event in lhe_parser.EventFile(lhe_nlo):
+            nb_event += 1
+            z_part = None
+            for p in event:
+                if p.pdg == 23 and p.status == 2:
+                    z_part = p
+            # the Z must have been decayed
+            self.assertTrue(z_part is not None, 'Z not decayed in event %d' % nb_event)
+            # Z invariant mass should stay around the pole (loose BW window)
+            self.assertTrue(mz - 30*wz < z_part.mass < mz + 30*wz)
+            # count the direct decay products of this Z
+            daughters = [p for p in event
+                         if p.mother1 is z_part or p.mother2 is z_part]
+            n_daughter = len(daughters)
+            self.assertIn(n_daughter, [2, 3])
+            # daughters must be coloured partons (Z > j j [g])
+            for d in daughters:
+                self.assertIn(abs(d.pdg), [1, 2, 3, 4, 5, 21])
+            if n_daughter == 3:
+                nb_three_body += 1
+
+        self.assertEqual(nb_event, nevents)
+        # the NLO real-emission channel (Z > j j g) must be reachable: with a
+        # QCD NLO correction at least some events carry the extra parton.
+        self.assertTrue(nb_three_body > 0,
+                        'no Z > j j g (real-emission) decay produced at NLO')
+
+
     def test_madspin_LOonly(self):
         
         text = """

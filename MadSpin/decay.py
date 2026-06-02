@@ -4426,15 +4426,57 @@ class decay_all_events_onshell(decay_all_events):
     def get_decay_command(self):
         logger.info('generate matrix element for decay only (1 - > N).')
 #        start = time.time()
+        nlo = str(self.options['decay_precision']).upper() == 'NLO'
         commandline = ''
+        if nlo:
+            # NLO decays radiate one extra parton. We generate the real-
+            # emission decay (e.g. Z > q q~ g) as its own standalone matrix
+            # element so that decay events carrying the extra jet get their
+            # own spin-density matrix. The radiation comes from the same FKS
+            # "soft" particles used by get_LO_definition_from_NLO.
+            pert = fks_common.find_pert_particles_interactions(
+                self.mgcmd._curr_model, pert_order='QCD')['soft_particles']
+            commandline += "define pert_QCD = %s;" % ' '.join(map(str, pert))
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
                 newproc = "add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                commandline += self.adapt_decay(newproc) 
+                commandline += self.adapt_decay(newproc)
                 #commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                i+=1 
+                i+=1
+                if nlo:
+                    real_proc = self.add_radiation_to_decay(proc, 'pert_QCD')
+                    realline = "add process %s @%i --no_warning=duplicate --standalone;" % (real_proc, i)
+                    commandline += self.adapt_decay(realline)
+                    i+=1
         return commandline
+
+    @staticmethod
+    def add_radiation_to_decay(proc, pert_label):
+        """insert the radiation multiparticle (pert_label) into a 1->N decay
+        definition, just before any coupling-order / $ / / restriction --
+        mirroring the real-emission handling of
+        reweight_interface.ReweightInterface.get_LO_definition_from_NLO."""
+        order = pert_label.replace('pert_', '')
+        # real emission adds one power of the perturbative coupling, so bump
+        # the Born coupling-order constraint by one (e.g. QCD=0 -> QCD=1),
+        # otherwise the extra-parton process has no diagrams.
+        if '%s=' % order in proc or '%s<=' % order in proc:
+            tokens = re.split(' ', proc)
+            proc = ''
+            for r in tokens:
+                if '%s<=' % order in r:
+                    ior = re.split('=', r)
+                    r = '%s<=%i' % (order, int(ior[1]) + 1)
+                elif '%s=' % order in r:
+                    ior = re.split('=', r)
+                    r = '%s=%i' % (order, int(ior[1]) + 1)
+                proc = proc + r + ' '
+        result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', proc, 1)
+        if len(result) == 3:
+            process, split, rest = result
+            return "%s %s %s%s" % (process.rstrip(), pert_label, split, rest)
+        return "%s %s" % (proc.rstrip(), pert_label)
 
     def compile(self):
         logger.info('Compiling code')

@@ -35,6 +35,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.interface.madevent_interface as madevent_interface
+import madgraph.interface.amcatnlo_run_interface as amcatnlo_run_interface
 import madgraph.interface.common_run_interface as common_run_interface
 import madgraph.interface.reweight_interface as rwgt_interface
 import madgraph.various.misc as misc
@@ -66,6 +67,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('onlyhelicity', False)
         self.add_param('ME_mode', 'auto', allowed=['auto', 'decay_chain', 'density'])
         self.add_param('spinmode', "PA", allowed=['full','madspin','none','onshell','PA'])
+        self.add_param('decay_precision', 'LO', allowed=['LO','NLO'], comment='Precision of the decay-event generation. NLO ([QCD]) is only allowed for the density-based spin-correlation modes (density/PA/full/onshell+density).')
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for spinmode==none. Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -574,6 +576,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             if args[1].lower() not in ["full", "onshell", "none", "madspin", "density", "pa"]:
                 raise self.InvalidCmd("spinmode can only take one of those 5 values: full/onshell/none/density/PA")
              
+        elif args[0] == "decay_precision":
+            if args[1].upper() not in ["LO", "NLO"]:
+                raise self.InvalidCmd("decay_precision can only take one of those 2 values: LO/NLO")
+            args[1] = args[1].upper()
+
         elif args[0] == "run_card":
             if self.options['spinmode'] == "madspin":
                 raise self.InvalidCmd("edition of the run_card is not allowed within normal mode")
@@ -723,7 +730,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['spinmode'] = 'full'
             self.options['ME_mode'] = 'decay_chain'
 
-
+        # decay_precision=NLO is only meaningful for the density-based spin
+        # correlation modes (these are the ones driving run_onshell with
+        # density_method=True). Reject it up-front for the modes that never
+        # build the decay density matrices (none/madspin/bridge and the
+        # onshell decay-chain path).
+        if str(self.options['decay_precision']).upper() == 'NLO':
+            spinmode = self.options['spinmode'].lower()
+            me_mode = self.options['ME_mode']
+            density_capable = (
+                spinmode == 'pa' or
+                (spinmode == 'full' and me_mode in ['auto', 'density']) or
+                (spinmode == 'onshell' and me_mode not in ['auto', 'decay_chain'])
+            )
+            if not density_capable:
+                raise self.InvalidCmd(
+                    "decay_precision=NLO is only allowed for the density-based "
+                    "spin-correlation modes (spinmode=density/PA/full or "
+                    "spinmode=onshell with ME_mode=density). "
+                    "Current spinmode=%s, ME_mode=%s." %
+                    (self.options['spinmode'], self.options['ME_mode']))
 
         if self.options["spinmode"] in ["none"]:
             out = self.run_bridge(line)
@@ -1358,9 +1384,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         
         nb_event = int(nb_event) # in case of hepmc request the nb_event is not an integer
+        nlo = str(self.options['decay_precision']).upper() == 'NLO'
+        # NLO decay generation goes through the aMC@NLO machinery: append the
+        # [QCD] tag to the process and run the events at NLO accuracy.
+        qcd_tag = ' [QCD]' if nlo else ''
+        if nlo and self.options['ms_dir']:
+            raise self.InvalidCmd("decay_precision=NLO is not supported in gridpack (ms_dir) mode.")
         if cumul:
             width = 0.
-        else:   
+        else:
             width = 1.
         part = self.model.get_particle(pdg)
         if not part:
@@ -1376,17 +1408,20 @@ class MadSpinInterface(extended_cmd.Cmd):
                 continue
             decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
             if not os.path.exists(decay_dir):
+                # At NLO the FKS exporter reads back the [QCD] perturbation
+                # order from the command history (history.get('generate')), so
+                # the generation commands must be recorded there (precmd=True).
                 if cumul:
-                    mg5.exec_cmd("generate %s" % proc)
+                    mg5.exec_cmd("generate %s%s" % (proc, qcd_tag), precmd=nlo)
                     for j,proc2 in enumerate(self.list_branches[name][1:]):
                         misc.sprint(proc2)
                         if restrict_file and j not in restrict_file:
                             raise Exception # Do not see how this can happen
-                        mg5.exec_cmd("add process %s" % proc2)
+                        mg5.exec_cmd("add process %s%s" % (proc2, qcd_tag), precmd=nlo)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 else:
                     misc.sprint(proc)
-                    mg5.exec_cmd("generate %s" % proc)
+                    mg5.exec_cmd("generate %s%s" % (proc, qcd_tag), precmd=nlo)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 
                 options = dict(mg5.options)
@@ -1440,6 +1475,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                         devnull.close()
             # Now generate the events
             if not self.options['ms_dir']:
+                if nlo:
+                    if output_width:
+                        out[i], dcross = self._generate_nlo_decay_events(decay_dir, nb_event, mg5)
+                        if cumul:
+                            width += dcross
+                        else:
+                            width *= dcross
+                    else:
+                        out[i], _ = self._generate_nlo_decay_events(decay_dir, nb_event, mg5)
+                    if cumul:
+                        break
+                    continue
                 if decay_dir in self.me_int:
                         me5_cmd = self.me_int[decay_dir]
                 else:
@@ -1515,6 +1562,56 @@ class MadSpinInterface(extended_cmd.Cmd):
             return out
         else:
             return out, width
+
+    def _generate_nlo_decay_events(self, decay_dir, nb_event, mg5):
+        """Generate parton-level NLO+PS ([QCD]) decay events through the
+        aMC@NLO machinery (decay_precision=NLO). The decay directory has
+        already been produced with the [QCD] tag, so here we drive the
+        event generation in 'noshower' mode (order=NLO, fixed_order=OFF,
+        shower=OFF) to obtain unweighted parton-level events.lhe.gz ready
+        for showering. NLO+PS events come with or without an extra parton;
+        the matching standalone decay density matrices generated by
+        get_decay_command pick up the right multiplicity automatically via
+        the event tag.
+
+        NOTE: aMC@NLO normally forbids unweighting a 1 -> N decay process
+        ('Decay processes can only be run at fixed order'). That restriction
+        is bypassed (with a loud warning) in
+        amcatnlo_run_interface.aMCatNLOCmd.run so that NLO+PS decay events
+        can be produced here.
+        Returns (EventFile, cross_section)."""
+        if decay_dir in self.me_int:
+            me5_cmd = self.me_int[decay_dir]
+        else:
+            me5_cmd = amcatnlo_run_interface.aMCatNLOCmdShell(
+                me_dir=os.path.realpath(decay_dir), options=mg5.options)
+            me5_cmd.options["automatic_html_opening"] = False
+            me5_cmd.allow_notification_center = False
+            self.me_int[decay_dir] = me5_cmd
+
+        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+        run_card["nevents"] = int(0.8 * nb_event)
+        if not self.seed:
+            self.seed = random.randint(0, int(30081*30081))
+            self.do_set('seed %s' % self.seed)
+            logger.info('Will use seed %s' % self.seed)
+            self.history.insert(0, 'set seed %s' % self.seed)
+        run_card["iseed"] = self.seed
+        run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+        param_card = self.banner['slha']
+        open(pjoin(decay_dir, "Cards", "param_card.dat"), "w").write(param_card)
+        self.seed += 1
+
+        # Drive aMC@NLO to obtain parton-level NLO+PS unweighted events
+        # (Events/run_01/events.lhe.gz). The '-p/--parton' flag stops the run
+        # after parton-level generation; with no explicit mode this resolves
+        # to the 'noshower' configuration (order=NLO, fixed_order=OFF,
+        # shower=OFF) inside ask_run_configuration.
+        me5_cmd.exec_cmd("generate_events -p -n run_01 -f")
+        cross = me5_cmd.results.current['cross']
+        me5_cmd.exec_cmd("exit")
+        evt = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'events.lhe.gz'))
+        return evt, cross
 
     def run_onshell(self, line, density_method=False):
         """Run the onshell Algorithm"""

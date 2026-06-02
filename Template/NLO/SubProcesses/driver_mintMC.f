@@ -99,9 +99,13 @@ c Write the process PID in the log.txt files (i.e., to the screen)
       fixed_order=.false.
       nlo_ps=.true.
       if (nincoming.ne.2) then
-         write (*,*) 'Decay processes not supported for'/
-     &        /' event generation'
-         stop 1
+         write (*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+         write (*,*) '!! WARNING: bypassing the restriction that decay'
+         write (*,*) '!! (1 -> N) processes are not supported for event'
+         write (*,*) '!! generation. The MC@NLO subtraction/unweighting'
+         write (*,*) '!! are designed for 2 -> N kinematics, so events'
+         write (*,*) '!! and weights may be physically WRONG.'
+         write (*,*) '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
       endif
 
 c     Read general MadFKS parameters
