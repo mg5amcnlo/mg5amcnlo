@@ -177,6 +177,11 @@ jobs:
 
        - name: Install pythia8 into cache dir (in top of lhapdf cache)
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
+         # Compile pythia8 (and its hepmc dependency) in parallel across the
+         # runner's vCPUs; MAKEFLAGS is inherited by every make the installer
+         # spawns. Same speed-up as the contur build.
+         env:
+           MAKEFLAGS: "-j4"
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
