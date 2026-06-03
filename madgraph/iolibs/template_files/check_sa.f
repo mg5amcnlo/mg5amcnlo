@@ -71,12 +71,12 @@ c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate
 c     the MadGraph5_aMC@NLO matrix-element.       
 c     Alternatevely, here the user can call or set the four momenta at his will, see below.
 c     	
+      ARGC = COMMAND_ARGUMENT_COUNT()
       IF(nincoming.EQ.1) THEN
-         SQRTS=PMASS(1)
+        SQRTS=PMASS(1)
       ELSE
-         SQRTS=1000d0              !CMS energy in GEV
+        SQRTS=1000d0              !CMS energy in GEV
 c---  Allow the energy to be set via command-line argument: ./check <energy> [nb_try] [flavor_idx]
-         ARGC = COMMAND_ARGUMENT_COUNT()
          IF (ARGC .GE. 1) THEN
             CALL GET_COMMAND_ARGUMENT(1, SQRTS_STR)
             READ(SQRTS_STR,*) SQRTS
@@ -87,14 +87,13 @@ c---  Allow the energy to be set via command-line argument: ./check <energy> [nb
       ENDIF
       NB_TRY = 1
       unique_flavor = 0
-      ARGC = COMMAND_ARGUMENT_COUNT()
       IF (ARGC .GE. 2) THEN
-         CALL GET_COMMAND_ARGUMENT(2, NB_TRY_STR)
-         READ(NB_TRY_STR,*) NB_TRY
+        CALL GET_COMMAND_ARGUMENT(2, NB_TRY_STR)
+        READ(NB_TRY_STR,*) NB_TRY
       ENDIF
       IF (ARGC .GE. 3) THEN
-         CALL GET_COMMAND_ARGUMENT(3, UFLAVOR_STR)
-         READ(UFLAVOR_STR,*) unique_flavor
+        CALL GET_COMMAND_ARGUMENT(3, UFLAVOR_STR)
+        READ(UFLAVOR_STR,*) unique_flavor
       ENDIF
 
       call printout()

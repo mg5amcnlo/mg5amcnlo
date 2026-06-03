@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import logging
+import math
 import os
 import pydoc
 import subprocess
@@ -426,8 +427,6 @@ class SALauncher(ExtLauncher):
         nb_run : int
             Number of independent timing repetitions used to build statistics.
         """
-        import math
-
         # Discover the number of flavors and their PDG codes by running once
         # with nb_try=1 and unique_flavor=0 (all flavors).
         try:
@@ -464,8 +463,8 @@ class SALauncher(ExtLauncher):
                 t0 = time.time()
                 subprocess.call(['./check', '1000', str(nb_try), str(flav_idx)],
                                 cwd=cur_path,
-                                stdout=open(os.devnull, 'w'),
-                                stderr=open(os.devnull, 'w'))
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
                 run_times.append(time.time() - t0)
             avg = sum(run_times) / len(run_times)
             if len(run_times) > 1:
