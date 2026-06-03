@@ -33,7 +33,9 @@ C
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
       CHARACTER*30 SQRTS_STR
+      CHARACTER*30 NB_TRY_STR, UFLAVOR_STR
       INTEGER ARGC
+      INTEGER NB_TRY, unique_flavor
       INTEGER MAXFLAVOR
       PARAMETER (MAXFLAVOR=%(maxflavor)d)
       INTEGER FLAVOR(NEXTERNAL, MAXFLAVOR)
@@ -73,7 +75,7 @@ c
          SQRTS=PMASS(1)
       ELSE
          SQRTS=1000d0              !CMS energy in GEV
-c---  Allow the energy to be set via command-line argument: ./check <energy>
+c---  Allow the energy to be set via command-line argument: ./check <energy> [nb_try] [flavor_idx]
          ARGC = COMMAND_ARGUMENT_COUNT()
          IF (ARGC .GE. 1) THEN
             CALL GET_COMMAND_ARGUMENT(1, SQRTS_STR)
@@ -82,6 +84,17 @@ c---  Allow the energy to be set via command-line argument: ./check <energy>
          IF (SQRTS.le.2.0d0*TOTALMASS) THEN
             SQRTS = 2.0d0*TOTALMASS
          ENDIF
+      ENDIF
+      NB_TRY = 1
+      unique_flavor = 0
+      ARGC = COMMAND_ARGUMENT_COUNT()
+      IF (ARGC .GE. 2) THEN
+         CALL GET_COMMAND_ARGUMENT(2, NB_TRY_STR)
+         READ(NB_TRY_STR,*) NB_TRY
+      ENDIF
+      IF (ARGC .GE. 3) THEN
+         CALL GET_COMMAND_ARGUMENT(3, UFLAVOR_STR)
+         READ(UFLAVOR_STR,*) unique_flavor
       ENDIF
 
       call printout()
@@ -106,7 +119,10 @@ c
 c     Now we can call the matrix element!
 c
       do I=1, MAXFLAVOR
+      IF(unique_flavor.gt.0.and.unique_flavor.ne.I) CYCLE
+      do J=1, NB_TRY
       CALL %(proc_prefix)sSMATRIX(P,FLAVOR(1,I), MATELEM)
+      enddo
 c
       write(*,*) "PDG", PDG_FOR_FLAVOR(:,I)
       write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	

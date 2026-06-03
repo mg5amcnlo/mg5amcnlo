@@ -438,6 +438,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   the -f option is specified. All other options are ")
         logger.info("   irrelevant for this kind of launch.")
         logger.info("")
+        logger.info("Launch on standalone output with timing analysis:",'$MG:BOLD')
+        logger.info(" o Example: launch PROC_sm_1 --timings=1000 --nb_run=5",'$MG:color:GREEN')
+        logger.info(" > --timings=N   Number of SMATRIX calls per flavor per run (enables timing mode)")
+        logger.info(" > --nb_run=Y    Number of timing repetitions (default: 1)")
+        logger.info(" > Prints a table with flavor index, average time and 1-sigma uncertainty.")
+        logger.info("")
         logger.info("Launch on aMC@NLO output:",'$MG:BOLD')
         logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
         logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')
@@ -10460,6 +10466,10 @@ _launch_parser.add_option("-R", "--reweight", default=False, action='store_true'
                             help="Run the reweight module (reweighting by different model parameter")
 _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
                             help="Run the madspin package")
+_launch_parser.add_option("", "--timings", default=0, type='int',
+                            help="[standalone] Number of SMATRIX calls per flavor per run for timing analysis (0=disabled)")
+_launch_parser.add_option("", "--nb_run", default=1, type='int',
+                            help="[standalone] Number of timing repetitions for statistics (used with --timings)")
 
 #===============================================================================
 # Interface for customize question.
