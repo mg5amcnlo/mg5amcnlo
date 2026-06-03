@@ -656,7 +656,7 @@ jobs:
       - name: import_ufo unit tests not previously covered
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_fd_gauge_import test_get_symmetric_color test_get_symmetric_lorentz test_merge_iden_couplings_with_minus test_remove_interactions2 test_remove_interactions3 test_reshape_FFV_coeff test_reshape_FFV_coeff_gamma5_and_vector test_reshape_FFV_coeff_unknown_structure_ignored -t0
+            ./tests/test_manager.py test_fd_gauge_import test_get_symmetric_color test_get_symmetric_lorentz test_merge_iden_couplings_with_minus test_remove_interactions2 test_remove_interactions3 test_reshape_FFV_coeff test_reshape_FFV_coeff_gamma5_and_vector test_reshape_FFV_coeff_unknown_structure_ignored test_read_feynman_diagram_count test_read_feynman_diagram_count_missing_file -t0
 
 
   unittest_33:
