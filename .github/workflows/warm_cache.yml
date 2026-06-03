@@ -399,7 +399,21 @@ jobs:
           path: ~/.cache/HEPtools
           key: looptools-${{ env.CACHE_KEY }}
 
+      # GitHub Actions caches are immutable: actions/cache/save is a silent
+      # no-op when the key already exists (it logs "Unable to reserve cache
+      # ... another job may be creating this cache" and the freshly rebuilt
+      # combined cache is discarded). Outside the Sunday cron / reset_heptools
+      # the old heptools-$KEY therefore never gets replaced. Delete it first so
+      # the new content is actually saved. Only do this (and the save) once all
+      # sub-caches succeeded, so a partial rebuild never replaces a good cache.
+      - name: Delete previous combined cache (so the fresh one can be saved)
+        if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
+        run: gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - uses: actions/cache/save@v5
+        if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
         with:
           path: ~/.cache/HEPtools
           key: heptools-${{ env.CACHE_KEY }}
