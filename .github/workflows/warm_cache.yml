@@ -279,6 +279,12 @@ jobs:
 
        - name: Install contur into cache dir
          if: steps.cache-contur.outputs.cache-hit != 'true'
+         # rivet is the long pole of the whole cache build (~36 min, single
+         # threaded). MAKEFLAGS is inherited by every make the installer spawns,
+         # so an unqualified "make" becomes a parallel build across the runner's
+         # vCPUs. Harmless if a sub-build pins its own -j.
+         env:
+           MAKEFLAGS: "-j4"
          run: |
                # YODA's python extension build needs Cython (no longer shipped by
                # default on the GitHub runner image); without it rivet aborts at
