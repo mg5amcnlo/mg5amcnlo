@@ -289,7 +289,9 @@ jobs:
                # YODA's python extension build needs Cython (no longer shipped by
                # default on the GitHub runner image); without it rivet aborts at
                # YODA, before FastJet is installed, leaving NLO builds broken.
-               sudo pip install Cython
+               # Install into the same interpreter mg5_aMC/YODA use (no sudo, so
+               # the system Python is left untouched for other steps).
+               python3 -m pip install Cython
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
                echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
