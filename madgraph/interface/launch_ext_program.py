@@ -19,6 +19,7 @@ import logging
 import math
 import os
 import pydoc
+import re
 import subprocess
 import time
 start=time.time()
@@ -476,17 +477,40 @@ class SALauncher(ExtLauncher):
             results.append((flav_idx, pdg_label, avg, sigma))
 
         # Print summary table
+        n_diagrams = self._read_feynman_diagram_count(cur_path)
         sep = '=' * 80
         header_fmt = '%-6s  %-30s  %-18s  %-18s'
         row_fmt    = '%-6d  %-30s  %-18.6f  %-18.6f'
         print('\n' + sep)
-        print('Timing summary: %d SMATRIX calls/flavor/run, %d run(s)' % (nb_try, nb_run))
+        if n_diagrams is not None:
+            print('Timing summary: %d Feynman diagram(s), %d SMATRIX calls/flavor/run, %d run(s)' %
+                  (n_diagrams, nb_try, nb_run))
+        else:
+            print('Timing summary: %d SMATRIX calls/flavor/run, %d run(s)' % (nb_try, nb_run))
         print('-' * 80)
         print(header_fmt % ('Flavor', 'PDG codes', 'Avg time (s)', '1-sigma (s)'))
         print('-' * 80)
         for flav_idx, pdg_label, avg, sigma in results:
             print(row_fmt % (flav_idx, pdg_label, avg, sigma))
         print(sep + '\n')
+
+    def _read_feynman_diagram_count(self, cur_path):
+        """Return number of Feynman diagrams from ngraphs.inc, if available."""
+        ngraphs_path = os.path.join(cur_path, 'ngraphs.inc')
+        try:
+            with open(ngraphs_path, 'r') as ngraphs_file:
+                content = ngraphs_file.read()
+        except (IOError, OSError):
+            return None
+
+        match = re.search(r'n_max_cg\s*=\s*(\d+)', content, re.IGNORECASE)
+        if not match:
+            return None
+
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
 
 
 class MWLauncher(ExtLauncher):
@@ -896,4 +920,3 @@ class Pythia8Launcher(ExtLauncher):
 
 # old compatibility shortcut
 open_file = misc.open_file
-
