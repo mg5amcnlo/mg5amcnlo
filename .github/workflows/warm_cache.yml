@@ -6,6 +6,10 @@ permissions:
   contents: read
 on:
   push:
+    paths:
+      - '.github/workflows/warm_cache.yml'
+      - '.github/actions/restore_heptools/**'
+      - '.github/actions/restore_heptools_*/**'
   schedule:
     - cron: '0 3 * * 0'    # every Sunday 3am
   workflow_dispatch:         
