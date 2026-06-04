@@ -546,6 +546,12 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             # find the minimum weighted order, then extract the values for the varius
             # couplings in the model
             weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
+            if not weighted and myprocdef.get_ninitial() == 1:
+                # find_optimal_process_orders skips the WEIGHTED search for decay
+                # processes (it relies on initial-state crossing). The minimal
+                # WEIGHTED guess is already exact here, since the number of
+                # interactions depends only on the number of external legs.
+                weighted = {'WEIGHTED': myprocdef.get_minimum_WEIGHTED()[0]}
             if not weighted:
                 raise MadGraph5Error('\nProcess orders cannot be determined automatically. \n' + \
                                       'Please specify them from the command line.')

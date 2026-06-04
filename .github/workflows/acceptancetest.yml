@@ -1801,3 +1801,23 @@ jobs:
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             ./tests/test_manager.py test_generation_heft -pA -t0 -l INFO
 
+  acceptancetest_decay_nlo:
+    # NLO event generation for a colour-neutral 1->n decay (ninitial==1):
+    # checks that z > j j [QCD] reproduces the e+ e- > z > j j [QCD] jet
+    # spectrum in the Z rest frame (regression guard for the beamless MC@NLO
+    # machinery).
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_decay_NLO_zjj_matches_production
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_NLO_zjj_matches_production -pA -t0 -l INFO
+

@@ -336,9 +336,16 @@ c and j_fks, because phase-space generation won't work in all cases).
          call put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2,emsum)
 c Prevents the code from crashing in the extremely rare case in which
 c the cm energy is smaller than sum of masses - keep massless partons
-         tmpecm=min(dot(pp(0,1),pp(0,2)),
-     #              dot(p_born(0,1),p_born(0,2)))
-         tmpecm=sqrt(2d0*tmpecm)
+         if(nincoming.eq.2)then
+            tmpecm=min(dot(pp(0,1),pp(0,2)),
+     #                 dot(p_born(0,1),p_born(0,2)))
+            tmpecm=sqrt(2d0*tmpecm)
+         else
+c decay: single incoming particle, the cm energy is its invariant mass
+            tmpecm=min(dot(pp(0,1),pp(0,1)),
+     #                 dot(p_born(0,1),p_born(0,1)))
+            tmpecm=sqrt(tmpecm)
+         endif
          if(tmpecm.lt.0.99*emsum)then
            write (*,*) 'Momenta generation for put_on_MC_mshell failed'
            mfail=1
@@ -351,13 +358,20 @@ c generate a phase-space point with the MC masses
             call set_cms_stuff(mohdr)
 c special treament here for i_fks and j_fks masses
             call put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail)
-c include initial state masses
-            if(j_fks.gt.nincoming.and.mfail.eq.0)
+c include initial state masses (only for a genuine 2-beam collision: a
+c single colourless incoming particle has no initial-state reshuffling)
+            if(j_fks.gt.nincoming.and.mfail.eq.0.and.nincoming.eq.2)
      &           call put_on_MC_mshell_in(p,xm1,xm2,mfail)
          else
 c include initial state masses
             call set_cms_stuff(izero)
-            call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
+            if(nincoming.eq.2)then
+               call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
+            else
+c decay: no initial-state reshuffling; Born kinematics are already valid.
+c The incoming momentum is rebuilt below from momentum conservation.
+               mfail=0
+            endif
          endif
  888     continue
 c restore the common block for the masses to the original MG masses
@@ -375,6 +389,32 @@ c all went fine and we can copy the new momenta onto the old ones.
                   endif
                enddo
             enddo
+c For a decay (single incoming particle) the phase-space generator does
+c not assign the incoming momentum (it is left at a sentinel value), and
+c put_on_MC_mshell_in -- which rebuilds the incoming momenta for a
+c collision -- is not called. Enforce momentum conservation explicitly:
+c the incoming momentum is the sum of the final-state momenta.
+            if(nincoming.eq.1)then
+               if(Hevents)then
+                  do j=0,3
+                     pp(j,1)=0d0
+                  enddo
+                  do i=2,nexternal
+                     do j=0,3
+                        pp(j,1)=pp(j,1)+pp(j,i)
+                     enddo
+                  enddo
+               else
+                  do j=0,3
+                     p_born(j,1)=0d0
+                  enddo
+                  do i=2,nexternal-1
+                     do j=0,3
+                        p_born(j,1)=p_born(j,1)+p_born(j,i)
+                     enddo
+                  enddo
+               endif
+            endif
          elseif(mfail.eq.1)then
 c Probably not needed, but just to make sure: fill the momenta common
 c blocks again by call generate momenta again.
@@ -1325,6 +1365,14 @@ c One may use equivalently a condition on maxjetflavor
           endif
           if(i.gt.nincoming)then
             emass(i)=tmpmass
+          elseif(nincoming.eq.1)then
+c decay: the single incoming particle is the decaying resonance. Unlike a
+c beam parton (which one_tree treats as massless because it is reshuffled
+c by initial-state radiation), the resonance keeps its physical mass, so
+c that the phase-space generator builds a consistent 1->n kinematics
+c (pb(:,1) has invariant mass emass(1)).
+            emass(i)=tmpmass
+            xm1=tmpmass
           elseif(i.eq.1)then
             emass(i)=0.d0
             xm1=tmpmass
@@ -1340,6 +1388,12 @@ c
       do i=nincoming+1,nexternal
         emsum=emsum+emass(i)
       enddo
+c
+c For a decay (single incoming particle) there is no second beam, so the
+c second-beam mass xm2 is never assigned above. It is irrelevant for the
+c on-shell reshuffling (no initial-state radiation off a single colourless
+c incoming particle); set it to zero so the consistency check passes.
+      if(nincoming.lt.2.and.xm2.eq.-1.d0) xm2=0.d0
 c
       if( xmi.eq.-1.d0.or.xmj.eq.-1.d0 .or.
      #    xm1.eq.-1.d0.or.xm2.eq.-1.d0 )then

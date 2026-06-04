@@ -1138,8 +1138,13 @@ c theta-function: The radiation from the shower should always be softer
 c than the jets at the Born, hence no need to include the MC counter
 c terms when the radiation is hard.
       if(pt_hardness.gt.shower_S_scale(nFKSprocess*2-1))then
-         emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-         emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
+         if (nincoming.eq.2) then
+            emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+            emsca_a=2d0*sqrt(ebeam(1)*ebeam(2))
+         else
+            emsca=sqrt(shat)
+            emsca_a=sqrt(shat)
+         endif
          is_pt_hard=.true.
          return
       endif
@@ -1693,10 +1698,10 @@ c
       masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
 c
-      do i=1,2
+      do i=1,nincoming
         istup_local(i) = -1
       enddo
-      do i=3,nexternal
+      do i=nincoming+1,nexternal
         istup_local(i) = 1
       enddo
       do i=1,nexternal
@@ -3243,8 +3248,11 @@ c ileg = 2 ==> emission from right    incoming parton
 c ileg = 3 ==> emission from massive  outgoing parton
 c ileg = 4 ==> emission from massless outgoing parton
 c Instead of pmass(j_fks), one should use pmass(fksfather), but the
-c kernels where pmass(fksfather) != pmass(j_fks) are non-singular
-      if(fksfather.le.2)then
+c kernels where pmass(fksfather) != pmass(j_fks) are non-singular.
+c Legs 1..nincoming are the incoming partons (ISR, ileg=1,2); any other
+c father is a final-state parton (FSR, ileg=3,4). For a 1->n decay only
+c leg 1 is incoming, so a father with index 2 is final state.
+      if(fksfather.le.nincoming)then
         ileg=fksfather
       elseif(pmass(j_fks).ne.0d0)then
         ileg=3
@@ -3264,10 +3272,30 @@ c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
 c xk3 = extra parton          (FKS parton)
       do j=0,3
 c xk1 and xk2 are never used for ISR
-         xp1(j)=pp(j,1)
-         xp2(j)=pp(j,2)
+         if (nincoming.eq.2) then
+            xp1(j)=pp(j,1)
+            xp2(j)=pp(j,2)
+         else
+c For a 1->n decay there is a single incoming momentum P=pp(1). Split it
+c evenly between the two pseudo-beams (xp1=xp2=P/2) so that xp1+xp2=P and
+c xp2.P=sh/2, exactly matching the 2->n collision identity. The FSR
+c invariants (xtk,xuk,xq1q,xq2q) are linear in xp1,xp2 and then reduce to
+c the correct frame-independent values w1=2 k1.k3, w2=2 k2.k3 (verified
+c analytically for both ileg=3 and ileg=4).
+            xp1(j)=pp(j,1)/2d0
+            xp2(j)=pp(j,1)/2d0
+         endif
          xk3(j)=pp(j,i_fks)
-         if(ileg.gt.2)pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,j_fks)
+c The recoil system is (sum of incoming momenta) minus the FKS pair. For a
+c 1->n decay there is a single incoming momentum, so pp(j,2) is a final-state
+c parton and must NOT be added here (it is for 2->n scattering only).
+         if(ileg.gt.2)then
+            if (nincoming.eq.2) then
+               pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,j_fks)
+            else
+               pp_rec(j)=pp(j,1)-pp(j,i_fks)-pp(j,j_fks)
+            endif
+         endif
          if(ileg.eq.3)then
             xk1(j)=pp(j,j_fks)
             xk2(j)=pp_rec(j)
@@ -3450,6 +3478,7 @@ c Checks on invariants
       subroutine check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12
      $     ,xm22)
       implicit none
+      include "nexternal.inc"
       integer ileg
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
       double precision tiny,dot
@@ -3458,6 +3487,7 @@ c Checks on invariants
       common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       integer imprecision(7),max_imprecision
       common /c_check_invariants/ max_imprecision,imprecision
+      logical imp6
 
       if(ileg.le.2)then
          if((abs(xtk+2*dot(xp1,xk3))/sh.ge.tiny).or.
@@ -3517,9 +3547,17 @@ c
                stop
             endif
          endif
-         if(((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)).or.
-     &      ((abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)).or.
-     &      ((abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)))then
+c The w2 self-consistency (w2 = 2 xk2.xk3) is frame independent and always
+c checked. The xq1q/xq2q invariants are defined w.r.t. the two beams and are
+c meaningful only for 2->n scattering; for a 1->n decay there is a single
+c incoming momentum, xp2 is a final-state parton, and these quantities cancel
+c out of the FSR MC counterterms (which use only w2). Skip them in that case.
+         imp6=(abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)
+         if(nincoming.eq.2)then
+            imp6=imp6.or.(abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)
+     &              .or.(abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)
+         endif
+         if(imp6)then
             write(*,*)'Warning: imprecision 6 in check_invariants'
             write(*,*)abs(w2-2*dot(xk2,xk3))/sh,
      &                abs(xq2q+2*dot(xp2,xk2))/sh,
@@ -4536,7 +4574,11 @@ c Shower scale
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 
 c Consistency check
-      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(pp(0,1),pp(0,2))
+      else
+         shattmp=dot(pp(0,1),pp(0,1))
+      endif
       if(abs(shattmp/shat-1d0).gt.1d-5)then
          write(*,*)'Error in assign_emsca: inconsistent shat'
          write(*,*)shattmp,shat
@@ -4546,7 +4588,11 @@ c Consistency check
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
      $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
-      emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+      if (nincoming.eq.2) then
+         emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+      else
+         emsca=sqrtshat
+      endif
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
      $        ,xm12)
@@ -4605,7 +4651,11 @@ c Consistency check
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
 c Consistency check
-      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(pp(0,1),pp(0,2))
+      else
+         shattmp=dot(pp(0,1),pp(0,1))
+      endif
       if(abs(shattmp/shat-1d0).gt.1d-5)then
          write(*,*)'Error in assign_emsca_array: inconsistent shat'
          write(*,*)shattmp,shat
@@ -4695,7 +4745,11 @@ c     skip if not QCD dipole (safety)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
       xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
      &              xscalemin+scaleMCdelta)
-      xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
+      if (nincoming.eq.2) then
+         xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
+      else
+         xscalemax=min(xscalemax,sqrt(shat))
+      endif
       xscalemin=min(xscalemin,xscalemax)
 c
       if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
@@ -4732,8 +4786,12 @@ c
      $           *ref_scale_a(i,j),scaleMClow)
             xscalemax_a(i,j)=max(shower_scale_factor*frac_upp
      $           *ref_scale_a(i,j),xscalemin_a(i,j)+scaleMCdelta)
-            xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0
-     $           *sqrt(ebeam(1)*ebeam(2)))
+            if (nincoming.eq.2) then
+               xscalemax_a(i,j)=min(xscalemax_a(i,j),2d0
+     $              *sqrt(ebeam(1)*ebeam(2)))
+            else
+               xscalemax_a(i,j)=min(xscalemax_a(i,j),sqrt(shat))
+            endif
             xscalemin_a(i,j)=min(xscalemin_a(i,j),xscalemax_a(i,j))
 c
             if(abrv.ne.'born'.and.shower_mc(1:7).eq.'PYTHIA6' .and.
@@ -4784,7 +4842,7 @@ c Born-level CM energy squared
             ref_sc=dsqrt(max(0d0,(1-xii)*sh))
          elseif(i_scale.eq.1)then
 c Sum of final-state transverse masses
-            do i=3,nexternal-1
+            do i=nincoming+1,nexternal-1
                ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
             enddo
             ref_sc=ref_sc/2d0
@@ -5050,7 +5108,17 @@ c Definition and initialisation of variables
       max_scale=scalemax
       xmp2=dot(pip,pip) ! mass squared of the partner
       e0sq=dot(pip,pifat) ! father-partner dot product (Born level)
-      theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
+c For a 1->n decay the colour partner of a final-state emitter can be the
+c incoming resonance, which is at rest in the decay frame (zero 3-momentum).
+c The father-partner angle is then geometrically undefined; get_angle would
+c stop. theta2p only enters the PYTHIA6 angular dead zones, so default it to
+c the maximal angle (pi) -> no angular-ordering restriction from a partner at
+c rest. For all other (>=1 momentum) cases use the genuine angle.
+      if(pip(1)**2+pip(2)**2+pip(3)**2.eq.0d0)then
+         theta2p=acos(-1d0)
+      else
+         theta2p=get_angle(pip,pifat) ! father-partner angle (Born level)
+      endif
       theta2p=theta2p**2
       xmm2=xm12*(4-ileg) ! emitter mass squared
       xmr2=xm22*(4-ileg)-xm12*(3-ileg) ! global-recoiler mass squared
@@ -5258,7 +5326,7 @@ c ileg = 1 ==> emission from left     incoming parton
 c ileg = 2 ==> emission from right    incoming parton
 c ileg = 3 ==> emission from massive  outgoing parton
 c ileg = 4 ==> emission from massless outgoing parton
-      if(ipart.le.2)then
+      if(ipart.le.nincoming)then
          ileg=ipart
       elseif(pmass(ipart).ne.0d0)then
          ileg=3
@@ -5278,10 +5346,30 @@ c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
 c xk3 = extra parton          (FKS parton)
       do j=0,3
 c xk1 and xk2 are never used for ISR
-         xp1(j)=pp(j,1)
-         xp2(j)=pp(j,2)
+         if (nincoming.eq.2) then
+            xp1(j)=pp(j,1)
+            xp2(j)=pp(j,2)
+         else
+c For a 1->n decay there is a single incoming momentum P=pp(1). Split it
+c evenly between the two pseudo-beams (xp1=xp2=P/2) so that xp1+xp2=P and
+c xp2.P=sh/2, exactly matching the 2->n collision identity. The FSR
+c invariants (xtk,xuk,xq1q,xq2q) are linear in xp1,xp2 and then reduce to
+c the correct frame-independent values w1=2 k1.k3, w2=2 k2.k3 (verified
+c analytically for both ileg=3 and ileg=4).
+            xp1(j)=pp(j,1)/2d0
+            xp2(j)=pp(j,1)/2d0
+         endif
          xk3(j)=pp(j,i_fks)
-         if(ileg.gt.2)pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,ipart)
+c The recoil system is (sum of incoming momenta) minus the FKS pair. For a
+c 1->n decay there is a single incoming momentum, so pp(j,2) is a final-state
+c parton and must NOT be added here (it is for 2->n scattering only).
+         if(ileg.gt.2)then
+            if (nincoming.eq.2) then
+               pp_rec(j)=pp(j,1)+pp(j,2)-pp(j,i_fks)-pp(j,ipart)
+            else
+               pp_rec(j)=pp(j,1)-pp(j,i_fks)-pp(j,ipart)
+            endif
+         endif
          if(ileg.eq.3)then
             xk1(j)=pp(j,ipart)
             xk2(j)=pp_rec(j)

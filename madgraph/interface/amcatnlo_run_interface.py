@@ -1071,9 +1071,13 @@ class AskRunNLO(cmd.ControlSwitch):
 #    
     def get_allowed_fixed_order(self):
         """ """
-        
-        if self.proc_characteristics['ninitial'] == 1 or \
-           'QED' in self.proc_characteristics['splitting_types']:
+
+        # A colour-neutral decay (ninitial==1, e.g. z > j j) has no
+        # initial-state singularity and can be generated as events
+        # (fixed_order=OFF -> noshower) just like e+ e- collisions.
+        # Coloured-initial decays are caught by the Fortran guard in
+        # genps_fks.f (incoming j_fks with fixed shat is not allowed).
+        if 'QED' in self.proc_characteristics['splitting_types']:
             return ['ON']
         else:
             return ['ON', 'OFF']
@@ -1979,8 +1983,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
-            if self.ninitial == 1:
-                raise aMCatNLOError('Decay processes can only be run at fixed order.')
+            if self.ninitial == 1 and mode in ['aMC@NLO', 'aMC@LO']:
+                # A decay has no beams to recoil against, so the MC@NLO shower
+                # interface cannot shower it. Writing the (unshowered) events is
+                # still fine: 'noshower' events are meant to be fed to MadSpin.
+                raise aMCatNLOError('Decay processes cannot be matched to a parton shower. '
+                                    'Use fixed_order=OFF with shower=OFF to write events '
+                                    '(e.g. for MadSpin).')
             mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
                          'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()

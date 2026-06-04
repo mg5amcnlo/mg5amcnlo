@@ -51,6 +51,86 @@ from tests.acceptance_tests.test_cmd_madevent import check_html_page
 pjoin = os.path.join
 
 #===============================================================================
+# Helpers for the colour-neutral 1->n decay validation (z/w/top decays at NLO)
+#===============================================================================
+_QCD_PARTONS = set(list(range(1, 6)) + [-i for i in range(1, 6)] + [21])
+
+def _read_lhe_partons(path):
+    """Yield (weight, [(px,py,pz,E,pdg), ...]) for the final-state coloured
+    partons of every event in an LHE (optionally gzipped) file. The weight is
+    the event XWGTUP (aMC@NLO events carry signed weights)."""
+    import gzip
+    opn = gzip.open(path, 'rt') if path.endswith('.gz') else open(path)
+    inside = False; header = True; parts = []; weight = 1.0
+    with opn as f:
+        for line in f:
+            s = line.strip()
+            if s.startswith('<event'):
+                inside = True; header = True; parts = []; continue
+            if s.startswith('</event>'):
+                inside = False; yield weight, parts; continue
+            if not inside:
+                continue
+            if s.startswith('<') or s.startswith('#'):
+                continue
+            toks = s.split()
+            if header:
+                try:
+                    weight = float(toks[2])
+                except (IndexError, ValueError):
+                    weight = 1.0
+                header = False
+                continue
+            if len(toks) < 11:
+                continue
+            try:
+                pdg = int(toks[0]); istup = int(toks[1])
+                px, py, pz, E = (float(toks[i]) for i in range(6, 10))
+            except ValueError:
+                continue
+            if istup == 1 and pdg in _QCD_PARTONS:
+                parts.append((px, py, pz, E, pdg))
+
+def _durham_two_jets(parts):
+    """Cluster the coloured partons into exactly two jets with the Durham/kT
+    (e+e-) algorithm. Returns two [E,px,py,pz] four-vectors."""
+    jets = [[p[3], p[0], p[1], p[2]] for p in parts]
+    Evis = sum(j[0] for j in jets) or 1.0
+    while len(jets) > 2:
+        best = None; bi = bj = -1
+        for i in range(len(jets)):
+            for k in range(i + 1, len(jets)):
+                a, b = jets[i], jets[k]
+                pa = math.sqrt(a[1]**2 + a[2]**2 + a[3]**2) or 1e-12
+                pb = math.sqrt(b[1]**2 + b[2]**2 + b[3]**2) or 1e-12
+                cos = (a[1]*b[1] + a[2]*b[2] + a[3]*b[3]) / (pa*pb)
+                cos = max(-1.0, min(1.0, cos))
+                y = 2*min(a[0], b[0])**2*(1 - cos)/Evis**2
+                if best is None or y < best:
+                    best = y; bi, bj = i, k
+        for c in range(4):
+            jets[bi][c] += jets[bj][c]
+        del jets[bj]
+    return jets
+
+def _leading_jet_energy_stats(path):
+    """Weighted (n, mean, rms) of the leading Durham-jet energy. This is a
+    frame-invariant, IR-safe observable: it must coincide between a colour
+    singlet produced at rest and the same singlet decayed standalone."""
+    Es = []; ws = []
+    for w, parts in _read_lhe_partons(path):
+        if len(parts) < 2:
+            continue
+        jets = _durham_two_jets(parts)
+        Es.append(max(j[0] for j in jets)); ws.append(w)
+    sw = sum(ws)
+    if not Es or sw == 0:
+        return 0, 0.0, 0.0
+    mean = sum(e*w for e, w in zip(Es, ws))/sw
+    rms = math.sqrt(max(0.0, sum((e - mean)**2*w for e, w in zip(Es, ws))/sw))
+    return len(Es), mean, rms
+
+#===============================================================================
 # TestCmd
 #===============================================================================
 class MECmdShell(IOTests.IOTestManager):
@@ -308,6 +388,90 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/run_02_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
+
+    def test_decay_NLO_zjj_matches_production(self):
+        """Colour-neutral 1->n decay at NLO (fixed_order=OFF, shower=OFF).
+
+        Generates the standalone decay  z > j j [QCD]  (ninitial==1, no beams)
+        and the production process  e+ e- > z > j j [QCD]  with the e+e- beams
+        tuned to the Z rest frame (ebeam = MZ/2, lpp=0). A frame-invariant,
+        IR-safe jet observable -- the leading Durham-jet energy -- must coincide
+        between the two samples up to statistics: the Z polarisation present in
+        e+e- -> Z only reshapes beam-referenced angles, not the jet energies.
+
+        This both validates the physics (decay == production in the rest frame)
+        and acts as a regression guard for the beamless MC@NLO event-generation
+        machinery (FKS/MC-counterterm kinematics and event reshuffling for
+        ninitial==1).
+        """
+        MZ = 91.1876
+        nevents = 250
+        ehalf = MZ / 2.0
+        path_prod = pjoin(self.tmpdir, 'prod_eeZjj')
+        path_dec = pjoin(self.tmpdir, 'decay_zjj')
+
+        # --- production: e+ e- > z > j j at the Z rest frame ---------------
+        text_prod = """
+        set crash_on_error True --no_save
+        set automatic_html_opening False --no_save
+        generate e+ e- > z > j j [QCD]
+        output %(path)s -f
+        launch
+        fixed_order=OFF
+        shower=OFF
+        set nevents %(nevt)s
+        set ebeam1 %(ehalf)s
+        set ebeam2 %(ehalf)s
+        set lpp1 0
+        set lpp2 0
+        done
+        """ % {'path': path_prod, 'nevt': nevents, 'ehalf': ehalf}
+
+        # --- standalone decay: z > j j (ninitial==1, beamless) ------------
+        text_dec = """
+        set crash_on_error True --no_save
+        set automatic_html_opening False --no_save
+        generate z > j j [QCD]
+        output %(path)s -f
+        launch
+        fixed_order=OFF
+        shower=OFF
+        set nevents %(nevt)s
+        done
+        """ % {'path': path_dec, 'nevt': nevents}
+
+        for text in (text_prod, text_dec):
+            interface = MGCmd.MasterCmd()
+            interface.no_notification()
+            open(pjoin(self.tmpdir, 'cmd'), 'w').write(text)
+            interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        lhe_prod = pjoin(path_prod, 'Events', 'run_01', 'events.lhe.gz')
+        lhe_dec = pjoin(path_dec, 'Events', 'run_01', 'events.lhe.gz')
+        self.assertTrue(os.path.exists(lhe_prod))
+        self.assertTrue(os.path.exists(lhe_dec))
+
+        n_prod, m_prod, rms_prod = _leading_jet_energy_stats(lhe_prod)
+        n_dec, m_dec, rms_dec = _leading_jet_energy_stats(lhe_dec)
+
+        # both samples must actually contain events
+        self.assertTrue(n_prod > 0.5 * nevents)
+        self.assertTrue(n_dec > 0.5 * nevents)
+
+        # the leading-jet energy is bounded below by MZ/2 (two forced jets,
+        # total energy MZ) and sits just above it; both samples must show this.
+        self.assertTrue(ehalf - 0.3 < m_prod < ehalf + 1.5,
+                        'production mean E1 = %g out of range' % m_prod)
+        self.assertTrue(ehalf - 0.3 < m_dec < ehalf + 1.5,
+                        'decay mean E1 = %g out of range' % m_dec)
+
+        # the central claim: the two frame-invariant distributions coincide.
+        # Calibrated on 10k-event runs the means agree to ~0.1 GeV; with
+        # nevents here the per-sample statistical error on the mean is
+        # ~rms/sqrt(n) ~ 0.1 GeV, so a 1.0 GeV tolerance is a safe ~5 sigma.
+        self.assertTrue(abs(m_prod - m_dec) < 1.0,
+                        'leading-jet energy differs: prod=%g dec=%g' %
+                        (m_prod, m_dec))
 
 
     def test_madspin_ON_and_onshell_atNLO(self):
