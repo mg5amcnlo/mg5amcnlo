@@ -98,9 +98,9 @@ c Write the process PID in the log.txt files (i.e., to the screen)
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
-      if (nincoming.ne.2) then
-         write (*,*) 'Decay processes not supported for'/
-     &        /' event generation'
+      if (nincoming.ne.1 .and. nincoming.ne.2) then
+         write (*,*) 'Only 1->n decays and 2->n scattering are'/
+     &        /' supported for event generation'
          stop 1
       endif
 
