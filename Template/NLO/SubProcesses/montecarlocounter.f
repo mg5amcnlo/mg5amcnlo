@@ -636,6 +636,8 @@ c$$$
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       integer n_connect,i_connect(2),iconnect
       logical include_gfun
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       mass=pmass(l_fks)
       veckn_ev=rho(p_cm(0,l_fks))
       veckbarn_ev=rho(p_born(0,min(k_fks,l_fks)))
@@ -658,13 +660,17 @@ c$$$
       enddo
 
 !     TODO: "check_positivity_MCxsec" at some point?
-      if (any(lzone(1:n_connect))) then      
-         if (mcatnlo_delta_mod) then
-!     include Delta
-            call compute_delta(p,probne)
+      if (any(lzone(1:n_connect))) then
+         if (softtest.or.colltest) then
+            probne=1d0
          else
+            if (mcatnlo_delta_mod) then
+!     include Delta
+               call compute_delta(p,probne)
+            else
 !     include bogus no-emission
-            probne=bogus_probne_fun(get_qMC(xi,y))
+               probne=bogus_probne_fun(get_qMC(xi,y))
+            endif
          endif
          amp_split_xmcxsec(1:amp_split_size,1:2)=amp_split_xmcxsec(
      $        1:amp_split_size,1:2)*probne
