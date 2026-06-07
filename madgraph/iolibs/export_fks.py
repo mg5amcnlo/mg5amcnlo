@@ -5297,21 +5297,63 @@ class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
             os.path.join(_file_path, 'iolibs/template_files/check_sa_fks.f'),
             os.path.join(born_path, 'check_sa_fks.f'))
 
-        # the Born-only 'check_fks' links only born.o/sborn_sf.o and friends
-        # (see the FKSSA target of the P* makefile); it uses neither the
-        # one-loop (virtual) matrix element nor the real-emission matrix
-        # elements, which are by far the heaviest parts to compile. Drop them
-        # so the standalone output stays light. The makefile pulls the real
-        # MEs in through a $(wildcard matrix_*.f), so removing the files simply
-        # makes that expansion empty, with no dangling reference.
-        for heavy in glob.glob(os.path.join(born_path, 'V[0-9]*')) + \
-                [os.path.join(born_path, 'MadLoop5_resources')]:
-            if os.path.isdir(heavy):
-                shutil.rmtree(heavy, ignore_errors=True)
-        for real_me in glob.glob(os.path.join(born_path, 'matrix_*.f')):
-            os.remove(real_me)
+        # strip the Born directory down to just what 'check_fks' needs
+        self.trim_born_dir(born_path)
 
         return result
+
+    # the source files linked into the 'check_fks' executable, i.e. the FKSSA
+    # target of the P* makefile. Kept in sync with the makefile template;
+    # b_sf_*.f is globbed because the count is process dependent (a pure [QED]
+    # Born has none) and check_sa_fks.f is the driver we just copied in.
+    check_fks_sources = ('check_sa_fks.f', 'born.f', 'sborn_sf.f',
+                         'splitorders_stuff.f', 'orderstags_glob.f')
+    # the build file plus the run-time inputs the driver reads (the
+    # param_card.dat symlink and the link-topology data file), and the files
+    # the 'launch' flow itself touches in each P* directory. born_leshouche.inc
+    # is one such file: building libmodel runs 'aMCatNLO treatcards param',
+    # whose get_pid_final_initial_states() reads born_leshouche.inc from every
+    # P* directory to force the final-state widths to zero.
+    check_fks_runtime = ('makefile', 'param_card.dat', 'born_links.dat',
+                         'born_leshouche.inc')
+
+    def trim_born_dir(self, born_path):
+        """Delete every file in born_path that 'check_fks' does not need.
+
+        The Born-only check links only the FKSSA objects (born, sborn_sf, the
+        b_sf_* color/charge links, ...) and nothing else, so the rest of the
+        full FKS directory -- the one-loop virtuals (V*/MadLoop), the
+        real-emission matrix elements (matrix_*.f), and the whole
+        integration/shower/analysis driver chain -- is dead weight here and,
+        the virtuals especially, very heavy to compile. Keep only the compiled
+        sources, the transitive closure of the includes they pull in, the
+        makefile and the run-time data files; remove all the rest.
+        """
+        keep = set(self.check_fks_sources) | set(self.check_fks_runtime)
+        keep |= set(os.path.basename(f)
+                    for f in glob.glob(os.path.join(born_path, 'b_sf_*.f')))
+        # follow the 'include' statements of the compiled sources so that no
+        # needed .inc is dropped (a missed one would only surface as a build
+        # failure, which the acceptance suite would catch, but be safe here)
+        inc_re = re.compile(r"^\s*include\s+['\"]([^'\"]+)['\"]", re.IGNORECASE)
+        queue = [f for f in keep if f.endswith('.f')]
+        while queue:
+            src = os.path.join(born_path, queue.pop())
+            if not os.path.isfile(src):
+                continue
+            for line in open(src, errors='replace'):
+                m = inc_re.match(line)
+                if m and m.group(1) not in keep:
+                    keep.add(m.group(1))
+                    queue.append(m.group(1))
+        for name in os.listdir(born_path):
+            if name in keep:
+                continue
+            full = os.path.join(born_path, name)
+            if os.path.isdir(full) and not os.path.islink(full):
+                shutil.rmtree(full, ignore_errors=True)
+            else:
+                os.remove(full)
 
     def write_born_links_file(self, filename, matrix_element):
         """Write born_links.dat: the soft-link topology of the Born.
