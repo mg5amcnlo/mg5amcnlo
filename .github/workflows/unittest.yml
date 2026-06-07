@@ -469,7 +469,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
-
+      - uses: ./.github/actions/restore_ufomodel
       # Runs a set of commands using the runners shell
       - name: test one of the test test_is_uptodate test_write_cplusplus_error test_write_cplusplus_line test_write_cplusplus_special_syntax test_multiple_if_statement test_single_if_statement test_remove_routine test_write_fortran_error test_write_fortran_line test_UFOExpressionParserPythonIF test_parse_fortran_IfElseStruct test_parse_fortran_IfElseStruct_MP test_parse_fortran_fct test_parse_fortran_fct_MP test_parse_special_fortran_fct test_error_interaction_save test_error_particle_save test_interaction_save test_particle_save test_write_pythia8_parameter_files test_fail_on_process_cc_file_uu_six test_write_match_go_process_cc_file test_pythia8_export_functions
         run: |
