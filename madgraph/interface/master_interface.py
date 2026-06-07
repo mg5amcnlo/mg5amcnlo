@@ -503,8 +503,9 @@ class Switcher(object):
                 path=None
         # if there is a path, find what output has been done
             if path:
-                type = self.cmd.find_output_type(self, path) 
-                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent']:
+                type = self.cmd.find_output_type(self, path)
+                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent',
+                            'amcatnlo_fks_sa']:
                     self.change_principal_cmd('MadGraph')
                 elif type == 'aMC@NLO':
                     self.change_principal_cmd('aMC@NLO')

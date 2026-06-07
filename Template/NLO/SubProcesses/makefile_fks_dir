@@ -80,8 +80,15 @@ POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o ha
 # Files for check_sudakov
 EWSUD= $(RUN) check_sudakov.o BinothLHA.o
 
-EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD) 
+EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD)
 EWSUDLIB = $(FILESSUD)
+
+# Files for the FKS Born building-block standalone (output ... --fks).
+# The driver embeds its own get_lo2_orders, so the EW-Sudakov object
+# chain is deliberately left out to keep the link minimal.
+FKSSA = check_sa_fks.o born.o sborn_sf.o				\
+	$(patsubst %.f,%.o,$(wildcard b_sf_???.f))			\
+	splitorders_stuff.o orderstags_glob.o
 
 # Files for check_sudakov_angle2
 EWSUD2= $(RUN) check_sudakov_angle2.o BinothLHA.o
@@ -134,9 +141,12 @@ check_sudakov: $(EWSUD) $(libmadloop)
 	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_sudakov
 
-ewsudakov_sa: $(EWSUDSA) 
+ewsudakov_sa: $(EWSUDSA)
 	$(FC) -o ewsudakov_sa $(EWSUDSA) $(LINKLIBS)  $(LDFLAGS)
 	strip ewsudakov_sa
+
+check_fks: $(FKSSA)
+	$(FC) $(FFLAGS) -o check_fks $(FKSSA) $(LINKLIBSSUD) $(LDFLAGS)
 
 $(LIBDIR)/libdhelas.$(dylibext):
 	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS" shared

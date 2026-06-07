@@ -5251,3 +5251,91 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in matrix_element.born_me['processes']])
 
         return calls, amp_split_orders
+
+
+class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
+    """FKS Born building-block standalone output ('output ... --fks').
+
+    The full optimized FKS directory is generated as usual (so the Born,
+    color/charge-linked Born and spin-correlated Born code is byte-for-byte
+    the production one). On top of that, each born subprocess directory gets
+    a self-contained driver (check_sa_fks.f) and the link-topology file
+    (born_links.dat) so that 'launch' can build and run a lightweight
+    Born-only 'check_fks' executable printing, for one phase-space point,
+    the Born B, the spin-correlated Born BORNTILDE and the linked Borns B_ij.
+    """
+
+    def generate_directories_fks(self, matrix_element, fortran_model, me_number,
+                                 me_ntot, path=os.getcwd(), OLP='MadLoop'):
+        """Run the regular FKS generation, then drop in the standalone
+        Born driver and its data files."""
+        result = super(ProcessExporterFortranFKS_SA, self).\
+            generate_directories_fks(matrix_element, fortran_model, me_number,
+                                     me_ntot, path, OLP)
+
+        borndir = "P%s" % \
+            matrix_element.born_me.get('processes')[0].shell_string()
+        born_path = os.path.join(path, borndir)
+
+        # masses of the born external legs (used by the driver to build the
+        # phase-space point with RAMBO)
+        self.write_pmass_file(
+            writers.FortranWriter(os.path.join(born_path, 'born_pmass.inc')),
+            matrix_element.born_me)
+
+        # the color/charge link topology
+        self.write_born_links_file(
+            os.path.join(born_path, 'born_links.dat'), matrix_element)
+
+        # the (process-independent) standalone driver
+        shutil.copy(
+            os.path.join(_file_path, 'iolibs/template_files/check_sa_fks.f'),
+            os.path.join(born_path, 'check_sa_fks.f'))
+
+        return result
+
+    def write_born_links_file(self, filename, matrix_element):
+        """Write born_links.dat: the color/charge link topology of the Born.
+
+        Format (flat, so a flavour-merging test can diff topology on its own):
+            line 1 : number of links
+            then    : 'm n pdg_m pdg_n col_m col_n itype' per link
+        where (m,n) are the born leg positions exactly as used by sborn_sf.f,
+        pdg/col come from the born legs, and itype is 0 (color) or 1 (charge).
+        """
+        born_legs = matrix_element.born_me.get('processes')[0].get('legs')
+        pdg, col = {}, {}
+        for i, leg in enumerate(born_legs):
+            pdg[i + 1] = leg.get('id')
+            col[i + 1] = leg.get('color')
+
+        lines = []
+        for c_link in matrix_element.color_links:
+            m, n = c_link['link']
+            # only QCD color links are produced for [QCD]; itype=1 (charge)
+            # is reserved for the QED-splitting extension
+            lines.append("%d %d %d %d %d %d %d" %
+                         (m, n, pdg[m], pdg[n], col[m], col[n], 0))
+
+        out = open(filename, 'w')
+        out.write("%d\n" % len(lines))
+        out.write("\n".join(lines))
+        out.write("\n")
+        out.close()
+
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
+        """Regular FKS finalize, plus a marker file so that 'launch' routes
+        to the lightweight Born 'check_fks' build/run instead of the full
+        aMC@NLO integration."""
+        result = super(ProcessExporterFortranFKS_SA, self).\
+            finalize(matrix_elements, history, mg5options, flaglist)
+        subproc = os.path.join(self.dir_path, 'SubProcesses')
+        open(os.path.join(subproc, 'check_sa_fks_mode'), 'w').write('1\n')
+        # the P*/makefile 'include's these run-time option files; the Born
+        # 'check_fks' target does not use their content, so empty stubs are
+        # enough to let make resolve the includes without a full run setup
+        for stub in ('analyse_opts', 'pythia8_opts'):
+            stub_path = os.path.join(subproc, stub)
+            if not os.path.isfile(stub_path):
+                open(stub_path, 'w').write('')
+        return result

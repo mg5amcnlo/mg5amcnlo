@@ -11191,7 +11191,18 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._export_dir, amcatnlo_options)
 
-    # Then treat the EW sudakov Standalone output     
+    # Then the FKS Born building-block standalone output (output ... --fks)
+    elif output_type=='amcatnlo_sa':
+        import madgraph.iolibs.export_fks as export_fks
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['running'] = cmd._curr_model.get('running_elements')
+        amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
+        logger.info("Writing out the FKS Born building blocks in a standalone format")
+        amcatnlo_options['export_format']='FKS5_optimized'
+        return export_fks.ProcessExporterFortranFKS_SA(cmd._export_dir, amcatnlo_options)
+
+    # Then treat the EW sudakov Standalone output
     elif output_type=='ewsudsa':
         import madgraph.iolibs.export_fks as export_fks
         ExporterClass=None
