@@ -17,9 +17,21 @@ C     ******************************************************************
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
       INCLUDE 'coupl.inc'
-      INTEGER I,J,ILINK,NLINKS,M,N
+      INTEGER I,J,ILINK,NLINKS,M,N,ICALL
       INTEGER PDG_M,PDG_N,COL_M,COL_N,ITYPE
       REAL*8 BORN, WGT, SQRTS, BORNTILDE, TOTMASS
+C     optional run-time controls read from the command line:
+C       arg1 = sqrt(s) of the phase-space point (<=0 -> built-in default)
+C       arg2 = number of Born re-evaluations (for the launch --timings mode)
+      INTEGER NARGS, NCALLS, IARGC
+      REAL*8 USER_ENERGY
+      CHARACTER*100 ARG
+C     the link topology is read once into these arrays, so the timing loop
+C     re-evaluates the Born building blocks without re-reading the file.
+      INTEGER MAXLINK
+      PARAMETER (MAXLINK=1000)
+      INTEGER MLIST(MAXLINK), NLIST(MAXLINK)
+      REAL*8 WGTLIST(MAXLINK)
       COMPLEX*16 ANS_CNT(2,NSPLITORDERS)
       COMMON /C_BORN_CNT/ ANS_CNT
       LOGICAL NEED_COLOR_LINKS, NEED_CHARGE_LINKS
@@ -51,6 +63,20 @@ C     This mirrors the production fill_needed_splittings().
         ENDDO
       ENDDO
 
+C     parse the optional command-line arguments (energy, #re-evaluations)
+      USER_ENERGY=0D0
+      NCALLS=1
+      NARGS=IARGC()
+      IF (NARGS.GE.1) THEN
+        CALL GETARG(1,ARG)
+        READ(ARG,*) USER_ENERGY
+      ENDIF
+      IF (NARGS.GE.2) THEN
+        CALL GETARG(2,ARG)
+        READ(ARG,*) NCALLS
+      ENDIF
+      IF (NCALLS.LT.1) NCALLS=1
+
       CALL SETPARA('param_card.dat')
       CALL PRINTOUT()
 
@@ -67,6 +93,9 @@ C     pick a center-of-mass energy comfortably above threshold
         TOTMASS=TOTMASS+PMASS(I)
       ENDDO
       SQRTS=1000D0
+      IF (USER_ENERGY.GT.0D0) SQRTS=USER_ENERGY
+C     keep the point above threshold so RAMBO never fails, even if the user
+C     asks for an energy below the sum of the final-state masses
       IF (4D0*TOTMASS.GT.SQRTS) SQRTS=4D0*TOTMASS
       CALL GET_MOMENTA(SQRTS,PMASS,P)
 
@@ -83,22 +112,37 @@ C     ---- kept explicit so the flavour-merging extension only has to
 C     ---- grow the upper bound and reset the relevant common blocks.
       WRITE(*,*) '==== FLAVOUR CONFIGURATION', 1, '===='
 
-      CALL SBORN(P,BORN)
-      BORNTILDE=0D0
-      DO J=1,NSPLITORDERS
-        BORNTILDE=BORNTILDE+DBLE(ANS_CNT(2,J))
-      ENDDO
-      WRITE(*,*) 'BORN       =', BORN
-      WRITE(*,*) 'BORNTILDE  =', BORNTILDE
-
+C     read the link topology once into MLIST/NLIST so the (optional) timing
+C     loop below does not pay the file I/O on every re-evaluation
       OPEN(UNIT=78,FILE='born_links.dat',STATUS='OLD')
       READ(78,*) NLINKS
       DO ILINK=1,NLINKS
         READ(78,*) M,N,PDG_M,PDG_N,COL_M,COL_N,ITYPE
-        CALL SBORN_SF(P,M,N,WGT)
-        WRITE(*,*) 'B_ij ', M, N, WGT
+        MLIST(ILINK)=M
+        NLIST(ILINK)=N
       ENDDO
       CLOSE(78)
+
+C     evaluate the Born building blocks NCALLS times (NCALLS>1 only for the
+C     launch --timings mode); the values are identical, so we keep the last
+C     ones and print them once below.
+      DO ICALL=1,NCALLS
+        CALL SBORN(P,BORN)
+        BORNTILDE=0D0
+        DO J=1,NSPLITORDERS
+          BORNTILDE=BORNTILDE+DBLE(ANS_CNT(2,J))
+        ENDDO
+        DO ILINK=1,NLINKS
+          CALL SBORN_SF(P,MLIST(ILINK),NLIST(ILINK),WGT)
+          WGTLIST(ILINK)=WGT
+        ENDDO
+      ENDDO
+
+      WRITE(*,*) 'BORN       =', BORN
+      WRITE(*,*) 'BORNTILDE  =', BORNTILDE
+      DO ILINK=1,NLINKS
+        WRITE(*,*) 'B_ij ', MLIST(ILINK), NLIST(ILINK), WGTLIST(ILINK)
+      ENDDO
 
       END
 

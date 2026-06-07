@@ -513,10 +513,91 @@ class SALauncher(ExtLauncher):
             return None
 
 
+class FKSSALauncher(ExtLauncher):
+    """Launch the FKS Born building-block standalone check ('check_fks').
+
+    Produced by 'output standalone --fks'. ExtLauncher.run() first offers to
+    edit the param_card (bypassed with -f); launch_program() then compiles the
+    Source libraries, builds 'check_fks' in every born subprocess directory and
+    runs it, echoing the Born, spin-correlated Born and color/charge-linked
+    Borns for one phase-space point. The --energy / --timings / --nb_run
+    options are honoured.
+    """
+
+    def __init__(self, cmd_int, running_dir, **options):
+        """initialize the FKS standalone version"""
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
+        self.cards = ['param_card.dat']
+
+    def launch_program(self):
+        """compile and run check_fks in each born subprocess directory."""
+        me_dir = self.running_dir
+        logger.info(
+            'Compiling Source libraries for the FKS standalone check...')
+        misc.compile(cwd=pjoin(me_dir, 'Source'))
+
+        sub_path = pjoin(me_dir, 'SubProcesses')
+        born_dirs = sorted(pjoin(sub_path, p) for p in os.listdir(sub_path)
+                           if p.startswith('P') and os.path.isfile(
+                               pjoin(sub_path, p, 'check_sa_fks.f')))
+        if not born_dirs:
+            logger.error(
+                'No FKS standalone born directory found in %s' % sub_path)
+            return
+
+        energy = float(getattr(self, 'energy', 0) or 0)
+        timings = int(getattr(self, 'timings', 0) or 0)
+        nb_run = int(getattr(self, 'nb_run', 1) or 1)
+
+        for born_path in born_dirs:
+            pdir = os.path.basename(born_path)
+            logger.info('Building check_fks in %s ...' % pdir)
+            misc.compile(['check_fks'], cwd=born_path)
+            logger.info('==== %s ====' % pdir)
+            # print the building-block values once (honouring --energy)
+            output = subprocess.Popen(
+                ['./check_fks', self._energy_arg(energy)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cwd=born_path).communicate()[0]
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', errors='replace')
+            logger.info(output)
+            if timings > 0:
+                self._run_with_timings(born_path, energy, timings, nb_run)
+
+    @staticmethod
+    def _energy_arg(energy):
+        """command-line sqrt(s) for check_fks; '0' means built-in default."""
+        return ('%.16g' % energy) if energy and energy > 0 else '0'
+
+    def _run_with_timings(self, born_path, energy, nb_try, nb_run):
+        """time nb_try Born re-evaluations, averaged over nb_run repetitions."""
+        run_times = []
+        for _ in range(nb_run):
+            t0 = time.time()
+            subprocess.call(
+                ['./check_fks', self._energy_arg(energy), str(nb_try)],
+                cwd=born_path, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            run_times.append(time.time() - t0)
+        avg = sum(run_times) / len(run_times)
+        if len(run_times) > 1:
+            sigma = math.sqrt(sum((t - avg) ** 2 for t in run_times)
+                              / (len(run_times) - 1))
+        else:
+            sigma = 0.0
+        sep = '=' * 60
+        print('\n' + sep)
+        print('Timing summary (%s): %d Born evaluation(s)/run, %d run(s)'
+              % (os.path.basename(born_path), nb_try, nb_run))
+        print('  wall time per run: %.6f +/- %.6f s' % (avg, sigma))
+        print(sep + '\n')
+
+
 class MWLauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
-    
-    
+
+
     def __init__(self, cmd_int, running_dir, **options):
         """ initialize the StandAlone Version"""
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
