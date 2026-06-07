@@ -28,19 +28,38 @@ C     ******************************************************************
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       LOGICAL SPLIT_TYPE_USED(NSPLITORDERS)
       COMMON/TO_SPLIT_TYPE_USED/SPLIT_TYPE_USED
+      DOUBLE PRECISION PARTICLE_CHARGE_BORN(NEXTERNAL-1)
+      COMMON /C_CHARGES_BORN/PARTICLE_CHARGE_BORN
+      INCLUDE 'nFKSconfigs.inc'
+      INCLUDE 'fks_info.inc'
 
 C     the FKS bookkeeping common blocks must be initialised before the
 C     Born is evaluated (NFKSPROCESS selects the IDEN/IJ data, and
-C     SPLIT_TYPE_USED enables the counterterm/spin-correlation pieces)
+C     SPLIT_TYPE_USED enables the counterterm/spin-correlation pieces).
+C     Only the split orders that are actually perturbed in some FKS
+C     configuration may be enabled: forcing all of them on makes the
+C     spin-correlation lookup ask for an amp_split order that does not
+C     exist for a mixed-coupling Born (e.g. z > q q~ has a QED order).
+C     This mirrors the production fill_needed_splittings().
       NFKSPROCESS=1
       DO I=1,NSPLITORDERS
-        SPLIT_TYPE_USED(I)=.TRUE.
+        SPLIT_TYPE_USED(I)=.FALSE.
+      ENDDO
+      DO J=1,FKS_CONFIGS
+        DO I=1,NSPLITORDERS
+          SPLIT_TYPE_USED(I)=SPLIT_TYPE_USED(I).OR.SPLIT_TYPE_D(J,I)
+        ENDDO
       ENDDO
 
       CALL SETPARA('param_card.dat')
       CALL PRINTOUT()
 
       INCLUDE 'born_pmass.inc'
+
+C     the per-leg electric charges enter the charge-linked Born ([QED]
+C     soft-photon links); they are written by the exporter and must be
+C     filled before SBORN_SF is called on a charge link.
+      INCLUDE 'born_charges.inc'
 
 C     pick a center-of-mass energy comfortably above threshold
       TOTMASS=0D0
@@ -51,8 +70,13 @@ C     pick a center-of-mass energy comfortably above threshold
       IF (4D0*TOTMASS.GT.SQRTS) SQRTS=4D0*TOTMASS
       CALL GET_MOMENTA(SQRTS,PMASS,P)
 
-      NEED_COLOR_LINKS=.TRUE.
-      NEED_CHARGE_LINKS=.FALSE.
+C     whether the soft links of this configuration are colour links (a
+C     gluon goes soft, [QCD]) or charge links (a photon goes soft, [QED])
+C     is read from the generated data: sborn_sf takes a different branch
+C     for each, so getting this from need_*_links_d (rather than forcing
+C     colour) is what makes the [QED] building blocks come out right.
+      NEED_COLOR_LINKS=NEED_COLOR_LINKS_D(NFKSPROCESS)
+      NEED_CHARGE_LINKS=NEED_CHARGE_LINKS_D(NFKSPROCESS)
 
 C     ---- one flavour configuration is available today; the loop is
 C     ---- kept explicit so the flavour-merging extension only has to
@@ -85,21 +109,39 @@ C     ---- grow the upper bound and reset the relevant common blocks.
       PARAMETER (NBORN=NEXTERNAL-1)
       REAL*8 ENERGY,PMASS(NBORN),P(0:3,NBORN),PRAMBO(4,10),WGT
       INTEGER I
-      P(0,1)=ENERGY/2
-      P(1,1)=0d0
-      P(2,1)=0d0
-      P(3,1)=ENERGY/2
-      P(0,2)=ENERGY/2
-      P(1,2)=0d0
-      P(2,2)=0d0
-      P(3,2)=-ENERGY/2
-      CALL RAMBO(NBORN-2,ENERGY,PMASS(3),PRAMBO,WGT)
-      DO I=3,NBORN
-        P(0,I)=PRAMBO(4,I-2)
-        P(1,I)=PRAMBO(1,I-2)
-        P(2,I)=PRAMBO(2,I-2)
-        P(3,I)=PRAMBO(3,I-2)
-      ENDDO
+      IF (NINCOMING.EQ.1) THEN
+C       decay: the parent decays at rest, so the available energy is
+C       fixed by its mass (ENERGY is ignored) and the NBORN-1 decay
+C       products are distributed by RAMBO in the parent rest frame.
+        P(0,1)=PMASS(1)
+        P(1,1)=0d0
+        P(2,1)=0d0
+        P(3,1)=0d0
+        CALL RAMBO(NBORN-1,PMASS(1),PMASS(2),PRAMBO,WGT)
+        DO I=2,NBORN
+          P(0,I)=PRAMBO(4,I-1)
+          P(1,I)=PRAMBO(1,I-1)
+          P(2,I)=PRAMBO(2,I-1)
+          P(3,I)=PRAMBO(3,I-1)
+        ENDDO
+      ELSE
+C       2 -> n: back-to-back massless initial states along z
+        P(0,1)=ENERGY/2
+        P(1,1)=0d0
+        P(2,1)=0d0
+        P(3,1)=ENERGY/2
+        P(0,2)=ENERGY/2
+        P(1,2)=0d0
+        P(2,2)=0d0
+        P(3,2)=-ENERGY/2
+        CALL RAMBO(NBORN-2,ENERGY,PMASS(3),PRAMBO,WGT)
+        DO I=3,NBORN
+          P(0,I)=PRAMBO(4,I-2)
+          P(1,I)=PRAMBO(1,I-2)
+          P(2,I)=PRAMBO(2,I-2)
+          P(3,I)=PRAMBO(3,I-2)
+        ENDDO
+      ENDIF
       RETURN
       END
 

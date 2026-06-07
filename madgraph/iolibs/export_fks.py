@@ -5287,6 +5287,11 @@ class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
         self.write_born_links_file(
             os.path.join(born_path, 'born_links.dat'), matrix_element)
 
+        # the electric charges of the born legs (used by sborn_sf's charge
+        # branch for a [QED] correction)
+        self.write_born_charges_file(
+            os.path.join(born_path, 'born_charges.inc'), matrix_element)
+
         # the (process-independent) standalone driver
         shutil.copy(
             os.path.join(_file_path, 'iolibs/template_files/check_sa_fks.f'),
@@ -5295,30 +5300,77 @@ class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
         return result
 
     def write_born_links_file(self, filename, matrix_element):
-        """Write born_links.dat: the color/charge link topology of the Born.
+        """Write born_links.dat: the soft-link topology of the Born.
 
         Format (flat, so a flavour-merging test can diff topology on its own):
             line 1 : number of links
             then    : 'm n pdg_m pdg_n col_m col_n itype' per link
         where (m,n) are the born leg positions exactly as used by sborn_sf.f,
         pdg/col come from the born legs, and itype is 0 (color) or 1 (charge).
+
+        For a [QCD] correction the links are the colour links between the
+        coloured Born legs (itype=0, the ones the b_sf_*.f files encode); for
+        a [QED] correction they are the charge links between every pair of
+        charged Born legs (itype=1). sborn_sf dispatches on the run-time
+        need_color_links/need_charge_links flags. The two cases use different
+        sources on purpose: the colour case must match the colour-basis
+        ordering of the b_sf files, whereas the charge case is a plain
+        enumeration of charged pairs (the colour-basis insertion drops the
+        colourless legs, e.g. the W bosons, which still carry charge links).
+
+        Whether this Born is colour- or charge-linked is taken from the first
+        FKS configuration's fks_info, the very one the driver selects with
+        NFKSPROCESS=1 (need_*_links_d(1)). This is the authoritative source:
+        the FKSProcess.perturbation attribute is unreliable here because it
+        keeps its 'QCD' default when the process is built from an amplitude.
         """
+        model = matrix_element.born_me.get('base_amplitude').\
+            get('process').get('model')
         born_legs = matrix_element.born_me.get('processes')[0].get('legs')
+        fks_legs = fks_common.to_fks_legs(born_legs, model)
         pdg, col = {}, {}
-        for i, leg in enumerate(born_legs):
+        for i, leg in enumerate(fks_legs):
             pdg[i + 1] = leg.get('id')
             col[i + 1] = leg.get('color')
 
+        # config 1 (NFKSPROCESS=1) decides the link type, matching the driver
+        fks_info = matrix_element.get_fks_info_list()[0]['fks_info']
         lines = []
-        for c_link in matrix_element.color_links:
-            m, n = c_link['link']
-            # only QCD color links are produced for [QCD]; itype=1 (charge)
-            # is reserved for the QED-splitting extension
-            lines.append("%d %d %d %d %d %d %d" %
-                         (m, n, pdg[m], pdg[n], col[m], col[n], 0))
+        if fks_info['need_charge_links']:
+            for c_link in fks_common.find_color_links(fks_legs, symm=True,
+                                                      pert='QED'):
+                m = c_link['legs'][0].get('number')
+                n = c_link['legs'][1].get('number')
+                lines.append("%d %d %d %d %d %d %d" %
+                             (m, n, pdg[m], pdg[n], col[m], col[n], 1))
+        else:
+            for c_link in matrix_element.color_links:
+                m, n = c_link['link']
+                lines.append("%d %d %d %d %d %d %d" %
+                             (m, n, pdg[m], pdg[n], col[m], col[n], 0))
 
         out = open(filename, 'w')
         out.write("%d\n" % len(lines))
+        out.write("\n".join(lines))
+        out.write("\n")
+        out.close()
+
+    def write_born_charges_file(self, filename, matrix_element):
+        """Write born_charges.inc: fixed-form assignments filling the
+        /c_charges_born/ common with the electric charge of each Born leg.
+
+        sborn_sf's charge ([QED]) branch builds the charge-linked Born as
+        born * charges_born(m) * charges_born(n) * gal**2, so the driver needs
+        these charges; the colour ([QCD]) branch ignores them."""
+        model = matrix_element.born_me.get('base_amplitude').\
+            get('process').get('model')
+        born_legs = matrix_element.born_me.get('processes')[0].get('legs')
+        fks_legs = fks_common.to_fks_legs(born_legs, model)
+        lines = []
+        for i, leg in enumerate(fks_legs):
+            lines.append("      particle_charge_born(%d) = %19.15fd0" %
+                         (i + 1, leg.get('charge')))
+        out = open(filename, 'w')
         out.write("\n".join(lines))
         out.write("\n")
         out.close()
