@@ -35,6 +35,7 @@ concurrency:
 jobs:
   madspin_factory:
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     strategy:
       fail-fast: false
       matrix:
