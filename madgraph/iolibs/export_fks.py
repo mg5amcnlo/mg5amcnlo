@@ -5297,15 +5297,19 @@ class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
             os.path.join(_file_path, 'iolibs/template_files/check_sa_fks.f'),
             os.path.join(born_path, 'check_sa_fks.f'))
 
-        # the Born-only 'check_fks' never uses the one-loop (virtual) matrix
-        # element, which is by far the heaviest part to compile. Drop the
-        # generated MadLoop virtual directory (V*) and its resources so the
-        # standalone output stays light; check_fks links only born.o/sborn_sf.o
-        # and friends, none of which live there.
+        # the Born-only 'check_fks' links only born.o/sborn_sf.o and friends
+        # (see the FKSSA target of the P* makefile); it uses neither the
+        # one-loop (virtual) matrix element nor the real-emission matrix
+        # elements, which are by far the heaviest parts to compile. Drop them
+        # so the standalone output stays light. The makefile pulls the real
+        # MEs in through a $(wildcard matrix_*.f), so removing the files simply
+        # makes that expansion empty, with no dangling reference.
         for heavy in glob.glob(os.path.join(born_path, 'V[0-9]*')) + \
                 [os.path.join(born_path, 'MadLoop5_resources')]:
             if os.path.isdir(heavy):
                 shutil.rmtree(heavy, ignore_errors=True)
+        for real_me in glob.glob(os.path.join(born_path, 'matrix_*.f')):
+            os.remove(real_me)
 
         return result
 
