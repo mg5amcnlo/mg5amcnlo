@@ -1962,6 +1962,7 @@ jobs:
     # FKS Born building-block standalone output ('output standalone --fks'):
     # hardcoded-value regression and consistency vs a plain aMC@NLO output.
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
