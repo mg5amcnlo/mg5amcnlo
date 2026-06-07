@@ -71,6 +71,9 @@ c     MAX_COMPAT_FLAVS must match the Python-side guard in get_max_weight_from_f
 
        integer frame_id
        common /to_me_frame/frame_id
+    
+       double precision beampol(2)
+       common /to_beampol/ beampol
 
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
@@ -130,6 +133,7 @@ c      enddo
 1     continue
       maxBW=0d0
       read(*,*) mode,  BWcut, Ecollider, temp, frame_id,
+     &          beampol(1), beampol(2),
      &          flavor_index_prod, flavor_index_full
 
       call GET_FLAVOR_MS_FULL(flavor_index_full, FLAVOR)

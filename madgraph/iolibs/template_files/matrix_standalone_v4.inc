@@ -5,79 +5,80 @@ C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER                 NCOMB         
+      INTEGER                 NCOMB
       PARAMETER (             NCOMB=%(ncomb)d)
-CF2PY INTENT(OUT) :: ANS                                                                                                                                                                                     
-CF2PY INTENT(IN) :: HEL                                                                                                                                                                                    
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)  
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
 
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
-	  INTEGER HEL
+      INTEGER HEL
       INTEGER FLAVOR(NEXTERNAL)
 C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+      COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL %(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
-	  USERHEL=-1
+      CALL %(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
+      USERHEL=-1
 
-	  END
+      END
 
       SUBROUTINE %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
-C  
+C
 %(info_lines)s
-C 
+C
 C MadGraph5_aMC@NLO StandAlone Version
-C 
+C
 C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C  
+C
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-	  INTEGER    NINITIAL 
+      INTEGER    NINITIAL
       PARAMETER (NINITIAL=%(nincoming)d)
       INTEGER NPOLENTRIES
       PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
-      INTEGER                 NCOMB         
+      INTEGER                 NCOMB
       PARAMETER (             NCOMB=%(ncomb)d)
-	  INTEGER HELAVGFACTOR
-	  PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
-C  
-C ARGUMENTS 
-C  
+      INTEGER HELAVGFACTOR
+      PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
 C  put in common block to expose this variable to python interface
-      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL 
+      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 %(proc_prefix)sMATRIX
       INTEGER IHEL,IDEN, I, J
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
-	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER FLAVOR(NEXTERNAL)
+      INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
@@ -86,16 +87,16 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
-	  DATA USERHEL/-1/	  
+      COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+      DATA USERHEL/-1/
       LOGICAL HELRESET
       common/%(proc_prefix)shelreset/HELRESET
       data HELRESET/.true./
-      
+
 %(helicity_lines)s
 %(den_factor_line)s
 
-	  INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
       DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
 
@@ -119,6 +120,9 @@ C ----------
 C BEGIN CODE
 C ----------
       IF(USERHEL.EQ.-1) NTRY=NTRY+1
+      DO IHEL=1,NEXTERNAL
+         JC(IHEL) = +1
+      ENDDO
 C     When spin-2 particles are involved, the Helicity filtering is dangerous for the 2->1 topology.
 C     This is because depending on the MC setup the initial PS points have back-to-back initial states
 C     for which some of the spin-2 helicity configurations are zero. But they are no longer zero
@@ -127,80 +131,160 @@ C     lorentz invariant with expternal spin-2 particles (only the helicity sum i
 C     For this reason, we simply remove the filterin when there is only three external particles.
       IF (NEXTERNAL.LE.3) THEN
         DO IHEL=1,NCOMB
-		  GOODHEL(IHEL)=.TRUE.
-		ENDDO
-	  ENDIF
+          GOODHEL(IHEL)=.TRUE.
+        ENDDO
+      ENDIF
       ANS = 0D0
           DO IHEL=1,NCOMB
-	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
+             IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
                 IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
-				    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+                    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                         CYCLE
                     ENDIF
-                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),FLAVOR(1))
+                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1),FLAVOR(1))
                     IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
                         ANS=ANS+T
                     ENDIF
-				    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
                         GOODHEL(IHEL)=.TRUE.
                     ENDIF
                 ENDIF
-		     ENDIF
+             ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)*%(proc_prefix)sBROKEN_SYM(FLAVOR)
-	  IF(USERHEL.NE.-1) THEN
-          ANS=ANS*HELAVGFACTOR	  
-	  ELSE
-		DO J=1,NINITIAL
-		  IF (POLARIZATIONS(J,0).ne.-1) THEN
+      IF(USERHEL.NE.-1) THEN
+          ANS=ANS*HELAVGFACTOR
+      ELSE
+        DO J=1,NINITIAL
+          IF (POLARIZATIONS(J,0).ne.-1) THEN
             ANS=ANS*BEAMS_HELAVGFACTOR(J)
             ANS=ANS/POLARIZATIONS(J,0)
-		  ENDIF
-		ENDDO
-	  ENDIF
-	  END
-       
-       
-      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,FLAVOR)
+          ENDIF
+        ENDDO
+      ENDIF
+      END
+
+
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC,FLAVOR)
       use model_object
-C  
+C
 %(info_lines)s
 C
 C Returns amplitude squared -- no average over initial state/symmetry factor
 c for the point with external lines W(0:6,NEXTERNAL)
-C  
+C
 %(process_lines)s
-C  
+C
       use aloha_object
       IMPLICIT NONE
-C  
+C
 C CONSTANTS
-C  
+C
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=%(ngraphs)d) 
+      PARAMETER (NGRAPHS=%(ngraphs)d)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       INTEGER FLAVOR(NEXTERNAL)
-C  
-C LOCAL VARIABLES 
-C  
+C
+C LOCAL VARIABLES
+C
       INTEGER I,J
       COMPLEX*16 ZTEMP
       INTEGER CF_INDEX
-      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
-      INTEGER DENOM
+      INTEGER %(proc_prefix)sCF(%(ncolortriang)d)
+      INTEGER %(proc_prefix)sDENOM
+      common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
+      type(aloha) W(NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+C
+C GLOBAL VARIABLES
+C
+      include 'coupl.inc'
+%(global_variable)s
+C COLOR DATA
+%(color_data_lines)s
+C
+C
+C ----------
+C BEGIN CODE
+C ----------
+      call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+c      WRITE (*,*) '  -> AMP = ', AMP
+      call %(proc_prefix)sGET_JAMP(AMP,JAMP)
+c      WRITE (*,*) '  -> JAMP = ', JAMP
+      call %(proc_prefix)sGET_MATRIX(JAMP,%(proc_prefix)sMATRIX)
+c      write (*,*) "  -> col.ave. |M|^2 for HEL=[", NHEL ,"] = ", %(proc_prefix)sMATRIX
+
+%(amp2_lines)s
+
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_NHEL(IDEN_STAR,NHEL_STAR)
+C CONSTANTS
+C
+CF2PY INTENT(OUT) :: NHEL_STAR
+CF2PY INTENT(OUT) :: IDEN_STAR
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=%(ncomb)d)
+
+      INTEGER NHEL(NEXTERNAL,NCOMB),NHEL_STAR(NEXTERNAL,NCOMB)
+      INTEGER IDEN,IDEN_STAR
+
+%(helicity_lines)s
+%(den_factor_line)s
+      IDEN_STAR = IDEN
+      NHEL_STAR = NHEL
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+      use model_object
+C
+%(process_lines)s
+C
+CF2PY INTENT(OUT) :: AMP
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: IC
+CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
+
+      use aloha_object
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C
+C ARGUMENTS
+C
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL)
+C
+C LOCAL VARIABLES
+C
+      COMPLEX*16 AMP(NGRAPHS)
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -212,55 +296,298 @@ C
       include 'coupl.inc'
 %(global_variable)s
 C
+C
+      bwcutoff=15 ! use if $ syntax is defined in the process
+%(flavor_mask_setup)s
+%(helas_calls)s
+%(amp2_lines)s
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_JAMP(AMP,JAMP)
+C
+%(process_lines)s
+C
+CF2PY INTENT(OUT) :: JAMP
+CF2PY INTENT(IN) :: AMP
+
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d)
+      INTEGER    NCOLOR
+      PARAMETER ( NCOLOR=%(ncolor)d)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
+
+%(jamp_lines)s
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,MATRIX)
+C
+%(process_lines)s
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+CF2PY INTENT(OUT) :: MATRIX
+CF2PY INTENT(IN) :: JAMP
+
+
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d)
+      REAL*8     ZERO,MATRIX
+      PARAMETER (ZERO=0D0)
+C
+
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+
+      INTEGER CF_INDEX
+      INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER %(proc_prefix)sDENOM
+      common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
+      COMPLEX*16 JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+C
+
 C COLOR DATA
 C
-%(color_data_lines)s
+
+      MATRIX = 0.D0
+      CF_INDEX = 0
+      DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX + 1
+          ZTEMP = ZTEMP + %(proc_prefix)sCF(CF_INDEX)*JAMP(J)
+        ENDDO
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/%(proc_prefix)sDENOM
+      ENDDO
+      END
+
+
+
+      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2, INTER)
+
+CF2PY INTENT(OUT) :: INTER
+CF2PY INTENT(IN) :: JAMP_1
+CF2PY INTENT(IN) :: JAMP_2
+
+      INTEGER I,J
+      INTEGER NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d)
+      INTEGER CF_INDEX
+      INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER %(proc_prefix)sDENOM
+      common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
+      COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),INTER
+
+C COLOR DATA
+C
+
+      INTER = (0.D0,0.D0)
+      CF_INDEX = 0
+      DO I = 1, NCOLOR
+C        ZTEMP = DCONJG(JAMP_2(I))
+         DO J=I, NCOLOR
+          CF_INDEX = CF_INDEX +1
+          INTER = INTER + %(proc_prefix)sCF(CF_INDEX) * (JAMP_1(J) * DCONJG(JAMP_2(I)) +JAMP_1(I) * DCONJG(JAMP_2(J)))
+        ENDDO
+      ENDDO
+      INTER = INTER/ (2d0*%(proc_prefix)sDENOM)
+
+      END
+
+
+
+      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)
+c     P momenta
+c     NHEL base of helicity that are not changing
+c     POS(N_CHNGING): position of the changing helicity
+c     n_changing: number of changing helicity
+c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
+c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
+      use model_object
+      implicit none
+CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: N_CHANGING
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(IN) :: FLAVOR(%(nexternal)d)
+CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
+c
+C
+C ARGUMENTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER THISNHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      INTEGER FLAVOR(NEXTERNAL)
+      DOUBLE PRECISION ALPHAS
+      DOUBLE COMPLEX INTER(*)
+      INTEGER NINTER
+      INTEGER NB_NHEL
+      DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:)
+      PARAMETER (NB_NHEL=%(ncomb)d)
+c LOCAL
+      INTEGER I,IHEL,IPART
+      DOUBLE PRECISION PI
+C
+      INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
+C     put in common block to expose this variable to python interface
+      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL
+C
+C     include coupling definition to update the value of alphas
+C
+      include 'coupl.inc'
+
+      ninter = N_COMB*(N_COMB+1)/2
+      allocate(TMP_INTER(NINTER))
+      TMP_INTER(:) = (0d0, 0d0)
+
+      DO I=1, N_COMB*(N_COMB+1)/2
+        INTER(I) = 0
+      enddo
+
+      IF (ALPHAS.ne.0d0) then
+          pi = 3.141592653589793d0
+          G = 2* DSQRT(ALPHAS*pi)
+          call UPDATE_AS_PARAM()
+      ENDIF
+      DO IHEL =1, NB_NHEL
+        THISNHEL(:) = NHEL(:, IHEL)
+        DO IPART=1,N_CHANGING
+            if(THISNHEL(POS(IPART)).NE.ALLOW_HEL(IPART)) GOTO 10 !BYPASS COMPUTATION FOR HELICITY
+        ENDDO
+        TMP_INTER(:) = 0
+        call  %(proc_prefix)sGET_ALL_INTER(P, THISNHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, TMP_INTER)
+        do I = 1, N_COMB*(N_COMB+1)/2
+           INTER(I) = INTER(I) + TMP_INTER(I)
+        enddo
+ 10   enddo
+      return
+      deallocate(TMP_INTER)
+      end
+
+      SUBROUTINE  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, INTER)
+c     P momenta
+c     NHEL base of helicity that are not changing
+c     POS(N_CHNGING): position of the changing helicity
+c     n_changing: number of changing helicity
+c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
+c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
+      implicit none
+CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
+CF2PY INTENT(IN) :: NHEL(%(nexternal)d)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: N_CHANGING
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(IN) :: FLAVOR(%(nexternal)d)
+CF2PY INTENT(OUT) :: INTER(NCOMB*(NCOMB+1)/2)
+c
+C
+C ARGUMENTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      INTEGER FLAVOR(NEXTERNAL)
+      DOUBLE COMPLEX INTER(*)
+c
+c     Intermediate array
+c
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d)
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d)
+      INTEGER IC(NEXTERNAL)
+
+      DOUBLE COMPLEX AMP(NGRAPHS)
+      DOUBLE COMPLEX, ALLOCATABLE, SAVE :: JAMP(:,:)
+      INTEGER, SAVE :: S_NCOMB = 0
+
+c
+c     LOCAL
+c
+      INTEGER I,J,SOL,N
+
+      if (allocated(jamp) .and. S_NCOMB.ne.N_COMB) then
+           deallocate(jamp)
+      endif
+
+     if (.not.allocated(jamp)) then
+        S_NCOMB=N_COMB
+        allocate(jamp(ncolor, N_COMB))
+      endif
 C ----------
 C BEGIN CODE
 C ----------
-bwcutoff=15 ! use if $ syntax is defined in the process
-%(flavor_mask_setup)s
-%(helas_calls)s
-%(jamp_lines)s
+      IC(:)=1
+      do I = 1, N_COMB
+         do N = 1, N_CHANGING
+            NHEL(POS(N)) = ALLOW_HEL((I-1)*N_CHANGING+N)
+         enddo
+         call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+         call %(proc_prefix)sGET_JAMP(AMP,JAMP(1,I))
+      enddo
 
-      %(proc_prefix)sMATRIX = 0.D0 
-      CF_INDEX = 0
-      DO I = 1, NCOLOR
-          ZTEMP = (0d0,0d0)
-          DO J = I, NCOLOR
-              CF_INDEX = CF_INDEX +1
-              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
-          ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+REAL(ZTEMP*DCONJG(JAMP(I)))
-	  ENDDO
-      %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX / DENOM
-%(amp2_lines)s
-      END
+    SOL = 0
+    DO I = 1, N_COMB
+       DO J= I, N_COMB
+         SOL = SOL +1
+         call %(proc_prefix)sGET_INTER(JAMP(1,I), JAMP(1,J), INTER(SOL))
+       ENDDO
+    ENDDO
+
+
+    RETURN
+    END
+
+
+
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL, FLAVOR ,ANS)
 C     This routine is the f2py interface for GET_value_internal which can not be in the interface
 C     due to f2py not knowing how to handle the couplings common block
       use model_object
-      IMPLICIT NONE   
+      IMPLICIT NONE
 C
 C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER NHEL
-      DOUBLE PRECISION ALPHAS 
-      real*8 pi     
+      DOUBLE PRECISION ALPHAS
+      real*8 pi
       INTEGER FLAVOR(NEXTERNAL)
-CF2PY INTENT(OUT) :: ANS  
-CF2PY INTENT(IN) :: NHEL   
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: ALPHAS
 CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
-C     ROUTINE FOR F2PY to read the benchmark point.    
+C     ROUTINE FOR F2PY to read the benchmark point.
 
       CALL  %(proc_prefix)sGET_value_internal(P, ALPHAS, NHEL, FLAVOR ,ANS)
       RETURN
@@ -272,24 +599,24 @@ C     ROUTINE FOR F2PY to read the benchmark point.
 C     This routine is the real value but can not be in the interface
 C     due to f2py not knowing how to handle the couplings common block
       use model_object
-      IMPLICIT NONE   
+      IMPLICIT NONE
 C
 C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-C  
-C ARGUMENTS 
-C  
+C
+C ARGUMENTS
+C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER NHEL
-      DOUBLE PRECISION ALPHAS 
-      real*8 pi     
+      DOUBLE PRECISION ALPHAS
+      real*8 pi
       INTEGER FLAVOR(NEXTERNAL)
-C     ROUTINE FOR F2PY to read the benchmark point.    
-C     the include file with the values of the parameters and masses 
+C     ROUTINE FOR F2PY to read the benchmark point.
+C     the include file with the values of the parameters and masses
       include "coupl.inc"
-      
+
       pi = 3.141592653589793d0
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
@@ -298,23 +625,23 @@ C     the include file with the values of the parameters and masses
       else
         CALL %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
       endif
-      return 
+      return
       end
 
       SUBROUTINE %(proc_prefix)sINITIALISEMODEL(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.    
-      IMPLICIT NONE   
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
       CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH 
-      call setpara(PATH)  !first call to setup the paramaters    
-      return 
-      end      
+CF2PY INTENT(IN) :: PATH
+      call setpara(PATH)  !first call to setup the paramaters
+      return
+      end
 
       LOGICAL FUNCTION %(proc_prefix)sIS_BORN_HEL_SELECTED(HELID)
       IMPLICIT NONE
-C     
+C
 C     CONSTANTS
-C     
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NCOMB
@@ -339,7 +666,7 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      
+
       %(proc_prefix)sIS_BORN_HEL_SELECTED = .True.
       if (POLARIZATIONS(0,0).eq.-1) THEN
         RETURN

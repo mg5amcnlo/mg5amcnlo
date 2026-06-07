@@ -2639,6 +2639,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                     return self.aloha_complete_output(text, line, begidx, endidx)
                 except Exception as error:
                     print(error)
+            if 'standalone' in args:
+                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=']
+
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -4613,12 +4616,34 @@ This implies that with decay chains:
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
-                self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)              
             else:
-                myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
                 myprocdef_unit = self.extract_process(line)
+            if gauge == 'feynman':
+                myprocdef_feyn = myprocdef
+            else:
+                self.do_set('gauge Feynman', log=False)
+                myprocdef_feyn = self.extract_process(line)
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               0 in self._curr_model.get('gauge'):
+                if gauge == 'axial':
+                    myprocdef_axial = myprocdef
+                else:
+                    self.do_set('gauge axial', log=False)
+                    myprocdef_axial = self.extract_process(line)
+            else:
+                myprocdef_axial = None
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               1 in self._curr_model.get('gauge'):
+                if gauge == 'FD':
+                    myprocdef_fd = myprocdef
+                else:
+                    self.do_set('gauge FD', log=False)
+                    myprocdef_fd = self.extract_process(line)
+            else:
+                myprocdef_fd = None
 
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
@@ -4626,6 +4651,8 @@ This implies that with decay chains:
                 logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
+                                                myprocdef_axial,
+                                                myprocdef_fd,
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
@@ -4806,7 +4833,12 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
+            gauge_labels = ['Unitary', 'Feynman']
+            if any('value_axial' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('Axial')
+            if any('value_fd' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('FD')
+            text += 'Gauge results (switching between %s gauge):\n' % '/'.join(gauge_labels)
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -5129,6 +5161,12 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            if part_name.endswith('*'):
+                part_name = part_name[:-1]
+                offshell = True
+            else:
+                offshell = False
+
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
                 part_name = part_name[1:-1]
@@ -5354,7 +5392,8 @@ This implies that with decay chains:
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
                                                             'polarization': polarization,
-                                                            'flavor': flavor }))
+                                                            'flavor': flavor,
+                                                            'offshell': offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
@@ -8994,7 +9033,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)   
+        
+        if args[0] in ['None', None, '0', 0]:
+            import multiprocessing
+            self.options['nb_core'] = multiprocessing.cpu_count()
+        else:
+            self.options['nb_core'] = int(args[0])
+       
     
     def set2_cluster_type(self, args, log=True):
         """Set the cluster type to be used for cluster jobs submission.

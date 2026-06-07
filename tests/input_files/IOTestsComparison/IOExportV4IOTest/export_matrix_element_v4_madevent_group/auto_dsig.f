@@ -233,9 +233,11 @@ C     ENDIF
       CALL RANMAR(RCOL)
 
 C     Select a flavor combination (need to do here for right sign)
+C     IPROC bound prevents over-indexing PD if floating-point drift
+C     keeps R>0 after the last valid flavor entry.
       CALL RANMAR(R)
       IPSEL = 0
-      DO WHILE (R.GT.0D0)
+      DO WHILE (R.GT.0D0.AND.IPSEL.LT.IPROC)
         IPSEL=IPSEL+1
         R=R-DABS(PD(IPSEL))/PD(0)
       ENDDO
@@ -247,7 +249,14 @@ C     set minimum ipsel for this IFLAV
       ENDIF
 
       IPSEL = IPSEL + IPSEL_SHIFT
-      RWGT_VALUE=REWGT(PP,FLAVOR, 1)
+C     REWGT can be expensive; skip it in non-sampling IMODEs
+C     (init/reweight/finalize/PDFs-only/squared-only). Note that IPSEL
+C     and IFLAV are still set above so SMATRIX gets valid arguments.
+      IF (IMODE.EQ.0) THEN
+        RWGT_VALUE=REWGT(PP,FLAVOR, 1)
+      ELSE
+        RWGT_VALUE=1D0
+      ENDIF
 
       CALL SMATRIX1(P1, IFLAV, RHEL, RCOL,CHANNEL,1, DSIGUU,
      $  SELECTED_HEL(1), SELECTED_COL(1))
@@ -525,7 +534,11 @@ C         Select a flavor combination (need to do here for right sign)
 
 
           CALL GET_FLAVOR1(IFLAV_VEC(IVEC), FLAVOR)
-          ALL_RWGT(IVEC) = REWGT(ALL_PP(0,1,IVEC),FLAVOR,IVEC)
+          IF (IMODE.EQ.0) THEN
+            ALL_RWGT(IVEC) = REWGT(ALL_PP(0,1,IVEC),FLAVOR,IVEC)
+          ELSE
+            ALL_RWGT(IVEC) = 1D0
+          ENDIF
 
           IF(FRAME_ID.NE.6)THEN
             CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P_MULTI(0

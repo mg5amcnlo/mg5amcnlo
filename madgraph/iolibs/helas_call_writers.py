@@ -380,7 +380,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
-        key = ((3, 3, 5, 3,tuple()), ('A',))
+        key = ((3, 3, 5, 3,tuple(),False), ('A',))
         call = lambda wf: \
                "CALL UVVAXX(W(%d),W(%d),%s,zero,zero,zero,W(%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -389,7 +389,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 5, 3, 1,tuple()), ('A',))
+        key = ((3, 5, 3, 1,tuple(), False), ('A',))
         call = lambda wf: \
                "CALL JVTAXX(W(%d),W(%d),%s,zero,zero,W(%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -410,7 +410,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 1, tuple(), tuple()), ('gggg3',))
+        key = ((3, 3, 3, 3, 1, tuple(), tuple(), False), ('gggg3',))
         call = lambda wf: \
                "CALL JGGGXX(W(%d),W(%d),W(%d),%s,W(%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[1].get('me_id'),
@@ -429,7 +429,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1, tuple(), tuple()), ('gggg2',))
+        key = ((3, 3, 3, 3, 1, tuple(), tuple(), False), ('gggg2',))
         call = lambda wf: \
                "CALL JGGGXX(W(%d),W(%d),W(%d),%s,W(%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -448,7 +448,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1, tuple(), tuple()), ('gggg1',))
+        key = ((3, 3, 3, 3, 1, tuple(), tuple(), False), ('gggg1',))
         call = lambda wf: \
                "CALL JGGGXX(W(%d),W(%d),W(%d),%s,W(%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[2].get('me_id'),
@@ -470,7 +470,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 3,tuple()), ('',))
+        key = ((1, 3, 3, 3, 3,tuple(), False), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(%d),W(%d),W(%d),DUM1,%s,%s,%s,W(%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -482,7 +482,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4,tuple()), ('',))
+        key = ((3, 3, 3, 1, 4,tuple(), False), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(%d),W(%d),W(%d),DUM1,%s,%s,%s,W(%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -507,7 +507,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 1,tuple()), ('',))
+        key = ((1, 3, 3, 3, 1,tuple(), False), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(%d),W(%d),W(%d),DUM1,%s,%s,%s,W(%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -519,7 +519,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4,tuple()), ('',))
+        key = ((3, 3, 3, 1, 4,tuple(), False), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(%d),W(%d),W(%d),DUM1,%s,%s,%s,W(%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -554,7 +554,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('number'))
         self.add_amplitude(key, call)
         
-        key = ((-2, 2, 5, 3,tuple()), ('',))
+        key = ((-2, 2, 5, 3,tuple(), False), ('',))
         call = lambda wf: \
                "CALL UIOXXX(W(%d),W(%d),%s,%s,%s,%s,W(%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -732,7 +732,6 @@ class FortranHelasCallWriter(HelasCallWriter):
                 argument.get_spin_state_number()]
 
             mother_letters = FortranHelasCallWriter.sorted_letters(argument)
-
             # If Lorentz structure is given, by default add this
             # to call name
             lor_name = argument.get('lorentz')[0]
@@ -1185,7 +1184,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     def generate_external_wavefunction(self,argument):
         """ Generate an external wavefunction """
-        
+
         call="CALL "
         call_function = None
         if argument.get('is_loop'):
@@ -1199,12 +1198,15 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "(P(0,%(number_external)d),"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "%(mass)s,NHEL(%(number_external)d),"
+                if argument.get('offshell'):
+                    call = call + "DSQRT(P(0,%(number_external)d)**2-P(1,%(number_external)d)**2-P(2,%(number_external)d)**2-P(3,%(number_external)d)**2),"
+                else:
+                    call = call + "%(mass)s,"
+                call = call + "NHEL(%(number_external)d),"
             if argument.get('spin') == 2:
                 call = call + "%(state_id)+d, FLAVOR(%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(','%(me_id)d'))
             else:
-
                 call = call + "%(state_id)+d,{0})".format(\
                                     self.format_helas_object('W(','%(me_id)d'))
 
@@ -2212,10 +2214,20 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = "w[%d] = "
 
-            call = call + HelasCallWriter.mother_dict[\
+            wf_name = HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()].lower()
-            # Fill out with X up to 6 positions
-            call = call + 'x' * (14 - len(call))
+            fixed_wf_name = None
+            if aloha.unitary_gauge == 3:
+                if argument.get('spin') == 1:
+                    wf_name = 'sfd'
+                elif argument.get('spin') == 3:
+                    fixed_wf_name = 'vfdxxxx'
+            if fixed_wf_name is None:
+                call = call + wf_name
+                # Fill out with X up to 6 positions
+                call = call + 'x' * (14 - len(call))
+            else:
+                call = call + fixed_wf_name
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity

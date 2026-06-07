@@ -1790,12 +1790,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["DATA Denom/1/", "DATA CF/1/"]
+            return ["DATA %(proc_prefix)sDenom/1/", "DATA %(proc_prefix)sCF/1/"]
 
         ret_list = []
         my_cs = color.ColorString()
         denominator = max(matrix_element.get('color_matrix').get_line_denominators())
-        ret_list.append("DATA Denom/%i/" % denominator)
+        ret_list.append("DATA %%(proc_prefix)sDenom/%(denom)i/" % {'denom':denominator})
 
         cf_index = 0
         col_basis = matrix_element.get('color_matrix')._col_basis1
@@ -1810,11 +1810,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for k in range(min_k, len(num_list), n):
                 chunk = num_list[k:k+n]
                 if is_asym:
-                    ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
+                    ret_list.append("DATA (%%(proc_prefix)sCF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index+1, k + 1, k+len(chunk),
                                      ','.join([("%i" % (int(i))) for i in chunk])))  
                 else: 
-                    ret_list.append("DATA (CF(i),i=%3r,%3r) /%s/" % \
+                    ret_list.append("DATA (%%(proc_prefix)sCF(i),i=%3r,%3r) /%s/" % \
                                     (cf_index+1, cf_index + len(chunk),
                                      ','.join([("%i" % ((1 if (k==index and pos==0) else 2)*int(i))) for pos,i in enumerate(chunk)])))
                 cf_index += len(chunk)
@@ -1826,7 +1826,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def get_den_factor_line(self, matrix_element):
         """Return the denominator factor line for this matrix element"""
-
         return "DATA IDEN/%2r/" % \
                matrix_element.get_denominator_factor()
 
@@ -3182,57 +3181,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 #        return
 
 
-    def write_check_sa(self, fsock, matrix_element, proc_prefix):
-
-        if self.format != 'standalone':
-            return
-    
-        template = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f')).read()
-
-        
-        all_flavors  = matrix_element.get_external_flavors(all_perm=False)
-        # Use legs_with_decays so that the PDG list covers all external particles
-        # of the combined process (including decay products), matching the length
-        # of each flavor tuple returned by get_external_flavors.
-        all_pdgs = [l.get('id') for l in matrix_element.get('processes')[0].get('legs_with_decays')]
-        map_all_flv = {}
-        for i, flv1 in  enumerate(all_flavors):
-            coup = matrix_element.get_coupling_for_flv(flv1, self.model)
-            if coup in map_all_flv:
-                map_all_flv[coup].append(flv1)
-            else:
-                map_all_flv[coup] = [flv1]
- 
-        pdg_to_flv_index = {}
-        for i, opts in self.model.merged_particles.items():
-            for j, pdg in enumerate(opts):
-                pdg_to_flv_index[pdg] = j+1
-
-        all_flavors = [flv[0] for flv in map_all_flv.values()]
-        maxflavor = len(all_flavors )
-        flavor_text = ['        FLAVOR(:,:) =1']
-        for i in range(1, maxflavor+1):
-            for j in range(1,1+len(all_flavors[i-1])):
-                if all_flavors[i-1][j-1] != 1:
-                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
-                    flavor_text.append('FLAVOR(%d,%d) = %d ! PDG = %d' % (j,i,pdg_to_flv_index[all_flavors[i-1][j-1]], all_flavors[i-1][j-1]))
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg))
-                elif abs(all_pdgs[j-1]) in self.model.get('merged_particles'):
-                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i,pdg)) 
-                else:
-                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j,i, all_pdgs[j-1]))
-                    
-                    
-
-        flavor_text = '\n        '.join(flavor_text)
-        fsock.write(template % {'maxflavor':maxflavor, 'flavor_def': flavor_text,
-                                'proc_prefix':proc_prefix})
-
-
     #===========================================================================
     # export model files
-    #=========================================================================== 
+    #===========================================================================
     def export_model_files(self, model_path):
         """export the model dependent files for V4 model"""
 
@@ -3337,11 +3288,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
             ff.write(text)
             ff.close()
-    
+
 
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-
 
         template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_matrix_splitter)).read()
         template2 = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_wrapper_all)).read()
@@ -3349,11 +3299,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         allncomb = [self.prefix_info[key][2] for key in allids]
+        alliden = [self.prefix_info[key][3] for key in allids] 
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
+        for (key, pid), (prefix, tag, ncomb, iden) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
         flavor_text= "  flavor(:) = 1\n"
@@ -3375,6 +3326,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         flavor_text += " enddo\n"
 
         text = []
+        
         for n_ext in range(min_nexternal, max_nexternal+1):
             current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
             current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
@@ -3393,7 +3345,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, ii))
                 else:
                     text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,ii))
-                text.append(' call %ssmatrixhel(p, nhel, flavor, ans)' % self.prefix_info[(pdgs,pid)][0])
+                text.append(' call %s%%(fct_name)s' % self.prefix_info[(pdgs,pid)][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -3408,6 +3360,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         params = self.get_model_parameter(self.model)
         parameter_setup =[]
         for key, var in params.items():
+            if not key or not var:
+                continue
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
                                    % (key, var))
 
@@ -3421,6 +3375,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         #nhel
         all_nhel_f2py = ' '
         all_nhel = ''
+        all_iden = ''
         nhel_template_f2py = """
         subroutine %(f2py_prefix)s%(prefix)sget_nhel_entry()
         integer %(prefix)snhel(%(next)s,%(ncombs)s)
@@ -3443,32 +3398,44 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
 
         done_prefix = set()
-        for prefix, ids, ncomb in zip(allprefix, allids, allncomb):
+        for prefix, ids, ncomb, iden in zip(allprefix, allids, allncomb, alliden):
             if prefix in done_prefix:
                 continue
             done_prefix.add(prefix)
-            all_nhel += nhel_template % {'prefix': prefix, 'next': len(ids[0]), 'ncombs': ncomb,
-                                          'f2py_prefix': f2py_prefix}
-            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 'next': len(ids[0]), 
-                                                   'ncombs': ncomb, 'f2py_prefix': f2py_prefix}
+            all_nhel += nhel_template % {'prefix': prefix, 
+                                         'next': len(ids[0]), 
+                                         'ncombs': ncomb,
+                                         'f2py_prefix': f2py_prefix}
+            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 
+                                                   'next': len(ids[0]), 
+                                                   'ncombs': ncomb, 
+                                                   'f2py_prefix': f2py_prefix}
+        # Build IDENS entries ONCE per ME slot (must align 1-to-1 with get_pdg_order / allids).
+        all_iden = ''
+        for i, iden in enumerate(alliden, start=1):
+            all_iden += ' idens(%s) = %s \n' % (i, iden)
+        #misc.sprint(all_iden)
 
         formatting = {'python_information':'\n'.join(info), 
-                          'smatrixhel': '\n'.join(text),
+                          'smatrixhel': '\n'.join(text) % {'fct_name': 'smatrixhel(p, nhel, flavor, ans)'},
                           'maxpart': max_nexternal,
                           'nb_me': len(allids),
                           'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
                                            for i in range(max_nexternal) for (pdg,pid) in allids),
                           'prefix':'\',\''.join(allprefix),
                           'pids': ','.join(str(pid) for (pdg,pid) in allids),
+                          'inter_splitter': '\n'.join(text) % {'fct_name': 'GET_ALL_INTER(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, INTER)'},
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
                           'flavormapping': flavor_text,
                           'setpara_for_each_matrix':setpara_for_each_matrix,
                           'nhel': all_nhel,
-                          'f2py_prefix': f2py_prefix
+                          'f2py_prefix': f2py_prefix,
+                          'idens_value': all_iden,
+                          'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)'},
+                          
                           }
-        
 
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
@@ -3553,6 +3520,30 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
         including the necessary matrix.f and nexternal.inc files"""
 
+        # Helper
+        def compute_iden_from_pdgs(ids, ninitial, model):
+            """
+            Helper function to compute denominator factor
+            """
+            def nhel_from_particle(p):
+                spin = int(p.get('spin'))
+                # for massless vectors use 2 helicities not 3
+                mass = p.get('mass')
+                if spin == 3 and (mass == 'ZERO' or str(mass).upper() == 'ZERO'):
+                    return 2
+                return spin
+
+            def color_dim_from_particle(p):
+                # In UFO, color is typically 1, 3, -3, 8, ...
+                return abs(int(p.get('color')))
+
+            incoming = ids[:ninitial]
+            iden = 1
+            for pid in incoming:
+                p = model.get_particle(pid)
+                iden *= nhel_from_particle(p) * color_dim_from_particle(p)
+            return int(iden)
+        
         cwd = os.getcwd()
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
@@ -3616,15 +3607,17 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             else:
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
             ncomb = matrix_element.get_helicity_combinations()
+            #iden = matrix_element.get_denominator_factor() 
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
-        
+                iden = compute_iden_from_pdgs(ids, ninitial, self.model)
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb, iden]
+
         template = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'),'r')
         text = template.read()
         template.close()
         fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
-        fsock.write(text)   
+        fsock.write(text)
         fsock.close()
 
         #important to put that first
@@ -3696,16 +3689,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         linkfiles = ['check_sa.f', 'coupl.inc']
         if self.format == 'standalone':
-            linkfiles = ['coupl.inc']   
+            linkfiles = ['coupl.inc']
 
-        if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
-            text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
-            pat = re.compile('smatrix', re.I)
-            new_text, n  = re.subn(pat, '%ssmatrix' % proc_prefix, text)
-            with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
-                f.write(new_text)
-            linkfiles.pop(0)
 
+        filename = pjoin(dirpath, 'check_sa.f')
+        self.write_check_sa(writers.FortranWriter(filename),
+                           matrix_element,
+                           proc_prefix=proc_prefix)        
+
+
+        linkfiles = ['coupl.inc']
         for file in linkfiles:
             ln('../%s' % file, cwd=dirpath)
         ln('../makefileP', name='makefile', cwd=dirpath)
@@ -3927,6 +3920,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract ncolor
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
+        replace_dict['ncolortriang'] = ncolor * (ncolor + 1) // 2
 
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
         replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
@@ -3934,7 +3928,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         if self.opt['export_format']=='standalone_msP':
         # For MadSpin need to return the AMP2
@@ -4051,6 +4045,93 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
 
+    #===========================================================================
+    # write_check_sa   
+    #===========================================================================
+    def write_check_sa(self, writer, matrix_element, proc_prefix=''):
+
+        if self.format != 'standalone':
+            return
+
+        # Density-mode defaults (overridden if 'density' is in cmd_options).
+        # The template uses both %(prefix)s and %(proc_prefix)s; supply both
+        # with the same value so the merged flavor-grouping + density paths
+        # share a single key set.
+        replace_dict = {'prefix': proc_prefix,
+                        'proc_prefix': proc_prefix,
+                        'use_density': '.false.',
+                        'dens_nchanging': 1,
+                        'dens_ncomb': 2,
+                    'dens_pos': 'if(nincoming.eq.2) then \n       POS(1) = 3 \n        else \n       POS(1) =1 \n        endif',
+                        'dens_allow_hel': 'ALLOW_HEL(1) = +1 \n       ALLOW_HEL(2) = -1'}
+
+        if 'density' in self.cmd_options:
+            replace_dict['use_density'] = '.true.'
+            changing = [int(i) for i in self.cmd_options['density'].split(',')]
+            replace_dict['dens_nchanging'] = len(changing)
+            replace_dict['dens_pos'] = '\n        '.join(
+                   ['POS(%s) = %i' % (i+1, pos) for i,pos in enumerate(changing)])
+            get_helicity_per_particle = matrix_element.get_helicity_per_particle()
+            changing_hels = [get_helicity_per_particle[pos-1] for pos in changing]
+            replace_dict['dens_ncomb'] = math.prod([len(hel) for hel in changing_hels])
+
+            i = 0
+            replace_dict['dens_allow_hel'] = ''
+            for comb in  itertools.product(*changing_hels):
+                for h in comb:
+                    i += 1
+                    replace_dict['dens_allow_hel'] += ' ALLOW_HEL(%i) = %i\n       ' % (i, h)
+
+        # Flavor-grouping (HEAD path): compute MAXFLAVOR + FLAVOR/PDG_FOR_FLAVOR
+        # initialiser code. Required by the merged check_sa.f template even when
+        # the model has no merged particles (we emit a trivial single entry).
+        all_flavors = matrix_element.get_external_flavors(all_perm=False)
+        # Use legs_with_decays so that the PDG list covers all external particles
+        # of the combined process (including decay products), matching the length
+        # of each flavor tuple returned by get_external_flavors.
+        all_pdgs = [l.get('id') for l in matrix_element.get('processes')[0].get('legs_with_decays')]
+        map_all_flv = {}
+        for flv1 in all_flavors:
+            coup = matrix_element.get_coupling_for_flv(flv1, self.model)
+            if coup in map_all_flv:
+                map_all_flv[coup].append(flv1)
+            else:
+                map_all_flv[coup] = [flv1]
+
+        pdg_to_flv_index = {}
+        for _, opts in self.model.merged_particles.items():
+            for j, pdg in enumerate(opts):
+                pdg_to_flv_index[pdg] = j + 1
+
+        all_flavors = [flv[0] for flv in map_all_flv.values()]
+        maxflavor = max(1, len(all_flavors))
+        flavor_text = ['        FLAVOR(:,:) =1']
+        for i in range(1, len(all_flavors) + 1):
+            for j in range(1, 1 + len(all_flavors[i-1])):
+                if all_flavors[i-1][j-1] != 1:
+                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
+                    flavor_text.append('FLAVOR(%d,%d) = %d ! PDG = %d' % (j, i, pdg_to_flv_index[all_flavors[i-1][j-1]], all_flavors[i-1][j-1]))
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, pdg))
+                elif abs(all_pdgs[j-1]) in self.model.get('merged_particles'):
+                    pdg = all_flavors[i-1][j-1] * all_pdgs[j-1] // abs(all_pdgs[j-1])
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, pdg))
+                else:
+                    flavor_text.append('PDG_FOR_FLAVOR(%d,%d) = %d' % (j, i, all_pdgs[j-1]))
+        replace_dict['maxflavor'] = maxflavor
+        replace_dict['flavor_def'] = '\n        '.join(flavor_text)
+
+        fsock =  open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 'r')
+        text = fsock.read()
+        fsock.close()
+        text = text % replace_dict
+        writer.write(text)
+        writer.close()
+
+
+
+    #===========================================================================
+    # write_check_sa_splitOrders
+    #===========================================================================
     def write_check_sa_splitOrders(self,squared_orders, split_orders, nexternal,
                                                 nincoming, proc_prefix, writer):
         """ Write out a more advanced version of the check_sa drivers that
@@ -4697,10 +4778,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract ncolor
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
+        replace_dict['proc_prefix'] = '' # Not used in MW
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         mask_decl, mask_setup, n_flavors, active_flavor_mask = \
                 self._get_flavor_mask_blocks(matrix_element)
@@ -5763,7 +5845,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
 
         # Set the size of Wavefunction
@@ -7958,7 +8040,6 @@ class UFO_model_to_mg4(object):
             vector_size = self.opt['output_options']['vector_size']
             self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
         except KeyError as error:
-            misc.sprint(error)
             self.vector_size = 0
 
         try:

@@ -161,53 +161,55 @@ class CombineRuns(object):
 
     def copy_events(self, fsock, input, scale_wgt, max_wgt):
         """ Copy events from separate runs into one file w/ appropriate wgts"""
-        
-        import collections
-        wgts = collections.defaultdict(int)
 
-
-        do_unweight = True
-        #tmp_max_wgt = 0
-        #new_wgt = self.get_fortran_str(new_wgt)
-        old_line = ""
-        nb_evt =0 
+        nb_evt = 0
+        # skip=True suppresses payload lines for a rejected event until next <event>.
         skip = False
-        nb_read = 0
-        for line in open(input):
-            if old_line.startswith("<event>"):
-                nb_read +=1
-                data = line.split()
-                if not len(data) == 6:
-                    raise MadGraph5Error("Line after <event> should have 6 entries")
+        pending_event = False
+        # Local bindings to reduce lookups in this per-event hot loop
+        rand = random.random
+        get_fortran = self.get_fortran_str
+        write = fsock.write
+        max_wgt_fortran = get_fortran(max_wgt)
+        scale = scale_wgt
 
-                new_wgt = float(data[2]) * scale_wgt
-                wgts[new_wgt] +=1
-                if new_wgt < 0:
-                    sign = '-'
-                else:
-                    sign = ''
-                new_wgt = abs(new_wgt)
-                skip = False
-                #if new_wgt > tmp_max_wgt:
-                    #misc.sprint("Found event with wgt %s higher than max wgt %s. uwgt to %s " % (new_wgt, tmp_max_wgt, max_wgt))
-                #    tmp_max_wgt = new_wgt
-                if do_unweight and abs(new_wgt) < random.random() * max_wgt:
-                    skip = True 
-                else:
-                    nb_evt+=1
-                    if do_unweight:
-                        new_wgt = max(max_wgt, new_wgt) 
+        with open(input) as fin:
+            for line in fin:
+                # The line immediately after <event> contains the event header and raw weight
+                if pending_event:
+                    data = line.split(None, 5)
+                    if len(data) != 6:
+                        raise MadGraph5Error("Line after <event> should have 6 entries")
 
-                    new_wgt = self.get_fortran_str(new_wgt)
-                    line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]),
-                                           sign, new_wgt, '  '.join(data[3:]))
-            if not skip and old_line:
-                fsock.write(old_line)
-            old_line = line
-        if not skip and old_line:
-                fsock.write(old_line) 
-        #misc.sprint("Read %s events, wrote %s events: %s%%" % (nb_read, nb_evt, 100*nb_evt/nb_read if nb_read else 0))
-        #misc.sprint(wgts)
+                    scaled_wgt = float(data[2]) * scale
+                    if scaled_wgt < 0:
+                        sign = '-'
+                        abs_wgt = -scaled_wgt
+                    else:
+                        sign = ''
+                        abs_wgt = scaled_wgt
+                    skip = False
+                    if abs_wgt < rand() * max_wgt:
+                        skip = True
+                    else:
+                        nb_evt += 1
+                        if abs_wgt < max_wgt:
+                            new_wgt = max_wgt_fortran
+                        else:
+                            new_wgt = get_fortran(abs_wgt)
+                        write("<event>\n")
+                        write(' %s  %s%s  %s\n' % ('   '.join(data[:2]),
+                                                   sign, new_wgt, '  '.join(data[3:])))
+                    pending_event = False
+                    continue
+                
+                # Defer writing "<event>" until after accept/reject
+                if line.startswith("<event>"):
+                    pending_event = True
+                    continue
+
+                if not skip:
+                    write(line)
         return nb_evt
     
     def get_channels(self, proc_path):

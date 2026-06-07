@@ -33,6 +33,7 @@ import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.misc as misc
+import madgraph.various.lhe_parser as lhe_parser
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -291,10 +292,26 @@ class TestCmdShell2(unittest.TestCase,
 
     def do(self, line, force=False):
         """ exec a line in the cmd under test """
-        if force:        
+        if force:
             self.cmd.exec_cmd(line, force=force)
-        else:   
-           self.cmd.exec_cmd(line) 
+        else:
+           self.cmd.exec_cmd(line)
+
+    @staticmethod
+    def _dens_value_for_key(dm, key):
+        """Return the complex value of DensityMatrix entry whose helicity label
+        tuple matches ``key``.
+
+        Replaces the old ``dm.matrix[ind][1]`` indexing, which relied on the
+        legacy structured-array storage that was removed when DensityMatrix
+        was refactored to parallel ``helicities`` / ``values`` arrays.
+        """
+        import numpy as np
+        key_arr = np.asarray(key, dtype=np.int32)
+        matches = np.where((dm.helicities == key_arr).all(axis=1))[0]
+        if len(matches) == 0:
+            raise KeyError('helicity key %s not found in DensityMatrix' % (key,))
+        return complex(dm.values[matches[0]])
     
     def test_output_madevent_directory(self):
         """Test outputting a MadEvent directory"""
@@ -1178,9 +1195,1449 @@ class TestCmdShell2(unittest.TestCase,
             self.assertAlmostEqual(standalone_cpp_no_fd[i], standalone[i])
 
 
-         
-    def test_v4_heft(self):
+    def test_standalone_density(self):
+        """test that standalone density is working"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('generate p p > j t t~ ')
+        self.do('output standalone %s --density=4,5 -f' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_gttx',
+                               'check_sa.log')
+        # Check that check_sa.f compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_gttx'))
+        
+        subprocess.call(['./check'],
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_gttx'))
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)    
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 0.0004188716594531423, 5)
+
+        # check density matrix
+        #
+        #particle 3 has helicity -1 -1
+        #particle 4 has helicity 1 1
+        #value is 1 (2.78194898230116219E-011,0.0000000000000000)
+        me_re = re.compile(r'particle\s+4\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'particle\s+5\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)', re.MULTILINE)
+        all_matches = me_re.findall(log_output)
+        sol = {}
+        for match in all_matches:
+            sol[(int(match[0]), int(match[1]), int(match[2]), int(match[3]))] = (float(match[4]), float(match[5]))
+
+        original_sol = {(-1, -1, 1, 1): (0.02827952274928987, 0.0), (-1, -1, 1, -1): (-0.0041892876162345, -0.0041923830983622255), (-1, 1, 1, 1): (0.000469685615962711, 0.0006142055733429721), (-1, 1, 1, -1): (-0.01784029173125566, -0.00794999696313525), (-1, -1, -1, -1): (0.02532739017396033, 0.0), (-1, 1, -1, 1): (-0.00028182588524174187, 0.0024162264334765746), (-1, 1, -1, -1): (-0.00048593945847553023, -0.0006039982074415239), (1, 1, 1, 1): (0.025301510150454294, 0.0), (1, 1, 1, -1): (0.004212401136919661, 0.0042167644618831875), (1, 1, -1, -1): (0.028322721746299958, 0.0)}
+
+        for key in original_sol:
+            self.assertIn(key, sol)
+            self.assertAlmostEqual(original_sol[key][0], sol[key][0])
+            self.assertAlmostEqual(original_sol[key][1], sol[key][1])
+
+        ########################################################################
+        ### check case with polarization vectors
+        ########################################################################
+        self.do('generate u u~ > z{0} z{T} g')
+        self.do('output standalone %s --density=3,4,5 -f ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_uux_z0zTg',
+                               'check_sa.log')
+        # Check that check_sa.f compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_uux_z0zTg'))
+        
+        subprocess.call(['./check'],
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_uux_z0zTg'))
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)    
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 3.140334500813846e-08, 5)
+
+        # check density matrix
+        #
+        #particle 3 has helicity -1 -1
+        #particle 4 has helicity 1 1
+        #value is 1 (2.78194898230116219E-011,0.0000000000000000)
+        me_re = re.compile(r'particle\s+3\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'particle\s+4\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'particle\s+5\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)', re.MULTILINE)
+        all_matches = me_re.findall(log_output)
+        sol = {}
+        for match in all_matches:
+            sol[(int(match[0]), int(match[1]), int(match[2]), int(match[3]), int(match[4]),int(match[5]))] = (float(match[6]), float(match[7]))
+            self.assertTrue(len(match), 8)
+            self.assertEqual(int(match[0]), int(match[1]))
+            self.assertEqual(int(match[0]), 0)
+            self.assertIn(int(match[2]), [-1,1])
+            self.assertIn(int(match[3]), [-1,1])
+
+        self.assertEqual(len(sol), 10)
+        original_sol =  {(0, 0, 1, 1, -1, -1): (3.4001167694559294e-07, 0.0), (0, 0, 1, 1, -1, 1): (-3.1461674759236455e-07, 4.8545818497513406e-09), (0, 0, 1, -1, -1, -1): (-3.069602710730949e-07, 4.832171908212019e-09), (0, 0, 1, -1, -1, 1): (2.7270589345996334e-07, -2.0762612868036477e-08), (0, 0, 1, 1, 1, 1): (2.914827381801457e-07, 0.0), (0, 0, 1, -1, 1, -1): (2.8446952890247865e-07, -7.217171184019204e-11), (0, 0, 1, -1, 1, 1): (-2.5326248092821595e-07, 1.519703606636158e-08), (0, 0, -1, -1, -1, -1): (2.7764709546297174e-07, 0.0), (0, 0, -1, -1, -1, 1): (-2.4727978606009926e-07, 1.4752928639145769e-08), (0, 0, -1, -1, 1, 1): (2.2137890970427402e-07, 0.0)}
+        for key in original_sol:
+            
+            self.assertIn(key, sol)
+            self.assertAlmostEqual(original_sol[key][0], sol[key][0])
+            self.assertAlmostEqual(original_sol[key][1], sol[key][1])
+
+        ########################################################################
+        ### check Z > t t~ case
+        ######################################################################## 
+        self.do('generate z > b b~')
+        self.do('output standalone %s --density=1 -f ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_z_bbx',
+                               'check_sa.log')
+        # Check that check_sa.f compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_z_bbx'))
+        
+        subprocess.call(['./check'],
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_z_bbx'))
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output) 
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 1696.1593018147787, 5)
+
+        # check density matrix
+        #
+        #particle 3 has helicity -1 -1
+        #particle 4 has helicity 1 1
+        #value is 1 (2.78194898230116219E-011,0.0000000000000000)
+        me_re = re.compile(
+                           r'particle\s+1\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)', re.MULTILINE)
+        all_matches = me_re.findall(log_output)
+        sol = {}
+        for match in all_matches:
+            sol[(int(match[0]), int(match[1]))] = (float(match[2]), float(match[3]))
+
+
+        self.assertEqual(len(sol), 6)
+        original_sol =  {(-1, -1): (520.1204099513759, 0.0), (-1, 0): (-217.2395066557355, 871.1782252029083), (-1, 1): (-939.258737149777, -499.49184104989456), (0, 0): (2136.628541206853, 0.0), (0, 1): (-534.1281427839928, 2141.9713873632077), (1, 1): (2431.7289542861076, 0.0)}
+        for key in original_sol:
+            
+            self.assertIn(key, sol)
+            self.assertAlmostEqual(original_sol[key][0], sol[key][0])
+            self.assertAlmostEqual(original_sol[key][1], sol[key][1])
+
+
+        ########################################################################
+        ### check case with interference computation
+        ######################################################################## 
+        self.do('generate u u~ > t t~ QCD^2==2')
+        self.do('output standalone %s --density=3,4 -f ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_uux_ttx',
+                               'check_sa.log')
+        # Check that check_sa.f compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_uux_ttx'))
+        
+        subprocess.call(['./check'],
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_uux_ttx'))
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output) 
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 0, 5)
+
+        # check density matrix
+        #
+        #particle 3 has helicity -1 -1
+        #particle 4 has helicity 1 1
+        #value is 1 (2.78194898230116219E-011,0.0000000000000000)
+        me_re = re.compile(
+                           r'particle\s+3\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'particle\s+4\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*'
+                           r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)', re.MULTILINE)
+        all_matches = me_re.findall(log_output)
+        sol = {}
+        for match in all_matches:
+            sol[(int(match[0]), int(match[1]), int(match[2]), int(match[3]))] = (float(match[4]), float(match[5]))
+            self.assertTrue(len(match), 6)
+            self.assertIn(int(match[0]), [-1,1])
+            self.assertIn(int(match[1]), [-1,1])
+            self.assertIn(int(match[2]), [-1,1])
+            self.assertIn(int(match[3]), [-1,1])
+
+
+        self.assertEqual(len(sol), 10)
+        original_sol = sol =  {(-1, -1, 1, 1): (-5.551115123125783e-17, 0.0), (-1, -1, 1, -1): (0.00926133766116009, 0.0), (-1, 1, 1, 1): (-0.009292545047075378, 0.0), (-1, 1, 1, -1): (0.09884700885130696, 0.0), (-1, -1, -1, -1): (-1.6479873021779667e-17, 0.0), (-1, 1, -1, 1): (5.415404411525035e-07, 0.0), (-1, 1, -1, -1): (-0.012877349160785171, 0.0), (1, 1, 1, 1): (-1.734723475976807e-17, 0.0), (1, 1, 1, -1): (0.012880402732054583, 0.0), (1, 1, -1, -1): (-4.85722573273506e-17, 0.0)}
+        for key in original_sol:
+
+            self.assertIn(key, sol)
+            self.assertAlmostEqual(original_sol[key][0] if abs(original_sol[key][0]) > 1e-12 else 0, sol[key][0])
+            self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
+
+    def test_standalone_density_uu(self):
+        ############################################################################
+        # Check convolution of density matrix with decay matrix 
+        # reproduces the full matrix-element
+        # testing case u u~ > z z, z > e+ e-
+        ############################################################################
+        self.do('generate u u~ > z z')
+        self.do('output standalone %s_prod --density=3,4 -f ' % self.out_dir)
+        self.do('generate u u~ > z z, z > e+ e-')
+        self.do('output standalone %s_full -f ' % self.out_dir) 
+        self.do('generate z > e+ e- --standalone') # --standalone allow mix 2>1 and 2>2 processes
+        self.do('output standalone %s_dec1 --density=1 -f ' % self.out_dir)
+        self.do('output standalone %s_dec2 --density=1 -f ' % self.out_dir)
+        # Read a test event for u u~ > z z, z > e+ e-
+        
+
+
+        text_lhe = """ <event>
+ 8      1 +9.3182000e+00 9.58106800e+01 7.54677100e-03 1.28936100e-01
+       -2 -1    0    0    0  501 -0.0000000000e+00 +0.0000000000e+00 +1.3133897947e+02 1.3133897947e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000000e+00 -0.0000000000e+00 -1.8928771624e+02 1.8928771624e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       23  2    1    2    0    0 +2.7856507549e+01 +9.4048216813e+00 -1.5629560828e+02 1.8332485973e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 -2.7856507549e+01 -9.4048216813e+00 +9.8346871509e+01 1.3730183598e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 +4.1207329404e+01 +1.3210392522e+01 -2.2428975695e+01 4.8740305887e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       11  1    3    3    0    0 -1.3350821855e+01 -3.8055708401e+00 -1.3386663259e+02 1.3458455385e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+      -11  1    4    4    0    0 -5.7647128134e+01 -2.1962673907e+01 +7.6540783391e+01 9.8305859181e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 +2.9790620585e+01 +1.2557852226e+01 +2.1806088117e+01 3.8995976798e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+
+        
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n')) 
+        # get the associate momenta for each matrix-element
+        production_p = [Event[0], Event[1], Event[2], Event[3]]
+        full_p = [Event[0], Event[1], Event[4], Event[5], Event[6], Event[7]]
+        decay_z1 = [Event[2], Event[4], Event[5]]
+        decay_z2 = [Event[3], Event[6], Event[7]]
+        all_p = [production_p, full_p, decay_z1, decay_z2]
+
+
+        all_me = []
+        all_dens = []
+        all_index= []
+        # compiles the three directories:
+        for i, (mdir, Pdir) in enumerate([(self.out_dir+'_prod', 'P0_uux_zz'), 
+                                 (self.out_dir+'_full', 'P0_uux_zz_z_epem_z_epem'), 
+                                 (self.out_dir+'_dec1', 'P0_z_epem'),
+                                 (self.out_dir+'_dec2', 'P0_z_epem')]):
+            p = all_p[i]
+            self.edit_p_in_standalone(os.path.join(mdir, 'SubProcesses', Pdir), p)
+            devnull = open(os.devnull,'w')
+            subprocess.call(['make'],
+                            stdout=devnull, stderr=devnull, 
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir)) 
+            self.assertTrue(os.path.exists(os.path.join(mdir,
+                                                        'SubProcesses', Pdir,
+                                                        'check')))
+            #compute the matrix-element
+            logfile = os.path.join(mdir,'SubProcesses', Pdir,
+                                   'check.log')
+            subprocess.call('./check', 
+                            stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir), shell=True)
+            log_output = open(logfile, 'r').read()
+            misc.sprint(log_output)
+            me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                               re.IGNORECASE)
+            me_groups = me_re.findall(log_output) 
+            dens_re =re.compile(r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)')
+            density = dens_re.findall(log_output)
+
+            hel_index = re.compile(
+                           r'particle\s+\d\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*')
+            index = hel_index.findall(log_output)
+    
+            if len(index) == len(density):
+                all_index.append([[int(x[0]), int(x[1])] for x in index])
+            else:
+                curr_index = []
+                for i in range(len(all_p), 2):
+                    i1 = index[2*i]
+                    i2 = index[2*i+1]
+                    curr_index.append([[int(i1[0]), int(i1[1]), int(i2[0]), int(i2[1])]])
+              
+                all_index.append(curr_index)
+
+            
+            all_me.append(float(me_groups[0]))
+            all_dens.append([complex(float(x[0]), float(x[1])) for x in density])
+
+        import MadSpin.decay as madspin
+        self.assertEqual(all_dens[1], []) 
+
+        import numpy as np
+        # array, nchanging, all_helicity_combinations, dimension):
+        allow_hel = [-1,-1,   -1,0,   -1,1, 
+                        0,-1,  0,0,   0,1, 
+                        1,-1,  1,0,   1,1]
+        
+        #allow_hel = [-1,-1,-1,0,0,0,1,1,1,
+        #             -1,0,1,-1,0,1,-1,0,1]
+
+        misc.sprint(all_index[0])
+        prod_dens = madspin.DensityMatrix(all_dens[0], 2, allow_hel, 9) 
+        prod_dec1 = madspin.DensityMatrix(all_dens[2], 1, [-1,0,1], 3) 
+        prod_dec2 = madspin.DensityMatrix(all_dens[3], 1, [-1,0,1], 3)  
+
+        self.assertAlmostEqual(prod_dec1.trace()/3./all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/9./4./2./all_me[0], 1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+
+
+        prod_dec = prod_dec1.tensor_product(prod_dec2)
+        #self.assertNotEqual(str(prod_dec1), str(prod_dec2))
+        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        mZ= 91.18800
+        WZ = 2.44140
+        nb_hel = 3*3
+        symfact = 2 # 2 Z identical particles in the final state
+        nb_spin = 2*2
+        matrix = prod_dens.scalar_multiplication(prod_dec)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
+        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin 
+
+        misc.sprint(matrix/all_me[1], all_me[1]/matrix)
+        #misc.sprint(matrix_sym/all_me[1], all_me[1]/matrix_sym) 
+        misc.sprint(matrix, all_me[1], )
+        self.assertAlmostEqual(matrix/all_me[1], 1,places=4)
+
+
+    def test_standalone_density_dd(self):
+        
+
+        ############################################################################
+        # Check convolution of density matrix with decay matrix 
+        # reproduces the full matrix-element
+        # testing case d d~ > z z, z > e+ e-
+        ############################################################################
+        self.do('generate d d~ > z z')
+        self.do('output standalone %s_prod --prefix=int --density=3,4 -f ' % self.out_dir)
+        self.do('generate d d~ > z z, z > e+ e-')
+        self.do('output standalone %s_full -f ' % self.out_dir) 
+        self.do('generate z > e+ e- --standalone') # --standalone allow mix 2>1 and 2>2 processes
+        self.do('output standalone %s_dec1 --density=1 -f ' % self.out_dir)
+        self.do('output standalone %s_dec2 --density=1 -f ' % self.out_dir)
+        # Read a test event for u u~ > z z, z > e+ e-
+        text_lhe = """<event>
+        8      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+       -1 -1    0    0    0  501 -0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        1 -1    0    0  501    0 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       23  2    1    2    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 +1.0803264452e+01 +4.0782658931e+01 -9.7070204270e+01 1.3970616197e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 +1.0085745661e+01 +3.5438949841e+00 +1.6319184216e+01 1.9508901320e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    3    3    0    0 -2.0889010113e+01 -4.4326553914e+01 -9.9568834346e+01 1.1097363155e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+      -11  1    4    4    0    0 +2.5139455461e+01 -6.3572870227e-01 +7.5662101007e+00 2.6261072087e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 -1.4336191009e+01 +4.1418387636e+01 -1.0463641438e+02 1.1344508989e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+
+        text_lhe ="""<event>
+ 8      1 +9.3182000e+00 1.24864100e+02 7.54677100e-03 1.23528200e-01
+        1 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1193143155e+02 1.1193143155e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       -1 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -1.4479335429e+02 1.4479335429e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       23  2    1    2    0    0 -3.9109420390e+01 -7.5804058190e+01 +8.5916956812e+00 1.2515938071e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 +3.9109420390e+01 +7.5804058190e+01 -4.1453618425e+01 1.3156540513e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 -3.6688912923e+01 -2.9778691677e+01 -3.7238302752e+01 6.0162596365e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       11  1    3    3    0    0 -2.4205074678e+00 -4.6025366514e+01 +4.5829998433e+01 6.4996784348e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+      -11  1    4    4    0    0 +5.2267279628e+01 +1.6179927919e+01 +4.8591069017e+00 5.4929677835e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 -1.3157859241e+01 +5.9624130265e+01 -4.6312725324e+01 7.6635727286e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n')) 
+        # get the associate momenta for each matrix-element
+        production_p = [Event[0], Event[1], Event[2], Event[3]]
+        full_p = [Event[0], Event[1], Event[4], Event[5], Event[6], Event[7]]
+        decay_z1 = [Event[2], Event[4], Event[5]]
+        decay_z2 = [Event[3], Event[6], Event[7]]
+        all_p = [production_p, full_p, decay_z1, decay_z2]
+
+
+        all_me = []
+        all_dens = []
+        all_index= []
+        # compiles the three directories:
+        for i, (mdir, Pdir) in enumerate([(self.out_dir+'_prod', 'P0_ddx_zz'), 
+                                 (self.out_dir+'_full', 'P0_ddx_zz_z_epem_z_epem'), 
+                                 (self.out_dir+'_dec1', 'P0_z_epem'),
+                                 (self.out_dir+'_dec2', 'P0_z_epem')]):
+            p = all_p[i]
+            self.edit_p_in_standalone(os.path.join(mdir, 'SubProcesses', Pdir), p)
+            devnull = open(os.devnull,'w')
+            subprocess.call(['make'],
+                            stdout=devnull, stderr=devnull, 
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir)) 
+            self.assertTrue(os.path.exists(os.path.join(mdir,
+                                                        'SubProcesses', Pdir,
+                                                        'check')))
+            #compute the matrix-element
+            logfile = os.path.join(mdir,'SubProcesses', Pdir,
+                                   'check.log')
+            subprocess.call('./check', 
+                            stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir), shell=True)
+            log_output = open(logfile, 'r').read()
+            misc.sprint(log_output)
+            me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                               re.IGNORECASE)
+            me_groups = me_re.findall(log_output) 
+            dens_re =re.compile(r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)')
+            density = dens_re.findall(log_output)
+
+            hel_index = re.compile(
+                           r'particle\s+\d\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*')
+            index = hel_index.findall(log_output)
+    
+            if len(index) == len(density):
+                all_index.append([[int(x[0]), int(x[1])] for x in index])
+            else:
+                curr_index = []
+                for i in range(len(all_p), 2):
+                    i1 = index[2*i]
+                    i2 = index[2*i+1]
+                    curr_index.append([[int(i1[0]), int(i1[1]), int(i2[0]), int(i2[1])]])
+              
+                all_index.append(curr_index)
+
+            
+            all_me.append(float(me_groups[0]))
+            all_dens.append([complex(float(x[0]), float(x[1])) for x in density])
+
+        import MadSpin.decay as madspin
+        self.assertEqual(all_dens[1], []) 
+
+        import numpy as np
+        # array, nchanging, all_helicity_combinations, dimension):
+        allow_hel = [-1,-1,   -1,0,   -1,1, 
+                      0,-1,    0,0,    0,1, 
+                      1,-1,    1,0,    1,1] #double checked with fortran code.
+        
+
+        prod_dens = madspin.DensityMatrix(all_dens[0], 2, allow_hel, 9) 
+        prod_dec1 = madspin.DensityMatrix(all_dens[2], 1, [-1,0, 1], 3) 
+        prod_dec2 = madspin.DensityMatrix(all_dens[3], 1, [-1,0, 1], 3)
+
+
+        #consistency of the matrix-element and the density matrix
+
+        self.assertAlmostEqual(prod_dec1.trace()/3./ all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/9./4./2./ all_me[0],1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+
+        prod_dec =prod_dec1.tensor_product(prod_dec2)
+        prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        mZ= 91.18800
+        WZ = 2.44140
+        nb_hel = 3*3
+        symfact = 2 # 2 Z identical particles in the final state
+        nb_spin = 2*2
+        matrix = prod_dens.scalar_multiplication(prod_dec)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
+        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
+
+        misc.sprint(matrix, all_me[1])
+        #misc.sprint(matrix/all_me[1], matrix_sym/all_me[1])
+
+
+        self.assertAlmostEqual(matrix/all_me[1],1,4)
+        #self.assertAlmostEqual(matrix_sym, all_me[1],4)
+
+        #check how madspin build the full event:
+        prod_lhe = """<event>
+        4      1 +9.3182000e+00 1.24864100e+02 7.54677100e-03 1.23528200e-01
+        1 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1193143155e+02 1.1193143155e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       -1 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -1.4479335429e+02 1.4479335429e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       23  1    1    2    0    0 -3.9109420390e+01 -7.5804058190e+01 +8.5916956812e+00 1.2515938071e+02 9.1188000000e+01 0.0000e+00 -1.0000e+00
+       23  1    1    2    0    0 +3.9109420390e+01 +7.5804058190e+01 -4.1453618425e+01 1.3156540513e+02 9.1188000000e+01 0.0000e+00 1.0000e+00
+       </event>"""
+        prod_Event = lhe_parser.Event()
+        prod_Event.parse(prod_lhe.split('\n'))
+        prod_p = [prod_Event[0], prod_Event[1], prod_Event[2], prod_Event[3]]
+        
+        for p1, pe in zip(production_p, prod_p):
+                self.assertAlmostEqual(p1.px, pe.px)
+                self.assertAlmostEqual(p1.py, pe.py)
+                self.assertAlmostEqual(p1.pz, pe.pz)
+                self.assertAlmostEqual(p1.E, pe.E)
+                #self.assertEqual(p1.id, pe.id)
+    
+        dec1_lhe = """ <event>
+ 3      0 +8.3965000e-02 9.11880000e+01 7.54677100e-03 1.30000000e-01
+       23 -1    0    0    0    0 -3.9109420391e+01 -7.5804058191e+01 +8.5916956813e+00 1.2515938071e+02 9.1188000000e+01 0.0000e+00 -1.0000e+00
+      -11  1    1    0    0    0 -3.6688912923e+01 -2.9778691677e+01 -3.7238302752e+01 6.0162596365e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       11  1    1    0    0    0 -2.4205074678e+00 -4.6025366514e+01 +4.5829998433e+01 6.4996784348e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+</event>"""
+
+        dec1_Event = lhe_parser.Event()
+        dec1_Event.parse(dec1_lhe.split('\n'))
+        dec1_p = [dec1_Event[0], dec1_Event[1], dec1_Event[2]]
+        for p1, pe in zip(decay_z1, dec1_p):
+                self.assertAlmostEqual(p1.px, pe.px)
+                self.assertAlmostEqual(p1.py, pe.py)
+                self.assertAlmostEqual(p1.pz, pe.pz)
+                self.assertAlmostEqual(p1.E, pe.E)
+        self.assertAlmostEqual(decay_z1[0].px, prod_p[2].px)
+
+        dec2_lhe = """<event>
+ 3      0 +8.3965000e-02 9.11880000e+01 7.54677100e-03 1.30000000e-01
+       23 -1    0    0    0    0 +3.9109420387e+01 +7.5804058185e+01 -4.1453618422e+01 1.3156540512e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    1    0    0    0 +5.2267279628e+01 +1.6179927919e+01 +4.8591069017e+00 5.4929677835e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    1    0    0    0 -1.3157859241e+01 +5.9624130265e+01 -4.6312725324e+01 7.6635727286e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+</event>"""
+                
+        dec2_Event = lhe_parser.Event()
+        dec2_Event.parse(dec2_lhe.split('\n'))
+        dec2_p = [dec2_Event[0], dec2_Event[1], dec2_Event[2]]
+        for p1, pe in zip(decay_z2, dec2_p):
+                self.assertAlmostEqual(p1.px, pe.px)
+                self.assertAlmostEqual(p1.py, pe.py)
+                self.assertAlmostEqual(p1.pz, pe.pz)
+                self.assertAlmostEqual(p1.E, pe.E)
+        self.assertAlmostEqual(decay_z2[0].px, prod_p[3].px)
+
+
+        # below number are computed by madspin...
+        #prod_diag = 0.009896473385096114 , dec_diag = 148120.70052380403
+        self.assertAlmostEqual(all_me[0]/0.009896473385096114,1, places=6)
+        self.assertAlmostEqual(all_me[2]*all_me[3]/148120.70052380403,1, places=6)
+
+        # check with printed version of madspin:
+        # information from madspin log
+        #    self.assertEqual(str(prod_dens),
+        #    density_prod = [([-1, -1, -1, -1],  0.00155656-4.44342280e-21j)
+        madspin_report= [([-1, -1, -1, -1],  0.00155656-4.44342280e-21j),
+ ([-1, -1, -1,  0], -0.0061166 +3.18998398e-18j),
+ ([-1, -1, -1,  1], -0.02385528+5.26004027e-18j),
+ ([-1,  0, -1, -1],  0.00845586-1.72478531e-19j),
+ ([-1,  0, -1,  0],  0.00353157-1.68518580e-18j),
+ ([-1,  0, -1,  1], -0.01006808-3.31784584e-18j),
+ ([-1,  1, -1, -1],  0.01352631-2.15122174e-18j),
+ ([-1,  1, -1,  0],  0.01119138-1.93698754e-18j),
+ ([-1,  1, -1,  1],  0.00186626-1.47534714e-18j),
+ ([-1, -1,  0,  0],  0.02404441+8.32488915e-20j),
+ ([-1, -1,  0,  1],  0.09364523+2.74460430e-17j),
+ ([-1,  0,  0, -1], -0.03322776-1.67756927e-17j),
+ ([-1,  0,  0,  0], -0.01387597-8.33384364e-19j),
+ ([-1,  0,  0,  1],  0.039555  +3.40446067e-17j),
+ ([-1,  1,  0, -1], -0.05306146-2.09403634e-17j),
+ ([-1,  1,  0,  0], -0.04396074-1.67907887e-17j),
+ ([-1,  1,  0,  1], -0.00733204+1.88201291e-18j),
+ ([-1, -1,  1,  1],  0.3666445 +1.01936527e-18j),
+ ([-1,  0,  1, -1], -0.1295935 -2.93067477e-17j),
+ ([-1,  0,  1,  0], -0.05414116+1.18078428e-17j),
+ ([-1,  0,  1,  1],  0.1543898 +8.85097549e-17j),
+ ([-1,  1,  1, -1], -0.20829503-1.77720466e-17j),
+ ([-1,  1,  1,  0], -0.1716968 -1.55059258e-17j),
+ ([-1,  1,  1,  1], -0.02861856+1.56582097e-17j),
+ ([ 0,  0, -1, -1],  0.04593575-6.65039823e-19j),
+ ([ 0,  0, -1,  0],  0.01918499-8.80142009e-18j),
+ ([ 0,  0, -1,  1], -0.0546941 -1.81837989e-17j),
+ ([ 0,  1, -1, -1],  0.07348216-1.08546983e-17j),
+ ([ 0,  1, -1,  0],  0.06079653-4.54388136e-18j),
+ ([ 0,  1, -1,  1],  0.01013831-7.16399374e-18j),
+ ([ 0,  0,  0,  0],  0.00801285-2.12259922e-19j),
+ ([ 0,  0,  0,  1], -0.0228443 -1.87071346e-17j),
+ ([ 0,  1,  0, -1],  0.03070557+9.95960116e-18j),
+ ([ 0,  1,  0,  0],  0.02539443+7.89596503e-18j),
+ ([ 0,  1,  0,  1],  0.00423451-1.40272182e-18j),
+ ([ 0,  0,  1,  1],  0.06512972+1.75433965e-18j),
+ ([ 0,  1,  1, -1], -0.08757587+4.34771986e-17j),
+ ([ 0,  1,  1,  0], -0.07240333+3.17362500e-17j),
+ ([ 0,  1,  1,  1], -0.01207272+1.30660225e-17j),
+ ([ 1,  1, -1, -1],  0.11848886+3.00231717e-18j),
+ ([ 1,  1, -1,  0],  0.09742438+2.01030469e-18j),
+ ([ 1,  1, -1,  1],  0.01623366-9.84227552e-18j),
+ ([ 1,  1,  0,  0],  0.08049559-9.13881031e-19j),
+ ([ 1,  1,  0,  1],  0.01342101-8.17624195e-18j),
+ ([ 1,  1,  1,  1],  0.00223785-8.42004594e-21j),
+ ([-1, -1,  0, -1], -0.0061166 -3.18998398e-18j),
+ ([-1, -1,  1, -1], -0.02385528-5.26004027e-18j),
+ ([ 0, -1, -1, -1],  0.00845586+1.72478531e-19j),
+ ([ 0, -1,  0, -1],  0.00353157+1.68518580e-18j),
+ ([ 0, -1,  1, -1], -0.01006808+3.31784584e-18j),
+ ([ 1, -1, -1, -1],  0.01352631+2.15122174e-18j),
+ ([ 1, -1,  0, -1],  0.01119138+1.93698754e-18j),
+ ([ 1, -1,  1, -1],  0.00186626+1.47534714e-18j),
+ ([-1, -1,  1,  0],  0.09364523-2.74460430e-17j),
+ ([ 0, -1, -1,  0], -0.03322776+1.67756927e-17j),
+ ([ 0, -1,  0,  0], -0.01387597+8.33384364e-19j),
+ ([ 0, -1,  1,  0],  0.039555  -3.40446067e-17j),
+ ([ 1, -1, -1,  0], -0.05306146+2.09403634e-17j),
+ ([ 1, -1,  0,  0], -0.04396074+1.67907887e-17j),
+ ([ 1, -1,  1,  0], -0.00733204-1.88201291e-18j),
+ ([ 0, -1, -1,  1], -0.1295935 +2.93067477e-17j),
+ ([ 0, -1,  0,  1], -0.05414116-1.18078428e-17j),
+ ([ 0, -1,  1,  1],  0.1543898 -8.85097549e-17j),
+ ([ 1, -1, -1,  1], -0.20829503+1.77720466e-17j),
+ ([ 1, -1,  0,  1], -0.1716968 +1.55059258e-17j),
+ ([ 1, -1,  1,  1], -0.02861856-1.56582097e-17j),
+ ([ 0,  0,  0, -1],  0.01918499+8.80142009e-18j),
+ ([ 0,  0,  1, -1], -0.0546941 +1.81837989e-17j),
+ ([ 1,  0, -1, -1],  0.07348216+1.08546983e-17j),
+ ([ 1,  0,  0, -1],  0.06079653+4.54388136e-18j),
+ ([ 1,  0,  1, -1],  0.01013831+7.16399374e-18j),
+ ([ 0,  0,  1,  0], -0.0228443 +1.87071346e-17j),
+ ([ 1,  0, -1,  0],  0.03070557-9.95960116e-18j),
+ ([ 1,  0,  0,  0],  0.02539443-7.89596503e-18j),
+ ([ 1,  0,  1,  0],  0.00423451+1.40272182e-18j),
+ ([ 1,  0, -1,  1], -0.08757587-4.34771986e-17j),
+ ([ 1,  0,  0,  1], -0.07240333-3.17362500e-17j),
+ ([ 1,  0,  1,  1], -0.01207272-1.30660225e-17j),
+ ([ 1,  1,  0, -1],  0.09742438-2.01030469e-18j),
+ ([ 1,  1,  1, -1],  0.01623366+9.84227552e-18j),
+ ([ 1,  1,  1,  0],  0.01342101+8.17624195e-18j)]
+        madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
+
+        for key in madspin_report_dict:
+            ref_val = self._dens_value_for_key(prod_dens, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+
+
+        madspin_report = [([-1, -1], 296.70587 -7.1793691e-15j),
+                          ([-1,  0], 102.16883 +4.6782249e+01j),
+                          ([-1,  1], 187.98897 +2.1782800e+02j),
+                         ([ 0,  0], 575.4612  -8.4577865e-16j),
+                         ([ 0,  1],  60.377983+2.7646572e+01j),
+                         ([ 1,  1], 282.4265  +2.6328346e-15j),
+                         ([ 0, -1], 102.16883 -4.6782249e+01j),
+                         ([ 1, -1], 187.98897 -2.1782800e+02j),
+                         ([ 1,  0],  60.377983-2.7646572e+01j),]
+        madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
+
+        for key in madspin_report_dict:
+            ref_val = self._dens_value_for_key(prod_dec1, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+
+        madspin_report =[([-1, -1],  332.7482   -3.3880889e-16j),
+                        ([-1,  0],  -84.79217  +1.5662439e+02j),
+                        ([-1,  1], -149.53477  -2.2903455e+02j),
+                        ([ 0,  0],  547.05566  -6.0317979e-15j),
+                        ([ 0,  1],    1.8067838-3.3374121e+00j),
+                        ([ 1,  1],  274.7897   -1.2771769e-15j),
+                        ([ 0, -1],  -84.79217  -1.5662439e+02j),
+                        ([ 1, -1], -149.53477  +2.2903455e+02j),
+                        ([ 1,  0],    1.8067838+3.3374121e+00j),]
+        madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
+
+        for key in madspin_report_dict:
+            ref_val = self._dens_value_for_key(prod_dec2, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+
+
+        madspin_report = [([-1, -1, -1, -1],  9.8728344e+04-2.4894488e-12j),
+                            ([-1, -1, -1,  0], -2.5158334e+04+4.6471375e+04j),
+                            ([-1, -1, -1,  1], -4.4367844e+04-6.7955898e+04j),
+                            ([-1, -1,  0,  0],  1.6231462e+05-5.7171845e-12j),
+                            ([-1, -1,  0,  1],  5.3608337e+02-9.9022980e+02j),
+                            ([-1, -1,  1,  1],  8.1531719e+04-2.3517624e-12j),
+                            ([-1, -1,  0, -1], -2.5158334e+04-4.6471375e+04j),
+                            ([-1, -1,  1, -1], -4.4367844e+04+6.7955898e+04j),
+                            ([-1, -1,  1,  0],  5.3608337e+02+9.9022980e+02j),
+                            ([-1,  0, -1, -1],  3.3996496e+04+1.5566709e+04j),
+                            ([-1,  0, -1,  0], -1.5990357e+04+1.2035362e+04j),
+                            ([-1,  0, -1,  1], -4.5630420e+03-3.0395766e+04j),
+                            ([-1,  0,  0,  0],  5.5892039e+04+2.5592494e+04j),
+                            ([-1,  0,  0,  1],  3.4072864e+02-2.5645407e+02j),
+                            ([-1,  0,  1,  1],  2.8074943e+04+1.2855280e+04j),
+                            ([-1,  0,  0, -1], -1.3358750e+03-1.9968898e+04j),
+                            ([-1,  0,  1, -1], -2.5992543e+04+1.6404617e+04j),
+                            ([-1,  0,  1,  0],  2.8465332e+01+4.2550491e+02j),
+                            ([-1,  1, -1, -1],  6.2552992e+04+7.2481875e+04j),
+                            ([-1,  1, -1,  0], -5.0057172e+04+1.0973549e+04j),
+                            ([-1,  1, -1,  1],  2.1779248e+04-7.5628828e+04j),
+                            ([-1,  1,  0,  0],  1.0284043e+05+1.1916404e+05j),
+                            ([-1,  1,  0,  1],  1.0666372e+03-2.3382855e+02j),
+                            ([-1,  1,  1,  1],  5.1657434e+04+5.9856891e+04j),
+                            ([-1,  1,  0, -1],  1.8177188e+04-4.7913766e+04j),
+                            ([-1,  1,  1, -1], -7.8001023e+04+1.0483107e+04j),
+                            ([-1,  1,  1,  0], -3.8732639e+02+1.0209648e+03j),
+                            ([ 0,  0, -1, -1],  1.9148367e+05-4.7640266e-13j),
+                            ([ 0,  0, -1,  0], -4.8794602e+04+9.0131258e+04j),
+                            ([ 0,  0, -1,  1], -8.6051461e+04-1.3180048e+05j),
+                            ([ 0,  0,  0,  0],  3.1480931e+05-3.9337535e-12j),
+                            ([ 0,  0,  0,  1],  1.0397339e+03-1.9205511e+03j),
+                            ([ 0,  0,  1,  1],  1.5813081e+05-9.6737700e-13j),
+                            ([ 0,  0,  0, -1], -4.8794602e+04-9.0131258e+04j),
+                            ([ 0,  0,  1, -1], -8.6051461e+04+1.3180048e+05j),
+                            ([ 0,  0,  1,  0],  1.0397339e+03+1.9205511e+03j),
+                            ([ 0,  1, -1, -1],  2.0090666e+04+9.1993467e+03j),
+                            ([ 0,  1, -1,  0], -9.4497070e+03+7.1124521e+03j),
+                            ([ 0,  1, -1,  1], -2.6965884e+03-1.7962768e+04j),
+                            ([ 0,  1,  0,  0],  3.3030117e+04+1.5124214e+04j),
+                            ([ 0,  1,  0,  1],  2.0135797e+02-1.5155484e+02j),
+                            ([ 0,  1,  1,  1],  1.6591248e+04+7.5969932e+03j),
+                            ([ 0,  1,  0, -1], -7.8945264e+02-1.1800878e+04j),
+                            ([ 0,  1,  1, -1], -1.5360629e+04+9.6945195e+03j),
+                            ([ 0,  1,  1,  0],  1.6821953e+01+2.5145758e+02j),
+                            ([ 1,  1, -1, -1],  9.3976914e+04+7.8038238e-13j),
+                            ([ 1,  1, -1,  0], -2.3947557e+04+4.4234879e+04j),
+                            ([ 1,  1, -1,  1], -4.2232586e+04-6.4685430e+04j),
+                            ([ 1,  1,  0,  0],  1.5450303e+05-2.6323258e-13j),
+                            ([ 1,  1,  0,  1],  5.1028366e+02-9.4257367e+02j),
+                            ([ 1,  1,  1,  1],  7.7607898e+04+3.6276724e-13j),
+                            ([ 1,  1,  0, -1], -2.3947557e+04-4.4234879e+04j),
+                            ([ 1,  1,  1, -1], -4.2232586e+04+6.4685430e+04j),
+                            ([ 1,  1,  1,  0],  5.1028366e+02+9.4257367e+02j),
+                            ([ 0, -1, -1, -1],  3.3996496e+04-1.5566709e+04j),
+                            ([ 0, -1, -1,  0], -1.3358750e+03+1.9968898e+04j),
+                            ([ 0, -1, -1,  1], -2.5992543e+04-1.6404617e+04j),
+                            ([ 0, -1,  0,  0],  5.5892039e+04-2.5592494e+04j),
+                            ([ 0, -1,  0,  1],  2.8465332e+01-4.2550491e+02j),
+                            ([ 0, -1,  1,  1],  2.8074943e+04-1.2855280e+04j),
+                            ([ 0, -1,  0, -1], -1.5990357e+04-1.2035362e+04j),
+                            ([ 0, -1,  1, -1], -4.5630420e+03+3.0395766e+04j),
+                            ([ 0, -1,  1,  0],  3.4072864e+02+2.5645407e+02j),
+                            ([ 1, -1, -1, -1],  6.2552992e+04-7.2481875e+04j),
+                            ([ 1, -1, -1,  0],  1.8177188e+04+4.7913766e+04j),
+                            ([ 1, -1, -1,  1], -7.8001023e+04-1.0483107e+04j),
+                            ([ 1, -1,  0,  0],  1.0284043e+05-1.1916404e+05j),
+                            ([ 1, -1,  0,  1], -3.8732639e+02-1.0209648e+03j),
+                            ([ 1, -1,  1,  1],  5.1657434e+04-5.9856891e+04j),
+                            ([ 1, -1,  0, -1], -5.0057172e+04-1.0973549e+04j),
+                            ([ 1, -1,  1, -1],  2.1779248e+04+7.5628828e+04j),
+                            ([ 1, -1,  1,  0],  1.0666372e+03+2.3382855e+02j),
+                            ([ 1,  0, -1, -1],  2.0090666e+04-9.1993467e+03j),
+                            ([ 1,  0, -1,  0], -7.8945264e+02+1.1800878e+04j),
+                            ([ 1,  0, -1,  1], -1.5360629e+04-9.6945195e+03j),
+                            ([ 1,  0,  0,  0],  3.3030117e+04-1.5124214e+04j),
+                            ([ 1,  0,  0,  1],  1.6821953e+01-2.5145758e+02j),
+                            ([ 1,  0,  1,  1],  1.6591248e+04-7.5969932e+03j),
+                            ([ 1,  0,  0, -1], -9.4497070e+03-7.1124521e+03j),
+                            ([ 1,  0,  1, -1], -2.6965884e+03+1.7962768e+04j),
+                            ([ 1,  0,  1,  0],  2.0135797e+02+1.5155484e+02j),]
+        madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
+
+        for key in madspin_report_dict:
+            ref_val = self._dens_value_for_key(prod_dec, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+                                                                             
+                                                                             
+    def test_standalone_density_f2py(self):       
+
+        ############################################################################
+        # Check convolution of density matrix with decay matrix 
+        # reproduces the full matrix-element
+        # testing case d d~ > z z, z > e+ e-
+        ############################################################################
+        self.do('generate d d~ > z z')
+        self.do('output standalone %s_prod --prefix=int --density=3,4 -f ' % self.out_dir)
+        self.do('generate d d~ > z z, z > e+ e-')
+        #self.do('output standalone %s_full -f ' % self.out_dir) 
+        #self.do('generate z > e+ e- --standalone') # --standalone allow mix 2>1 and 2>2 processes
+        #self.do('output standalone %s_dec1 --density=1 -f ' % self.out_dir)
+        #self.do('output standalone %s_dec2 --density=1 -f ' % self.out_dir)
+        # Read a test event for u u~ > z z, z > e+ e-
+        text_lhe = """<event>
+        8      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+       -1 -1    0    0    0  501 -0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        1 -1    0    0  501    0 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       23  2    1    2    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 +1.0803264452e+01 +4.0782658931e+01 -9.7070204270e+01 1.3970616197e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 +1.0085745661e+01 +3.5438949841e+00 +1.6319184216e+01 1.9508901320e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    3    3    0    0 -2.0889010113e+01 -4.4326553914e+01 -9.9568834346e+01 1.1097363155e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+      -11  1    4    4    0    0 +2.5139455461e+01 -6.3572870227e-01 +7.5662101007e+00 2.6261072087e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 -1.4336191009e+01 +4.1418387636e+01 -1.0463641438e+02 1.1344508989e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n')) 
+        # get the associate momenta for each matrix-element
+        production_p = [Event[0], Event[1], Event[2], Event[3]]
+        #full_p = [Event[0], Event[1], Event[4], Event[5], Event[6], Event[7]]
+        #decay_z1 = [Event[2], Event[4], Event[5]]
+        #decay_z2 = [Event[3], Event[6], Event[7]]
+        #all_p = [production_p, full_p, decay_z1, decay_z2]
+
+        mdir = self.out_dir+'_prod'
+        Pdir = 'P0_ddx_zz'
+        p = production_p
+        
+        # start to do standalone fortran for comparison
+        self.edit_p_in_standalone(os.path.join(mdir, 'SubProcesses', Pdir), p)
+        devnull = open(os.devnull,'w')
+        subprocess.call(['make'],
+                            stdout=devnull, stderr=devnull, 
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir)) 
+        self.assertTrue(os.path.exists(os.path.join(mdir,
+                                                        'SubProcesses', Pdir,
+                                                        'check')))
+        #compute the matrix-element
+        logfile = os.path.join(mdir,'SubProcesses', Pdir,
+                                   'check.log')
+        subprocess.call('./check', 
+                            stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir), shell=True)
+        log_output = open(logfile, 'r').read()
+        misc.sprint(log_output)
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.findall(log_output) 
+        dens_re =re.compile(r'value is\s+\d+\s*\(([\d\.eE\+-]+),([\d\.eE\+-]+)\)')
+        density = dens_re.findall(log_output)
+
+        hel_index = re.compile(
+                       r'particle\s+\d\s+has\s+helicity\s+([\+\-]?\d)\s*([\+\-]?\d)\s*')
+        index = hel_index.findall(log_output)
+        all_index = []
+        if len(index) == len(density):
+            all_index.append([[int(x[0]), int(x[1])] for x in index])
+        else:
+            curr_index = []
+            for i in range(4, 2):
+                i1 = index[2*i]
+                i2 = index[2*i+1]
+                curr_index.append([[int(i1[0]), int(i1[1]), int(i2[0]), int(i2[1])]])
+          
+            all_index.append(curr_index)
+
+        fortran_me = float(me_groups[0])
+        fortran_dens = [complex(float(x[0]), float(x[1])) for x in density]    
+
+        # Do the computation via f2py linking
+        sys.path.insert(0, os.path.join(mdir, 'SubProcesses', Pdir))
+        make_rc = subprocess.call(['make', 'matrix2py.so'],
+                            #stdout=devnull, stderr=devnull,
+                            cwd=os.path.join(mdir, 'SubProcesses',
+                                             Pdir))
+        so_path = os.path.join(mdir, 'SubProcesses', Pdir, 'matrix2py.so')
+        self.assertEqual(make_rc, 0,
+            'make matrix2py.so failed (rc=%s); check that f2py is configured.' % make_rc)
+        self.assertTrue(os.path.exists(so_path),
+            'matrix2py.so was not produced at %s' % so_path)
+
+        # Force re-import in case a stale module from another test is cached
+        if 'matrix2py' in sys.modules:
+            del sys.modules['matrix2py']
+        import matrix2py
+        #os.chdir(os.path.join(mdir, 'SubProcesses', Pdir))
+        with misc.chdir(os.path.join(mdir, 'SubProcesses', Pdir)):
+            matrix2py.py_m0_initialisemodel('../../Cards/param_card.dat')
+
+            p = [[x.E, x.px, x.py, x.pz] for x in p]
+            P =self.invert_momenta(p)
+            alphas = 0.118
+            nhel = -1 # means sum over all helicity
+            # GET_value / SMATRIX now take a per-particle merged-flavor index
+            # array (matches the flavor-grouping plumbing). Single-flavor
+            # processes use 1 for every particle.
+            flavor_value = [1] * len(P[0])
+            me2 = matrix2py.py_m0_get_value(P, alphas, nhel, flavor_value)
+            misc.sprint('fortran: ', fortran_me, ' f2py: ', me2)
+            # compute density matrix
+            self.assertAlmostEqual(fortran_me/me2, 1., places=5)
+
+            pos = [3,4] # particle to get density matrix
+            n_changing = 2 # why needed in f2py ?
+            allow_hel = [-1,-1,   -1,0,   -1,1, 
+                          0,-1,    0,0,    0,1, 
+                          1,-1,    1,0,    1,1]
+            ncomb = 9 # why needed in f2py ?
+            alphas = 0.118 # no impact for ZZ
+
+            # GET_DENSITY now takes a per-particle merged-flavor index array
+            # (matches the SMATRIX/GET_AMP flavor-grouping plumbing).
+            # Single-flavor processes use 1 for every particle.
+            flavor = [1] * len(P[0])
+            f2py_dens = matrix2py.py_m0_get_density(P, pos, n_changing, allow_hel, ncomb, flavor, alphas)
+            misc.sprint('fortran: ', fortran_dens)
+            misc.sprint('f2py:    ', f2py_dens)
+            for i in range(9*5):
+                misc.sprint(i, fortran_dens[i], f2py_dens[i])
+                self.assertAlmostEqual(fortran_dens[i].real/f2py_dens[i].real, 1, places=3)
+                self.assertAlmostEqual(fortran_dens[i].imag, f2py_dens[i].imag, places=5)
+            import MadSpin.decay as madspin
+            density_matrix = madspin.DensityMatrix(f2py_dens, n_changing, allow_hel, ncomb)
+            self.assertAlmostEqual(density_matrix.trace()/9./4./2./fortran_me, 1,4)  #9 color , 4 spin, 2 symmetry factor (
+            misc.sprint(density_matrix.values[1], fortran_dens[1])
+
+
+    def test_density_mode_user_interface(self):
+        ############################################################################
+        # This test checks that the python interface of the density mode works properly ie.
+        # it creates a LHE file with a tag <density> which contains the density matrix with the correct number of elements.
+        # We also check that the average density matrix is stable.
+        # To check if the value of the density matrix itself is correct see the other test_density_mode_* tests.
+        ############################################################################
+        
+        text = f"""generate g g > t t~
+output {self.out_dir}_density0
+launch
+reweight=density
+set run_card nevents 50000
+set helicity_direction [6]
+set particle_in_density_matrix [6, -6]
+set boost_choice [6, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'])
+
+
+        
+
+        lhe_path = pjoin(self.out_dir + '_density0/Events/run_01/unweighted_events.lhe.gz')
+        rho_mean_path = pjoin(self.out_dir + '_density0/Events/run_01/Average_density_matrix_unweighted_events.txt')
+        
+        self.assertTrue(os.path.isfile(lhe_path), f"File not found {lhe_path}")
+        self.assertTrue(os.path.isfile(rho_mean_path), f"File not found {rho_mean_path}")
+
+
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+            break #we only want the first one
+        
+        for elem in density_check:
+            self.assertIsInstance(elem, complex)
+        
+        self.assertEqual(len(density_check), 10, f"The density matrix is not the correct length: {density_check}")
+
+        rho_avg_ref =  [[(0.3670142422790588+0j), (1.7429098337870793e-07-3.933851109770078e-05j), (-1.742909833606001e-07+3.9338510968347334e-05j), (0.11514189584464168-0j)],
+                        [(1.7429098337870793e-07+3.933851109770078e-05j), (0.13298575772060628+0j), (0.06344292964491506-0j), (-1.7429098336059725e-07-3.933851096834704e-05j)],
+                        [(-1.742909833606001e-07-3.9338510968347334e-05j), (0.06344292964491506+0j), (0.13298575772060628+0j), (1.7429098337870735e-07+3.9338511097700886e-05j)],
+                        [(0.11514189584464168+0j), (-1.7429098336059725e-07+3.933851096834704e-05j), (1.7429098337870735e-07-3.9338511097700886e-05j), (0.36701424227905893+0j)]]
+
+        #now let's read the average density matrix
+        with open(rho_mean_path, 'r') as f:
+            data = f.readlines()[1:]
+            rho_avg = []
+            for i in range(len(data)):
+                aux = data[i].strip("\t\n[]").split(",")
+                rho_avg.append([complex(aux[i].strip(" ()")) for i in range(len(aux))])
+            
+        for i in range(len(rho_avg)):
+            for j in range(len(rho_avg[0])):
+                self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, places=3) #we ask 3 digits because we only use 50k events
+                self.assertAlmostEqual(rho_avg[i][j].imag, rho_avg_ref[i][j].imag, places=3)
+
+
+    def test_density_mode_ttbar(self):
+        ############################################################################
+        # Check working condition of the density mode
+        # reproduces the full density matrix and computes quantum information observables
+        # testing case g g > t t~
+        ############################################################################
+        import madgraph.various.Density_functions as dens
+        #we generate just one event of the process  to create the process folder (it is fast enough)
+        text = f"""generate g g > t t~
+output {self.out_dir}_density1
+launch
+set run_card nevents 1
+set use_syst False
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        logfile = 'test_density_mode_ttbar1.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}_density1/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_ttbar.lhe.gz"), f"{self.out_dir}_density1/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir}_density1/ -i
+reweight run_01 --mode=density
+set helicity_direction [6]
+set boost_choice [6, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_ttbar2.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        
+        #The lhe file has been reweighted, now we read density_check, the density matrix to compare to the reference
+        lhe_path = pjoin(self.out_dir + '_density1/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+
+        #reference density matrix
+        density_ref = [(0.4526973360805629+0j), (-2.1317321205040213e-05+0.0024340905341333923j), (2.13173212052136e-05-0.002434090538628891j),
+                          (0.28550869973262555+0j), (0.04730266391943712+0j), (0.04700262219476668+0j), (2.1317321205213577e-05+0.0024340905386288922j),
+                          (0.04730266391943711+0j), (-2.1317321205040145e-05-0.0024340905341333906j), (0.45269733608056295+0j)]
+
+        #1) here we check that the density matrix is computed properly
+        for i in range(len(density_ref)):
+            self.assertAlmostEqual(density_ref[i].real, density_check[i].real, places=7)
+            self.assertAlmostEqual(density_ref[i].imag, density_check[i].imag, places=7)
+        
+        rho_instance = dens.DensityMatrixObservables(density_check)
+
+        #2) here we check that the concurrence is computed properly
+        concurrence_ref = 0.47641209333195317
+        concurrence_check = rho_instance.Get_Concurrence()
+        self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
+
+        #3) here we check that purity is computed properly
+        purity_ref = 0.5818411704583635
+        purity_check = rho_instance.Get_Purity()
+        self.assertAlmostEqual(purity_ref, purity_check, places=7)
+
+        #4) here we check that magic is computed properly
+        magic_ref = 0.4706552252614239
+        magic_check = rho_instance.Magic_Mixed()
+        self.assertAlmostEqual(magic_ref, magic_check, places=7)
+
+    def test_density_mode_wpwm(self):
+        ############################################################################
+        # Check working condition of the density mode
+        # reproduces the full density matrix and computes quantum information observables
+        # testing case u u~ > w+ w-
+        ############################################################################
+        import madgraph.various.Density_functions as dens
+        text = f"""generate u u~ > w+ w-
+output {self.out_dir}_density2
+launch
+set run_card nevents 1
+set use_syst False
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd2.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+
+        logfile = 'test_density_mode_wpwm1.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd2.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}_density2/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_wpwm.lhe.gz"), f"{self.out_dir}_density2/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir}_density2/ -i
+reweight run_01 --mode=density
+set helicity_direction [24]
+set particle_in_density_matrix [24, -24]
+set boost_choice [24, -24]
+set order_helicities [+1, -1, +1, 0, +1, +1, 0, -1, 0, 0, 0, +1, -1, -1, -1, 0, -1, +1]
+set axis_referential [-1, -2]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt2.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_wpwm2.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt2.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        
+        #The lhe file has been reweighted, now we read density_check, the density matrix to compare to the reference
+        lhe_path = pjoin(self.out_dir + '_density2/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+
+        #reference density matrix
+        density_ref = [1.1377075855848739e-05+0j, -2.490684288126926e-09+4.954042982384063e-05j, -0.00010741895892651527-1.052802929701333e-08j, -2.490684288126926e-09+4.9540429845192674e-05j, -0.00020752750288735081-1.8249104252772033e-07j,
+                       7.268812229221872e-07-0.00037506459555688727j, -0.0001074189589717972-1.052802929701333e-08j, 7.268812229221872e-07-0.0003750645955782362j, -0.003320285453600001+0j, 0.0002263297014919883+0j, 
+                       -2.2327036098315108e-08+0.00046759229342787956j, 0.0002263297015849638+0j, -7.492082590489525e-07+0.0009009955880770624j, -0.001633220781778451-3.0830277624655218e-06j, -2.232703608840189e-08+0.00046759229362505555j, 
+                       -0.0016332207818714126-3.083027762460848e-06j, 7.268812229221946e-07+0.014457877454041002j, 0.0010142200261194483+0j, -2.2327036118073693e-08-0.0004675922936294792j, 0.00195945157385873+1.5309858519097204e-06j, 
+                       -6.515921500262154e-06+0.0035412482571934695j, 0.0010142200265469868+0j, -6.515921500242399e-06+0.0035412482573950388j, 0.03134914553472118-3.072499733046761e-06j, 0.00022632970167793935+0j, 
+                       -7.492082593914445e-07+0.0009009955884665416j, -0.0016332207824823572-3.0830277638297043e-06j, -2.232703610816048e-08+0.0004675922938266552j, -0.001633220782575319-3.0830277638250304e-06j, 7.268812229221946e-07+0.01445787746027238j, 
+                       0.003786149199326624+0j, -7.242802726675139e-06+0.006841498529578208j, 0.001959451574684711-1.530985852636054e-06j, -7.2428027263327e-06+0.006841498529967629j, 0.06056481979985879-5.3258180009900856e-05j, 
+                       0.012364686884072221+0j, -6.515921503155216e-06-0.0035412482586862654j, 0.012364686884776021+0j, -0.00021213299283073748-0.10945883956181096j, 0.0010142200269745254+0j,
+                       -6.515921503135461e-06+0.0035412482588878342j, 0.031349145547936254-3.072499733046761e-06j, 0.012364686885479825+0j, -0.00021213299283073748-0.10945883956804142j, 0.9689920004990016+0j]
+
+
+        event_of_reference = """<event>
+ 4      1 +1.7477710e+01 8.42506000e+01 7.54677100e-03 1.31740400e-01
+        2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +2.6479266201e+02 2.6479266201e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -1.9946623190e+02 1.9946623190e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       24  1    1    2    0    0 -7.2588221973e+00 +2.4046986127e+01 +2.4863204649e+02 2.6251868227e+02 8.0419002446e+01 0.0000e+00 -1.0000e+00
+      -24  1    1    2    0    0 +7.2588221973e+00 -2.4046986127e+01 -1.8330561638e+02 2.0174021164e+02 8.0419002446e+01 0.0000e+00 1.0000e+00
+<density> (1.1377075855848739e-05+0j) (-2.490684288126926e-09+4.954042982384063e-05j) (-0.00010741895892651527-1.052802929701333e-08j) (-2.490684288126926e-09+4.9540429845192674e-05j) (-0.00020752750288735081-1.8249104252772033e-07j) (7.268812229221872e-07-0.00037506459555688727j) (-0.0001074189589717972-1.052802929701333e-08j) (7.268812229221872e-07-0.0003750645955782362j) (-0.003320285453600001+0j) (0.0002263297014919883+0j) (-2.2327036098315108e-08+0.00046759229342787956j) (0.0002263297015849638+0j) (-7.492082590489525e-07+0.0009009955880770624j) (-0.001633220781778451-3.0830277624655218e-06j) (-2.232703608840189e-08+0.00046759229362505555j) (-0.0016332207818714126-3.083027762460848e-06j) (7.268812229221946e-07+0.014457877454041002j) (0.0010142200261194483+0j) (-2.2327036118073693e-08-0.0004675922936294792j) (0.00195945157385873+1.5309858519097204e-06j) (-6.515921500262154e-06+0.0035412482571934695j) (0.0010142200265469868+0j) (-6.515921500242399e-06+0.0035412482573950388j) (0.03134914553472118-3.072499733046761e-06j) (0.00022632970167793935+0j) (-7.492082593914445e-07+0.0009009955884665416j) (-0.0016332207824823572-3.0830277638297043e-06j) (-2.232703610816048e-08+0.0004675922938266552j) (-0.001633220782575319-3.0830277638250304e-06j) (7.268812229221946e-07+0.01445787746027238j) (0.003786149199326624+0j) (-7.242802726675139e-06+0.006841498529578208j) (0.001959451574684711-1.530985852636054e-06j) (-7.2428027263327e-06+0.006841498529967629j) (0.06056481979985879-5.3258180009900856e-05j) (0.012364686884072221+0j) (-6.515921503155216e-06-0.0035412482586862654j) (0.012364686884776021+0j) (-0.00021213299283073748-0.10945883956181096j) (0.0010142200269745254+0j) (-6.515921503135461e-06+0.0035412482588878342j) (0.031349145547936254-3.072499733046761e-06j) (0.012364686885479825+0j) (-0.00021213299283073748-0.10945883956804142j) (0.9689920004990016+0j) </density>
+</event>
+"""
+        
+        #1) here we check that the density matrix is computed properly
+        for i in range(len(density_ref)):
+            self.assertAlmostEqual(density_ref[i].real, density_check[i].real, places=7)
+            self.assertAlmostEqual(density_ref[i].imag, density_check[i].imag, places=7)
+
+        rho_instance = dens.DensityMatrixObservables(density_check)
+
+        #2) here we check that the bounds of concurrence are computed properly
+        lower_concurrence2_ref = 0.023941838572111518
+        upper_concurrence2_ref = 0.02402940624369876
+        lower_concurrence2_check = rho_instance.ConcLB2()
+        upper_concurrence2_check = rho_instance.ConcUB2()
+        self.assertAlmostEqual(lower_concurrence2_check, lower_concurrence2_ref, places=7)
+        self.assertAlmostEqual(upper_concurrence2_check, upper_concurrence2_ref, places=7)
+      
+        #3) here we check that purity is computed properly
+        purity_ref = 0.9999562161642062
+        purity_check = rho_instance.Get_Purity()
+        self.assertAlmostEqual(purity_check, purity_ref, places=7)
+
+        #4) here we check that mana is computed properly
+        mana_ref = 0.5113137785276397
+        mana_check = rho_instance.Get_Mana()
+        self.assertAlmostEqual(mana_check, mana_ref, places=7)
+
+    def test_density_mode_decay1(self):
+        ############################################################################
+        # Check working condition of the density mode
+        # reproduces the full density matrix and computes quantum information observables
+        # testing case g g > t t~, t > b W+
+        # particle_in_density_matrix = [5, -6]
+        ############################################################################
+        import madgraph.various.Density_functions as dens
+        text = f"""generate g g > t t~, t > b w+
+output {self.out_dir}_density3
+launch
+set run_card nevents 1
+set run_card use_syst False
+"""
+
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        logfile = 'test_density_mode_decay11.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'])
+
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}_density3/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_decay1.lhe.gz"), f"{self.out_dir}_density3/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir}_density3/ -i
+reweight run_01 --mode=density
+set helicity_direction [5]
+set particle_in_density_matrix [5, -6]
+set boost_choice [5, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_decay12.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        
+        #The lhe file has been reweighted, now we read density_check, the density matrix to compare to the reference
+        lhe_path = pjoin(self.out_dir + '_density3/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+
+        #reference density matrix
+        density_ref = [(0.00023359526522495882+0j), (2.9956750131603144e-05+1.3622977588717694e-05j), (-0.00037002831548626185-0.0001606402006384915j),
+                            (0.0013988914248279838+0.0007925330810912253j), (0.0001701973522356173+0j), (-0.0003301297581403585+4.196117432997617e-05j), 
+                            (0.0003588942963018077+0.00015927990509450137j), (0.5380495499305434+0j), (0.03639176740610352+0.01649755017431808j), 
+                            (0.4615466574519961+0j)]
+
+
+        event_of_reference = """<event>
+ 6      1 +4.2873600e+02 2.58116800e+02 7.54677100e-03 1.10829800e-01
+       21 -1    0    0  501  502 +0.0000000000e+00 +0.0000000000e+00 +1.0845458909e+02 1.0845458909e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       21 -1    0    0  502  503 -0.0000000000e+00 -0.0000000000e+00 -6.4844659178e+02 6.4844659178e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        6  2    1    2  501    0 -1.0996883743e+01 +1.9124424233e+02 -1.8275210837e+02 3.1616925127e+02 1.7282757494e+02 0.0000e+00 0.0000e+00
+        5  1    3    3  501    0 +4.3637392514e+01 +4.9281743782e+00 -1.3060449857e+01 4.6056207819e+01 4.7000000000e+00 0.0000e+00 -1.0000e+00
+       24  1    3    3    0    0 -5.4634276257e+01 +1.8631606795e+02 -1.6969165851e+02 2.7011304345e+02 8.0419002446e+01 0.0000e+00 -1.0000e+00
+       -6  1    1    2    0  503 +1.0996883743e+01 -1.9124424233e+02 -3.5723989432e+02 4.4073192960e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+<density> (0.00023359526522495882+0j) (2.9956750131603144e-05+1.3622977588717694e-05j) (-0.00037002831548626185-0.0001606402006384915j) (0.0013988914248279838+0.0007925330810912253j) (0.0001701973522356173+0j) (-0.0003301297581403585+4.196117432997617e-05j) (0.0003588942963018077+0.00015927990509450137j) (0.5380495499305434+0j) (0.03639176740610352+0.01649755017431808j) (0.4615466574519961+0j) </density>
+</event>
+"""
+        
+        #1) here we check that the density matrix is computed properly
+        for i in range(len(density_ref)):
+            self.assertAlmostEqual(density_ref[i].real, density_check[i].real, places=7)
+            self.assertAlmostEqual(density_ref[i].imag, density_check[i].imag, places=7)
+
+        rho_instance = dens.DensityMatrixObservables(density_check)
+
+        #2) here we check that the bounds of concurrence is computed properly
+        concurrence_ref = 0.0
+        concurrence_check = rho_instance.Get_Concurrence()
+        self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
+      
+        #3) here we check that purity is computed properly
+        purity_ref = 0.5057218059862959
+        purity_check = rho_instance.Get_Purity()
+        self.assertAlmostEqual(purity_ref, purity_check, places=7)
+
+        #4) here we check that magic is computed properly
+        magic_ref = 0.018653388493735004
+        magic_check = rho_instance.Magic_Mixed()
+        self.assertAlmostEqual(magic_ref, magic_check, places=7)
+
+    def test_density_mode_decay2(self):
+        ############################################################################
+        # Check working condition of the density mode
+        # reproduces the full density matrix and computes quantum information observables
+        # testing case g g > t t~, t > b W+
+        # particle_in_density_matrix = [24, -6]
+        ############################################################################
+        import madgraph.various.Density_functions as dens
+        #we generate just one event of the process  to create the process folder (it is fast enough)
+        text = f"""generate g g > t t~, t > b w+
+output {self.out_dir}_density4
+launch
+reweight=density
+set run_card nevents 1
+set run_card use_syst False
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        logfile = 'test_density_mode_decay21.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'])
+
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}_density4/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_decay2.lhe.gz"), f"{self.out_dir}_density4/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir}_density4/ -i
+reweight run_01 --mode=density
+set helicity_direction [24]
+set particle_in_density_matrix [24, -6]
+set boost_choice [24, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_decay22.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        
+        #The lhe file has been reweighted, now we read density_check, the density matrix to compare to the reference
+        lhe_path = pjoin(self.out_dir + '_density4/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+
+        #reference density matrix
+        density_ref = [(0.00021651020376335244+0j), (1.859345759680708e-05+3.319131194668537e-05j), (-8.654700949220674e-06+4.660850889005045e-06j), 
+                            (-5.964620125575636e-06-5.140944580422725e-06j), 0j, 0j, (0.00014764522936272262+0j), (1.2627222190362744e-05-3.412335641445621e-05j), 
+                            (8.443512531745642e-06-4.6314605809771255e-06j), 0j, 0j, (0.4140153688283749+0j), (0.0355514105428883+0.06346306191601571j), 
+                            (-0.033098118766739994+0.01782446293447554j), (-0.022810459480124095-0.019660482239005784j), (0.28234295658745207+0j), 
+                            (0.04829020692948074-0.13049773873783233j), (0.03229047222126599-0.017712065763110893j), (0.12282862506005009+0j), 
+                            (-0.015383774120452564-0.027546742046050884j), (0.18044889409099676+0j)]
+
+        
+        #1) here we check that the density matrix is computed properly
+        for i in range(len(density_ref)):
+            self.assertAlmostEqual(density_ref[i].real, density_check[i].real, places=7)
+            self.assertAlmostEqual(density_ref[i].imag, density_check[i].imag, places=7)
+
+        rho_instance = dens.DensityMatrixObservables(density_check)
+
+        #2) here we check that the smaller eigenvalue of the partialy transposed density matrix is computed properly
+        flag_ref, eigval_ref = False, [1.30764975e-04, 2.33384118e-04, 1.00757194e-01, 1.28026668e-01, 2.55472741e-01, 5.15379248e-01]
+        flag_check, eigval_check = rho_instance.PeresHorodecki_criterion(['boson', 'fermion'])
+        self.assertEqual(flag_ref, flag_check)
+        for i in range(len(eigval_ref)):
+            self.assertAlmostEqual(eigval_ref[i], eigval_check[i], places=7)
+      
+        #3) here we check that purity is computed properly
+        purity_ref = 0.3574250017186387
+        purity_check = rho_instance.Get_Purity()
+        self.assertAlmostEqual(purity_ref, purity_check, places=7)
+
+    def test_density_mode_doublettbar(self):
+        ############################################################################
+        # Check working condition of the density mode
+        # reproduces the full density matrix and computes quantum information observables
+        # testing case p p > t t t~ t~
+        # helicity_direction [6] pt [0]
+        # particle_in_density_matrix [6, -6] rapidity [0, 1]
+        # boost_choice [6, -6] pt [0, 0]
+        ############################################################################
+        import madgraph.various.Density_functions as dens
+        #we generate just one event of the process  to create the process folder (it is fast enough)
+        text = f"""generate p p > t t t~ t~
+output {self.out_dir}_density5
+launch
+set run_card nevents 1
+set run_card use_syst False
+"""
+        
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        logfile = 'test_density_mode_ttbar1.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}_density5/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_doublettbar.lhe.gz"), f"{self.out_dir}_density5/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir}_density5/ -i
+reweight run_01 --mode=density
+set helicity_direction [6] pt [0]
+set particle_in_density_matrix [6, -6] rapidity [0, 1]
+set boost_choice [6, -6] pt [0, 0]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_ttbar2.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        
+
+        ## With the chosen seed, the event must be:
+        event_random = """<event>
+ 6      1 +8.8259995e-03 6.31093800e+02 7.54677100e-03 1.00159800e-01
+       21 -1    0    0  504  503 +0.0000000000e+00 +0.0000000000e+00 +1.2135286086e+03 1.2135286086e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       21 -1    0    0  502  504 -0.0000000000e+00 -0.0000000000e+00 -5.8371897887e+02 5.8371897887e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        6  1    1    2  501    0 +3.6623210951e+02 -1.7709369819e+02 +2.0834055640e+02 4.8869512318e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+        6  1    1    2  502    0 -3.1599447381e+02 +3.9628896508e+02 +1.0466750690e+02 5.4569381371e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+       -6  1    1    2    0  501 -2.8790168023e+02 -5.3212030280e+01 +2.4116702458e+02 4.1690458307e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+       -6  1    1    2    0  503 +2.3766404453e+02 -1.6598323661e+02 +7.5634541823e+01 3.4595406749e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+<density> (0.41585128247332614+0j) (-0.03826754879773473-0.08665010160467382j) (0.01819843853040962+0.0694772074195328j) (-0.006036323974019095+0.028318452797874368j) (0.08409384779983874+0j) (-0.051323966834621225-0.010218484907272918j) (-0.018157600093053276-0.06950829298296718j) (0.0841062677380868+0j) (0.0382601151338116+0.08669345314193963j) (0.41594860198874833+0j) </density>
+</event>
+"""
+
+        #The lhe file has been reweighted, now we read density_check, the density matrix to compare to the reference
+        lhe_path = pjoin(self.out_dir + '_density5/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+
+        #reference density matrix
+        density_ref = [(0.41585128247332614+0j), (-0.03826754879773473-0.08665010160467382j), (0.01819843853040962+0.0694772074195328j), 
+                            (-0.006036323974019095+0.028318452797874368j), (0.08409384779983874+0j), (-0.051323966834621225-0.010218484907272918j), 
+                            (-0.018157600093053276-0.06950829298296718j), (0.0841062677380868+0j), (0.0382601151338116+0.08669345314193963j), 
+                            (0.41594860198874833+0j)]
+
+        lhe_path = pjoin(self.out_dir + '_density5/Events/run_01/unweighted_events.lhe.gz')
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+        
+        # 1) here we check that the density matrix is computed properly
+        for i in range(len(density_ref)):
+            self.assertAlmostEqual(density_ref[i].real, density_check[i].real, places=7)
+            self.assertAlmostEqual(density_ref[i].imag, density_check[i].imag, places=7)
+
+        rho_instance = dens.DensityMatrixObservables(density_check)
+
+        #2) here we check that the bounds of concurrence is computed properly
+        concurrence_ref = 0.028913810451469873
+        concurrence_check = rho_instance.Get_Concurrence()
+        self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
+      
+        # #3) here we check that purity is computed properly
+        purity_ref = 0.42378825285881117
+        purity_check = rho_instance.Get_Purity()
+        self.assertAlmostEqual(purity_ref, purity_check, places=7)
+
+        # #4) here we check that magic is computed properly
+        magic_ref = 0.480231580151087
+        magic_check = rho_instance.Magic_Mixed()
+        self.assertAlmostEqual(magic_ref, magic_check, places=7)
+
+    @staticmethod
+    def invert_momenta(p):
+        """ fortran/C-python do not order table in the same order"""
+        new_p = []
+        for i in range(len(p[0])):  new_p.append([0]*len(p))
+        for i, onep in enumerate(p):
+            for j, x in enumerate(onep):
+                new_p[j][i] = x
+        return new_p
+
+
+
+    def edit_p_in_standalone(self, dir, p):
+        """edit the check.f file to include the momenta p"""
+        misc.sprint(dir)
+        text = []
+        done = False
+        for line in open(os.path.join(dir, 'check_sa.f'), 'r'):
+            if 'CALL GET_MOMENTA(SQRTS,PMASS,P)' in line:
+                for i in range(len(p)):
+                    real_p = lhe_parser.FourMomentum(p[i])
+                    misc.sprint(real_p)
+                    done = True
+                    for j in range(4):
+                        text.append('        p(%s,%s) = %e\n' % (j, i+1, real_p[j]))
+            else:
+                text.append(line)
+
+        if not done:
+            raise Exception('Could not find place to insert momenta in check_sa.f')
+
+        checkf = os.path.join(dir, 'check_sa.f')
+        open(checkf, 'w').write('\n'.join(text))
+
+        
+    def notest_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""
+        ##v4 not supported anymore
 
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
@@ -1696,7 +3153,51 @@ C
             if part.get('pdg_code') in [250, 251]:
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 2)
-        
+
+    def test_check_gauge_epem_vevex_wpwm(self):
+        """Test `check gauge e+ e- > ve ve~ w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > ve ve~ w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+
+    def test_check_pp_wpwm(self):
+        """Test `check p p > w+ w-` runs and gauge check succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='DEBUG') as cm:
+            self.do('check p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_pp_wpwm(self):
+        """Test `check gauge p p > w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_epem_aa_includes_axial(self):
+        """Test `check gauge e+ e- > a a` includes axial gauge and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > a a')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+         
 
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""

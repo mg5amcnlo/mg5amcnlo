@@ -1185,7 +1185,7 @@ class gen_ximprove_v4(gen_ximprove):
     max_splitting = 130       # maximum duplication of a given channel 
     min_iter = 3    
     max_iter = 9
-    keep_grid_for_refine = True        # only apply if needed to split the job
+    keep_grid_for_refine = False        # only apply if needed to split the job
 
 
 
@@ -1479,7 +1479,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
                     'suppress_amplitude': 0 if self.disable_multichannel else 1,
-                    'base_directory': C.name if self.keep_grid_for_refine else '',  
+                    'base_directory': C.name if self.keep_grid_for_refine else '',
                     'grid_refinment' : 1
                     }
 

@@ -251,10 +251,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA MG5_1_DENOM/1/
+      DATA (MG5_1_CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (MG5_1_CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -382,10 +382,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA MG5_1_DENOM/1/
+      DATA (MG5_1_CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (MG5_1_CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -418,11 +418,11 @@ C     JAMPs contributing to orders QCD=2
 
       SUBROUTINE MG5_1_GET_JAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
 
       ONEJAMP = JAMP(NJAMP+1, SOINDEX)  ! +1 since njamp start at zero (c convention)
@@ -430,7 +430,7 @@ C     JAMPs contributing to orders QCD=2
 
       SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
@@ -510,7 +510,7 @@ C     JAMPs contributing to orders QCD=2
       RETURN
       END
 
-      SUBROUTINE MG5_1_GET_CHOSEN_SO_CONFIG(M,N, OUT)
+      SUBROUTINE MG5_1__GET_CHOSEN_SO_CONFIG(M,N, OUT)
 
       INTEGER M, N
       LOGICAL OUT

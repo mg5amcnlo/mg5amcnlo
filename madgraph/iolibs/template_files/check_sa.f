@@ -14,7 +14,7 @@ C
 C     
 C     INCLUDE FILES
 C     
-C---  the include file with the values of the parameters and masses	
+C---  the include file with the values of the parameters and masses 
       INCLUDE "coupl.inc"
 C---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
@@ -98,9 +98,9 @@ c---  Allow the energy to be set via command-line argument: ./check <energy> [nb
 
       call printout()
 
-      CALL GET_MOMENTA(SQRTS,PMASS,P)	
+      CALL GET_MOMENTA(SQRTS,PMASS,P)   
 c
-c	  write the information on the four momenta 
+c     write the information on the four momenta 
 c
       write (*,*)
       write (*,*) " Phase space point:"
@@ -124,16 +124,23 @@ c
       enddo
 c
       write(*,*) "PDG", PDG_FOR_FLAVOR(:,I)
-      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
+      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
       write (*,*) "-----------------------------------------------------------------------------"
       enddo
 
+      if (%(use_density)s)then
+         do I=1, MAXFLAVOR
+            write (*,*) "==== density matrix for flavor", I,
+     .                  " (PDG ", PDG_FOR_FLAVOR(:,I), ") ===="
+            call get_density_matrix(P, FLAVOR(1,I))
+         enddo
+      endif
 cc
 cc      Copy down here (or read in) the four momenta as a string. 
 cc      
 cc
-c      buff(1)=" 1   0.5630480E+04  0.0000000E+00  0.0000000E+00  0.5630480E+04"
-c      buff(2)=" 2   0.5630480E+04  0.0000000E+00  0.0000000E+00 -0.5630480E+04"
+c      buff(1)=" 1   0.5E+03  0.0000000E+00  0.0000000E+00  0.5E+03"
+c      buff(2)=" 2   0.5E+03  0.0000000E+00  0.0000000E+00  -0.5E+03"
 c      buff(3)=" 3   0.5466073E+04  0.4443190E+03  0.2446331E+04 -0.4864732E+04"
 c      buff(4)=" 4   0.8785819E+03 -0.2533886E+03  0.2741971E+03  0.7759741E+03"
 c      buff(5)=" 5   0.4916306E+04 -0.1909305E+03 -0.2720528E+04  0.4088757E+04"
@@ -153,18 +160,60 @@ c         write (*,'(i2,1x,5e15.7)') i, P(0,i),P(1,i),P(2,i),P(3,i),
 c     .dsqrt(dabs(DOT(p(0,i),p(0,i))))
 c      enddo
 c
-c      CALL SMATRIX(P,MATELEM)
+c      CALL %(prefix)sSMATRIX(P,MATELEM)
 c
 c      write (*,*) "-------------------------------------------------"
-c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
+c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)   
 c      write (*,*) "-------------------------------------------------"
 
       end
-	
-	  
-	  
-	  
-	   double precision function dot(p1,p2)
+    
+       SUBROUTINE get_density_matrix(P, FLAVOR)
+       implicit none
+C---  integer nexternal ! number particles (incoming+outgoing) in the me
+       INCLUDE "nexternal.inc"
+       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+       INTEGER FLAVOR(NEXTERNAL) ! per-particle merged-flavor index (1-based)
+       INTEGER NHEL(NEXTERNAL)
+       INTEGER N_CHANGING  ! might need changing
+       PARAMETER (N_CHANGING=%(dens_nchanging)i)
+       INTEGER N_COMB
+       PARAMETER (N_COMB=%(dens_ncomb)i) ! total number of different helicity  combination to consider
+       INTEGER POS(N_CHANGING)
+       INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+       DOUBLE COMPLEX INTER((N_COMB*(N_COMB+1))/2)
+
+       INTEGER I,J, SOL
+       INTEGER K
+
+       %(dens_pos)s
+
+c      density matrix helicity index value for particle
+       %(dens_allow_hel)s
+c        ALLOW_HEL(3) = +1
+c        ALLOW_HEL(4) = -1
+c        ALLOW_HEL(5) = -1
+c        ALLOW_HEL(6) = +1
+c        ALLOW_HEL(7) = -1
+c        ALLOW_HEL(8) = -1
+c     (last zero avoid to update as, otherwise new value for as can be  provided
+       call %(prefix)sGET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, 0d0, INTER)
+       
+       SOL=0
+       DO I=1, N_COMB
+          DO J = I, N_COMB
+             SOL= SOL + 1
+             DO K =1, N_CHANGING
+                WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((I-1)*N_CHANGING+K), ALLOW_HEL((J-1)*N_CHANGING+K)
+            ENDDO
+             write(*,*) 'value is ',SOL , INTER(SOL)
+          ENDDO
+       ENDDO
+
+       return
+       END 
+      
+       double precision function dot(p1,p2)
 C****************************************************************************
 C     4-Vector Dot product
 C****************************************************************************
@@ -174,29 +223,28 @@ C****************************************************************************
       end
 
 
-	  SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
+      SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
 C---- auxiliary function to change convention between MadGraph5_aMC@NLO and rambo
-c---- four momenta. 	  
-	  IMPLICIT NONE
-	  INCLUDE "nexternal.inc"
-C	  ARGUMENTS
-	  REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
+c---- four momenta.       
+      IMPLICIT NONE
+      INCLUDE "nexternal.inc"
+C     ARGUMENTS
+      REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C         LOCAL
          INTEGER I
          REAL*8 etot2,mom,m1,m2,e1,e2
 
          ETOT2=energy**2
-         m1=pmass(1)
-         m2=pmass(2)
-         mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
-     -        2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
-         mom=dsqrt(mom)
-         e1=DSQRT(mom**2+m1**2)
-         e2=DSQRT(mom**2+m2**2)
-         write (*,*) e1+e2,mom
 
          if(nincoming.eq.2) then
 
+             m1=pmass(1)
+             m2=pmass(2)
+             mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
+     &            2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
+             mom=dsqrt(mom)
+             e1=DSQRT(mom**2+m1**2)
+             e2=DSQRT(mom**2+m2**2)
             P(0,1)=e1
             P(1,1)=0d0
             P(2,1)=0d0
@@ -209,10 +257,10 @@ C         LOCAL
              
             call rambo(nexternal-2,energy,pmass(nincoming+1),prambo,WGT)
             DO I=3, NEXTERNAL
-               P(0,I)=PRAMBO(4,I-2)	
+               P(0,I)=PRAMBO(4,I-2) 
                P(1,I)=PRAMBO(1,I-2)
                P(2,I)=PRAMBO(2,I-2)
-               P(3,I)=PRAMBO(3,I-2)	
+               P(3,I)=PRAMBO(3,I-2) 
             ENDDO
              
           elseif(nincoming.eq.1) then 
@@ -224,15 +272,15 @@ C         LOCAL
              
              call rambo(nexternal-1,energy,pmass(2),prambo,WGT)
              DO I=2, NEXTERNAL
-                P(0,I)=PRAMBO(4,I-1)	
+                P(0,I)=PRAMBO(4,I-1)    
                 P(1,I)=PRAMBO(1,I-1)
                 P(2,I)=PRAMBO(2,I-1)
-                P(3,I)=PRAMBO(3,I-1)	
+                P(3,I)=PRAMBO(3,I-1)    
              ENDDO
           endif
           
-	  RETURN
-	  END
+      RETURN
+      END
       
 
       SUBROUTINE RAMBO(N,ET,XM,P,WT)

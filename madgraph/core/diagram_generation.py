@@ -1773,7 +1773,10 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not all(istags):
                     raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
                 islegs = [\
-                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'is_tagged': tag}) \
+                        fks_tag.TagLeg({'id':id, 'state': False, 
+                                        'polarization': isleg['polarization'],
+                                        'offshell': isleg['offshell'], 
+                                        'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
                 def get_flavor(beamid,id):
@@ -1786,8 +1789,10 @@ class MultiProcess(base_objects.PhysicsObject):
                     return flavor
 
                 islegs = [\
-                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization'],
-                                          'flavor': get_flavor(i,id)}) \
+                        base_objects.Leg({'id':id, 'state': False,
+                                          'polarization': islegs_orig[i]['polarization'],
+                                          'flavor': get_flavor(i,id),
+                                          'offshell': islegs_orig[i]['offshell']}) \
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1827,8 +1832,10 @@ class MultiProcess(base_objects.PhysicsObject):
                                     flavor.append(f)
                         return flavor
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'],
-                                              'flavor': get_flavor(id, fsleg)}) \
+                            base_objects.Leg({'id':id, 'state': True,
+                                              'polarization': fsleg['polarization'],
+                                              'flavor': get_flavor(id, fsleg),
+                                              'offshell': fsleg['offshell']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
@@ -1842,7 +1849,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # check for longitudinal photon
                 invalid = False
                 for l in legs[len(islegs):]:
-                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO" and not l['offshell']:
                         l['polarization'] =list(l['polarization'])
                         l['polarization'].remove(0)
                         if len(l['polarization']) == 0:

@@ -493,50 +493,6 @@ class HelasModelTest(HelasModelTestSetup):
                           mymodel.add_amplitude,
                           (1, 2), "not_a_function")
 
-    def test_set_wavefunctions(self):
-        """Test wavefunction dictionary in HelasModel"""
-
-        wavefunctions = {}
-        # IXXXXXX.Key: (spin, state, polarization, flavor)
-        key1 = ((-2, 0, tuple(), tuple(), None), ('',))
-        wavefunctions[key1] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-        # OXXXXXX.Key: (spin, state, polarization, flavor)
-        key2 = ((2, 0, tuple(), tuple(), None), ('',))
-        wavefunctions[key2] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-
-        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
-
-        wf = helas_objects.HelasWavefunction()
-        wf.set('particle', -2, self.mybasemodel)
-        wf.set('state', 'incoming')
-        wf.set('interaction_id', 0)
-        wf.set('number_external', 1)
-        wf.set('lorentz', [''])
-        wf.set('number', 40)
-
-        self.assertEqual(wf.get_call_key(), key1)
-
-        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        wf.set('fermionflow', -1)
-
-        self.assertEqual(wf.get_call_key(), key2)
-
-        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        del wavefunctions[key1]
-        del wavefunctions[key2]
-        
 
 #===============================================================================
 # FortranHelasCallWriterTest
@@ -1014,6 +970,22 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
+
+    @test_aloha.set_global(unitary=3)
+    def test_UFO_Python_helas_call_writer_fd(self):
+        """Test automatic generation of UFO helas calls in Python in FD gauge"""
+
+        python_model = helas_call_writers.PythonUFOHelasCallWriter(
+            self.mybasemodel)
+
+        result = python_model.get_matrix_element_calls(self.mymatrixelement)
+        solution = ['w[0] = vfdxxxx(p[0],zero,hel[0],-1)',
+                    'w[1] = vfdxxxx(p[1],wmas,hel[1],-1)',
+                    'w[2] = vfdxxxx(p[2],zero,hel[2],+1)',
+                    'w[3] = vfdxxxx(p[3],wmas,hel[3],+1)',
+                    'w[4] = vfdxxxx(p[4],zmas,hel[4],+1)']
+
+        self.assertEqual(solution, result[:5])
         
 
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):

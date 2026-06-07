@@ -1,0 +1,31 @@
+#*************************************************************************
+#                          Reweight Density Module                       *
+#                      Adding density matrix to LO event                 *
+#                                                                        *
+#*************************************************************************
+#          
+#   1) the value of alpha_s will be used from the event so the value in
+#      the param_card is not taken into account.
+#      event generation runs are needed.
+#   2) all inputs except particle_in_density_matrix are optional and
+#      the accepted values are described in [2510.17730].
+#
+#   For more detail on the inputs and how to use the density module, see [2510.17730].
+#   helicity_direction: choose 1 or more particles to act as reference for the definition of the helicity referential (appendix C of [2510.17730])
+#   particle_in_density_matrix: choose 2 particles to put in the density matrix to study their spin correlations
+#   boost_choice: choose 1 or more particles to boost the frame into their center-of-mass frame
+
+#   order_helicities: helicity basis for the density matrix, for instance [1, 1, 1, -1, -1, 1, -1, -1] corresponds to {|++>, |+->, |-+>, |-->}
+#   axis_referential: choose 1 particle in the initial state from which the production angle theta should be defined 
+#   symmetrise_initial_state: if True, for each event the density matrix is computed as the sum of rho(theta) and rho(theta + pi)
+#************************************************************************
+# ENTER YOUR COMMANDS BELOW. 
+#************************************************************************
+
+#Default values:
+change helicity_direction [0]
+change particle_in_density_matrix [6, -6]
+change boost_choice [0]
+change order_helicities [0]
+change axis_referential [0]
+change symmetrise_initial_state False

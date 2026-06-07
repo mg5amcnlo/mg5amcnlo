@@ -10,6 +10,9 @@ on:
       - 'docs/**'
 #      - '.github/**'
 
+  pull_request:
+    types: [opened, synchronize, reopened]
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -32,6 +35,7 @@ jobs:
   test_additional_unittest:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -42,7 +46,7 @@ jobs:
       - name: test one of the test test_helas_diagrams_gg_wpwmttx
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py -v2 -t0 testIO_modification_to_cuts -e .github/workflows/IOtest.yml 
+            ./tests/test_manager.py -v2 -t0 testIO_modification_to_cuts -e .github/workflows/IOtest.yml
 
 #  test_excluded2:
 #    # excluded due to side effect
@@ -64,6 +68,7 @@ jobs:
   unittest_0:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -71,16 +76,17 @@ jobs:
       - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card
+      - name: test one of the test test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card -t0
+            ./tests/test_manager.py test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card -t0
 
 
 
   unittest_1:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -98,6 +104,7 @@ jobs:
   unittest_2:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -115,6 +122,7 @@ jobs:
   unittest_3:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -132,6 +140,7 @@ jobs:
   unittest_4:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -149,6 +158,7 @@ jobs:
   unittest_5:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -166,6 +176,7 @@ jobs:
   unittest_6:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -183,6 +194,7 @@ jobs:
   unittest_7:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -200,6 +212,7 @@ jobs:
   unittest_8:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -217,6 +230,7 @@ jobs:
   unittest_9:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -234,6 +248,7 @@ jobs:
   unittest_10:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -252,6 +267,7 @@ jobs:
   unittest_11:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -269,6 +285,7 @@ jobs:
   unittest_12:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -286,6 +303,7 @@ jobs:
   unittest_13:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -303,6 +321,7 @@ jobs:
   unittest_14:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -320,6 +339,7 @@ jobs:
   unittest_15:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -337,6 +357,7 @@ jobs:
   unittest_16:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -354,6 +375,7 @@ jobs:
   unittest_17:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -371,6 +393,7 @@ jobs:
   unittest_18_1:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -386,6 +409,7 @@ jobs:
   unittest_18_2:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -401,6 +425,7 @@ jobs:
   unittest_18_3:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -420,6 +445,7 @@ jobs:
   unittest_19:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -427,16 +453,17 @@ jobs:
       - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_set_wavefunctions test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob test_schedular
+      - name: test one of the test  test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob test_schedular
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_set_wavefunctions test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob -t0
+            ./tests/test_manager.py test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob -t0
 
 
 
   unittest_20:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -454,6 +481,7 @@ jobs:
   unittest_21:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -472,6 +500,7 @@ jobs:
   unittest_22:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -489,6 +518,7 @@ jobs:
   unittest_23:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -506,6 +536,7 @@ jobs:
   unittest_24:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -523,6 +554,7 @@ jobs:
   unittest_25:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -540,6 +572,7 @@ jobs:
   unittest_26:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -557,6 +590,7 @@ jobs:
   unittest_27:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -574,6 +608,7 @@ jobs:
   unittest_28:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -591,6 +626,7 @@ jobs:
   unittest_new_coverage:
     # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     permissions:
       contents: read
 

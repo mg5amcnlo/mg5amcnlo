@@ -189,28 +189,37 @@ C     Continue only if IMODE is 0, 4 or 5
      %(get_flavor)s
 
      channel = %(get_channel)s
-     
+
      call ranmar(RHEL)
      call ranmar(RCOL)
 
 C     Select a flavor combination (need to do here for right sign)
+C     IPROC bound prevents over-indexing PD if floating-point drift
+C     keeps R>0 after the last valid flavor entry.
           CALL RANMAR(R)
-          IPSEL = 0 
-          DO WHILE (R.GT.0D0)
+          IPSEL = 0
+          DO WHILE (R.GT.0D0.AND.IPSEL.LT.IPROC)
              IPSEL=IPSEL+1
              R=R-DABS(PD(IPSEL))/PD(0)
           ENDDO
 
       %(start_ipsel_for_IFLAV)s
       IPSEL = IPSEL + IPSEL_SHIFT
-      rwgt_value=REWGT(PP,FLAVOR, 1)
+C     REWGT can be expensive; skip it in non-sampling IMODEs
+C     (init/reweight/finalize/PDFs-only/squared-only). Note that IPSEL
+C     and IFLAV are still set above so SMATRIX gets valid arguments.
+      if (IMODE.eq.0) then
+         rwgt_value=REWGT(PP,FLAVOR, 1)
+      else
+         rwgt_value=1d0
+      endif
 
      CALL SMATRIX%(proc_id)s(P1, IFLAV, RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
-         
+
      DSIGUU = DSIGUU* rwgt_value
-     
+
          IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN        
+            IF (DSIGUU.LT.1D199) THEN
               DSIG%(proc_id)s = DSIGUU*CONV
             else
               DSIG%(proc_id)s = 0.0d0
@@ -434,7 +443,11 @@ C     Select a flavor combination (need to do here for right sign)
 
 
        CALL GET_FLAVOR%(proc_id)s(IFLAV_VEC(IVEC), FLAVOR)
-       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       if (IMODE.eq.0) then
+         ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       else
+         ALL_RWGT(IVEC) = 1d0
+       endif
 
      if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))

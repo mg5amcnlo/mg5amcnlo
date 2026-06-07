@@ -182,6 +182,62 @@ class TestBanner(unittest.TestCase):
 
           
 
+class TestDensity(unittest.TestCase):
+    """Test class for the reading of the lhe input file"""
+
+    def test_get_density_mapping(self):
+        """test the utility function that return the order of the density matrix-elements"""
+
+        fct = madspin.DensityMatrix.get_map_density_matrix
+
+        # check one single fermion case first
+        out = fct([-1,1], n_changing=1)
+
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(ordered_keys, [(-1, -1), (-1, 1), (1, -1), (1, 1)])
+
+        self.assertEqual(out[(-1, -1)], (True, 0))
+        self.assertEqual(out[(-1,  1)], (True, 1))    
+        self.assertEqual(out[( 1, -1)], (False,1))
+        self.assertEqual(out[(1, 1)], (True, 2))
+
+        # check one massive boson next
+        out = fct([-1,0,1], n_changing=1)
+
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(ordered_keys, [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1)])
+
+        self.assertEqual(out[(-1, -1)], (True, 0))
+        self.assertEqual(out[(-1,  0)], (True, 1))    
+        self.assertEqual(out[(-1, 1)],  (True ,2))
+        self.assertEqual(out[(0, 0)], (True, 3))
+        self.assertEqual(out[(0, 1)], (True,4))
+        self.assertEqual(out[(1, 1)], (True, 5))
+
+        self.assertEqual(out[(1,  0)], (False, 4))    
+        self.assertEqual(out[(1, -1)], (False,2))
+
+
+        # check a tt~ case
+        out = fct([1,1,-1,1,1,-1,-1,-1], n_changing=2)
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(len(ordered_keys), 16) 
+        self.assertEqual(out[(1,1,1,1)], (True,0))
+        self.assertEqual(out[(1,-1,1,1)], (True,1))
+        self.assertEqual(out[(1,1,1,-1)], (True,2))
+        self.assertEqual(out[(1,-1,1,-1)], (True,3))
+        self.assertEqual(out[(-1,-1,1,1)], (True,4))
+        self.assertEqual(out[(-1,1,1,-1)], (True,5))
+        self.assertEqual(out[(-1,-1,1,-1)], (True,6))
+        self.assertEqual(out[(1,1,-1,-1)], (True,7))
+        self.assertEqual(out[(1,-1,-1,-1)], (True,8))
+        self.assertEqual(out[(-1,-1,-1,-1)], (True,9))    
+
+        nb_false = len([True for key in out if not out[key][0]])
+        self.assertEqual(nb_false, 6)
 
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""

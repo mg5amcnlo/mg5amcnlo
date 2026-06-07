@@ -10,6 +10,9 @@ on:
       - 'docs/**'
 #      - '.github/**'
 
+  pull_request:
+    types: [opened, synchronize, reopened]
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -32,6 +35,7 @@ jobs:
   acceptancetest_0:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -57,6 +61,7 @@ jobs:
   acceptancetest_5:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -78,6 +83,7 @@ jobs:
   acceptancetest_10:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -94,6 +100,7 @@ jobs:
   acceptancetest_11:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -112,6 +119,7 @@ jobs:
   acceptancetest_12:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -130,6 +138,7 @@ jobs:
   acceptancetest_13:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -148,6 +157,7 @@ jobs:
   acceptancetest_14:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -167,6 +177,7 @@ jobs:
   acceptancetest_15:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -186,6 +197,7 @@ jobs:
   acceptancetest_16:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -204,6 +216,7 @@ jobs:
   acceptancetest_17:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -223,6 +236,7 @@ jobs:
   acceptancetest_18:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -242,6 +256,7 @@ jobs:
   acceptancetest_19:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -261,6 +276,7 @@ jobs:
   acceptancetest_20:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -279,6 +295,7 @@ jobs:
   acceptancetest_21:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -298,6 +315,7 @@ jobs:
   acceptancetest_22:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -317,6 +335,7 @@ jobs:
   acceptancetest_23:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -336,6 +355,7 @@ jobs:
   acceptancetest_24:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -356,6 +376,7 @@ jobs:
   acceptancetest_25:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -375,6 +396,7 @@ jobs:
   acceptancetest_26:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -394,6 +416,7 @@ jobs:
   acceptancetest_27:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -413,6 +436,7 @@ jobs:
   acceptancetest_28:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -432,6 +456,7 @@ jobs:
   acceptancetest_29:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -451,6 +476,7 @@ jobs:
   acceptancetest_30:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -470,6 +496,7 @@ jobs:
   acceptancetest_31:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -489,6 +516,7 @@ jobs:
   acceptancetest_32:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -508,6 +536,7 @@ jobs:
   acceptancetest_33:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -530,6 +559,7 @@ jobs:
     # caller's wavefunction slot when TXXXXX writes 16 complex into
     # a 4-complex aloha element.
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v4
@@ -546,6 +576,7 @@ jobs:
   acceptancetest_34:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -565,6 +596,7 @@ jobs:
   acceptancetest_35:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -584,6 +616,7 @@ jobs:
   acceptancetest_36:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -623,6 +656,7 @@ jobs:
   acceptancetest_37:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -641,6 +675,7 @@ jobs:
   acceptancetest_38:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -659,6 +694,7 @@ jobs:
   test_oneloop_reweighting:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -688,10 +724,10 @@ jobs:
             ./tests/test_manager.py test_oneloop_reweighting -pA -t0 -l INFO
 
 
-
   acceptancetest_42:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -711,6 +747,7 @@ jobs:
   acceptancetest_43:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -730,6 +767,7 @@ jobs:
   acceptancetest_44:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -749,6 +787,7 @@ jobs:
   acceptancetest_45:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -768,6 +807,7 @@ jobs:
   acceptancetest_46:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -787,6 +827,7 @@ jobs:
   acceptancetest_47:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -806,6 +847,7 @@ jobs:
   acceptancetest_48:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -827,6 +869,7 @@ jobs:
   acceptancetest_49:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -846,6 +889,7 @@ jobs:
   acceptancetest_50:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -865,6 +909,7 @@ jobs:
   acceptancetest_51:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -884,6 +929,7 @@ jobs:
   acceptancetest_52:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -903,6 +949,7 @@ jobs:
   acceptancetest_53:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -923,6 +970,7 @@ jobs:
   acceptancetest_54:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -942,6 +990,7 @@ jobs:
   acceptancetest_55:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -961,6 +1010,7 @@ jobs:
   acceptancetest_56:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -979,6 +1029,7 @@ jobs:
   acceptancetest_contur:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -995,6 +1046,7 @@ jobs:
   acceptancetest_contur2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -1011,6 +1063,7 @@ jobs:
   acceptancetest_59:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1030,6 +1083,7 @@ jobs:
   acceptancetest_60:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1047,9 +1101,50 @@ jobs:
 
 
 
+  acceptancetest_65:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_tt_semi
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_tt_semi -pA -t0 -l INFO
+
+
+
+  acceptancetest_66:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_zh
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_zh -pA -t0 -l INFO
+
+
+
   acceptancetest_67:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1069,6 +1164,7 @@ jobs:
   acceptancetest_68:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1088,6 +1184,7 @@ jobs:
   acceptancetest_69:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1109,6 +1206,7 @@ jobs:
   acceptancetest_71:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1129,6 +1227,7 @@ jobs:
   acceptancetest_72:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -1147,6 +1246,7 @@ jobs:
   acceptancetest_73:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1166,6 +1266,7 @@ jobs:
   acceptancetest_74:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -1184,6 +1285,7 @@ jobs:
   acceptancetest_75:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1204,6 +1306,7 @@ jobs:
   acceptancetest_76:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1223,6 +1326,7 @@ jobs:
   acceptancetest_78:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1242,6 +1346,7 @@ jobs:
   acceptancetest_79:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1261,6 +1366,7 @@ jobs:
   acceptancetest_80:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -1284,6 +1390,7 @@ jobs:
   acceptancetest_81:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1303,6 +1410,7 @@ jobs:
   acceptancetest_82:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1322,6 +1430,7 @@ jobs:
   acceptancetest_83:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1358,6 +1467,7 @@ jobs:
   acceptancetest_emela:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1374,6 +1484,7 @@ jobs:
   acceptancetest_emela2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1390,6 +1501,7 @@ jobs:
   acceptancetest_emela3:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1405,6 +1517,7 @@ jobs:
   acceptancetest_emela4:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1420,6 +1533,7 @@ jobs:
   acceptancetest_88:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1477,6 +1591,7 @@ jobs:
   acceptancetest_93:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1496,6 +1611,7 @@ jobs:
   acceptancetest_94:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1515,6 +1631,7 @@ jobs:
   acceptancetest_95:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1533,6 +1650,7 @@ jobs:
   acceptancetest_96:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -1551,6 +1669,7 @@ jobs:
   acceptancetest_97:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1570,6 +1689,7 @@ jobs:
   acceptancetest_98:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1589,6 +1709,7 @@ jobs:
   acceptancetest_99:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -1607,6 +1728,7 @@ jobs:
   acceptancetest_100_2:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1626,6 +1748,7 @@ jobs:
   acceptancetest_101:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1644,6 +1767,7 @@ jobs:
     # The type of runner that the job will run on
 
     runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -1672,58 +1796,58 @@ jobs:
   acceptancetest_103_polarization:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_polarization_top_decay
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             ./tests/test_manager.py test_polarization_top_decay -pA -t0 -l INFO
 
   acceptancetest_ewsudakov:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
       # Runs a set of commands using the runners shell
       - name: test one of the test test_tt_ewsudakov
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_ttbar_ewsudakov -pA -t0 -l INFO
 
   acceptancetest_heft:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_loop_improved_reweighting
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             ./tests/test_manager.py test_generation_heft -pA -t0 -l INFO
 
   acceptancetest_flavor:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1742,6 +1866,7 @@ jobs:
     # Previously uncovered acceptance tests in tests/acceptance_tests/test_cmd.py
     # related to the merged/ufo_aloha pipelines and decay-chain ordering
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1757,6 +1882,7 @@ jobs:
     # Previously uncovered acceptance tests in tests/acceptance_tests/test_cmd_madevent.py
     # Includes test_madevent_dy3j_mlm after reopening/owning stdout safely.
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1771,6 +1897,7 @@ jobs:
   acceptancetest_uncovered_madloop:
     # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1784,6 +1911,7 @@ jobs:
   acceptancetest_madevent_vbf_merged_flavor:
     # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1795,6 +1923,7 @@ jobs:
   acceptancetest_madevent_flavor_zud:
     # Flavor-grouped u q > Z u q QCD=0 tests (grouped and ungrouped).
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1806,6 +1935,7 @@ jobs:
   acceptancetest_check_madevent_me_vs_standalone:
     # Previously uncovered acceptance test in tests/acceptance_tests/test_cmd_madloop.py
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1818,6 +1948,7 @@ jobs:
   acceptancetest_check_mlm_rwgt:
     # Previously uncovered acceptance test in tests/acceptance_tests/test_MLM_reweight.py
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -1840,3 +1971,146 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_fks_standalone_born_values test_fks_standalone_vs_amcatnlo -pA -t0 -l INFO
+
+  acceptancetest_density:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_density -pA -t0 -l INFO
+
+      - name: test test_standalone_density_dd (ZZ density vs analytic decay)
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_density_dd -pA -t0 -l INFO
+
+      - name: test test_standalone_density_uu
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_density_uu -pA -t0 -l INFO
+
+      - name: test test_standalone_density_f2py (f2py density wrapper)
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            ./tests/test_manager.py test_standalone_density_f2py -pA -t0 -l INFO
+
+
+  acceptancetest_density_interface:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_user_interface
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            sudo pip install numpy
+            which f2py
+            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            ./tests/test_manager.py test_density_mode_user_interface -pA -t0 -l INFO
+
+
+  acceptancetest_density_ttbar:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_ttbar
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_ttbar -pA -t0 -l INFO
+
+  acceptancetest_density_wpwm:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache    
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_wpwm
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_wpwm -pA -t0 -l INFO
+
+  acceptancetest_density_decay1:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_decay1
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_decay1 -pA -t0 -l INFO
+
+  acceptancetest_density_decay2:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_decay2
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_decay2 -pA -t0 -l INFO
+
+  acceptancetest_density_tttbartbar:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Runs a set of commands using the runners shell
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test one of the test test_density_mode_doublettbar
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            ./tests/test_manager.py test_density_mode_doublettbar -pA -t0 -l INFO

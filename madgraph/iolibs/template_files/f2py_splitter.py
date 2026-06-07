@@ -35,6 +35,67 @@ CF2PY double precision, intent(in) :: SCALE2
       return
       end
   
+  subroutine %(f2py_prefix)sf77_density(pdgs, procid, npdg, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, INTER)
+  IMPLICIT NONE
+C     P momenta
+C     NHEL base of helicity that are not changing
+C     POS(N_CHNGING): position of the changing helicity
+C     n_changing: number of changing helicity
+C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
+C      consider (all jamp computed)
+C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
+C      symmetric one)
+
+  integer pdgs(*)
+  integer npdg, nhel, procid
+  integer n_comb
+  double precision p(*)
+  double precision ANS, ALPHAS, PI,SCALE2
+  integer n_changing
+  INTEGER POS(*)
+  INTEGER ALLOW_HEL(*)
+  DOUBLE COMPLEX INTER(*)
+  integer flavor(%(maxpart)i),I
+C     Update is done insider the direct density call functions
+
+%(flavormapping)s
+
+%(density_splitter)s
+
+            return
+            end
+
+  subroutine %(f2py_prefix)sf77_get_all_inter(pdgs, procid, npdg, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+  IMPLICIT NONE
+C     P momenta
+C     NHEL base of helicity that are not changing
+C     POS(N_CHNGING): position of the changing helicity
+C     n_changing: number of changing helicity
+C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
+C      consider (all jamp computed)
+C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
+C      symmetric one)
+
+  integer pdgs(*)
+  integer npdg, nhel, procid, n_changing
+  integer n_comb
+  double precision p(*)
+  double precision ANS,  PI,SCALE2
+  INTEGER POS(*)
+  INTEGER ALLOW_HEL(*)
+  DOUBLE COMPLEX INTER(*)
+  integer flavor(%(maxpart)i),I
+C     Update is done insider the direct density call functions
+
+C     Update is done insider the direct density call functions
+
+%(flavormapping)s
+
+%(inter_splitter)s
+
+            return
+            end
+
       SUBROUTINE %(f2py_prefix)sf77_INITIALISE(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE

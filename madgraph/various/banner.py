@@ -130,6 +130,7 @@ class Banner(dict):
       'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
+      'MGDensity':'',
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
       'pythia8':'pythia8_card.dat',
@@ -1096,6 +1097,11 @@ class ConfigFile(dict):
                 
         name = name.strip()
         lower_name = name.lower() 
+
+        #for these specific parameters, we do not check the type of value because it can accept very different types of input
+        if lower_name in ['helicity_direction', 'particle_in_density_matrix', 'boost_choice']:
+            dict.__setitem__(self, lower_name, value)
+            return self.post_set(lower_name, None, change_userdefine, raiseerror) 
         
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
@@ -1163,7 +1169,7 @@ class ConfigFile(dict):
                     new_value += current
  
                 value = new_value                           
-                
+
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
@@ -1523,6 +1529,8 @@ class ConfigFile(dict):
                                 raise InvalidCmd("%s can not be mapped to a float" % value)
                         finally:
                             value = v
+            # elif targettype == type(None):
+            #     value = None
             else:
                 raise InvalidCmd("type %s is not handle by the card" % targettype)
             
@@ -1559,8 +1567,124 @@ class ConfigFile(dict):
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
-        self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
- 
+        self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror)
+
+
+class DensityCard(ConfigFile):
+    """This class is defined to allow to edit the reweight_card with inline commands for the density module"""
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        self.add_param('helicity_direction', [0])
+        self.add_param('particle_in_density_matrix', [6, -6])
+        self.add_param('boost_choice', [0])
+        self.add_param('order_helicities', [0])
+        self.add_param('axis_referential', [0])
+        self.add_param('symmetrise_initial_state', False)
+
+    def read(self, finput):
+        list_parameters = ["helicity_direction", "particle_in_density_matrix",\
+                           "boost_choice", "order_helicities", "axis_referential",\
+                           "symmetrise_initial_state"]
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception("No such file %s" % finput)
+
+        for line in finput:
+            line = line.strip()
+            if not line:
+                continue
+
+            if line[0] == '#':
+               continue
+
+            if line[0] == '!':
+                continue
+
+            if line == "launch":
+                continue
+
+            if "change" in line:
+                line = line[6:]
+                line.strip()
+                if '=' in line:
+                    key, value = line.split('=',1)
+                    #if there is a # of ! we remove everything after
+                    start_comment = 0
+                    for i in range(len(value)):
+                        if '#' in value[i] or '!' in value[i]:
+                            start_comment = i
+                            break
+                    if start_comment > 0:
+                        value = value[0:start_comment]
+                    if key.strip() in list_parameters:
+                        value = value.lower()
+                        if value.strip() == "default":
+                            value = ""
+                    self[key.strip()] = value.strip()
+                
+                else:
+                    command =  line.split()
+
+                    for param in list_parameters:
+                        if param in command[0]:
+                            aux = line.replace(param, "")
+                            start_comment = 0
+                            for i in range(len(aux)):
+                                if '#' in aux[i] or '!' in aux[i]:
+                                    start_comment = i
+                                    break
+                            if start_comment > 0:
+                                aux = aux[0:start_comment]
+                            command = [param, aux] #this line is necessary for cases like [6, -6]
+
+                    key, value = command[0], command[1]
+
+                    self[key.strip()] = value.strip()
+
+    def write(self, output_file, template=None):
+        list_parameters = ["helicity_direction", "particle_in_density_matrix",\
+                           "boost_choice", "order_helicities", "axis_referential",\
+                           "symmetrise_initial_state"]
+        if not template: #this template only works for density module
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'Common', 'Cards', 'density_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'density_card_default.dat')
+        
+        text = ""
+        for line in open(template,'r'):
+            #the goal of this block is to separate what is a commment from what is not
+            nline = line.split("#")
+            if len(nline) == 2: #separating cases with comment lines or without
+                command = nline[0] #if there is a command it is in this object
+                comment = nline[1] #if there is a comment, it is this object
+            else:
+                command = nline[0]
+                comment = ''
+            
+            if command == '' or command == '\n':
+                if command == '':
+                    text += '# ' + comment
+                else:
+                    text += '\n'
+            else:
+                for param in list_parameters:
+                    if param in command:
+                        if comment:
+                            text += 'change ' + param +  ' ' + str(self[param]) + ' # ' + comment
+                        else:
+                            text += 'change ' + param +  ' ' + str(self[param]) + '\n'
+
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+        fsock.write(text)
+        fsock.close()
 
 class RivetCard(ConfigFile):
 
@@ -4214,6 +4338,7 @@ class RunCardLO(RunCard):
         self.add_param("gridpack", False)
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
+        self.add_param("allow_overshoot_events", False, hidden=True, include=False, comment="allow to write more events than requested instead of trashing the last ones.")
         self.add_param("iseed", 0)
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")

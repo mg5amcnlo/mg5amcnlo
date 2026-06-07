@@ -8,7 +8,7 @@ ANNOUNCEMENT:
     OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
         to 0 (automatic) meaning that the next run in the directory will be with a different seed. 
         Note that this was the behavior at LO already.
-    OM: Allow easier syntax in the run_card. 
+    OM: Allow easier syntax in the run_card.
         You can now use "set lpp1 e-" instead of "set lpp1 3"
         You can now use "set fixed_scale mz" instead of "set fixed_scale 91.1880"
         You can now use "set dynamical_scale_choice ht/2" instead of "set dynamical_scale_choice 3"
@@ -106,6 +106,10 @@ ANNOUNCEMENT:
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
 
+
+3.5.15 (17/4/26):
+  OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
+  OM: Additional fix related to the matchbox template
 
 3.5.14 (10/4/26):
   OM: Fix issue on how Sextet where written within lhef output
