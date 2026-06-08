@@ -1816,22 +1816,33 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 flag.append('P1D') # D is for $ syntax -> offshell propagator only
                 
             # Creating line formatting:
-            call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
+            call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(fixp2)s%(out)s);'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
                                             '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
-                                     tuple(range(len(argument.get('coupling'))))           
-                   } 
+                                     tuple(range(len(argument.get('coupling')))),
+                   'fixp2': ''
+                   }
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
                     arg['mass'] = "pars->%(CM)s,%(bwcutoff)s"
                 else:
                     arg['mass'] = "pars->%(M)s,pars->%(W)s,%(bwcutoff)s"
-            else:        
+                # Standard offshell propagator routines (ending in _1/_2/_3) take
+                # an extra FIXP2 argument (see aloha use_fixp2). Hardcode it to
+                # zero so the routine recomputes p^2 from the momenta; a falsy
+                # 'propagator' covers both the standard and the massless (P0)
+                # propagators. Custom/polarization propagators and loop
+                # wavefunctions keep the old signature.
+                if not argument.get('is_loop') and \
+                   not argument.get('polarization') and \
+                   not argument.get('particle').get('propagator'):
+                    arg['fixp2'] = '0., '
+            else:
                 arg['out'] = 'amp[%(out)d]'
                 arg['mass'] = ''
                 
