@@ -32,6 +32,15 @@ C     re-evaluates the Born building blocks without re-reading the file.
       PARAMETER (MAXLINK=1000)
       INTEGER MLIST(MAXLINK), NLIST(MAXLINK)
       REAL*8 WGTLIST(MAXLINK)
+C     COLOFLEG(i) is the soft-correlation quantum number of Born leg i, taken
+C     from born_links.dat (colour rep for [QCD], colour singlet=1 for the
+C     charged-but-colourless legs of a [QED] run); it stays 0 iff the leg
+C     never appears in a link, i.e. is uncorrelated. HASDIAG flags whether the
+C     leg's diagonal self-link is already present. Both drive the rebuild of
+C     the missing massless diagonals below.
+      INTEGER COLOFLEG(NEXTERNAL), NTOT, ITMP
+      LOGICAL HASDIAG(NEXTERNAL)
+      REAL*8 LINKSUM, RTMP
       COMPLEX*16 ANS_CNT(2,NSPLITORDERS)
       COMMON /C_BORN_CNT/ ANS_CNT
       LOGICAL NEED_COLOR_LINKS, NEED_CHARGE_LINKS
@@ -114,12 +123,21 @@ C     ---- grow the upper bound and reset the relevant common blocks.
 
 C     read the link topology once into MLIST/NLIST so the (optional) timing
 C     loop below does not pay the file I/O on every re-evaluation
+      DO I=1,NEXTERNAL-1
+        COLOFLEG(I)=0
+        HASDIAG(I)=.FALSE.
+      ENDDO
       OPEN(UNIT=78,FILE='born_links.dat',STATUS='OLD')
       READ(78,*) NLINKS
       DO ILINK=1,NLINKS
         READ(78,*) M,N,PDG_M,PDG_N,COL_M,COL_N,ITYPE
         MLIST(ILINK)=M
         NLIST(ILINK)=N
+C       remember the colour rep of each leg (recoverable from any link it
+C       appears in) and whether its diagonal self-link is already present
+        COLOFLEG(M)=COL_M
+        COLOFLEG(N)=COL_N
+        IF (M.EQ.N) HASDIAG(M)=.TRUE.
       ENDDO
       CLOSE(78)
 
@@ -138,9 +156,60 @@ C     ones and print them once below.
         ENDDO
       ENDDO
 
+C     Rebuild the diagonal soft self-links B_ii that the link generator skips
+C     for massless legs: find_color_links drops the leg1==leg2 pair when the
+C     leg is massless (only massive emitters keep an explicit diagonal link),
+C     so e.g. g g > t t~ has B_ij 3 3 / 4 4 for the tops but no 1 1 / 2 2 for
+C     the gluons, and u u~ > w+ w- has the W charge diagonals but not the u
+C     ones. They are recovered from the conservation Ward identity, which for
+C     colour is sum_j T_i.T_j = 0 and for charge is sum_j Q_j = 0; both give
+C     the diagonal as minus half the sum of the off-diagonal links touching
+C     leg i:  B_ii = -1/2 * sum_{j/=i} B_ij.  This is convention independent
+C     and reproduces the explicit massive diagonals (the MadFKS 1/2 and the
+C     colour-basis / charge normalisation included) to machine precision in
+C     both the [QCD] and [QED] cases, so HASDIAG skips the legs that already
+C     carry an explicit diagonal to avoid double counting.
+      NTOT=NLINKS
+      DO I=1,NEXTERNAL-1
+        IF (COLOFLEG(I).NE.0 .AND. .NOT.HASDIAG(I)) THEN
+          LINKSUM=0D0
+          DO ILINK=1,NLINKS
+            IF (MLIST(ILINK).NE.NLIST(ILINK) .AND.
+     &          (MLIST(ILINK).EQ.I .OR. NLIST(ILINK).EQ.I)) THEN
+              LINKSUM=LINKSUM+WGTLIST(ILINK)
+            ENDIF
+          ENDDO
+          NTOT=NTOT+1
+          MLIST(NTOT)=I
+          NLIST(NTOT)=I
+          WGTLIST(NTOT)=-0.5D0*LINKSUM
+        ENDIF
+      ENDDO
+
+C     order the links by (m,n) so the reconstructed diagonals sit next to the
+C     leg's other links instead of being tacked on at the end: B_ij 1 1 then
+C     1 2 ... rather than the off-diagonals first and the diagonals last. The
+C     key m*NEXTERNAL+n is injective since leg numbers run 1..NEXTERNAL-1.
+      DO I=1,NTOT-1
+        DO J=I+1,NTOT
+          IF (MLIST(J)*NEXTERNAL+NLIST(J) .LT.
+     &        MLIST(I)*NEXTERNAL+NLIST(I)) THEN
+            ITMP=MLIST(I)
+            MLIST(I)=MLIST(J)
+            MLIST(J)=ITMP
+            ITMP=NLIST(I)
+            NLIST(I)=NLIST(J)
+            NLIST(J)=ITMP
+            RTMP=WGTLIST(I)
+            WGTLIST(I)=WGTLIST(J)
+            WGTLIST(J)=RTMP
+          ENDIF
+        ENDDO
+      ENDDO
+
       WRITE(*,*) 'BORN       =', BORN
       WRITE(*,*) 'BORNTILDE  =', BORNTILDE
-      DO ILINK=1,NLINKS
+      DO ILINK=1,NTOT
         WRITE(*,*) 'B_ij ', MLIST(ILINK), NLIST(ILINK), WGTLIST(ILINK)
       ENDDO
 
