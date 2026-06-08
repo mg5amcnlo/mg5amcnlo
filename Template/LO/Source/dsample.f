@@ -119,7 +119,15 @@ C     data for vectorization
       
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-      
+
+c     Vector slot currently being prepared by the phase-space generator.
+c     one_tree (genps.f) fills generated_inv_mass(:,:,generated_inv_mass_ivec)
+c     with the (squared) invariant masses of two-final-state s-channel nodes.
+c     The array itself is dimensioned with nexternal, which is unknown in this
+c     generic Source file, so only the index is shared here.
+      integer generated_inv_mass_ivec
+      common/to_inv_mass_ivec/generated_inv_mass_ivec
+
 c
 c     External
 c
@@ -178,6 +186,10 @@ c
          if (iter .le. itmax) then
 c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             ievent=ievent+1
+c           Tell the phase-space generator which vector slot it is filling.
+c           A passing point is stored at all_p(:,ivec+1) below (ivec is
+c           incremented only after passcuts succeeds), so target ivec+1.
+            generated_inv_mass_ivec = ivec + 1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             CUTSDONE=.FALSE.
             CUTSPASSED=.FALSE.
@@ -437,6 +449,9 @@ c
          call sample_get_config(wgt,iter,ipole)
          if (iter .le. itmax) then
             ievent=ievent+1
+c           Non-vectorized fallback survey: the point is evaluated through
+c           dsig(p,...) with a single vector slot (IVEC=1).
+            generated_inv_mass_ivec = 1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
                xzoomfact = 1d0

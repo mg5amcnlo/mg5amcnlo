@@ -746,6 +746,8 @@ c
       double precision tmass(-max_branch:-1)
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
       integer iopposite ! index for t-channel mapping for the part not handle by itree
+      integer ia,ib,imu              ! loop indices for the initial-leg invariant fill
+      double precision sgna,sgnb,qinv(0:3)
 c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
@@ -762,6 +764,7 @@ c
 
       include 'vector.inc'
       include 'run.inc'
+      include 'genps_inv_mass.inc'
 
 c-----
 c  Begin Code
@@ -770,6 +773,20 @@ c-----
       pswgt = 1d0
       wgt   = 1d0
       pass = .true.
+c
+c     Reset the generated invariant masses for the current vector slot.
+c     They are (re)filled below for the s-channel nodes that fuse exactly
+c     two final-state external particles; everything else stays at zero so
+c     that the offshell HELAS currents recompute p^2 from the momenta.
+c
+      if (generated_inv_mass_ivec.ge.1 .and.
+     &     generated_inv_mass_ivec.le.VECSIZE_MEMMAX) then
+         do i=1,nexternal
+            do ix=1,nexternal
+               generated_inv_mass(ix,i,generated_inv_mass_ivec)=0d0
+            enddo
+         enddo
+      endif
 c-----------
 c     Trap for trivial case 2->1
 c----------
@@ -854,6 +871,23 @@ c
 c     Check that s is ok, and fill masses, update totmass
 c
          m(ibranch) = sqrt(s(ibranch))
+c
+c     If this s-channel node is the fusion of exactly two final-state
+c     external particles, store its (squared) invariant mass so that the
+c     corresponding offshell HELAS current can use it as the exact
+c     propagator p^2 (FIXP2) instead of recomputing it from the momenta.
+c     Composite daughters (negative index) involve more than two
+c     particles and are therefore skipped.
+c
+         if (itree(1,ibranch).gt.nincoming .and.
+     &        itree(2,ibranch).gt.nincoming .and.
+     &        generated_inv_mass_ivec.ge.1 .and.
+     &        generated_inv_mass_ivec.le.VECSIZE_MEMMAX) then
+            generated_inv_mass(itree(1,ibranch),itree(2,ibranch),
+     &           generated_inv_mass_ivec) = s(ibranch)
+            generated_inv_mass(itree(2,ibranch),itree(1,ibranch),
+     &           generated_inv_mass_ivec) = s(ibranch)
+         endif
          totmass=totmass+m(ibranch)-
      &        m(itree(1,ibranch))-m(itree(2,ibranch))
          if (totmass .gt. M(-nbranch)) then
@@ -1345,6 +1379,38 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
          call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
+c
+c     Fill the (squared) invariant mass of every external pair that
+c     involves at least one initial-state particle, now that all final
+c     momenta are known. This covers the offshell currents fusing an
+c     initial and a final particle (t-channel exchange) and the two
+c     initial particles together (which gives s_hat). The value stored is
+c     exactly the propagator p^2 the HELAS routine would otherwise
+c     recompute: q = sum over the two legs of (+p) for final and (-p) for
+c     initial, so q^2 = (p_final-p_initial)^2 or (p_a+p_b)^2 as relevant.
+c     Final+final pairs are handled earlier from s(ibranch) and are left
+c     untouched here.
+c
+      if (generated_inv_mass_ivec.ge.1 .and.
+     &     generated_inv_mass_ivec.le.VECSIZE_MEMMAX) then
+         do ia=1,nexternal
+            do ib=ia+1,nexternal
+               if (ia.le.nincoming .or. ib.le.nincoming) then
+                  sgna=1d0
+                  if (ia.le.nincoming) sgna=-1d0
+                  sgnb=1d0
+                  if (ib.le.nincoming) sgnb=-1d0
+                  do imu=0,3
+                     qinv(imu)=sgna*p(imu,ia)+sgnb*p(imu,ib)
+                  enddo
+                  generated_inv_mass(ia,ib,generated_inv_mass_ivec)=
+     &                 dot(qinv,qinv)
+                  generated_inv_mass(ib,ia,generated_inv_mass_ivec)=
+     &                 generated_inv_mass(ia,ib,generated_inv_mass_ivec)
+               endif
+            enddo
+         enddo
+      endif
 c$$$      write(*,*) '****'
 c$$$      do i=-nbranch,nexternal
 c$$$         write(*,*) 'mass', i, m(i)

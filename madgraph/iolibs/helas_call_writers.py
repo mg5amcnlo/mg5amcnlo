@@ -1299,6 +1299,19 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
         arg['extra'] = '%(bwcutoff)s'
 
+        # Standard offshell propagator routines (ending in _1/_2/_3 and built on
+        # the usual Breit-Wigner denominator) now take an extra FIXP2 argument.
+        # When non-zero it replaces the computed p^2; hardcode it to zero here so
+        # the behaviour is unchanged. A falsy 'propagator' covers both the
+        # standard and the massless (P0) propagators, for which aloha keeps the
+        # standard denominator (see aloha use_fixp2). Custom/polarization
+        # propagators and loop wavefunctions keep the old signature.
+        if isinstance(argument, helas_objects.HelasWavefunction) and \
+           not argument.get('is_loop') and \
+           not argument.get('polarization') and \
+           not argument.get('particle').get('propagator'):
+            arg['extra'] += '0d0,'
+
         # ALL ARGUMENT FORMATTED ###############################################
         call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
         # Store the result.
