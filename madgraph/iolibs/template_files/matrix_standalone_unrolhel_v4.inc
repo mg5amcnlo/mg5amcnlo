@@ -127,9 +127,12 @@ C     Per-diagram helicity-index permutation: maps each diagram's cartesian
 C     combination order to the common canonical order before the color sum.
       INTEGER HELPERM(NCOMB,NGRAPHS)
 %(helperm_data)s
-C     Amplitude good-helicity mask (computed once after the warmup).
-      LOGICAL MASK_AMP(NCOMB,NGRAPHS)
-      SAVE MASK_AMP
+C     Per-amplitude good-helicity masks (computed once after the warmup).
+C     MASK_AMP lets an amplitude skip the helicity combinations where IT
+C     vanishes; GOODHEL_AMP records, during the warmup, whether each amplitude
+C     is ever non-zero for each (canonical) helicity combination.
+      LOGICAL MASK_AMP(NCOMB,NGRAPHS), GOODHEL_AMP(NCOMB,NGRAPHS)
+      SAVE MASK_AMP, GOODHEL_AMP
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
       double precision bwcutoff
@@ -145,10 +148,17 @@ C ----------
 C BEGIN CODE
 C ----------
       bwcutoff=15 ! use if $ syntax is defined in the process
-C     Wavefunctions are always built in full (all-true mask); only the
-C     amplitude evaluation and the color sum skip the dead (always-zero)
-C     helicity combinations, discovered during the first NWARMUP evaluations.
+C     Wavefunctions are always built in full (all-true mask); the amplitude
+C     evaluation, the JAMP construction and the color sum all skip the dead
+C     (always-zero) helicity combinations discovered during the warmup.
       MASK_ALL = .TRUE.
+      IF (NTRY .EQ. 1) THEN
+         DO I=1,NGRAPHS
+            DO ICH=1,NCOMB
+               GOODHEL_AMP(ICH,I) = .FALSE.
+            ENDDO
+         ENDDO
+      ENDIF
       IF (NTRY .LE. NWARMUP) THEN
          DO I=1,NGRAPHS
             DO ICH=1,NCOMB
@@ -156,9 +166,14 @@ C     helicity combinations, discovered during the first NWARMUP evaluations.
             ENDDO
          ENDDO
       ELSE IF (.NOT. MASKS_READY) THEN
+C        Compute amplitude I at combination ICH only if it feeds a globally
+C        good helicity AND that amplitude is itself non-zero there (skips
+C        amplitudes that vanish by chirality, etc., even where the total does
+C        not).
          DO I=1,NGRAPHS
             DO ICH=1,NCOMB
                MASK_AMP(ICH,I) = GOODHEL(HELPERM(ICH,I))
+     &              .AND. GOODHEL_AMP(HELPERM(ICH,I),I)
             ENDDO
          ENDDO
          MASKS_READY = .TRUE.
@@ -177,6 +192,15 @@ C     Zero AMP so masked (unfilled) combinations contribute nothing to JAMP.
       ENDDO
 %(flavor_mask_setup)s
 %(helas_calls)s
+C     During the warmup, record for every amplitude which helicity
+C     combinations make it non-zero (used to build MASK_AMP above).
+      IF (NTRY .LE. NWARMUP) THEN
+         DO I=1,NGRAPHS
+            DO ICH=1,NCOMB
+               IF (AMP(ICH,I) .NE. (0D0,0D0)) GOODHEL_AMP(ICH,I) = .TRUE.
+            ENDDO
+         ENDDO
+      ENDIF
 C     W is kept allocated (SAVE) for reuse on the next call.
       END
 
@@ -204,10 +228,18 @@ C
 C LOCAL VARIABLES
 C
       INTEGER IH
+      INTEGER NWARMUP
+      PARAMETER (NWARMUP=2)
+C     Shared good-helicity state: after the warmup, bypass the JAMP
+C     construction entirely for the dead helicity combinations.
+      LOGICAL GOODHEL(NCOMB), MASKS_READY
+      INTEGER NTRY
+      common/%(proc_prefix)sunrolhel_state/GOODHEL, NTRY, MASKS_READY
 C ----------
 C BEGIN CODE
 C ----------
       DO IH = 1, NCOMB
+         IF (NTRY .GT. NWARMUP .AND. .NOT. GOODHEL(IH)) CYCLE
 %(jamp_lines)s
       ENDDO
       END
