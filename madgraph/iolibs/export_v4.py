@@ -3740,9 +3740,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         return replace_dict
 
-    def _get_flavor_mask_blocks(self, matrix_element):
+    def _get_flavor_mask_blocks(self, matrix_element, append_amp_init=True):
         """Build the Fortran declaration / DATA block and the runtime flavor
         bit lookup block for the per-call flavor-mask optimization.
+
+        append_amp_init controls whether the setup block emits its own
+        AMP zero-initialisation. The default standalone template relies on it
+        (it has no explicit AMP init); the unrolhel template zeroes its 2-D
+        AMP itself, so it passes append_amp_init=False.
 
         Returns (decl_block, setup_block, n_flavors, active_flavor_mask). When
         the optimization is inactive for this matrix element, returns
@@ -3825,7 +3830,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         setup_block = self._format_flavor_mask_setup(
             leading_comment='C     Resolve input FLAVOR(NEXTERNAL) -> bit'
             ' in CURRENT_FLAV_BIT.',
-            append_amp_init=True)
+            append_amp_init=append_amp_init)
 
         return (decl_block, setup_block, n_flavors, active_flavor_mask)
 
@@ -3934,22 +3939,26 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                                        'flavor_mask_decl':'',
                                        'flavor_mask_setup':''}
 
+        # Unrolled-helicity standalone (--unrolhel): emit the H/_h variant calls.
+        unrolhel = str(self.cmd_options.get('unrolhel', False)).lower() \
+                       in ('true', '1', 'yes')
+
         # Flavor-mask optimization: compute per-amp/per-wf masks (only when the
         # toggle is on and the ME has merged-particle flavor variants), build
         # the data/decl/setup blocks, and configure the helas writer so it
         # prefixes each per-call CALL with an IAND guard. The try/finally
         # ensures we never leak the writer state into the next matrix element.
+        # The unrolhel template carries a 2-D AMP(NCOMB,NGRAPHS) that it zeroes
+        # itself, so the setup block must not emit its own (rank-1) AMP init.
         mask_decl, mask_setup, n_flavors, active_flavor_mask = \
-                self._get_flavor_mask_blocks(matrix_element)
+                self._get_flavor_mask_blocks(matrix_element,
+                                             append_amp_init=not unrolhel)
         replace_dict['flavor_mask_decl'] = mask_decl
         replace_dict['flavor_mask_setup'] = mask_setup
 
         fortran_model.use_flavor_mask = (n_flavors > 0)
         fortran_model.me_n_flavors = n_flavors
         fortran_model.me_active_flavor_mask = active_flavor_mask
-        # Unrolled-helicity standalone (--unrolhel): emit the H/_h variant calls.
-        unrolhel = str(self.cmd_options.get('unrolhel', False)).lower() \
-                       in ('true', '1', 'yes')
         fortran_model.unrolhel = unrolhel
         try:
             # Extract helas calls

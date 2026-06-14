@@ -115,7 +115,12 @@ C
 C LOCAL VARIABLES
 C
       INTEGER I, IQH, ICH
+C     Persistent wavefunction workspace: W(I)%%W is dimensioned with the
+C     compile-time constants (MAXWF,NCOMB), so it can be allocated once and
+C     reused across calls instead of allocate/deallocate on every call. This
+C     routine is already non-reentrant (SAVE MASK_AMP, common unrolhel_state).
       type(aloha_H) W(NWAVEFUNCS)
+      SAVE W
       COMPLEX*16 SCRATCH(NCOMB)
       LOGICAL MASK_ALL(NCOMB)
 C     Per-diagram helicity-index permutation: maps each diagram's cartesian
@@ -128,6 +133,7 @@ C     Amplitude good-helicity mask (computed once after the warmup).
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
       double precision bwcutoff
+%(flavor_mask_decl)s
 C
 C GLOBAL VARIABLES
 C
@@ -161,7 +167,7 @@ C     Every wavefunction is pre-allocated to the full helicity combination
 C     count NCOMB (maximal memory); the cartesian-product routines fill only
 C     the unmasked components.
       do I=1,NWAVEFUNCS
-         allocate(W(I)%%W(MAXWF,NCOMB))
+         if (.not. allocated(W(I)%%W)) allocate(W(I)%%W(MAXWF,NCOMB))
       enddo
 C     Zero AMP so masked (unfilled) combinations contribute nothing to JAMP.
       DO I=1,NGRAPHS
@@ -169,10 +175,9 @@ C     Zero AMP so masked (unfilled) combinations contribute nothing to JAMP.
             AMP(ICH,I) = (0D0,0D0)
          ENDDO
       ENDDO
+%(flavor_mask_setup)s
 %(helas_calls)s
-      do I=1,NWAVEFUNCS
-         deallocate(W(I)%%W)
-      enddo
+C     W is kept allocated (SAVE) for reuse on the next call.
       END
 
 
