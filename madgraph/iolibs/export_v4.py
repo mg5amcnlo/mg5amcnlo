@@ -3829,6 +3829,80 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         return (decl_block, setup_block, n_flavors, active_flavor_mask)
 
+    def _unrolhel_index_info(self, matrix_element):
+        """Shared helicity-index bookkeeping for the unrolled-helicity output:
+        NCOMB, the external legs, the per-leg radix, and the canonical strides
+        (leg 1 most significant)."""
+        hel_matrix = list(matrix_element.get_helicity_matrix())
+        ncomb = len(hel_matrix)
+        nexternal, _ = matrix_element.get_nexternal_ninitial()
+        legs = list(range(1, nexternal + 1))
+        # radix (number of helicity states) per external leg, taken from the
+        # helicity matrix so it matches NCOMB and the *_h routines' %n exactly.
+        rleg = dict((i, len(set(row[i - 1] for row in hel_matrix))) for i in legs)
+        prod = 1
+        for i in legs:
+            prod *= rleg[i]
+        assert prod == ncomb, \
+            "unrolhel: helicity space is not a clean product (%s != %s)" % (prod, ncomb)
+        canon = {}
+        s = 1
+        for leg in sorted(legs, reverse=True):
+            canon[leg] = s
+            s *= rleg[leg]
+        return ncomb, legs, rleg, canon
+
+    @staticmethod
+    def _unrolhel_call_strides(node, rleg):
+        """Per-leg strides of the cartesian (loop-nesting) index of a single
+        wavefunction/amplitude `node`, from a recursive walk of its mother tree
+        (first mother = outermost loop = most significant).  An external
+        wavefunction (no mothers) is a single leg with stride 1."""
+        strides = {}
+        if not node.get('mothers'):
+            strides[node.get('number_external')] = 1
+            return strides
+
+        def rec(wf, base):
+            mothers = list(wf.get('mothers'))
+            if not mothers:
+                strides[wf.get('number_external')] = base
+                return rleg[wf.get('number_external')]
+            cur, size = base, 1
+            for m in reversed(mothers):   # innermost (last) = least significant
+                sz = rec(m, cur)
+                cur *= sz
+                size *= sz
+            return size
+
+        cur = 1
+        for m in reversed(list(node.get('mothers'))):
+            cur *= rec(m, cur)
+        return strides
+
+    def _get_unrolhel_helperm(self, matrix_element):
+        """DATA lines filling HELPERM(NCOMB, NGRAPHS).
+
+        Each amplitude enumerates the external helicities in its own cartesian
+        order; HELPERM remaps `AMP(HELPERM(IH,g),g) = scratch(IH)` so every
+        diagram's AMP column is in the common canonical (leg-ascending) order
+        and the color/JAMP sum adds matching helicities."""
+        import itertools
+        ncomb, legs, rleg, canon = self._unrolhel_index_info(matrix_element)
+        lines = []
+        for amp in matrix_element.get_all_amplitudes():
+            strides = self._unrolhel_call_strides(amp, rleg)
+            col = [0] * (ncomb + 1)
+            for combo in itertools.product(*[range(rleg[leg]) for leg in legs]):
+                h = dict(zip(legs, combo))
+                diag_flat = 1 + sum(h[leg] * strides[leg] for leg in legs)
+                canon_flat = 1 + sum(h[leg] * canon[leg] for leg in legs)
+                col[diag_flat] = canon_flat
+            vals = ','.join(str(col[i]) for i in range(1, ncomb + 1))
+            lines.append('      DATA (HELPERM(I,%d),I=1,NCOMB) /%s/'
+                         % (amp.get('number'), vals))
+        return '\n'.join(lines)
+
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
@@ -3873,6 +3947,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         fortran_model.use_flavor_mask = (n_flavors > 0)
         fortran_model.me_n_flavors = n_flavors
         fortran_model.me_active_flavor_mask = active_flavor_mask
+        # Unrolled-helicity standalone (--unrolhel): emit the H/_h variant calls.
+        unrolhel = str(self.cmd_options.get('unrolhel', False)).lower() \
+                       in ('true', '1', 'yes')
+        fortran_model.unrolhel = unrolhel
         try:
             # Extract helas calls
             helas_calls = fortran_model.get_matrix_element_calls(\
@@ -3881,6 +3959,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             fortran_model.use_flavor_mask = False
             fortran_model.me_n_flavors = 0
             fortran_model.me_active_flavor_mask = None
+            fortran_model.unrolhel = False
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
@@ -3943,7 +4022,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
+            if unrolhel:
+                # 2-D AMP(NCOMB,igraph) / JAMP(icolor,NCOMB): the template wraps
+                # these lines in a DO IH=1,NCOMB loop.
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(
+                    matrix_element, JAMP_format="JAMP(%s,IH)", AMP_format="AMP(IH,%s)")
+            else:
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
             # Consider the output of a dummy order 'ALL_ORDERS' for which we
             # set all amplitude order to weight 1 and only one squared order
             # contribution which is of course ALL_ORDERS=2.
@@ -3989,6 +4074,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
 
         matrix_template = self.matrix_template
+        if unrolhel:
+            matrix_template = 'matrix_standalone_unrolhel_v4.inc'
+            # Maximal first-dimension of the per-wavefunction %W array (number of
+            # Lorentz components); the exporter pre-allocates W(i)%W(MAXWF,NCOMB).
+            spin_to_size = {1: 1, 2: 4, 3: 4, 4: 16, 5: 16}
+            replace_dict['maxwf'] = max(
+                [spin_to_size.get(wf.get('spin'), 4)
+                 for wf in matrix_element.get_all_wavefunctions()] + [1])
+            # Per-diagram helicity-index permutation (canonical-order remap).
+            replace_dict['helperm_data'] = self._get_unrolhel_helperm(matrix_element)
         if self.opt['export_format']=='standalone_msP' :
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':

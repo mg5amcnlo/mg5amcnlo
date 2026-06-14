@@ -23,6 +23,16 @@ C###############################################################################
             double precision :: P(0:3)
             integer :: flv_index
          END TYPE ALOHA2D
+c        ALOHA_H carries a single momentum/flavor but an array of
+c        wavefunctions: W(lorentz_component, wavefunction_index). It is
+c        used by the cartesian-product ALOHA routines (tag 'H'). No
+c        SEQUENCE here since the component is allocatable.
+         TYPE ALOHA_H
+            double complex, allocatable :: W(:,:)
+            double precision :: P(0:3)
+            integer :: flv_index
+            integer :: n
+         END TYPE ALOHA_H
       end module ALOHA_OBJECT
 
 
@@ -1921,5 +1931,136 @@ c     local variable
       do i = 1, nb
          Amp(ihels(i)) =  W1%W(1) * Wall(iwfcts(i))%W(1)
       enddo
+      return
+      end
+
+c###############################################################################
+c     Unrolled-helicity external wavefunctions (tag 'H').
+c
+c     These return a type(aloha_H) carrying ALL helicity states at once:
+c       - fermions / massless vectors : 2 states
+c       - massive vectors             : 3 states
+c       - scalars                     : 1 state
+c     The scalar nhel argument is replaced by a logical MASK(:): a state is
+c     computed only if its mask entry is .true. (others left zero, fixed
+c     index).  Momentum / flavor are set unconditionally.  Each routine reuses
+c     the corresponding scalar HELAS routine once per state and copies the
+c     column (inlining the math is a possible later optimization).
+c###############################################################################
+
+      subroutine ixxxxx_h(p, fmass, mask, nsf, flavor, fi)
+      use aloha_object
+      implicit none
+      type(aloha_H) fi
+      type(aloha)   tmp
+      logical mask(2)
+      integer nsf, flavor, k
+      double precision p(0:3), fmass
+      integer hels(2)
+      data hels /-1, 1/
+
+      if (.not. allocated(fi % W)) allocate(fi % W(4,2))
+      fi % W = (0d0,0d0)
+      fi % n = 2
+      fi % flv_index = flavor
+      fi % P(0) = p(0)*nsf*(-1)
+      fi % P(1) = p(1)*nsf*(-1)
+      fi % P(2) = p(2)*nsf*(-1)
+      fi % P(3) = p(3)*nsf*(-1)
+      do k = 1, 2
+         if (.not. mask(k)) cycle
+         call ixxxxx(p, fmass, hels(k), nsf, flavor, tmp)
+         fi % W(:,k) = tmp % W(:)
+      enddo
+      return
+      end
+
+      subroutine oxxxxx_h(p, fmass, mask, nsf, flavor, fo)
+      use aloha_object
+      implicit none
+      type(aloha_H) fo
+      type(aloha)   tmp
+      logical mask(2)
+      integer nsf, flavor, k
+      double precision p(0:3), fmass
+      integer hels(2)
+      data hels /-1, 1/
+
+      if (.not. allocated(fo % W)) allocate(fo % W(4,2))
+      fo % W = (0d0,0d0)
+      fo % n = 2
+      fo % flv_index = flavor
+      fo % P(0) = p(0)*nsf
+      fo % P(1) = p(1)*nsf
+      fo % P(2) = p(2)*nsf
+      fo % P(3) = p(3)*nsf
+      do k = 1, 2
+         if (.not. mask(k)) cycle
+         call oxxxxx(p, fmass, hels(k), nsf, flavor, tmp)
+         fo % W(:,k) = tmp % W(:)
+      enddo
+      return
+      end
+
+      subroutine vxxxxx_h(p, vmass, mask, nsv, vc)
+      use aloha_object
+      implicit none
+      type(aloha_H) vc
+      type(aloha)   tmp
+      logical mask(*)
+      integer nsv, k, nstate
+      double precision p(0:3), vmass
+      integer hels(3)
+
+      if (vmass .eq. 0d0) then
+         nstate = 2
+         hels(1) = -1
+         hels(2) = 1
+      else
+         nstate = 3
+         hels(1) = -1
+         hels(2) = 0
+         hels(3) = 1
+      endif
+c     Do NOT reallocate when the caller already provided storage (e.g. the
+c     --unrolhel exporter pre-allocates W(i)%W(MAXWF,NCOMB) and reuses the same
+c     slot for different wavefunctions): only allocate to nstate if unallocated.
+      if (.not. allocated(vc % W)) allocate(vc % W(4, nstate))
+      vc % W(:,1:nstate) = (0d0,0d0)
+      vc % n = nstate
+      vc % flv_index = 0
+      vc % P(0) = p(0)*nsv
+      vc % P(1) = p(1)*nsv
+      vc % P(2) = p(2)*nsv
+      vc % P(3) = p(3)*nsv
+      do k = 1, nstate
+         if (.not. mask(k)) cycle
+         call vxxxxx(p, vmass, hels(k), nsv, tmp)
+         vc % W(:,k) = tmp % W(:)
+      enddo
+      return
+      end
+
+      subroutine sxxxxx_h(p, nss, mask, sc)
+      use aloha_object
+      implicit none
+      type(aloha_H) sc
+      type(aloha)   tmp
+      logical mask(*)
+      integer nss
+      double precision p(0:3)
+
+      if (.not. allocated(sc % W)) allocate(sc % W(1,1))
+      sc % W = (0d0,0d0)
+      sc % n = 1
+      sc % flv_index = 0
+      sc % P(0) = p(0)*nss
+      sc % P(1) = p(1)*nss
+      sc % P(2) = p(2)*nss
+      sc % P(3) = p(3)*nss
+      if (mask(1)) then
+         call sxxxxx(p, nss, tmp)
+         sc % W(1,1) = tmp % W(1)
+      endif
       return
       end

@@ -9926,7 +9926,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if out == 0:
                         newflag = list(flag) + ['P1N']
                         wanted_lorentz.append((name, tuple(newflag), -1))
-                
+
+            # Unrolled-helicity standalone (--unrolhel): also generate the 'H'
+            # (cartesian-product) variant of every used routine; the matrix.f
+            # calls those instead of the scalar ones.
+            if str(getattr(self._curr_exporter, 'cmd_options', {}).get(
+                    'unrolhel', False)).lower() in ('true', '1', 'yes'):
+                for (name, flag, out) in wanted_lorentz[:]:
+                    wanted_lorentz.append((name, tuple(list(flag) + ['H']), out))
+
             # For a unique output of multiple type of exporter need to store this
             # information.             
             if hasattr(self, 'previous_lorentz'):

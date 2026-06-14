@@ -35,6 +35,16 @@ C###############################################################################
             complex*32 :: P(0:3)
             integer :: flv_index
          END TYPE MP_ALOHA2D
+c        ALOHA_H carries a single momentum/flavor but an array of
+c        wavefunctions: W(lorentz_component, wavefunction_index). It is
+c        used by the cartesian-product ALOHA routines (tag 'H'). No
+c        SEQUENCE here since the component is allocatable.
+         TYPE ALOHA_H
+            double complex, allocatable :: W(:,:)
+            double precision :: P(0:3)
+            integer :: flv_index
+            integer :: n
+         END TYPE ALOHA_H
       end module ALOHA_OBJECT
 
       subroutine ixxxxx(p, fmass, nhel, nsf, flavor ,fi)
