@@ -33,8 +33,6 @@
 # -----------------------------------------------------------------------------
 
 from __future__ import absolute_import
-from six.moves import range
-from six.moves import zip
 __version__    = "3.3"
 __tabversion__ = "3.2"       # Version of table file used
 lexdebug = 0
