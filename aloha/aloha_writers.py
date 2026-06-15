@@ -1456,8 +1456,7 @@ class ALOHAWriterForFortranH(ALOHAWriterForFortran):
             main = '%s%d' % (self.particles[self.outgoing - 1], self.outgoing)
             comp = self.type_to_size[self.particles[self.outgoing - 1]] - 2
             tmpname = '%stmp' % self.particles[self.outgoing - 1]
-            self.declaration.add(('list_complex', tmpname))  # type(aloha_H) local
-            routine.write('    allocate(%s %% W(%d, %s))\n' % (tmpname, comp, prod))
+            self.declaration.add(('list_complex', tmpname))  # type(aloha_H) local (static %W)
         else:
             main = 'vertex'
             tmpname = 'amptmp'
@@ -1485,9 +1484,6 @@ class ALOHAWriterForFortranH(ALOHAWriterForFortran):
                     self.declaration.add(('int', 'iqq'))
                     self.declaration.add(('int', 'jqq'))
 
-        if self.offshell:
-            routine.write('    deallocate(%s %% W)\n' % tmpname)
-
         self.declaration.discard(('complex', 'COUP'))
         for nm in aloha_lib.KERNEL.reduced_expr2:
             self.declaration.discard(('complex', nm))
@@ -1495,14 +1491,9 @@ class ALOHAWriterForFortranH(ALOHAWriterForFortran):
         decl = self.get_declaration_txt()
         text.write(decl)
         if not self.offshell:
-            # local complex scratch for the amplitude array, allocated to the
-            # full cartesian-product size.
-            text.write(' complex*16, allocatable :: %s(:)\n' % tmpname)
-            body = StringIO()
-            body.write('    allocate(%s(%s))\n' % (tmpname, prod))
-            body.write(routine.getvalue())
-            body.write('    deallocate(%s)\n' % tmpname)
-            routine = body
+            # static complex scratch for the amplitude array, sized to the
+            # compile-time maximum MAXNCOMB_H from the aloha_object module.
+            text.write(' complex*16 %s(MAXNCOMB_H)\n' % tmpname)
         text.write(routine.getvalue())
         text.write(self.get_foot_txt(combine=True))
 

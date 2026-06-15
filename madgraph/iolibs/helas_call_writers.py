@@ -1114,7 +1114,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if not call:
             return call
         prefix = self._flavor_mask_prefix(amplitude, 'amp')
-        return prefix + call if prefix else call
+        if not prefix:
+            return call
+        if self.unrolhel:
+            # In unrolhel the amplitude "call" is a multi-line block (CALL into
+            # SCRATCH followed by a remap of SCRATCH into AMP). A plain
+            # statement prefix would guard only the CALL and let the remap copy
+            # garbage SCRATCH into AMP. Guard the whole block instead; a masked
+            # amplitude then leaves the (pre-zeroed) AMP column at zero.
+            return '%sTHEN\n%s\n      ENDIF' % (prefix, call)
+        return prefix + call
         
 
 

@@ -11,6 +11,13 @@ C distribution.
 C
 C###############################################################################
       module ALOHA_OBJECT
+c        Static-allocation sizes for the cartesian-product type ALOHA_H below.
+c        MAXWFSIZE_H >= the number of Lorentz components of any wavefunction
+c        (4 for fermion/vector, 16 for tensor); MAXNCOMB_H >= the helicity
+c        combination count NCOMB of any process. These are compile-time knobs
+c        for the --unrolhel output (raise MAXNCOMB_H if a process needs more).
+         integer MAXWFSIZE_H, MAXNCOMB_H
+         parameter (MAXWFSIZE_H=16, MAXNCOMB_H=1024)
          TYPE ALOHA
             SEQUENCE
             double complex::W(4)
@@ -25,10 +32,11 @@ C###############################################################################
          END TYPE ALOHA2D
 c        ALOHA_H carries a single momentum/flavor but an array of
 c        wavefunctions: W(lorentz_component, wavefunction_index). It is
-c        used by the cartesian-product ALOHA routines (tag 'H'). No
-c        SEQUENCE here since the component is allocatable.
+c        used by the cartesian-product ALOHA routines (tag 'H'). W is a fixed
+c        statically-allocated array (no allocatable component / descriptor
+c        indirection); only the first %n columns are meaningful.
          TYPE ALOHA_H
-            double complex, allocatable :: W(:,:)
+            double complex :: W(MAXWFSIZE_H, MAXNCOMB_H)
             double precision :: P(0:3)
             integer :: flv_index
             integer :: n
@@ -1959,8 +1967,7 @@ c###############################################################################
       integer hels(2)
       data hels /-1, 1/
 
-      if (.not. allocated(fi % W)) allocate(fi % W(4,2))
-      fi % W = (0d0,0d0)
+      fi % W(1:4,1:2) = (0d0,0d0)
       fi % n = 2
       fi % flv_index = flavor
       fi % P(0) = p(0)*nsf*(-1)
@@ -1970,7 +1977,7 @@ c###############################################################################
       do k = 1, 2
          if (.not. mask(k)) cycle
          call ixxxxx(p, fmass, hels(k), nsf, flavor, tmp)
-         fi % W(:,k) = tmp % W(:)
+         fi % W(1:4,k) = tmp % W(1:4)
       enddo
       return
       end
@@ -1986,8 +1993,7 @@ c###############################################################################
       integer hels(2)
       data hels /-1, 1/
 
-      if (.not. allocated(fo % W)) allocate(fo % W(4,2))
-      fo % W = (0d0,0d0)
+      fo % W(1:4,1:2) = (0d0,0d0)
       fo % n = 2
       fo % flv_index = flavor
       fo % P(0) = p(0)*nsf
@@ -1997,7 +2003,7 @@ c###############################################################################
       do k = 1, 2
          if (.not. mask(k)) cycle
          call oxxxxx(p, fmass, hels(k), nsf, flavor, tmp)
-         fo % W(:,k) = tmp % W(:)
+         fo % W(1:4,k) = tmp % W(1:4)
       enddo
       return
       end
@@ -2022,11 +2028,7 @@ c###############################################################################
          hels(2) = 0
          hels(3) = 1
       endif
-c     Do NOT reallocate when the caller already provided storage (e.g. the
-c     --unrolhel exporter pre-allocates W(i)%W(MAXWF,NCOMB) and reuses the same
-c     slot for different wavefunctions): only allocate to nstate if unallocated.
-      if (.not. allocated(vc % W)) allocate(vc % W(4, nstate))
-      vc % W(:,1:nstate) = (0d0,0d0)
+      vc % W(1:4,1:nstate) = (0d0,0d0)
       vc % n = nstate
       vc % flv_index = 0
       vc % P(0) = p(0)*nsv
@@ -2036,7 +2038,7 @@ c     slot for different wavefunctions): only allocate to nstate if unallocated.
       do k = 1, nstate
          if (.not. mask(k)) cycle
          call vxxxxx(p, vmass, hels(k), nsv, tmp)
-         vc % W(:,k) = tmp % W(:)
+         vc % W(1:4,k) = tmp % W(1:4)
       enddo
       return
       end
@@ -2050,8 +2052,7 @@ c     slot for different wavefunctions): only allocate to nstate if unallocated.
       integer nss
       double precision p(0:3)
 
-      if (.not. allocated(sc % W)) allocate(sc % W(1,1))
-      sc % W = (0d0,0d0)
+      sc % W(1:1,1:1) = (0d0,0d0)
       sc % n = 1
       sc % flv_index = 0
       sc % P(0) = p(0)*nss

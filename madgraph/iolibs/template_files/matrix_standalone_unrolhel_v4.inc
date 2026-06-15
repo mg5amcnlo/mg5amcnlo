@@ -41,6 +41,8 @@ C
       INTEGER NWARMUP
       PARAMETER (NWARMUP=2)
       REAL*8 T
+C     Broken-symmetry (flavor) factor, same as the standard standalone.
+      INTEGER %(proc_prefix)sBROKEN_SYM
       COMPLEX*16 AMP(NCOMB,NGRAPHS), JAMP(NCOLOR,NCOMB)
       INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
       INTEGER %(proc_prefix)sDENOM
@@ -55,6 +57,12 @@ C     and their per-call masks let GET_AMP skip the corresponding components.
       DATA NTRY/0/
       DATA MASKS_READY/.FALSE./
       DATA GOODHEL/NCOMB*.FALSE./
+C     The good-helicity set (and the per-amplitude masks derived from it) are
+C     flavor dependent, so restart the warmup whenever the flavor changes.
+      INTEGER PREV_FLAVOR(NEXTERNAL)
+      LOGICAL FLAVOR_CHANGED
+      SAVE PREV_FLAVOR
+      DATA PREV_FLAVOR/NEXTERNAL*0/
 C
 C COLOR DATA
 C     (SMATRIX needs no couplings; the amplitude/coupling work is in GET_AMP)
@@ -64,6 +72,18 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      FLAVOR_CHANGED = .FALSE.
+      DO I = 1, NEXTERNAL
+         IF (FLAVOR(I) .NE. PREV_FLAVOR(I)) FLAVOR_CHANGED = .TRUE.
+         PREV_FLAVOR(I) = FLAVOR(I)
+      ENDDO
+      IF (FLAVOR_CHANGED) THEN
+         NTRY = 0
+         MASKS_READY = .FALSE.
+         DO I = 1, NCOMB
+            GOODHEL(I) = .FALSE.
+         ENDDO
+      ENDIF
       NTRY = NTRY + 1
       CALL %(proc_prefix)sGET_AMP(P, FLAVOR, AMP)
       CALL %(proc_prefix)sGET_JAMP(AMP, JAMP)
@@ -74,7 +94,7 @@ C ----------
          IF (NTRY .LE. NWARMUP .AND. T .NE. 0D0) GOODHEL(IHEL) = .TRUE.
          ANS = ANS + T
       ENDDO
-      ANS = ANS / DBLE(IDEN)
+      ANS = ANS / DBLE(IDEN) * %(proc_prefix)sBROKEN_SYM(FLAVOR)
       END
 
 
@@ -115,10 +135,9 @@ C
 C LOCAL VARIABLES
 C
       INTEGER I, IQH, ICH
-C     Persistent wavefunction workspace: W(I)%%W is dimensioned with the
-C     compile-time constants (MAXWF,NCOMB), so it can be allocated once and
-C     reused across calls instead of allocate/deallocate on every call. This
-C     routine is already non-reentrant (SAVE MASK_AMP, common unrolhel_state).
+C     Wavefunction workspace: type(aloha_H)%%W is a fixed static array
+C     (MAXWFSIZE_H,MAXNCOMB_H) so there is no allocation at all; SAVE keeps it
+C     off the stack (it is large) and the routine is already non-reentrant.
       type(aloha_H) W(NWAVEFUNCS)
       SAVE W
       COMPLEX*16 SCRATCH(NCOMB)
@@ -178,12 +197,8 @@ C        not).
          ENDDO
          MASKS_READY = .TRUE.
       ENDIF
-C     Every wavefunction is pre-allocated to the full helicity combination
-C     count NCOMB (maximal memory); the cartesian-product routines fill only
-C     the unmasked components.
-      do I=1,NWAVEFUNCS
-         if (.not. allocated(W(I)%%W)) allocate(W(I)%%W(MAXWF,NCOMB))
-      enddo
+C     W is statically allocated (no allocate); the cartesian-product routines
+C     fill only the unmasked components of each W(I)%%W.
 C     Zero AMP so masked (unfilled) combinations contribute nothing to JAMP.
       DO I=1,NGRAPHS
          DO ICH=1,NCOMB
@@ -304,3 +319,8 @@ CF2PY INTENT(OUT) :: INTER((N_COMB*(N_COMB+1))/2)
          INTER(I) = (0D0,0D0)
       ENDDO
       END
+
+
+C     Broken-symmetry (flavor) factor function, identical to the standard
+C     standalone output.
+%(broken_sym_function)s

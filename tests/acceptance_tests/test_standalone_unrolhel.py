@@ -166,3 +166,15 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # combined H+M (flavor-coupling) routines + massive externals + reused slot
     test_unrolhel_uux_uuxwpwm = unrolhel_consistency_test_factory(
         'u u~ > u u~ w+ w-', model='sm')
+
+    # VBF-like multi-topology with a non-trivial broken-symmetry flavor factor
+    # (BROKEN_SYM(FLAVOR) = 2 here, which must be applied to the summed |M|^2)
+    test_unrolhel_ud_wpwmud = unrolhel_consistency_test_factory(
+        'u d > w+ w- u d QCD=0', model='sm')
+
+    # merged-flavor subprocess: exercises the per-flavor flavor mask (the
+    # amplitude IAND guards must wrap the whole SCRATCH->AMP remap) and the
+    # per-flavor good-helicity warmup reset (check_sa evaluates several flavors
+    # with a shared, ever-incrementing NTRY).
+    test_unrolhel_pp_wpwm = unrolhel_consistency_test_factory(
+        'p p > w+ w- QCD=0', model='sm')
