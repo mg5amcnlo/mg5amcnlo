@@ -1042,6 +1042,14 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         self.use_flavor_mask = False
         self.me_n_flavors = 0
         self.me_active_flavor_mask = None
+        # Unrolled-helicity emission (standalone --unrolhel).  When True the
+        # external wavefunctions call the *_h variants (returning type(aloha_H)
+        # with all helicity states) with the scalar NHEL argument replaced by an
+        # all-true MASK_ALL, the vertex/amplitude routines use their 'H'
+        # (cartesian-product) variants with a MASK_ALL argument before the
+        # output, and amplitudes write into the 2-D AMP(NCOMB, igraph) array
+        # (passed as the contiguous column AMP(1, igraph)).
+        self.unrolhel = False
         super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
@@ -1106,7 +1114,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if not call:
             return call
         prefix = self._flavor_mask_prefix(amplitude, 'amp')
-        return prefix + call if prefix else call
+        if not prefix:
+            return call
+        if self.unrolhel:
+            # In unrolhel the amplitude "call" is a multi-line block (CALL into
+            # SCRATCH followed by a remap of SCRATCH into AMP). A plain
+            # statement prefix would guard only the CALL and let the remap copy
+            # garbage SCRATCH into AMP. Guard the whole block instead; a masked
+            # amplitude then leaves the (pre-zeroed) AMP column at zero.
+            return '%sTHEN\n%s\n      ENDIF' % (prefix, call)
+        return prefix + call
         
 
 
@@ -1210,6 +1227,17 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 call = call + "%(state_id)+d,{0})".format(\
                                     self.format_helas_object('W(','%(me_id)d'))
 
+            if self.unrolhel:
+                # *_h external returning type(aloha_H) with all helicity states;
+                # the scalar helicity NHEL(n) is replaced by the all-true MASK_ALL
+                # (external/intermediate wavefunctions are always built in full).
+                call = call.replace('(P(0,', '_H(P(0,', 1)
+                if argument.get('spin') != 1:
+                    call = call.replace('NHEL(%(number_external)d),', 'MASK_ALL,')
+                else:
+                    # scalar: no helicity argument, mask follows the nss flag
+                    call = call.replace('%(state_id)+d,', '%(state_id)+d,MASK_ALL,', 1)
+
         call_function = lambda wf: call % wf.get_external_helas_call_dict()
         self.add_wavefunction(argument.get_call_key(), call_function)
 
@@ -1239,8 +1267,23 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
         if isinstance(argument, helas_objects.HelasWavefunction) and argument.get('onshell') is False:
             flag.append('P1D') # D is for $ syntax -> offshell propagator only
+        if self.unrolhel:
+            # cartesian-product (H) variant of the routine; 'H' must be injected
+            # identically into get_aloha_info tags so the generated routine name
+            # matches (see ProcessExporterFortranSA unrolhel handling).
+            flag.append('H')
         # Creating line formatting:
-        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(out)s)'
+        is_amp_base = isinstance(argument, helas_objects.HelasAmplitude) \
+                          and argument.get('type') == 'base'
+        if self.unrolhel and is_amp_base:
+            # The amplitude writes all combinations into SCRATCH; arg['out']
+            # (set below) supplies the closing paren plus the canonical-order
+            # remap into AMP(NCOMB, igraph). No trailing ')' here.
+            call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(mask)s%(out)s'
+        elif self.unrolhel:
+            call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(mask)s%(out)s)'
+        else:
+            call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
                                         '%s' % l[0], l[1:], outgoing, flag, True),
@@ -1274,15 +1317,25 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 else:
                     arg['mass'] = "ML(%(out)d),ZERO,"
             else:
-                arg['out']=self.format_helas_object('W(','%(out)d')                   
+                arg['out']=self.format_helas_object('W(','%(out)d')
                 if aloha.complex_mass:
                     arg['mass'] = "DCMPLX(%(CM)s),"
                 else:
                     arg['mass'] = "%(M)s,%(W)s,"
         # Standard Amplitude
-        elif argument['type'] == 'base':      
-            arg['mass'] = ''  
-            arg['out'] = self.format_helas_object('AMP(','%(out)d')              
+        elif argument['type'] == 'base':
+            arg['mass'] = ''
+            if self.unrolhel:
+                # Write the cartesian-product amplitudes into SCRATCH, then remap
+                # them into the canonical helicity order of AMP(NCOMB, igraph)
+                # via the per-diagram HELPERM table (%(out)d is the graph index,
+                # filled at the per-call stage).
+                arg['out'] = ('SCRATCH)\n'
+                              '      DO IQH = 1, NCOMB\n'
+                              '        IF (MASK_AMP(IQH,%(out)d)) AMP(HELPERM(IQH,%(out)d),%(out)d) = SCRATCH(IQH)\n'
+                              '      ENDDO')
+            else:
+                arg['out'] = self.format_helas_object('AMP(','%(out)d')
         # Loop Amplitude
         elif argument['type'] == 'loop':
             arg['mass'] = ''
@@ -1298,6 +1351,15 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  call += "\n %(second_line)s "
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
         arg['extra'] = '%(bwcutoff)s'
+        if self.unrolhel:
+            if is_amp_base:
+                # the amplitude skips dead helicity combinations; index by the
+                # same AMP graph index the remap/HELPERM use (%(out)d, which
+                # differs from get('number') after wavefunction renumbering).
+                arg['mask'] = 'MASK_AMP(1,%(out)d),'
+            else:
+                # wavefunctions are always built in full
+                arg['mask'] = 'MASK_ALL,'
 
         # ALL ARGUMENT FORMATTED ###############################################
         call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)

@@ -1147,7 +1147,368 @@ class ALOHAWriterForFortran(WriteALOHA):
         return text
 
 
-class QP(object): 
+class ALOHAWriterForFortranH(ALOHAWriterForFortran):
+    """Fortran writer for the 'H' tag: cartesian-product (vectorized) mode.
+
+    Each input/output wavefunction is a ``type(aloha_H)`` carrying a single
+    momentum/flavor (``%P`` / ``%flv_index``) but an *array* of wavefunctions
+    ``%W(lorentz_component, wavefunction_index)`` with ``%n`` entries.  The
+    routine evaluates the cartesian product of the input arrays: everything
+    that depends only on the momenta (resulting momentum, the propagator
+    ``denom``, momentum-only TMP/FCT) is computed once in front of the loop,
+    and the per-combination output ``%W(:, IOUT)`` is filled inside a nested
+    loop over the inputs.  A ``logical MASK(*)`` argument (indexed in cartesian
+    order, fixed index) lets the caller skip selected combinations.
+
+    For an off-shell routine the output is a ``type(aloha_H)`` wavefunction
+    (``%W(:, IOUT)`` filled, ``%n`` set).  For an amplitude routine
+    (``offshell == 0``) the output is instead an assumed-size complex array
+    ``vertex(*)`` with one amplitude per cartesian combination (``vertex(IOUT)``).
+
+    Scope: QP/MP, loop (SplitCoefficient) and combined routines are not
+    handled here.
+    """
+
+    def __init__(self, abstract_routine, dirpath, options=None):
+        ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath, options=options)
+        # one loop variable per input particle position (1-based), and a global
+        # output counter giving the cartesian index.  For amplitudes
+        # (offshell == 0) every particle is an input.
+        self.input_positions = [i + 1 for i in range(len(self.particles))
+                                if i + 1 != self.outgoing]
+        self.out_counter = 'IOUT'
+
+    def product_expr(self):
+        """Fortran expression for the full cartesian-product size (product of
+           the input wavefunction counts)."""
+        return ' * '.join('%s%d %% n' % (self.particles[pos - 1], pos)
+                          for pos in self.input_positions)
+
+    def define_argument_list(self, couplings=None):
+        """Append the MASK argument at the very end (just before the output)."""
+        call_arg = ALOHAWriterForFortran.define_argument_list(self, couplings)
+        call_arg.append(('logical', 'MASK'))
+        self.declaration.add(('logical', 'MASK'))
+        self.call_arg = call_arg
+        return call_arg
+
+    def shift_indices(self, match):
+        """Index input wavefunction reads by their per-input loop variable."""
+        var = match.group('var')
+        if var.startswith('P'):
+            # momentum scratch array, computed once before the loop
+            return '%s(%s)' % (var, int(match.group('num')))
+        shift = 0
+        if aloha.unitary_gauge == 3 and var.startswith('S'):
+            shift += 4
+        pos = re.search(r'\d+$', var).group()
+        return '%s %% W(%s, IH%s)' % (var, int(match.group('num')) + shift, pos)
+
+    def get_declaration_txt(self):
+        """Declarations for H mode: wavefunctions become type(aloha_H), plus
+           the cartesian-product loop indices and the MASK argument."""
+        # Hide the wavefunction and MASK declarations so the base emitter only
+        # handles the scalar / momentum / coupling entries.
+        wf = [(t, n) for (t, n) in self.declaration
+              if t.startswith('list') and n[0] in ('F', 'V', 'S', 'T', 'R')]
+        for entry in wf:
+            self.declaration.discard(entry)
+        self.declaration.discard(('logical', 'MASK'))
+        # amplitude output: emitted as an assumed-size array below, not a scalar
+        amp_out = not self.offshell
+        if amp_out:
+            self.declaration.discard(('complex', 'vertex'))
+
+        out = StringIO()
+        out.write(ALOHAWriterForFortran.get_declaration_txt(self))
+
+        for t, n in sorted(wf):
+            out.write(' type(aloha_H) %s\n' % n)
+            if n.startswith('F'):
+                out.write(' integer flv_index%s\n' % n[1:])
+        if amp_out:
+            out.write(' %s vertex(*)\n' % self.type2def['complex'])
+        idx = ['IH%d' % pos for pos in self.input_positions] + [self.out_counter]
+        out.write(' integer %s\n' % ', '.join(idx))
+        out.write(' logical MASK(*)\n')
+
+        # restore (other passes may inspect the declaration set)
+        for entry in wf:
+            self.declaration.add(entry)
+        self.declaration.add(('logical', 'MASK'))
+        if amp_out:
+            self.declaration.add(('complex', 'vertex'))
+        return out.getvalue()
+
+    def get_coupling_def(self):
+        """Reuse the base flavor logic, but adapt the vanishing-output action to
+           the H output shapes."""
+        text = ALOHAWriterForFortran.get_coupling_def(self)
+        # wavefunction output: signal an empty output via %n = 0 (the 2-D %W is
+        # allocatable and may not be zeroable as a whole).
+        text = re.sub(r'(\w+)\s*%\s*W\(:\)\s*=\s*\(0d0,0d0\)',
+                      r'\1 % n = 0', text)
+        # amplitude output: zero the whole produced slice of the vertex array.
+        text = re.sub(r'VERTEX\s*=\s*\(0d0,0d0\)',
+                      'VERTEX(1:%s) = (0d0,0d0)' % self.product_expr(), text)
+        return text
+
+    def define_expression(self):
+        """Hoist momentum-only work before the cartesian-product loop; emit one
+           output wavefunction per (unmasked) combination of the inputs."""
+
+        wf_re = re.compile(r'\b[FVSTR]\d+\s*%\s*W\s*\(')
+        ref_re = re.compile(r'\b(?:TMP|FCT)\d+\b')
+
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+
+        # ---- render TMP (contracted) and FCT definitions ----
+        node_line = {}   # name -> "<name> = ...\n"
+        node_order = []  # emission order: contracted (sorted) then fct
+        for name in sorted(self.routine.contracted.keys()):
+            obj = self.routine.contracted[name]
+            node_line[name] = ' %s = %s\n' % (name, self.write_obj(obj))
+            self.declaration.add(('complex', name))
+            node_order.append(name)
+        fct_keys = list(self.routine.fct.keys())
+        fct_keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in fct_keys:
+            fct, objs = self.routine.fct[name]
+            fmt = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            try:
+                line = fmt % ','.join([self.write_obj(o) for o in objs])
+            except TypeError:
+                line = fmt % tuple([self.write_obj(o) for o in objs])
+            node_line[name] = line
+            node_order.append(name)
+
+        # ---- classify each node momentum-only vs wavefunction-dependent ----
+        nodes = set(node_order)
+        direct = {}
+        refs = {}
+        for name in node_order:
+            rhs = node_line[name].split('=', 1)[1]
+            direct[name] = bool(wf_re.search(rhs))
+            refs[name] = (set(ref_re.findall(rhs)) & nodes) - {name}
+        wf_dep = set(n for n in node_order if direct[n])
+        changed = True
+        while changed:
+            changed = False
+            for n in node_order:
+                if n not in wf_dep and (refs[n] & wf_dep):
+                    wf_dep.add(n)
+                    changed = True
+
+        preloop = StringIO()
+        inloop = StringIO()
+        for name in node_order:
+            (inloop if name in wf_dep else preloop).write(node_line[name])
+
+        # ---- numerator coupling name (shared by both output shapes) ----
+        numerator = self.routine.expr
+        if not 'Coup(1)' in self.routine.infostr:
+            coup_name = 'COUP'
+        else:
+            coup_name = '%s' % self.change_number_format(1)
+
+        if not self.offshell:
+            # ---- amplitude output: vertex(IOUT), one per combination ----
+            formatted = self.write_obj(numerator.get_rep([0]))
+            if coup_name == 'COUP':
+                if formatted.startswith(('+', '-')):
+                    inloop.write('    vertex(%s) = COUP*(%s)\n' % (self.out_counter, formatted))
+                else:
+                    inloop.write('    vertex(%s) = COUP*%s\n' % (self.out_counter, formatted))
+            else:
+                inloop.write('    vertex(%s) = %s\n' % (self.out_counter, formatted))
+        else:
+            # ---- denominator / coefficient (momentum-only -> before loop) ----
+            coeff = 'denom*'
+            if not aloha.complex_mass:
+                if self.routine.denominator:
+                    if 'P1N' not in self.tag:
+                        preloop.write('    denom = %(COUP)s/(%(denom)s)\n' % {
+                            'COUP': coup_name,
+                            'denom': self.write_obj(self.routine.denominator)})
+                else:
+                    preloop.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % {
+                        'i': self.outgoing, 'COUP': coup_name})
+            else:
+                if self.routine.denominator and 'P1N' not in self.tag:
+                    raise Exception('modify denominator are not compatible with complex mass scheme', self.tag)
+                if 'P1N' not in self.tag:
+                    preloop.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % {
+                        'i': self.outgoing, 'COUP': coup_name})
+            if 'P1N' not in self.tag:
+                self.declaration.add(('complex', 'denom'))
+                self.declaration.add(('list_double', 'P%s' % self.outgoing))
+            else:
+                coeff = '%(COUP)s*' % {'COUP': coup_name}
+
+            # ---- output wavefunction assignments (inside the loop) ----
+            to_order = {}
+            for ind in numerator.listindices():
+                formatted = self.write_obj(numerator.get_rep(ind))
+                if formatted.startswith(('+', '-')):
+                    if '*' in formatted:
+                        formatted = '(%s)*%s' % tuple(formatted.split('*', 1))
+                    else:
+                        if formatted.startswith('+'):
+                            formatted = formatted[1:]
+                        else:
+                            formatted = '(-1)*%s' % formatted[1:]
+                shift = 1 - self.momentum_size
+                to_order[self.pass_to_HELAS(ind)] = \
+                    '    %s %% W(%d, %s)= %s%s\n' % (self.outname,
+                        self.pass_to_HELAS(ind) + shift, self.out_counter,
+                        coeff, formatted)
+            for i in sorted(to_order):
+                inloop.write(to_order[i])
+
+        # ---- assemble: preloop, loop open, body, loop close, set %n ----
+        out = StringIO()
+        out.write(preloop.getvalue())
+        out.write('    %s = 0\n' % self.out_counter)
+        for pos in self.input_positions:
+            bound = '%s%d' % (self.particles[pos - 1], pos)
+            out.write('    do IH%d = 1, %s %% n\n' % (pos, bound))
+        out.write('    %s = %s + 1\n' % (self.out_counter, self.out_counter))
+        out.write('    if (.not. MASK(%s)) cycle\n' % self.out_counter)
+        out.write(inloop.getvalue())
+        for pos in reversed(self.input_positions):
+            out.write('    enddo\n')
+        if self.offshell:
+            # record how many wavefunctions were produced (amplitude output is a
+            # plain array and carries no %n).
+            out.write('    %s %% n = %s\n' % (self.outname, self.out_counter))
+
+        txt = out.getvalue()
+
+        # ---- drop TMP/FCT that ended up used only once (mirror base) ----
+        found = False
+        for name in fct_keys:
+            if txt.count(name) == 1:
+                del self.routine.fct[name]
+                found = True
+        for name in sorted(self.routine.contracted.keys()):
+            if txt.count(name) == 1:
+                del self.routine.contracted[name]
+                self.declaration.discard(('complex', name))
+                found = True
+        if found:
+            return self.define_expression()
+
+        return txt
+
+    def write_combined(self, lor_names, mode='self', offshell=None):
+        """H-mode combined routine (more than one coupling structure).
+
+        It calls each individual cartesian-product (H) routine and accumulates
+        their outputs element-wise over BOTH the Lorentz component and the
+        cartesian-product (combination) index.  The MASK argument is already
+        threaded into the per-call argument list (after the masses) by
+        define_argument_list, so the inner calls need no special handling; only
+        the local temporary allocation and the 2-D accumulation differ from the
+        scalar combined routine.
+        """
+        if offshell is None:
+            offshell = self.offshell
+        # The routine name and the inner-call addon must use the SAME tag order
+        # as the (sorted) single-routine names produced by get_routine_name and
+        # as the helas call writer, otherwise H combined with another tag (e.g.
+        # the 'M' flavor-coupling tag: FFV6_2HM vs FFV6_2MH) names mismatch.
+        sorted_tag = sorted(self.tag)
+        if any(t.startswith('P') for t in sorted_tag):
+            propa = [t for t in sorted_tag if t.startswith('P')][0]
+            sorted_tag.remove(propa)
+            sorted_tag.append(propa)
+        name = combine_name(self.routine.name, lor_names, offshell, sorted_tag)
+        self.name = name
+        text = StringIO()
+        routine = StringIO()
+        data = {}
+
+        new_couplings = ['COUP%s' % (i + 1) for i in range(len(lor_names) + 1)]
+        text.write(self.get_header_txt(name=name, couplings=new_couplings))
+
+        data['addon'] = ''.join(sorted_tag) + '_%s' % self.offshell
+        argument = [n for fmt, n in self.define_argument_list(new_couplings)]
+        index = argument.index(new_couplings[0])
+        data['before_coup'] = ','.join(argument[:index])
+        # everything after the couplings (masses + MASK) -> after_coup
+        data['after_coup'] = ','.join(argument[index + len(lor_names) + 1:])
+        if data['after_coup']:
+            data['after_coup'] = ',' + data['after_coup']
+
+        lor_list = (self.routine.name,) + lor_names
+        line = "    call %(name)s%(addon)s(%(before_coup)s,%(coup)s%(after_coup)s,%(out)s)\n"
+        prod = self.product_expr()
+
+        if self.offshell:
+            main = '%s%d' % (self.particles[self.outgoing - 1], self.outgoing)
+            comp = self.type_to_size[self.particles[self.outgoing - 1]] - 2
+            tmpname = '%stmp' % self.particles[self.outgoing - 1]
+            self.declaration.add(('list_complex', tmpname))  # type(aloha_H) local (static %W)
+        else:
+            main = 'vertex'
+            tmpname = 'amptmp'
+
+        for i, lname in enumerate(lor_list):
+            data['name'] = lname
+            prefix = 'M' if 'M' in self.tag else ''
+            data['coup'] = '%sCOUP%d' % (prefix, i + 1)
+            data['out'] = main if i == 0 else tmpname
+            routine.write(line % data)
+            if i:
+                if not self.offshell:
+                    routine.write('    do iqq = 1, %s\n' % prod)
+                    routine.write('        if (.not. MASK(iqq)) cycle\n')
+                    routine.write('        vertex(iqq) = vertex(iqq) + %s(iqq)\n' % tmpname)
+                    routine.write('    enddo\n')
+                    self.declaration.add(('int', 'iqq'))
+                else:
+                    routine.write('    do jqq = 1, %s %% n\n' % main)
+                    routine.write('        if (.not. MASK(jqq)) cycle\n')
+                    routine.write('    do iqq = 1, %d\n' % comp)
+                    routine.write('        %s %% W(iqq, jqq) = %s %% W(iqq, jqq) + %s %% W(iqq, jqq)\n'
+                                  % (main, main, tmpname))
+                    routine.write('    enddo\n    enddo\n')
+                    self.declaration.add(('int', 'iqq'))
+                    self.declaration.add(('int', 'jqq'))
+
+        self.declaration.discard(('complex', 'COUP'))
+        for nm in aloha_lib.KERNEL.reduced_expr2:
+            self.declaration.discard(('complex', nm))
+
+        decl = self.get_declaration_txt()
+        text.write(decl)
+        if not self.offshell:
+            # static complex scratch for the amplitude array, sized to the
+            # compile-time maximum MAXNCOMB_H from the aloha_object module.
+            text.write(' complex*16 %s(MAXNCOMB_H)\n' % tmpname)
+        text.write(routine.getvalue())
+        text.write(self.get_foot_txt(combine=True))
+
+        text = text.getvalue()
+        if self.out_path:
+            writer = self.writer(self.out_path, 'a')
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            commentstring += 'The process calculated in this file is: \n'
+            commentstring += self.routine.infostr + '\n'
+            writer.write_comments(commentstring)
+            writer.writelines(text)
+        return text
+
+
+class QP(object):
     """routines for writing out Fortran"""
     
     type2def = {}    
@@ -2934,7 +3295,9 @@ class WriterFactory(object):
             else:
                 return ALOHAWriterForFortranLoop(data, outputdir, options=options)
         if language == 'fortran':
-            if 'MP' in tags:
+            if 'H' in tags:
+                return ALOHAWriterForFortranH(data, outputdir, options=options)
+            elif 'MP' in tags:
                 return ALOHAWriterForFortranQP(data, outputdir, options=options)
             else:
                 return ALOHAWriterForFortran(data, outputdir, options=options)

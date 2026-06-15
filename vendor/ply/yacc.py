@@ -64,7 +64,6 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import absolute_import
-from six.moves import range
 __version__    = "3.3"
 __tabversion__ = "3.2"       # Table version
 
@@ -91,7 +90,7 @@ resultlimit = 40               # Size limit of results when running in debug mod
 pickle_protocol = 0            # Protocol to use when writing pickle files
 
 import re, types, sys, os.path
-from six import StringIO
+from io import StringIO
 
 # Compatibility function for python 2.6/3.0
 if sys.version_info[0] < 3:
@@ -1856,10 +1855,7 @@ class LRTable(object):
         return parsetab._lr_signature
 
     def read_pickle(self,filename):
-        try:
-            import six.moves.cPickle as pickle
-        except ImportError:
-            import pickle
+        import pickle
 
         in_f = open(filename,"rb")
 
@@ -2677,10 +2673,7 @@ del _lr_goto_items
     # -----------------------------------------------------------------------------
 
     def pickle_table(self,filename,signature=""):
-        try:
-            import six.moves.cPickle as pickle
-        except ImportError:
-            import pickle
+        import pickle
         outf = open(filename,"wb")
         pickle.dump(__tabversion__,outf,pickle_protocol)
         pickle.dump(self.lr_method,outf,pickle_protocol)

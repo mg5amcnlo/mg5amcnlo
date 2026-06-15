@@ -23,6 +23,18 @@ C###############################################################################
                  double precision :: P(0:3)
                  integer :: flv_index
               END TYPE ALOHA2D
+c             ALOHA_H carries a single momentum/flavor but an array of
+c             wavefunctions: W(lorentz_component, wavefunction_index).
+c             Used by the cartesian-product ALOHA routines (tag 'H').
+c             W is a fixed statically-allocated array (MAXWFSIZE_H/MAXNCOMB_H).
+              integer MAXWFSIZE_H, MAXNCOMB_H
+              parameter (MAXWFSIZE_H=16, MAXNCOMB_H=1024)
+              TYPE ALOHA_H
+                 double complex :: W(MAXWFSIZE_H, MAXNCOMB_H)
+                 double precision :: P(0:3)
+                 integer :: flv_index
+                 integer :: n
+              END TYPE ALOHA_H
        end module ALOHA_OBJECT
 
       subroutine ixxxxx(p, fmass, nhel, nsf ,flav,fi)
