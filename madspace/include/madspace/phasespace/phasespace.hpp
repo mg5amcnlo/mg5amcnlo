@@ -2,6 +2,7 @@
 
 #include "madspace/phasespace/base.hpp"
 #include "madspace/phasespace/chili.hpp"
+#include "madspace/phasespace/color_ordered_mapping.hpp"
 #include "madspace/phasespace/cuts.hpp"
 #include "madspace/phasespace/invariants.hpp"
 #include "madspace/phasespace/luminosity.hpp"
@@ -14,7 +15,7 @@ namespace madspace {
 
 class PhaseSpaceMapping : public Mapping {
 public:
-    enum TChannelMode { propagator, rambo, chili };
+    enum TChannelMode { propagator, rambo, chili, color_ordered };
 
     PhaseSpaceMapping(
         const Topology& topology,
@@ -35,9 +36,10 @@ public:
         const std::optional<Cuts>& cuts = std::nullopt
     );
 
-    std::size_t random_dim() const {
-        return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);
-    }
+    // std::size_t random_dim() const {
+    //     return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);
+    // }
+    std::size_t random_dim() const { return _n_random; }
     std::size_t particle_count() const {
         return _topology.outgoing_masses().size() + 2;
     }
@@ -61,8 +63,14 @@ private:
     double _sqrt_s_lab;
     bool _leptonic;
     bool _map_luminosity;
+    std::size_t _n_random;
     std::vector<Invariant> _s_invariants;
-    std::variant<TPropagatorMapping, FastRamboMapping, ChiliMapping, std::monostate>
+    std::variant<
+        TPropagatorMapping,
+        FastRamboMapping,
+        ChiliMapping,
+        ColorOrderedMapping,
+        std::monostate>
         _t_mapping;
     std::vector<std::variant<TwoBodyDecay, ThreeBodyDecay, FastRamboMapping>> _s_decays;
     nested_vector2<me_int_t> _permutations;

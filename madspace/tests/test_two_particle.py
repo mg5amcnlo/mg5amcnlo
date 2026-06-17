@@ -55,14 +55,14 @@ def mapping_and_args(request):
                 p0 = np.stack([point.m0, zeros, zeros, zeros], axis=1)
                 pa = np.stack([e0, zeros, zeros, e0], axis=1)
                 pb = np.stack([e0, zeros, zeros, -e0], axis=1)
-                return [point.r1, point.r2, point.m1, point.m2], [pa, pb], p0
+                return [point.r1, point.r2, point.m1, point.m2], [pa, pb, zeros, zeros], p0
 
         else:
 
             def make_args(point):
                 return (
                     [point.r1, point.r2, point.m1, point.m2],
-                    [point.pa, point.pb],
+                    [point.pa, point.pb, zeros, zeros],
                     point.p0,
                 )
 

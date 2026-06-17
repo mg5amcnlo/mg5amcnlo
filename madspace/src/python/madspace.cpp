@@ -483,18 +483,28 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TPropagatorMapping, Mapping>(m, "TPropagatorMapping")
         .def(
-            py::init<std::vector<std::size_t>, double>(),
+            py::init<std::vector<std::size_t>, double, std::vector<double>>(),
             py::arg("integration_order"),
-            py::arg("invariant_power") = 0.
+            py::arg("invariant_power") = 0.,
+            py::arg("pt_min") = std::vector<double>{}
         )
         .def("random_dim", &TPropagatorMapping::random_dim);
 
     py::classh<ColorOrderedMapping, Mapping>(m, "ColorOrderedMapping")
         .def(
-            py::init<std::vector<std::size_t>, double, double>(),
+            py::init<
+                std::vector<std::size_t>,
+                double,
+                double,
+                std::vector<double>,
+                std::vector<std::vector<double>>,
+                std::vector<std::vector<double>>>(),
             py::arg("color_order"),
             py::arg("t_invariant_power") = 0.,
-            py::arg("s_invariant_power") = 0.
+            py::arg("s_invariant_power") = 0.,
+            py::arg("pt_min") = std::vector<double>{},
+            py::arg("sqrt_s_min") = std::vector<std::vector<double>>{},
+            py::arg("dr_min") = std::vector<std::vector<double>>{}
         )
         .def("random_dim", &ColorOrderedMapping::random_dim);
 
@@ -685,6 +695,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             {"propagator", PhaseSpaceMapping::propagator},
             {"rambo", PhaseSpaceMapping::rambo},
             {"chili", PhaseSpaceMapping::chili},
+            {"color_ordered", PhaseSpaceMapping::color_ordered},
         }
     );
     psmap

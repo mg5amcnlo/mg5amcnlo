@@ -28,7 +28,10 @@ private:
 class TwoToTwoParticleScattering : public Mapping {
 public:
     TwoToTwoParticleScattering(
-        bool com, double invariant_power = 0, double mass = 0, double width = 0
+        bool com,
+        double invariant_power = 0,
+        double mass = 0,
+        double width = 0
     );
 
 private:

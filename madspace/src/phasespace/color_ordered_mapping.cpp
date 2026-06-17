@@ -1,6 +1,7 @@
 #include "madspace/phasespace/color_ordered_mapping.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 #include "madspace/util.hpp"
@@ -66,12 +67,50 @@ std::size_t n_block_randoms_for_set_size(std::size_t k) {
     return 2 + 3 * (k - 2);
 }
 
+double mat_at(
+    const std::vector<std::vector<double>>& m, std::size_t i, std::size_t j
+) {
+    if (i < m.size() && j < m[i].size()) return m[i][j];
+    return 0.0;
+}
+
 }  // namespace
+
+
+double ColorOrderedMapping::pt2(std::size_t i) const {
+    double p = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
+    return p * p;
+}
+
+double ColorOrderedMapping::cut_floor(const std::vector<std::size_t>& subset) const {
+    if (subset.size() < 2) return 0.0;
+    // Sum over distinct pairs of the per-pair invariant-mass floor implied by
+    // sqrt_s_min and the pt/dR cut, exactly as gen23's setup_PS_cuts.
+    double cut = 0.0;
+    for (std::size_t a = 0; a + 1 < subset.size(); ++a) {
+        for (std::size_t b = a + 1; b < subset.size(); ++b) {
+            std::size_t i = subset[a], j = subset[b];
+            double ss = mat_at(_sqrt_s_min, i, j);
+            double pti = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
+            double ptj = (j < _pt_min.size()) ? _pt_min[j] : 0.0;
+            double dr = mat_at(_dr_min, i, j);
+            cut += std::max(ss * ss, 2.0 * pti * ptj * (1.0 - std::cos(dr)));
+        }
+    }
+    double npart = static_cast<double>(subset.size());
+    // gen23 uses npart/(npart-1) for the full final state and 1/2 for proper
+    // subsets.
+    double scaling = (subset.size() == _n_out) ? npart / (npart - 1.0) : 0.5;
+    return cut * scaling;
+}
 
 ColorOrderedMapping::ColorOrderedMapping(
     const std::vector<std::size_t>& color_order,
     double t_invariant_power,
-    double s_invariant_power
+    double s_invariant_power,
+    const std::vector<double>& pt_min,
+    const std::vector<std::vector<double>>& sqrt_s_min,
+    const std::vector<std::vector<double>>& dr_min
 ) :
     Mapping(
         "ColorOrderedMapping",
@@ -118,6 +157,9 @@ ColorOrderedMapping::ColorOrderedMapping(
         }()
     ),
     _n_out(color_order.size() - 2),
+    _pt_min(pt_min),
+    _sqrt_s_min(sqrt_s_min),
+    _dr_min(dr_min),
     _com_scattering(true, t_invariant_power),
     _lab_scattering(false, t_invariant_power),
     _two_to_three(t_invariant_power, 0., 0., s_invariant_power, 0., 0.),
@@ -224,6 +266,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         Value mass_sum_set2 = masses_of(_set2);
         if (_set1.size() >= 2) {
             auto s_min = fb.square(mass_sum_set1);
+            // Cut floor: composite invariant mass must clear the cut-implied
+            // minimum (gen23 invm_min) in addition to the kinematic minimum.
+            double floor1 = cut_floor(_set1);
+            if (floor1 > 0.0) s_min = fb.max(s_min, Value(floor1));
             auto s_max = fb.square(fb.sub(e_cm, mass_sum_set2));
             auto res = _uniform_invariant.build_forward(fb, {next_random()}, {s_min, s_max});
             m_set1 = fb.sqrt(res["invariant"]);
@@ -233,6 +279,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         }
         if (_set2.size() >= 2) {
             auto s_min = fb.square(mass_sum_set2);
+            double floor2 = cut_floor(_set2);
+            if (floor2 > 0.0) s_min = fb.max(s_min, Value(floor2));
             auto s_max = fb.square(fb.sub(e_cm, m_set1));
             auto res = _uniform_invariant.build_forward(fb, {next_random()}, {s_min, s_max});
             m_set2 = fb.sqrt(res["invariant"]);
@@ -243,7 +291,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         auto central = _com_scattering.build_forward(
             fb,
             {next_random(), next_random(), m_set1, m_set2},
-            {pa, pb}
+            {pa, pb, Value(0.), Value(0.)}
         );
         P_set1 = central.at(0);
         P_set2 = central.at(1);
@@ -275,6 +323,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 m_min = fb.add(m_min, m_out.at(s[i]));
             }
             auto s_min = fb.square(m_min);
+            // Cut floor for the rest system {s[j+1], ..., s[k-1]}.
+            std::vector<std::size_t> rest_sub(s.begin() + j + 1, s.end());
+            double fl = cut_floor(rest_sub);
+            if (fl > 0.0) s_min = fb.max(s_min, Value(fl));
             auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s[j])));
             auto r = _uniform_invariant.build_forward(fb, {next_random()}, {s_min, s_max});
             Value m_rest = fb.sqrt(r["invariant"]);
@@ -318,10 +370,14 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             // has im1 subtracted from our previous step, so we pass pb = R_a + im1
             // to recover p_12 = R_b + R_a inside the kernel.
             if (first) {
+                // First peel is a 2->2 LAB block. With cuts enabled the |t|
+                // floor for the peeled particle (pt^2) is appended as the
+                // t_min_cut condition (t_max_cut = 0 = no upper |t| cut).
+                ValueVec cond{R_b, R_a, Value(pt2(s[j])), Value(0.0)};
                 auto ks = _lab_scattering.build_forward(
                     fb,
                     {next_random(), next_random(), m_rest, m_peel},
-                    {R_b, R_a}
+                    cond
                 );
                 Value peeled = ks.at(1);
                 p_out[s[j]] = peeled;
@@ -331,10 +387,21 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 first = false;
             } else {
                 Value pb_for_block = fb.add(R_a, im1);
+                // 2->3 block. Cuts: t_min_cut = pt^2 of the peeled particle;
+                // s23_min_cut = adjacent-pair floor for {s[j-1], s[j]} (the
+                // (2,3) system inside the kernel is peeled + previous peeled).
+                ValueVec cond{
+                    R_b,
+                    pb_for_block,
+                    im1,
+                    Value(pt2(s[j])),
+                    Value(0.0),
+                    Value(cut_floor({s[j - 1], s[j]})),
+                    Value(0.0)};
                 auto ks = _two_to_three.build_forward(
                     fb,
                     {next_random(), next_random(), next_random(), m_rest, m_peel},
-                    {R_b, pb_for_block, im1}
+                    cond
                 );
                 Value peeled = ks.at(1);
                 p_out[s[j]] = peeled;
@@ -454,6 +521,8 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         Value mass_sum_set2 = masses_of(_set2);
         if (_set1.size() >= 2) {
             auto s_min = fb.square(mass_sum_set1);
+            double floor1 = cut_floor(_set1);
+            if (floor1 > 0.0) s_min = fb.max(s_min, Value(floor1));
             auto s_max = fb.square(fb.sub(e_cm, mass_sum_set2));
             auto m2_set1 = invariants.at(idx_m2_set1);
             auto res = _uniform_invariant.build_inverse(fb, {m2_set1}, {s_min, s_max});
@@ -465,6 +534,8 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         }
         if (_set2.size() >= 2) {
             auto s_min = fb.square(mass_sum_set2);
+            double floor2 = cut_floor(_set2);
+            if (floor2 > 0.0) s_min = fb.max(s_min, Value(floor2));
             auto s_max = fb.square(fb.sub(e_cm, m_set1));
             auto m2_set2 = invariants.at(idx_m2_set2);
             auto res = _uniform_invariant.build_inverse(fb, {m2_set2}, {s_min, s_max});
@@ -500,7 +571,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         auto central = _com_scattering.build_inverse(
             fb,
             {P_set1, P_set2},
-            {pa, pb}
+            {pa, pb, Value(0.), Value(0.)}
         );
         random_out.push_back(central.at(0));
         random_out.push_back(central.at(1));
@@ -521,6 +592,10 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                 m_min = fb.add(m_min, m_out.at(s[i]));
             }
             auto s_min = fb.square(m_min);
+            // Identical cut floor to the forward pass.
+            std::vector<std::size_t> rest_sub(s.begin() + j + 1, s.end());
+            double fl = cut_floor(rest_sub);
+            if (fl > 0.0) s_min = fb.max(s_min, Value(fl));
             auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s[j])));
             auto m2 = invariants.at(idx_start + j);
             auto res = _uniform_invariant.build_inverse(fb, {m2}, {s_min, s_max});
@@ -551,10 +626,12 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             // p1_out = R_a + R_b - peeled.
             Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
             if (first) {
+                // Same cut conditions as the forward 2->2 block.
+                ValueVec cond{R_b, R_a, Value(pt2(s[j])), Value(0.0)};
                 auto rs = _lab_scattering.build_inverse(
                     fb,
                     {p1_out, peeled},
-                    {R_b, R_a}
+                    cond
                 );
                 random_out.push_back(rs.at(0));
                 random_out.push_back(rs.at(1));
@@ -565,10 +642,19 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                 // internally subtracts p_3 = im1, so we pass pb = R_a + im1
                 // to get p_12 = R_b + R_a (the remaining-to-produce system).
                 Value pb_for_block = fb.add(R_a, im1);
+                // Same cut conditions as the forward 2->3 block.
+                ValueVec cond{
+                    R_b,
+                    pb_for_block,
+                    im1,
+                    Value(pt2(s[j])),
+                    Value(0.0),
+                    Value(cut_floor({s[j - 1], s[j]})),
+                    Value(0.0)};
                 auto rs = _two_to_three.build_inverse(
                     fb,
                     {p1_out, peeled},
-                    {R_b, pb_for_block, im1}
+                    cond
                 );
                 random_out.push_back(rs.at(0));
                 random_out.push_back(rs.at(1));

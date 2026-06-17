@@ -81,6 +81,27 @@ nested_vector2<me_int_t> invert_permutations(nested_vector2<me_int_t> perms_in) 
 
 } // namespace
 
+namespace {
+// Total random-number count for PhaseSpaceMapping. Used for BOTH the declared
+// input tensor shape and random_dim() so they can never disagree (a mismatch
+// makes unstack() drop slots and the t-channel args loop overrun the buffer).
+std::size_t ps_random_dim(
+    const Topology& topology, bool leptonic, PhaseSpaceMapping::TChannelMode mode
+) {
+    std::size_t base = 3 * topology.outgoing_masses().size() - (leptonic ? 4 : 2);
+    // ColorOrderedMapping (single t-channel chain) consumes a different number of
+    // randoms than the nominal 3*t_propagator_count - 1 assumed by the closed form.
+    // Swap that contribution for its single-chain random_dim (4*n_t_out - 6 with
+    // n_t_out = t_propagator_count + 1). Kept in sync with ColorOrderedMapping via
+    // a runtime guard in the constructor body.
+    if (mode == PhaseSpaceMapping::color_ordered && topology.t_propagator_count() >= 1) {
+        std::size_t k = topology.t_propagator_count();
+        base = base - (3 * k - 1) + (4 * (k + 1) - 6);
+    }
+    return base;
+}
+} // namespace
+
 PhaseSpaceMapping::PhaseSpaceMapping(
     const Topology& topology,
     double cm_energy,
@@ -93,9 +114,7 @@ PhaseSpaceMapping::PhaseSpaceMapping(
     Mapping(
         "PhaseSpaceMapping",
         {{"random",
-          batch_float_array(
-              3 * topology.outgoing_masses().size() - (leptonic ? 4 : 2)
-          )}},
+          batch_float_array(ps_random_dim(topology, leptonic, t_channel_mode))}},
         {{"momenta", batch_four_vec_array(topology.outgoing_masses().size() + 2)},
          {"x1", batch_float},
          {"x2", batch_float}},
@@ -178,23 +197,59 @@ PhaseSpaceMapping::PhaseSpaceMapping(
     double s_hat_min =
         std::max(total_mass * total_mass, sqrt_s_hat_min * sqrt_s_hat_min);
     if (has_t_channel) {
+        // Per-child pt_min (and eta_max), ordered to match the mass conditions
+        // handed to the t-channel mapping (leaf children carry their pt cut;
+        // composite children were reset to 0 above).
+        std::vector<double> eta_max, pt_min;
+        for (std::size_t index : topology.decays().at(0).child_indices) {
+            auto& info = decay_info.at(index);
+            eta_max.push_back(info.eta_max);
+            pt_min.push_back(info.pt_min);
+        }
         if (t_channel_mode == PhaseSpaceMapping::chili) {
             // |y| <= |eta|, so we can pass y_max = eta_max
-            std::vector<double> eta_max, pt_min;
-            for (std::size_t index : topology.decays().at(0).child_indices) {
-                auto& info = decay_info.at(index);
-                eta_max.push_back(info.eta_max);
-                pt_min.push_back(info.pt_min);
-            }
             _t_mapping =
                 ChiliMapping(_topology.t_propagator_count() + 1, eta_max, pt_min);
+        } else if (t_channel_mode == PhaseSpaceMapping::color_ordered) {
+            std::size_t n_t_out = topology.decays().at(0).child_indices.size();
+            std::vector<std::size_t> chain_order;
+            chain_order.reserve(n_t_out + 2);
+            chain_order.push_back(0);
+            for (std::size_t i = 0; i < n_t_out; ++i) {
+                chain_order.push_back(i + 2);
+            }
+            chain_order.push_back(1);
+            _t_mapping = ColorOrderedMapping(
+                chain_order, invariant_power, invariant_power, pt_min
+            );
         } else if (t_channel_mode == PhaseSpaceMapping::propagator ||
                    topology.t_propagator_count() < 2) {
-            _t_mapping =
-                TPropagatorMapping(_topology.t_integration_order(), invariant_power);
+            _t_mapping = TPropagatorMapping(
+                _topology.t_integration_order(), invariant_power, pt_min
+            );
         } else if (t_channel_mode == PhaseSpaceMapping::rambo) {
             // TODO: add massless special case
             _t_mapping = FastRamboMapping(_topology.t_propagator_count() + 1, false);
+        }
+    }
+
+    // Random-number budget: identical formula to the declared input shape.
+    _n_random = ps_random_dim(_topology, _leptonic, t_channel_mode);
+    // Guard against the single-chain formula drifting from ColorOrderedMapping's
+    // actual random_dim() (e.g. if the chain order or its parametrisation changes).
+    // Fail loudly here rather than overrunning the random buffer at runtime.
+    if (has_t_channel && std::holds_alternative<ColorOrderedMapping>(_t_mapping)) {
+        std::size_t k = _topology.t_propagator_count();
+        std::size_t formula_co_rd = 4 * (k + 1) - 6;
+        std::size_t actual_co_rd =
+            std::get<ColorOrderedMapping>(_t_mapping).random_dim();
+        if (formula_co_rd != actual_co_rd) {
+            throw std::runtime_error(std::format(
+                "PhaseSpaceMapping: color_ordered random_dim mismatch "
+                "(formula {} vs actual {})",
+                formula_co_rd,
+                actual_co_rd
+            ));
         }
     }
 

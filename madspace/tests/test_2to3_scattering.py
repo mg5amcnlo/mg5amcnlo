@@ -94,7 +94,7 @@ def fixed_input_points(rng, request):
     map_22 = ms.TwoToTwoParticleScattering(com=False)
     r1 = rng.random(N)
     r2 = rng.random(N)
-    p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pA, pB])
+    p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pA, pB, ZEROS, ZEROS])
 
     # Randoms for the 2->3 mapper
     r_choice = rng.random(N)
@@ -147,7 +147,7 @@ def input_points(rng, request):
     map_22 = ms.TwoToTwoParticleScattering(com=com)
     r1 = rng.random(N)
     r2 = rng.random(N)
-    p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pa, pb])
+    p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pa, pb, ZEROS, ZEROS])
 
     # Randoms for the 2->3 mapper
     r_choice = rng.random(N)  # decide branch (emitter choice)
@@ -175,7 +175,7 @@ def test_momentum_conservation(input_points):
         input_points.m1,
         input_points.m2,
     ]
-    conditions = [input_points.pa, input_points.pb, input_points.p3]
+    conditions = [input_points.pa, input_points.pb, input_points.p3, ZEROS, ZEROS, ZEROS, ZEROS]
 
     m3 = mass(input_points.p3)
     p1, p2, det = mapping.map_forward(inputs, conditions)
@@ -195,7 +195,7 @@ def test_inverse(input_points):
         input_points.m1,
         input_points.m2,
     ]
-    conditions = [input_points.pa, input_points.pb, input_points.p3]
+    conditions = [input_points.pa, input_points.pb, input_points.p3, ZEROS, ZEROS, ZEROS, ZEROS]
 
     p1, p2, det = mapping.map_forward(inputs, conditions)
     *inv_inputs, inv_det = mapping.map_inverse([p1, p2], conditions)
@@ -219,7 +219,7 @@ def test_on_shell_masses(input_points):
         input_points.m1,
         input_points.m2,
     ]
-    conditions = [input_points.pa, input_points.pb, input_points.p3]
+    conditions = [input_points.pa, input_points.pb, input_points.p3, ZEROS, ZEROS, ZEROS, ZEROS]
 
     p1, p2, det = mapping.map_forward(inputs, conditions)
 
@@ -248,8 +248,8 @@ def test_phase_space_compare(rng, input_points):
         input_points.m1,
         input_points.m2,
     ]
-    conditions = [input_points.pa, input_points.pb, input_points.p3]
-    conditions22 = [input_points.pa, input_points.pb - input_points.p3]
+    conditions = [input_points.pa, input_points.pb, input_points.p3, ZEROS, ZEROS, ZEROS, ZEROS]
+    conditions22 = [input_points.pa, input_points.pb - input_points.p3, ZEROS, ZEROS]
 
     p1, p2, det23 = mapping23.map_forward(inputs, conditions)
     p1s, p2s, det22 = mapping22.map_forward(inputs22, conditions22)
@@ -270,7 +270,7 @@ def test_phase_space_volume(fixed_input_points):
         fixed_input_points.m2,
     ]
 
-    conditions = [fixed_input_points.pa, fixed_input_points.pb, fixed_input_points.p3]
+    conditions = [fixed_input_points.pa, fixed_input_points.pb, fixed_input_points.p3, ZEROS, ZEROS, ZEROS, ZEROS]
 
     p1, p2, det = mapping23.map_forward(inputs, conditions)
 

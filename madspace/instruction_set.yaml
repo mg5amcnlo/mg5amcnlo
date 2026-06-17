@@ -1242,6 +1242,65 @@ t_inv_value_and_min_max:
       type: [float]
       desc:
 
+t_inv_min_max_cut:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc:
+    - name: pb
+      type: [float, 4]
+      desc:
+    - name: m1
+      type: [float]
+      desc:
+    - name: m2
+      type: [float]
+      desc:
+    - name: t_min_cut
+      type: [float]
+      desc: lower bound on |t| (e.g. pt^2 of the emitted particle); 0 = no cut
+    - name: t_max_cut
+      type: [float]
+      desc: upper bound on |t|; 0 = no cut
+  outputs:
+    - name: t_min
+      type: [float]
+      desc:
+    - name: t_max
+      type: [float]
+      desc:
+
+t_inv_value_and_min_max_cut:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc:
+    - name: pb
+      type: [float, 4]
+      desc:
+    - name: p1
+      type: [float, 4]
+      desc:
+    - name: p2
+      type: [float, 4]
+      desc:
+    - name: t_min_cut
+      type: [float]
+      desc: lower bound on |t|; 0 = no cut
+    - name: t_max_cut
+      type: [float]
+      desc: upper bound on |t|; 0 = no cut
+  outputs:
+    - name: t_abs
+      type: [float]
+      desc:
+    - name: t_min
+      type: [float]
+      desc:
+    - name: t_max
+      type: [float]
+      desc:
+
 t1_inv_min_max_doublet:
   inputs:
     - name: pa
@@ -1396,6 +1455,77 @@ s23_value_and_min_max:
     - name: p2
       type: [float, 4]
       desc:
+  outputs:
+    - name: s_23
+      type: [float]
+      desc:
+    - name: s23_min
+      type: [float]
+      desc:
+    - name: s23_max
+      type: [float]
+      desc:
+
+s23_min_max_cut:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc:
+    - name: pb
+      type: [float, 4]
+      desc:
+    - name: p3
+      type: [float, 4]
+      desc:
+    - name: t1_abs
+      type: [float]
+      desc:
+    - name: m1
+      type: [float]
+      desc:
+    - name: m2
+      type: [float]
+      desc:
+    - name: s23_min_cut
+      type: [float]
+      desc: minimum invariant mass^2 of the (2,3) system (gen23 invm_min); 0 = no cut
+    - name: s23_max_cut
+      type: [float]
+      desc: maximum invariant mass^2 of the (2,3) system; 0 = no cut
+  outputs:
+    - name: s23_min
+      type: [float]
+      desc:
+    - name: s23_max
+      type: [float]
+      desc:
+
+s23_value_and_min_max_cut:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc:
+    - name: pb
+      type: [float, 4]
+      desc:
+    - name: p3
+      type: [float, 4]
+      desc:
+    - name: t1_abs
+      type: [float]
+      desc:
+    - name: p1
+      type: [float, 4]
+      desc:
+    - name: p2
+      type: [float, 4]
+      desc:
+    - name: s23_min_cut
+      type: [float]
+      desc: minimum invariant mass^2 of the (2,3) system; 0 = no cut
+    - name: s23_max_cut
+      type: [float]
+      desc: maximum invariant mass^2 of the (2,3) system; 0 = no cut
   outputs:
     - name: s_23
       type: [float]

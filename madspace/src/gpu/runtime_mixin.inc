@@ -209,251 +209,263 @@ case 68:
     batch_foreach<tensor_foreach<kernel_t_inv_value_and_min_max<GpuTypes>, 4, 3, 1>, 4, 3>(instr, locals, device);
     break;
 case 69:
-    batch_foreach<tensor_foreach<kernel_t1_inv_min_max_doublet<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t_inv_min_max_cut<GpuTypes>, 6, 2, 1>, 6, 2>(instr, locals, device);
     break;
 case 70:
-    batch_foreach<tensor_foreach<kernel_t1_inv_value_and_min_max_doublet<GpuTypes>, 5, 3, 1>, 5, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t_inv_value_and_min_max_cut<GpuTypes>, 6, 3, 1>, 6, 3>(instr, locals, device);
     break;
 case 71:
-    batch_foreach<tensor_foreach<kernel_t2_inv_min_max_doublet<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t1_inv_min_max_doublet<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
     break;
 case 72:
-    batch_foreach<tensor_foreach<kernel_t2_inv_value_and_min_max_doublet<GpuTypes>, 6, 3, 1>, 6, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t1_inv_value_and_min_max_doublet<GpuTypes>, 5, 3, 1>, 5, 3>(instr, locals, device);
     break;
 case 73:
-    batch_foreach<tensor_foreach<kernel_s23_min_max<GpuTypes>, 6, 2, 1>, 6, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t2_inv_min_max_doublet<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 74:
-    batch_foreach<tensor_foreach<kernel_s23_value_and_min_max<GpuTypes>, 6, 3, 1>, 6, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t2_inv_value_and_min_max_doublet<GpuTypes>, 6, 3, 1>, 6, 3>(instr, locals, device);
     break;
 case 75:
-    batch_foreach<tensor_foreach<kernel_invariants_from_momenta<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_s23_min_max<GpuTypes>, 6, 2, 1>, 6, 2>(instr, locals, device);
     break;
 case 76:
-    batch_foreach<tensor_foreach<kernel_sde2_channel_weights<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_s23_value_and_min_max<GpuTypes>, 6, 3, 1>, 6, 3>(instr, locals, device);
     break;
 case 77:
-    batch_foreach<tensor_foreach<kernel_subchannel_weights<GpuTypes>, 6, 1, 1>, 6, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_s23_min_max_cut<GpuTypes>, 8, 2, 1>, 8, 2>(instr, locals, device);
     break;
 case 78:
-    batch_foreach<tensor_foreach<kernel_apply_subchannel_weights<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_s23_value_and_min_max_cut<GpuTypes>, 8, 3, 1>, 8, 3>(instr, locals, device);
     break;
 case 79:
-    batch_foreach<tensor_foreach<kernel_pt_eta_phi_x<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_invariants_from_momenta<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 80:
-    batch_foreach<tensor_foreach<kernel_mirror_momenta<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_sde2_channel_weights<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
     break;
 case 81:
-    batch_foreach<tensor_foreach<kernel_momenta_to_x1x2<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_subchannel_weights<GpuTypes>, 6, 1, 1>, 6, 1>(instr, locals, device);
     break;
 case 82:
-    batch_foreach<tensor_foreach<kernel_uniform_invariant<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_apply_subchannel_weights<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
     break;
 case 83:
-    batch_foreach<tensor_foreach<kernel_uniform_invariant_inverse<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_pt_eta_phi_x<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 84:
-    batch_foreach<tensor_foreach<kernel_breit_wigner_invariant<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_mirror_momenta<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 85:
-    batch_foreach<tensor_foreach<kernel_breit_wigner_invariant_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_momenta_to_x1x2<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 86:
-    batch_foreach<tensor_foreach<kernel_stable_invariant<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_uniform_invariant<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
     break;
 case 87:
-    batch_foreach<tensor_foreach<kernel_stable_invariant_inverse<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_uniform_invariant_inverse<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
     break;
 case 88:
-    batch_foreach<tensor_foreach<kernel_stable_invariant_nu<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_breit_wigner_invariant<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 89:
-    batch_foreach<tensor_foreach<kernel_stable_invariant_nu_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_breit_wigner_invariant_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 90:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massless<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_stable_invariant<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
     break;
 case 91:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massless_inverse<GpuTypes>, 2, 3, 1>, 2, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_stable_invariant_inverse<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
     break;
 case 92:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massless_com<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_stable_invariant_nu<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 93:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massive<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_stable_invariant_nu_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 94:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massive_inverse<GpuTypes>, 3, 3, 1>, 3, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massless<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
     break;
 case 95:
-    batch_foreach<tensor_foreach<kernel_fast_rambo_massive_com<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massless_inverse<GpuTypes>, 2, 3, 1>, 2, 3>(instr, locals, device);
     break;
 case 96:
-    batch_foreach<tensor_foreach<kernel_cut_unphysical<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massless_com<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 97:
-    batch_foreach<tensor_foreach<kernel_cut_one<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massive<GpuTypes>, 4, 2, 1>, 4, 2>(instr, locals, device);
     break;
 case 98:
-    batch_foreach<tensor_foreach<kernel_cut_all<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massive_inverse<GpuTypes>, 3, 3, 1>, 3, 3>(instr, locals, device);
     break;
 case 99:
-    batch_foreach<tensor_foreach<kernel_cut_any<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_fast_rambo_massive_com<GpuTypes>, 3, 2, 1>, 3, 2>(instr, locals, device);
     break;
 case 100:
-    batch_foreach<tensor_foreach<kernel_scale_transverse_energy<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_cut_unphysical<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
     break;
 case 101:
-    batch_foreach<tensor_foreach<kernel_scale_transverse_mass<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_cut_one<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 102:
-    batch_foreach<tensor_foreach<kernel_scale_half_transverse_mass<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_cut_all<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 103:
-    batch_foreach<tensor_foreach<kernel_scale_partonic_energy<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_cut_any<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 104:
-    batch_foreach<tensor_foreach<kernel_chili_forward<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_scale_transverse_energy<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 105:
-    batch_foreach<tensor_foreach<kernel_chili_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_scale_transverse_mass<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 106:
-    op_matrix_element(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_scale_half_transverse_mass<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 107:
-    batch_foreach<tensor_foreach<kernel_collect_channel_weights<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_scale_partonic_energy<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 108:
-    batch_foreach<tensor_foreach<kernel_interpolate_pdf<GpuTypes>, 6, 1, 1>, 6, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_chili_forward<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 109:
-    batch_foreach<tensor_foreach<kernel_interpolate_alpha_s<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_chili_inverse<GpuTypes>, 5, 2, 1>, 5, 2>(instr, locals, device);
     break;
 case 110:
-    op_matmul(instr, locals, device);
+    op_matrix_element(instr, locals, device);
     break;
 case 111:
-    batch_foreach<tensor_foreach_dynamic<kernel_relu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_collect_channel_weights<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 112:
-    batch_foreach<tensor_foreach_dynamic<kernel_leaky_relu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_interpolate_pdf<GpuTypes>, 6, 1, 1>, 6, 1>(instr, locals, device);
     break;
 case 113:
-    batch_foreach<tensor_foreach_dynamic<kernel_elu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_interpolate_alpha_s<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 114:
-    batch_foreach<tensor_foreach_dynamic<kernel_gelu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    op_matmul(instr, locals, device);
     break;
 case 115:
-    batch_foreach<tensor_foreach_dynamic<kernel_sigmoid<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_relu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 116:
-    batch_foreach<tensor_foreach_dynamic<kernel_softplus<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_leaky_relu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 117:
-    op_rqs_reshape(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_elu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 118:
-    batch_foreach<tensor_foreach<kernel_rqs_find_bin<GpuTypes>, 4, 1, 2>, 4, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_gelu<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 119:
-    batch_foreach<tensor_foreach<kernel_rqs_forward<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_sigmoid<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 120:
-    batch_foreach<tensor_foreach<kernel_rqs_inverse<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_softplus<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 121:
-    batch_foreach<tensor_foreach_dynamic<kernel_softmax<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
+    op_rqs_reshape(instr, locals, device);
     break;
 case 122:
-    batch_foreach<tensor_foreach<kernel_softmax_prior<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_rqs_find_bin<GpuTypes>, 4, 1, 2>, 4, 1>(instr, locals, device);
     break;
 case 123:
-    batch_foreach<tensor_foreach<kernel_sample_discrete<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_rqs_forward<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
     break;
 case 124:
-    batch_foreach<tensor_foreach<kernel_sample_discrete_inverse<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_rqs_inverse<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
     break;
 case 125:
-    batch_foreach<tensor_foreach<kernel_sample_discrete_probs<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach_dynamic<kernel_softmax<GpuTypes>, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 126:
-    batch_foreach<tensor_foreach<kernel_sample_discrete_probs_inverse<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_softmax_prior<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 127:
-    op_discrete_histogram(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_sample_discrete<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 128:
-    batch_foreach<tensor_foreach<kernel_permute_momenta<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_sample_discrete_inverse<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 129:
-    batch_foreach<tensor_foreach<kernel_gather<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_sample_discrete_probs<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 130:
-    batch_foreach<tensor_foreach<kernel_gather_int<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_sample_discrete_probs_inverse<GpuTypes>, 2, 2, 1>, 2, 2>(instr, locals, device);
     break;
 case 131:
-    batch_foreach<tensor_foreach<kernel_select_int<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    op_discrete_histogram(instr, locals, device);
     break;
 case 132:
-    batch_foreach<tensor_foreach<kernel_select<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_permute_momenta<GpuTypes>, 3, 1, 1>, 3, 1>(instr, locals, device);
     break;
 case 133:
-    batch_foreach<tensor_foreach<kernel_select_vector<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_gather<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 134:
-    batch_foreach<tensor_foreach<kernel_argsort<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_gather_int<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 135:
-    op_quantile(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_select_int<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 136:
-    batch_foreach<tensor_foreach<kernel_one_hot<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_select<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 137:
-    batch_foreach<tensor_foreach<kernel_madnis_abs_weight<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_select_vector<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 138:
-    batch_foreach<tensor_foreach<kernel_madnis_softclip<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_argsort<GpuTypes>, 1, 1, 1>, 1, 1>(instr, locals, device);
     break;
 case 139:
-    batch_foreach<tensor_foreach<kernel_madnis_variance<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
+    op_quantile(instr, locals, device);
     break;
 case 140:
-    batch_foreach<tensor_foreach<kernel_madnis_single_channel_variance<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_one_hot<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 141:
-    batch_foreach<tensor_foreach<kernel_madnis_multi_channel_variance<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_madnis_abs_weight<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 142:
-    op_nonzero(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_madnis_softclip<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
     break;
 case 143:
-    op_batch_gather(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_madnis_variance<GpuTypes>, 4, 1, 1>, 4, 1>(instr, locals, device);
     break;
 case 144:
-    op_batch_scatter(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_madnis_single_channel_variance<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 145:
-    op_random(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_madnis_multi_channel_variance<GpuTypes>, 2, 1, 1>, 2, 1>(instr, locals, device);
     break;
 case 146:
-    op_random_int(instr, locals, device);
+    op_nonzero(instr, locals, device);
     break;
 case 147:
-    op_unweight(instr, locals, device);
+    op_batch_gather(instr, locals, device);
     break;
 case 148:
-    batch_foreach<tensor_foreach<kernel_vegas_forward<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    op_batch_scatter(instr, locals, device);
     break;
 case 149:
-    batch_foreach<tensor_foreach<kernel_vegas_inverse<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    op_random(instr, locals, device);
     break;
 case 150:
-    op_vegas_histogram(instr, locals, device);
+    op_random_int(instr, locals, device);
     break;
 case 151:
+    op_unweight(instr, locals, device);
+    break;
+case 152:
+    batch_foreach<tensor_foreach<kernel_vegas_forward<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    break;
+case 153:
+    batch_foreach<tensor_foreach<kernel_vegas_inverse<GpuTypes>, 2, 2, 2>, 2, 2>(instr, locals, device);
+    break;
+case 154:
+    op_vegas_histogram(instr, locals, device);
+    break;
+case 155:
     op_histogram(instr, locals, device);
     break;

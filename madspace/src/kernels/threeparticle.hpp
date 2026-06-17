@@ -563,6 +563,95 @@ KERNELSPEC void kernel_s23_value_and_min_max(
     s_23 = lsquare<T>(p_23);
 }
 
+// Clamp the s23 invariant-mass range against cut-derived bounds. s23_min_cut
+// is the minimum invariant mass^2 of the (2,3) system implied by the pt /
+// sqrt_s_min / dR cuts (gen23's invm_min); s23_max_cut is an optional upper
+// bound (gen23's invm_max).
+template <typename T>
+KERNELSPEC void kernel_s23_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p3,
+    FIn<T, 0> t1_abs,
+    FIn<T, 0> m1,
+    FIn<T, 0> m2,
+    FIn<T, 0> s23_min_cut,
+    FIn<T, 0> s23_max_cut,
+    FOut<T, 0> s23_min,
+    FOut<T, 0> s23_max
+) {
+    FourMom<T> p_tot, p_12, pt2;
+    for (int i = 0; i < 4; ++i) {
+        p_tot[i] = pa[i] + pb[i];
+        p_12[i] = pa[i] + pb[i] - p3[i];
+        pt2[i] = pb[i] - p3[i];
+    }
+    auto m0_2 = lsquare<T>(p_tot);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m3_2 = lsquare<T>(load_mom<T>(p3));
+    auto s12 = lsquare<T>(p_12);
+    auto m1_2 = m1 * m1;
+    auto m2_2 = m2 * m2;
+    auto t2 = lsquare<T>(pt2);
+
+    auto s23_out = s23_min_max<T>(m0_2, ma_2, mb_2, m1_2, m2_2, m3_2, t1_abs, t2, s12);
+    auto smn = s23_out.first;
+    auto smx = s23_out.second;
+
+    FVal<T> smin_cut(s23_min_cut), smax_cut(s23_max_cut);
+    smn = where(smin_cut > 0., max(smn, smin_cut), smn);
+    smx = where(smax_cut > 0., min(smx, smax_cut), smx);
+    smx = where(smx > smn, smx, smn + EPS);
+
+    s23_min = smn;
+    s23_max = smx;
+}
+
+template <typename T>
+KERNELSPEC void kernel_s23_value_and_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p3,
+    FIn<T, 0> t1_abs,
+    FIn<T, 1> p1,
+    FIn<T, 1> p2,
+    FIn<T, 0> s23_min_cut,
+    FIn<T, 0> s23_max_cut,
+    FOut<T, 0> s_23,
+    FOut<T, 0> s23_min,
+    FOut<T, 0> s23_max
+) {
+    FourMom<T> p_tot, p_12, pt2, p_23;
+    for (int i = 0; i < 4; ++i) {
+        p_tot[i] = pa[i] + pb[i];
+        p_12[i] = p1[i] + p2[i];
+        pt2[i] = pb[i] - p3[i];
+        p_23[i] = p2[i] + p3[i];
+    }
+    auto m0_2 = lsquare<T>(p_tot);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m3_2 = lsquare<T>(load_mom<T>(p3));
+    auto s12 = lsquare<T>(p_12);
+    auto m1_2 = lsquare<T>(load_mom<T>(p1));
+    auto m2_2 = lsquare<T>(load_mom<T>(p2));
+    auto t2 = lsquare<T>(pt2);
+
+    auto s23_out = s23_min_max<T>(m0_2, ma_2, mb_2, m1_2, m2_2, m3_2, t1_abs, t2, s12);
+    auto smn = s23_out.first;
+    auto smx = s23_out.second;
+
+    FVal<T> smin_cut(s23_min_cut), smax_cut(s23_max_cut);
+    smn = where(smin_cut > 0., max(smn, smin_cut), smn);
+    smx = where(smax_cut > 0., min(smx, smax_cut), smx);
+    smx = where(smx > smn, smx, smn + EPS);
+
+    s23_min = smn;
+    s23_max = smx;
+    s_23 = lsquare<T>(p_23);
+}
+
 template <typename T>
 KERNELSPEC void kernel_two_to_three_particle_scattering(
     IIn<T, 0> phi_index,

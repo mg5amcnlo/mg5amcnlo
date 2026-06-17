@@ -4,8 +4,15 @@
 
 using namespace madspace;
 
+double TPropagatorMapping::pt2(std::size_t i) const {
+    double p = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
+    return p * p;
+}
+
 TPropagatorMapping::TPropagatorMapping(
-    const std::vector<std::size_t>& integration_order, double invariant_power
+    const std::vector<std::size_t>& integration_order,
+    double invariant_power,
+    const std::vector<double>& pt_min
 ) :
     Mapping(
         "TPropagatorMapping",
@@ -32,6 +39,7 @@ TPropagatorMapping::TPropagatorMapping(
         }()
     ),
     _integration_order(integration_order),
+    _pt_min(pt_min),
     _com_scattering(true, invariant_power),
     _lab_scattering(false, invariant_power) {
     std::size_t next_index_low = 0;
@@ -111,7 +119,8 @@ Mapping::Result TPropagatorMapping::build_forward_impl(
         auto ks = scattering.build_forward(
             fb,
             {next_random(), next_random(), mass_sum, mass},
-            {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest}
+            {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest,
+             Value(pt2(sampled_index)), Value(0.)}
         );
         k_rest = ks.at(0);
         auto k = ks.at(1);
@@ -193,7 +202,10 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         auto k = inputs.at(sampled_index + 2);
         k_rest = fb.sub(k_rest, k);
         auto rs = scattering.build_inverse(
-            fb, {k_rest, k}, {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest}
+            fb,
+            {k_rest, k},
+            {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest,
+             Value(pt2(sampled_index)), Value(0.)}
         );
         random_out.push_back(rs.at(0));
         random_out.push_back(rs.at(1));

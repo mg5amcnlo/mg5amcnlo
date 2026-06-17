@@ -488,6 +488,82 @@ KERNELSPEC void kernel_t_inv_value_and_min_max(
     t_abs = -t_temp;
 }
 
+// Clamp the |t| range against cut-derived bounds. Both kernels return the
+// absolute (positive) t invariant, so a pt cut on the emitted particle is a
+// *lower* bound on |t| (t_min_cut), and any topology max is an upper bound
+// (t_max_cut).
+template <typename T>
+KERNELSPEC void kernel_t_inv_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 0> m1,
+    FIn<T, 0> m2,
+    FIn<T, 0> t_min_cut,
+    FIn<T, 0> t_max_cut,
+    FOut<T, 0> t_min,
+    FOut<T, 0> t_max
+) {
+    FourMom<T> p_tot;
+    for (int i = 0; i < 4; ++i) {
+        p_tot[i] = pa[i] + pb[i];
+    }
+    auto s = lsquare<T>(p_tot);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m1_2 = m1 * m1;
+    auto m2_2 = m2 * m2;
+    auto t_min_max = t_inv_min_max<T>(s, ma_2, mb_2, m1_2, m2_2);
+    auto tmn = t_min_max.first;
+    auto tmx = t_min_max.second;
+
+    FVal<T> tmin_cut(t_min_cut), tmax_cut(t_max_cut);
+    tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
+    tmx = where(tmax_cut > 0., min(tmx, tmax_cut), tmx);
+    // Keep the range non-degenerate; an empty range collapses to ~zero width
+    // and is suppressed by the sampling Jacobian downstream.
+    tmx = where(tmx > tmn, tmx, tmn + EPS);
+
+    t_min = tmn;
+    t_max = tmx;
+}
+
+template <typename T>
+KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p1,
+    FIn<T, 1> p2,
+    FIn<T, 0> t_min_cut,
+    FIn<T, 0> t_max_cut,
+    FOut<T, 0> t_abs,
+    FOut<T, 0> t_min,
+    FOut<T, 0> t_max
+) {
+    FourMom<T> pa1, p_tot;
+    for (int i = 0; i < 4; ++i) {
+        pa1[i] = pa[i] - p1[i];
+        p_tot[i] = pa[i] + pb[i];
+    }
+    auto s = lsquare<T>(p_tot);
+    auto t_temp = lsquare<T>(pa1);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m1_2 = lsquare<T>(load_mom<T>(p1));
+    auto m2_2 = lsquare<T>(load_mom<T>(p2));
+    auto t_min_max = t_inv_min_max<T>(s, ma_2, mb_2, m1_2, m2_2);
+    auto tmn = t_min_max.first;
+    auto tmx = t_min_max.second;
+
+    FVal<T> tmin_cut(t_min_cut), tmax_cut(t_max_cut);
+    tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
+    tmx = where(tmax_cut > 0., min(tmx, tmax_cut), tmx);
+    tmx = where(tmx > tmn, tmx, tmn + EPS);
+
+    t_min = tmn;
+    t_max = tmx;
+    t_abs = -t_temp;
+}
+
 template <typename T>
 KERNELSPEC void kernel_invariants_from_momenta(
     FIn<T, 2> p_ext, FIn<T, 2> factors, FOut<T, 1> invariants
