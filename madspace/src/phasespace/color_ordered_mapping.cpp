@@ -63,8 +63,14 @@ std::size_t n_intermediate_masses_for_set_size(std::size_t k) {
 
 std::size_t n_block_randoms_for_set_size(std::size_t k) {
     if (k <= 1) return 0;
-    // First peel: 2->2 LAB (2 randoms); each subsequent peel: 2->3 (3 randoms).
-    return 2 + 3 * (k - 2);
+    // Continuous randoms only. First peel: 2->2 LAB (2 randoms). Each subsequent
+    // peel: 2->3 (2 randoms).
+    return 2 + 2 * (k - 2);
+}
+
+std::size_t n_discrete_for_set_size(std::size_t k) {
+    // One discrete two-solution choice per 2->3 peel (all peels after the first).
+    return (k >= 2) ? (k - 2) : 0;
 }
 
 double mat_at(
@@ -85,12 +91,12 @@ double ColorOrderedMapping::pt2(std::size_t i) const {
 double ColorOrderedMapping::cut_floor(const std::vector<std::size_t>& subset) const {
     if (subset.size() < 2) return 0.0;
     // Sum over distinct pairs of the per-pair invariant-mass floor implied by
-    // sqrt_s_min and the pt/dR cut, exactly as gen23's setup_PS_cuts.
+    // m_inv_min and the pt/dR cut, exactly as gen23's setup_PS_cuts.
     double cut = 0.0;
     for (std::size_t a = 0; a + 1 < subset.size(); ++a) {
         for (std::size_t b = a + 1; b < subset.size(); ++b) {
             std::size_t i = subset[a], j = subset[b];
-            double ss = mat_at(_sqrt_s_min, i, j);
+            double ss = mat_at(_m_inv_min, i, j);
             double pti = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
             double ptj = (j < _pt_min.size()) ? _pt_min[j] : 0.0;
             double dr = mat_at(_dr_min, i, j);
@@ -109,7 +115,7 @@ ColorOrderedMapping::ColorOrderedMapping(
     double t_invariant_power,
     double s_invariant_power,
     const std::vector<double>& pt_min,
-    const std::vector<std::vector<double>>& sqrt_s_min,
+    const std::vector<std::vector<double>>& m_inv_min,
     const std::vector<std::vector<double>>& dr_min
 ) :
     Mapping(
@@ -133,9 +139,16 @@ ColorOrderedMapping::ColorOrderedMapping(
               + n_block_randoms_for_set_size(s2.size());
             std::size_t total = n_set_masses + n_intermediate_masses
                               + n_central + n_walk;
+            std::size_t n_discrete =
+                n_discrete_for_set_size(s1.size()) + n_discrete_for_set_size(s2.size());
             NamedVector<Type> input_types;
             for (std::size_t i = 0; i < total; ++i) {
                 input_types.push_back(std::format("random{}", i), batch_float);
+            }
+            // Opt-in discrete channel: one int per 2->3 peel (the two-solution
+            // choice), appended after the continuous randoms.
+            for (std::size_t j = 0; j < n_discrete; ++j) {
+                input_types.push_back(std::format("discrete{}", j), batch_int);
             }
             return input_types;
         }(),
@@ -158,7 +171,7 @@ ColorOrderedMapping::ColorOrderedMapping(
     ),
     _n_out(color_order.size() - 2),
     _pt_min(pt_min),
-    _sqrt_s_min(sqrt_s_min),
+    _m_inv_min(m_inv_min),
     _dr_min(dr_min),
     _com_scattering(true, t_invariant_power),
     _lab_scattering(false, t_invariant_power),
@@ -180,6 +193,8 @@ ColorOrderedMapping::ColorOrderedMapping(
         n_block_randoms_for_set_size(s1.size())
       + n_block_randoms_for_set_size(s2.size());
     _random_dim = n_set_masses + n_intermediate_masses + n_central + n_walk;
+    _discrete_dim =
+        n_discrete_for_set_size(s1.size()) + n_discrete_for_set_size(s2.size());
 }
 
 Mapping::Result ColorOrderedMapping::build_forward_impl(
@@ -191,6 +206,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
     ValueVec m_out(conditions.begin() + 1, conditions.end());
     auto r = inputs.begin();
     auto next_random = [&]() { return *(r++); };
+    auto r_disc = inputs.begin() + _random_dim;
+    auto next_discrete = [&]() { return *(r_disc++); };
     ValueVec dets;
 
     // Phase 1a + Phase 2: set composite masses and the central block.
@@ -291,7 +308,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         auto central = _com_scattering.build_forward(
             fb,
             {next_random(), next_random(), m_set1, m_set2},
-            {pa, pb, Value(0.), Value(0.)}
+            {pa, pb, Value(0.)}
         );
         P_set1 = central.at(0);
         P_set2 = central.at(1);
@@ -371,9 +388,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             // to recover p_12 = R_b + R_a inside the kernel.
             if (first) {
                 // First peel is a 2->2 LAB block. With cuts enabled the |t|
-                // floor for the peeled particle (pt^2) is appended as the
-                // t_min_cut condition (t_max_cut = 0 = no upper |t| cut).
-                ValueVec cond{R_b, R_a, Value(pt2(s[j])), Value(0.0)};
+                // floor for the peeled particle (pt^2)
+                ValueVec cond{R_b, R_a, Value(pt2(s[j]))};
                 auto ks = _lab_scattering.build_forward(
                     fb,
                     {next_random(), next_random(), m_rest, m_peel},
@@ -395,12 +411,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                     pb_for_block,
                     im1,
                     Value(pt2(s[j])),
-                    Value(0.0),
-                    Value(cut_floor({s[j - 1], s[j]})),
-                    Value(0.0)};
+                    Value(cut_floor({s[j - 1], s[j]}))};
                 auto ks = _two_to_three.build_forward(
                     fb,
-                    {next_random(), next_random(), next_random(), m_rest, m_peel},
+                    {next_discrete(), next_random(), next_random(), m_rest, m_peel},
                     cond
                 );
                 Value peeled = ks.at(1);
@@ -437,6 +451,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
     Value e_cm = conditions.at(0);
     ValueVec m_out(conditions.begin() + 1, conditions.end());
     ValueVec random_out;
+    ValueVec discrete_out;
     ValueVec dets;
 
     Value pa = inputs.at(0);
@@ -571,7 +586,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         auto central = _com_scattering.build_inverse(
             fb,
             {P_set1, P_set2},
-            {pa, pb, Value(0.), Value(0.)}
+            {pa, pb, Value(0.)}
         );
         random_out.push_back(central.at(0));
         random_out.push_back(central.at(1));
@@ -627,7 +642,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
             if (first) {
                 // Same cut conditions as the forward 2->2 block.
-                ValueVec cond{R_b, R_a, Value(pt2(s[j])), Value(0.0)};
+                ValueVec cond{R_b, R_a, Value(pt2(s[j]))};
                 auto rs = _lab_scattering.build_inverse(
                     fb,
                     {p1_out, peeled},
@@ -648,15 +663,15 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                     pb_for_block,
                     im1,
                     Value(pt2(s[j])),
-                    Value(0.0),
-                    Value(cut_floor({s[j - 1], s[j]})),
-                    Value(0.0)};
+                    Value(cut_floor({s[j - 1], s[j]}))};
                 auto rs = _two_to_three.build_inverse(
                     fb,
                     {p1_out, peeled},
                     cond
                 );
-                random_out.push_back(rs.at(0));
+                // rs.at(0) is the discrete choice index (int) emitted by the
+                // 2->3 inverse; rs.at(1), rs.at(2) are the continuous r_s23, r_t1.
+                discrete_out.push_back(rs.at(0));
                 random_out.push_back(rs.at(1));
                 random_out.push_back(rs.at(2));
                 dets.push_back(rs["det"]);
@@ -669,5 +684,9 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
     if (!_set1.empty()) walk_inverse(_set1, P_set1, R_b_for_set1);
     if (!_set2.empty()) walk_inverse(_set2, P_set2, R_b_for_set2);
 
-    return {{input_types().keys(), random_out}, fb.product(dets)};
+    // input_types is [random0..random_{N-1}, discrete0..discrete_{M-1}], so the
+    // returned values must be the continuous randoms followed by the discrete ints.
+    ValueVec all_out = random_out;
+    all_out.insert(all_out.end(), discrete_out.begin(), discrete_out.end());
+    return {{input_types().keys(), all_out}, fb.product(dets)};
 }

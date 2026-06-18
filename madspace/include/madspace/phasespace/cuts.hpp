@@ -23,6 +23,8 @@ public:
     double sqrt_s_min() const;
     std::vector<double> eta_max() const;
     std::vector<double> pt_min() const;
+    std::vector<std::vector<double>> m_inv_min() const;
+    std::vector<std::vector<double>> dr_min() const;
 
 private:
     NamedVector<Value> build_function_impl(

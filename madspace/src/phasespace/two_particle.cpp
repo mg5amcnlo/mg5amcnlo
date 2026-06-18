@@ -80,8 +80,7 @@ TwoToTwoParticleScattering::TwoToTwoParticleScattering(
         {{"momentum1", batch_four_vec}, {"momentum2", batch_four_vec}},
         {{"momentum_in1", batch_four_vec},
          {"momentum_in2", batch_four_vec},
-         {"t_min_cut", batch_float},
-         {"t_max_cut", batch_float}}
+         {"t_min_cut", batch_float}}
     ),
     _com(com),
     _invariant(invariant_power, mass, width) {}
@@ -94,8 +93,8 @@ Mapping::Result TwoToTwoParticleScattering::build_forward_impl(
     auto r_phi = inputs.at(0), r_inv = inputs.at(1), m1 = inputs.at(2),
          m2 = inputs.at(3);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
-    auto t_min_cut = conditions.at(2), t_max_cut = conditions.at(3);
-    auto [t_min, t_max] = fb.t_inv_min_max_cut(p_in1, p_in2, m1, m2, t_min_cut, t_max_cut);
+    auto t_min_cut = conditions.at(2);
+    auto [t_min, t_max] = fb.t_inv_min_max_cut(p_in1, p_in2, m1, m2, t_min_cut);
     auto t_result = _invariant.build_forward(fb, {r_inv}, {t_min, t_max});
     auto [p1, p2, det_scatter] = _com
         ? fb.two_to_two_particle_scattering_com(
@@ -116,9 +115,9 @@ Mapping::Result TwoToTwoParticleScattering::build_inverse_impl(
 ) const {
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
-    auto t_min_cut = conditions.at(2), t_max_cut = conditions.at(3);
+    auto t_min_cut = conditions.at(2);
     auto [t_abs, t_min, t_max] = fb.t_inv_value_and_min_max_cut(
-        p_in1, p_in2, p1, p2, t_min_cut, t_max_cut  
+        p_in1, p_in2, p1, p2, t_min_cut
     );
     auto t_result = _invariant.build_inverse(fb, {t_abs}, {t_min, t_max});
     auto [r_phi, m1, m2, det_scatter] = _com

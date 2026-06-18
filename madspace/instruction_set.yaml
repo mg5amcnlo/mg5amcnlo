@@ -1258,10 +1258,7 @@ t_inv_min_max_cut:
       desc:
     - name: t_min_cut
       type: [float]
-      desc: lower bound on |t| (e.g. pt^2 of the emitted particle); 0 = no cut
-    - name: t_max_cut
-      type: [float]
-      desc: upper bound on |t|; 0 = no cut
+      desc:
   outputs:
     - name: t_min
       type: [float]
@@ -1286,10 +1283,7 @@ t_inv_value_and_min_max_cut:
       desc:
     - name: t_min_cut
       type: [float]
-      desc: lower bound on |t|; 0 = no cut
-    - name: t_max_cut
-      type: [float]
-      desc: upper bound on |t|; 0 = no cut
+      desc:
   outputs:
     - name: t_abs
       type: [float]
@@ -1488,10 +1482,7 @@ s23_min_max_cut:
       desc:
     - name: s23_min_cut
       type: [float]
-      desc: minimum invariant mass^2 of the (2,3) system (gen23 invm_min); 0 = no cut
-    - name: s23_max_cut
-      type: [float]
-      desc: maximum invariant mass^2 of the (2,3) system; 0 = no cut
+      desc:
   outputs:
     - name: s23_min
       type: [float]
@@ -1522,10 +1513,7 @@ s23_value_and_min_max_cut:
       desc:
     - name: s23_min_cut
       type: [float]
-      desc: minimum invariant mass^2 of the (2,3) system; 0 = no cut
-    - name: s23_max_cut
-      type: [float]
-      desc: maximum invariant mass^2 of the (2,3) system; 0 = no cut
+      desc:
   outputs:
     - name: s_23
       type: [float]

@@ -99,7 +99,7 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
 ) :
     Mapping(
         "TwoToThreeParticleScattering",
-        {{"random_choice", batch_float},
+        {{"discrete_choice", batch_int},
          {"random_s23", batch_float},
          {"random_t1", batch_float},
          {"mass1", batch_float},
@@ -109,9 +109,7 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
          {"momentum_in2", batch_four_vec},
          {"momentum3", batch_four_vec},
          {"t_min_cut", batch_float},
-         {"t_max_cut", batch_float},
-         {"s23_min_cut", batch_float},
-         {"s23_max_cut", batch_float}}
+         {"s23_min_cut", batch_float}}
     ),
     _t_invariant(t_invariant_power, t_mass, t_width),
     _s_invariant(s_invariant_power, s_mass, s_width) {}
@@ -121,22 +119,20 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
     const NamedVector<Value>& inputs,
     const NamedVector<Value>& conditions
 ) const {
-    auto r_choice = inputs.at(0), r_s23 = inputs.at(1), r_t1 = inputs.at(2),
+    auto index_choice = inputs.at(0), r_s23 = inputs.at(1), r_t1 = inputs.at(2),
          m1 = inputs.at(3), m2 = inputs.at(4);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
-    auto t_min_cut = conditions.at(3), t_max_cut = conditions.at(4);
+    auto t_min_cut = conditions.at(3);
     auto [t1_min, t1_max] = fb.t_inv_min_max_cut(
-        p_a, fb.sub(p_b, p_3), m1, m2, t_min_cut, t_max_cut
+        p_a, fb.sub(p_b, p_3), m1, m2, t_min_cut
     );
     auto t_inv_result = _t_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
-    auto s23_min_cut = conditions.at(5), s23_max_cut = conditions.at(6);
+    auto s23_min_cut = conditions.at(4);
     auto [s23_min, s23_max] = fb.s23_min_max_cut(
-        p_a, p_b, p_3, t_inv_result["invariant"], m1, m2,
-        s23_min_cut, s23_max_cut
+        p_a, p_b, p_3, t_inv_result["invariant"], m1, m2, s23_min_cut
     );
     auto s23_inv_result = _s_invariant.build_forward(fb, {r_s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
-    auto [index_choice, index_det] = fb.sample_discrete(r_choice, 2);
     auto [p1, p2, det_scatter] = fb.two_to_three_particle_scattering(
         index_choice,
         p_a,
@@ -147,7 +143,13 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
         m1,
         m2
     );
-    auto det_scatter_23 = fb.mul(index_det, det_scatter);
+    // `index_choice` (a discrete 0/1 input) selects one of the 2 two-body
+    // solutions. The factor 2 is the solution multiplicity, i.e. the discrete
+    // sum this single branch stands in for under uniform discrete sampling.
+    // NOTE (MadNIS): for an adaptive discrete classifier that divides the
+    // weight by q_disc, drop this Value(2.) so the discrete measure is owned
+    // by the integrator and not double-counted.
+    auto det_scatter_23 = fb.mul(Value(2.), det_scatter);
     return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter_23)};
 }
 
@@ -158,23 +160,23 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
 ) const {
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
-    auto t_min_cut = conditions.at(3), t_max_cut = conditions.at(4);
+    auto t_min_cut = conditions.at(3);
     auto [t1_abs, t1_min, t1_max] = fb.t_inv_value_and_min_max_cut(
-        p_a, fb.sub(p_b, p_3), p1, p2, t_min_cut, t_max_cut
+        p_a, fb.sub(p_b, p_3), p1, p2, t_min_cut
     );
     auto t_inv_result = _t_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
-    auto s23_min_cut = conditions.at(5), s23_max_cut = conditions.at(6);
+    auto s23_min_cut = conditions.at(4);
     auto [s23, s23_min, s23_max] = fb.s23_value_and_min_max_cut(
-        p_a, p_b, p_3, t1_abs, p1, p2, s23_min_cut, s23_max_cut
+        p_a, p_b, p_3, t1_abs, p1, p2, s23_min_cut
     );
     auto s23_inv_result = _s_invariant.build_inverse(fb, {s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
     auto [m1, m2, index_choice, det_scatter] =
         fb.two_to_three_particle_scattering_inverse(p1, p2, p_3, p_a, p_b, t1_abs, s23);
-    auto [r_choice, index_det] = fb.sample_discrete_inverse(index_choice, 2);
-    auto det_scatter_23 = fb.mul(index_det, det_scatter);
+    // inverse of the forward solution-multiplicity factor (see forward note)
+    auto det_scatter_23 = fb.mul(Value(0.5), det_scatter);
     return {
-        {{"random_choice", r_choice},
+        {{"discrete_choice", index_choice},
          {"random_s23", s23_inv_result["random"]},
          {"random_t1", t_inv_result["random"]},
          {"mass1", m1},

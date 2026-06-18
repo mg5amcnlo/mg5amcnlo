@@ -19,7 +19,7 @@ public:
     // same indexing as the masses m_out and the entries of the color order
     // minus 2):
     //   * pt_min[i]        : minimum transverse momentum of outgoing particle i.
-    //   * sqrt_s_min[i][j] : minimum invariant mass of the pair (i, j).
+    //   * m_inv_min[i][j] : minimum invariant mass of the pair (i, j).
     //   * dr_min[i][j]     : minimum delta-R separation of the pair (i, j).
     // Passing any non-empty cut container enables cut-aware sampling. The cuts
     // are translated into invariant-space bounds exactly as in the Fortran
@@ -33,11 +33,12 @@ public:
         double t_invariant_power = 0.8,
         double s_invariant_power = 0.8,
         const std::vector<double>& pt_min = {},
-        const std::vector<std::vector<double>>& sqrt_s_min = {},
+        const std::vector<std::vector<double>>& m_inv_min = {},
         const std::vector<std::vector<double>>& dr_min = {}
     );
 
     std::size_t random_dim() const { return _random_dim; }
+    std::size_t discrete_dim() const override { return _discrete_dim; }
 
 private:
     Result build_forward_impl(
@@ -65,6 +66,10 @@ private:
     std::vector<std::size_t> _set2;
     std::size_t _n_out;
     std::size_t _random_dim;
+    // Number of discrete two-solution choices (one per 2->3 peel). These are
+    // supplied/recovered as a separate batch_int channel, not through the
+    // continuous random_dim() block (opt-in r_disc).
+    std::size_t _discrete_dim;
     // True iff exactly one of (set1, set2) has size 1 (and the other >= 2).
     // In that case the central block is DoubleT instead of 2->2.
     bool _use_double_t;
@@ -76,7 +81,7 @@ private:
 
     // Cut configuration (empty => all bounds resolve to 0 = no cut).
     std::vector<double> _pt_min;
-    std::vector<std::vector<double>> _sqrt_s_min;
+    std::vector<std::vector<double>> _m_inv_min;
     std::vector<std::vector<double>> _dr_min;
 
     Invariant _uniform_invariant;

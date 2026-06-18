@@ -36,6 +36,9 @@ public:
         double s_width = 0
     );
 
+    // one discrete input: which of the 2 two-body solutions to take
+    std::size_t discrete_dim() const override { return 1; }
+
 private:
     Result build_forward_impl(
         FunctionBuilder& fb,

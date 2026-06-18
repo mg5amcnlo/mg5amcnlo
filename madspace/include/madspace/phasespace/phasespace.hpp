@@ -24,7 +24,8 @@ public:
         double invariant_power = 0.8,
         TChannelMode t_channel_mode = propagator,
         const std::optional<Cuts>& cuts = std::nullopt,
-        const std::vector<std::vector<std::size_t>>& permutations = {}
+        const std::vector<std::vector<std::size_t>>& permutations = {},
+        const std::optional<std::vector<std::size_t>>& color_order = std::nullopt
     );
 
     PhaseSpaceMapping(
@@ -33,13 +34,12 @@ public:
         bool leptonic = false,
         double invariant_power = 0.8,
         TChannelMode mode = rambo,
-        const std::optional<Cuts>& cuts = std::nullopt
+        const std::optional<Cuts>& cuts = std::nullopt,
+        const std::optional<std::vector<std::size_t>>& color_order = std::nullopt
     );
 
-    // std::size_t random_dim() const {
-    //     return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);
-    // }
-    std::size_t random_dim() const { return _n_random; }
+    std::size_t random_dim() const { return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);}
+    std::size_t discrete_dim() const override { return _n_discrete; }
     std::size_t particle_count() const {
         return _topology.outgoing_masses().size() + 2;
     }
@@ -63,7 +63,7 @@ private:
     double _sqrt_s_lab;
     bool _leptonic;
     bool _map_luminosity;
-    std::size_t _n_random;
+    std::size_t _n_discrete;
     std::vector<Invariant> _s_invariants;
     std::variant<
         TPropagatorMapping,

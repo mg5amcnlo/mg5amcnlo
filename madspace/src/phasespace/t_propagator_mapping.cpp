@@ -120,7 +120,7 @@ Mapping::Result TPropagatorMapping::build_forward_impl(
             fb,
             {next_random(), next_random(), mass_sum, mass},
             {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest,
-             Value(pt2(sampled_index)), Value(0.)}
+             Value(pt2(sampled_index))}
         );
         k_rest = ks.at(0);
         auto k = ks.at(1);
@@ -205,7 +205,7 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
             fb,
             {k_rest, k},
             {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest,
-             Value(pt2(sampled_index)), Value(0.)}
+             Value(pt2(sampled_index))}
         );
         random_out.push_back(rs.at(0));
         random_out.push_back(rs.at(1));

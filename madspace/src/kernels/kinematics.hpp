@@ -490,8 +490,7 @@ KERNELSPEC void kernel_t_inv_value_and_min_max(
 
 // Clamp the |t| range against cut-derived bounds. Both kernels return the
 // absolute (positive) t invariant, so a pt cut on the emitted particle is a
-// *lower* bound on |t| (t_min_cut), and any topology max is an upper bound
-// (t_max_cut).
+// *lower* bound on |t| (t_min_cut).
 template <typename T>
 KERNELSPEC void kernel_t_inv_min_max_cut(
     FIn<T, 1> pa,
@@ -499,7 +498,6 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     FIn<T, 0> m1,
     FIn<T, 0> m2,
     FIn<T, 0> t_min_cut,
-    FIn<T, 0> t_max_cut,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
 ) {
@@ -516,9 +514,8 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
-    FVal<T> tmin_cut(t_min_cut), tmax_cut(t_max_cut);
+    FVal<T> tmin_cut(t_min_cut);
     tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
-    tmx = where(tmax_cut > 0., min(tmx, tmax_cut), tmx);
     // Keep the range non-degenerate; an empty range collapses to ~zero width
     // and is suppressed by the sampling Jacobian downstream.
     tmx = where(tmx > tmn, tmx, tmn + EPS);
@@ -534,7 +531,6 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     FIn<T, 1> p1,
     FIn<T, 1> p2,
     FIn<T, 0> t_min_cut,
-    FIn<T, 0> t_max_cut,
     FOut<T, 0> t_abs,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
@@ -554,9 +550,8 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
-    FVal<T> tmin_cut(t_min_cut), tmax_cut(t_max_cut);
+    FVal<T> tmin_cut(t_min_cut);
     tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
-    tmx = where(tmax_cut > 0., min(tmx, tmax_cut), tmx);
     tmx = where(tmx > tmn, tmx, tmn + EPS);
 
     t_min = tmn;

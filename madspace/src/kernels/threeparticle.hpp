@@ -563,10 +563,9 @@ KERNELSPEC void kernel_s23_value_and_min_max(
     s_23 = lsquare<T>(p_23);
 }
 
-// Clamp the s23 invariant-mass range against cut-derived bounds. s23_min_cut
-// is the minimum invariant mass^2 of the (2,3) system implied by the pt /
-// sqrt_s_min / dR cuts (gen23's invm_min); s23_max_cut is an optional upper
-// bound (gen23's invm_max).
+// Clamp the s23 invariant-mass range against the cut-derived lower bound.
+// s23_min_cut is the minimum invariant mass^2 of the (2,3) system implied by
+// the pt / m_inv_min / dR cuts (gen23's invm_min).
 template <typename T>
 KERNELSPEC void kernel_s23_min_max_cut(
     FIn<T, 1> pa,
@@ -576,7 +575,6 @@ KERNELSPEC void kernel_s23_min_max_cut(
     FIn<T, 0> m1,
     FIn<T, 0> m2,
     FIn<T, 0> s23_min_cut,
-    FIn<T, 0> s23_max_cut,
     FOut<T, 0> s23_min,
     FOut<T, 0> s23_max
 ) {
@@ -599,9 +597,8 @@ KERNELSPEC void kernel_s23_min_max_cut(
     auto smn = s23_out.first;
     auto smx = s23_out.second;
 
-    FVal<T> smin_cut(s23_min_cut), smax_cut(s23_max_cut);
+    FVal<T> smin_cut(s23_min_cut);
     smn = where(smin_cut > 0., max(smn, smin_cut), smn);
-    smx = where(smax_cut > 0., min(smx, smax_cut), smx);
     smx = where(smx > smn, smx, smn + EPS);
 
     s23_min = smn;
@@ -617,7 +614,6 @@ KERNELSPEC void kernel_s23_value_and_min_max_cut(
     FIn<T, 1> p1,
     FIn<T, 1> p2,
     FIn<T, 0> s23_min_cut,
-    FIn<T, 0> s23_max_cut,
     FOut<T, 0> s_23,
     FOut<T, 0> s23_min,
     FOut<T, 0> s23_max
@@ -642,9 +638,8 @@ KERNELSPEC void kernel_s23_value_and_min_max_cut(
     auto smn = s23_out.first;
     auto smx = s23_out.second;
 
-    FVal<T> smin_cut(s23_min_cut), smax_cut(s23_max_cut);
+    FVal<T> smin_cut(s23_min_cut);
     smn = where(smin_cut > 0., max(smn, smin_cut), smn);
-    smx = where(smax_cut > 0., min(smx, smax_cut), smx);
     smx = where(smx > smn, smx, smn + EPS);
 
     s23_min = smn;
