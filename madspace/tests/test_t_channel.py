@@ -218,6 +218,9 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
     sample_count = 100000
     inputs, r, _ = _fwd_inputs(mapping, rng, sample_count)
     *rest, det = mapping.map_forward(inputs)
+    # det is the per-branch Jacobian; the solution multiplicity (2 per 2->3 peel)
+    # is owned externally now, so apply 2^discrete_dim to recover the full volume.
+    det = det * 2.0 ** mapping.discrete_dim()
     ps_volume = (
         (2 * math.pi) ** (4 - 3 * particle_count)
         * (math.pi / 2.0) ** (particle_count - 1)

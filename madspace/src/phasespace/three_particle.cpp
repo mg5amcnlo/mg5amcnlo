@@ -144,13 +144,13 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
         m2
     );
     // `index_choice` (a discrete 0/1 input) selects one of the 2 two-body
-    // solutions. The factor 2 is the solution multiplicity, i.e. the discrete
-    // sum this single branch stands in for under uniform discrete sampling.
-    // NOTE (MadNIS): for an adaptive discrete classifier that divides the
-    // weight by q_disc, drop this Value(2.) so the discrete measure is owned
-    // by the integrator and not double-counted.
-    auto det_scatter_23 = fb.mul(Value(2.), det_scatter);
-    return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter_23)};
+    // solutions; the det returned here is the per-branch Jacobian ONLY.
+    // The solution multiplicity (factor 2 per 2->3 peel, i.e. 2^discrete_dim
+    // overall) is intentionally NOT applied here -- it is owned by the caller:
+    //   - uniform discrete sampling: multiply the weight by 2^discrete_dim;
+    //   - adaptive discrete classifier (MadNIS q_disc): apply no factor.
+    // This keeps the discrete measure out of madspace and avoids double-counting.
+    return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter)};
 }
 
 Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
@@ -173,14 +173,14 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
     auto [m1, m2, index_choice, det_scatter] =
         fb.two_to_three_particle_scattering_inverse(p1, p2, p_3, p_a, p_b, t1_abs, s23);
-    // inverse of the forward solution-multiplicity factor (see forward note)
-    auto det_scatter_23 = fb.mul(Value(0.5), det_scatter);
+    // per-branch Jacobian only; the solution multiplicity is owned externally
+    // (see forward note), so no compensating 0.5 here.
     return {
         {{"discrete_choice", index_choice},
          {"random_s23", s23_inv_result["random"]},
          {"random_t1", t_inv_result["random"]},
          {"mass1", m1},
          {"mass2", m2}},
-        fb.mul(det_inv, det_scatter_23)
+        fb.mul(det_inv, det_scatter)
     };
 }
