@@ -41,7 +41,7 @@ C     integer    n_max_cg
 C     
 C     LOCAL
 C     
-      INTEGER I,J,K
+      INTEGER I,J,K,L
 C     four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER MATELEM_ARRAY_DIM
@@ -53,7 +53,7 @@ C     sqrt(s)= center of mass energy
       INTEGER RETURNCODE, UNITS, TENS, HUNDREDS
       INTEGER NSQUAREDSO_LOOP
       REAL*8 , ALLOCATABLE :: PREC_FOUND(:)
-
+      INTEGER NB_INTER
       LOGICAL INIT
       DATA INIT/.TRUE./
       COMMON/INITCHECKSA/INIT
@@ -74,6 +74,13 @@ C     EXTERNAL
 C     
       REAL*8 DOT
       EXTERNAL DOT
+
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER, ALLOCATABLE :: POS(:)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER, ALLOCATABLE :: ALLOW_HEL(:)
+      DOUBLE COMPLEX, ALLOCATABLE :: INTER(:)
+      INTEGER SOL
 
 C     
 C     BEGIN CODE
@@ -220,6 +227,45 @@ C
 C       
 C       write the information on the four momenta 
 C       
+
+C       YOU CAN EDIT THOSE NUMBERS
+        N_CHANGING =1
+        N_COMB=2
+
+        ALLOCATE( POS(N_CHANGING))
+        ALLOCATE( ALLOW_HEL(N_CHANGING*N_COMB))
+        ALLOCATE(INTER(N_COMB*(N_COMB+1)/2))
+
+C       THIS IS PROCESS SPECIFIC -> need to be tuned... 
+        NHEL(1) = 1
+        NHEL(2) = -1
+        NHEL(3) = 1
+        NHEL(4) = -1
+        ALLOW_HEL(1) = 1
+        ALLOW_HEL(2) = -1
+        POS(1) = 3
+
+        CALL ML5_0_GET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL,
+     $    N_COMB, INTER)
+
+        NB_INTER=0
+        DO I=1, N_COMB
+          DO J = I, N_COMB
+            NB_INTER = NB_INTER + 1
+            DO L=1, N_CHANGING
+              WRITE (*,*) 'particle', POS(K), 'has helicity',
+     $          ALLOW_HEL((I-1)*N_CHANGING+K), ALLOW_HEL((J-1)
+     $         *N_CHANGING+K)
+            ENDDO
+            WRITE(*,*) 'value is ',NB_INTER , INTER(NB_INTER)
+          ENDDO
+        ENDDO
+
+
+
+        DEALLOCATE (POS)
+        DEALLOCATE(ALLOW_HEL)
+        DEALLOCATE(INTER)
         IF (K.EQ.NPSPOINTS) THEN
           WRITE (*,*)
           WRITE (*,*) ' Phase space point:'

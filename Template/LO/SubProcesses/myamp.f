@@ -3,6 +3,7 @@
 c*****************************************************************************
 c     Approximates matrix element by propagators
 c*****************************************************************************
+          use model_object
       implicit none
 c
 c     Constants
@@ -208,6 +209,7 @@ c         write(*,*) 'final cut_bw: ',nbw,lbw(nbw),xmass,onshell,OnBW(i),cut_bw
 c*****************************************************************************
 c     Attempts to determine peaks for this configuration
 c*****************************************************************************
+          use model_object
       implicit none
 c
 c     Constants

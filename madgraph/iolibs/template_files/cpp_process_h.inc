@@ -11,6 +11,7 @@
 %(include_for_complex)s
 
 #include "Parameters_%(model_name)s.h"
+#include "HelAmps_%(model_name)s.h"
 
 using namespace std;
 

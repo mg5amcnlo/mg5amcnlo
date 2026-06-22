@@ -130,6 +130,7 @@ class Banner(dict):
       'scalesfunctionalform':'',
       'montecarlomasses':'',
       'initrwgt':'',
+      'MGDensity':'',
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
       'pythia8':'pythia8_card.dat',
@@ -298,19 +299,21 @@ class Banner(dict):
     ############################################################################
     #  WRITE BANNER
     ############################################################################
-    def check_pid(self, pid2label):
+    def check_pid(self, pid2label, forbidden_pids=None):
         """special routine removing width/mass of particles not present in the model
         This is usefull in case of loop model card, when we want to use the non
         loop model."""
         
         if not hasattr(self, 'param_card'):
             self.charge_card('slha')
+
+        forbidden_pids = set(forbidden_pids or [])
             
         for tag in ['mass', 'decay']:
             block = self.param_card.get(tag)
-            for data in block:
+            for data in list(block):
                 pid = data.lhacode[0]
-                if pid not in list(pid2label.keys()): 
+                if pid not in list(pid2label.keys()) or pid in forbidden_pids:
                     block.remove((pid,))
 
     def get_lha_strategy(self):
@@ -1094,6 +1097,11 @@ class ConfigFile(dict):
                 
         name = name.strip()
         lower_name = name.lower() 
+
+        #for these specific parameters, we do not check the type of value because it can accept very different types of input
+        if lower_name in ['helicity_direction', 'particle_in_density_matrix', 'boost_choice']:
+            dict.__setitem__(self, lower_name, value)
+            return self.post_set(lower_name, None, change_userdefine, raiseerror) 
         
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
@@ -1161,7 +1169,7 @@ class ConfigFile(dict):
                     new_value += current
  
                 value = new_value                           
-                
+
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
@@ -1521,6 +1529,8 @@ class ConfigFile(dict):
                                 raise InvalidCmd("%s can not be mapped to a float" % value)
                         finally:
                             value = v
+            # elif targettype == type(None):
+            #     value = None
             else:
                 raise InvalidCmd("type %s is not handle by the card" % targettype)
             
@@ -1557,8 +1567,124 @@ class ConfigFile(dict):
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
-        self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
- 
+        self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror)
+
+
+class DensityCard(ConfigFile):
+    """This class is defined to allow to edit the reweight_card with inline commands for the density module"""
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        self.add_param('helicity_direction', [0])
+        self.add_param('particle_in_density_matrix', [6, -6])
+        self.add_param('boost_choice', [0])
+        self.add_param('order_helicities', [0])
+        self.add_param('axis_referential', [0])
+        self.add_param('symmetrise_initial_state', False)
+
+    def read(self, finput):
+        list_parameters = ["helicity_direction", "particle_in_density_matrix",\
+                           "boost_choice", "order_helicities", "axis_referential",\
+                           "symmetrise_initial_state"]
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception("No such file %s" % finput)
+
+        for line in finput:
+            line = line.strip()
+            if not line:
+                continue
+
+            if line[0] == '#':
+               continue
+
+            if line[0] == '!':
+                continue
+
+            if line == "launch":
+                continue
+
+            if "change" in line:
+                line = line[6:]
+                line.strip()
+                if '=' in line:
+                    key, value = line.split('=',1)
+                    #if there is a # of ! we remove everything after
+                    start_comment = 0
+                    for i in range(len(value)):
+                        if '#' in value[i] or '!' in value[i]:
+                            start_comment = i
+                            break
+                    if start_comment > 0:
+                        value = value[0:start_comment]
+                    if key.strip() in list_parameters:
+                        value = value.lower()
+                        if value.strip() == "default":
+                            value = ""
+                    self[key.strip()] = value.strip()
+                
+                else:
+                    command =  line.split()
+
+                    for param in list_parameters:
+                        if param in command[0]:
+                            aux = line.replace(param, "")
+                            start_comment = 0
+                            for i in range(len(aux)):
+                                if '#' in aux[i] or '!' in aux[i]:
+                                    start_comment = i
+                                    break
+                            if start_comment > 0:
+                                aux = aux[0:start_comment]
+                            command = [param, aux] #this line is necessary for cases like [6, -6]
+
+                    key, value = command[0], command[1]
+
+                    self[key.strip()] = value.strip()
+
+    def write(self, output_file, template=None):
+        list_parameters = ["helicity_direction", "particle_in_density_matrix",\
+                           "boost_choice", "order_helicities", "axis_referential",\
+                           "symmetrise_initial_state"]
+        if not template: #this template only works for density module
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'Common', 'Cards', 'density_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'density_card_default.dat')
+        
+        text = ""
+        for line in open(template,'r'):
+            #the goal of this block is to separate what is a commment from what is not
+            nline = line.split("#")
+            if len(nline) == 2: #separating cases with comment lines or without
+                command = nline[0] #if there is a command it is in this object
+                comment = nline[1] #if there is a comment, it is this object
+            else:
+                command = nline[0]
+                comment = ''
+            
+            if command == '' or command == '\n':
+                if command == '':
+                    text += '# ' + comment
+                else:
+                    text += '\n'
+            else:
+                for param in list_parameters:
+                    if param in command:
+                        if comment:
+                            text += 'change ' + param +  ' ' + str(self[param]) + ' # ' + comment
+                        else:
+                            text += 'change ' + param +  ' ' + str(self[param]) + '\n'
+
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+        fsock.write(text)
+        fsock.close()
 
 class RivetCard(ConfigFile):
 
@@ -4212,6 +4338,7 @@ class RunCardLO(RunCard):
         self.add_param("gridpack", False)
         self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
+        self.add_param("allow_overshoot_events", False, hidden=True, include=False, comment="allow to write more events than requested instead of trashing the last ones.")
         self.add_param("iseed", 0)
         self.add_param("bypass_check", [], typelist=str, include=False, hidden=True,
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
@@ -4449,6 +4576,7 @@ class RunCardLO(RunCard):
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
+        self.add_param('disable_multichannel', False, hidden=True, include=False, comment='disable madevent suppressed-amplitude multichannel mode and ignore symfact multiplicative factors in gen_ximprove channel steering')
         self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
         #hel recycling
         self.add_param('hel_recycling', True, hidden=True, include=False, comment='allowed to deactivate helicity optimization at run-time --code needed to be generated with such optimization--')
@@ -4804,16 +4932,16 @@ class RunCardLO(RunCard):
                     self.display_block.append('fixed_fact_scale')
                     self.display_block.append('pdlabel')
 
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22,81,-81]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
             
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22,81,-81]):
                 # check for e p collision
-                if any(id  in beam_id for id in [11,-11,13,-13]):
+                if any(id  in beam_id for id in [11,-11,13,-13, 82,-82]):
                     self.display_block.append('beam_pol')
-                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13]):
+                    if any(id  in beam_id_split[0] for id in [11,-11,13,-13,82,-82]):
                         self['lpp1'] = 0  
                         self['lpp2'] = 1 
                         self['ebeam1'] = '1k'  
@@ -4832,7 +4960,7 @@ class RunCardLO(RunCard):
                     self['ebeam2'] = '6500'
                     self['pdlabel'] = 'edff'
             
-            elif any(id in beam_id for id in [11,-11,13,-13]):
+            elif any(id in beam_id for id in [11,-11,13,-13,82,-82]):
                 self['lpp1'] = 0
                 self['lpp2'] = 0
                 self['ebeam1'] = 500
@@ -4894,31 +5022,31 @@ class RunCardLO(RunCard):
                 self.display_block.append('eva_pdf')
 
             # automatic polarisation of the beam if neutrino beam  
-            if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
+            if any(id  in beam_id for id in [12,-12,14,-14,16,-16, 83,-83]):
                 self.display_block.append('beam_pol')
-                if any(id  in beam_id_split[0] for id in [12,14,16]):
+                if any(id  in beam_id_split[0] for id in [12,14,16,83]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = -100
-                    if not all(id  in [12,14,16] for id in beam_id_split[0]):
+                    if not all(id  in [12,14,16,83] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1]. %s')
-                elif any(id  in beam_id_split[0] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[0] for id in [-12,-14,-16,-83]):
                     self['lpp1'] = 0   
                     self['ebeam1'] = '1k'  
                     self['polbeam1'] = 100
-                    if not all(id  in [-12,-14,-16] for id in beam_id_split[0]):
+                    if not all(id  in [-12,-14,-16,-83] for id in beam_id_split[0]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam1].')                         
-                if any(id  in beam_id_split[1] for id in [12,14,16]):
+                if any(id  in beam_id_split[1] for id in [12,14,16,83]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = -100
-                    if not all(id  in [12,14,16] for id in beam_id_split[1]):
+                    if not all(id  in [12,14,16,83] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
-                elif any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[1] for id in [-12,-14,-16,-83]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
-                    if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
+                    if not all(id  in [-12,-14,-16,-83] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
         # Check if need matching
@@ -4946,7 +5074,7 @@ class RunCardLO(RunCard):
                     else:
                         idsmax.remove(i)
                 for j in idsmax:
-                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21]:
+                    if j not in [1,-1,2,-2,3,-3,4,-4,5,-5,21,81,-81]:
                         break
                 else:
                     # all are jet => matching is ON
@@ -5004,7 +5132,7 @@ class RunCardLO(RunCard):
                 elif proc[0].get('orders')['QCD'] != 0:
                     no_qcd = False 
                 #misc.sprint(proc.get_order())
-                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22] for j in proc[0]['legs'][2:]):
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16,22,82] for j in proc[0]['legs'][2:]):
                     pure_lepton = False
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
                     proton_initial = False
@@ -5077,16 +5205,16 @@ class RunCardLO(RunCard):
                 for pdg in ids:
                     if pdg == 22:
                         one_proc_cut['a'] +=1
-                    elif abs(pdg) <= self['maxjetflavor'] or pdg == 21:
+                    elif abs(pdg) <= self['maxjetflavor'] or pdg in [21, 81, -81]:
                         one_proc_cut['j'] += 1
                         one_proc_cut['J'] += 1
                     elif abs(pdg) <= 5:
                         one_proc_cut['b'] += 1
                         one_proc_cut['J'] += 1
-                    elif abs(pdg) in [11,13,15]:
+                    elif abs(pdg) in [11,13,15,82]:
                         one_proc_cut['l'] += 1
                         one_proc_cut['L'] += 1
-                    elif abs(pdg) in [12,14,16]:
+                    elif abs(pdg) in [12,14,16,83]:
                         one_proc_cut['n'] += 1
                         one_proc_cut['L'] += 1 
                     elif str(oneproc.get('model').get_particle(pdg)['mass']) != 'ZERO':

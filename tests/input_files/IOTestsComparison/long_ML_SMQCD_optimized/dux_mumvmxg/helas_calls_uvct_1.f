@@ -3,6 +3,7 @@ C
 C     Modules
 C     
       USE ML5_0_POLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
 C     
       IMPLICIT NONE
 C     
@@ -37,6 +38,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER I,J,K
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
       COMPLEX*16 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
 
       LOGICAL DUMMYFALSE
@@ -74,9 +77,8 @@ C
 
       COMPLEX*16 AMP(NBORNAMPS)
       COMMON/ML5_0_AMPS/AMP
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_W/W
-
       COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,
      $ -1:NLOOPWAVEFUNCS)
       COMPLEX*16 PL(0:3,-1:NLOOPWAVEFUNCS)
@@ -97,16 +99,16 @@ C      if true.
       ENDIF
 
 C     Amplitude(s) for UVCT diagram with ID 14
-      CALL FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMPL(2,25))
+      CALL FFV2_0(W(6),W(2),W(7),GC_11,AMPL(2,25))
       AMPL(2,25)=AMPL(2,25)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 15
-      CALL FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMPL(1,26))
+      CALL FFV2_0(W(6),W(2),W(7),GC_11,AMPL(1,26))
       AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 C     Amplitude(s) for UVCT diagram with ID 16
-      CALL FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(2,27))
+      CALL FFV2_0(W(1),W(8),W(7),GC_11,AMPL(2,27))
       AMPL(2,27)=AMPL(2,27)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 17
-      CALL FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(1,28))
+      CALL FFV2_0(W(1),W(8),W(7),GC_11,AMPL(1,28))
       AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 
       GOTO 1001

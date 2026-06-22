@@ -38,7 +38,7 @@ else
    TOCOMPILE += makefile_gammaUPC_dummy
    TOREMOVE += $(LIBDIR)libgammaUPC.$(libext)
 endif
-
+FFLAGS += -I../MODEL
 ifdef lhapdf
   TOREMOVE +=  pdfwrap.o
   PDF         += pdfwrap_lhapdf.o pdg2pdf_lhapdf6.o

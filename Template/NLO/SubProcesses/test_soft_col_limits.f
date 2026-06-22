@@ -200,7 +200,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
          elseif (is_a_ph(i)) then
             totmass = totmass + ptgmin
-         else
+         elseif (i.ne.nexternal) then
             if (any(mxxmin(i,i+1:nexternal-1).gt.0d0)) then
                do k=i+1,nexternal-1
                   if (mxxmin(i,k).gt.0d0) then

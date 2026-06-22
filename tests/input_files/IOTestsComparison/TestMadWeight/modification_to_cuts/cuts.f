@@ -33,6 +33,7 @@ C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED
 C**************************************************************************
+      use model_object
       IMPLICIT NONE
 c
 c     Constants

@@ -165,17 +165,17 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       ENDDO
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
-C     PJFry++
-      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
-      STOP
+C       PJFry++
+        WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+        STOP
       CASE(3)
-C     IREGI
-      WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
-      STOP
+C       IREGI
+        WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
+        STOP
       CASE(7)
-C     COLLIER
-      WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
-      STOP
+C       COLLIER
+        WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
+        STOP
       END SELECT
       DO I=1,3
         RES(I)=(0.0D0,0.0D0)

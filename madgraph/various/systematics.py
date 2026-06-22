@@ -162,7 +162,7 @@ class Systematics(object):
             isEVAxDIS=True
         # none, chff, edff
         if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
+            raise SystematicsError('Systematics not supported for pdlabel=%s' % self.banner.run_card['pdlabel'])
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
@@ -1314,6 +1314,8 @@ def call_systematics(args, result=sys.stdout, running=True,
 
 
     input, output = args[0:2]
+    if input.endswith('.gz') and not os.path.exists(input):
+        input = input[:-3]
     
     start_opts = 2
     if output and output.startswith('-'):

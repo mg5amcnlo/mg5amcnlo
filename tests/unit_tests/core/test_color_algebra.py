@@ -672,22 +672,22 @@ class ColorFactorTest(unittest.TestCase):
 
         options= []
         import itertools
-        all = itertools.product([True, False], repeat=2)
+        all = itertools.product([True, False], repeat=4)
         for opt in all:
             options.append({
                             'rule_eps_aeps_sum': opt[0],
                             'rule_eps_aeps_nosum': opt[1],
-                            #'rule_eps_T': opt[2],
-                            # 'rule_aeps_T': opt[3]
+                            'rule_eps_T': opt[2],
+                             'rule_aeps_T': opt[3]
 
             })
                             
         nb_checked = 0
         for mode in options:
-            #with misc.TMP_variable(color.Epsilon, 'rule_eps_T', mode['rule_eps_T']):
+            with misc.TMP_variable(color.Epsilon, 'rule_eps_T', mode['rule_eps_T']):
                 with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_sum', mode['rule_eps_aeps_sum']):   
                     with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_nosum', mode['rule_eps_aeps_nosum']):
-                        #with misc.TMP_variable(color.EpsilonBar, 'rule_aeps_T', mode['rule_aeps_T']): 
+                        with misc.TMP_variable(color.EpsilonBar, 'rule_aeps_T', mode['rule_aeps_T']): 
                             out1 = my_color_factor.full_simplify()
                             try:
                                 value, power = out1.set_Nc()

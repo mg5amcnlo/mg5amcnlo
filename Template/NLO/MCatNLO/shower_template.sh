@@ -8,6 +8,17 @@ RUN_NAME=$3
 NFILE=$4
 
 export %(ld_library_path)s=$%(ld_library_path)s:%(extralibs)s
+# Ensure the shower's LHAPDF resolves to the locally-staged PDF set first.
+# CommonRunCmd.patch_lhapdf_info_file injects AlphaS_FlavorScheme /
+# AlphaS_NumFlavors there for PDF sets shipped with older metadata; without
+# this prefix HERWIG6 loads the unpatched system copy and aborts.
+if [ -d "%(local_pdfsets)s" ]; then
+    if [ -n "$LHAPDF_DATA_PATH" ]; then
+        export LHAPDF_DATA_PATH="%(local_pdfsets)s:$LHAPDF_DATA_PATH"
+    else
+        export LHAPDF_DATA_PATH="%(local_pdfsets)s"
+    fi
+fi
 
 if [ $SHOWER == "HERWIGPP" ] ; then
     export PYTHIA8DATA=""

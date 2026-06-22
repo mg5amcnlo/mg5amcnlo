@@ -1,4 +1,7 @@
       subroutine pdfwrap
+## if(LO) {          
+      use model_object 
+## }
       implicit none
 C
 C     INCLUDE

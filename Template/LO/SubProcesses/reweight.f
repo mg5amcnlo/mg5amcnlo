@@ -181,6 +181,7 @@ c**************************************************
       logical function isjet(ipdg)
 c**************************************************
 c   determines whether particle is qcd jet particle
+c   Note: merged flavor particle (81) is treated as jet
 c**************************************************
       implicit none
 
@@ -188,10 +189,17 @@ c**************************************************
 
       integer ipdg, irfl
 
-      isjet=.true.
-
       irfl=abs(ipdg)
-      if (irfl.gt.maxjetflavor.and.irfl.ne.21) isjet=.false.
+      isjet=.false.
+      if (irfl.le.maxjetflavor) then
+          isjet=.true.
+      elseif(irfl.eq.21)then
+          isjet=.true.
+      else if (irfl.eq.81) then
+c        Merged flavor particles (81) are treated as jets
+c        They will be mapped to actual quark types (1-4) in the clustering
+          isjet=.true.
+      endif
 c      write(*,*)'isjet? pdg = ',ipdg,' -> ',irfl,' -> ',isjet
 
       return
@@ -552,12 +560,14 @@ c***************************************************
       return
       end
 
-      logical function setclscales(p, keepq2bck, ivec)
+      logical function setclscales(p, keepq2bck, ivec, flavor)
 c**************************************************
 c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
 c     keepq2bck allow to not reset the parameter q2bck
+c     flavor(nexternal) maps particles to their flavor (for merged flavor particles like 81)
 c**************************************************
+      use model_object
       implicit none
 
       integer ivec              ! for event number in batch for common block
@@ -571,9 +581,10 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run_config.inc'
-C   
-C   ARGUMENTS 
-C   
+      integer flavor(nexternal) ! flavor index for merged flavor particles
+C
+C   ARGUMENTS
+C
       DOUBLE PRECISION P(0:3,NEXTERNAL)
 C   global variables
 C     Present process number
@@ -663,7 +674,7 @@ c      are flagged as jets)
       if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
       endif
- 100  clustered = cluster(p(0,1), ivec)
+ 100  clustered = cluster(p(0,1), flavor, ivec)
       if(.not.clustered) then
          if(init_mode) goto 999
          open(unit=26,file='../../../error',status='unknown',err=999)
@@ -1330,11 +1341,13 @@ c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
 
       end
 
-      double precision function rewgt(p, ivec)
+      double precision function rewgt(p, flavor, ivec)
 c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
+c   flavor(nexternal) provides flavor indices for merged flavor particles (81)
 c**************************************************
+      use model_object
       implicit none
 
       include 'message.inc'
@@ -1346,11 +1359,12 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run_config.inc'
-C   
-C   ARGUMENTS 
-C   
+C
+C   ARGUMENTS
+C
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       integer ivec
+      integer flavor(nexternal)
 C
 C   global variables
 C     Present process number
@@ -1435,6 +1449,13 @@ c   Since we use pdf reweighting, need to know particle identities
       endif
 
       if (use_syst.and.igraphs(1).eq.0) igraphs(1) = iconfig ! happens if use_syst=T BUT fix scale
+c     Guard against invalid subprocess selection (can happen if IPSEL is unset)
+      if (ipsel.lt.1.or.ipsel.gt.maxproc) then
+         if (btest(mlevel,0)) write(*,*) 'rewgt: invalid ipsel=',ipsel,
+     $        ' (valid range 1 to ',maxproc,')'
+         rewgt = 0d0
+         return
+      endif
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
@@ -1452,7 +1473,11 @@ c     Store pdf information for systematics studies (initial)
          if(use_syst)then
             do j=1,2
                 n_pdfrw(j,ivec)=1
-                i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+                if(abs(ipdgcl(j,igraphs(1),iproc)).eq.81) then
+                   i_pdgpdf(1,j,ivec)=abs(flavor(j))*sign(1,ipdgcl(j,igraphs(1),iproc))
+                else
+                   i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+                endif
                 s_xpdf(1,j,ivec)=xbk(ib(j))
                 s_qpdf(1,j,ivec)=sqrt(q2fact(j))
             enddo
@@ -1462,7 +1487,7 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p,.true., ivec)) then ! assign the correct id information.(preserve q2bck)
+      if(.not.setclscales(p,.true., ivec, flavor)) then ! assign the correct id information.(preserve q2bck)
 c         write(*,*) "Fail to cluster the events from the rewgt function"
 c         stop 1
         rewgt = 0d0
@@ -1808,9 +1833,15 @@ c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
+                if( abs(i_pdgpdf(1,i,ivec)).ne.81)then
                 s_rwfact(ivec)=s_rwfact(ivec)*pdg2pdf(abs(lpp(IB(i))),
      $           i_pdgpdf(1,i,ivec)*sign(1,lpp(IB(i))),IB(i),
      $           s_xpdf(1,i,ivec),s_qpdf(1,i,ivec))
+            else
+                s_rwfact(ivec)=s_rwfact(ivec)*pdg2pdf(abs(lpp(IB(i))),
+     $           abs(flavor(i))*sign(1, i_pdgpdf(1,i,ivec))*sign(1,lpp(IB(i))),IB(i),
+     $           s_xpdf(1,i,ivec),s_qpdf(1,i,ivec))
+            endif
             endif
          enddo
          if (asref.gt.0d0.and.n_qcd(ivec).le.nexternal)then
@@ -1823,7 +1854,8 @@ c            s_rwfact=0d0
       return
       end
 
-      subroutine update_scale_coupling(p, wgt)
+      subroutine update_scale_coupling(p, flavor, wgt)
+          use model_object
       implicit none
 
 C
@@ -1831,7 +1863,7 @@ C     PARAMETERS
 C
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
-      
+
       include 'genps.inc'
 
       include 'nexternal.inc'
@@ -1841,19 +1873,24 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 C      include 'maxparticles.inc'
-      
+
+      integer flavor(nexternal)
       double precision all_p(4*maxdim/3+14,1), all_wgt(1)
       double precision p(4*maxdim/3+14), wgt
       double precision all_q2fact(2,1)
+      integer flavor_vec(nexternal,1)
+      integer i
       all_p(:,1) = p(:)
       all_wgt(1) = wgt
-      call update_scale_coupling_vec(all_p, all_wgt,all_q2fact, 1)
+      flavor_vec(:,1) = flavor
+      call update_scale_coupling_vec(all_p, all_wgt,all_q2fact, 1, flavor_vec)
       wgt = all_wgt(1)
       return
       end
 
       
-      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
+      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED, flavor_vec)
+          use model_object
       implicit none
 
 C
@@ -1861,7 +1898,7 @@ C     PARAMETERS
 C
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
-      
+
       include 'genps.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
@@ -1870,10 +1907,12 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 C      include 'maxparticles.inc'
-      
+
       double precision all_p(4*maxdim/3+14,*), all_wgt(*)
       double precision all_q2fact(2,*)
+      integer flavor_vec(nexternal,*)
       integer i,j,k, VECSIZE_USED
+      integer flavor(nexternal)
 
       logical setclscales
       external setclscales
@@ -1904,7 +1943,12 @@ c      save firsttime
             call set_fac_scale(all_p(1,i),q2fact)
          endif
 
-         if(.not.setclscales(all_p(1,i) , .false., i))then
+c        Copy flavor array for this event from flavor_vec
+         do j=1,nexternal
+            flavor(j)=flavor_vec(j,i)
+         enddo
+
+         if(.not.setclscales(all_p(1,i) , .false., i, flavor))then
             all_wgt(i) = 0d0
          else
             all_q2fact(1,i) = q2fact(1)

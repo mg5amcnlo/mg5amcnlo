@@ -540,6 +540,7 @@ C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 C     Process: d d~ > z z [ LOonly = QCD QED ] QCD^2=2 QED^2=4
 C     
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -570,10 +571,13 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
+      INTEGER FLAVOR(NEXTERNAL-1)
+      DATA FLAVOR /NMO*1/
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
       INTEGER CF_INDEX, DENOM
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
-     $ ,NWAVEFUNCS), JAMPH(2, NCOLOR,NAMPSO)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), JAMPH(2,
+     $  NCOLOR,NAMPSO)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
@@ -638,16 +642,16 @@ C     ----------
             IF (NHEL(GLU_IJ).NE.0) NHEL(GLU_IJ) = IHEL
           ENDIF
           IF (.NOT. CALCULATEDBORN) THEN
-            CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-            CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-            CALL VXXXXX(P(0,3),MDL_MZ,NHEL(3),+1*IC(3),W(1,3))
-            CALL VXXXXX(P(0,4),MDL_MZ,NHEL(4),+1*IC(4),W(1,4))
-            CALL FFV2_3_2(W(1,1),W(1,3),GC_68,GC_76,ZERO,ZERO,W(1,5))
+            CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
+            CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
+            CALL VXXXXX(P(0,3),MDL_MZ,NHEL(3),+1,W(3))
+            CALL VXXXXX(P(0,4),MDL_MZ,NHEL(4),+1,W(4))
+            CALL FFV2_3_2(W(1),W(3),GC_68,GC_76,ZERO,ZERO,W(5))
 C           Amplitude(s) for diagram number 1
-            CALL FFV2_3_0(W(1,5),W(1,2),W(1,4),GC_68,GC_76,AMP(1))
-            CALL FFV2_3_2(W(1,1),W(1,4),GC_68,GC_76,ZERO,ZERO,W(1,5))
+            CALL FFV2_3_0(W(5),W(2),W(4),GC_68,GC_76,AMP(1))
+            CALL FFV2_3_2(W(1),W(4),GC_68,GC_76,ZERO,ZERO,W(5))
 C           Amplitude(s) for diagram number 2
-            CALL FFV2_3_0(W(1,5),W(1,2),W(1,3),GC_68,GC_76,AMP(2))
+            CALL FFV2_3_0(W(5),W(2),W(3),GC_68,GC_76,AMP(2))
             DO I=1,NGRAPHS
               IF(IHEL.EQ.BACK_HEL)THEN
                 SAVEAMP(I,HELL)=AMP(I)

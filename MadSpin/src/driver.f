@@ -1,4 +1,5 @@
       program madspin
+      use model_object 
       implicit none
 
 C---  integer    n_max_cg
@@ -36,12 +37,26 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision M_PROD, M_FULL
       logical notpass
       integer counter,mode,nbpoints, counter2, counter3
+      integer flavor_index_prod, flavor_index_full
+      integer GET_FLAVOR_INDEX, GET_FLAVOR_INDEX_PROD
+      integer FLAVOR(NEXTERNAL)
+      integer FLAVOR_PROD(NEXTERNAL_PROD)
       double precision mean, variance, maxweight,weight,std
       double precision temp
       double precision Pprod(0:3,nexternal_prod)
 
       integer nb_mc_masses, indices_mc_masses(nexternal)
       double precision values_mc_masses(nexternal)
+
+c     Variables for the per-flavor maxweight loop (mode=1)
+c     MAX_COMPAT_FLAVS must match the Python-side guard in get_max_weight_from_fortran.
+      integer MAX_COMPAT_FLAVS
+      parameter (MAX_COMPAT_FLAVS=500)
+      integer nflavs_compat
+      integer compat_flav_idx(MAX_COMPAT_FLAVS)
+      double precision rel_brs_compat(MAX_COMPAT_FLAVS)
+      integer FLAVOR_TMP(NEXTERNAL)
+      double precision M_full_tmp, weight_tmp
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -57,6 +72,9 @@ c      integer mapconfig(0:lmaxconfigs)
 
        integer frame_id
        common /to_me_frame/frame_id
+    
+       double precision beampol(2)
+       common /to_beampol/ beampol
 
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
@@ -115,8 +133,23 @@ c      enddo
  
 1     continue
       maxBW=0d0
-      read(*,*) mode,  BWcut, Ecollider, temp, frame_id
- 
+      read(*,*) mode,  BWcut, Ecollider, temp, frame_id,
+     &          beampol(1), beampol(2),
+     &          flavor_index_prod, flavor_index_full
+
+      call GET_FLAVOR_MS_FULL(flavor_index_full, FLAVOR)
+      call GET_FLAVOR_MS_PROD(flavor_index_prod, FLAVOR_PROD)
+c     Bridge MadSpin's flavor index (its own enumeration) to the matrix
+c     element's flavor index.  The full/production MEs enumerate flavors
+c     differently (and more finely) than MadSpin, so passing MadSpin's index
+c     straight to SMATRIX/SMATRIX_PROD selects the wrong ME flavor -- often
+c     giving |M|=0, so the unweighting loop never accepts and spins forever.
+c     Resolve via the ME's own forward lookup on the FLAVOR array instead.
+      if (mode.ge.1 .and. mode.le.3) then
+        flavor_index_full = GET_FLAVOR_INDEX(FLAVOR)
+        flavor_index_prod = GET_FLAVOR_INDEX_PROD(FLAVOR_PROD)
+      endif
+
 
       if (mode.eq.1) then    ! calculate the maximum weight
          nbpoints=int(temp)
@@ -173,7 +206,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
       amp2(i)=0d0
       enddo
       call coup()
-      CALL SMATRIX_PROD(P,M_PROD)
+      CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
 c      write(*,*) 'M_prod ', M_prod
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   IV. select one topology                        c
@@ -214,6 +247,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c        max_m=0d0
 c        max_jac=0d0
 
+c       Read compatible full-ME flavor groups and their BR factors from Python.
+c       Python sends: nflavs_compat lines of (flavor_index, br_factor).
+        read(*,*) nflavs_compat
+        do k=1, nflavs_compat
+           read(*,*) compat_flav_idx(k), rel_brs_compat(k)
+        enddo
+
         counter2=0
         counter3=0
         do i=1,nbpoints
@@ -240,7 +280,7 @@ c           enddo
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do k=-nexternal_prod+2,-1
                 do j=1,2
@@ -259,58 +299,27 @@ c           enddo
            cycle
            endif
           
-           call  boost_to_frame(pfull, frame_id, P2)
-           call SMATRIX(P2,M_full)
-
+c          Compute M_prod from boosted production momenta.
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
+c          Boost the full-event momenta, then loop over all compatible
+c          full-ME flavor groups.  For each group j:
+c            weight_tmp = M_full(j) * jac / M_prod / br_factor(j)
+c          The global maximum G is returned; Python then recovers the
+c          per-flavor maxweight as G * br_factor(j).
+           call  boost_to_frame(pfull, frame_id, P2)
+           do k=1, nflavs_compat
+              call GET_FLAVOR_MS_FULL(compat_flav_idx(k), FLAVOR_TMP)
+              call SMATRIX(P2,GET_FLAVOR_INDEX(FLAVOR_TMP),M_full_tmp)
+              weight_tmp=M_full_tmp*jac/M_prod/rel_brs_compat(k)
+              if (weight_tmp.gt.maxweight) then
+                maxweight=weight_tmp
+              endif
+           enddo
 
-
-           weight=M_full*jac/M_prod
-           if (weight.gt.maxweight) then
-            maxweight=weight
-c            max_m=M_full
-c            max_jac=jac
-c            do k =1,nexternal
-c            do j=0,3
-c            max_mom(j,k)=pfull(j,k)
-c            enddo
-c            enddo
-           endif
-c           mean=mean+weight
-c           variance=variance+weight**2
         enddo
-c        mean=mean/real(nbpoints)   
-c        variance=variance/real(nbpoints)-mean**2
-c        std=sqrt(variance)
-        write (*,*) maxweight   ! ,mean,std  
-c        write (*,*) 'max_m',max_m 
-c        write (*,*) 'max_jac', jac
-c        write (*,*) 'Extrenal masses'
-c        do k=1,nexternal
-c        write(*,*) dot(max_mom(0,k), max_mom(0,k))
-c        enddo
-c        do j=0,3
-c          pw1(j)=max_mom(j,4)+max_mom(j,5)
-c          pt1(j)=pw1(j)+max_mom(j,3)
-c          pw2(j)=max_mom(j,7)+max_mom(j,8)
-c          pt2(j)=pw2(j)+max_mom(j,6)
-c          pt2g(j)=pt2(j)+max_mom(j,9)
-c        enddo
- 
-c        write (*,*) 'm45', sqrt(2D0*dot(max_mom(0,4),max_mom(0,5))) 
-c        write (*,*) 'm78', sqrt(2d0*dot(max_mom(0,7),max_mom(0,8))) 
-c        write (*,*) 'mt1', sqrt(dot(pt1,pt1)) 
-c        write (*,*) 'mt2', sqrt(dot(pt2,pt2)) 
-c        write (*,*) 'mt2g', sqrt(dot(pt2g,pt2g)) 
-c        write (*,*) 'm9', sqrt(dot(max_mom(0,9),max_mom(0,9))) 
-c        write (*,*) 'shat', sqrt(2D0*dot(max_mom(0,2),max_mom(0,1))) 
-c        write(*,*)  (max_mom(j,1), j=0,3)
-c        write(*,*)  (max_mom(j,2), j=0,3)
-c        write(*,*)  (pt1(j), j=0,3)
-c        write(*,*)  (pt2(j), j=0,3)
-c        write(*,*)  (max_mom(j,9), j=0,3)
+        write (*,*) maxweight
         call flush()
         goto 1
       endif
@@ -351,7 +360,7 @@ c        initialize the helicity amps
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do i=-nexternal_prod+2,-1
                 do j=1,2
@@ -371,11 +380,11 @@ c        initialize the helicity amps
            endif
 
            call  boost_to_frame(pfull, frame_id, P2)
-           call SMATRIX(P2,M_full)
+           call SMATRIX(P2,flavor_index_full,M_full)
 
 
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
 
            weight=M_full*jac/M_prod
@@ -440,7 +449,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) cycle
            notpass=.false.
-           call SMATRIX(pfull,M_full)
+           call SMATRIX(pfull,flavor_index_full,M_full)
 
            write(*,*) M_full
         enddo
@@ -450,6 +459,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 2     continue
       end
+
+      include 'flavor_ms.inc'
 
       subroutine get_helicity_ID(iconfig)
       implicit none
@@ -537,6 +548,7 @@ c     common
 
 
       subroutine set_parameters(p,Ecollider)
+      use model_object 
       implicit none
 
       double precision ZERO
@@ -617,6 +629,7 @@ c Make sure have enough mass for external particles
 
 
       subroutine merge_itree(itree,qmass,qwidth,  p_ext,mapext2res)
+      use model_object 
       implicit none
       !include 'genps.inc'
       include 'coupl.inc'
@@ -2049,7 +2062,6 @@ c         write(*,*) 'cluster.f: uncompressed code ',i,' is ',ids(i)
 
       return
       end
-
 
 
 

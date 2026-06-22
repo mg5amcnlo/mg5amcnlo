@@ -2831,7 +2831,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         
     def setUp(self):
 
-        self.debugging = uni.debug
+        self.debugging = getattr(uni, 'debug', False)
         # Set up model
 
         mypartlist = base_objects.ParticleList()
@@ -5028,7 +5028,7 @@ class TestIdentifyMETag(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm',  options={'apply_flavor_grouping':False})
     
     def test_identify_me_tag_qq_qqg(self):
         """Test the find_symmetry function"""
@@ -5153,7 +5153,7 @@ class TestIdentifyMETagFKS(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm',  options={'apply_flavor_grouping':False})
     
     def test_identify_me_tag_qq_qg(self):
         """Test the find_symmetry function"""

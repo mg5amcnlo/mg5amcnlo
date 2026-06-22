@@ -90,6 +90,8 @@ class AbstractRoutine(object):
 
     def write(self, output_dir, language='Fortran', mode='self', combine=True, options=None, **opt):
         """ write the content of the object """
+        # Set loop_mode based on the tag of this specific routine
+        aloha.loop_mode = any(t.startswith('L') for t in self.tag)
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag, options)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -1077,6 +1079,14 @@ class AbstractALOHAModel(dict):
                 l_lorentz = []
                 for l_name in list_l_name: 
                     l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
+
+                if any(lor.spins != l_lorentz[0].spins for lor in l_lorentz[1:]):
+                    lorentzname = list_l_name[0]
+                    lorentzname += ''.join(tag)
+                    if (lorentzname, outgoing) in self:
+                        self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                    continue
+
                 builder = CombineRoutineBuilder(l_lorentz)
                                
                 for conjg in request[list_l_name[0]]:
@@ -1120,7 +1130,8 @@ class AbstractALOHAModel(dict):
             realname = name + ''.join(tag)
             if (realname, outgoing) in self:
                 continue # already computed
-            
+            # Set loop_mode correctly for each routine based on its tag
+            aloha.loop_mode = any(t.startswith('L') for t in tag)
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:
@@ -1415,7 +1426,6 @@ if '__main__' == __name__:
     stop = time.time()
     logger.info('done in %s s' % (stop-start))
   
-
 
 
 

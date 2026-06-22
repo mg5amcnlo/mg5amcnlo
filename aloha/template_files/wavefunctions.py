@@ -3,31 +3,114 @@ from __future__ import absolute_import
 import math
 from math import sqrt, pow
 from itertools import product
+
+
+class _WView:
+    """A writable view into the spin-representation part of a WaveFunction.
+    
+    WaveFunction stores the 4-momentum in indices 0-1 (as complex numbers)
+    and the spin components starting at index 2.  This view provides
+    zero-based indexed access to those spin components so that ALOHA
+    routines can use ``wf.W[0]``, ``wf.W[1]``, … instead of
+    ``wf[2]``, ``wf[3]``, …
+    """
+
+    __slots__ = ('_wf',)
+
+    def __init__(self, wf):
+        self._wf = wf
+
+    def __getitem__(self, i):
+        return self._wf[i + 2]
+
+    def __setitem__(self, i, value):
+        self._wf[i + 2] = value
+
+    def __len__(self):
+        return len(self._wf) - 2
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+
+class FLV_Coupling_py:
+    """Python counterpart of the Fortran FLV_COUPLING type.
+
+    Holds numerical flavor-indexed coupling values for use inside Python
+    ALOHA routines generated with the ``M`` flag (flavor-merged models).
+
+    Attributes
+    ----------
+    partner  : dict {k1 -> k2}
+        Given the flavor index *k1* of the first fermion, gives the
+        expected flavor index *k2* of the second fermion.
+    partner2 : dict {k2 -> k1}
+        Reverse mapping.
+    val      : dict {k1 -> complex}
+        Actual coupling value indexed by the first-fermion flavor.
+    """
+
+    def __init__(self, flavors_dict):
+        """Build the coupling tables from a resolved-value dictionary.
+
+        Parameters
+        ----------
+        flavors_dict : dict
+            Maps flavor-index tuples ``(k1, k2, …)`` to complex coupling
+            values.  Exactly two non-zero entries are expected in each key.
+        """
+        self.partner = {}
+        self.partner2 = {}
+        self.val = {}
+        for key, value in flavors_dict.items():
+            non_zero = [i for i in key if i != 0]
+            if len(non_zero) == 2:
+                k1, k2 = non_zero
+            elif len(non_zero) == 1:
+                k1 = k2 = non_zero[0]
+            else:
+                continue
+            self.partner[k1] = k2
+            self.partner2[k2] = k1
+            self.val[k1] = value
+
+
 class WaveFunction(list):
-    """a objet for a WaveFunction"""
-    
-    spin_to_size={0:1,
-                  1:3,
-                  2:6,
-                  3:6,
-                  4:18,
-                  5:18}
-    
-    def __init__(self, spin= None, size=None):
-        """Init the list with zero value"""
-        
+    """A WaveFunction object with momenta, W (spin representation), and flavor."""
+
+    spin_to_size = {0: 1,
+                    1: 3,
+                    2: 6,
+                    3: 6,
+                    4: 18,
+                    5: 18}
+
+    def __init__(self, spin=None, size=None):
+        """Init the list with zero value and set extra attributes."""
+
         if spin:
             size = self.spin_to_size[spin]
-        list.__init__(self, [0]*size)
-        
+        list.__init__(self, [0] * size)
+        # Writable zero-based view into the spin components (list[2:])
+        self.W = _WView(self)
+        # Four-momentum [p0, p1, p2, p3] stored with the sign convention
+        # of the wavefunction initialisation function (ixxxxx uses −p·nsf,
+        # oxxxxx/vxxxxx/sxxxxx use +p·ns).
+        self.momenta = [0.0, 0.0, 0.0, 0.0]
+        # Flavor index for merged-particle models (−1 = no flavor / not merged)
+        self.flavor = -1
 
-def ixxxxx(p,fmass,nhel,nsf):
+
+def ixxxxx(p, fmass, nhel, nsf, flavor=-1):
     """Defines an inflow fermion."""
     
     fi = WaveFunction(2)
     
     fi[0] = complex(-p[0]*nsf,-p[3]*nsf)
-    fi[1] = complex(-p[1]*nsf,-p[2]*nsf) 
+    fi[1] = complex(-p[1]*nsf,-p[2]*nsf)
+    fi.momenta = [-p[0]*nsf, -p[1]*nsf, -p[2]*nsf, -p[3]*nsf]
+    fi.flavor = flavor
     nh = nhel*nsf 
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
@@ -81,12 +164,14 @@ def ixxxxx(p,fmass,nhel,nsf):
     
     return fi 
 
-def oxxxxx(p,fmass,nhel,nsf):
+def oxxxxx(p, fmass, nhel, nsf, flavor=-1):
     """ initialize an outgoing fermion"""
     
     fo = WaveFunction(2)
     fo[0] = complex(p[0]*nsf,p[3]*nsf)
     fo[1] = complex(p[1]*nsf,p[2]*nsf)
+    fo.momenta = [p[0]*nsf, p[1]*nsf, p[2]*nsf, p[3]*nsf]
+    fo.flavor = flavor
     nh = nhel*nsf
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
@@ -153,6 +238,7 @@ def vxxxxx(p,vmass,nhel,nsv):
 
     vc[0] = complex(p[0]*nsv,p[3]*nsv)
     vc[1] = complex(p[1]*nsv,p[2]*nsv)
+    vc.momenta = [p[0]*nsv, p[1]*nsv, p[2]*nsv, p[3]*nsv]
 
     if (nhel == 4):
         if (vmass == 0.):
@@ -229,7 +315,98 @@ def sxxxxx(p,nss):
     sc[2] = complex(1.,0.)
     sc[0] = complex(p[0]*nss,p[3]*nss)
     sc[1] = complex(p[1]*nss,p[2]*nss)
+    sc.momenta = [p[0]*nss, p[1]*nss, p[2]*nss, p[3]*nss]
     return sc
+
+def sfdxxx(p,nss):
+    """initialize a scalar wavefunction for FD gauge"""
+
+    sc = WaveFunction(size=7)
+
+    sc[0] = complex(p[0]*nss,p[3]*nss)
+    sc[1] = complex(p[1]*nss,p[2]*nss)
+    sc[6] = complex(1.,0.)
+    return sc
+
+def define_gauge_dir(q):
+    """define the gauge direction used in FD gauge"""
+
+    qabs2 = q[1].real**2 + q[2].real**2 + q[3].real**2
+    n = [0.0] * 5
+
+    if qabs2 > 0.:
+        qabs = sqrt(qabs2)
+        n[0] = sign(1., q[0].real)
+        n[1] = -q[1].real / qabs
+        n[2] = -q[2].real / qabs
+        n[3] = -q[3].real / qabs
+        n[4] = 0.
+    else:
+        n[0] = sign(1., q[0].real)
+        n[1] = 0.
+        n[2] = 0.
+        n[3] = sign(-1., q[0].real)
+        n[4] = 0.
+
+    return n
+
+def multiply_propagator_factor(win, m):
+    """apply the FD gauge propagator projector"""
+
+    wout = WaveFunction(size=7)
+    wout[0] = win[0]
+    wout[1] = win[1]
+
+    q = [0j] * 5
+    q[0] = complex(-win[0].real, 0.)
+    q[1] = complex(-win[1].real, 0.)
+    q[2] = complex(-win[1].imag, 0.)
+    q[3] = complex(-win[0].imag, 0.)
+    q[4] = -1j * m
+
+    n = define_gauge_dir(q)
+    w0 = list(win[2:7])
+
+    nq = n[0] * q[0].real - n[1] * q[1].real - n[2] * q[2].real - n[3] * q[3].real
+    js1 = (n[0] * w0[0] - n[1] * w0[1] - n[2] * w0[2] - n[3] * w0[3]) / nq
+    js2 = (q[0] * w0[0] - q[1] * w0[1] - q[2] * w0[2] - q[3] * w0[3] - q[4].conjugate() * w0[4]) / nq
+
+    for i in range(5):
+        wout[i+2] = w0[i] - q[i] * js1 - n[i] * js2
+
+    return wout
+
+def vfdxxxx(p,vmass,nhel,nsv):
+    """initialize a vector wavefunction for FD gauge"""
+
+    vc = vxxxxx(p,vmass,nhel,nsv)
+    vcfd = WaveFunction(size=7)
+
+    for i in range(6):
+        vcfd[i] = vc[i]
+
+    if vmass != 0.:
+        pt2 = p[1]**2 + p[2]**2
+        pp = min(p[0],sqrt(pt2 + p[3]**2))
+        if pp > 0.:
+            n = [sign(1., p[0]), -p[1]/pp, -p[2]/pp, -p[3]/pp, 0.]
+        else:
+            n = [sign(1., p[0]), 0., 0., -sign(1., p[0]), 0.]
+
+        nk = n[0] * p[0] - n[1] * p[1] - n[2] * p[2] - n[3] * p[3]
+
+        if abs(nhel) == 1:
+            vcfd[6] = complex(0.,0.)
+        else:
+            vcfd[2] = -vmass / nk * n[0]
+            vcfd[3] = -vmass / nk * n[1]
+            vcfd[4] = -vmass / nk * n[2]
+            vcfd[5] = -vmass / nk * n[3]
+            vcfd[6] = -nsv * complex(0.,1.)
+    else:
+        vcfd[6] = complex(0.,0.)
+
+    return vcfd
 
 
 def txxxxx(p, tmass, nhel, nst):
@@ -357,6 +534,7 @@ def txxxxx(p, tmass, nhel, nst):
     tc[17] = ft[(3,3)]
     tc[0] = ft[(4,0)]
     tc[1] = ft[(5,0)]
+    tc.momenta = [ft[(4,0)].real, ft[(5,0)].real, ft[(5,0)].imag, ft[(4,0)].imag]
 
     return tc
 
@@ -604,7 +782,8 @@ def irxxxx(p, mass, nhel, nsr):
     ri[16] = rc[(3,2)]
     ri[17] = rc[(3,3)]
     ri[0] = rc[(4,0)]
-    ri[1] = rc[(5,0)]              
+    ri[1] = rc[(5,0)]
+    ri.momenta = [-rc[(4,0)].real, -rc[(5,0)].real, -rc[(5,0)].imag, -rc[(4,0)].imag]
 
     return ri
 
@@ -872,8 +1051,7 @@ def orxxxx(p, mass, nhel, nsr):
     ro[17] = rc[(3,3)]
     ro[0] = rc[(4,0)]
     ro[1] = rc[(5,0)]
+    ro.momenta = [rc[(4,0)].real, rc[(5,0)].real, rc[(5,0)].imag, rc[(4,0)].imag]
     
     return ro
     
-
-

@@ -436,7 +436,7 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
+        v5_string = "import model_v4 %s --debug\n" % os.path.join(self.model_dir, model)
         v5_string += "set automatic_html_opening False\n"
         couplings = MERunner.get_coupling_definitions(orders)
 
@@ -468,6 +468,7 @@ class MG5_UFO_Runner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
+        misc.sprint("proc_card.dat content:\n%s" % v5_string)
         return v5_string
 
 class MG5_UFO_gauge_Runner(MG5Runner):
@@ -622,17 +623,21 @@ class MG5_CPP_Runner(MG5Runner):
         return v5_string
 
     def fix_energy_in_check(self, dir_name, energy):
-        """Replace the hard coded collision energy in check_sa.f by the given
+        """Replace the hard coded collision energy in check_sa.cpp by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'r')
-        check_sa = file.read()
-        file.close()
+        for check_sa_path in glob.glob(
+                os.path.join(dir_name, 'SubProcesses', '*', 'check_sa.cpp')):
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'w')
-        file.write(re.sub("energy = 1000", "energy = %i" % int(energy),
-                          check_sa))
-        file.close()
+            file = open(check_sa_path, 'r')
+            check_sa = file.read()
+            file.close()
+
+            file = open(check_sa_path, 'w')
+            file.write(re.sub(r"double energy = [\d.]+;",
+                              "double energy = %s;" % str(float(energy)),
+                              check_sa))
+            file.close()
 
 class PickleRunner(MERunner):
     """Runner object for the stored comparison results."""
@@ -1069,4 +1074,3 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-

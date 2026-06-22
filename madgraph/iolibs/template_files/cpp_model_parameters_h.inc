@@ -11,6 +11,13 @@
 #include "read_slha.h"
 using namespace std;
 
+struct FLV_COUPLING
+{
+     int partner[4] = {-1,-1,-1,-1};
+     int partner2[4] = {-1,-1,-1,-1};
+     std::complex<double>* val[4];
+};
+
 class Parameters_%(model_name)s
 {
 public:
@@ -23,6 +30,8 @@ double zero, ZERO;
 %(independent_couplings)s
 %(dependent_parameters)s
 %(dependent_couplings)s
+%(flavor_independent_couplings)s
+%(flavor_dependent_couplings)s
 
 // Set parameters that are unchanged during the run
 void setIndependentParameters(SLHAReader& slha);

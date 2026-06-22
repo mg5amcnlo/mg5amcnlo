@@ -10,6 +10,8 @@ import logging
 import time
 import tempfile
 import math
+import glob
+import gzip
 
 logger = logging.getLogger('test_cmd')
 
@@ -57,6 +59,11 @@ class TestMadSpin(unittest.TestCase):
         if not self.debuging:
             shutil.rmtree(self.path)
         self.assertFalse(self.debuging)
+
+    def _get_single_decayed_lhe_path(self):
+        decayed_events = glob.glob(pjoin(self.run_dir, 'Events', '*decayed*', '*.lhe.gz'))
+        self.assertTrue(decayed_events)
+        return decayed_events[0]
 
 
     def test_hepmc_decay(self):
@@ -232,4 +239,211 @@ class TestMadSpin(unittest.TestCase):
         import math
         self.assertLess(abs(pol[1]-pol[-1]), 2 * math.sqrt(pol[1]))
         self.assertLess(pol[0], pol[-1])
-         
+
+    def test_madspin_mixed_flavor_decay_log_summary(self):
+        """Check MadSpin log summary for mixed lepton/quark decay definition."""
+
+        cmd_path = pjoin(self.path, 'test_madspin_mixed_flavor.cmd')
+        log_path = pjoin(self.path, 'test_madspin_mixed_flavor.log')
+        command = """import model sm
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+define l+ = e+ mu+ u d~
+define l- = e- mu- u~ d
+generate u u~ > z g
+output %(path)s
+launch
+madspin=ON
+shower=OFF
+analysis=OFF
+set nevents 10000
+set iseed 1
+decay w+ > j j
+decay w- > j j
+decay z > l+ l-
+""" % {'path': self.run_dir}
+        with open(cmd_path, 'w') as fsock:
+            fsock.write(command)
+
+        with open(log_path, 'w') as log_file:
+            return_code = subprocess.call(
+                [sys.executable, pjoin(_file_path, os.path.pardir, 'bin', 'mg5_aMC'), cmd_path],
+                cwd=pjoin(_file_path, os.path.pardir),
+                stdout=log_file, stderr=subprocess.STDOUT)
+        self.assertEqual(return_code, 0)
+
+        with open(log_path) as log_file:
+            log = log_file.read()
+            misc.sprint(log)
+
+        # MadSpin's default spinmode is "PA" (pole approximation), which
+        # routes through the density code path. The density path emits a
+        # single summary line of the form:
+        #   CRITICAL: MadSpin unweight efficiency: 0.3697
+        #            (10000 written / 27048 trials, 2.70 trials/event)
+        # rather than the legacy multi-line onshell summary
+        # ("Total number of events written", "Average number of trial
+        # points per production event", "Branching ratio to allowed
+        # decays", ...). Parse the new line for the metrics that are
+        # still meaningful here: the written-event count and the
+        # trials/event efficiency.
+        summary = re.search(
+            r'MadSpin unweight efficiency:\s*([0-9]+(?:\.[0-9]+)?)\s*'
+            r'\(([0-9]+)\s*written\s*/\s*([0-9]+)\s*trials,\s*'
+            r'([0-9]+(?:\.[0-9]+)?)\s*trials/event\)',
+            log)
+        self.assertIsNotNone(summary,
+            msg='MadSpin density-mode summary line not found in log')
+        n_written = int(summary.group(2))
+        trials_per_event = float(summary.group(4))
+        self.assertEqual(n_written, 10000,
+            msg='Expected 10000 written events, got %d' % n_written)
+        # Density-mode trials/event for this process is ~2.70 (the legacy
+        # onshell path used to give ~4.98 here; both are valid sampling
+        # efficiencies for the same decay channel definition).
+        self.assertAlmostEqual(trials_per_event, 2.70, delta=0.5)
+
+        # The legacy onshell-mode summary lines (Branching ratio to allowed
+        # decays / Number of events with weights larger than max_weight /
+        # Number of subprocesses / Number of failures when restoring the
+        # Monte Carlo masses) are not emitted by the density code path,
+        # so those assertions are intentionally not ported here.
+
+        with gzip.open(self._get_single_decayed_lhe_path(), 'rt') as lhe_file:
+            banner_lines = []
+            for line in lhe_file:
+                if '<event' in line:
+                    break
+                banner_lines.append(line)
+        banner_text = ''.join(banner_lines)
+        self.assertNotRegex(banner_text, r'(?mi)^\s*81\s+[0-9eE.+-]+\s+# added\s*$')
+        self.assertNotRegex(banner_text, r'(?mi)^\s*82\s+[0-9eE.+-]+\s+# added\s*$')
+        self.assertNotRegex(banner_text, r'(?mi)^\s*83\s+[0-9eE.+-]+\s+# added\s*$')
+        self.assertNotRegex(banner_text, r'(?mi)^\s*decay\s+81\s+[0-9eE.+-]+\s+# added\s*$')
+        self.assertNotRegex(banner_text, r'(?mi)^\s*decay\s+82\s+[0-9eE.+-]+\s+# added\s*$')
+        self.assertNotRegex(banner_text, r'(?mi)^\s*decay\s+83\s+[0-9eE.+-]+\s+# added\s*$')
+
+    def test_madspin_wplus_all_all_flavor_balance(self):
+        """`w+ > all all` should populate e/mu decay modes with similar rates."""
+
+        cmd_path = pjoin(self.path, 'test_madspin_wplus_all_all.cmd')
+        log_path = pjoin(self.path, 'test_madspin_wplus_all_all.log')
+        command = """import model sm
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+generate p p > w+ g
+output %(path)s
+launch
+madspin=ON
+shower=OFF
+analysis=OFF
+set nevents 2000
+set iseed 1
+decay w+ > all all
+""" % {'path': self.run_dir}
+        with open(cmd_path, 'w') as fsock:
+            fsock.write(command)
+
+        with open(log_path, 'w') as log_file:
+            return_code = subprocess.call(
+                [sys.executable, pjoin(_file_path, os.path.pardir, 'bin', 'mg5_aMC'), cmd_path],
+                cwd=pjoin(_file_path, os.path.pardir),
+                stdout=log_file, stderr=subprocess.STDOUT)
+        self.assertEqual(return_code, 0)
+
+        counts={}
+        for event in lhe_parser.EventFile(self._get_single_decayed_lhe_path()):
+            for particle in event:
+                if particle.status == 1:
+                    if particle.pdg in counts:
+                        counts[particle.pdg] += 1
+                    else:
+                        counts[particle.pdg] = 1
+
+        misc.sprint(counts)
+        self.assertNotIn(81, counts)
+        self.assertNotIn(82, counts)
+        self.assertNotIn(83, counts)
+        self.assertNotIn(-81, counts)
+        self.assertNotIn(-82, counts)
+        self.assertNotIn(-83, counts)    
+        self.assertGreater(counts[-11], 0)
+        self.assertEqual(counts[-11],counts[12])
+        self.assertGreater(counts[-13], 0)
+        self.assertEqual(counts[-13],counts[14])
+        self.assertGreater(counts[-15], 0) 
+        self.assertEqual(counts[-15],counts[16])
+        self.assertGreater(counts[4], 0)
+        self.assertEqual(counts[4], counts[-3])
+        self.assertGreater(counts[2], 0)
+        self.assertEqual(counts[2], counts[-1])
+
+
+        lepton_total = counts[-11] + counts[-13]
+        self.assertLess(abs(counts[-11] - counts[-13]), 4* math.sqrt(counts[-11]),
+            msg='Expected electron/muon counts to be comparable, got %s' % counts)
+        self.assertLess(abs(counts[2] - counts[4]), 4* math.sqrt(counts[4]),
+            msg='Expected electron/muon counts to be comparable, got %s' % counts)
+                
+    def test_madspin_wplus_all_all_flavor_balance_2to1(self):
+        """`w+ > all all` should populate e/mu decay modes with similar rates."""
+
+        cmd_path = pjoin(self.path, 'test_madspin_wplus_all_all.cmd')
+        log_path = pjoin(self.path, 'test_madspin_wplus_all_all.log')
+        command = """import model sm
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+generate p p > w+
+output %(path)s
+launch
+madspin=ON
+shower=OFF
+analysis=OFF
+set nevents 2000
+set iseed 1
+decay w+ > all all
+""" % {'path': self.run_dir}
+        with open(cmd_path, 'w') as fsock:
+            fsock.write(command)
+
+        with open(log_path, 'w') as log_file:
+            return_code = subprocess.call(
+                [sys.executable, pjoin(_file_path, os.path.pardir, 'bin', 'mg5_aMC'), cmd_path],
+                cwd=pjoin(_file_path, os.path.pardir),
+                stdout=log_file, stderr=subprocess.STDOUT)
+        self.assertEqual(return_code, 0)
+
+        counts={}
+        for event in lhe_parser.EventFile(self._get_single_decayed_lhe_path()):
+            for particle in event:
+                if particle.status == 1:
+                    if particle.pdg in counts:
+                        counts[particle.pdg] += 1
+                    else:
+                        counts[particle.pdg] = 1
+
+        misc.sprint(counts)
+        self.assertNotIn(81, counts)
+        self.assertNotIn(82, counts)
+        self.assertNotIn(83, counts)
+        self.assertNotIn(-81, counts)
+        self.assertNotIn(-82, counts)
+        self.assertNotIn(-83, counts)    
+        self.assertGreater(counts[-11], 0)
+        self.assertEqual(counts[-11],counts[12])
+        self.assertGreater(counts[-13], 0)
+        self.assertEqual(counts[-13],counts[14])
+        self.assertGreater(counts[-15], 0) 
+        self.assertEqual(counts[-15],counts[16])
+        self.assertGreater(counts[4], 0)
+        self.assertEqual(counts[4], counts[-3])
+        self.assertGreater(counts[2], 0)
+        self.assertEqual(counts[2], counts[-1])
+
+
+        lepton_total = counts[-11] + counts[-13]
+        self.assertLess(abs(counts[-11] - counts[-13]), 4* math.sqrt(counts[-11]),
+            msg='Expected electron/muon counts to be comparable, got %s' % counts)
+        self.assertLess(abs(counts[2] - counts[4]), 4* math.sqrt(counts[4]),
+            msg='Expected electron/muon counts to be comparable, got %s' % counts)
+               

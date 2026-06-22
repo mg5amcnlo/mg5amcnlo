@@ -4155,9 +4155,11 @@ RESTART = %(mint_mode)s
                 ld_library_path = 'DYLD_LIBRARY_PATH'
             else:
                 ld_library_path = 'LD_LIBRARY_PATH'
+            local_pdfsets = pjoin(self.me_dir, 'lib', 'PDFsets')
             fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
                 % {'ld_library_path': ld_library_path,
-                   'extralibs': ':'.join(extrapaths)})
+                   'extralibs': ':'.join(extrapaths),
+                   'local_pdfsets': local_pdfsets if os.path.isdir(local_pdfsets) else ''})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
         if event_files:

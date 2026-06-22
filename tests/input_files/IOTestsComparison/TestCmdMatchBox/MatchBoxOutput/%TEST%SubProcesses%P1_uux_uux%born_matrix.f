@@ -239,6 +239,12 @@ C
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+C     Flavor table for the FLAV_IDX -> FLAVOR rebuild.
+      INTEGER NMASK_FLAV
+      PARAMETER (NMASK_FLAV=1)
+      INTEGER MASK_J
+      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)
+      DATA FLAV_TABLE / 1, 1, 1, 1 /
 C     
 C     FUNCTION
 C     
@@ -250,24 +256,34 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA MG5_1_DENOM/1/
+      DATA (MG5_1_CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (MG5_1_CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
-      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV1P0_3(W(1,1),W(1,2),GC_5,ZERO,ZERO,W(1,5))
+C     Rebuild FLAVOR(NEXTERNAL) from the resolved flavor index.
+      IF (FLAV_IDX .GE. 1 .AND. FLAV_IDX .LE. NMASK_FLAV) THEN
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, FLAV_IDX)
+        ENDDO
+      ELSE
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, 1)
+        ENDDO
+      ENDIF
+      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
+      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
+      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1, FLAVOR(3),W(3))
+      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1, FLAVOR(4),W(4))
+      CALL FFV1P0_3(W(1),W(2),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMP(1))
-      CALL FFV1P0_3(W(1,1),W(1,3),GC_5,ZERO,ZERO,W(1,5))
+      CALL FFV1_0(W(4),W(3),W(5),GC_5,AMP(1))
+      CALL FFV1P0_3(W(1),W(3),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
+      CALL FFV1_0(W(4),W(2),W(5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
       JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
      $ -01)*AMP(2)
@@ -371,6 +387,12 @@ C     REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+C     Flavor table for the FLAV_IDX -> FLAVOR rebuild.
+      INTEGER NMASK_FLAV
+      PARAMETER (NMASK_FLAV=1)
+      INTEGER MASK_J
+      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)
+      DATA FLAV_TABLE / 1, 1, 1, 1 /
 
 C     
 C     GLOBAL VARIABLES
@@ -379,10 +401,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM/1/
-      DATA (CF(I),I=  1,  2) /9,6/
+      DATA MG5_1_DENOM/1/
+      DATA (MG5_1_CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I),I=  3,  3) /9/
+      DATA (MG5_1_CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -392,16 +414,26 @@ C     ----------
       ENDDO
 
 
-      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV1P0_3(W(1,1),W(1,2),GC_5,ZERO,ZERO,W(1,5))
+C     Rebuild FLAVOR(NEXTERNAL) from the resolved flavor index.
+      IF (FLAV_IDX .GE. 1 .AND. FLAV_IDX .LE. NMASK_FLAV) THEN
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, FLAV_IDX)
+        ENDDO
+      ELSE
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, 1)
+        ENDDO
+      ENDIF
+      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
+      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
+      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1, FLAVOR(3),W(3))
+      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1, FLAVOR(4),W(4))
+      CALL FFV1P0_3(W(1),W(2),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMP(1))
-      CALL FFV1P0_3(W(1,1),W(1,3),GC_5,ZERO,ZERO,W(1,5))
+      CALL FFV1_0(W(4),W(3),W(5),GC_5,AMP(1))
+      CALL FFV1P0_3(W(1),W(3),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
+      CALL FFV1_0(W(4),W(2),W(5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
       JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
      $ -01)*AMP(2)
@@ -414,11 +446,11 @@ C     JAMPs contributing to orders QCD=2
 
       SUBROUTINE MG5_1_GET_JAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
 
       ONEJAMP = JAMP(NJAMP+1, SOINDEX)  ! +1 since njamp start at zero (c convention)
@@ -426,7 +458,7 @@ C     JAMPs contributing to orders QCD=2
 
       SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
@@ -506,7 +538,7 @@ C     JAMPs contributing to orders QCD=2
       RETURN
       END
 
-      SUBROUTINE MG5_1_GET_CHOSEN_SO_CONFIG(M,N, OUT)
+      SUBROUTINE MG5_1__GET_CHOSEN_SO_CONFIG(M,N, OUT)
 
       INTEGER M, N
       LOGICAL OUT

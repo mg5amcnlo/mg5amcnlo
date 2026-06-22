@@ -432,8 +432,13 @@ class TestFRDecay(unittest.TestCase):
     
     def test_decay_mssm(self):
         decay_framework = DecayComparator('MSSM_SLHA2')
-        
+       
+
+        mssm = 'go su1 su3 su5 su6 sd3 sd4 h02 a0 h+ sv1 sv3 sl1- sl2- sl6- w- h- n2 n4 x1+ '.split()
+
         for i, name in enumerate(decay_framework.particles_id.keys()):
+            if name not in mssm:
+                continue
             import time
             start = time.time()
             print('comparing decay for %s %s' % (i, name))

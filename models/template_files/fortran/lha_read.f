@@ -355,11 +355,11 @@ c
       integer lun
       logical fopened
       character*(*) filename
-      character*90  tempname
+      character*512  tempname
       integer fine
       integer dirup,i
 
-      character*90 lastopen
+      character*512 lastopen
       save lastopen
       data lastopen /''/
       integer sindex

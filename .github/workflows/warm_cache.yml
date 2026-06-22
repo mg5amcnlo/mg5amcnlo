@@ -26,6 +26,7 @@ env:
 jobs:
 
   delete-cache:
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -57,6 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   rebuild-numpy-cache:
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -78,43 +80,45 @@ jobs:
         run: pip install --target ~/.cache/pip-packages numpy
 
   ufo_cache:
-     runs-on: ubuntu-latest
-     needs: delete-cache
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    runs-on: ubuntu-latest
+    needs: delete-cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
-       - name: Cache UFO MODEL
-         id: cache-ufo
-         uses: actions/cache@v5
-         with:
-           path: ~/.cache/UFOMODEL
-           key: ufomodel
+    steps:
+     - name: Cache UFO MODEL
+       id: cache-ufo
+       uses: actions/cache@v5
+       with:
+         path: ~/.cache/UFOMODEL
+         key: ufomodel
 
-       - uses: actions/checkout@v5
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
+     - uses: actions/checkout@v5
+       if: steps.cache-ufo.outputs.cache-hit != 'true'
 
-       - name: Install UFO model
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
-         run: |
-           mkdir -p /home/runner/.cache/UFOMODEL
-           echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-           echo "import model 2HDM" >> cmd
-           ./bin/mg5_aMC cmd
+     - name: Install UFO model
+       if: steps.cache-ufo.outputs.cache-hit != 'true'
+       run: |
+         mkdir -p /home/runner/.cache/UFOMODEL
+         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
+         echo "import model 2HDM" >> cmd
+         ./bin/mg5_aMC cmd
 
-       - name: move UFO model to cache
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
-         run: |
-           cp -r models/2HDM /home/runner/.cache/UFOMODEL
+     - name: move UFO model to cache
+       if: steps.cache-ufo.outputs.cache-hit != 'true'
+       run: |
+         cp -r models/2HDM /home/runner/.cache/UFOMODEL
            
   lhapdf_cache:
-     needs: delete-cache
-     runs-on: ${{ matrix.os }}
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    needs: delete-cache
+    runs-on: ${{ matrix.os }}
+    strategy:
+     matrix:
+       os: [ubuntu-22.04, ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -149,14 +153,15 @@ jobs:
                tar -xzpvf cteq6l1.tar.gz           
                
   pythia8_cache:
-     runs-on: ${{ matrix.os }}
-     needs: lhapdf_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    runs-on: ${{ matrix.os }}
+    needs: lhapdf_cache
+    strategy:
+     matrix:
+       os: [ubuntu-22.04, ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -203,14 +208,15 @@ jobs:
                test -x /home/runner/.cache/HEPtools/pythia8/bin/pythia8-config
 
   emela_cache:
-     runs-on: ${{ matrix.os }}
-     needs: lhapdf_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    runs-on: ${{ matrix.os }}
+    needs: lhapdf_cache
+    strategy:
+     matrix:
+       os: [ubuntu-22.04, ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -257,14 +263,15 @@ jobs:
 #             GH_TOKEN: ${{ github.token }}
 
   contur_cache:
-     runs-on: ${{ matrix.os }}
-     needs: pythia8_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    runs-on: ${{ matrix.os }}
+    needs: pythia8_cache
+    strategy:
+     matrix:
+       os: [ubuntu-22.04, ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: check Cache rivet/contur packages
@@ -321,63 +328,64 @@ jobs:
        #     GH_TOKEN: ${{ github.token }}
 
   looptools_cache:
-     runs-on: ${{ matrix.os }}
-     strategy:
-      matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-     needs:
-       - delete-cache
+    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    runs-on: ${{ matrix.os }}
+    strategy:
+     matrix:
+       os: [ubuntu-22.04, ubuntu-24.04]
+    needs:
+    - delete-cache
 
-     # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
-       - name: Set cache key
-         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
-       - name: Cache loop packages (iregi/cutools)
-         id: cache-nlo
-         uses: actions/cache@v5
-         with:
-           path: ~/.cache/HEPtools
-           key: looptools-${{ env.CACHE_KEY }} # key to change if not final step
-       
-       - name: get mg5
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         uses: actions/checkout@v5
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+     - name: Set cache key
+       run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+     - name: Cache loop packages (iregi/cutools)
+       id: cache-nlo
+       uses: actions/cache@v5
+       with:
+         path: ~/.cache/HEPtools
+         key: looptools-${{ env.CACHE_KEY }} # key to change if not final step
+      
+     - name: get mg5
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       uses: actions/checkout@v5
 
-       - name: Install cuttools/iregi into cache dir
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         run: |
-               mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
-               mkdir -p /home/runner/.cache/HEPtools/IREGI/src
-               cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-               cd vendor/IREGI/src
-               make
-               cd ../../CutTools
-               make
-               cd ../../
-               cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
-               cp -r vendor/./CutTools/includects/libcts.a /home/runner/.cache/HEPtools/CutTools/lib
-               cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
+     - name: Install cuttools/iregi into cache dir
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       run: |
+             mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
+             mkdir -p /home/runner/.cache/HEPtools/IREGI/src
+             cd $GITHUB_WORKSPACE
+             echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+             cd vendor/IREGI/src
+             make
+             cd ../../CutTools
+             make
+             cd ../../
+             cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
+             cp -r vendor/./CutTools/includects/libcts.a /home/runner/.cache/HEPtools/CutTools/lib
+             cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
 
-       - name: Install ninja/collier into cache dir 
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         run: |
-               mkdir -p ~/.cache/HEPtools
-               cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-               echo "install collier " > cmd
-               echo "install ninja " >> cmd
-               ./bin/mg5_aMC cmd
+     - name: Install ninja/collier into cache dir 
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       run: |
+             mkdir -p ~/.cache/HEPtools
+             cd $GITHUB_WORKSPACE
+             echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+             echo "install collier " > cmd
+             echo "install ninja " >> cmd
+             ./bin/mg5_aMC cmd
 
   heptools_cache:
+    if: always() && (github.ref_name == '3.x' || github.ref_name == 'test_ci')
     runs-on: ${{ matrix.os }}       
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
     needs: [lhapdf_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache]
-    if: always()   # 👈 runs even if a dependency failed
     steps:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV

@@ -10,7 +10,23 @@ C It is subject to the ALOHA license which should accompany this
 C distribution.
 C
 C###############################################################################
-      subroutine ixxxxx(p, fmass, nhel, nsf ,fi)
+      module ALOHA_OBJECT
+         TYPE ALOHA
+            SEQUENCE
+            double complex::W(4)
+            double precision :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA
+         TYPE ALOHA2D
+            SEQUENCE
+            double complex::W(16)
+            double precision :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA2D
+      end module ALOHA_OBJECT
+
+
+      subroutine ixxxxx(p, fmass, nhel, nsf, flavor ,fi)
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number.
@@ -22,10 +38,15 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fi(6)          : fermion wavefunction               |fi>
+c       complex fi % W(4)          : fermion wavefunction               |fi>
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex fi(6),chi(2)
+      
+          type(aloha) fi
+      integer flavor
+      double complex chi(2)
+
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
       integer nhel,nsf,ip,im,nh
@@ -33,6 +54,11 @@ c
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
 
+      fi % P(0)  = p(0)*nsf*-1
+      fi % P(1)  = p(1)*nsf*-1
+      fi % P(2)  = p(2)*nsf*-1
+      fi % P(3)  = p(3)*nsf*-1
+      fi % flv_index = flavor
 c#ifdef HELAS_CHECK
 c      double precision p2
 c      double precision epsi
@@ -70,8 +96,6 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fi(1) = dcmplx(p(0),p(3))*nsf*-1
-      fi(2) = dcmplx(p(1),p(2))*nsf*-1
 
       nh = nhel*nsf
 
@@ -86,10 +110,10 @@ c#endif
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(3) = ip     * sqm(ip)
-            fi(4) = im*nsf * sqm(ip)
-            fi(5) = ip*nsf * sqm(im)
-            fi(6) = im     * sqm(im)
+            fi % W (1) = ip     * sqm(ip)
+            fi % W (2) = im*nsf * sqm(ip)
+            fi % W (3) = ip*nsf * sqm(im)
+            fi % W (4) = im     * sqm(im)
 
          else
 
@@ -109,10 +133,10 @@ c#endif
                chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fi(3) = sfomeg(1)*chi(im)
-            fi(4) = sfomeg(1)*chi(ip)
-            fi(5) = sfomeg(2)*chi(im)
-            fi(6) = sfomeg(2)*chi(ip)
+            fi % W(1) = sfomeg(1)*chi(im)
+            fi % W(2) = sfomeg(1)*chi(ip)
+            fi % W(3) = sfomeg(2)*chi(im)
+            fi % W(4) = sfomeg(2)*chi(ip)
 
          endif
 
@@ -121,148 +145,39 @@ c#endif
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            sqp0p3 = dsqrt(max(dabs(p(0))+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
-            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
+            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*dabs(p(0)))
          else
             chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(3) = dcmplx( rZero )
-            fi(4) = dcmplx( rZero )
-            fi(5) = chi(1)
-            fi(6) = chi(2)
-         else
-            fi(3) = chi(2)
-            fi(4) = chi(1)
-            fi(5) = dcmplx( rZero )
-            fi(6) = dcmplx( rZero )
-         endif
-      endif
-c
-      return
-      end
-
-
-      subroutine ixxxso(p, fmass, nhel, nsf ,fi)
-c Identical to ixxxxx, except that fi returns only the spinor (without the momentum)
-      implicit none
-      double complex fi(4),chi(2)
-      double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
-     &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,ip,im,nh
-
-      double precision rZero, rHalf, rTwo
-      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
-
-c#ifdef HELAS_CHECK
-c      double precision p2
-c      double precision epsi
-c      parameter( epsi = 2.0d-5 )
-c      integer stdo
-c      parameter( stdo = 6 )
-c#endif
-c
-c#ifdef HELAS_CHECK
-c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-c      if ( abs(p(0))+pp.eq.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in ixxxxx is zero momentum'
-c      endif
-c      if ( p(0).le.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in ixxxxx has non-positive energy'
-c         write(stdo,*)
-c     &        '             : p(0) = ',p(0)
-c      endif
-c      p2 = (p(0)-pp)*(p(0)+pp)
-c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in ixxxxx has inappropriate mass'
-c         write(stdo,*)
-c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
-c      endif
-c      if (abs(nhel).ne.1) then
-c         write(stdo,*) ' helas-error : nhel in ixxxxx is not -1,1'
-c         write(stdo,*) '             : nhel = ',nhel
-c      endif
-c      if (abs(nsf).ne.1) then
-c         write(stdo,*) ' helas-error : nsf in ixxxxx is not -1,1'
-c         write(stdo,*) '             : nsf = ',nsf
-c      endif
-c#endif
-
-c$$$      fi(1) = dcmplx(p(0),p(3))*nsf*-1
-c$$$      fi(2) = dcmplx(p(1),p(2))*nsf*-1
-
-      nh = nhel*nsf
-
-      if ( fmass.ne.rZero ) then
-
-         pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
-
-         if ( pp.eq.rZero ) then
-
-            sqm(0) = dsqrt(abs(fmass)) ! possibility of negative fermion masses
-            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
-            ip = (1+nh)/2
-            im = (1-nh)/2
-
-            fi(1) = ip     * sqm(ip)
-            fi(2) = im*nsf * sqm(ip)
-            fi(3) = ip*nsf * sqm(im)
-            fi(4) = im     * sqm(im)
-
-         else
-
-            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
-            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
-            omega(1) = dsqrt(p(0)+pp)
-            omega(2) = fmass/omega(1)
-            ip = (3+nh)/2
-            im = (3-nh)/2
-            sfomeg(1) = sf(1)*omega(ip)
-            sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
-            chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
-            if ( pp3.eq.rZero ) then
-               chi(2) = dcmplx(-nh )
+            if( p(0).gt.0d0) then
+                fi % W(1) = dcmplx( rZero )
+                fi % W(2) = dcmplx( rZero )
+                fi % W(3) = chi(1)
+                fi % W(4) = chi(2)
             else
-               chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
+                fi % W(1) = dcmplx(0,1) * chi(1)  
+                fi % W(2) = dcmplx(0,1) * chi(2)
+                fi % W(3) = dcmplx( rZero )
+                fi % W(4) = dcmplx( rZero )
+            endif   
+         else
+             if (p(0).gt.0d0) then
+                fi % W(1) = chi(2)
+                fi % W(2) = chi(1)
+                fi % W(3) = dcmplx( rZero )
+                fi % W(4) = dcmplx( rZero )
+            else
+
+                fi % W(1) = dcmplx( rZero )
+                fi % W(2) = dcmplx( rZero )
+                fi % W(3) = dcmplx(0,1) * chi(2)
+                fi % W(4) = dcmplx(0,1) * chi(1)
             endif
-
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
-
-         endif
-
-      else
-
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
-            sqp0p3 = 0d0
-         else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-         end if
-         chi(1) = dcmplx( sqp0p3 )
-         if ( sqp0p3.eq.rZero ) then
-            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
-         else
-            chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
-         endif
-         if ( nh.eq.1 ) then
-            fi(1) = dcmplx( rZero )
-            fi(2) = dcmplx( rZero )
-            fi(3) = chi(1)
-            fi(4) = chi(2)
-         else
-            fi(1) = chi(2)
-            fi(2) = chi(1)
-            fi(3) = dcmplx( rZero )
-            fi(4) = dcmplx( rZero )
          endif
       endif
 c
@@ -270,7 +185,9 @@ c
       end
 
 
-      subroutine oxxxxx(p,fmass,nhel,nsf , fo)
+
+
+      subroutine oxxxxx(p,fmass,nhel,nsf , flavor, fo)
 c
 c This subroutine computes a fermion wavefunction with the flowing-OUT
 c fermion number.
@@ -282,10 +199,14 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fo(6)          : fermion wavefunction               <fo|
+c       complex fo % W(4)           : fermion wavefunction               <fo|
 c
+      use aloha_object
       implicit none
-      double complex fo(6),chi(2)
+      type(aloha) fo
+      integer flavor
+
+      double complex chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
       integer nhel,nsf,nh,ip,im
@@ -330,9 +251,11 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fo(1) = dcmplx(p(0),p(3))*nsf
-      fo(2) = dcmplx(p(1),p(2))*nsf
-
+      fo % P(0)  = p(0)*nsf
+      fo % P(1)  = p(1)*nsf
+      fo % P(2)  = p(2)*nsf
+      fo % P(3)  = p(3)*nsf
+      fo % flv_index = flavor
       nh = nhel*nsf
 
       if ( fmass.ne.rZero ) then
@@ -345,10 +268,10 @@ c#endif
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
             im = nhel * (1+nh)/2
             ip = nhel * -1 * ((1-nh)/2)
-            fo(3) = im     * sqm(abs(ip))
-            fo(4) = ip*nsf * sqm(abs(ip))
-            fo(5) = im*nsf * sqm(abs(im))
-            fo(6) = ip     * sqm(abs(im))
+            fo % W(1)  = im     * sqm(abs(ip))
+            fo % W(2)  = ip*nsf * sqm(abs(ip))
+            fo % W(3)  = im*nsf * sqm(abs(im))
+            fo % W(4)  = ip     * sqm(abs(im))
          else
 
 c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
@@ -368,10 +291,10 @@ c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
                chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fo(3) = sfomeg(2)*chi(im)
-            fo(4) = sfomeg(2)*chi(ip)
-            fo(5) = sfomeg(1)*chi(im)
-            fo(6) = sfomeg(1)*chi(ip)
+            fo % W(1)  = sfomeg(2)*chi(im)
+            fo % W(2)  = sfomeg(2)*chi(ip)
+            fo % W(3)  = sfomeg(1)*chi(im)
+            fo % W(4)  = sfomeg(1)*chi(ip)
 
          endif
 
@@ -380,149 +303,38 @@ c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            sqp0p3 = dsqrt(max(dabs(p(0))+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
-            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
+            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*dabs(p(0)))
          else
             chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(3) = chi(1)
-            fo(4) = chi(2)
-            fo(5) = dcmplx( rZero )
-            fo(6) = dcmplx( rZero )
+             if(p(0).gt.0d0)then
+                 fo % W(1)  = chi(1)
+                 fo % W(2)  = chi(2)
+                 fo % W(3)  = dcmplx( rZero )
+                 fo % W(4)  = dcmplx( rZero )
+             else
+                 fo % W(1)  = dcmplx( rZero ) 
+                 fo % W(2)  = dcmplx( rZero ) 
+                 fo % W(3)  = dcmplx(0,1) * chi(1)
+                 fo % W(4)  = dcmplx(0,1) * chi(2)
+             endif
          else
-            fo(3) = dcmplx( rZero )
-            fo(4) = dcmplx( rZero )
-            fo(5) = chi(2)
-            fo(6) = chi(1)
-         endif
-
-      endif
-c
-      return
-      end
-
-      subroutine oxxxso(p,fmass,nhel,nsf , fo)
-c Identical to oxxxxx, except that fo returns only the spinor (without the momentum)
-      implicit none
-      double complex fo(4),chi(2)
-      double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
-     &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,nh,ip,im
-
-      double precision rZero, rHalf, rTwo
-      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
-
-c#ifdef HELAS_CHECK
-c      double precision p2
-c      double precision epsi
-c      parameter( epsi = 2.0d-5 )
-c      integer stdo
-c      parameter( stdo = 6 )
-c#endif
-c
-c#ifdef HELAS_CHECK
-c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-c      if ( abs(p(0))+pp.eq.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx is zero momentum'
-c      endif
-c      if ( p(0).le.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx has non-positive energy'
-c         write(stdo,*)
-c     &        '         : p(0) = ',p(0)
-c      endif
-c      p2 = (p(0)-pp)*(p(0)+pp)
-c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx has inappropriate mass'
-c         write(stdo,*)
-c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
-c      endif
-c      if ( abs(nhel).ne.1 ) then
-c         write(stdo,*) ' helas-error : nhel in oxxxxx is not -1,1'
-c         write(stdo,*) '             : nhel = ',nhel
-c      endif
-c      if ( abs(nsf).ne.1 ) then
-c         write(stdo,*) ' helas-error : nsf in oxxxxx is not -1,1'
-c         write(stdo,*) '             : nsf = ',nsf
-c      endif
-c#endif
-
-c$$$      fo(1) = dcmplx(p(0),p(3))*nsf
-c$$$      fo(2) = dcmplx(p(1),p(2))*nsf
-
-      nh = nhel*nsf
-
-      if ( fmass.ne.rZero ) then
-
-         pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
-
-         if ( pp.eq.rZero ) then
-
-            sqm(0) = dsqrt(abs(fmass)) ! possibility of negative fermion masses
-            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
-            ip = -((1+nh)/2)
-            im =  (1-nh)/2
-
-            fo(1) = im     * sqm(im)
-            fo(2) = ip*nsf * sqm(im)
-            fo(3) = im*nsf * sqm(-ip)
-            fo(4) = ip     * sqm(-ip)
-
-         else
-
-            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
-            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
-            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
-            omega(1) = dsqrt(p(0)+pp)
-            omega(2) = fmass/omega(1)
-            ip = (3+nh)/2
-            im = (3-nh)/2
-            sfomeg(1) = sf(1)*omega(ip)
-            sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
-            chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
-            if ( pp3.eq.rZero ) then
-               chi(2) = dcmplx(-nh )
+             if(p(0).gt.0d0) then
+                fo % W(1)  = dcmplx( rZero )
+                fo % W(2)  = dcmplx( rZero )
+                fo % W(3)  = chi(2)
+                fo % W(4)  = chi(1)
             else
-               chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
+                 fo % W(1)  = dcmplx(0,1) * chi(2)
+                 fo % W(2)  = dcmplx(0,1) * chi(1)
+                 fo % W(3)  = dcmplx( rZero )
+                 fo % W(4)  = dcmplx( rZero )
             endif
-
-            fo(1) = sfomeg(2)*chi(im)
-            fo(2) = sfomeg(2)*chi(ip)
-            fo(3) = sfomeg(1)*chi(im)
-            fo(4) = sfomeg(1)*chi(ip)
-
-         endif
-
-      else
-
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
-            sqp0p3 = 0d0
-         else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-         end if
-         chi(1) = dcmplx( sqp0p3 )
-         if ( sqp0p3.eq.rZero ) then
-            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
-         else
-            chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
-         endif
-         if ( nh.eq.1 ) then
-            fo(1) = chi(1)
-            fo(2) = chi(2)
-            fo(3) = dcmplx( rZero )
-            fo(4) = dcmplx( rZero )
-         else
-            fo(1) = dcmplx( rZero )
-            fo(2) = dcmplx( rZero )
-            fo(3) = chi(2)
-            fo(4) = chi(1)
          endif
 
       endif
@@ -544,12 +356,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : PSEUDOR  wavefunction    epsilon^mu^nu(t)
+c       complex tc % W($$18$$)         : PSEUDOR  wavefunction    epsilon^mu^nu(t)
 c
+      use aloha_object
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(18)
+      type(aloha) tc
 
       double complex ft(6,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -559,10 +372,12 @@ c
       parameter( rZero = 0.0d0, rHalf = 0.5d0 )
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
+      tc % W(1) = NHEL
+      tc % P(0) = p(0)*nst
+      tc % P(1) = p(1)*nst
+      tc % P(2) = p(2)*nst
+      tc % P(3) = p(3)*nst
 
-      tc(3)=NHEL
-      tc(1) = dcmplx(p(0),p(3))*nst
-      tc(2) = dcmplx(p(1),p(2))*nst
 
       return
       end
@@ -578,8 +393,10 @@ c
 c output:
 c       complex sc(3)          : scalar wavefunction                   s
 c
+      use aloha_object
       implicit none
-      double complex sc(3)
+
+      type(aloha) sc
       double precision p(0:3)
       integer nss
 
@@ -618,9 +435,11 @@ c         write(stdo,*) '             : nss = ',nss
 c      endif
 c#endif
 
-      sc(3) = dcmplx( rOne )
-      sc(1) = dcmplx(p(0),p(3))*nss
-      sc(2) = dcmplx(p(1),p(2))*nss
+      sc % W(1) = dcmplx( rOne )
+      sc % P(0) = p(0)*nss
+      sc % P(1) = p(1)*nss
+      sc % P(2) = p(2)*nss
+      sc % P(3) = p(3)*nss
 c
       return
       end
@@ -637,12 +456,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c       complex tc % W($$18$$)         : tensor wavefunction    epsilon^mu^nu(t)
 c
+      use aloha_object
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(18)
+      type(aloha2d) tc
 
       double complex ft(6,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -664,6 +484,11 @@ c
 
       ft(5,1) = dcmplx(p(0),p(3))*nst
       ft(6,1) = dcmplx(p(1),p(2))*nst
+
+      tc % P(0) = p(0)*nst
+      tc % P(1) = p(1)*nst
+      tc % P(2) = p(2)*nst
+      tc % P(3) = p(3)*nst
 
       if ( nhel.ge.0 ) then
 c construct eps+
@@ -772,24 +597,22 @@ c construct eps0
         end if
       end if
 
-      tc(3) = ft(1,1)
-      tc(4) = ft(1,2)
-      tc(5) = ft(1,3)
-      tc(6) = ft(1,4)
-      tc(7) = ft(2,1)
-      tc(8) = ft(2,2)
-      tc(9) = ft(2,3)
-      tc(10) = ft(2,4)
-      tc(11) = ft(3,1)
-      tc(12) = ft(3,2)
-      tc(13) = ft(3,3)
-      tc(14) = ft(3,4)
-      tc(15) = ft(4,1)
-      tc(16) = ft(4,2)
-      tc(17) = ft(4,3)
-      tc(18) = ft(4,4)
-      tc(1) = ft(5,1)
-      tc(2) = ft(6,1)
+      tc % W(1) = ft(1,1)
+      tc % W(2) = ft(1,2)
+      tc % W(3) = ft(1,3)
+      tc % W(4) = ft(1,4)
+      tc % w(5) = ft(2,1)
+      tc % w(6) = ft(2,2)
+      tc % w(7) = ft(2,3)
+      tc % w(8) = ft(2,4)
+      tc % w(9) = ft(3,1)
+      tc % w(10) = ft(3,2)
+      tc % w(11) = ft(3,3)
+      tc % w(12) = ft(3,4)
+      tc % w(13) = ft(4,1)
+      tc % w(14) = ft(4,2)
+      tc % w(15) = ft(4,3)
+      tc % w(16) = ft(4,4)
 
       return
       end
@@ -807,17 +630,17 @@ c                                (0 is forbidden if vmass=0.0)
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
+c       complex vc % W(4))          : vector wavefunction       epsilon^mu(v)
 c
+      use aloha_object
       implicit none
-      double complex vc(6)
       double precision p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
       integer nhel,nsv,nsvahl
 
       double precision rZero, rHalf, rOne, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0 )
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
-
+      type(aloha) vc
 c#ifdef HELAS_CHECK
 c      double precision p2
 c      double precision epsi
@@ -866,25 +689,26 @@ c#endif
       hel = dble(nhel)
       nsvahl = nsv*dabs(hel)
       pt2 = p(1)**2+p(2)**2
-      pp = min(p(0),dsqrt(pt2+p(3)**2))
+      pp = min(dabs(p(0)),dsqrt(pt2+p(3)**2))
       pt = min(pp,dsqrt(pt2))
 
-      vc(1) = dcmplx(p(0),p(3))*nsv
-      vc(2) = dcmplx(p(1),p(2))*nsv
-
+      vc % P(0) = p(0)*nsv
+      vc % P(1) = p(1)*nsv
+      vc % P(2) = p(2)*nsv
+      vc % P(3) = p(3)*nsv
 c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
 c      if( nhel.eq.4 ) then
 c         if( vmass.eq.rZero ) then
-c            vc(1) = rOne
-c            vc(2) = p(1)/p(0)
-c            vc(3) = p(2)/p(0)
-c            vc(4) = p(3)/p(0)
+c            vc % W($$1$$)) = rOne
+c            vc % W($$2$$)) = p(1)/p(0)
+c            vc % W(1)) = p(2)/p(0)
+c            vc % W(2)) = p(3)/p(0)
 c         else
-c            vc(1) = p(0)/vmass
-c            vc(2) = p(1)/vmass
-c            vc(3) = p(2)/vmass
-c            vc(4) = p(3)/vmass
+c            vc % W($$1$$)) = p(0)/vmass
+c            vc % W($$2$$)) = p(1)/vmass
+c            vc % W(1)) = p(2)/vmass
+c            vc % W(2)) = p(3)/vmass
 c         endif
 c         return
 c      endif
@@ -896,42 +720,42 @@ c#endif
 
          if ( pp.eq.rZero ) then
 
-            vc(3) = dcmplx( rZero )
-            vc(4) = dcmplx(-hel*sqh )
-            vc(5) = dcmplx( rZero , nsvahl*sqh )
-            vc(6) = dcmplx( hel0 )
+            vc % W(1) = dcmplx( rZero )
+            vc % W(2) = dcmplx(-hel*sqh )
+            vc % W(3) = dcmplx( rZero , nsvahl*sqh )
+            vc % W(4) = dcmplx( hel0 )
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(3) = dcmplx( hel0*pp/vmass )
-            vc(6) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
+            vc % W(1) = dcmplx( hel0*pp/vmass )
+            vc % W(4) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(4) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc % W(2) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       )
-               vc(5) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc % W(3) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       )
             else
-               vc(4) = dcmplx( -hel*sqh )
-               vc(5) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
+               vc % W(2) = dcmplx( -hel*sqh )
+               vc % W(3) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
             endif
 
          endif
 
       else
 
-         pp = p(0)
+         pp = dabs(p(0))
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(3) = dcmplx( rZero )
-         vc(6) = dcmplx( hel*pt/pp*sqh )
+         vc % W(1) = dcmplx( rZero )
+         vc % W(4) = dcmplx( hel*pt/pp*sqh )
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(4) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
-            vc(5) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
+            vc % W(2) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
+            vc % W(3) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
          else
-            vc(4) = dcmplx( -hel*sqh )
-            vc(5) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+            vc % W(2) = dcmplx( -hel*sqh )
+            vc % W(3) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
          endif
 
       endif
@@ -1332,6 +1156,9 @@ c#endif
 c
       return
       end
+
+
+
       subroutine irxxxx(p,rmass,nhel,nsr , ri)
 c
 c This subroutine computes a Rarita-Schwinger wavefunction of spin-3/2
@@ -1345,14 +1172,15 @@ c                                  (1- and 1 is forbidden if rmass = 0)
 c       integer nsr  = -1 or 1   : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex ri(18)           : RS fermion wavefunction         |ri>v   
+c       complex ri % W($$18$$)           : RS fermion wavefunction         |ri>v   
 c     
 c- by K.Mawatari - 2008/02/26
 c
+      use aloha_object
       implicit none
       double precision p(0:3),rmass
       integer nhel,nsr
-      double complex ri(18)
+      type(aloha2d) ri
 
       double complex rc(6,4),ep(4),em(4),e0(4),fip(4),fim(4),chi(2)
       double precision pp,pt2,pt,pzpt,emp, sf(2),sfomeg(2),omega(2),pp3,
@@ -1412,6 +1240,12 @@ c#endif
       rc(6,1) = -1*dcmplx(p(1),p(2))*nsr
 
       nsv = -nsr ! nsv=+1 for final, -1 for initial
+      ri % P(0) = p(0) *nsv
+      ri % P(1) = p(1) *nsv
+      ri % P(2) = p(2) *nsv
+      ri % P(3) = p(3) *nsv
+
+
 
       if ( nhel.ge.1 ) then 
 c construct eps+
@@ -1635,24 +1469,22 @@ c spin-3/2 fermion wavefunction
          end do
       end if
 
-      ri(3) = rc(1,1)
-      ri(4) = rc(1,2)
-      ri(5) = rc(1,3)
-      ri(6) = rc(1,4)
-      ri(7) = rc(2,1)
-      ri(8) = rc(2,2)
-      ri(9) = rc(2,3)
-      ri(10) = rc(2,4)
-      ri(11) = rc(3,1)
-      ri(12) = rc(3,2)
-      ri(13) = rc(3,3)
-      ri(14) = rc(3,4)
-      ri(15) = rc(4,1)
-      ri(16) = rc(4,2)
-      ri(17) = rc(4,3)
-      ri(18) = rc(4,4)
-      ri(1) = rc(5,1)
-      ri(2) = rc(6,1)
+      ri % W(1) = rc(1,1)
+      ri % W(2) = rc(1,2)
+      ri % W(3) = rc(1,3)
+      ri % W(4) = rc(1,4)
+      ri % W(5) = rc(2,1)
+      ri % W(6) = rc(2,2)
+      ri % W(7) = rc(2,3)
+      ri % W(8) = rc(2,4)
+      ri % W(9) = rc(3,1)
+      ri % W(10) = rc(3,2)
+      ri % W(11) = rc(3,3)
+      ri % W(12) = rc(3,4)
+      ri % W(13) = rc(4,1)
+      ri % W(14) = rc(4,2)
+      ri % W(15) = rc(4,3)
+      ri % W(16) = rc(4,4)
 
       return
       end
@@ -1669,14 +1501,16 @@ c                                  (1- and 1 is forbidden if rmass = 0)
 c       integer nsr  = -1 or 1   : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex ro(18)           : RS fermion wavefunction         |ro>v   
+c       complex ro % W($$18$$)           : RS fermion wavefunction         |ro>v   
 c     
 c- by Y.Takaesu - 2011/01/11
 c
+      use aloha_object
       implicit none
       double precision p(0:3),rmass
       integer nhel,nsr
-      double complex ro(18),fipp(4),fimm(4)
+      double complex fipp(4),fimm(4)
+      type(aloha2d) ro
 
       double complex rc(6,4),ep(4),em(4),e0(4),fop(4),fom(4),chi(2)
       double precision pp,pt2,pt,pzpt,emp, sf(2),sfomeg(2),omega(2),pp3,
@@ -1734,6 +1568,10 @@ c#endif
 
       rc(5,1) = dcmplx(p(0),p(3))*nsr
       rc(6,1) = dcmplx(p(1),p(2))*nsr
+      ro % P(0) = nsr * p(0)
+      ro % P(1) = nsr * p(1)
+      ro % P(2) = nsr * p(2)
+      ro % P(3) = nsr * p(3)
 
       nsv = nsr ! nsv=+1 for final, -1 for initial
 
@@ -1999,24 +1837,22 @@ c spin-3/2 fermion wavefunction
          end do
       end if
 
-      ro(3) = rc(1,1)
-      ro(4) = rc(1,2)
-      ro(5) = rc(1,3)
-      ro(6) = rc(1,4)
-      ro(7) = rc(2,1)
-      ro(8) = rc(2,2)
-      ro(9) = rc(2,3)
-      ro(10) = rc(2,4)
-      ro(11) = rc(3,1)
-      ro(12) = rc(3,2)
-      ro(13) = rc(3,3)
-      ro(14) = rc(3,4)
-      ro(15) = rc(4,1)
-      ro(16) = rc(4,2)
-      ro(17) = rc(4,3)
-      ro(18) = rc(4,4)
-      ro(1) = rc(5,1)
-      ro(2) = rc(6,1)
+      ro % W(1) = rc(1,1)
+      ro % W(2) = rc(1,2)
+      ro % W(3) = rc(1,3)
+      ro % W(4) = rc(1,4)
+      ro % W(5) = rc(2,1)
+      ro % W(6) = rc(2,2)
+      ro % W(7) = rc(2,3)
+      ro % W(8) = rc(2,4)
+      ro % W(9) = rc(3,1)
+      ro % W(10) = rc(3,2)
+      ro % W(11) = rc(3,3)
+      ro % W(12) = rc(3,4)
+      ro % W(13) = rc(4,1)
+      ro % W(14) = rc(4,2)
+      ro % W(15) = rc(4,3)
+      ro % W(16) = rc(4,4)
 
       return
       end
@@ -2053,35 +1889,37 @@ c spin-3/2 fermion wavefunction
 
       subroutine CombineAmp(nb, ihels, iwfcts, W1, Wall, Amp)
 
+      use aloha_object
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
-      double complex W1(6)
-      double complex Wall(6,*)
+      type(aloha) W1
+      type(aloha) Wall(*)
       double complex Amp(*)
 c     local variable
       integer i
 
       do i = 1, nb
-         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i)) +
-     &                    W1(4) * Wall(4,iwfcts(i))+
-     &                    W1(5) * Wall(5,iwfcts(i))+
-     &                    W1(6) * Wall(6,iwfcts(i))
+         Amp(ihels(i)) =  W1%W(1) * Wall(iwfcts(i))%W(1) +
+     &                    W1%W(2) * Wall(iwfcts(i))%W(2) +
+     &                    W1%W(3) * Wall(iwfcts(i))%W(3) +
+     &                    W1%W(4) * Wall(iwfcts(i))%W(4)
       enddo
       return
       end
      
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
-
+      use aloha_object
+      implicit none 
       integer nb ! size of the vectors
       integer ihels(*), iwfcts(*)
-      double complex W1(3)
-      double complex Wall(6,*)
+      type(aloha)  W1
+      type(aloha) Wall(*)
       double complex Amp(*)
 c     local variable
       integer i
 
       do i = 1, nb
-         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i))
+         Amp(ihels(i)) =  W1%W(1) * Wall(iwfcts(i))%W(1)
       enddo
       return
       end

@@ -1,0 +1,182 @@
+# Workflow for IOTests - tests that compare generated output files against
+# reference files. Collected from unittest.yml and acceptancetest.yml.
+
+name: running IOTests
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+#      - '.github/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'running IOTests'
+        required: true
+
+env:
+  commitmsg: ${{ github.event.head_commit.message }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # IOTests from unit tests (no HEP tools cache required)
+  # ---------------------------------------------------------------------------
+
+  # IOTest framework self-tests (from unittest_2)
+  IOtest_iotest_examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test IOTest framework examples
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_IOTestWrappedWithSetUP testIO_MyHandwrittenIOTest testIO_MyCustomNameIOTestWithPathRegExpr testIO_MyCustomNameIOTestWrapped testIO_MyCustomNameIOTestWrappedWithReturnPath testIO_MySimpleIOTestWrapped -t0
+
+
+  # MadWeight IOTest (from unittest_0 and test_additional_unittest)
+  IOtest_modification_to_cuts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test testIO_modification_to_cuts
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_modification_to_cuts -t0
+
+
+  # FKS exporter IOTests (from unittest_18_1 and unittest_18_2)
+  IOtest_fks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test FKS IO tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_test_pptt_fks_loonly testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_ppw_fksall testIO_test_tdecay_fksreal testIO_test_wprod_fksew -t0
+
+
+  # C++ exporter IOTests (from unittest_20)
+  IOtest_cpp_write:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test C++ write IO tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_write_cpp_go_process_cc_file testIO_write_dec_multiprocess_files -t0
+
+
+  # Export v4 and Python matrix element IOTests (from unittest_21, unittest_22, unittest_23)
+  IOtest_export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test export IO tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_sqso_uux_uuxuuxx testIO_export_matrix_element_v4_madevent_group testIO_export_matrix_element_v4_madevent_nogroup testIO_export_matrix_element_v4_standalone testIO_get_python_matrix_methods testIO_DJR_histograms -t0
+
+
+  # Loop unit proc output IOTest (from unittest_28)
+  IOtest_unit_proc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test unit proc output IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_UnitProcOutputIOTests -t0
+
+
+  # Loop squared-order IOTest – needs UFO model cache (from unittest_29)
+  IOtest_loop_sqso:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore_ufomodel
+      - name: test loop squared order IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_Loop_sqso_uux_ddx -t0
+
+
+  # EW Sudakov IOTests (from unittest_33)
+  IOtest_ewsudakov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: test EW Sudakov IO tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov -t0
+
+
+  # ---------------------------------------------------------------------------
+  # IOTests from acceptance tests (HEP tools cache required)
+  # ---------------------------------------------------------------------------
+
+  # Acceptance and unit proc output IOTests (from acceptancetest_0)
+  IOtest_acceptance_proc:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+      - name: test acceptance proc output IO tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_AcceptanceProcOutputIOTests -pA -t0 -l INFO
+            ./tests/test_manager.py testIO_UnitProcOutputIOTests -pA -t0 -l INFO
+
+
+  # TIR output IOTest (from acceptancetest_70)
+  IOtest_TIR:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_all
+      - name: test TIR output IO test
+        run: |
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
+            ./tests/test_manager.py testIO_TIR_output -pA -t0 -l INFO
+
+
+  # MatchBox output IOTest (from acceptancetest_77)
+  IOtest_matchbox:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+      - name: test MatchBox output IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
+            ./tests/test_manager.py testIO_MatchBoxOutput -pA -t0 -l INFO
+
+
+  # Gnuplot histogram output IOTest (from acceptancetest_100)
+  IOtest_gnuplot:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test gnuplot histogram output IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_gnuplot_histo_output -pA -t0 -l INFO

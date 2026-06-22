@@ -1,5 +1,5 @@
 name: Restore ufo cache
-description: Restores numpy from cache and sets PYTHONPATH
+description: Restores cached UFO models and sets PYTHONPATH
 runs:
   using: composite
   steps:
@@ -12,6 +12,7 @@ runs:
           heft.tgz
           loop_qcd_qed_sm.tgz
           loop_qcd_qed_sm_Gmu.tgz
+          RS.tgz
           sm_v4.tgz
           uutt_sch_4fermion.tgz
           uutt_tch_scalar.tgz

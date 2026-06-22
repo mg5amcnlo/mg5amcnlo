@@ -1,6 +1,7 @@
 C THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS CALLS BUILDING THE LOOP
 
       SUBROUTINE %(proc_prefix)sLOOPNUM(Q,RES)
+      USE ALOHA_OBJECT
 C  
 C CONSTANTS 
 C 
@@ -49,7 +50,7 @@ C
 	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  %(dp_born_amps_decl)s
-	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sWFCTS/W  
 
 	  INTEGER HELPICKED
@@ -68,6 +69,7 @@ C
 	  END
 
       SUBROUTINE %(proc_prefix)sLOOPNUMHEL(Q,RES,H)
+      USE ALOHA_OBJECT
 C  
 C CONSTANTS 
 C  
@@ -96,7 +98,7 @@ C
 C LOCAL VARIABLES 
 C
       %(complex_dp_format)s BUFF(4)
-      %(complex_dp_format)s WL(20,NMAXLOOPWFS)
+      TYPE(ALOHA) WL(NMAXLOOPWFS)
       INTEGER I
 C
 C GLOBAL VARIABLES
@@ -110,7 +112,7 @@ C
       common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  %(dp_born_amps_decl)s	  
-	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sWFCTS/W  
 
 C ----------
@@ -121,9 +123,9 @@ C ----------
       END
 
       SUBROUTINE %(proc_prefix)sMPLOOPNUM(Q,RES)
-	  
+      USE ALOHA_OBJECT
       INCLUDE 'cts_mprec.h'
-	  IMPLICIT NONE	  
+	  IMPLICIT NONE
 C  
 C CONSTANTS 
 C 
@@ -185,7 +187,7 @@ C
 	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  %(mp_born_amps_decl)s	  
-	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(mp_aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sMP_WFS/W	
 
 	  INTEGER HELPICKED
@@ -216,9 +218,10 @@ C       This is just to compute the wfs in quad prec
       END
 
       SUBROUTINE %(proc_prefix)sMPLOOPNUMHEL(Q,RES,H)
-C  
-C CONSTANTS 
-C  
+      USE ALOHA_OBJECT
+C
+C CONSTANTS
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER    MAXLCOUPLINGS
@@ -244,7 +247,7 @@ C
 C LOCAL VARIABLES 
 C
       %(complex_mp_format)s BUFF(4)
-      %(complex_mp_format)s WL(20,NMAXLOOPWFS)
+      TYPE(MP_ALOHA) WL(NMAXLOOPWFS)
       INTEGER I
 C
 C GLOBAL VARIABLES
@@ -258,7 +261,7 @@ C
       common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 	  %(mp_born_amps_decl)s	  
-	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(mp_aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sMP_WFS/W
 C ----------
 C BEGIN CODE

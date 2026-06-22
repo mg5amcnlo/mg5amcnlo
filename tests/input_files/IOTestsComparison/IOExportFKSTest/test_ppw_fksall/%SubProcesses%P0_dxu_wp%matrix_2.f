@@ -229,6 +229,7 @@ C
 C     Process: g u > w+ d [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     Process: g c > w+ s [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -257,10 +258,12 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
       INTEGER CF(NCOLOR*(NCOLOR+1))
       INTEGER CF_INDEX, DENOM
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
-     $ ,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
 C     
 C     FUNCTION
@@ -276,16 +279,16 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       JAMP(:,:) = (0D0,0D0)
-      CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
-      CALL OXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL FFV1_2(W(1,2),W(1,1),GC_5,ZERO,ZERO,W(1,5))
+      CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1,W(1))
+      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1, FLAVOR(2),W(2))
+      CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1,W(3))
+      CALL OXXXXX(P(0,4),ZERO,NHEL(4),+1, FLAVOR(4),W(4))
+      CALL FFV1_2(W(2),W(1),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,5),W(1,4),W(1,3),GC_11,AMP(1))
-      CALL FFV1_1(W(1,4),W(1,1),GC_5,ZERO,ZERO,W(1,5))
+      CALL FFV2_0(W(5),W(4),W(3),GC_11,AMP(1))
+      CALL FFV1_1(W(4),W(1),GC_5,ZERO,ZERO,W(5))
 C     Amplitude(s) for diagram number 2
-      CALL FFV2_0(W(1,2),W(1,5),W(1,3),GC_11,AMP(2))
+      CALL FFV2_0(W(2),W(5),W(3),GC_11,AMP(2))
 C     JAMPs contributing to orders QCD=1 QED=1
       JAMP(1,1) = AMP(1)+AMP(2)
 

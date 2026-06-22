@@ -220,6 +220,7 @@ C
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 C
 C FUNCTION
 C
@@ -235,6 +236,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 
@@ -330,6 +332,7 @@ c      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 
 C  
 C GLOBAL VARIABLES
@@ -347,6 +350,7 @@ C ----------
       ENDDO	
 
 
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 
@@ -354,11 +358,11 @@ C ----------
 
       SUBROUTINE %(proc_prefix)sGET_JAMP(njamp, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=%(ncolor)d) 
       INTEGER NAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 	
 	  ONEJAMP = JAMP(njamp+1, SOINDEX) ! +1 since njamp start at zero (c convention)
@@ -366,7 +370,7 @@ C ----------
 
        SUBROUTINE %(proc_prefix)sGET_LNJAMP(njamp, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=%(ncolor)d) 
       INTEGER NAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
@@ -396,7 +400,7 @@ C ----------
     return 
     end
 
-    subroutine %(proc_prefix)sget_chosen_so_config(M,N, out)
+    subroutine %(proc_prefix)s_get_chosen_so_config(M,N, out)
 
     integer M, N
     logical out

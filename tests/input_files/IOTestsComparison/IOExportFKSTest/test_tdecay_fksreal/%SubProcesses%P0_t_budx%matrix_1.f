@@ -237,6 +237,7 @@ C
 C     Process: t > b u d~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
 C     Process: t > b c s~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
 C     
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -265,10 +266,12 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
       INTEGER CF(NCOLOR*(NCOLOR+1))
       INTEGER CF_INDEX, DENOM
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
-     $ ,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
 C     
 C     FUNCTION
@@ -286,26 +289,26 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       JAMP(:,:) = (0D0,0D0)
-      CALL IXXXXX(P(0,1),MDL_MT,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),MDL_MB,NHEL(2),+1*IC(2),W(1,2))
-      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FFV1_1(W(1,2),W(1,5),GC_11,MDL_MB,ZERO,W(1,6))
-      CALL FFV2_3(W(1,4),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,7))
+      CALL IXXXXX(P(0,1),MDL_MT,NHEL(1),+1, FLAVOR(1),W(1))
+      CALL OXXXXX(P(0,2),MDL_MB,NHEL(2),+1, FLAVOR(2),W(2))
+      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1, FLAVOR(3),W(3))
+      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1, FLAVOR(4),W(4))
+      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1,W(5))
+      CALL FFV1_1(W(2),W(5),GC_11,MDL_MB,ZERO,W(6))
+      CALL FFV2_3(W(4),W(3),GC_100,MDL_MW,MDL_WW,W(7))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,1),W(1,6),W(1,7),GC_100,AMP(1))
-      CALL FFV2_1(W(1,2),W(1,7),GC_100,MDL_MT,MDL_WT,W(1,6))
+      CALL FFV2_0(W(1),W(6),W(7),GC_100,AMP(1))
+      CALL FFV2_1(W(2),W(7),GC_100,MDL_MT,MDL_WT,W(6))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,1),W(1,6),W(1,5),GC_11,AMP(2))
-      CALL FFV1_1(W(1,3),W(1,5),GC_11,ZERO,ZERO,W(1,6))
-      CALL FFV2_3(W(1,4),W(1,6),GC_100,MDL_MW,MDL_WW,W(1,7))
+      CALL FFV1_0(W(1),W(6),W(5),GC_11,AMP(2))
+      CALL FFV1_1(W(3),W(5),GC_11,ZERO,ZERO,W(6))
+      CALL FFV2_3(W(4),W(6),GC_100,MDL_MW,MDL_WW,W(7))
 C     Amplitude(s) for diagram number 3
-      CALL FFV2_0(W(1,1),W(1,2),W(1,7),GC_100,AMP(3))
-      CALL FFV1_2(W(1,4),W(1,5),GC_11,ZERO,ZERO,W(1,7))
-      CALL FFV2_3(W(1,7),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,5))
+      CALL FFV2_0(W(1),W(2),W(7),GC_100,AMP(3))
+      CALL FFV1_2(W(4),W(5),GC_11,ZERO,ZERO,W(7))
+      CALL FFV2_3(W(7),W(3),GC_100,MDL_MW,MDL_WW,W(5))
 C     Amplitude(s) for diagram number 4
-      CALL FFV2_0(W(1,1),W(1,2),W(1,5),GC_100,AMP(4))
+      CALL FFV2_0(W(1),W(2),W(5),GC_100,AMP(4))
 C     JAMPs contributing to orders QCD=1 QED=2
       JAMP(1,1) = (-1.000000000000000D+00)*AMP(3)+(-1.000000000000000D
      $ +00)*AMP(4)

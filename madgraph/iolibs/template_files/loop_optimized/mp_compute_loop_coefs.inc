@@ -10,7 +10,8 @@ C
 C  
 C Modules
 C
-      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
 C
       IMPLICIT NONE
 C  
@@ -125,10 +126,10 @@ C
 	  %(complex_dp_format)s DP_AMP(NBORNAMPS)
 	  common/%(proc_prefix)sAMPS/DP_AMP
 ## }	  
-	  %(complex_mp_format)s W(20,NWAVEFUNCS)
+	  type(mp_aloha) W(NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/W  
 
-	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
+	  type(aloha) DPW(NWAVEFUNCS)
 	  common/%(proc_prefix)sW/DPW
 
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,-1:NLOOPWAVEFUNCS)
@@ -399,9 +400,11 @@ C   Copy back to the quantities computed in DP in the QP containers (but only th
       ENDDO
     ENDDO
     DO I=1,NWAVEFUNCS
-      DO J=1,MAXLWFSIZE+4
-        W(J,I)=CMPLX(DPW(J,I),KIND=16)
+      DO J=1,SIZE(W(I)%W)
+        W(I)%W(J)=CMPLX(DPW(I)%W(J),KIND=16)
       ENDDO
+      W(I)%P = DPW(I)%P
+      W(I)%flv_index = DPW(I)%flv_index
     ENDDO
   ENDIF
 
@@ -497,9 +500,11 @@ c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
 C This needs to be done once since only the momenta of these WF matters.
   IF(.NOT.DPW_COPIED.AND.COMPUTE_INTEGRAND_IN_QP) THEN
     DO I=1,NWAVEFUNCS
-      DO J=1,MAXLWFSIZE+4
-        DPW(J,I)=CMPLX(W(J,I),KIND=8)
+      DO J=1,SIZE(W(I)%W)
+        DPW(I)%W(J)=CMPLX(W(I)%W(J),KIND=8)
       ENDDO
+      DPW(I)%P = W(I)%P
+      DPW(I)%flv_index = W(I)%flv_index
     ENDDO
     DPW_COPIED=.True.
   ENDIF

@@ -832,7 +832,7 @@ class AskRun(cmd.ControlSwitch):
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell',"full"]
+            self.allowed_madspin = ['OFF',"ON",'onshell',"full", "PA"]
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
@@ -866,12 +866,10 @@ class AskRun(cmd.ControlSwitch):
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if value == 'onshell':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        if value in  ['onshell', 'none', 'density']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value ]
         elif value in ['full', 'madspin']:
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
-        elif value == 'none':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
         else:
             return []
         
@@ -887,7 +885,7 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return
-        self.allowed_reweight = ['OFF', 'ON']
+        self.allowed_reweight = ['OFF', 'ON', 'density']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path
@@ -899,11 +897,44 @@ class AskRun(cmd.ControlSwitch):
         
         if 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                self.switch['reweight'] = 'ON'
+                reweightcard = open(pjoin(self.me_dir,'Cards','reweight_card.dat'), 'r')
+                content = reweightcard.read()
+                if 'change particle_in_density_matrix' in content:
+                    self.switch['reweight'] = 'density'
+                else:
+                    self.switch['reweight'] = 'ON'
+                reweightcard.close()
             else:
                 self.switch['reweight'] = 'OFF'
         else:
-            self.switch['reweight'] = 'Not Avail.'        
+            self.switch['reweight'] = 'Not Avail.'      
+
+    def get_cardcmd_for_reweight(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        if value in ['density']:
+            content_rwgt_card = open(pjoin(self.me_dir, "Cards", "reweight_card.dat"), "r")
+            if 'change particle_in_density_matrix' in content_rwgt_card.read():
+                content_rwgt_card.close()
+                return [] #if reweight_card.dat has information for density matrices, we keep it
+            else:
+                content_rwgt_card.close()
+                import shutil
+                shutil.copyfile(pjoin(self.me_dir, "Cards", "density_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+                return []
+        elif value in ['ON']:
+            content_rwgt_card = open(pjoin(self.me_dir, "Cards", "reweight_card.dat"), "r")
+            if 'change particle_in_density_matrix' in content_rwgt_card.read():
+                content_rwgt_card.close()
+                import shutil
+                shutil.copyfile(pjoin(self.me_dir, "Cards", "reweight_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+                return []
+            else:
+                content_rwgt_card.close()
+                return [] #else we keep the current reweight_card.dat
+        elif value in ['OFF']:
+            return [] #if reweight=OFF, we do not create a reweight_card.dat
+        else:
+            return 
 
 #===============================================================================
 # CheckValidForCmd
@@ -2653,7 +2684,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     self.boost_events()
                             
                                        
-                self.exec_cmd('reweight -from_cards', postcmd=False)            
+                self.exec_cmd('reweight --mode=%s -from_cards' %switch_mode['reweight'], postcmd=False)            
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
@@ -2754,11 +2785,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
                 
-        if self.ninitial == 1:
-            logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
-                           "    To have the previous behavior use the calculate_decay_widths function")
         #    self.do_calculate_decay_widths(line, *args, **opt)
-        #else:
         self.do_generate_events(line, *args, **opt)
             
     def getSysSummaryFromLog(self, kpath=None,knext_name=None):
@@ -2980,13 +3007,42 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             # ungroup resutls (that we need here). Note that initial particles
             # grouping are not at the same stage as final particle grouping
             nb_output = len(ids) / (len(set([p[0] for p in ids])))
-            results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
-            result = float(results.strip().split(' ')[0])
-            for particles in ids:
+            results_text = open(pjoin(P_path, run_name + '_results.dat')).read()
+            result = float(results_text.split('\n')[0].strip().split(' ')[0])
+
+            # Try to use per-leshouche-row subprocess weights stored in results.dat
+            # by the grouped DSIG function.  These are written as an XML block
+            # <subprocess_weights>w1\nw2\n...</subprocess_weights> and correctly
+            # account for flavor-merged particles (e.g. pdg=81 representing j j).
+            sub_weights = None
+            wgt_match = re.search(
+                r'<subprocess_weights>(.*?)</subprocess_weights>',
+                results_text, re.DOTALL)
+            if wgt_match:
                 try:
-                    particle_dict[particles[0]].append([particles[1:], result/nb_output])
-                except KeyError:
-                    particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
+                    parsed = [float(x) for x in wgt_match.group(1).split()]
+                    if len(parsed) == len(ids):
+                        sub_weights = parsed
+                except Exception:
+                    pass
+
+            if sub_weights is not None:
+                for i, particles in enumerate(ids):
+                    try:
+                        particle_dict[particles[0]].append(
+                            [particles[1:], result * sub_weights[i]])
+                    except KeyError:
+                        particle_dict[particles[0]] = [
+                            [particles[1:], result * sub_weights[i]]]
+            else:
+                # Fallback: divide equally among all subprocesses (legacy behaviour)
+                for particles in ids:
+                    try:
+                        particle_dict[particles[0]].append(
+                            [particles[1:], result / nb_output])
+                    except KeyError:
+                        particle_dict[particles[0]] = [
+                            [particles[1:], result / nb_output]]
     
         if not os.path.exists(pjoin(self.me_dir, 'Events', run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', run_name))
@@ -3810,21 +3866,38 @@ Beware that this can be dangerous for local multicore runs.""")
         Gdirs = self.get_Gdir()
         Gdirs.sort()
         partials_info = []
+        # Use RLIMIT_NOFILE directly to avoid spawning a shell
         try:
-            p = subprocess.Popen(["ulimit", "-n"], stdout=subprocess.PIPE)
-            out, err = p.communicate()
-            max_G = out.decode()
-            if max_G == "unlimited":
-                max_G =2500
+            import resource
+            soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft_limit == resource.RLIM_INFINITY:
+                max_G = 2500
             else:
-                max_G = int(max_G) - 40
-        except Exception as  error:
+                # Keep descriptor headroom for logs/pipes/subprocesses.
+                max_G = max(80, int(soft_limit) - 40)
+        except Exception as error:
             logger.debug(error)
-            max_G = 80 # max(20, len(Gdirs)/self.options['nb_core'])
+            try:
+                out = subprocess.check_output(
+                    ["sh", "-c", "ulimit -n"], stderr=subprocess.STDOUT).decode().strip()
+                if out == "unlimited":
+                    max_G = 2500
+                else:
+                    max_G = max(80, int(out) - 40)
+            except Exception as error:
+                logger.debug(error)
+                max_G = 80 # max(20, len(Gdirs)/self.options['nb_core'])
 
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+
+        def _safe_nunwgt(result):
+            """Extract an integer unweighted-event count when available."""
+            try:
+                return max(0, int(float(result.get('nunwgt'))))
+            except Exception:
+                return 0
 
         def split(a, n):
             """split a list "a" into n chunk of same size (or nearly same size)"""
@@ -3883,7 +3956,8 @@ Beware that this can be dangerous for local multicore runs.""")
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
             logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
             misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
             
@@ -3910,10 +3984,12 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(pjoin(Gdir, 'events.lhe'))
                         continue
 
+                    # Pass precomputed nunwgt to avoid re-counting from LHE files.
                     AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                                 result.get('xsec'),
                                 result.get('xerru'),
-                                result.get('axsec')
+                                result.get('axsec'),
+                                nb_event=_safe_nunwgt(result)
                                 )
                     
             if len(AllEvent) == 0:
@@ -3922,7 +3998,8 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                                proc_charac=self.proc_characteristic)
+                                proc_charac=self.proc_characteristic,
+                                keep_overshoot=self.run_card['allow_overshoot_events'])
                 logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
                 misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
 
@@ -3937,6 +4014,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
                    
         self.results.add_detail('nb_event', nb_event)
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
@@ -3964,6 +4042,13 @@ Beware that this can be dangerous for local multicore runs.""")
             self.run_card = banner_mod.RunCard(self.banner['mgruncard'])
         AllEvent.banner = self.banner
 
+        def _safe_nunwgt(result):
+            """Extract an integer unweighted-event count when available."""
+            try:
+                return max(0, int(float(result.get('nunwgt'))))
+            except Exception:
+                return 0
+
         for Gdir in Gdirs:
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
@@ -3976,10 +4061,12 @@ Beware that this can be dangerous for local multicore runs.""")
                     os.remove(pjoin(Gdir, 'events.lhe'))
                     continue
                 if not preprocess_only:
+                    # Pass precomputed nunwgt to avoid re-counting from LHE files.
                     AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
-                             result.get('axsec')
+                             result.get('axsec'),
+                             nb_event=_safe_nunwgt(result)
                     )
  
         if preprocess_only:
@@ -5847,11 +5934,17 @@ tar -czf split_$1.tar.gz split_$1
             mode = self.cluster_mode
         
         # ensure that exe is executable
-        if os.path.exists(exe) and not os.access(exe, os.X_OK):
-            os.system('chmod +x %s ' % exe)
-        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
-                                            os.access(pjoin(cwd, exe), os.X_OK):
-            os.system('chmod +x %s ' % pjoin(cwd, exe))
+        exe_path = None
+        if os.path.exists(exe):
+            exe_path = exe
+        elif cwd:
+            local_exe = pjoin(cwd, exe)
+            if os.path.exists(local_exe):
+                exe_path = local_exe
+        # Use os.chmod instead of shell chmod to avoid process-launch overhead.
+        if exe_path and not os.access(exe_path, os.X_OK):
+            mode_bits = os.stat(exe_path).st_mode
+            os.chmod(exe_path, mode_bits | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
                     
         if mode == 0:
             self.update_status((remaining, 1, 
@@ -7295,7 +7388,8 @@ class GridPackCmd(MadEventCmd):
                     else:
                         nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current.get('axsec')),self.run_card['nevents'], self.nb_event, self.gridpack_cross, sum_axsec)
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event, 
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
                     partials_info.append((pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
@@ -7316,7 +7410,8 @@ class GridPackCmd(MadEventCmd):
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
         
         
         if partials:
@@ -7838,5 +7933,3 @@ if '__main__' == __name__:
     
     
     
-
-

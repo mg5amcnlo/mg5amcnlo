@@ -38,7 +38,9 @@ c
       integer itmax_adjust
 
 c      integer imirror, iproc, iconf
-      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP) 
+      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP)
+      integer IFLAV_VEC(NB_WARP) 
+      integer dummyflavor
       integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
       integer ilock             !  position of the event in the current warp (max is WARP_SIZE)
       integer iwarp               ! position of the current warp (max is NB_WARP)
@@ -162,6 +164,7 @@ c      maxcfig=nconfigs
 c
 c     Main Integration Loop
 c
+      dummyflavor = 0
       ievent = 0
       iter = 1
       ivec = 0
@@ -203,7 +206,10 @@ c               all_wgt(i) = all_wgt(i)*fx
                endif
 
                if (VECSIZE_USED.le.1) then
-                  all_fx(1) = dsig(all_p, all_wgt,0)
+                  ! 0  is used as flavor index to indicate that none has been
+                  ! set (yet) the handling depends group_subprocess/flavor
+                  dummyflavor = 0 ! important to reset since dsig can overwrite it
+                  all_fx(1) = dsig(all_p,dummyflavor, all_wgt,0)
                   ivec=0
                   ilock=0
                   iwarp=1 
@@ -219,7 +225,7 @@ c                 need to restore common block
                   CUTSPASSED=.TRUE.
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
                enddo
-               call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+               call select_grouping(imirror_vec(iwarp),iflav_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
                if (ivec.lt.VECSIZE_USED)then
                   cycle
                endif
@@ -229,7 +235,7 @@ c              reset variable for the next grid
                iwarp =1
                
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf_vec, iproc, imirror_vec, all_fx,VECSIZE_USED)
+     &                          iconf_vec, iproc, iflav_vec, imirror_vec, all_fx,VECSIZE_USED)
 
                 do i=1, VECSIZE_USED
 c                 need to restore common block                  
@@ -349,6 +355,7 @@ c      do i=1,cur_it-1
       enddo
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -358,6 +365,7 @@ c     Write out MadLoop statistics, if any
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
          call output_run_statistics(66)
+         call output_subprocess_weights(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -432,7 +440,9 @@ c
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
                xzoomfact = 1d0
-               fx = dsig(p,wgt,0) !Evaluate function
+               ! first 0 is for unset flavor
+               ! second 0 is for the mode
+               fx = dsig(p,dummyflavor,wgt,0) !Evaluate function
                if (xzoomfact .gt. 0d0) then
                   wgt = wgt*fx*xzoomfact
                else
@@ -520,6 +530,7 @@ c      do i=1,cur_it-1
       enddo
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)      
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -529,6 +540,7 @@ c     Write out MadLoop statistics, if any
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
          call output_run_statistics(66)
+         call output_subprocess_weights(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -677,6 +689,57 @@ c     $     ntot/1000,'</th><th align=right>',teff,'</th></tr>'
  48   format(a,a,a,a)
  49   format(a)
  50   format(a)
+      end
+
+
+
+      subroutine output_subprocess_weights(outUnit)
+c***********************************************************************
+c     Appends per-leshouche-row relative weights to the results.dat file
+c     as an XML block.  The weights are set by the grouped DSIG function
+c     (super_auto_dsig_group_v4.inc) via the DSIG_RELSPROC common block.
+c     When no grouped subprocess is present, NREL_SPROC_STORE stays 0
+c     and nothing is written.
+c***********************************************************************
+      implicit none
+c
+c     Arguments
+c
+      integer outUnit
+c
+c     Local
+c
+      integer i
+      double precision relsum, relout
+c
+c     Global: common block shared with the grouped DSIG function
+c
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      DATA NREL_SPROC_STORE /0/
+
+      if (NREL_SPROC_STORE.gt.0) then
+c       Write fractions of the total.  The grouped DSIG path already stores
+c       normalised weights (sum = 1) so this is a no-op there; the
+c       non-grouped path accumulates raw per-group sums that need it.  The
+c       common block is left untouched (idempotent across repeated calls
+c       and safe if accumulation continues afterwards).
+        relsum = 0d0
+        do i=1,NREL_SPROC_STORE
+          relsum = relsum + REL_SPROC_STORE(i)
+        enddo
+        write(outUnit,'(A)') '<subprocess_weights>'
+        do i=1,NREL_SPROC_STORE
+          if (relsum.gt.0d0) then
+            relout = REL_SPROC_STORE(i)/relsum
+          else
+            relout = REL_SPROC_STORE(i)
+          endif
+          write(outUnit,'(E20.10)') relout
+        enddo
+        write(outUnit,'(A)') '</subprocess_weights>'
+      endif
       end
 
 
@@ -1688,6 +1751,7 @@ c
 c
 c     Local
 c
+      integer dummyflavor
       integer i, j, k, knt, nun,itsum
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
@@ -2263,7 +2327,7 @@ c            enddo
 c            close(26)
 
 c     Update weights in dsig (needed for subprocess group mode)
-            xdum=dsig(0,0,2)
+            xdum=dsig(0,dummyflavor,0,2)
 c
 c     Add test to see if we have achieved desired accuracy 
 c     Allow minimum itmin iterations
@@ -2481,6 +2545,7 @@ c 23   close(22)
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
 

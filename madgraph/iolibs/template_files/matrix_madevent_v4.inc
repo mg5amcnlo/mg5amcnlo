@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, DUM, IVEC, ANS, SELECTED_HEL, SELECTED_COL)
+SUBROUTINE SMATRIX%(proc_id)s(P, iflav, RHEL, RCOL, DUM, IVEC, ANS, SELECTED_HEL, SELECTED_COL)
 C  
 %(info_lines)s
 C 
@@ -34,12 +34,17 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
     REAL*8 RHEL, RCOL
-    INTEGER DUM, SELECTED_HEL, SELECTED_COL, IVEC
+    INTEGER DUM! channel information
+    integer SELECTED_HEL, SELECTED_COL, IVEC
+    integer iflav
 c
 c global (due to reading writting)
 c 
-    LOGICAL GOODHEL(NCOMB)
-    INTEGER NTRY
+C   Good-helicity filter is per (helicity, flavor): a helicity that is zero for
+C   one merged flavor but non-zero for another must not be dropped, so
+C   GOODHEL/NTRY carry an extra MAXFLAVPERPROC (IFLAV) dimension.
+    LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC)
+    INTEGER NTRY(MAXFLAVPERPROC)
     common/BLOCK_GOODHEL/NTRY,GOODHEL
     integer nb_spin_state(2)
     data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
@@ -56,8 +61,19 @@ C
     INTEGER IDUM, NGOOD, J, JJ
     REAL     XRAN1
     EXTERNAL XRAN1
+    INTEGER FLAVOR(NEXTERNAL)
+    INTEGER FLAVOR_FOR_SYM(NEXTERNAL)
+C   Per-row FLAVOR lookup used by BROKEN_SYM. The IFLAV-indexed FLAVOR
+C   table above can collapse distinct same-flavor / different-flavor
+C   leshouche rows that share the same coupling group; BROKEN_SYM needs
+C   row-level information to apply the identical-particle correction.
+    INTEGER FLAVOR_ROW(NEXTERNAL,%(max_flavor_row)s)
+    %(get_flavor_row_matrix)s
+    INTEGER IPSEL
+    COMMON /SUBPROC/ IPSEL
+    INTEGER BROKEN_SYM%(proc_id)s
 
-C  
+C
 C GLOBAL VARIABLES
 C  
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
@@ -66,7 +82,7 @@ C
 c    CHARACTER*101        HEL_BUFF
 c    COMMON/TO_HELICITY/  HEL_BUFF
     
-	REAL*8 POL(2)
+    REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
     
     INTEGER          ISUM_HEL
@@ -82,7 +98,8 @@ c    COMMON/TO_HELICITY/  HEL_BUFF
 C ----------
 C BEGIN CODE
 C ----------
-    NTRY=NTRY+1
+    CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
+    NTRY(IFLAV)=NTRY(IFLAV)+1
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
@@ -105,50 +122,50 @@ c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 !   If the helicity grid status is 0, this means that it is not yet initialized.
     IF (ISUM_HEL.EQ.0.or.(DS_get_dim_status('Helicity').eq.0)) THEN
         DO I=1,NCOMB
-           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
-               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1), IVEC)            
+           IF (GOODHEL(I,IFLAV) .OR. NTRY(IFLAV) .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
+               T=MATRIX%(proc_id)s(P,NHEL(1,I),IFLAV, IVEC)
             %(beam_polarization)s
-			 IF (ISUM_HEL.NE.0) then
-			   call DS_add_entry('Helicity',I,T)
-			 endif
+             IF (ISUM_HEL.NE.0) then
+               call DS_add_entry('Helicity',I,T)
+             endif
              ANS=ANS+DABS(T)
              TS(I)=T
            ENDIF
         ENDDO
-        IF(NTRY.EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(IFLAV).EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
-	IF (ISUM_HEL.NE.0) then
+    IF (ISUM_HEL.NE.0) then
 !         We set HEL_PICKED to -HEL_PICKED here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
-		  HEL_PICKED = -iabs(HEL_PICKED)
+          HEL_PICKED = -iabs(HEL_PICKED)
 !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
-		  hel_jacobian   = 1.0d0
-		  IF(DS_get_dim_status('Helicity').eq.1) then 
+          hel_jacobian   = 1.0d0
+          IF(DS_get_dim_status('Helicity').eq.1) then 
 !           If we finished the initialization we can update the grid so as to start sampling over it.
 !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
-			CALL DS_SET_GRID_MODE('Helicity','init')
+            CALL DS_SET_GRID_MODE('Helicity','init')
           endif
-	    ELSE
-          IF(NTRY.LE.MAXTRIES)THEN
+        ELSE
+          IF(NTRY(IFLAV).LE.MAXTRIES)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-                 GOODHEL(I)=.TRUE.
+              IF (.NOT.GOODHEL(I,IFLAV) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,IFLAV)=.TRUE.
                  NGOOD = NGOOD +1
-                 print *,'Adding good helicity ',I,TS(I)/ANS
+                 print *,'Adding good helicity ',I,' flavor ',IFLAV,TS(I)/ANS
               ENDIF
            ENDDO
           ENDIF
-          IF(NTRY.EQ.MAXTRIES)THEN
+          IF(NTRY(IFLAV).EQ.MAXTRIES)THEN
              ISUM_HEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
-		endif
+        endif
     ELSE              !RANDOM HELICITY
        
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
-			
-			T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1), IVEC)            
+
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),IFLAV, IVEC)
             %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
@@ -165,7 +182,7 @@ c            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
        IF(R.LT.SUMHEL)THEN
            SELECTED_HEL = I
 c          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
-          ANS=DSIGN(ANS,TS(I))		  
+          ANS=DSIGN(ANS,TS(I))        
           GOTO 10
        ENDIF
     ENDDO
@@ -179,18 +196,38 @@ c          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
         ELSE IF(ANS.ne.0d0) THEN
-			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
-			stop 1
+            write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+            stop 1
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    IF (IPSEL.GE.1.AND.IPSEL.LE.%(max_flavor_row)s) THEN
+       FLAVOR_FOR_SYM(:) = FLAVOR_ROW(:, IPSEL)
+    ELSE
+       FLAVOR_FOR_SYM(:) = FLAVOR(:)
+    ENDIF
+    ANS=ANS/DBLE(IDEN)*BROKEN_SYM%(proc_id)s(FLAVOR_FOR_SYM)
 
     CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG, 1,  SELECTED_COL, IVEC)
 
     END
- 
- 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IVEC)
+
+
+      SUBROUTINE GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR_OUT)
+C     Returns the flavor array for a given flavor index IFLAV
+      IMPLICIT NONE
+      include 'nexternal.inc'
+      INTEGER IFLAV, I
+      INTEGER FLAVOR_OUT(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL,%(max_flavor)s)
+      %(get_flavor_matrix)s
+      FLAVOR_OUT(:) = FLAVOR(:, IFLAV)
+      RETURN
+      END
+
+
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IFLAV, IVEC)
+use model_object
+use aloha_object
 C  
 %(info_lines)s
 C
@@ -226,6 +263,8 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL)
+    INTEGER IFLAV
+    INTEGER FLAVOR(NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     INTEGER IVEC
 C  
@@ -236,15 +275,16 @@ C
     INTEGER CF(NCOLOR*(NCOLOR+1))
     INTEGER CF_INDEX,DENOM
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
-    COMPLEX*16 W(18,NWAVEFUNCS)
+    type(aloha) W(NWAVEFUNCS)
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 
-	%(fake_width_declaration)s
-	logical first
-	data first /.true./
-	save first
+    %(fake_width_declaration)s
+    logical first
+    data first /.true./
+    save first
 C
 C FUNCTION
 C
@@ -256,8 +296,8 @@ C
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
 
-	double precision small_width_treatment
-	common/narrow_width/small_width_treatment
+    double precision small_width_treatment
+    common/narrow_width/small_width_treatment
 C  
 C COLOR DATA
 C  
@@ -266,15 +306,19 @@ C ----------
 C BEGIN CODE
 C ----------
 if (first) then
-	first=.false.
-	%(fake_width_definitions)s
+    first=.false.
+    %(fake_width_definitions)s
 endif
 
+C   Rebuild the FLAVOR(NEXTERNAL) array from the threaded flavor index.
+    CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
+%(flavor_mask_setup)s
+AMP(:) = (0d0,0d0)
 %(helas_calls)s
 %(jamp_lines)s
 
     MATRIX%(proc_id)s = 0.D0 
-	DO M = 1, NAMPSO
+    DO M = 1, NAMPSO
       CF_INDEX = 0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
@@ -282,24 +326,27 @@ endif
           CF_INDEX = CF_INDEX +1
           ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
         ENDDO
-		DO N = 1, NAMPSO
+        DO N = 1, NAMPSO
           IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
-		  ENDIF
-		ENDDO
+             MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
+          ENDIF
+        ENDDO
       ENDDO
-	ENDDO
+    ENDDO
      MATRIX%(proc_id)s = MATRIX%(proc_id)s / DENOM
 
 %(amp2_lines)s
     Do I = 1, NCOLOR
-	  DO M = 1, NAMPSO	
-		DO N = 1, NAMPSO
-          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN		
+      DO M = 1, NAMPSO  
+        DO N = 1, NAMPSO
+          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN        
             Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
-		  ENDIF
-		enddo
-	  enddo
+          ENDIF
+        enddo
+      enddo
     Enddo
 
     END
+
+
+%(broken_sym_function)s

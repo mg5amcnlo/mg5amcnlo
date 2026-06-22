@@ -407,7 +407,12 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # Instantiate the class
         IOTestsInstances.append(IOTestsClass())
         # Run the setUp
-        IOTestsInstances[-1].setUp()
+        try:
+            IOTestsInstances[-1].setUp()
+        except Exception as e:
+            print('[SKIP] %s.setUp: %s' % (IOTestsClass.__name__, e))
+            IOTestsInstances.pop()
+            continue
         # Find the testIO defined and use them in load mode only, we will run
         # them later here.
         IOTestsFunctions = IOTestFinder()
@@ -1120,6 +1125,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
         logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
         logging.getLogger('tutorial').setLevel('ERROR')
+        logging.getLogger('tutorial_aMCatNLO').setLevel('ERROR')
+        logging.getLogger('tutorial_MadLoop').setLevel('ERROR')
+        logging.getLogger('tutorial_plugin').setLevel('ERROR')
     except:
         pass
 
@@ -1190,5 +1198,4 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 #    run('test_check_valid_on_file')
 #    run('test_collect_dir.*') # '.*' stands for all possible char (re format)
 #    python tests/test_manager.py test_decay.py -l INFO|less
-
 

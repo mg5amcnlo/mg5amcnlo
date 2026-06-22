@@ -1,0 +1,70 @@
+name: MadSpin parallel factory
+
+# Gated workflow: only fires on the literal "3.x" branch push, on pull requests,
+# and on manual dispatch. Unlike the existing parralel.yml (which runs on every
+# push) this one is intentionally restricted because the matrix is heavy.
+
+on:
+  push:
+    branches:
+      - '3.x'
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      nevents:
+        description: 'Events per production sample (default 10000)'
+        required: false
+        default: '10000'
+      eff_tol:
+        description: 'Relative tolerance for the efficiency-pair checks'
+        required: false
+        default: '0.15'
+
+env:
+  MADSPIN_TEST_NEVENTS: ${{ github.event.inputs.nevents || '10000' }}
+  MADSPIN_TEST_EFF_TOL: ${{ github.event.inputs.eff_tol || '0.15' }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  madspin_factory:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test_short_madspin_ttbar
+          - test_short_madspin_singletop
+          - test_short_madspin_zz
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+          sudo pip install numpy
+          which f2py
+          echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+          cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+
+      - name: Run ${{ matrix.test }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          ./tests/test_manager.py ${{ matrix.test }} -pP -t0 -l INFO
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: madspin-logs-${{ matrix.test }}
+          path: |
+            /tmp/msfactory_*/**/*.log
+            /tmp/msfactory_*/**/madspin_card.dat
+          if-no-files-found: ignore

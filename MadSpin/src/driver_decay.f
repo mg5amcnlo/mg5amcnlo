@@ -1,10 +1,12 @@
       PROGRAM DRIVER
+      use model_object
 C**************************************************************************
 C     THIS IS THE DRIVER FOR CHECKING THE STANDALONE MATRIX ELEMENT.
 C     IT USES A SIMPLE PHASE SPACE GENERATOR
 C     Fabio Maltoni - 3rd Febraury 2007
 C     Modified Version for the decay Package (Pierre Artoisenet)
 C**************************************************************************
+      use model_object
       IMPLICIT NONE
 C     
 C     CONSTANTS  
@@ -32,7 +34,10 @@ C
 C     LOCAL
 C     
       INTEGER I,J,K
+      INTEGER flavor_index
+      INTEGER GET_FLAVOR_INDEX
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+      INTEGER FLAVOR(NEXTERNAL)
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
@@ -62,7 +67,8 @@ c      call setpara('param_card.dat')  !first call to setup the paramaters
 
 c      read phase-space point
 
-1      do i=1,nexternal
+1      read(*,*) flavor_index
+      do i=1,nexternal
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
 
@@ -71,8 +77,12 @@ c      read phase-space point
 c     
 c     Now we can call the matrix element!
 c
-
-      CALL SMATRIX(P,MATELEM)
+      call GET_FLAVOR_MS(flavor_index, FLAVOR)
+c     Map MadSpin's flavor index to the matrix element's own (different)
+c     flavor enumeration via the ME forward lookup; passing it directly can
+c     select the wrong ME flavor (|M|=0).
+      flavor_index = GET_FLAVOR_INDEX(FLAVOR)
+      CALL SMATRIX(P,flavor_index,MATELEM)
 c
 
 c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
@@ -83,10 +93,9 @@ c      write (*,*) "------------------------------------------------------------
        goto 1
 
       end
-	
-	  
-	  
-	  
+
+      include 'flavor_ms.inc'
+
 	   double precision function dot(p1,p2)
 C****************************************************************************
 C     4-Vector Dot product

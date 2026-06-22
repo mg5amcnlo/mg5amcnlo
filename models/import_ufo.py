@@ -248,7 +248,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
     model_path, restrict_file, restrict_name = get_path_restrict(model_name, restrict)
     
     #import the FULL model
-    model = import_full_model(model_path, decay, prefix)
+    model = import_full_model(model_path, decay, prefix, options=options)
 
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
@@ -320,12 +320,59 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         else:
             # It might be that the default of the model (i.e. 'CMSParam') is CMS.
             model.change_mass_to_complex_scheme(toCMS=False, bypass_check=allow_qed)
-      
+
+    # forbid NLO model to use flavor grouping
+    try:
+        perturb = model.get('perturbation_couplings')
+    except Exception:
+        support_flavor = True
+    else:
+        if perturb:
+            support_flavor = False  
+        else:
+            support_flavor = True
+
+    # forbid 4Fermion model to use flavor grouping
+    if any(lor.spins.count(2)>2 for lor in model.get('lorentz')):
+        support_flavor = False
+
+    if options.get('apply_flavor_grouping', True) and support_flavor:
+        logger.info("Apply flavor grouping to the model")
+        if model.get_particle(2).get('mass') != 'ZERO':
+            logger.info('no grouping quark due to massive u quark')
+        elif model.get_particle(3).get('mass') != 'ZERO':
+            model.merge_flavor([1,2])
+        elif model.get_particle(4).get('mass') != 'ZERO':
+            model.merge_flavor([1,2,3])
+        elif model.get_particle(5).get('mass') != 'ZERO':
+            model.merge_flavor([1,2,3,4])
+        elif model.get_particle(6).get('mass') != 'ZERO':
+            model.merge_flavor([1,2,3,4,5])
+        else:
+            model.merge_flavor([1,2,3,4,5,6])
+        if model.get_particle(11).get('mass') != 'ZERO':
+            logger.info('no grouping lepton due to massive electron')
+        elif model.get_particle(13).get('mass') != 'ZERO':
+            logger.info('no grouping lepton due to massive muon')
+        elif model.get_particle(15).get('mass') != 'ZERO':
+            model.merge_flavor([11,13])
+        else:
+            model.merge_flavor([11,13,15])
+
+        if model.get_particle(12).get('mass') != 'ZERO' or \
+            model.get_particle(14).get('mass') != 'ZERO' or \
+            model.get_particle(16).get('mass') != 'ZERO':
+            logger.info('no grouping neutrino due to mass')
+        else:
+            model.merge_flavor([12,14,16])
+        #misc.sprint('W merging')
+        #model.merge_part_antipart(24)  # W+/W-
+
     return model
     
 
 _import_once = []
-def import_full_model(model_path, decay=False, prefix=''):
+def import_full_model(model_path, decay=False, prefix='', options={}):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
@@ -333,11 +380,14 @@ def import_full_model(model_path, decay=False, prefix=''):
     
     if prefix is True:
         prefix='mdl_'
+    
+    FFV = options.get('apply_flavor_grouping', True)
         
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py', 'coupling_orders.py']
+                       'propagators.py', 'coupling_orders.py',
+                       'CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -346,31 +396,53 @@ def import_full_model(model_path, decay=False, prefix=''):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py','CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']:
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
     files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge == 1: 
+    if aloha.unitary_gauge == 1:
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 2:
+        # axial gauge removes the goldstones (like unitary) and therefore
+        # must not share the Feynman gauge pickle (which keeps them)
+        pickle_name = 'model_axial.pkl'
     elif aloha.unitary_gauge == 3:
         pickle_name = 'model_FDG.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
     if decay:
         pickle_name = 'dec_%s' % pickle_name
+    model = None
     pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         allow_reload = True
+        bypass_pkl = False
         try:
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, pickle_name))
         except Exception as error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
+            #check if FFV modification was apply or not (important for NLO which is not compatible with FFV)
+            all_coup_name =[coupl.name  for coupls in model.get('couplings').values() for coupl in coupls] 
+            if not FFV:
+                if any('FFV' in name for name in all_coup_name):
+                    logger.info('reload from .py file')
+                    bypass_pkl = True                        
+            else:
+                if all(not 'FFV' in name for name in all_coup_name):
+                    # Only bypass for non-loop (non-NLO) models; loop models
+                    # are not compatible with FFV optimization so they should
+                    # use the pickle directly (which has properly restricted
+                    # wavefunction counterterms).
+                    if not dict.get(model, 'perturbation_couplings'):
+                        logger.info('reload from .py file')
+                        bypass_pkl = True
+
             # We don't care about the restrict_card for this comparison
             if 'version_tag' in model and not model.get('version_tag') is None and \
                 model.get('version_tag').startswith(os.path.realpath(model_path)) and \
@@ -382,39 +454,45 @@ def import_full_model(model_path, decay=False, prefix=''):
                         if value in ['as','mu_r', 'zero','aewm1']:
                             continue
                         if prefix:
-                            if value.startswith(prefix):
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
-                                return model
-                            else:
+                            if not  value.startswith(prefix):
                                 logger.info('reload from .py file')
+                                bypass_pkl = True
                                 break
-                        else:
-                            if value.startswith('mdl_'):
+                        elif value.startswith('mdl_'):
                                 logger.info('reload from .py file')
+                                bypass_pkl = True
                                 break                   
-                            else:
-                                _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
-                                return model
                     else:
                         continue
                     break                                         
             else:
                 logger.info('reload from .py file')
+                bypass_pkl = True
 
+        if not bypass_pkl and model:
+            logger.debug('use model from pickle file %s', os.path.join(model_path, pickle_name))
+            _import_once.append((model_path, aloha.unitary_gauge, prefix, decay))
+            return model
+        
     if (model_path, aloha.unitary_gauge, prefix, decay) in _import_once and not allow_reload:
         raise MadGraph5Error('This model %s is modified on disk. To reload it you need to quit/relaunch MG5_aMC ' % model_path)
      
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
-    ufo2mg5_converter = UFOMG5Converter(ufo_model)    
+    ufo2mg5_converter = UFOMG5Converter(ufo_model, FFV=options.get('apply_flavor_grouping', True),)    
     model = ufo2mg5_converter.load_model()
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
 
+    # Store the WF CT coupling expression strings in the model so that they
+    # can be evaluated during model restriction (e.g. to remove counterterms
+    # for massless particles like b when MB=0).
+    if ufo2mg5_converter.wf_ct_coupling_exprs:
+        model['wf_ct_coupling_exprs'] = ufo2mg5_converter.wf_ct_coupling_exprs
+
     # Load the Parameter/Coupling in a convenient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main(\
-             additional_couplings =(ufo2mg5_converter.wavefunction_CT_couplings
-                           if ufo2mg5_converter.perturbation_couplings else []))
+             additional_couplings = ufo2mg5_converter.additional_couplings)
     
     model.set('parameters', parameters)
     model.set('couplings', couplings)
@@ -445,7 +523,9 @@ def import_full_model(model_path, decay=False, prefix=''):
     path = os.path.dirname(os.path.realpath(model_path))
     path = os.path.join(path, model.get('name'))
     model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
-    
+
+
+
     # save in a pickle files to fasten future usage
     if ReadWrite and model['allow_pickle']:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
@@ -461,7 +541,7 @@ def import_full_model(model_path, decay=False, prefix=''):
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
-    def __init__(self, model, auto=False):
+    def __init__(self, model, auto=False, FFV=True):
         """ initialize empty list for particles/interactions """
 
         if hasattr(model, '__header__'):
@@ -471,7 +551,7 @@ class UFOMG5Converter(object):
             else:
                 logger.info("\n"+header)
         else:
-            f =collections.defaultdict(lambda : 'n/a')
+            f = collections.defaultdict(lambda : 'n/a')
             for key in ['author', 'version', 'email', 'arxiv']:
                 if hasattr(model, '__%s__' % key):
                     val = getattr(model, '__%s__' % key)
@@ -491,6 +571,8 @@ class UFOMG5Converter(object):
         self.colored_scalar = False # in presence of color scalar particle the running of a_s is modified
                                     # This is not supported by madevent/systematics
         self.wavefunction_CT_couplings = []
+        self.additional_couplings = []
+        self.wf_ct_coupling_exprs = {}
  
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
@@ -506,11 +588,15 @@ class UFOMG5Converter(object):
         if self.perturbation_couplings!={}:
             self.model = loop_base_objects.LoopModel({'perturbation_couplings':\
                                                 list(self.perturbation_couplings.keys())})
+            self.FFV_optim = False
         else:
-            self.model = base_objects.Model()                        
+            self.model = base_objects.Model() 
+            self.FFV_optim = FFV                       
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         self.conservecharge = set(['charge'])
+        
+        
 
         if hasattr(model, 'startfromalpha0'):
             startfromalpha = bannermod.ConfigFile.format_variable(model.startfromalpha0, bool, name="startfromalpha0")
@@ -605,7 +691,20 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+
         if aloha.unitary_gauge == 3:
+            # Pre-optimize FFV interactions before goldstone merging so that
+            # interactions like Z-cbar-c (which has a G0 coupling via ymc != 0)
+            # get FFV-optimized first. Without this, goldstone merging adds an
+            # FFS coupling making len(couplings)==3, causing reshape_FFV_coeff
+            # to skip optimization. During merge_flavor the coupling indices
+            # (0,0),(0,1) then map to different lorentz structures for charm
+            # vs the other quarks, producing wrong couplings (e.g. GC_51 instead
+            # of GC_FFV_2) at flavor entry (4,4,0).
+            for interaction in list(self.interactions):
+                self.optimise_interaction(interaction)
+                if not interaction['couplings']:
+                    self.interactions.remove(interaction)
             self.merge_all_goldstone_with_vector()
 
     
@@ -681,11 +780,22 @@ class UFOMG5Converter(object):
 
         self.check_model_all()
 
+        self.additional_couplings += self.wavefunction_CT_couplings \
+                           if self.perturbation_couplings else []
+
         return self.model
     
     def optimise_interaction(self, interaction):
         
-        
+        # Check if the interaction is a FFV interaction with two couplings
+        if self.FFV_optim:
+            ffv_coeff = self.reshape_FFV_coeff(self.model, interaction)
+            if ffv_coeff:
+                self.optimise_FFV(interaction, ffv_coeff)
+
+        self.optimise_iden_coup(interaction)
+
+    def optimise_iden_coup(self, interaction):
         #  Check if two couplings have exactly the same definition. 
         #  If so replace one by the other
         if not hasattr(self, 'iden_couplings'):
@@ -771,8 +881,248 @@ class UFOMG5Converter(object):
             new_l = interaction.get('lorentz').index(new_name)
             # adding the new combination (color,lor) associate to this sum of structure
             interaction['couplings'][(color, new_l)] = coup  
-                
-    
+
+    def optimise_FFV(self, interaction, ffv_coeff):
+        """ handle the case where a FFV vertex has two couplings but not in the correct base
+            This routine will define the new coupling and potentially new lorentz structure
+            and return the new interaction. """
+        
+        def get_new_expr(expr1, coeff1, expr2, coeff2):
+            if coeff1 != 0 and coeff2 != 0:
+                if coeff1 == coeff2:
+                    return '%s*(%s+(%s))' %(coeff1, expr1, expr2)
+                elif coeff1 == - coeff2:
+                    return '%s*(%s-(%s))' %(coeff1, expr1, expr2)
+                else:
+                    return '%s*(%s) + (%s)*(%s)' %(coeff1, expr1 , coeff2,expr2)
+            elif coeff1 == 0:
+                return '%s*(%s)' %(coeff2,expr2)
+            else:
+                return '%s*(%s)' %(coeff1,expr1)
+
+        lorentz_structures = ['Gamma(3,2,-1)*ProjP(-1,1)','Gamma(3,2,-1)*ProjM(-1,1)', 'ProjP(2,1)', 'ProjM(2,1)']
+        proj = []
+        for structure in lorentz_structures:
+            lorentz = [l for l in self.model['lorentz'] if l.get('structure') == structure]
+            if lorentz:
+                proj.append(lorentz[0])
+            else:
+                proj.append(self.add_lorentz(None, structure, [2,2,3] if 'Gamma' in structure else [2,2,1]))
+            
+        nametospin = {}
+        for namel in interaction.get('lorentz'):
+            lorentz = [l for l in self.model['lorentz'] if l.get('name') == namel] 
+            nametospin[namel] = lorentz[0].get('spins') if lorentz else None
+
+
+        #define the new couplings
+        #warning self.model['couplings'] is not yet filled need to use self.ufomodel.all_couplings
+        all_color = set([c for c, l in interaction.get('couplings')])
+        new_coups = {}
+        for col in all_color:
+
+            valid_coup_ffv = set([name for (c,l) , name in interaction.get('couplings').items() if c == col if nametospin[interaction.get('lorentz')[l]] == [2,2,3]])
+            valid_coup_ffs = set([name for (c,l) , name in interaction.get('couplings').items() if c == col if nametospin[interaction.get('lorentz')[l]] == [2,2,1]]) 
+            coup_ffv = [c for c in self.ufomodel.all_couplings if c.name in valid_coup_ffv]
+            coup_ffs = [c for c in self.ufomodel.all_couplings if c.name in valid_coup_ffs] 
+            # FFV case:
+            assert len(coup_ffv) == 2 
+            expr1_ffv = coup_ffv[0].value
+            expr2_ffv = coup_ffv[1].value
+            if coup_ffv[0].order != coup_ffv[1].order:
+                #not compatible for optimization
+                return
+            # FFV case
+            new_expr1 = get_new_expr(expr1_ffv, ffv_coeff[0][0], expr2_ffv, ffv_coeff[1][0])
+            new_expr2 = get_new_expr(expr1_ffv, ffv_coeff[0][1], expr2_ffv, ffv_coeff[1][1])
+            if new_expr1 in [c.value for c in self.additional_couplings]:
+                new_coup1 = [c for c in self.additional_couplings if c.value == new_expr1][0]
+            else:
+                new_coup1 = self.add_coupling(new_expr1, coup_ffv[0].order, 'GC_FFV_%d' % len(self.additional_couplings))
+            if new_expr2 in [c.value for c in self.additional_couplings]:
+                new_coup2 = [c for c in self.additional_couplings if c.value == new_expr2][0]
+            else:
+                new_coup2 = self.add_coupling(new_expr2, coup_ffv[0].order, 'GC_FFV_%d' % len(self.additional_couplings))
+            assert len(coup_ffs) == 0
+
+        for (color, lor) in interaction.get('couplings'):
+            new_coups[(col, 0)] = new_coup1.name 
+            new_coups[(col, 1)] = new_coup2.name  
+
+        # Initialize a new interaction but keep id tag
+        new_interaction = base_objects.Interaction({'id':interaction.get('id')})                
+        new_interaction.set('particles', interaction.get('particles'))              
+        new_interaction.set('lorentz', [l.get('name') for l in proj])
+        new_interaction.set('couplings', new_coups)
+        new_interaction.set('orders', interaction.get('orders')) 
+        new_interaction.set('color', interaction.get('color'))
+        new_interaction.set('type', interaction.get('type'))
+        new_interaction.set('loop_particles', interaction.get('loop_particles'))
+        # remove old interactions
+        #self.interactions.remove(interaction)
+        # add to the interactions
+        
+        if interaction.get('id')-1 < len(self.interactions) and  self.interactions[interaction.get('id')-1] is interaction:
+            index = interaction.get('id')-1
+        else:
+            index = self.interactions.index(interaction)
+        self.interactions[index] = new_interaction
+
+
+    def add_lorentz_create_name(self, structure, spins):
+        """same as add_lorentz but create a new name for the lorentz base on spins information"""
+
+        letter = {1: 'S', 2: 'F', 3: 'V', 4: 'R', 5: 'U'}
+        new_name = ''.join([letter[s] for s in spins])
+        labels = [l.get('name')[len(spins):] for l in self.model['lorentz'] if l.get('name').startswith(new_name) and l.get('name')[len(spins):]]
+        if labels:
+            flag = max([int(l) for l in labels if l.isdigit()]) + 1
+        else:
+            flag = 1
+        new_name += str(flag)
+
+        return self.add_lorentz(new_name, spins , structure)
+
+
+    @staticmethod       
+    def reshape_FFV_coeff(model, interaction):
+        """To allow multi-dimensional coupling to be efficient, it is important that all
+           the FFV interactions have the same lorentz structure. 
+           If you have two couplings, then this will be rehape to have one coupling for
+            (1+gamma5)/2 part  and one for (1-gamma5)/2 part.
+           This routines returns the linear combination of the coupling to go to that basis   
+        """
+
+        if len(interaction.get('couplings'))!=2:
+            return None
+        
+        lorentzs = [model.get_lorentz(l) for l in interaction.get('lorentz')]
+        
+        if lorentzs[0].get('spins') != [2,2,3]:
+            return None
+        
+        def projection(lor, spin):
+            def get_coeff(lor):
+                try:
+                    return int(re.findall(r'([\+\-]?\s*\d+)\*Gamma\(3,2', lor)[0])
+                except:
+                    if re.search(r'-\s*Gamma\(3,2', lor):
+                        return -1
+                    else: 
+                        return 1
+                    
+            def get_coeffS(lor):
+                try:
+                    return int(re.findall(r'([\+\-]?\s*\d+)\*Proj\w\(2,1\)', lor)[0])
+                except:
+                    if re.search(r'-\s*Proj\w\(2,1\)', lor):
+                        return -1
+                    else: 
+                        return 1
+                    
+            def get_coeffI(lor):
+                try:
+                    return int(re.findall(r'([\+\-]?\s*\d+)\*Identity\([12],[12]\)', lor)[0])
+                except:
+                    if re.search(r'-\s*Identity\(', lor):
+                        return -1
+                    else: 
+                        return 1
+            if " - " in lor:
+                p1, p2 = lor.split(" - ")
+                r1 = projection(p1, spin)
+                if r1 is None:
+                    return None
+                r2 = projection(p2, spin)
+                if r2 is None:
+                    return None
+                c1, c2, s1, s2 = r1
+                c3, c4, s3, s4 = r2
+                return c1-c3, c2-c4, s1-s3, s2-s4
+            elif " + " in lor:
+                p1, p2 = lor.split(" + ")
+                r1 = projection(p1, spin)
+                if r1 is None:
+                    return None
+                r2 = projection(p2, spin)
+                if r2 is None:
+                    return None
+                c1, c2, s1, s2 = r1
+                c3, c4, s3, s4 = r2
+                return c1+c3, c2+c4, s1+s3, s2+s4
+            elif "ProjP(-1,1)" in lor:
+                return get_coeff(lor), 0, 0, 0
+            elif "ProjM(-1,1)" in lor:
+                return 0, get_coeff(lor), 0, 0
+            elif re.search(r"ProjP\((['\"])[\w\s]*\1,1\)" , lor): 
+                return get_coeff(lor), 0, 0, 0
+            elif re.search(r"ProjM\((['\"])[\w\s]*\1,1\)" , lor):
+                return 0, get_coeff(lor), 0, 0
+            elif  'Gamma(3,2,1)' == lor:
+                c = get_coeff(lor)
+                return c, c, 0, 0
+            elif 'Gamma5' in lor:
+                lor = re.sub(
+                        r"Gamma5\(\s*([^)]+)\s*\)\s*(\*\w+)",
+                        r"ProjP(\1)\2 - ProjM(\1)\2",
+                        lor)
+
+                return projection(lor, spin)
+
+            elif spin != [2,2,1]:
+                # Unknown FFV Lorentz structure: ignore this interaction's
+                # projection (it will be handled correctly in flavor merging)
+                return None
+            # BELOW IS FOR FD GAUGE SUPPORT (projection on PROJP(2,1) and PROJM(2,1)
+            elif "ProjP(2,1)" in lor:
+                return 0,0 , get_coeffS(lor), 0
+            elif "ProjM(2,1)" in lor:
+                return 0,0, 0, get_coeffS(lor)
+            elif "Identity(1,2)" in lor or "Identity(2,1)" in lor:
+                a = get_coeffI(lor)
+                return a, a
+            else:
+                return None
+
+        all_c = []
+        for lor in lorentzs:
+            result = projection(lor.get('structure'), lor.get('spins'))
+            if result is None:
+                return None
+            c1, c2, cs1, cs2 = result
+            all_c.append((c1,c2,cs1,cs2))
+        
+        #avoid useless trigger if already  in the right basis
+        def is_trivial_quadruple(t):
+            """
+            A quadruple (A,B,C,D) is trivial if:
+            - all four entries are zero, OR
+            - exactly one entry is 1 and the others are 0
+            """
+            # Case 1: all zeros
+            if all(x == 0 for x in t):
+                return True
+
+            # Case 2: exactly one 1 and the rest zero
+            return sum(x == 1 for x in t) == 1 and sum(x == 0 for x in t) == 3
+
+
+        def is_trivial_coefficient(coef):
+            """
+            coef = [(A,B,C,D), ...]  — one entry per lorentz structure
+            """
+            return all(is_trivial_quadruple(t) for t in coef)
+
+
+
+        if is_trivial_coefficient(all_c): 
+            return None
+        
+        return all_c
+
+
+
+
     def merge_all_goldstone_with_vector(self):
         """For Feynman Diagram gauge need to merge interaction of scalar/boson"""
 
@@ -1368,6 +1718,12 @@ class UFOMG5Converter(object):
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
                   dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
                         for key in counterterm])
+                # Store the expression strings so they can be evaluated later during
+                # model restriction (to zero out WF CT couplings for massless particles)
+                for laurentOrder, expr in counterterm.items():
+                    coupName = newCouplingName + \
+                               ('' if laurentOrder==0 else '_'+str(-laurentOrder)+'eps')
+                    self.wf_ct_coupling_exprs[coupName] = expr
                 # We want to create the new coupling for this wavefunction
                 # renormalization.
                 self.ufomodel.object_library.Coupling(\
@@ -1872,7 +2228,6 @@ class UFOMG5Converter(object):
             if abs(total) > 1e-12:
                 logger.info('The model has interaction violating the charge: %s' % charge)
                 self.conservecharge.discard(charge)
-
         
         
     def get_sign_flow(self, flow, nb_fermion):
@@ -1917,11 +2272,40 @@ class UFOMG5Converter(object):
                     
         return  '' if sign ==1 else '-'
 
+    def add_coupling(self, expr, order, name):
+        """Add a coupling definition to the model """
+
+        logger.debug('MG5 converter defines %s to %s', name, expr)
+        assert name not in [c.name for c in self.additional_couplings] + [c.name for c in self.ufomodel.all_couplings]
+        #avoid side effect that the instantiate a UFO class update the list of coupling in the model
+        # Use the Coupling class's own __globals__ dict directly, because self.ufomodel.object_library
+        # may have been replaced by a new module object (e.g. when decays.py uses a relative import
+        # `from .object_library import ...` which Python registers under a different sys.modules key
+        # and overwrites ufomodel.object_library).  The Coupling class's __globals__ always points
+        # to the original object_library.__dict__ where `global all_couplings` resolves.
+        coup_class = self.ufomodel.all_couplings[0].__class__
+        coup_globals = coup_class.__init__.__globals__
+        old_all_couplings = coup_globals['all_couplings']
+        coup_globals['all_couplings'] = self.additional_couplings
+        try:
+            new = coup_class(name=name, value=expr, order=order)
+        finally:
+            coup_globals['all_couplings'] = old_all_couplings
+        return new
+
+
     def add_lorentz(self, name, spins , expr, formfact=None):
         """ Add a Lorentz expression which is not present in the UFO """
 
+        if name is None:
+            assert formfact is None
+            return self.add_lorentz_create_name(spins, expr)
         logger.debug('MG5 converter defines %s to %s', name, expr)
         assert name not in [l.name for l in self.model['lorentz']]
+
+        if not hasattr(self.ufomodel, 'object_library'):
+            raise InvalidModel('The UFO model does not have an object_library attribute. Unable to add lorentz %s' % name)
+
         with misc.TMP_variable(self.ufomodel.object_library, 'all_lorentz', 
                                self.model['lorentz']):
             new = self.model['lorentz'][0].__class__(name = name,
@@ -2499,17 +2883,24 @@ class RestrictModel(model_reader.ModelReader):
         
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
-        
+
+        def add_coupling(coupling_pos, coupling):
+            if coupling.startswith('-'):
+                coupling = coupling[1:]
+            if coupling in coupling_pos:
+                if vertex not in coupling_pos[coupling]:
+                    coupling_pos[coupling].append(vertex)
+            else:
+                coupling_pos[coupling] = [vertex]
+
         self.coupling_pos = {}
         for vertex in self['interactions']:
             for key, coupling in vertex['couplings'].items():
-                if coupling.startswith('-'):
-                    coupling = coupling[1:]
-                if coupling in self.coupling_pos:
-                    if vertex not in self.coupling_pos[coupling]:
-                        self.coupling_pos[coupling].append(vertex)
+                if isinstance(coupling, base_objects.FLV_Coupling):
+                    for flv in coupling.get('flavors'):
+                        add_coupling(self.coupling_pos, coupling.get('flavors')[flv])
                 else:
-                    self.coupling_pos[coupling] = [vertex]
+                    add_coupling(self.coupling_pos, coupling)
         
         for particle in self['particles']:
             for key, coupling_dict in particle['counterterm'].items():
@@ -2522,7 +2913,7 @@ class RestrictModel(model_reader.ModelReader):
 
         return self.coupling_pos
         
-    def detect_identical_couplings(self, strict_zero=False):
+    def detect_identical_couplings(self, strict_zero=False, allow_minus_coupling=False):
         """return a list with the name of all vanishing couplings"""
         
         dict_value_coupling = {}
@@ -2559,15 +2950,15 @@ class RestrictModel(model_reader.ModelReader):
 
             value = limit_to_6_digit(value)
 
-            if value in dict_value_coupling or -1*value in dict_value_coupling:
-                if value in dict_value_coupling:
+            if value in dict_value_coupling:
                     iden_key.add(value)
                     dict_value_coupling[value].append((name,1))
-                else:
+            elif allow_minus_coupling and -1*value in dict_value_coupling:
                     iden_key.add(-1*value)
                     dict_value_coupling[-1*value].append((name,-1))
             else:
                 dict_value_coupling[value] = [(name,1)]
+                
         for key in iden_key:
             tmp = []
             if key in dict_value_coupling:
@@ -2601,7 +2992,10 @@ class RestrictModel(model_reader.ModelReader):
 
         for v in self['interactions']:
             for c in v['couplings'].values():
-                self.coupling_order_dict[c] = v['orders']
+                if isinstance(c, base_objects.FLV_Coupling):
+                    continue
+                else:
+                    self.coupling_order_dict[c] = v['orders']
         
         if cname not in self.coupling_order_dict:
             self.coupling_order_dict[cname] = None
@@ -2895,11 +3289,27 @@ class RestrictModel(model_reader.ModelReader):
                     if coupling in zero_couplings:
                         modify=True
                         del vertex['couplings'][key]
+                    elif isinstance(coupling, base_objects.FLV_Coupling):
+                        # loop over all flavor to see which are kept
+                        for flav in list(coupling.get('flavors').keys()):
+                            coup =coupling.get('flavors')[flav]
+                            if coup in zero_couplings:
+                                del coupling.get('flavors')[flav]
+                            elif coup.startswith('-'):
+                                coup = coup[1:]
+                                if coup in zero_couplings:
+                                    del coupling.get('flavors')[flav] 
+                        # check if no flavor remain
+                        if len(coupling.get('flavors')) == 0:
+                            modify=True
+                            del vertex['couplings'][key]
+
                     elif coupling.startswith('-'):
                         coupling = coupling[1:]
                         if coupling in zero_couplings:
                             modify=True
-                            del vertex['couplings'][key]                      
+                            del vertex['couplings'][key]
+
                         
                 if modify:
                     mod_vertex.append(vertex)
@@ -3105,6 +3515,8 @@ class RestrictModel(model_reader.ModelReader):
         # for the same color structure. 
         to_lor = {}
         for (color, lor), coup in interaction['couplings'].items():
+            if isinstance(coup, base_objects.FLV_Coupling):
+                continue
             abscoup, coeff = (coup[1:],-1) if coup.startswith('-') else (coup, 1)
             key = (color, abscoup)
             if key in to_lor:

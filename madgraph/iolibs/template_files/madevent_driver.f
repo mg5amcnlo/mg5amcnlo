@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
+          use model_object
       implicit none
 C
 C     CONSTANTS
@@ -230,6 +231,7 @@ c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
       use DiscreteSampler
+      use model_object
 
       implicit none
 c

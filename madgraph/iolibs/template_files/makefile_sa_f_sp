@@ -1,10 +1,15 @@
 include ../../Source/make_opts
-
 SHELL = /bin/bash
 HERE := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
+ROOT_DIR = $(HERE)/../../
 LIBDIR := $(abspath $(HERE)/../../lib)
 PDIR := $(strip $(notdir $(patsubst %/,%,$(strip $(HERE)))))
 PROG   = check
+# Absolute path to the process directory; used as an include path so that the
+# Fortran compiler can locate process-local .inc files when matrix.f is built
+# from a different cwd (needed for python3.12/3.13 / f2py setups).
+# Keep this distinct from PDIR (basename) which is used for dylib naming below.
+PDIR_FULL:=$(shell dirname $(realpath --no-symlinks $(firstword matrix.f)))
 PROG_SPLITORDERS = check_sa_born_splitOrders
 LINKLIBS =  -L$(LIBDIR) -ldhelas -lmodel
 LIBS = $(LIBDIR)/libdhelas.$(libext) $(LIBDIR)/libmodel.$(libext)
@@ -13,7 +18,10 @@ PROCESS=  matrix.o
 CHECK_SA=  check_sa.o
 CHECK_SA_SPLITORDERS=  check_sa_born_splitOrders.o
  
-$(PROG): $(PROCESS) $(CHECK_SA) makefile $(LIBS)
+F_INCLUDE = -I$(ROOT_DIR)/Source/DHELAS -I$(ROOT_DIR)/Source/MODEL -I$(PDIR_FULL)
+FFLAGS += $(F_INCLUDE)
+
+$(PROG): $(LIBS) $(PROCESS) $(CHECK_SA) makefile
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(CHECK_SA) $(LINKLIBS)
 
 $(PROG_SPLITORDERS): $(PROCESS) $(CHECK_SA_SPLITORDERS) makefile $(LIBS)
@@ -21,6 +29,15 @@ $(PROG_SPLITORDERS): $(PROCESS) $(CHECK_SA_SPLITORDERS) makefile $(LIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc
 
+$(LIBDIR)/libdhelas.$(libext):
+	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS"
+$(LIBDIR)/libmodel.$(libext):
+	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS"
+$(LIBDIR)/libdhelas.$(dylibext):
+	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS" shared
+$(LIBDIR)/libmodel.$(dylibext):
+	$(MAKE) -C "$(LIBDIR)/../Source/MODEL" shared
+	
 # For python linking (require f2py part of numpy)
 ifeq ($(origin MENUM),undefined)
   MENUM=2
@@ -28,12 +45,6 @@ endif
 
 libme$(PDIR).$(dylibext): $(LIBDIR)/libdhelas.$(dylibext) $(LIBDIR)/libmodel.$(dylibext) matrix.o
 	gfortran $(DYNLIBFLAG) -o libme$(PDIR).$(dylibext) matrix.o ../../Source/DHELAS/*.o ../../Source/MODEL/*.o
-
-
-$(LIBDIR)/libdhelas.$(dylibext):
-	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS" shared
-$(LIBDIR)/libmodel.$(dylibext):
-	$(MAKE) -C "$(LIBDIR)/../Source/MODEL" shared
 
 matrix$(MENUM)py.so: f2py_matrix_wrapper.f libme$(PDIR).$(dylibext)  makefile 
 	touch __init__.py
