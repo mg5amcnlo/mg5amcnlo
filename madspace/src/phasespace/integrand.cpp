@@ -805,7 +805,9 @@ NamedVector<Value> MultiChannelIntegrand::build_function_impl(
     if (_return_sizes) {
         output.push_back(
             "return_batch_sizes",
-            _integrands.at(0)->_flags & Integrand::drop_cuts_and_rescale ? fb.stack_sizes(ret_batch_sizes) : batch_sizes
+            _integrands.at(0)->_flags & Integrand::drop_cuts_and_rescale
+                ? fb.stack_sizes(ret_batch_sizes)
+                : batch_sizes
         );
     }
     return output;

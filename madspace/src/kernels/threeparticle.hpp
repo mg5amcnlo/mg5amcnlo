@@ -197,14 +197,10 @@ KERNELSPEC FVal<T> bk_V(
     // Polynomial fallback (the previous implementation), used by the LU
     // helper if the matrix's leading pivots are below the LU tolerance.
     // Expansion along row 3, using a22 = a33 = 0 and a21 = a12.
-    auto poly_det = a31 * (a12 * a23 - a13 * a22)
-                  + a32 * (a12 * a13 - a11 * a23);
+    auto poly_det = a31 * (a12 * a23 - a13 * a22) + a32 * (a12 * a13 - a11 * a23);
 
     auto det = lup_det3_general<T>(
-        a11, a12, a13,
-        a12, a22, a23,
-        a31, a32, FVal<T>(0.0),
-        poly_det
+        a11, a12, a13, a12, a22, a23, a31, a32, FVal<T>(0.0), poly_det
     );
     return -det / 8.0;
 }
@@ -240,25 +236,15 @@ KERNELSPEC FVal<T> bk_gram4(
     // Polynomial fallback (the previous "hard-coded because easier" expansion),
     // re-organized to keep the inner 2x2 minors as their own subexpressions.
     // Used by the LU helper if any pivot is below tolerance.
-    auto poly_det = a14 * a14 * (a23 * a23 - a22 * a33)
-                  + a13 * a13 * (a24 * a24 - a22 * a44)
-                  + a12 * a12 * (a34 * a34 - a33 * a44)
-                  - a23 * a23 * a11 * a44
-                  - a24 * a24 * a11 * a33
-                  - a34 * a34 * a11 * a22
-                  + a11 * a22 * a33 * a44
-                  + 2.0 * a11 * a23 * a24 * a34
-                  + 2.0 * a12 * a13 * (a23 * a44 - a24 * a34)
-                  + 2.0 * a12 * a14 * (a24 * a33 - a23 * a34)
-                  + 2.0 * a13 * a14 * (a22 * a34 - a23 * a24);
+    auto poly_det = a14 * a14 * (a23 * a23 - a22 * a33) +
+        a13 * a13 * (a24 * a24 - a22 * a44) + a12 * a12 * (a34 * a34 - a33 * a44) -
+        a23 * a23 * a11 * a44 - a24 * a24 * a11 * a33 - a34 * a34 * a11 * a22 +
+        a11 * a22 * a33 * a44 + 2.0 * a11 * a23 * a24 * a34 +
+        2.0 * a12 * a13 * (a23 * a44 - a24 * a34) +
+        2.0 * a12 * a14 * (a24 * a33 - a23 * a34) +
+        2.0 * a13 * a14 * (a22 * a34 - a23 * a24);
 
-    auto det = lup_det4<T>(
-        a11, a12, a13, a14,
-             a22, a23, a24,
-                  a33, a34,
-                       a44,
-        poly_det
-    );
+    auto det = lup_det4<T>(a11, a12, a13, a14, a22, a23, a24, a33, a34, a44, poly_det);
     return det / 16.0;
 }
 
@@ -286,25 +272,13 @@ KERNELSPEC FVal<T> bk_sqrt_g3i_g3im1(
 
     // Polynomial fallback for each 3x3 Gram (cofactor expansion). Used by the
     // LU helper independently per matrix if its pivots are below tolerance.
-    auto poly_g3i = a11 * (a22 * a33 - a23 * a23)
-                  - a12 * (a12 * a33 - a13 * a23)
-                  + a13 * (a12 * a23 - a13 * a22);
-    auto poly_g3im1 = a11 * (a22 * b33 - b23 * b23)
-                    - a12 * (a12 * b33 - b13 * b23)
-                    + b13 * (a12 * b23 - b13 * a22);
+    auto poly_g3i = a11 * (a22 * a33 - a23 * a23) - a12 * (a12 * a33 - a13 * a23) +
+        a13 * (a12 * a23 - a13 * a22);
+    auto poly_g3im1 = a11 * (a22 * b33 - b23 * b23) - a12 * (a12 * b33 - b13 * b23) +
+        b13 * (a12 * b23 - b13 * a22);
 
-    auto g3i = lup_det3<T>(
-        a11, a12, a13,
-             a22, a23,
-                  a33,
-        poly_g3i
-    );
-    auto g3im1 = lup_det3<T>(
-        a11, a12, b13,
-             a22, b23,
-                  b33,
-        poly_g3im1
-    );
+    auto g3i = lup_det3<T>(a11, a12, a13, a22, a23, a33, poly_g3i);
+    auto g3im1 = lup_det3<T>(a11, a12, b13, a22, b23, b33, poly_g3im1);
 
     return sqrt(g3i * g3im1) / 8.0;
 }

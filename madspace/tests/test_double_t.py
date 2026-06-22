@@ -238,14 +238,14 @@ def test_phase_space_volume_analytic(fixed_input_points):
         return (s - m1_sq - m2_sq) ** 2 - 4 * m1_sq * m2_sq
 
     def integrand(mir_sq):
-        l = lam(s, m1_val ** 2, mir_sq)
+        l = lam(s, m1_val**2, mir_sq)
         if l <= 0:
             return 0.0
         return np.pi / (2 * s) * np.sqrt(l)
 
     analytic_volume, _ = quad(
         integrand,
-        mir_min_val ** 2,
+        mir_min_val**2,
         (np.sqrt(s) - m1_val) ** 2,
     )
 
@@ -304,10 +304,10 @@ def test_inverse_lab_specifically(rng):
 
 @pytest.fixture(
     params=[
-        ("m1=0",       0.0),
-        ("m1=1e-9",    1e-9),
-        ("m1=1e-6",    1e-6),
-        ("m1=1e-3",    1e-3),
+        ("m1=0", 0.0),
+        ("m1=1e-9", 1e-9),
+        ("m1=1e-6", 1e-6),
+        ("m1=1e-3", 1e-3),
     ],
     ids=["m1=0", "m1=1e-9", "m1=1e-6", "m1=1e-3"],
 )
@@ -356,8 +356,9 @@ def test_inverse_massless(massless_input_points):
     # random round-trip; r_t2 used to be the most sensitive (its bounds
     # depend on t1_abs which depended on the lossy m1^2 recompute).
     for i, (inp, inv_inp) in enumerate(zip(inputs, inv_inputs)):
-        assert inp == approx(inv_inp, rel=1e-5, abs=1e-8), \
-            f"mismatch in input index {i}"
+        assert inp == approx(
+            inv_inp, rel=1e-5, abs=1e-8
+        ), f"mismatch in input index {i}"
 
 
 def test_phase_space_volume_massless(rng):
@@ -366,7 +367,7 @@ def test_phase_space_volume_massless(rng):
 
     m1_val = 0.0
     mir_min_val = 80.0
-    s_val = 13000.0 ** 2
+    s_val = 13000.0**2
 
     pa = np.tile([6500.0, 0, 0, 6500.0], (N, 1))
     pb = np.tile([6500.0, 0, 0, -6500.0], (N, 1))
@@ -388,14 +389,14 @@ def test_phase_space_volume_massless(rng):
         return (s - m1_sq - m2_sq) ** 2 - 4 * m1_sq * m2_sq
 
     def integrand(mir_sq):
-        l = lam(s_val, m1_val ** 2, mir_sq)
+        l = lam(s_val, m1_val**2, mir_sq)
         if l <= 0:
             return 0.0
         return np.pi / (2 * s_val) * np.sqrt(l)
 
     analytic_volume, _ = quad(
         integrand,
-        mir_min_val ** 2,
+        mir_min_val**2,
         (np.sqrt(s_val) - m1_val) ** 2,
     )
 

@@ -304,12 +304,12 @@ KERNELSPEC void kernel_double_t_scattering(
     auto sqrts = sqrt(max(s, EPS2));
     auto m1_2 = m1 * m1;
 
-    auto e1  = ( t1_abs + t2_abs + 2. * m1_2) / (2. * sqrts);
-    auto pz1 = ( t2_abs - t1_abs)              / (2. * sqrts);
+    auto e1 = (t1_abs + t2_abs + 2. * m1_2) / (2. * sqrts);
+    auto pz1 = (t2_abs - t1_abs) / (2. * sqrts);
     auto pt2_raw =
         (t1_abs * t2_abs + (t1_abs + t2_abs) * m1_2 + m1_2 * m1_2 - s * m1_2) / s;
     auto pt2 = max(pt2_raw, 0.);
-    auto pt  = sqrt(pt2);
+    auto pt = sqrt(pt2);
     auto phi = PI * (2. * r_phi - 1.);
 
     FourMom<T> p1_canon{e1, pt * cos(phi), pt * sin(phi), pz1};

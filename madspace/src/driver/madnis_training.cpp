@@ -167,10 +167,12 @@ void MadnisTraining::build_runtimes_and_optimizer() {
         if (_config.buffer_capacity > 0) {
             std::vector<std::shared_ptr<FunctionGenerator>> buf_unw_funcs;
             for (auto& channel : _channels) {
-                buf_unw_funcs.push_back(std::make_shared<BufferUnweighter>(
-                    channel.integrand->return_types(),
-                    _config.buffer_unweighting_quantile
-                ));
+                buf_unw_funcs.push_back(
+                    std::make_shared<BufferUnweighter>(
+                        channel.integrand->return_types(),
+                        _config.buffer_unweighting_quantile
+                    )
+                );
             }
             _multi_channel_unweighter = build_runtime(
                 MultiChannelFunction(buf_unw_funcs, true).function(),
@@ -532,7 +534,8 @@ void MadnisTraining::process_job_results(const std::vector<std::size_t>& job_ids
                     );
                 }
                 if (job.unweighted_samples.channel_sizes.size() > 0) {
-                    std::size_t unw_chan_size = job.unweighted_samples.channel_sizes.at(chan_index);
+                    std::size_t unw_chan_size =
+                        job.unweighted_samples.channel_sizes.at(chan_index);
                     chan_unweighted_samples.tensors.clear();
                     chan_unweighted_samples.size = unw_chan_size;
                     for (auto& tensor : job.unweighted_samples.tensors) {

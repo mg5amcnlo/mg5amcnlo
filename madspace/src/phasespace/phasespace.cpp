@@ -85,15 +85,18 @@ namespace {
 // Chain (color) order for the t-channel ColorOrderedMapping: the externally
 // supplied order if given, else the default single chain [0, 2, ..., n+1, 1].
 std::vector<std::size_t> ps_chain_order(
-    const Topology& topology,
-    const std::optional<std::vector<std::size_t>>& color_order
+    const Topology& topology, const std::optional<std::vector<std::size_t>>& color_order
 ) {
-    if (color_order) return *color_order;
+    if (color_order) {
+        return *color_order;
+    }
     std::size_t n_t_out = topology.decays().at(0).child_indices.size();
     std::vector<std::size_t> chain;
     chain.reserve(n_t_out + 2);
     chain.push_back(0);
-    for (std::size_t i = 0; i < n_t_out; ++i) chain.push_back(i + 2);
+    for (std::size_t i = 0; i < n_t_out; ++i) {
+        chain.push_back(i + 2);
+    }
     chain.push_back(1);
     return chain;
 }
@@ -105,7 +108,8 @@ std::size_t ps_discrete_dim(
     PhaseSpaceMapping::TChannelMode mode,
     const std::optional<std::vector<std::size_t>>& color_order
 ) {
-    if (mode == PhaseSpaceMapping::color_ordered && topology.t_propagator_count() >= 1) {
+    if (mode == PhaseSpaceMapping::color_ordered &&
+        topology.t_propagator_count() >= 1) {
         ColorOrderedMapping co(ps_chain_order(topology, color_order));
         return co.discrete_dim();
     }
@@ -127,10 +131,11 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         "PhaseSpaceMapping",
         [&] {
             NamedVector<Type> in{
-            {"random",
-                batch_float_array(
-                3 * topology.outgoing_masses().size() - (leptonic ? 4 : 2)
-            )}};
+                {"random",
+                 batch_float_array(
+                     3 * topology.outgoing_masses().size() - (leptonic ? 4 : 2)
+                 )}
+            };
             // Opt-in discrete channel: only declared when the t-channel strategy
             // actually has discrete two-solution choices (color_ordered).
             std::size_t nd = ps_discrete_dim(topology, t_channel_mode, color_order);
@@ -258,7 +263,10 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             for (std::size_t a = 0;
                  std::size_t cidx : topology.decays().at(0).child_indices) {
                 for (std::size_t p = 0; p < out_idx.size(); ++p) {
-                    if (out_idx[p] == cidx) { child_to_out[a] = p; break; }
+                    if (out_idx[p] == cidx) {
+                        child_to_out[a] = p;
+                        break;
+                    }
                 }
                 ++a;
             }
@@ -268,17 +276,24 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             std::vector<std::vector<double>> m_inv_co(nc, std::vector<double>(nc, 0.));
             std::vector<std::vector<double>> dr_co(nc, std::vector<double>(nc, 0.));
             for (std::size_t a = 0; a < nc; ++a) {
-                if (child_to_out[a] >= m_inv_full.size()) continue;
+                if (child_to_out[a] >= m_inv_full.size()) {
+                    continue;
+                }
                 for (std::size_t b = 0; b < nc; ++b) {
-                    if (child_to_out[b] >= m_inv_full.size()) continue;
+                    if (child_to_out[b] >= m_inv_full.size()) {
+                        continue;
+                    }
                     m_inv_co[a][b] = m_inv_full[child_to_out[a]][child_to_out[b]];
                     dr_co[a][b] = dr_full[child_to_out[a]][child_to_out[b]];
                 }
             }
             _t_mapping = ColorOrderedMapping(
                 ps_chain_order(topology, color_order),
-                invariant_power, invariant_power, pt_min,
-                m_inv_co, dr_co
+                invariant_power,
+                invariant_power,
+                pt_min,
+                m_inv_co,
+                dr_co
             );
         } else if (t_channel_mode == PhaseSpaceMapping::propagator ||
                    topology.t_propagator_count() < 2) {
@@ -360,7 +375,9 @@ Mapping::Result PhaseSpaceMapping::build_forward_impl(
     // strategy declared discrete choices (color_ordered). These are passed
     // through to the t-channel mapping after its continuous randoms.
     ValueVec discrete_numbers;
-    if (inputs.size() > 1) discrete_numbers = fb.unstack(inputs.at(1));
+    if (inputs.size() > 1) {
+        discrete_numbers = fb.unstack(inputs.at(1));
+    }
     auto d = discrete_numbers.begin();
     auto next_discrete = [&]() { return *(d++); };
 
@@ -625,9 +642,7 @@ Mapping::Result PhaseSpaceMapping::build_inverse_impl(
                 // Discrete choices sit at forward positions [nc, nc+nd) in
                 // t_result (after the continuous randoms, before "det").
                 for (std::size_t j = 0; j < t_mapping.discrete_dim(); ++j) {
-                    discrete_out.push_back(
-                        t_result.at(t_mapping.random_dim() + j)
-                    );
+                    discrete_out.push_back(t_result.at(t_mapping.random_dim() + j));
                 }
                 dets.push_back(t_result["det"]);
             },

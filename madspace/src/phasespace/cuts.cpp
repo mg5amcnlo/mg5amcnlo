@@ -105,7 +105,9 @@ std::vector<std::vector<double>> Cuts::m_inv_min() const {
             continue;
         }
         std::size_t i = idx.at(0).at(0), j = idx.at(0).at(1);
-        if (i < 2 || j < 2) continue;
+        if (i < 2 || j < 2) {
+            continue;
+        }
         i -= 2;
         j -= 2;
         if (i < n && j < n && item.min > m.at(i).at(j)) {
@@ -124,10 +126,14 @@ std::vector<std::vector<double>> Cuts::dr_min() const {
             continue;
         }
         const auto& idx = item.observable.indices();
-        if (idx.size() != 2) continue;
+        if (idx.size() != 2) {
+            continue;
+        }
         for (std::size_t k = 0; k < idx.at(0).size(); ++k) {
             std::size_t i = idx.at(0).at(k), j = idx.at(1).at(k);
-            if (i < 2 || j < 2) continue;
+            if (i < 2 || j < 2) {
+                continue;
+            }
             i -= 2;
             j -= 2;
             if (i < n && j < n && item.min > dr.at(i).at(j)) {

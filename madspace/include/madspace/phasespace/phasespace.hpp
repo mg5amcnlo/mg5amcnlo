@@ -38,7 +38,9 @@ public:
         const std::optional<std::vector<std::size_t>>& color_order = std::nullopt
     );
 
-    std::size_t random_dim() const { return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);}
+    std::size_t random_dim() const {
+        return 3 * _topology.outgoing_masses().size() - (_leptonic ? 4 : 2);
+    }
     std::size_t discrete_dim() const override { return _n_discrete; }
     std::size_t particle_count() const {
         return _topology.outgoing_masses().size() + 2;

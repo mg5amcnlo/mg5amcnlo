@@ -116,9 +116,8 @@ Mapping::Result TwoToTwoParticleScattering::build_inverse_impl(
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
     auto t_min_cut = conditions.at(2);
-    auto [t_abs, t_min, t_max] = fb.t_inv_value_and_min_max_cut(
-        p_in1, p_in2, p1, p2, t_min_cut
-    );
+    auto [t_abs, t_min, t_max] =
+        fb.t_inv_value_and_min_max_cut(p_in1, p_in2, p1, p2, t_min_cut);
     auto t_result = _invariant.build_inverse(fb, {t_abs}, {t_min, t_max});
     auto [r_phi, m1, m2, det_scatter] = _com
         ? fb.two_to_two_particle_scattering_com_inverse(p1, p2, p_in1, p_in2)
@@ -133,8 +132,12 @@ Mapping::Result TwoToTwoParticleScattering::build_inverse_impl(
 }
 
 DoubleT::DoubleT(
-    double t1_invariant_power, double t1_mass, double t1_width,
-    double t2_invariant_power, double t2_mass, double t2_width
+    double t1_invariant_power,
+    double t1_mass,
+    double t1_width,
+    double t2_invariant_power,
+    double t2_mass,
+    double t2_width
 ) :
     Mapping(
         "DoubleT",
@@ -168,15 +171,11 @@ Mapping::Result DoubleT::build_forward_impl(
     auto t2_result = _t2_invariant.build_forward(fb, {r_t2}, {t2_min, t2_max});
 
     auto [p1, p2, det_scatter] = fb.double_t_scattering(
-        r_phi, p_in1, p_in2,
-        t1_result["invariant"], t2_result["invariant"], m1
+        r_phi, p_in1, p_in2, t1_result["invariant"], t2_result["invariant"], m1
     );
 
     auto det_inv = fb.mul(t1_result["det"], t2_result["det"]);
-    return {
-        {{"momentum1", p1}, {"momentum2", p2}},
-        fb.mul(det_inv, det_scatter)
-    };
+    return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter)};
 }
 
 Mapping::Result DoubleT::build_inverse_impl(
@@ -189,16 +188,14 @@ Mapping::Result DoubleT::build_inverse_impl(
     auto m1 = conditions.at(2);
     auto mir_min = conditions.at(3);
 
-    auto [r_phi, det_scatter] =
-        fb.double_t_scattering_inverse(p1, p2, p_in1, p_in2);
+    auto [r_phi, det_scatter] = fb.double_t_scattering_inverse(p1, p2, p_in1, p_in2);
 
     auto [t1_abs, t1_min, t1_max] =
         fb.t1_inv_value_and_min_max_doublet(p_in1, p_in2, p1, m1, mir_min);
     auto t1_result = _t1_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
 
-    auto [t2_abs, t2_min, t2_max] = fb.t2_inv_value_and_min_max_doublet(
-        p_in1, p_in2, p1, m1, mir_min, t1_abs
-    );
+    auto [t2_abs, t2_min, t2_max] =
+        fb.t2_inv_value_and_min_max_doublet(p_in1, p_in2, p1, m1, mir_min, t1_abs);
     auto t2_result = _t2_invariant.build_inverse(fb, {t2_abs}, {t2_min, t2_max});
 
     auto det_inv = fb.mul(t1_result["det"], t2_result["det"]);

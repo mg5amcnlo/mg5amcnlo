@@ -30,9 +30,12 @@ KERNELSPEC FVal<T> max_abs(FVal<T> first, Args... rest) {
 // LU_TOL * max(|entries|).
 template <typename T>
 KERNELSPEC FVal<T> lup_det3(
-    FVal<T> a11, FVal<T> a12, FVal<T> a13,
-                 FVal<T> a22, FVal<T> a23,
-                              FVal<T> a33,
+    FVal<T> a11,
+    FVal<T> a12,
+    FVal<T> a13,
+    FVal<T> a22,
+    FVal<T> a23,
+    FVal<T> a33,
     FVal<T> polynomial_fallback
 ) {
     // Row-major working copy.
@@ -70,9 +73,15 @@ KERNELSPEC FVal<T> lup_det3(
         auto n20 = where(sel2, r00, r20);
         auto n21 = where(sel2, r01, r21);
         auto n22 = where(sel2, r02, r22);
-        r00 = n00; r01 = n01; r02 = n02;
-        r10 = n10; r11 = n11; r12 = n12;
-        r20 = n20; r21 = n21; r22 = n22;
+        r00 = n00;
+        r01 = n01;
+        r02 = n02;
+        r10 = n10;
+        r11 = n11;
+        r12 = n12;
+        r20 = n20;
+        r21 = n21;
+        r22 = n22;
 
         sign = where(any_swap, -sign, sign);
         degenerate = degenerate | (best_mag < tol);
@@ -98,12 +107,16 @@ KERNELSPEC FVal<T> lup_det3(
         auto n12 = where(sel2, r22, r12);
         auto n21 = where(sel2, r11, r21);
         auto n22 = where(sel2, r12, r22);
-        r11 = n11; r12 = n12; r21 = n21; r22 = n22;
+        r11 = n11;
+        r12 = n12;
+        r21 = n21;
+        r22 = n22;
         // Multipliers in column 0 follow the row swap (preserves L, not
         // strictly needed for the determinant but kept for correctness).
         auto n10 = where(sel2, r20, r10);
         auto n20 = where(sel2, r10, r20);
-        r10 = n10; r20 = n20;
+        r10 = n10;
+        r20 = n20;
 
         sign = where(sel2, -sign, sign);
         degenerate = degenerate | (pivot_mag < tol);
@@ -131,9 +144,15 @@ KERNELSPEC FVal<T> lup_det3(
 // a21 = a12 but a13 != a31 and a23 != a32 (and a22 = a33 = 0).
 template <typename T>
 KERNELSPEC FVal<T> lup_det3_general(
-    FVal<T> a11, FVal<T> a12, FVal<T> a13,
-    FVal<T> a21, FVal<T> a22, FVal<T> a23,
-    FVal<T> a31, FVal<T> a32, FVal<T> a33,
+    FVal<T> a11,
+    FVal<T> a12,
+    FVal<T> a13,
+    FVal<T> a21,
+    FVal<T> a22,
+    FVal<T> a23,
+    FVal<T> a31,
+    FVal<T> a32,
+    FVal<T> a33,
     FVal<T> polynomial_fallback
 ) {
     auto r00 = a11, r01 = a12, r02 = a13;
@@ -170,9 +189,15 @@ KERNELSPEC FVal<T> lup_det3_general(
         auto n20 = where(sel2, r00, r20);
         auto n21 = where(sel2, r01, r21);
         auto n22 = where(sel2, r02, r22);
-        r00 = n00; r01 = n01; r02 = n02;
-        r10 = n10; r11 = n11; r12 = n12;
-        r20 = n20; r21 = n21; r22 = n22;
+        r00 = n00;
+        r01 = n01;
+        r02 = n02;
+        r10 = n10;
+        r11 = n11;
+        r12 = n12;
+        r20 = n20;
+        r21 = n21;
+        r22 = n22;
 
         sign = where(any_swap, -sign, sign);
         degenerate = degenerate | (best_mag < tol);
@@ -198,10 +223,14 @@ KERNELSPEC FVal<T> lup_det3_general(
         auto n12 = where(sel2, r22, r12);
         auto n21 = where(sel2, r11, r21);
         auto n22 = where(sel2, r12, r22);
-        r11 = n11; r12 = n12; r21 = n21; r22 = n22;
+        r11 = n11;
+        r12 = n12;
+        r21 = n21;
+        r22 = n22;
         auto n10 = where(sel2, r20, r10);
         auto n20 = where(sel2, r10, r20);
-        r10 = n10; r20 = n20;
+        r10 = n10;
+        r20 = n20;
 
         sign = where(sel2, -sign, sign);
         degenerate = degenerate | (pivot_mag < tol);
@@ -221,10 +250,16 @@ KERNELSPEC FVal<T> lup_det3_general(
 // det of a symmetric 4x4 matrix via LU with partial pivoting. See lup_det3.
 template <typename T>
 KERNELSPEC FVal<T> lup_det4(
-    FVal<T> a11, FVal<T> a12, FVal<T> a13, FVal<T> a14,
-                 FVal<T> a22, FVal<T> a23, FVal<T> a24,
-                              FVal<T> a33, FVal<T> a34,
-                                           FVal<T> a44,
+    FVal<T> a11,
+    FVal<T> a12,
+    FVal<T> a13,
+    FVal<T> a14,
+    FVal<T> a22,
+    FVal<T> a23,
+    FVal<T> a24,
+    FVal<T> a33,
+    FVal<T> a34,
+    FVal<T> a44,
     FVal<T> polynomial_fallback
 ) {
     auto r00 = a11, r01 = a12, r02 = a13, r03 = a14;
@@ -273,10 +308,22 @@ KERNELSPEC FVal<T> lup_det4(
         auto n31 = where(sel3, r01, r31);
         auto n32 = where(sel3, r02, r32);
         auto n33 = where(sel3, r03, r33);
-        r00 = n00; r01 = n01; r02 = n02; r03 = n03;
-        r10 = n10; r11 = n11; r12 = n12; r13 = n13;
-        r20 = n20; r21 = n21; r22 = n22; r23 = n23;
-        r30 = n30; r31 = n31; r32 = n32; r33 = n33;
+        r00 = n00;
+        r01 = n01;
+        r02 = n02;
+        r03 = n03;
+        r10 = n10;
+        r11 = n11;
+        r12 = n12;
+        r13 = n13;
+        r20 = n20;
+        r21 = n21;
+        r22 = n22;
+        r23 = n23;
+        r30 = n30;
+        r31 = n31;
+        r32 = n32;
+        r33 = n33;
 
         sign = where(any_swap, -sign, sign);
         degenerate = degenerate | (best_mag < tol);
@@ -285,10 +332,18 @@ KERNELSPEC FVal<T> lup_det4(
         auto f10 = r10 / pivot_safe;
         auto f20 = r20 / pivot_safe;
         auto f30 = r30 / pivot_safe;
-        r10 = f10; r20 = f20; r30 = f30;
-        r11 = r11 - f10 * r01; r12 = r12 - f10 * r02; r13 = r13 - f10 * r03;
-        r21 = r21 - f20 * r01; r22 = r22 - f20 * r02; r23 = r23 - f20 * r03;
-        r31 = r31 - f30 * r01; r32 = r32 - f30 * r02; r33 = r33 - f30 * r03;
+        r10 = f10;
+        r20 = f20;
+        r30 = f30;
+        r11 = r11 - f10 * r01;
+        r12 = r12 - f10 * r02;
+        r13 = r13 - f10 * r03;
+        r21 = r21 - f20 * r01;
+        r22 = r22 - f20 * r02;
+        r23 = r23 - f20 * r03;
+        r31 = r31 - f30 * r01;
+        r32 = r32 - f30 * r02;
+        r33 = r33 - f30 * r03;
     }
 
     // ---- Step 1: pivot from column 1, rows {1, 2, 3} ----
@@ -319,9 +374,18 @@ KERNELSPEC FVal<T> lup_det4(
         auto n10 = where(sel2, r20, where(sel3, r30, r10));
         auto n20 = where(sel2, r10, r20);
         auto n30 = where(sel3, r10, r30);
-        r10 = n10; r11 = n11; r12 = n12; r13 = n13;
-        r20 = n20; r21 = n21; r22 = n22; r23 = n23;
-        r30 = n30; r31 = n31; r32 = n32; r33 = n33;
+        r10 = n10;
+        r11 = n11;
+        r12 = n12;
+        r13 = n13;
+        r20 = n20;
+        r21 = n21;
+        r22 = n22;
+        r23 = n23;
+        r30 = n30;
+        r31 = n31;
+        r32 = n32;
+        r33 = n33;
 
         sign = where(any_swap, -sign, sign);
         degenerate = degenerate | (best_mag < tol);
@@ -329,9 +393,12 @@ KERNELSPEC FVal<T> lup_det4(
         auto pivot_safe = where(degenerate, FVal<T>(1.0), r11);
         auto f21 = r21 / pivot_safe;
         auto f31 = r31 / pivot_safe;
-        r21 = f21; r31 = f31;
-        r22 = r22 - f21 * r12; r23 = r23 - f21 * r13;
-        r32 = r32 - f31 * r12; r33 = r33 - f31 * r13;
+        r21 = f21;
+        r31 = f31;
+        r22 = r22 - f21 * r12;
+        r23 = r23 - f21 * r13;
+        r32 = r32 - f31 * r12;
+        r33 = r33 - f31 * r13;
     }
 
     // ---- Step 2: pivot from column 2, rows {2, 3} ----
@@ -344,12 +411,18 @@ KERNELSPEC FVal<T> lup_det4(
         auto n23 = where(sel3, r33, r23);
         auto n32 = where(sel3, r22, r32);
         auto n33 = where(sel3, r23, r33);
-        r22 = n22; r23 = n23; r32 = n32; r33 = n33;
+        r22 = n22;
+        r23 = n23;
+        r32 = n32;
+        r33 = n33;
         auto n20 = where(sel3, r30, r20);
         auto n21 = where(sel3, r31, r21);
         auto n30 = where(sel3, r20, r30);
         auto n31 = where(sel3, r21, r31);
-        r20 = n20; r21 = n21; r30 = n30; r31 = n31;
+        r20 = n20;
+        r21 = n21;
+        r30 = n30;
+        r31 = n31;
 
         sign = where(sel3, -sign, sign);
         degenerate = degenerate | (pivot_mag < tol);

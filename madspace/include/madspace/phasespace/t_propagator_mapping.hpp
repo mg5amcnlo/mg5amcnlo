@@ -12,7 +12,7 @@ namespace madspace {
 class TPropagatorMapping : public Mapping {
 public:
     TPropagatorMapping(
-        const std::vector<std::size_t>& integration_order, 
+        const std::vector<std::size_t>& integration_order,
         double invariant_power = 0.8,
         const std::vector<double>& pt_min = {}
     );

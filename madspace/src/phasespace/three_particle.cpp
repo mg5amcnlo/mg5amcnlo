@@ -123,9 +123,8 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
          m1 = inputs.at(3), m2 = inputs.at(4);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
     auto t_min_cut = conditions.at(3);
-    auto [t1_min, t1_max] = fb.t_inv_min_max_cut(
-        p_a, fb.sub(p_b, p_3), m1, m2, t_min_cut
-    );
+    auto [t1_min, t1_max] =
+        fb.t_inv_min_max_cut(p_a, fb.sub(p_b, p_3), m1, m2, t_min_cut);
     auto t_inv_result = _t_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
     auto s23_min_cut = conditions.at(4);
     auto [s23_min, s23_max] = fb.s23_min_max_cut(
@@ -161,14 +160,12 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
     auto t_min_cut = conditions.at(3);
-    auto [t1_abs, t1_min, t1_max] = fb.t_inv_value_and_min_max_cut(
-        p_a, fb.sub(p_b, p_3), p1, p2, t_min_cut
-    );
+    auto [t1_abs, t1_min, t1_max] =
+        fb.t_inv_value_and_min_max_cut(p_a, fb.sub(p_b, p_3), p1, p2, t_min_cut);
     auto t_inv_result = _t_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
     auto s23_min_cut = conditions.at(4);
-    auto [s23, s23_min, s23_max] = fb.s23_value_and_min_max_cut(
-        p_a, p_b, p_3, t1_abs, p1, p2, s23_min_cut
-    );
+    auto [s23, s23_min, s23_max] =
+        fb.s23_value_and_min_max_cut(p_a, p_b, p_3, t1_abs, p1, p2, s23_min_cut);
     auto s23_inv_result = _s_invariant.build_inverse(fb, {s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
     auto [m1, m2, index_choice, det_scatter] =

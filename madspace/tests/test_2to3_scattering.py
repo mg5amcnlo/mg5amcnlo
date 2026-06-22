@@ -277,7 +277,13 @@ def test_phase_space_volume(fixed_input_points):
         fixed_input_points.m2,
     ]
 
-    conditions = [fixed_input_points.pa, fixed_input_points.pb, fixed_input_points.p3, ZEROS, ZEROS]
+    conditions = [
+        fixed_input_points.pa,
+        fixed_input_points.pb,
+        fixed_input_points.p3,
+        ZEROS,
+        ZEROS,
+    ]
 
     p1, p2, det = mapping23.map_forward(inputs, conditions)
     # per-branch Jacobian; apply the 2-solution multiplicity externally

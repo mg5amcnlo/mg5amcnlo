@@ -28,7 +28,6 @@ def _fwd_inputs(mapping, rng, n):
     return inputs, r, disc
 
 
-
 @pytest.fixture
 def rng():
     return np.random.default_rng(1234)
@@ -87,7 +86,9 @@ CM_ENERGY = 13000.0
 
 def test_t_channel_masses(masses, rng, mode):
     mapping = ms.PhaseSpaceMapping(
-        masses, CM_ENERGY, mode=mode,
+        masses,
+        CM_ENERGY,
+        mode=mode,
         color_order=_color_order(len(masses) - 2, mode),
     )
     inputs, r, _ = _fwd_inputs(mapping, rng, BATCH_SIZE)
@@ -111,14 +112,14 @@ def test_t_channel_masses(masses, rng, mode):
     abs_tol = 1e-3
     if mode == ms.PhaseSpaceMapping.color_ordered:
         abs_tol = 1e-3 + 2e-6 * np.abs(p_ext[:, :, 0])
-    assert np.all(
-        np.abs(m_ext - m_ext_true) <= abs_tol + 1e-3 * np.abs(m_ext_true)
-    )
+    assert np.all(np.abs(m_ext - m_ext_true) <= abs_tol + 1e-3 * np.abs(m_ext_true))
 
 
 def test_t_channel_incoming(masses, rng, mode):
     mapping = ms.PhaseSpaceMapping(
-        masses, CM_ENERGY, mode=mode,
+        masses,
+        CM_ENERGY,
+        mode=mode,
         color_order=_color_order(len(masses) - 2, mode),
     )
     inputs, r, _ = _fwd_inputs(mapping, rng, BATCH_SIZE)
@@ -148,7 +149,9 @@ def test_t_channel_incoming(masses, rng, mode):
 
 def test_t_channel_momentum_conservation(masses, rng, mode):
     mapping = ms.PhaseSpaceMapping(
-        masses, CM_ENERGY, mode=mode,
+        masses,
+        CM_ENERGY,
+        mode=mode,
         color_order=_color_order(len(masses) - 2, mode),
     )
     inputs, r, _ = _fwd_inputs(mapping, rng, BATCH_SIZE)
@@ -166,7 +169,10 @@ def test_t_channel_momentum_conservation(masses, rng, mode):
 
 def test_t_channel_inverse(masses, rng, mode):
     mapping = ms.PhaseSpaceMapping(
-        masses, CM_ENERGY, mode=mode, invariant_power=0.3,
+        masses,
+        CM_ENERGY,
+        mode=mode,
+        invariant_power=0.3,
         color_order=_color_order(len(masses) - 2, mode),
     )
     inputs, r, disc = _fwd_inputs(mapping, rng, BATCH_SIZE)
@@ -207,12 +213,18 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
     co = _color_order(particle_count, mode)
     if mode == ms.PhaseSpaceMapping.chili:
         mapping = ms.PhaseSpaceMapping(
-            [0.0] * (particle_count + 2), energy, mode=mode, leptonic=False,
+            [0.0] * (particle_count + 2),
+            energy,
+            mode=mode,
+            leptonic=False,
             color_order=co,
         )
     else:
         mapping = ms.PhaseSpaceMapping(
-            [0.0] * (particle_count + 2), energy, mode=mode, leptonic=True,
+            [0.0] * (particle_count + 2),
+            energy,
+            mode=mode,
+            leptonic=True,
             color_order=co,
         )
     sample_count = 100000
@@ -232,6 +244,7 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
     std_error = np.std(det) / np.sqrt(sample_count)
     assert np.mean(det) == approx(ps_volume, abs=3 * std_error, rel=1e-6)
 
+
 # ---------------------------------------------------------------------------
 # Color-order variety (color_ordered mode, always via PhaseSpaceMapping).
 #
@@ -245,15 +258,15 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
 # ---------------------------------------------------------------------------
 _CO_VARIETY = [
     # (color_order, outgoing_masses, id)
-    ([0, 2, 3, 4, 1],          [0.0, 0.0, 0.0],            "n3 chain {2,3,4}|{}"),
-    ([0, 2, 3, 1, 4],          [0.0, 0.0, 0.0],            "n3 split {2,3}|{4}"),
-    ([0, 2, 1, 3, 4],          [173.0, 80.0, 0.0],         "n3 split {2}|{3,4} massive"),
-    ([0, 2, 3, 4, 5, 1],       [0.0, 0.0, 0.0, 0.0],       "n4 chain {2,3,4,5}|{}"),
-    ([0, 2, 3, 1, 4, 5],       [0.0, 0.0, 0.0, 0.0],       "n4 split {2,3}|{4,5}"),
-    ([0, 2, 3, 4, 1, 5],       [80.0, 80.0, 80.0, 80.0],   "n4 split {2,3,4}|{5} W"),
-    ([0, 2, 3, 4, 5, 6, 1],    [0.0, 0.0, 0.0, 0.0, 0.0],  "n5 chain {2..6}|{}"),
-    ([0, 2, 3, 4, 1, 5, 6],    [0.0, 0.0, 0.0, 0.0, 0.0],  "n5 split {2,3,4}|{5,6}"),
-    ([0, 2, 3, 1, 4, 5, 6],    [173.0, 0.0, 0.0, 0.0, 0.0],"n5 split {2,3}|{4,5,6} top"),
+    ([0, 2, 3, 4, 1], [0.0, 0.0, 0.0], "n3 chain {2,3,4}|{}"),
+    ([0, 2, 3, 1, 4], [0.0, 0.0, 0.0], "n3 split {2,3}|{4}"),
+    ([0, 2, 1, 3, 4], [173.0, 80.0, 0.0], "n3 split {2}|{3,4} massive"),
+    ([0, 2, 3, 4, 5, 1], [0.0, 0.0, 0.0, 0.0], "n4 chain {2,3,4,5}|{}"),
+    ([0, 2, 3, 1, 4, 5], [0.0, 0.0, 0.0, 0.0], "n4 split {2,3}|{4,5}"),
+    ([0, 2, 3, 4, 1, 5], [80.0, 80.0, 80.0, 80.0], "n4 split {2,3,4}|{5} W"),
+    ([0, 2, 3, 4, 5, 6, 1], [0.0, 0.0, 0.0, 0.0, 0.0], "n5 chain {2..6}|{}"),
+    ([0, 2, 3, 4, 1, 5, 6], [0.0, 0.0, 0.0, 0.0, 0.0], "n5 split {2,3,4}|{5,6}"),
+    ([0, 2, 3, 1, 4, 5, 6], [173.0, 0.0, 0.0, 0.0, 0.0], "n5 split {2,3}|{4,5,6} top"),
 ]
 _CO_IDS = [c[2] for c in _CO_VARIETY]
 
@@ -262,8 +275,11 @@ _CO_IDS = [c[2] for c in _CO_VARIETY]
 def test_color_ordered_color_orders(rng, color_order, out_masses, _label):
     masses = [0.0, 0.0, *out_masses]
     mapping = ms.PhaseSpaceMapping(
-        masses, CM_ENERGY, mode=ms.PhaseSpaceMapping.color_ordered,
-        invariant_power=0.3, color_order=color_order,
+        masses,
+        CM_ENERGY,
+        mode=ms.PhaseSpaceMapping.color_ordered,
+        invariant_power=0.3,
+        color_order=color_order,
     )
     # random_dim is color-order invariant; discrete_dim tracks the peel count.
     assert mapping.random_dim() == 3 * len(out_masses) - 2
