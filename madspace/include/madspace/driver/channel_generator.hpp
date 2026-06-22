@@ -48,7 +48,7 @@ public:
     const std::vector<Histogram>& histograms() const { return _histograms; }
     EventFile& event_file() { return _event_file; }
     EventFile& weight_file() { return _weight_file; }
-    std::size_t max_weight() const { return _max_weight; }
+    double max_weight() const { return _max_weight; }
     std::size_t batch_size() const { return _batch_size; }
     bool needs_optimization() const {
         return (_vegas_optimizer || _discrete_optimizer) && !_status.optimized;

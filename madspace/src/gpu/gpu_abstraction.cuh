@@ -57,7 +57,6 @@
 #define GPURAND_RNG_PSEUDO_DEFAULT CURAND_RNG_PSEUDO_DEFAULT
 
 #define thrust_par thrust::cuda::par
-namespace gpu_std = cuda::std;
 
 #elif defined __HIPCC__
 
@@ -117,6 +116,9 @@ namespace gpu_std = cuda::std;
 
 #define thrust_par thrust::hip_rocprim::par
 namespace cub = hipcub;
-namespace gpu_std = hip::std;
 
 #endif
+
+struct gpu_less_double {
+    __host__ __device__ bool operator()(double a, double b) const { return a < b; }
+};

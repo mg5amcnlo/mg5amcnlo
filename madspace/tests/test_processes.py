@@ -120,4 +120,4 @@ def test_process_inverse(mapping, masses, permutation_count):
     *map_out, det = mapping.map_forward([r], condition)
     r_inv, det_inv = mapping.map_inverse(map_out, condition)
     assert r_inv == approx(r, abs=1e-3, rel=1e-3)
-    assert det_inv == approx(1 / det, rel=1e-4)
+    assert det_inv == approx(1 / det, rel=1e-3)

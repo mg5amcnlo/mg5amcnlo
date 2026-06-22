@@ -768,7 +768,7 @@ void op_quantile(
         temp_storage_bytes,
         static_cast<double*>(tmp.data()),
         batch_size,
-        gpu_std::less<double>{},
+        gpu_less_double{},
         device.stream()
     );
     Tensor tmp_sort(
@@ -779,7 +779,7 @@ void op_quantile(
         temp_storage_bytes,
         static_cast<double*>(tmp.data()),
         batch_size,
-        gpu_std::less<double>{},
+        gpu_less_double{},
         device.stream()
     );
     tmp_sort.reset(device);
@@ -894,7 +894,8 @@ void op_unweight(
     gpuStream_t stream = device.stream();
 
     if (batch_size == 0) {
-        indices = Tensor(DataType::dt_float, {0}, device, instruction.output_alloc_hints[0]);
+        indices =
+            Tensor(DataType::dt_float, {0}, device, instruction.output_alloc_hints[0]);
         uw_weights =
             Tensor(DataType::dt_float, {0}, device, instruction.output_alloc_hints[1]);
         return;

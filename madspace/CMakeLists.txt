@@ -5,24 +5,41 @@ project (
     LANGUAGES CXX
 )
 
-if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;87;89;90;100;120")
+option(ENABLE_CUDA "Enable CUDA GPU backend" OFF)
+option(ENABLE_HIP "Enable HIP/ROCm GPU backend" OFF)
+option(ENABLE_SIMD "Enable SIMD CPU acceleration" OFF)
+if(APPLE)
+    option(ENABLE_OPENBLAS "Build OpenBLAS from source (default: OFF on Apple, ON elsewhere)" OFF)
+else()
+    option(ENABLE_OPENBLAS "Build OpenBLAS from source (default: OFF on Apple, ON elsewhere)" ON)
 endif()
 
-if (NOT DEFINED CMAKE_HIP_ARCHITECTURES)
-    set(CMAKE_HIP_ARCHITECTURES "gfx900;gfx906;gfx908;gfx90a;gfx942;gfx1030;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201;gfx1150;gfx1151")
+if(ENABLE_CUDA)
+    if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES "75;80;86;87;89;90;100;120")
+    endif()
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(CMAKE_CUDA_COMPILER)
+        enable_language(CUDA)
+        set(COMPILE_CUDA 1)
+    else()
+        message(FATAL_ERROR "ENABLE_CUDA is ON but no CUDA compiler was found")
+    endif()
 endif()
 
-include(CheckLanguage)
-check_language(CUDA)
-if(CMAKE_CUDA_COMPILER)
-    enable_language(CUDA)
-    set(COMPILE_CUDA 1)
-endif()
-check_language(HIP)
-if(CMAKE_HIP_COMPILER)
-    enable_language(HIP)
-    set(COMPILE_HIP 1)
+if(ENABLE_HIP)
+    if (NOT DEFINED CMAKE_HIP_ARCHITECTURES)
+        set(CMAKE_HIP_ARCHITECTURES "gfx900;gfx906;gfx908;gfx90a;gfx942;gfx1030;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201;gfx1150;gfx1151")
+    endif()
+    include(CheckLanguage)
+    check_language(HIP)
+    if(CMAKE_HIP_COMPILER)
+        enable_language(HIP)
+        set(COMPILE_HIP 1)
+    else()
+        message(FATAL_ERROR "ENABLE_HIP is ON but no HIP compiler was found")
+    endif()
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE 1)
@@ -69,7 +86,7 @@ if(COMPILE_HIP)
     find_package(hipcub REQUIRED)
 endif()
 
-if(USE_SIMD)
+if(ENABLE_SIMD)
     set(
         sleef_libname
         ${CMAKE_STATIC_LIBRARY_PREFIX}sleef${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -98,11 +115,47 @@ if(USE_SIMD)
     #find_package(sleef CONFIG REQUIRED)
 endif()
 
-#find_package(OpenBLAS REQUIRED)
-#set(BLA_VENDOR OpenBLAS)
-set(BLA_STATIC ON)
-set(BLA_SIZEOF_INTEGER 4)
-find_package(BLAS REQUIRED)
+if(ENABLE_OPENBLAS)
+    set(
+        openblas_libname
+        ${CMAKE_STATIC_LIBRARY_PREFIX}openblas${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+    ExternalProject_Add(libopenblas
+        GIT_REPOSITORY https://github.com/OpenMathLib/OpenBLAS
+        GIT_TAG v0.3.33
+        UPDATE_DISCONNECTED true
+        CMAKE_ARGS
+            -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+            -DCMAKE_INSTALL_LIBDIR=lib
+            -DBUILD_SHARED_LIBS=OFF
+            -DBUILD_WITHOUT_LAPACK=ON
+            -DBUILD_SINGLE=OFF
+            -DBUILD_DOUBLE=ON
+            -DBUILD_COMPLEX=OFF
+            -DBUILD_COMPLEX16=OFF
+            -DBUILD_TESTING=OFF
+            -DBUILD_WITHOUT_CBLAS=ON
+            -DUSE_THREAD=OFF
+            -DCMAKE_POSITION_INDEPENDENT_CODE=1
+        INSTALL_BYPRODUCTS <INSTALL_DIR>/lib/${openblas_libname}
+    )
+    ExternalProject_Get_Property(libopenblas install_dir)
+    add_library(madspace::blas INTERFACE IMPORTED GLOBAL)
+    add_dependencies(madspace::blas libopenblas)
+    file(MAKE_DIRECTORY ${install_dir}/include)
+    target_include_directories(madspace::blas INTERFACE ${install_dir}/include)
+    target_link_libraries(
+        madspace::blas
+        INTERFACE
+        ${install_dir}/lib/${openblas_libname}
+    )
+else()
+    set(BLA_STATIC ON)
+    set(BLA_SIZEOF_INTEGER 4)
+    find_package(BLAS REQUIRED)
+    add_library(madspace::blas INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(madspace::blas INTERFACE BLAS::BLAS)
+endif()
 
 ########################################################################################
 # Main madspace module                                                                 #
@@ -221,7 +274,7 @@ add_library(
 target_include_directories(madspace PUBLIC include)
 target_compile_features(madspace PUBLIC cxx_std_20)
 target_link_libraries(madspace PUBLIC nlohmann_json::nlohmann_json)
-if (USE_SIMD)
+if (ENABLE_SIMD)
     target_compile_definitions(madspace PRIVATE SIMD_AVAILABLE=1)
 endif()
 
@@ -315,7 +368,7 @@ endif()
 # CPU backend                                                                          #
 ########################################################################################
 
-if(NOT USE_SIMD)
+if(NOT ENABLE_SIMD)
     set(CPU_TARGETS madspace_cpu)
     set(SIMD_FLAGS "")
     set(SIMD_DEFINES "")
@@ -350,7 +403,7 @@ foreach(
     )
     target_include_directories(${cpu_target} PUBLIC include)
     target_compile_features(${cpu_target} PUBLIC cxx_std_20)
-    target_link_libraries(${cpu_target} PRIVATE BLAS::BLAS)
+    target_link_libraries(${cpu_target} PRIVATE madspace::blas)
     target_link_libraries(${cpu_target} PRIVATE madspace)
     if(NOT cpu_target STREQUAL "madspace_cpu")
         target_link_libraries(${cpu_target} PRIVATE sleef::sleef)

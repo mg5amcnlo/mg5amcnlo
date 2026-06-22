@@ -31,7 +31,7 @@ test = [
 wheel.expand-macos-universal-tags = true
 minimum-version = "build-system.requires"
 cmake.build-type="Release"
-cmake.define.USE_SIMD="0"
+cmake.define.ENABLE_SIMD="OFF"
 cmake.define.CMAKE_EXPORT_COMPILE_COMMANDS="1"
 
 [tool.pytest.ini_options]

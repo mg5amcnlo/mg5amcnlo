@@ -1,4 +1,4 @@
-name: Build
+name: MadSpace
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
                 PATH=$PATH:/usr/local/cuda/bin
                 CMAKE_PREFIX_PATH=/opt/rocm
                 HIPFLAGS=--gcc-toolchain=$(dirname $(which g++))/../..
-                SKBUILD_CMAKE_ARGS="-DUSE_SIMD=1"
+                SKBUILD_CMAKE_ARGS="-DENABLE_CUDA=ON;-DENABLE_HIP=ON;-DENABLE_SIMD=ON;-DENABLE_OPENBLAS=OFF"
 
           - os: macos-14
             build_small: cp312-macosx_arm64
