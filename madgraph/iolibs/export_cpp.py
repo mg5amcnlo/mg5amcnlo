@@ -31,6 +31,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
+import madgraph.iolibs.drawing_svg as draw_svg
 import madgraph.iolibs.files as files
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
@@ -2881,7 +2882,18 @@ class ProcessExporterMG7(ProcessExporterCPP):
             # Create the process .h and .cc files
             process_exporter_mg7.generate_process_files()
             for file in self.to_link_in_P:
-                ln('../%s' % file) 
+                ln('../%s' % file)
+
+        # Generate SVG Feynman diagrams (diagrams.svg + diagrams.json)
+        if not self.opt.get('output_options', {}).get('noeps') == 'True':
+            svg_stem = pjoin(dirpath, 'diagrams')
+            model = matrix_element.get('processes')[0].get('model')
+            diagrams = matrix_element.get('base_amplitude').get('diagrams')
+            logger.info('Generating Feynman diagrams for %s' %
+                        matrix_element.get('processes')[0].nice_string())
+            plot = draw_svg.MultiSVGDiagramDrawer(diagrams, svg_stem,
+                                                  model=model, amplitude=True)
+            plot.draw()
 
         me_lib_path = self.me_lib_format.format(process_id = proc_dir_name)
         self.process_info.append(process_exporter_mg7.get_subprocess_info(dirpath, me_lib_path))
