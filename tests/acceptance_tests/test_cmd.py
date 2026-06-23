@@ -1407,6 +1407,32 @@ class TestCmdShell2(unittest.TestCase,
         mg7 = get_values('standalone_mg7', './check_sa.exe')
         self._assert_me_lists_close(mg7, cpp)
 
+    def test_mg7_merged_flavor_unsupported_is_clean(self):
+        """The mg7/madmatrix C++ output must REFUSE, with a clear InvalidCmd,
+        the merged-flavor structures it cannot yet generate -- rather than
+        crashing with a cryptic unpack error or emitting uncompilable code.
+
+        MSSM 'p p > go go' has gluino/chargino-squark-quark vertices where only
+        the light quark is in a merged group (a single merged-flavor leg), and
+        the relevant flavored couplings are event-by-event (running-alphas)
+        couplings; neither is supported by the two-merged-leg, fixed-pointer
+        FLV mechanism (see docs/mg7_merged_flavor_mssm_design.md). The Fortran
+        'madevent' path handles the same process, so we also check that still
+        works.
+        """
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        # mg7 (default) and the explicit standalone_mg7 must both refuse cleanly.
+        self.assertRaises(InvalidCmd, self.do,
+                          'output standalone_mg7 %s -f' % self.out_dir)
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+        # The Fortran madevent output supports the same process.
+        self.do('output madevent %s -f' % self.out_dir)
+        self.assertTrue(
+            os.path.isdir(os.path.join(self.out_dir, 'SubProcesses')),
+            'madevent output should support MSSM p p > go go')
+
     def test_standalone_density(self):
         """test that standalone density is working"""
 

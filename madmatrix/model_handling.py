@@ -934,11 +934,18 @@ class MadMatrixUFOModelConverter(export_cpp.UFOModelConverterGPU):
     def write_flv_couplings(self, params):
         """Write out the lines of independent parameters"""
 
+        # Refuse merged-flavor structures this backend cannot yet generate
+        # correctly (single-merged-leg vertices, e.g. MSSM
+        # gluino/chargino-squark-quark; event-by-event flavored couplings) with
+        # a clear message rather than crashing or emitting wrong/uncompilable
+        # code. See docs/mg7_merged_flavor_mssm_design.md.
+        self._assert_flv_couplings_supported(params)
+
         def_flv = []
         # For each parameter, write name = expr;
         for coupl in params:
             for key, c in coupl.flavors.items():
-                # get first/second index
+                # get first/second index (two-leg "partner" topology)
                 k1, k2 = [i for i in key if i!=0]
                 def_flv.append('%(name)s.partner1[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})

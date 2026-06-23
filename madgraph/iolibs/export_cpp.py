@@ -373,9 +373,49 @@ class UFOModelConverterCPP(object):
 
         return "\n".join(res_strings)
 
+    def _assert_flv_couplings_supported(self, params):
+        """Refuse, with a clear and actionable message, the merged-flavor
+        coupling structures the C++ (mg7/standalone_mg7) backend cannot yet
+        generate correctly, instead of crashing or emitting wrong/uncompilable
+        code:
+
+          * a vertex with a number of merged-flavor legs other than two -- the
+            backend only models the two-leg "partner" topology (the SM q q~ V
+            case); MSSM gluino/chargino-squark-quark vertices have a single
+            merged leg;
+          * an event-by-event ("dependent", running-alphas) flavored coupling,
+            which cannot be referenced by the fixed value[] pointers that are
+            set once in setIndependentCouplings.
+
+        The Fortran 'madevent'/'standalone' output supports these processes.
+        See docs/mg7_merged_flavor_mssm_design.md for the full plan to lift this
+        limitation.
+        """
+        dep_names = set(c.name for c in getattr(self, 'coups_flv_dep', []))
+        for coupl in params:
+            is_dep = coupl.name in dep_names
+            for key in coupl.flavors:
+                nb_merged = len([i for i in key if i != 0])
+                if nb_merged == 2 and not is_dep:
+                    continue
+                if is_dep:
+                    reason = ("references an event-by-event (running-alphas) "
+                              "coupling")
+                else:
+                    reason = ("connects %d merged-flavor leg(s); only the "
+                              "two-leg partner topology is supported" % nb_merged)
+                raise InvalidCmd(
+                    "merged-flavor C++ output (mg7/standalone_mg7) does not yet "
+                    "support this process: flavor coupling %s %s. This occurs "
+                    "e.g. for MSSM gluino/chargino-squark-quark vertices. Use "
+                    "'output madevent' or 'output standalone' for this process. "
+                    "See docs/mg7_merged_flavor_mssm_design.md for details."
+                    % (coupl.name, reason))
+
     def write_flv_couplings(self, params):
         """Write out the lines of independent parameters"""
 
+        self._assert_flv_couplings_supported(params)
         def_flv = []
         # For each parameter, write name = expr;
         for coupl in params:
@@ -383,7 +423,7 @@ class UFOModelConverterCPP(object):
                 # get first/second index
                 k1, k2 = [i for i in key if i!=0]
                 def_flv.append('%(name)s.partner[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
-                def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1}) 
+                def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.val[%(in)i]  =  &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})
 
         return "\n".join(def_flv)
