@@ -116,17 +116,86 @@ unpack reveals **three** independent problems; all are needed for MSSM:
 
 The minimal first crash (#1) was masking #2 and #3.
 
+## How the Fortran/madevent side does it (the template to mirror)
+
+`output madevent`/`standalone` supports `p p > go go`. From the generated
+`Source/MODEL/flavor_couplings.f`:
+
+```fortran
+TYPE COUPPTR
+  DOUBLE COMPLEX, POINTER :: P
+END TYPE
+TYPE FLV_COUPLING
+  INTEGER :: PARTNER(4)
+  INTEGER :: PARTNER2(4)
+  TYPE(COUPPTR) :: VAL(4)        ! pointer per flavor index
+END TYPE
+! single merged leg (quark flavor k), unmerged partner (gluino) carries flavor 1:
+FLV_56(J)%PARTNER(3)=1 ; FLV_56(J)%PARTNER2(1)=3 ; FLV_56(J)%VAL(3)%P => GC_106(J)
+```
+
+Two ideas make it work:
+
+1. **Single-leg = two-leg with an unmerged partner of flavor 1.** Unmerged legs
+   carry flavor index 1 (Fortran) / 0 (C++, since `get_flavor_matrix` subtracts
+   1). So a single-leg key `(k,0,..)` is serialized exactly like a two-leg one
+   with the partner flavor = 1: `partner1[k-1]=0, partner2[0]=k-1, value[k-1]=coup`.
+   Each squark is a separate diagram, gated by the merged-quark flavor.
+2. **`VAL` is a pointer into the per-event coupling array** (`=> GC_106(J)`), so
+   running-αs ("dependent") couplings work uniformly with independent ones.
+
+## Empirical finding: serialization alone is NOT sufficient (consumer is wrong)
+
+An attempt that (a) serialized single-leg as above (`k2 = 1`) and (b) relaxed
+the guard to allow single-leg *independent* couplings was validated on
+`p p > n1 n1 QCD=0` (electroweak neutralino pair: single merged quark leg +
+unmerged neutralino + squark, with **independent** couplings, so the dependent
+gap is out of the way). It **compiles and runs** but gives **wrong** per-flavor
+|M|² — only the first flavor matches:
+
+| flavor (q q~ > n1 n1) | standalone_mg7 | Fortran standalone |
+|---|---|---|
+| d d~ (idx 0) | 2.4022949e-05 | 2.4022949e-05  ✓ |
+| u u~ (idx 1) | 3.5226867e-07 | 3.8121047e-04  ✗ |
+| s s~ (idx 2) | 4.5463454e-07 | 2.4022949e-05  ✗ |
+| c c~ (idx 3) | 3.5226867e-07 | 3.8121047e-04  ✗ |
+
+The generated cudacpp **does** emit separate, correctly-mass-ed squark diagrams
+(`FFS1M_3(..., cIPD[3]=Msd1, ...)`, `cIPD[5]=Msd4`, `cIPD[9]=Msu1`, …), so the
+propagator masses are fine and the goodhel-union filter is not the cause
+(re-tested with it applied — no change). The bug is the **consumer gating** in
+`MadMatrixALOHAWriter.get_coupling_def` (the `FFSxM` routine): it is hard-wired
+to read `F1`/`F2` and assumes the *merged* fermion is `F1`. For these vertices
+the unmerged fermion can be `F1` (flv_index 0), so `partner1[flv_index1]` indexes
+the wrong slot and only flavor 0 (where `partner1[0]==0`) survives. Fortran
+handles this by branching on the fermion *position parity* and using `PARTNER`
+vs `PARTNER2` (aloha_writers.py ~757-786); the cudacpp port of that logic does
+not correctly cover the single-merged-leg case.
+
+So the single-leg work is **(1) serialization [trivial, done in the attempt] +
+(2) a real consumer fix** that picks the merged fermion's flavor (mirroring the
+Fortran parity/`PARTNER2` branching) — NOT serialization alone. The attempt was
+reverted; the guard still (correctly) blocks single-leg so no wrong physics
+ships.
+
 ## Plan (for the Option A follow-up)
 
-1. [done] single-leg serialization in `write_flv_couplings`.
-2. dependent flavored couplings (#2): redesign the FLV coupling value storage to
-   select a per-event dependent coupling by flavor index (not a fixed pointer).
-3. ensure per-flavor couplings (#3) are generated/declared in `Parameters`.
-4. single-leg consumer gating (#1 vertex side) in `get_coupling_def` (+ generic
-   aloha writers, + Fortran), threading which-leg-is-flavored to the writer.
-5. validate `p p > go go`: generate `standalone_mg7`, build, and compare the
-   per-flavor |M|² (check_sa.exe matrix mode) against the Fortran
-   `output standalone` / `madevent` reference; add a regression test.
+1. single-leg serialization in `write_flv_couplings` (trivial: unmerged partner
+   flavor = 1, i.e. the two-leg formula with `k2 = 1`). Validated structurally
+   against `flavor_couplings.f`.
+2. **single-leg consumer fix** in `get_coupling_def` (+ the generic
+   `aloha_writers.py`): identify and index by the *merged* fermion leg (parity /
+   `partner2`), mirroring Fortran. This is the actual correctness fix; validate
+   on `p p > n1 n1 QCD=0` against the Fortran per-flavor |M|².
+3. dependent flavored couplings: redesign the FLV value storage to select a
+   per-event dependent coupling by flavor index (idcoup into the per-event
+   `couplings` buffer + a `CD_ACCESS` `FLV_COUPLING` view), the analogue of
+   Fortran's `VAL%P => GC(J)`. This is the large piece and unblocks `p p > go go`.
+4. relax the guard incrementally (single-leg once step 2 is validated; dependent
+   once step 3 is); keep it for any residue.
+5. validate `p p > go go`: build `standalone_mg7`, compare per-flavor |M|²
+   against the `test_madevent_mssm_gogo` reference; convert
+   `test_mssm_gogo_mg7_unsupported` into a positive consistency check.
 
 ## Open questions for review
 
