@@ -30,7 +30,7 @@ split_sets_from_color_order(const std::vector<std::size_t>& color_order) {
     std::vector<std::size_t> rotated;
     rotated.reserve(n);
     for (std::size_t k = 0; k < n; ++k) {
-        rotated.push_back(color_order[(i0 + k) % n]);
+        rotated.push_back(color_order.at((i0 + k) % n));
     }
     auto it1 = std::find(rotated.begin(), rotated.end(), 1u);
     if (it1 == rotated.end()) {
@@ -39,14 +39,14 @@ split_sets_from_color_order(const std::vector<std::size_t>& color_order) {
     std::size_t i1 = std::distance(rotated.begin(), it1);
     std::vector<std::size_t> set1, set2;
     for (std::size_t k = 1; k < i1; ++k) {
-        std::size_t p = rotated[k];
+        std::size_t p = rotated.at(k);
         if (p <= 1) {
             throw std::invalid_argument("invalid color_order");
         }
         set1.push_back(p - 2);
     }
     for (std::size_t k = i1 + 1; k < n; ++k) {
-        std::size_t p = rotated[k];
+        std::size_t p = rotated.at(k);
         if (p <= 1) {
             throw std::invalid_argument("invalid color_order");
         }
@@ -82,8 +82,8 @@ std::size_t n_discrete_for_set_size(std::size_t k) {
 }
 
 double mat_at(const std::vector<std::vector<double>>& m, std::size_t i, std::size_t j) {
-    if (i < m.size() && j < m[i].size()) {
-        return m[i][j];
+    if (i < m.size() && j < m.at(i).size()) {
+        return m.at(i).at(j);
     }
     return 0.0;
 }
@@ -91,7 +91,7 @@ double mat_at(const std::vector<std::vector<double>>& m, std::size_t i, std::siz
 } // namespace
 
 double ColorOrderedMapping::pt2(std::size_t i) const {
-    double p = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
+    double p = (i < _pt_min.size()) ? _pt_min.at(i) : 0.0;
     return p * p;
 }
 
@@ -104,10 +104,10 @@ double ColorOrderedMapping::cut_floor(const std::vector<std::size_t>& subset) co
     double cut = 0.0;
     for (std::size_t a = 0; a + 1 < subset.size(); ++a) {
         for (std::size_t b = a + 1; b < subset.size(); ++b) {
-            std::size_t i = subset[a], j = subset[b];
+            std::size_t i = subset.at(a), j = subset.at(b);
             double ss = mat_at(_m_inv_min, i, j);
-            double pti = (i < _pt_min.size()) ? _pt_min[i] : 0.0;
-            double ptj = (j < _pt_min.size()) ? _pt_min[j] : 0.0;
+            double pti = (i < _pt_min.size()) ? _pt_min.at(i) : 0.0;
+            double ptj = (j < _pt_min.size()) ? _pt_min.at(j) : 0.0;
             double dr = mat_at(_dr_min, i, j);
             cut += std::max(ss * ss, 2.0 * pti * ptj * (1.0 - std::cos(dr)));
         }
@@ -258,10 +258,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         Value mass_sum_set1 = masses_of(_set1);
         Value mass_sum_set2 = masses_of(_set2);
         if (_set1.size() == 1) {
-            m_set1 = m_out.at(_set1[0]);
+            m_set1 = m_out.at(_set1.at(0));
         }
         if (_set2.size() == 1) {
-            m_set2 = m_out.at(_set2[0]);
+            m_set2 = m_out.at(_set2.at(0));
         }
         bool single_is_set1 = (_set1.size() == 1);
         Value m_single = single_is_set1 ? m_set1 : m_set2;
@@ -313,7 +313,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             m_set1 = fb.sqrt(res["invariant"]);
             dets.push_back(res["det"]);
         } else {
-            m_set1 = m_out.at(_set1[0]);
+            m_set1 = m_out.at(_set1.at(0));
         }
         if (_set2.size() >= 2) {
             auto s_min = fb.square(mass_sum_set2);
@@ -327,7 +327,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             m_set2 = fb.sqrt(res["invariant"]);
             dets.push_back(res["det"]);
         } else {
-            m_set2 = m_out.at(_set2[0]);
+            m_set2 = m_out.at(_set2.at(0));
         }
         auto central = _com_scattering.build_forward(
             fb, {next_random(), next_random(), m_set1, m_set2}, {pa, pb}
@@ -358,9 +358,9 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         }
         Value prev_mass = m_set;
         for (std::size_t j = 0; j < k - 2; ++j) {
-            Value m_min = m_out.at(s[j + 1]);
+            Value m_min = m_out.at(s.at(j + 1));
             for (std::size_t i = j + 2; i < k; ++i) {
-                m_min = fb.add(m_min, m_out.at(s[i]));
+                m_min = fb.add(m_min, m_out.at(s.at(i)));
             }
             auto s_min = fb.square(m_min);
             // Cut floor for the rest system {s[j+1], ..., s[k-1]}.
@@ -369,7 +369,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             if (fl > 0.0) {
                 s_min = fb.max(s_min, Value(fl));
             }
-            auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s[j])));
+            auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s.at(j))));
             auto r =
                 _uniform_invariant.build_forward(fb, {next_random()}, {s_min, s_max});
             Value m_rest = fb.sqrt(r["invariant"]);
@@ -400,7 +400,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             const ValueVec& rest_masses) {
             std::size_t k = s.size();
             if (k == 1) {
-                p_out[s[0]] = P_set;
+                p_out.at(s.at(0)) = P_set;
                 return;
             }
             Value R_a = fb.sub(P_set, R_b);
@@ -409,8 +409,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             for (std::size_t j = 0; j < k - 1; ++j) {
                 // New-rest mass: intermediate (rest_masses[j]) or final residual (j ==
                 // k-2).
-                Value m_rest = (j < k - 2) ? rest_masses[j] : m_out.at(s[k - 1]);
-                Value m_peel = m_out.at(s[j]);
+                Value m_rest = (j < k - 2) ? rest_masses[j] : m_out.at(s.at(k - 1));
+                Value m_peel = m_out.at(s.at(j));
                 // Block convention: pa-side carries the chain (mass m_rest), pb-side
                 // carries the peeled particle (mass m_peel). R_a is the active leg
                 // and gets decremented by peeled; R_b is constant.
@@ -421,12 +421,12 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 if (first) {
                     // First peel is a 2->2 LAB block. With cuts enabled the |t|
                     // floor for the peeled particle (pt^2)
-                    ValueVec cond{R_b, R_a, Value(pt2(s[j]))};
+                    ValueVec cond{R_b, R_a, Value(pt2(s.at(j)))};
                     auto ks = _lab_scattering.build_forward(
                         fb, {next_random(), next_random(), m_rest, m_peel}, cond
                     );
                     Value peeled = ks.at(1);
-                    p_out[s[j]] = peeled;
+                    p_out.at(s.at(j)) = peeled;
                     R_a = fb.sub(R_a, peeled);
                     im1 = peeled;
                     dets.push_back(ks["det"]);
@@ -440,8 +440,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                         R_b,
                         pb_for_block,
                         im1,
-                        Value(pt2(s[j])),
-                        Value(cut_floor({s[j - 1], s[j]}))
+                        Value(pt2(s.at(j))),
+                        Value(cut_floor({s.at(j - 1), s.at(j)}))
                     };
                     auto ks = _two_to_three.build_forward(
                         fb,
@@ -449,14 +449,14 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                         cond
                     );
                     Value peeled = ks.at(1);
-                    p_out[s[j]] = peeled;
+                    p_out.at(s.at(j)) = peeled;
                     R_a = fb.sub(R_a, peeled);
                     im1 = peeled;
                     dets.push_back(ks["det"]);
                 }
             }
             // Last particle = R_a + R_b (= what remains after all explicit peels).
-            p_out[s[k - 1]] = fb.add(R_a, R_b);
+            p_out.at(s.at(k - 1)) = fb.add(R_a, R_b);
         };
 
     if (!_set1.empty()) {
@@ -472,7 +472,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
     p_ext.push_back(pa);
     p_ext.push_back(pb);
     for (std::size_t i = 0; i < _n_out; ++i) {
-        p_ext.push_back(p_out[i]);
+        p_ext.push_back(p_out.at(i));
     }
 
     return {{output_types().keys(), p_ext}, fb.product(dets)};
@@ -537,9 +537,9 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
     }
 
     auto sum_momenta = [&](const std::vector<std::size_t>& s) -> Value {
-        Value p = p_outgoing(s[0]);
+        Value p = p_outgoing(s.at(0));
         for (std::size_t k = 1; k < s.size(); ++k) {
-            p = fb.add(p, p_outgoing(s[k]));
+            p = fb.add(p, p_outgoing(s.at(k)));
         }
         return p;
     };
@@ -569,10 +569,10 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         }
     } else if (_use_double_t) {
         if (_set1.size() == 1) {
-            m_set1 = m_out.at(_set1[0]);
+            m_set1 = m_out.at(_set1.at(0));
             m_set2 = fb.sqrt(invariants.at(idx_m2_set2));
         } else {
-            m_set2 = m_out.at(_set2[0]);
+            m_set2 = m_out.at(_set2.at(0));
             m_set1 = fb.sqrt(invariants.at(idx_m2_set1));
         }
     } else {
@@ -591,7 +591,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             dets.push_back(res["det"]);
             m_set1 = fb.sqrt(m2_set1);
         } else {
-            m_set1 = m_out.at(_set1[0]);
+            m_set1 = m_out.at(_set1.at(0));
         }
         if (_set2.size() >= 2) {
             auto s_min = fb.square(mass_sum_set2);
@@ -606,7 +606,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             dets.push_back(res["det"]);
             m_set2 = fb.sqrt(m2_set2);
         } else {
-            m_set2 = m_out.at(_set2[0]);
+            m_set2 = m_out.at(_set2.at(0));
         }
     }
 
@@ -646,9 +646,9 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             // the (sqrt of the) actual recovered m2 at each step.
             Value prev_mass = m_set;
             for (std::size_t j = 0; j < k - 2; ++j) {
-                Value m_min = m_out.at(s[j + 1]);
+                Value m_min = m_out.at(s.at(j + 1));
                 for (std::size_t i = j + 2; i < k; ++i) {
-                    m_min = fb.add(m_min, m_out.at(s[i]));
+                    m_min = fb.add(m_min, m_out.at(s.at(i)));
                 }
                 auto s_min = fb.square(m_min);
                 // Identical cut floor to the forward pass.
@@ -657,7 +657,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                 if (fl > 0.0) {
                     s_min = fb.max(s_min, Value(fl));
                 }
-                auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s[j])));
+                auto s_max = fb.square(fb.sub(prev_mass, m_out.at(s.at(j))));
                 auto m2 = invariants.at(idx_start + j);
                 auto res = _uniform_invariant.build_inverse(fb, {m2}, {s_min, s_max});
                 random_out.push_back(res["random"]);
@@ -686,13 +686,13 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         Value im1;
         bool first = true;
         for (std::size_t j = 0; j < k - 1; ++j) {
-            Value peeled = p_outgoing(s[j]);
+            Value peeled = p_outgoing(s.at(j));
             // p1_out is the chain carrier (mass m_rest); by conservation
             // p1_out = R_a + R_b - peeled.
             Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
             if (first) {
                 // Same cut conditions as the forward 2->2 block.
-                ValueVec cond{R_b, R_a, Value(pt2(s[j]))};
+                ValueVec cond{R_b, R_a, Value(pt2(s.at(j)))};
                 auto rs = _lab_scattering.build_inverse(fb, {p1_out, peeled}, cond);
                 random_out.push_back(rs.at(0));
                 random_out.push_back(rs.at(1));
@@ -708,8 +708,8 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                     R_b,
                     pb_for_block,
                     im1,
-                    Value(pt2(s[j])),
-                    Value(cut_floor({s[j - 1], s[j]}))
+                    Value(pt2(s.at(j))),
+                    Value(cut_floor({s.at(j - 1), s.at(j)}))
                 };
                 auto rs = _two_to_three.build_inverse(fb, {p1_out, peeled}, cond);
                 // rs.at(0) is the discrete choice index (int) emitted by the
