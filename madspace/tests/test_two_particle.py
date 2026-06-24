@@ -18,12 +18,16 @@ def rng():
         {"decay": True, "com": True},
         {"decay": False, "com": False},
         {"decay": False, "com": True},
+        {"decay": False, "com": False, "has_cut": True},
+        {"decay": False, "com": True, "has_cut": True},
     ],
     ids=[
         "1->2 decay",
         "1->2 decay, COM",
         "2->2 scattering",
         "2->2 scattering, COM",
+        "2->2 scattering, cut",
+        "2->2 scattering, COM, cut",
     ],
 )
 def mapping_and_args(request):
@@ -47,7 +51,9 @@ def mapping_and_args(request):
                 )
 
     else:
-        mapping = ms.TwoToTwoParticleScattering(com=com)
+        has_cut = request.param.get("has_cut", False)
+        mapping = ms.TwoToTwoParticleScattering(com=com, has_cut=has_cut)
+        cut = [zeros] if has_cut else []
         if com:
 
             def make_args(point):
@@ -55,14 +61,14 @@ def mapping_and_args(request):
                 p0 = np.stack([point.m0, zeros, zeros, zeros], axis=1)
                 pa = np.stack([e0, zeros, zeros, e0], axis=1)
                 pb = np.stack([e0, zeros, zeros, -e0], axis=1)
-                return [point.r1, point.r2, point.m1, point.m2], [pa, pb, zeros], p0
+                return [point.r1, point.r2, point.m1, point.m2], [pa, pb, *cut], p0
 
         else:
 
             def make_args(point):
                 return (
                     [point.r1, point.r2, point.m1, point.m2],
-                    [point.pa, point.pb, zeros],
+                    [point.pa, point.pb, *cut],
                     point.p0,
                 )
 

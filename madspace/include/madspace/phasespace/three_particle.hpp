@@ -33,7 +33,8 @@ public:
         double t_width = 0,
         double s_invariant_power = 0,
         double s_mass = 0,
-        double s_width = 0
+        double s_width = 0,
+        bool has_cut = false
     );
 
     // one discrete input: which of the 2 two-body solutions to take
@@ -53,6 +54,7 @@ private:
 
     Invariant _t_invariant;
     Invariant _s_invariant;
+    bool _has_cut;
 };
 
 } // namespace madspace

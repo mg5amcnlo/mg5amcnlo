@@ -28,7 +28,11 @@ private:
 class TwoToTwoParticleScattering : public Mapping {
 public:
     TwoToTwoParticleScattering(
-        bool com, double invariant_power = 0, double mass = 0, double width = 0
+        bool com,
+        double invariant_power = 0,
+        double mass = 0,
+        double width = 0,
+        bool has_cut = false
     );
 
 private:
@@ -45,6 +49,7 @@ private:
 
     bool _com;
     Invariant _invariant;
+    bool _has_cut;
 };
 
 class DoubleT : public Mapping {

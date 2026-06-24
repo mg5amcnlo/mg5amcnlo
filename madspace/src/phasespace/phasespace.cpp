@@ -1,6 +1,7 @@
 #include "madspace/phasespace/phasespace.hpp"
 #include "madspace/constants.hpp"
 #include "madspace/util.hpp"
+#include <algorithm>
 
 using namespace madspace;
 
@@ -256,17 +257,15 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             // mirroring the pt_min reordering above. Composite (non-leaf)
             // children carry no pairwise cut.
             const auto& out_idx = topology.outgoing_indices();
+            const auto& child_indices = topology.decays().at(0).child_indices;
             std::vector<std::size_t> child_to_out(
-                topology.decays().at(0).child_indices.size(),
-                std::numeric_limits<std::size_t>::max()
+                child_indices.size(), std::numeric_limits<std::size_t>::max()
             );
-            for (std::size_t a = 0;
-                 std::size_t cidx : topology.decays().at(0).child_indices) {
-                for (std::size_t p = 0; p < out_idx.size(); ++p) {
-                    if (out_idx[p] == cidx) {
-                        child_to_out[a] = p;
-                        break;
-                    }
+            for (std::size_t a = 0; a < child_indices.size(); ++a) {
+                auto it =
+                    std::find(out_idx.begin(), out_idx.end(), child_indices.at(a));
+                if (it != out_idx.end()) {
+                    child_to_out.at(a) = std::distance(out_idx.begin(), it);
                 }
                 ++a;
             }
@@ -276,15 +275,17 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             std::vector<std::vector<double>> m_inv_co(nc, std::vector<double>(nc, 0.));
             std::vector<std::vector<double>> dr_co(nc, std::vector<double>(nc, 0.));
             for (std::size_t a = 0; a < nc; ++a) {
-                if (child_to_out[a] >= m_inv_full.size()) {
+                if (child_to_out.at(a) >= m_inv_full.size()) {
                     continue;
                 }
                 for (std::size_t b = 0; b < nc; ++b) {
-                    if (child_to_out[b] >= m_inv_full.size()) {
+                    if (child_to_out.at(b) >= m_inv_full.size()) {
                         continue;
                     }
-                    m_inv_co[a][b] = m_inv_full[child_to_out[a]][child_to_out[b]];
-                    dr_co[a][b] = dr_full[child_to_out[a]][child_to_out[b]];
+                    m_inv_co.at(a).at(b) =
+                        m_inv_full.at(child_to_out.at(a)).at(child_to_out.at(b));
+                    dr_co.at(a).at(b) =
+                        dr_full.at(child_to_out.at(a)).at(child_to_out.at(b));
                 }
             }
             _t_mapping = ColorOrderedMapping(

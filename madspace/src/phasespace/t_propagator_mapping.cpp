@@ -40,8 +40,8 @@ TPropagatorMapping::TPropagatorMapping(
     ),
     _integration_order(integration_order),
     _pt_min(pt_min),
-    _com_scattering(true, invariant_power),
-    _lab_scattering(false, invariant_power) {
+    _com_scattering(true, invariant_power, 0., 0., true),
+    _lab_scattering(false, invariant_power, 0., 0., true) {
     std::size_t next_index_low = 0;
     std::size_t next_index_high = integration_order.size() - 1;
     for (std::size_t index : integration_order) {

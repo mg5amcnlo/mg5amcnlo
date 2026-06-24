@@ -432,11 +432,12 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TwoToTwoParticleScattering, Mapping>(m, "TwoToTwoParticleScattering")
         .def(
-            py::init<bool, double, double, double>(),
+            py::init<bool, double, double, double, bool>(),
             py::arg("com"),
             py::arg("invariant_power") = 0.,
             py::arg("mass") = 0.,
-            py::arg("width") = 0.
+            py::arg("width") = 0.,
+            py::arg("has_cut") = false
         );
 
     py::classh<DoubleT, Mapping>(m, "DoubleT")
@@ -455,13 +456,14 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TwoToThreeParticleScattering, Mapping>(m, "TwoToThreeParticleScattering")
         .def(
-            py::init<double, double, double, double, double, double>(),
+            py::init<double, double, double, double, double, double, bool>(),
             py::arg("t_invariant_power") = 0.,
             py::arg("t_mass") = 0.,
             py::arg("t_width") = 0.,
             py::arg("s_invariant_power") = 0.,
             py::arg("s_mass") = 0.,
-            py::arg("s_width") = 0.
+            py::arg("s_width") = 0.,
+            py::arg("has_cut") = false
         );
 
     py::classh<Propagator>(m, "Propagator")

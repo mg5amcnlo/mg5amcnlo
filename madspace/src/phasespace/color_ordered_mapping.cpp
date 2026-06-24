@@ -183,8 +183,8 @@ ColorOrderedMapping::ColorOrderedMapping(
     _m_inv_min(m_inv_min),
     _dr_min(dr_min),
     _com_scattering(true, t_invariant_power),
-    _lab_scattering(false, t_invariant_power),
-    _two_to_three(t_invariant_power, 0., 0., s_invariant_power, 0., 0.),
+    _lab_scattering(false, t_invariant_power, 0., 0., true),
+    _two_to_three(t_invariant_power, 0., 0., s_invariant_power, 0., 0., true),
     _double_t(t_invariant_power, 0., 0., t_invariant_power, 0., 0.) {
     auto [s1, s2] = split_sets_from_color_order(color_order);
     _set1 = s1;
@@ -330,7 +330,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             m_set2 = m_out.at(_set2[0]);
         }
         auto central = _com_scattering.build_forward(
-            fb, {next_random(), next_random(), m_set1, m_set2}, {pa, pb, Value(0.)}
+            fb, {next_random(), next_random(), m_set1, m_set2}, {pa, pb}
         );
         P_set1 = central.at(0);
         P_set2 = central.at(1);
@@ -629,8 +629,7 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         random_out.push_back(central.at(2));
         dets.push_back(central["det"]);
     } else {
-        auto central =
-            _com_scattering.build_inverse(fb, {P_set1, P_set2}, {pa, pb, Value(0.)});
+        auto central = _com_scattering.build_inverse(fb, {P_set1, P_set2}, {pa, pb});
         random_out.push_back(central.at(0));
         random_out.push_back(central.at(1));
         dets.push_back(central["det"]);
