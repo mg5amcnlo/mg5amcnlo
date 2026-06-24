@@ -3157,20 +3157,26 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
+            # standalone_msP/msF templates declare JAMP as a 1D array and cannot
+            # handle split-order JAMP; fall back to the non-split-order generator.
+            if self.opt['export_format'] in ['standalone_msP', 'standalone_msF']:
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
+            else:
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                           matrix_element,amp_orders,split_order_names=split_orders)
             replace_dict['nb_temp_jamp'] = nb_tmp_jamp
             # Now setup the array specifying what squared split order is chosen
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
                               matrix_element.get('processes')[0],squared_orders)
-            
+
             # For convenience we also write the driver check_sa_splitOrders.f
             # that explicitely writes out the contribution from each squared order.
             # The original driver still works and is compiled with 'make' while
             # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
-            check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
-            self.write_check_sa_splitOrders(squared_orders,split_orders,
-              nexternal,ninitial,proc_prefix,check_sa_writer)
+            if self.opt['export_format'] not in ['standalone_msP', 'standalone_msF']:
+                check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
+                self.write_check_sa_splitOrders(squared_orders,split_orders,
+                  nexternal,ninitial,proc_prefix,check_sa_writer)
 
         if write:
             writers.FortranWriter('nsqso_born.inc').writelines(
