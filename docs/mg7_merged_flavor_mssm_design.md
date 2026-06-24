@@ -1,12 +1,14 @@
 # mg7/madmatrix merged-flavor support for single-merged-leg vertices (MSSM)
 
-## Status (this PR)
+## Status
 
-Two things ship here:
+Full MSSM merged-flavor support for single-merged-leg vertices, with both
+flavor-*independent* and *dependent* (event-by-event, running-αs) couplings, now
+ships in the mg7/madmatrix C++ (`standalone_mg7`) backend.
 
-1. **Single-merged-leg flavored couplings are now supported** (the MSSM
-   topology: one merged fermion + an unmerged partner + a squark/boson), for
-   flavor-*independent* couplings. Two parts:
+1. **Single-merged-leg flavored couplings** (the MSSM topology: one merged
+   fermion + an unmerged partner + a squark/boson), for flavor-*independent*
+   couplings. Two parts:
    - **serialization** (`write_flv_couplings`, both copies): a single-leg key is
      written exactly like the Fortran side — the unmerged partner gets flavor
      index 1, i.e. the two-leg formula with `k2 = 1`.
@@ -16,32 +18,31 @@ Two things ship here:
      leg is the partner-populated one.
 
    Validated: `p p > n1 n1 QCD=0` (t-channel squark, EW/independent couplings)
-   now reproduces the Fortran standalone per-flavor |M|² for **all** flavors
-   (before the consumer fix only flavor 0 matched). Regression test:
-   `test_standalone_mg7_mssm_single_leg`. The two-leg path is unchanged
-   (`test_standalone_mg7_vs_cpp` still passes).
+   reproduces the Fortran standalone per-flavor |M|² for **all** flavors
+   (regression test `test_standalone_mg7_mssm_single_leg`). The two-leg path is
+   unchanged (`test_standalone_mg7_vs_cpp`).
 
-2. **A guard for the remaining gap.** `UFOModelConverterCPP.
-   _assert_flv_couplings_supported` (called from both `write_flv_couplings`)
-   still raises a clear `InvalidCmd` for the cases not yet handled — an
-   event-by-event ("dependent", running-αs) flavored coupling, or a vertex with
-   >2 merged legs. So `generate p p > go go; output standalone_mg7` still fails
-   cleanly (its SUSY-QCD couplings are dependent):
-   ```
-   InvalidCmd : merged-flavor C++ output (mg7/standalone_mg7) does not yet support
-   this process: flavor coupling FLV_54 references an event-by-event (running-alphas)
-   coupling. ... Use 'output madevent' or 'output standalone' for this process.
-   ```
-   The guard is scoped to the process's *used* couplings, so SM two-leg cases
-   and single-leg independent cases generate; `output madevent`/`standalone`
-   keep working.
+2. **Dependent (event-by-event, running-αs) flavored couplings** — Step 3 below,
+   the large piece, now **done**. The SUSY-QCD MSSM squark-quark-gluino vertices
+   (`GC_106`/`GC_110` ∝ `g_s`) cannot be addressed by fixed `value[]` pointers in
+   `setIndependentCouplings`, so they are gathered event-by-event into
+   `cDPF_*` / `flvCOUPs_dep` and consumed by the *same* vertex routines
+   instantiated with `CD_ACCESS` (per-event SIMD access) instead of `CI_ACCESS`.
 
-**Remaining for full MSSM (`p p > go go`): the dependent-coupling mechanism**
-(Step 3 below) — the large piece.
+   Validated: `p p > go go` `standalone_mg7` reproduces the Fortran standalone
+   per-flavor |M|² for both subprocesses (`P1_QQx_gogo`, `P1_gg_gogo`) to ~1e-7
+   (the mg7 mixed-precision float floor). Regression test:
+   `test_standalone_mg7_mssm_gogo` (the dependent-coupling counterpart of
+   `test_standalone_mg7_mssm_single_leg`, and the consistency check matching the
+   Fortran `test_madevent_mssm_gogo`).
+
+3. **The guard** (`UFOModelConverterCPP._assert_flv_couplings_supported`) now
+   only rejects vertices with **>2 merged-flavor legs** (never seen so far);
+   both independent and dependent one-/two-leg cases generate.
 
 ---
 
-The rest of this note records the diagnosis and the remaining plan.
+The rest of this note records the diagnosis and the (now implemented) plan.
 
 ## Symptom
 
@@ -196,12 +197,12 @@ the dependent-coupling case (Step 3).
 1. [done] single-leg serialization in `write_flv_couplings`.
 2. [done] single-leg consumer fix in `get_coupling_def` (select by the merged
    fermion leg). Validated on `p p > n1 n1 QCD=0`.
-3. **dependent flavored couplings (remaining, the large piece)** — see below.
-4. relax the guard for dependent once step 3 is validated.
-5. validate `p p > go go` vs the `test_madevent_mssm_gogo` reference; convert
-   `test_mssm_gogo_mg7_unsupported` into a positive consistency check.
+3. [done] **dependent flavored couplings (the large piece)** — see below.
+4. [done] relax the guard for dependent (now only rejects >2 merged legs).
+5. [done] validate `p p > go go` vs the Fortran standalone; converted
+   `test_mssm_gogo_mg7_unsupported` into the positive `test_standalone_mg7_mssm_gogo`.
 
-## Step 3 design: dependent (event-by-event) flavored couplings
+## Step 3 design: dependent (event-by-event) flavored couplings [DONE]
 
 Today the cudacpp FLV mechanism (`model_handling.py` ~1591-1660 + the
 `CPPProcess.cc` template) **bakes** the per-flavor coupling values into a
@@ -211,35 +212,56 @@ based `FLV_COUPLING_VIEW`. This works only for *independent* couplings; a
 running-αs coupling like `GC_106` changes per event and cannot be a fixed
 pointer/constant (and isn't even in scope in `setIndependentCouplings`).
 
-**Chosen approach — per-event gather, reuse the consumer.** The dependent
-couplings are already computed per event into `allcouplings` and exposed in the
-kernel as `allCOUPs[idcoup]` (`CD_ACCESS::idcoupAccessBufferConst`). So for a
-dependent flavored coupling we keep an `idcoup` per (coupling, flavor) slot and,
-**per event page in `calculate_jamps`, gather** the current values into a
-`dpf_value[nDPF*nMF*2]` array, then build an ordinary value-based
-`FLV_COUPLING_VIEW` over it. The vertex routines and `get_coupling_def` are
-**unchanged** (they already consume a value-based view) — this is the key
-simplification, and it is the direct analogue of Fortran's `VAL%P => GC(J)`.
+**Implemented approach — per-event AoSoA gather + reuse the (templated)
+consumer.** The dependent couplings are already computed per event into
+`allcouplings` and exposed in the kernel as `allCOUPs[idcoup]`
+(`CD_ACCESS::idcoupAccessBufferConst`). For a dependent flavored coupling we keep
+an `idcoup` per (coupling, flavor) slot and, **per event page in
+`calculate_jamps`, gather** the running values into an AoSoA `dpf_value` buffer
+(one `nx2*neppC` SIMD record per slot), then build a `FLV_COUPLING_ARRAY` view
+over it. The key realisation: the vertex routines (`FFSxM`, …) are *templated*
+on the coupling access type (`template<class W_ACCESS, class A_ACCESS, class
+C_ACCESS>`), and the access type is chosen **at the call site**. So the *same*
+routine body is instantiated with `CD_ACCESS` for dependent flavored calls and
+`CI_ACCESS` for independent ones — `get_coupling_def` is essentially unchanged
+(only the per-flavor stride `2` becomes `C_ACCESS::flv_stride`, which is `nx2`
+for the broadcast `CI_ACCESS` and `nx2*neppC` for the per-event AoSoA
+`CD_ACCESS`). This is the direct analogue of Fortran's `VAL%P => GC(J)`, and it
+keeps the independent path numerically identical. NB: by construction the
+phase-space integrator gives all SIMD lanes the same flavor index, so each lane
+selects the same flavor but reads its own per-event running value.
 
-Concrete surface:
+Concrete surface (as implemented):
 
-1. **Split** `couporderflv` into independent (existing `cIPF`) and dependent
-   (`cDPF`) flavored couplings (using `coups_flv_dep`).
-2. **Model-side** (`model_handling.py`): emit `cDPF_partner1/2[nDPF*nMF]` (as
-   today) plus `cDPF_idcoup[nDPF*nMF]` — the `idcoup` of the dependent coupling
-   each `value[j]` slot points at (the position of that GC in `coups_dep`;
-   `value[j]` is null for unused slots → idcoup `-1`).
-3. **Kernel** (`CPPProcess.cc`/`process_function_definitions.inc`): right after
-   `allCOUPs` is set up, gather
-   `dpf_value[i*nMF+j] = (cDPF_idcoup[i*nMF+j] >= 0) ? COUPs[cDPF_idcoup[i*nMF+j]] : 0`
-   (per event / SIMD page), then
-   `FLV_COUPLING_ARRAY<nDPF,nMF> flvCOUPs_dep{ cDPF_partner1, cDPF_partner2, dpf_value }`.
-4. **Routing** (`model_handling.py` helas-call writer, ~2251-2287): a dependent
-   flavored coupling resolves to `flvCOUPs_dep[idx]` instead of `flvCOUPs[idx]`.
-5. **Guard**: drop the `is_dep` rejection in `_assert_flv_couplings_supported`.
-6. **Validate**: `p p > go go` standalone_mg7 vs the Fortran reference
-   (`test_madevent_mssm_gogo`); flip `test_mssm_gogo_mg7_unsupported` to a
-   positive consistency test.
+1. **Split** `couporderflv` into independent (`flvCOUPs`/`cIPF`) and dependent
+   (`flvCOUPs_dep`/`cDPF`) orderings in the helas-call writer `format_coupling`,
+   classifying via `model.is_running_coupling(flv_coup.get_one_coupling())`.
+   Dependent flavored calls keep `CD_ACCESS` (the independent ones swap to
+   `CI_ACCESS`).
+2. **Model-side** (`model_handling.py` `get_process_function_definitions`): emit
+   compile-time constant `cDPF_partner1/2[nMF*nDPF]` plus `cDPF_idcoup[nMF*nDPF]`
+   — the `idcoup` of the dependent coupling each `value[j]` slot points at,
+   emitted *symbolically* as `Parameters_dependentCouplings::idcoup_<GC>` (`-1`
+   for unused slots). No baked-in value array (the values run per event).
+3. **Kernel** (`CPPProcess.cc`/`process_function_definitions.inc`): after
+   `allCOUPs`/`COUPs` are set up, gather (per event page)
+   `CD_ACCESS::kernelAccess(dpf_value + (i*nMF+j)*CD_ACCESS::flv_stride) = CD_ACCESS::kernelAccessConst(COUPs[cDPF_idcoup[i*nMF+j]])`
+   for `idcoup>=0`, then
+   `FLV_COUPLING_ARRAY<nDPF,nMF,CD_ACCESS::flv_stride> flvCOUPs_dep{ cDPF_partner1, cDPF_partner2, dpf_value }`.
+   `FLV_COUPLING_ARRAY` grew a 3rd template param `FSTRIDE` (default `nx2`) so the
+   value offset is `i*FSTRIDE*STRIDE`; `dpf_value` is `alignas(cppAlign)` for the
+   SIMD reinterpret.
+4. **Serialization**: `write_flv_couplings`/`set_flv_couplings` now serializes
+   *only* the independent flavored couplings (the dependent ones have no fixed
+   `value[]` pointer).
+5. **Guard**: dropped the `is_dep` rejection in
+   `_assert_flv_couplings_supported` (now only >2 merged legs).
+6. **Validated** on CPU/SIMD (`cppavx2`): `p p > go go` standalone_mg7 vs Fortran
+   standalone, per-flavor |M|² agree to ~1e-7 for both `P1_QQx_gogo` and
+   `P1_gg_gogo` (`test_standalone_mg7_mssm_gogo`).
 
-Risk: this is the deepest cudacpp codegen change (touches the SIMD/CUDA gather
-and the per-coupling routing); needs CPU **and** GPU validation.
+Remaining/risk: GPU validation was **not** run here (no GPU in the dev
+environment). The gather/routing was written to be CPU+GPU uniform (CUDA
+`__constant__`-free `__device__ const` cDPF arrays; `CD_ACCESS` kernel access),
+but a GPU build+run cross-check is still advisable before relying on the CUDA
+path.
