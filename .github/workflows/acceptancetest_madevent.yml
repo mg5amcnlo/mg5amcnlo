@@ -986,8 +986,8 @@ jobs:
 
   acceptancetest_mssm_gogo:
     # Fortran madevent supports MSSM p p > go go (merged-flavor squark/gluino
-    # vertices); the mg7/madmatrix counterpart cannot yet and refuses cleanly
-    # (test_mssm_gogo_mg7_unsupported in acceptancetest_mg7.yml).
+    # vertices); the mg7/madmatrix counterpart now also supports it and is
+    # checked per-flavor (test_standalone_mg7_mssm_gogo in acceptancetest_mg7.yml).
     runs-on: ubuntu-24.04
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:

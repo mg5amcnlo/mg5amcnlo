@@ -1460,31 +1460,73 @@ class TestCmdShell2(unittest.TestCase,
                         'all matrix elements vanished for p p > n1 n1')
         self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
 
-    def test_mssm_gogo_mg7_unsupported(self):
-        """The mg7/madmatrix C++ output must REFUSE, with a clear InvalidCmd,
-        the merged-flavor structures it cannot yet generate -- rather than
-        crashing with a cryptic unpack error or emitting uncompilable code.
+    def test_standalone_mg7_mssm_gogo(self):
+        """Dependent (event-by-event, running-alphas) flavored couplings must
+        give the same per-flavor |M|^2 in standalone_mg7 (madmatrix) as in the
+        Fortran standalone.
 
-        MSSM 'p p > go go' has gluino/chargino-squark-quark vertices where only
-        the light quark is in a merged group (a single merged-flavor leg), and
-        the relevant flavored couplings are event-by-event (running-alphas)
-        couplings; neither is supported by the two-merged-leg, fixed-pointer
-        FLV mechanism (see docs/mg7_merged_flavor_mssm_design.md).
+        MSSM 'p p > go go' has single-merged-leg squark/gluino-quark vertices
+        (one merged light quark + an unmerged gluino + a squark) whose flavored
+        couplings are *dependent* (SUSY-QCD, running-alphas): the squark-quark-
+        gluino coupling GC_106/GC_110 ~ g_s changes per event. These are not
+        addressable as fixed value[] pointers, so they are gathered event-by-
+        event into cDPF_* / flvCOUPs_dep (Step 3 of
+        docs/mg7_merged_flavor_mssm_design.md). This is the dependent-coupling
+        counterpart of test_standalone_mg7_mssm_single_leg (independent flavored
+        couplings) and the consistency check matching test_madevent_mssm_gogo.
 
-        The Fortran madevent counterpart (test_madevent_mssm_gogo) checks that
-        the same process is supported there.
+        The energy (sqrt(s)) is chosen above the gluino-pair threshold (Mgo ~
+        608 GeV) so neither check driver auto-bumps it, i.e. both evaluate the
+        same phase-space point.
         """
+        energy = '3000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
         self.do('import model MSSM_SLHA2')
         self.do('generate p p > go go')
-        self.assertRaises(InvalidCmd, self.do,
-                          'output standalone_mg7 %s -f' % self.out_dir)
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > go go')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
 
     def test_madevent_mssm_gogo(self):
         """The Fortran madevent output supports MSSM 'p p > go go' (merged-flavor
         squark/gluino vertices with single-merged-leg / event-by-event flavored
-        couplings), which the mg7/madmatrix C++ output cannot yet generate
-        (test_mssm_gogo_mg7_unsupported). Acts as the madevent counterpart and a
-        reference for the eventual mg7 fix.
+        couplings). The mg7/madmatrix C++ output now also supports it and is
+        checked to agree per-flavor in test_standalone_mg7_mssm_gogo; this acts
+        as the madevent counterpart.
         """
         self.do('import model MSSM_SLHA2')
         self.do('generate p p > go go')
