@@ -453,7 +453,17 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
             out.write('      return;\n')
             out.write('    }\n')
             if nb_coupling == 1:
-                out.write('    if(MCOUP.partner1[flv_index1] != flv_index2) {\n')
+                # A flavored coupling is indexed by the *merged* fermion leg; for
+                # a single merged leg the unmerged partner carries flavor index 0
+                # and the merged leg can be either F1 or F2 (the cudacpp argument
+                # order is not guaranteed to put the merged leg first, unlike the
+                # Fortran side). Pick whichever leg is the merged (partner-
+                # populated) one. For the two-leg case partner1[flv1]==flv2 holds
+                # and flv_sel==flv_index1, reproducing the old behaviour.
+                out.write('    int flv_sel = -1;\n')
+                out.write('    if(MCOUP.partner1[flv_index1] == flv_index2) flv_sel = flv_index1;\n')
+                out.write('    else if(MCOUP.partner1[flv_index2] == flv_index1) flv_sel = flv_index2;\n')
+                out.write('    if(flv_sel == -1) {\n')
                 out.write('      %s\n' % fail)
                 out.write('      return;\n')
                 out.write('    }\n')
@@ -467,7 +477,7 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
                 # the coupling is a complex number but in this case it is represented as a sequence of real numbers
                 # so, when we need to shift within the array, we need to double the shift width to account for
                 # both real and imaginary parts
-                out.write('    COUP = C_ACCESS::kernelAccessConst( MCOUP.value + 2*flv_index1 );\n')
+                out.write('    COUP = C_ACCESS::kernelAccessConst( MCOUP.value + 2*flv_sel );\n')
             else:
                 for i in range(1,nb_coupling+1):
                     # the coupling is a complex number but in this case it is represented as a sequence of real numbers
@@ -945,8 +955,13 @@ class MadMatrixUFOModelConverter(export_cpp.UFOModelConverterGPU):
         # For each parameter, write name = expr;
         for coupl in params:
             for key, c in coupl.flavors.items():
-                # get first/second index (two-leg "partner" topology)
-                k1, k2 = [i for i in key if i!=0]
+                nonzero = [i for i in key if i != 0]
+                if len(nonzero) == 2:
+                    k1, k2 = nonzero
+                else:
+                    # single merged leg: unmerged partner has flavor index 1
+                    # (mirror Fortran flavor_couplings.f)
+                    k1 = nonzero[0]; k2 = 1
                 def_flv.append('%(name)s.partner1[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.value[%(in)i] = &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})

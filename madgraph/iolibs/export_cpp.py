@@ -377,37 +377,44 @@ class UFOModelConverterCPP(object):
         """Refuse, with a clear and actionable message, the merged-flavor
         coupling structures the C++ (mg7/standalone_mg7) backend cannot yet
         generate correctly, instead of crashing or emitting wrong/uncompilable
-        code:
+        code.
 
-          * a vertex with a number of merged-flavor legs other than two -- the
-            backend only models the two-leg "partner" topology (the SM q q~ V
-            case); MSSM gluino/chargino-squark-quark vertices have a single
-            merged leg;
+        Supported: one- and two-merged-leg "partner" vertices with
+        flavor-*independent* couplings. Single-merged-leg vertices (one merged
+        fermion + an unmerged partner, e.g. the electroweak MSSM
+        squark-quark-neutralino vertices) are serialized like the Fortran side
+        (the unmerged partner is given flavor index 1) and gated by the merged
+        leg (see get_coupling_def).
+
+        Not yet supported (raises):
+
           * an event-by-event ("dependent", running-alphas) flavored coupling,
             which cannot be referenced by the fixed value[] pointers that are
-            set once in setIndependentCouplings.
+            set once in setIndependentCouplings -- this is the remaining gap,
+            e.g. for the SUSY-QCD MSSM gluino-squark-quark vertices;
+          * a vertex with more than two merged-flavor legs (never seen so far).
 
-        The Fortran 'madevent'/'standalone' output supports these processes.
-        See docs/mg7_merged_flavor_mssm_design.md for the full plan to lift this
-        limitation.
+        The Fortran 'madevent'/'standalone' output supports the remaining cases.
+        See docs/mg7_merged_flavor_mssm_design.md for the plan to lift the
+        dependent-coupling limitation.
         """
         dep_names = set(c.name for c in getattr(self, 'coups_flv_dep', []))
         for coupl in params:
             is_dep = coupl.name in dep_names
             for key in coupl.flavors:
                 nb_merged = len([i for i in key if i != 0])
-                if nb_merged == 2 and not is_dep:
+                if nb_merged in (1, 2) and not is_dep:
                     continue
                 if is_dep:
                     reason = ("references an event-by-event (running-alphas) "
                               "coupling")
                 else:
-                    reason = ("connects %d merged-flavor leg(s); only the "
-                              "two-leg partner topology is supported" % nb_merged)
+                    reason = ("connects %d merged-flavor legs; only one or two "
+                              "are supported" % nb_merged)
                 raise InvalidCmd(
                     "merged-flavor C++ output (mg7/standalone_mg7) does not yet "
                     "support this process: flavor coupling %s %s. This occurs "
-                    "e.g. for MSSM gluino/chargino-squark-quark vertices. Use "
+                    "e.g. for SUSY-QCD MSSM gluino-squark-quark vertices. Use "
                     "'output madevent' or 'output standalone' for this process. "
                     "See docs/mg7_merged_flavor_mssm_design.md for details."
                     % (coupl.name, reason))
@@ -420,8 +427,12 @@ class UFOModelConverterCPP(object):
         # For each parameter, write name = expr;
         for coupl in params:
             for key, c in coupl.flavors.items():
-                # get first/second index
-                k1, k2 = [i for i in key if i!=0]
+                nonzero = [i for i in key if i != 0]
+                if len(nonzero) == 2:
+                    k1, k2 = nonzero
+                else:
+                    # single merged leg: unmerged partner has flavor index 1
+                    k1 = nonzero[0]; k2 = 1
                 def_flv.append('%(name)s.partner[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.val[%(in)i]  =  &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})

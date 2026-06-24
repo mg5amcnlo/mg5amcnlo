@@ -1,35 +1,47 @@
 # mg7/madmatrix merged-flavor support for single-merged-leg vertices (MSSM)
 
-## Resolution (this PR): Option B — clean guard
+## Status (this PR)
 
-This PR ships **Option B**: the madmatrix (mg7/standalone_mg7) model export now
-**refuses, with a clear and actionable error**, the merged-flavor configurations
-it cannot yet generate correctly, instead of crashing or emitting
-wrong/uncompilable code. Concretely, `UFOModelConverterCPP` gained
-`_assert_flv_couplings_supported`, called from both `write_flv_couplings`
-copies (`export_cpp.py` and `madmatrix/model_handling.py`); it raises
-`InvalidCmd` when a used flavored coupling either connects a number of merged
-legs other than two, or is an event-by-event ("dependent", running-αs) coupling.
+Two things ship here:
 
-Result for `generate p p > go go; output standalone_mg7`:
-```
-Command "output standalone_mg7 ..." interrupted with error:
-InvalidCmd : merged-flavor C++ output (mg7/standalone_mg7) does not yet support
-this process: flavor coupling FLV_54 references an event-by-event (running-alphas)
-coupling. ... Use 'output madevent' or 'output standalone' for this process.
-```
-The guard is scoped to the process's *used* couplings (`coups_flv_dep/indep` are
-filtered to `wanted_couplings`), so valid SM two-leg merged cases (e.g.
-`u u~ > j j QCD=0`) still generate. `output madevent`/`standalone` keep working.
+1. **Single-merged-leg flavored couplings are now supported** (the MSSM
+   topology: one merged fermion + an unmerged partner + a squark/boson), for
+   flavor-*independent* couplings. Two parts:
+   - **serialization** (`write_flv_couplings`, both copies): a single-leg key is
+     written exactly like the Fortran side — the unmerged partner gets flavor
+     index 1, i.e. the two-leg formula with `k2 = 1`.
+   - **consumer fix** (`MadMatrixALOHAWriter.get_coupling_def`): the flavored
+     coupling is selected by the *merged* fermion leg, which (unlike Fortran)
+     can be either `F1` or `F2` in the cudacpp argument order — pick whichever
+     leg is the partner-populated one.
 
-The full feature (Option A) is **deferred**; the diagnosis and plan below are
-kept for the follow-up. The rest of this note describes Option A.
+   Validated: `p p > n1 n1 QCD=0` (t-channel squark, EW/independent couplings)
+   now reproduces the Fortran standalone per-flavor |M|² for **all** flavors
+   (before the consumer fix only flavor 0 matched). Regression test:
+   `test_standalone_mg7_mssm_single_leg`. The two-leg path is unchanged
+   (`test_standalone_mg7_vs_cpp` still passes).
+
+2. **A guard for the remaining gap.** `UFOModelConverterCPP.
+   _assert_flv_couplings_supported` (called from both `write_flv_couplings`)
+   still raises a clear `InvalidCmd` for the cases not yet handled — an
+   event-by-event ("dependent", running-αs) flavored coupling, or a vertex with
+   >2 merged legs. So `generate p p > go go; output standalone_mg7` still fails
+   cleanly (its SUSY-QCD couplings are dependent):
+   ```
+   InvalidCmd : merged-flavor C++ output (mg7/standalone_mg7) does not yet support
+   this process: flavor coupling FLV_54 references an event-by-event (running-alphas)
+   coupling. ... Use 'output madevent' or 'output standalone' for this process.
+   ```
+   The guard is scoped to the process's *used* couplings, so SM two-leg cases
+   and single-leg independent cases generate; `output madevent`/`standalone`
+   keep working.
+
+**Remaining for full MSSM (`p p > go go`): the dependent-coupling mechanism**
+(Step 3 below) — the large piece.
 
 ---
 
-Status of Option A: **deferred / not implemented**. This note records the
-diagnosis, the discovered scope, and the implementation plan, so a follow-up PR
-is self-contained.
+The rest of this note records the diagnosis and the remaining plan.
 
 ## Symptom
 
@@ -172,11 +184,12 @@ handles this by branching on the fermion *position parity* and using `PARTNER`
 vs `PARTNER2` (aloha_writers.py ~757-786); the cudacpp port of that logic does
 not correctly cover the single-merged-leg case.
 
-So the single-leg work is **(1) serialization [trivial, done in the attempt] +
-(2) a real consumer fix** that picks the merged fermion's flavor (mirroring the
-Fortran parity/`PARTNER2` branching) — NOT serialization alone. The attempt was
-reverted; the guard still (correctly) blocks single-leg so no wrong physics
-ships.
+So the single-leg work is **(1) serialization [trivial] + (2) a real consumer
+fix** that picks the merged fermion's flavor — NOT serialization alone.
+**Both are now done** (see the Status section at the top): the consumer selects
+whichever fermion leg is the partner-populated (merged) one, and
+`p p > n1 n1 QCD=0` matches Fortran for all flavors. The guard now only blocks
+the dependent-coupling case (Step 3).
 
 ## Plan (for the Option A follow-up)
 

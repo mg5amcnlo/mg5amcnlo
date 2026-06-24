@@ -1407,6 +1407,59 @@ class TestCmdShell2(unittest.TestCase,
         mg7 = get_values('standalone_mg7', './check_sa.exe')
         self._assert_me_lists_close(mg7, cpp)
 
+    def test_standalone_mg7_mssm_single_leg(self):
+        """Single-merged-leg flavored couplings must give the same per-flavor
+        |M|^2 in standalone_mg7 (madmatrix) as in the Fortran standalone.
+
+        p p > n1 n1 QCD=0 is a t-channel-squark process with single-merged-leg
+        vertices (one merged light quark + an unmerged neutralino + a squark)
+        whose flavored couplings are *independent* (electroweak), isolating the
+        single-leg consumer-gating fix (the get_coupling_def merged-leg
+        selection) from the still-guarded dependent-coupling case. Without the
+        fix only the first flavor matches; with it all flavors do.
+        """
+        energy = '1000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > n1 n1 QCD=0')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > n1 n1')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
     def test_mssm_gogo_mg7_unsupported(self):
         """The mg7/madmatrix C++ output must REFUSE, with a clear InvalidCmd,
         the merged-flavor structures it cannot yet generate -- rather than
