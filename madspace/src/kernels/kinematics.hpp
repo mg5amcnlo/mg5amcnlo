@@ -487,16 +487,50 @@ KERNELSPEC void kernel_t_inv_value_and_min_max(
     t_abs = -t_temp;
 }
 
-// Clamp the |t| range against cut-derived bounds. Both kernels return the
-// absolute (positive) t invariant, so a pt cut on the emitted particle is a
-// *lower* bound on |t| (t_min_cut).
+// Cut-derived |t| interval from the AmpliCol/gen23 ETmin construction
+// (phase_space_gen23.f03, gen23_one_step, lines 698-727).
+template <typename T>
+KERNELSPEC Pair<FVal<T>, FVal<T>> t_cut_bounds_etmin(
+    FourMom<T> p_tot,
+    FourMom<T> pb,
+    FVal<T> m1_2,
+    FVal<T> m2_2,
+    FVal<T> etmin_i,
+    FVal<T> etmin_ir
+) {
+    auto pt_tot2 = p_tot[1] * p_tot[1] + p_tot[2] * p_tot[2];
+    auto s = lsquare<T>(p_tot);
+    auto piir0 = sqrt(max(s, 0.) + pt_tot2);
+    auto pib0 = (p_tot[0] * pb[0] - p_tot[3] * pb[3]) / piir0;
+    // effective recoil ETmin, corrected for the system's own pt (i single)
+    auto et_i2_minus_mi = etmin_i * etmin_i - m1_2;
+    auto d = sqrt(pt_tot2) - sqrt(max(et_i2_minus_mi, 0.));
+    auto et_corr = sqrt(m2_2 + d * d);
+    auto etminir =
+        max(etmin_ir, where(pt_tot2 < et_i2_minus_mi, et_corr, sqrt(max(m2_2, 0.))));
+    auto etmini = max(etmin_i, sqrt(max(m1_2, 0.)));
+    auto base = piir0 * piir0 - etmini * etmini + etminir * etminir;
+    auto root = (piir0 - etmini - etminir) * (piir0 + etmini - etminir) *
+        (piir0 - etmini + etminir) * (piir0 + etmini + etminir);
+    auto rootsq = sqrt(max(root, 0.));
+    auto ratio = pib0 / piir0;
+    // signed-t -> |t|: |t|_min uses (base - root), |t|_max uses (base + root)
+    return {ratio * (base - rootsq) - m2_2, ratio * (base + rootsq) - m2_2};
+}
+
+// Clamp the kinematic |t| range against the ETmin cut interval. Both kernels
+// return the absolute (positive) t invariant. The ETmin bound is a sampling
+// optimization, not the cut enforcement: the integrator applies the real cut on
+// the final momenta (cf. AmpliCol's explicit ET-check on the generated
+// solutions).
 template <typename T>
 KERNELSPEC void kernel_t_inv_min_max_cut(
     FIn<T, 1> pa,
     FIn<T, 1> pb,
     FIn<T, 0> m1,
     FIn<T, 0> m2,
-    FIn<T, 0> t_min_cut,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
 ) {
@@ -513,14 +547,13 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
-    FVal<T> tmin_cut(t_min_cut);
-    tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
-    // Keep the range non-degenerate; an empty range collapses to ~zero width
-    // and is suppressed by the sampling Jacobian downstream.
-    tmx = where(tmx > tmn, tmx, tmn + EPS);
-
-    t_min = tmn;
-    t_max = tmx;
+    auto cut =
+        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m2_2, m1_2, etmin_i, etmin_ir);
+    auto tmn_c = max(tmn, cut.first);
+    auto tmx_c = min(tmx, cut.second);
+    auto ok = tmx_c > tmn_c;
+    t_min = where(ok, tmn_c, tmn);
+    t_max = where(ok, tmx_c, tmx);
 }
 
 template <typename T>
@@ -529,7 +562,8 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     FIn<T, 1> pb,
     FIn<T, 1> p1,
     FIn<T, 1> p2,
-    FIn<T, 0> t_min_cut,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_abs,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
@@ -549,12 +583,13 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
-    FVal<T> tmin_cut(t_min_cut);
-    tmn = where(tmin_cut > 0., max(tmn, tmin_cut), tmn);
-    tmx = where(tmx > tmn, tmx, tmn + EPS);
-
-    t_min = tmn;
-    t_max = tmx;
+    auto cut =
+        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m2_2, m1_2, etmin_i, etmin_ir);
+    auto tmn_c = max(tmn, cut.first);
+    auto tmx_c = min(tmx, cut.second);
+    auto ok = tmx_c > tmn_c;
+    t_min = where(ok, tmn_c, tmn);
+    t_max = where(ok, tmx_c, tmx);
     t_abs = -t_temp;
 }
 

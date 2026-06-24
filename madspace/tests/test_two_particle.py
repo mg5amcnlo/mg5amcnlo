@@ -53,7 +53,7 @@ def mapping_and_args(request):
     else:
         has_cut = request.param.get("has_cut", False)
         mapping = ms.TwoToTwoParticleScattering(com=com, has_cut=has_cut)
-        cut = [zeros] if has_cut else []
+        cut = [zeros, zeros] if has_cut else []
         if com:
 
             def make_args(point):

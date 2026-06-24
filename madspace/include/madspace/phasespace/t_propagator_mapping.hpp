@@ -36,6 +36,7 @@ private:
     std::vector<std::size_t> _integration_order;
     std::vector<bool> _sample_sides;
     std::vector<double> _pt_min;
+    bool _has_cut;
     Invariant _uniform_invariant;
     TwoToTwoParticleScattering _com_scattering;
     TwoToTwoParticleScattering _lab_scattering;

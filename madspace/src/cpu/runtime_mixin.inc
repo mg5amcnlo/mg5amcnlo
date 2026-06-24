@@ -209,10 +209,10 @@ case 68:
     batch_foreach<tensor_foreach<kernel_t_inv_value_and_min_max<CpuTypes>, kernel_t_inv_value_and_min_max<SimdTypes>, 4, 3, 1, DeviceType>, 4, 3>(instr, locals, device);
     break;
 case 69:
-    batch_foreach<tensor_foreach<kernel_t_inv_min_max_cut<CpuTypes>, kernel_t_inv_min_max_cut<SimdTypes>, 5, 2, 1, DeviceType>, 5, 2>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t_inv_min_max_cut<CpuTypes>, kernel_t_inv_min_max_cut<SimdTypes>, 6, 2, 1, DeviceType>, 6, 2>(instr, locals, device);
     break;
 case 70:
-    batch_foreach<tensor_foreach<kernel_t_inv_value_and_min_max_cut<CpuTypes>, kernel_t_inv_value_and_min_max_cut<SimdTypes>, 5, 3, 1, DeviceType>, 5, 3>(instr, locals, device);
+    batch_foreach<tensor_foreach<kernel_t_inv_value_and_min_max_cut<CpuTypes>, kernel_t_inv_value_and_min_max_cut<SimdTypes>, 6, 3, 1, DeviceType>, 6, 3>(instr, locals, device);
     break;
 case 71:
     batch_foreach<tensor_foreach<kernel_t1_inv_min_max_doublet<CpuTypes>, kernel_t1_inv_min_max_doublet<SimdTypes>, 4, 2, 1, DeviceType>, 4, 2>(instr, locals, device);

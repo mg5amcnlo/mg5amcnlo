@@ -83,6 +83,7 @@ private:
     std::vector<double> _pt_min;
     std::vector<std::vector<double>> _m_inv_min;
     std::vector<std::vector<double>> _dr_min;
+    bool _has_cut;
 
     Invariant _uniform_invariant;
     TwoToTwoParticleScattering _com_scattering;

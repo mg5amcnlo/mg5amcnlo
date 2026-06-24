@@ -90,6 +90,36 @@ double mat_at(const std::vector<std::vector<double>>& m, std::size_t i, std::siz
 
 } // namespace
 
+// Whether any cut (pt, invariant-mass, or dR) is active. With no cut the cut
+// kernels reduce to the plain ones, so we skip them to keep the map exactly
+// invertible and avoid boosted-frame round-trip noise.
+static bool has_any_cut(
+    const std::vector<double>& pt_min,
+    const std::vector<std::vector<double>>& m_inv_min,
+    const std::vector<std::vector<double>>& dr_min
+) {
+    for (double p : pt_min) {
+        if (p > 0.0) {
+            return true;
+        }
+    }
+    for (const auto& row : m_inv_min) {
+        for (double v : row) {
+            if (v > 0.0) {
+                return true;
+            }
+        }
+    }
+    for (const auto& row : dr_min) {
+        for (double v : row) {
+            if (v > 0.0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 double ColorOrderedMapping::pt2(std::size_t i) const {
     double p = (i < _pt_min.size()) ? _pt_min.at(i) : 0.0;
     return p * p;
@@ -182,9 +212,20 @@ ColorOrderedMapping::ColorOrderedMapping(
     _pt_min(pt_min),
     _m_inv_min(m_inv_min),
     _dr_min(dr_min),
+    _has_cut(has_any_cut(pt_min, m_inv_min, dr_min)),
     _com_scattering(true, t_invariant_power),
-    _lab_scattering(false, t_invariant_power, 0., 0., true),
-    _two_to_three(t_invariant_power, 0., 0., s_invariant_power, 0., 0., true),
+    _lab_scattering(
+        false, t_invariant_power, 0., 0., has_any_cut(pt_min, m_inv_min, dr_min)
+    ),
+    _two_to_three(
+        t_invariant_power,
+        0.,
+        0.,
+        s_invariant_power,
+        0.,
+        0.,
+        has_any_cut(pt_min, m_inv_min, dr_min)
+    ),
     _double_t(t_invariant_power, 0., 0., t_invariant_power, 0., 0.) {
     auto [s1, s2] = split_sets_from_color_order(color_order);
     _set1 = s1;
@@ -404,6 +445,18 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 return;
             }
             Value R_a = fb.sub(P_set, R_b);
+            auto etmin_particle = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            ValueVec etmin_suffix;
+            if (_has_cut) {
+                etmin_suffix.resize(k);
+                etmin_suffix.at(k - 1) = etmin_particle(s.at(k - 1));
+                for (std::size_t j = k - 1; j-- > 0;) {
+                    etmin_suffix.at(j) =
+                        fb.add(etmin_particle(s.at(j)), etmin_suffix.at(j + 1));
+                }
+            }
             Value im1;
             bool first = true;
             for (std::size_t j = 0; j < k - 1; ++j) {
@@ -419,9 +472,13 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 // has im1 subtracted from our previous step, so we pass pb = R_a + im1
                 // to recover p_12 = R_b + R_a inside the kernel.
                 if (first) {
-                    // First peel is a 2->2 LAB block. With cuts enabled the |t|
-                    // floor for the peeled particle (pt^2)
-                    ValueVec cond{R_b, R_a, Value(pt2(s.at(j)))};
+                    // First peel is a 2->2 LAB block. Cut: ETmin of the peeled
+                    // particle (etmin_i) and of the recoil chain (etmin_ir).
+                    ValueVec cond{R_b, R_a};
+                    if (_has_cut) {
+                        cond.push_back(etmin_particle(s.at(j)));
+                        cond.push_back(etmin_suffix.at(j + 1));
+                    }
                     auto ks = _lab_scattering.build_forward(
                         fb, {next_random(), next_random(), m_rest, m_peel}, cond
                     );
@@ -433,16 +490,15 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                     first = false;
                 } else {
                     Value pb_for_block = fb.add(R_a, im1);
-                    // 2->3 block. Cuts: t_min_cut = pt^2 of the peeled particle;
-                    // s23_min_cut = adjacent-pair floor for {s[j-1], s[j]} (the
-                    // (2,3) system inside the kernel is peeled + previous peeled).
-                    ValueVec cond{
-                        R_b,
-                        pb_for_block,
-                        im1,
-                        Value(pt2(s.at(j))),
-                        Value(cut_floor({s.at(j - 1), s.at(j)}))
-                    };
+                    // 2->3 block. Cuts: ETmin of the peeled particle (etmin_i)
+                    // and recoil chain (etmin_ir); s23_min_cut = adjacent-pair
+                    // floor for {s[j-1], s[j]} (the (2,3) system in the kernel).
+                    ValueVec cond{R_b, pb_for_block, im1};
+                    if (_has_cut) {
+                        cond.push_back(etmin_particle(s.at(j)));
+                        cond.push_back(etmin_suffix.at(j + 1));
+                        cond.push_back(Value(cut_floor({s.at(j - 1), s.at(j)})));
+                    }
                     auto ks = _two_to_three.build_forward(
                         fb,
                         {next_discrete(), next_random(), next_random(), m_rest, m_peel},
@@ -683,6 +739,20 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             return;
         }
         Value R_a = fb.sub(P_set, R_b);
+        // ETmin suffix sums for the recoil chain (see forward walk); only built
+        // when cuts are active.
+        auto etmin_particle = [&](std::size_t idx) {
+            return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+        };
+        ValueVec etmin_suffix;
+        if (_has_cut) {
+            etmin_suffix.resize(k);
+            etmin_suffix.at(k - 1) = etmin_particle(s.at(k - 1));
+            for (std::size_t j = k - 1; j-- > 0;) {
+                etmin_suffix.at(j) =
+                    fb.add(etmin_particle(s.at(j)), etmin_suffix.at(j + 1));
+            }
+        }
         Value im1;
         bool first = true;
         for (std::size_t j = 0; j < k - 1; ++j) {
@@ -692,7 +762,11 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
             Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
             if (first) {
                 // Same cut conditions as the forward 2->2 block.
-                ValueVec cond{R_b, R_a, Value(pt2(s.at(j)))};
+                ValueVec cond{R_b, R_a};
+                if (_has_cut) {
+                    cond.push_back(etmin_particle(s.at(j)));
+                    cond.push_back(etmin_suffix.at(j + 1));
+                }
                 auto rs = _lab_scattering.build_inverse(fb, {p1_out, peeled}, cond);
                 random_out.push_back(rs.at(0));
                 random_out.push_back(rs.at(1));
@@ -704,13 +778,12 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
                 // to get p_12 = R_b + R_a (the remaining-to-produce system).
                 Value pb_for_block = fb.add(R_a, im1);
                 // Same cut conditions as the forward 2->3 block.
-                ValueVec cond{
-                    R_b,
-                    pb_for_block,
-                    im1,
-                    Value(pt2(s.at(j))),
-                    Value(cut_floor({s.at(j - 1), s.at(j)}))
-                };
+                ValueVec cond{R_b, pb_for_block, im1};
+                if (_has_cut) {
+                    cond.push_back(etmin_particle(s.at(j)));
+                    cond.push_back(etmin_suffix.at(j + 1));
+                    cond.push_back(Value(cut_floor({s.at(j - 1), s.at(j)})));
+                }
                 auto rs = _two_to_three.build_inverse(fb, {p1_out, peeled}, cond);
                 // rs.at(0) is the discrete choice index (int) emitted by the
                 // 2->3 inverse; rs.at(1), rs.at(2) are the continuous r_s23, r_t1.

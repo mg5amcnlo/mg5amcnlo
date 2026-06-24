@@ -113,7 +113,8 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
                 {"momentum3", batch_four_vec}
             };
             if (has_cut) {
-                cond.push_back("t_min_cut", batch_float);
+                cond.push_back("etmin_i", batch_float);
+                cond.push_back("etmin_ir", batch_float);
                 cond.push_back("s23_min_cut", batch_float);
             }
             return cond;
@@ -132,12 +133,14 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
          m1 = inputs.at(3), m2 = inputs.at(4);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
     auto [t1_min, t1_max] = _has_cut
-        ? fb.t_inv_min_max_cut(p_a, fb.sub(p_b, p_3), m1, m2, conditions.at(3))
+        ? fb.t_inv_min_max_cut(
+              p_a, fb.sub(p_b, p_3), m1, m2, conditions.at(3), conditions.at(4)
+          )
         : fb.t_inv_min_max(p_a, fb.sub(p_b, p_3), m1, m2);
     auto t_inv_result = _t_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
     auto [s23_min, s23_max] = _has_cut
         ? fb.s23_min_max_cut(
-              p_a, p_b, p_3, t_inv_result["invariant"], m1, m2, conditions.at(4)
+              p_a, p_b, p_3, t_inv_result["invariant"], m1, m2, conditions.at(5)
           )
         : fb.s23_min_max(p_a, p_b, p_3, t_inv_result["invariant"], m1, m2);
     auto s23_inv_result = _s_invariant.build_forward(fb, {r_s23}, {s23_min, s23_max});
@@ -171,12 +174,12 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
     auto [t1_abs, t1_min, t1_max] = _has_cut
         ? fb.t_inv_value_and_min_max_cut(
-              p_a, fb.sub(p_b, p_3), p1, p2, conditions.at(3)
+              p_a, fb.sub(p_b, p_3), p1, p2, conditions.at(3), conditions.at(4)
           )
         : fb.t_inv_value_and_min_max(p_a, fb.sub(p_b, p_3), p1, p2);
     auto t_inv_result = _t_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
     auto [s23, s23_min, s23_max] = _has_cut
-        ? fb.s23_value_and_min_max_cut(p_a, p_b, p_3, t1_abs, p1, p2, conditions.at(4))
+        ? fb.s23_value_and_min_max_cut(p_a, p_b, p_3, t1_abs, p1, p2, conditions.at(5))
         : fb.s23_value_and_min_max(p_a, p_b, p_3, t1_abs, p1, p2);
     auto s23_inv_result = _s_invariant.build_inverse(fb, {s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);

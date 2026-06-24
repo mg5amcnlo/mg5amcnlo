@@ -83,7 +83,8 @@ TwoToTwoParticleScattering::TwoToTwoParticleScattering(
                 {"momentum_in1", batch_four_vec}, {"momentum_in2", batch_four_vec}
             };
             if (has_cut) {
-                cond.push_back("t_min_cut", batch_float);
+                cond.push_back("etmin_i", batch_float);
+                cond.push_back("etmin_ir", batch_float);
             }
             return cond;
         }()
@@ -101,7 +102,7 @@ Mapping::Result TwoToTwoParticleScattering::build_forward_impl(
          m2 = inputs.at(3);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
     auto [t_min, t_max] = _has_cut
-        ? fb.t_inv_min_max_cut(p_in1, p_in2, m1, m2, conditions.at(2))
+        ? fb.t_inv_min_max_cut(p_in1, p_in2, m1, m2, conditions.at(2), conditions.at(3))
         : fb.t_inv_min_max(p_in1, p_in2, m1, m2);
     auto t_result = _invariant.build_forward(fb, {r_inv}, {t_min, t_max});
     auto [p1, p2, det_scatter] = _com
@@ -124,7 +125,9 @@ Mapping::Result TwoToTwoParticleScattering::build_inverse_impl(
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
     auto [t_abs, t_min, t_max] = _has_cut
-        ? fb.t_inv_value_and_min_max_cut(p_in1, p_in2, p1, p2, conditions.at(2))
+        ? fb.t_inv_value_and_min_max_cut(
+              p_in1, p_in2, p1, p2, conditions.at(2), conditions.at(3)
+          )
         : fb.t_inv_value_and_min_max(p_in1, p_in2, p1, p2);
     auto t_result = _invariant.build_inverse(fb, {t_abs}, {t_min, t_max});
     auto [r_phi, m1, m2, det_scatter] = _com
