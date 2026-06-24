@@ -177,4 +177,20 @@ jobs:
             export PATH="$HOME/.cache/HEPtools/bin:$PATH"
             ./tests/test_manager.py test_generation_heft_mg7 -pA -t0 -l INFO
 
+  acceptancetest_mg7_mssm_gogo:
+    # mg7/madmatrix cannot yet generate the MSSM merged-flavor squark/gluino
+    # vertices (single-merged-leg / event-by-event flavored couplings); the
+    # output must refuse cleanly with InvalidCmd (not crash). The madevent
+    # counterpart is test_madevent_mssm_gogo in acceptancetest_madevent.yml.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test one of the test test_mssm_gogo_mg7_unsupported
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_mssm_gogo_mg7_unsupported -pA -t0 -l INFO
+
 
