@@ -306,8 +306,10 @@ class UFOModelConverterCPP(object):
                                self.write_set_parameters(self.params_dep)
         replace_dict['set_dependent_couplings'] = \
                                self.write_set_parameters(list(self.coups_dep.values()))
+        # Only independent flavored couplings use the FLV_COUPLING value[] pointer mechanism;
+        # dependent (running-alphas) ones are gathered event-by-event (see model_handling / Step 3).
         replace_dict['set_flv_couplings'] = \
-                                self.write_flv_couplings(self.coups_flv_dep+self.coups_flv_indep)    
+                                self.write_flv_couplings(self.coups_flv_indep)
 
         replace_dict['print_independent_parameters'] = \
                                self.write_print_parameters(self.params_indep)
@@ -379,45 +381,34 @@ class UFOModelConverterCPP(object):
         generate correctly, instead of crashing or emitting wrong/uncompilable
         code.
 
-        Supported: one- and two-merged-leg "partner" vertices with
-        flavor-*independent* couplings. Single-merged-leg vertices (one merged
-        fermion + an unmerged partner, e.g. the electroweak MSSM
-        squark-quark-neutralino vertices) are serialized like the Fortran side
-        (the unmerged partner is given flavor index 1) and gated by the merged
-        leg (see get_coupling_def).
+        Supported: one- and two-merged-leg "partner" vertices, with either
+        flavor-*independent* or *dependent* (event-by-event, running-alphas)
+        couplings. Single-merged-leg vertices (one merged fermion + an unmerged
+        partner, e.g. the electroweak MSSM squark-quark-neutralino vertices) are
+        serialized like the Fortran side (the unmerged partner is given flavor
+        index 1) and gated by the merged leg (see get_coupling_def). Dependent
+        flavored couplings (e.g. the SUSY-QCD MSSM gluino-squark-quark vertices)
+        are gathered event-by-event into cDPF_* / flvCOUPs_dep (Step 3).
 
         Not yet supported (raises):
 
-          * an event-by-event ("dependent", running-alphas) flavored coupling,
-            which cannot be referenced by the fixed value[] pointers that are
-            set once in setIndependentCouplings -- this is the remaining gap,
-            e.g. for the SUSY-QCD MSSM gluino-squark-quark vertices;
           * a vertex with more than two merged-flavor legs (never seen so far).
 
         The Fortran 'madevent'/'standalone' output supports the remaining cases.
-        See docs/mg7_merged_flavor_mssm_design.md for the plan to lift the
-        dependent-coupling limitation.
+        See docs/mg7_merged_flavor_mssm_design.md.
         """
-        dep_names = set(c.name for c in getattr(self, 'coups_flv_dep', []))
         for coupl in params:
-            is_dep = coupl.name in dep_names
             for key in coupl.flavors:
                 nb_merged = len([i for i in key if i != 0])
-                if nb_merged in (1, 2) and not is_dep:
+                if nb_merged in (1, 2):
                     continue
-                if is_dep:
-                    reason = ("references an event-by-event (running-alphas) "
-                              "coupling")
-                else:
-                    reason = ("connects %d merged-flavor legs; only one or two "
-                              "are supported" % nb_merged)
                 raise InvalidCmd(
                     "merged-flavor C++ output (mg7/standalone_mg7) does not yet "
-                    "support this process: flavor coupling %s %s. This occurs "
-                    "e.g. for SUSY-QCD MSSM gluino-squark-quark vertices. Use "
+                    "support this process: flavor coupling %s connects %d "
+                    "merged-flavor legs; only one or two are supported. Use "
                     "'output madevent' or 'output standalone' for this process. "
                     "See docs/mg7_merged_flavor_mssm_design.md for details."
-                    % (coupl.name, reason))
+                    % (coupl.name, nb_merged))
 
     def write_flv_couplings(self, params):
         """Write out the lines of independent parameters"""
