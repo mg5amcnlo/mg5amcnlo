@@ -300,13 +300,13 @@ std::array<Value, 3> t_inv_value_and_min_max(Value pa, Value pb, Value p1, Value
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 
-std::array<Value, 2> t_inv_min_max_cut(Value pa, Value pb, Value m1, Value m2, Value etmin_i, Value etmin_ir) {
-    auto output_vector = instruction("t_inv_min_max_cut", {pa, pb, m1, m2, etmin_i, etmin_ir});
+std::array<Value, 2> t_inv_min_max_cut(Value pa, Value pb, Value m1, Value m2, Value etmin_1, Value etmin_2) {
+    auto output_vector = instruction("t_inv_min_max_cut", {pa, pb, m1, m2, etmin_1, etmin_2});
     return {output_vector[0], output_vector[1]};
 }
 
-std::array<Value, 3> t_inv_value_and_min_max_cut(Value pa, Value pb, Value p1, Value p2, Value etmin_i, Value etmin_ir) {
-    auto output_vector = instruction("t_inv_value_and_min_max_cut", {pa, pb, p1, p2, etmin_i, etmin_ir});
+std::array<Value, 3> t_inv_value_and_min_max_cut(Value pa, Value pb, Value p1, Value p2, Value etmin_1, Value etmin_2) {
+    auto output_vector = instruction("t_inv_value_and_min_max_cut", {pa, pb, p1, p2, etmin_1, etmin_2});
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 

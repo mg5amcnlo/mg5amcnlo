@@ -82,8 +82,8 @@ void add_instructions(py::classh<FunctionBuilder>& fb) {
     fb.def("three_body_decay_inverse", &FunctionBuilder::three_body_decay_inverse, py::arg("p1"), py::arg("p2"), py::arg("p3"));
     fb.def("t_inv_min_max", &FunctionBuilder::t_inv_min_max, py::arg("pa"), py::arg("pb"), py::arg("m1"), py::arg("m2"));
     fb.def("t_inv_value_and_min_max", &FunctionBuilder::t_inv_value_and_min_max, py::arg("pa"), py::arg("pb"), py::arg("p1"), py::arg("p2"));
-    fb.def("t_inv_min_max_cut", &FunctionBuilder::t_inv_min_max_cut, py::arg("pa"), py::arg("pb"), py::arg("m1"), py::arg("m2"), py::arg("etmin_i"), py::arg("etmin_ir"));
-    fb.def("t_inv_value_and_min_max_cut", &FunctionBuilder::t_inv_value_and_min_max_cut, py::arg("pa"), py::arg("pb"), py::arg("p1"), py::arg("p2"), py::arg("etmin_i"), py::arg("etmin_ir"));
+    fb.def("t_inv_min_max_cut", &FunctionBuilder::t_inv_min_max_cut, py::arg("pa"), py::arg("pb"), py::arg("m1"), py::arg("m2"), py::arg("etmin_1"), py::arg("etmin_2"));
+    fb.def("t_inv_value_and_min_max_cut", &FunctionBuilder::t_inv_value_and_min_max_cut, py::arg("pa"), py::arg("pb"), py::arg("p1"), py::arg("p2"), py::arg("etmin_1"), py::arg("etmin_2"));
     fb.def("t1_inv_min_max_doublet", &FunctionBuilder::t1_inv_min_max_doublet, py::arg("pa"), py::arg("pb"), py::arg("m1"), py::arg("mir_min"));
     fb.def("t1_inv_value_and_min_max_doublet", &FunctionBuilder::t1_inv_value_and_min_max_doublet, py::arg("pa"), py::arg("pb"), py::arg("p1"), py::arg("m1"), py::arg("mir_min"));
     fb.def("t2_inv_min_max_doublet", &FunctionBuilder::t2_inv_min_max_doublet, py::arg("pa"), py::arg("pb"), py::arg("m1"), py::arg("mir_min"), py::arg("t1_abs"));

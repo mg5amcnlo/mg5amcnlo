@@ -83,8 +83,8 @@ TwoToTwoParticleScattering::TwoToTwoParticleScattering(
                 {"momentum_in1", batch_four_vec}, {"momentum_in2", batch_four_vec}
             };
             if (has_cut) {
-                cond.push_back("etmin_i", batch_float);
-                cond.push_back("etmin_ir", batch_float);
+                cond.push_back("etmin_1", batch_float);
+                cond.push_back("etmin_2", batch_float);
             }
             return cond;
         }()

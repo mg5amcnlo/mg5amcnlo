@@ -1256,10 +1256,10 @@ t_inv_min_max_cut:
     - name: m2
       type: [float]
       desc:
-    - name: etmin_i
+    - name: etmin_1
       type: [float]
       desc:
-    - name: etmin_ir
+    - name: etmin_2
       type: [float]
       desc:
   outputs:
@@ -1284,10 +1284,10 @@ t_inv_value_and_min_max_cut:
     - name: p2
       type: [float, 4]
       desc:
-    - name: etmin_i
+    - name: etmin_1
       type: [float]
       desc:
-    - name: etmin_ir
+    - name: etmin_2
       type: [float]
       desc:
   outputs:

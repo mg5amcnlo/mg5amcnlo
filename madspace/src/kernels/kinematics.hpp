@@ -489,33 +489,39 @@ KERNELSPEC void kernel_t_inv_value_and_min_max(
 
 // Cut-derived |t| interval from the AmpliCol/gen23 ETmin construction
 // (phase_space_gen23.f03, gen23_one_step, lines 698-727).
+// Convention chosen to match the kernels' m1/m2 mass labels:
+//   particle 1 == recoil system    "ir"  (mass^2 m1_2, ETmin floor etmin_1)
+//   particle 2 == single peeled jet "i"  (mass^2 m2_2, ETmin floor etmin_2)
+// t is measured w.r.t. beam a: t = (pa - p1)^2 = (pb - p2)^2, so the angle->|t|
+// offset carries the recoil mass^2 (m1).
 template <typename T>
 KERNELSPEC Pair<FVal<T>, FVal<T>> t_cut_bounds_etmin(
     FourMom<T> p_tot,
-    FourMom<T> pb,
+    FourMom<T> pa,
     FVal<T> m1_2,
     FVal<T> m2_2,
-    FVal<T> etmin_i,
-    FVal<T> etmin_ir
+    FVal<T> etmin_1,
+    FVal<T> etmin_2
 ) {
     auto pt_tot2 = p_tot[1] * p_tot[1] + p_tot[2] * p_tot[2];
     auto s = lsquare<T>(p_tot);
     auto piir0 = sqrt(max(s, 0.) + pt_tot2);
-    auto pib0 = (p_tot[0] * pb[0] - p_tot[3] * pb[3]) / piir0;
-    // effective recoil ETmin, corrected for the system's own pt (i single)
-    auto et_i2_minus_mi = etmin_i * etmin_i - m1_2;
-    auto d = sqrt(pt_tot2) - sqrt(max(et_i2_minus_mi, 0.));
-    auto et_corr = sqrt(m2_2 + d * d);
-    auto etminir =
-        max(etmin_ir, where(pt_tot2 < et_i2_minus_mi, et_corr, sqrt(max(m2_2, 0.))));
-    auto etmini = max(etmin_i, sqrt(max(m1_2, 0.)));
-    auto base = piir0 * piir0 - etmini * etmini + etminir * etminir;
-    auto root = (piir0 - etmini - etminir) * (piir0 + etmini - etminir) *
-        (piir0 - etmini + etminir) * (piir0 + etmini + etminir);
+    auto ppa0 = (p_tot[0] * pa[0] - p_tot[3] * pa[3]) / piir0;
+    // peeled jet (2): pt floor^2 = etmin_2^2 - m2^2; recoil (1) floor corrected
+    // for the system's own pt.
+    auto pt2_floor = etmin_2 * etmin_2 - m2_2;
+    auto d = sqrt(pt_tot2) - sqrt(max(pt2_floor, 0.));
+    auto et_corr = sqrt(m1_2 + d * d);
+    auto eff_1 = max(etmin_1, where(pt_tot2 < pt2_floor, et_corr, sqrt(max(m1_2, 0.))));
+    auto eff_2 = max(etmin_2, sqrt(max(m2_2, 0.)));
+    auto base = piir0 * piir0 - eff_2 * eff_2 + eff_1 * eff_1;
+    auto root = (piir0 - eff_2 - eff_1) * (piir0 + eff_2 - eff_1) *
+        (piir0 - eff_2 + eff_1) * (piir0 + eff_2 + eff_1);
     auto rootsq = sqrt(max(root, 0.));
-    auto ratio = pib0 / piir0;
-    // signed-t -> |t|: |t|_min uses (base - root), |t|_max uses (base + root)
-    return {ratio * (base - rootsq) - m2_2, ratio * (base + rootsq) - m2_2};
+    auto ratio = ppa0 / piir0;
+    // signed-t -> |t|: min uses (base - root), max uses (base + root); the
+    // angle->|t| offset carries the recoil mass^2 (m1).
+    return {ratio * (base - rootsq) - m1_2, ratio * (base + rootsq) - m1_2};
 }
 
 // Clamp the kinematic |t| range against the ETmin cut interval. Both kernels
@@ -529,8 +535,8 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     FIn<T, 1> pb,
     FIn<T, 0> m1,
     FIn<T, 0> m2,
-    FIn<T, 0> etmin_i,
-    FIn<T, 0> etmin_ir,
+    FIn<T, 0> etmin_1,
+    FIn<T, 0> etmin_2,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
 ) {
@@ -547,8 +553,9 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
+    // particle 1 = recoil (m1, etmin_1), particle 2 = peeled (m2, etmin_2)
     auto cut =
-        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m2_2, m1_2, etmin_i, etmin_ir);
+        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m1_2, m2_2, etmin_1, etmin_2);
     auto tmn_c = max(tmn, cut.first);
     auto tmx_c = min(tmx, cut.second);
     auto ok = tmx_c > tmn_c;
@@ -562,8 +569,8 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     FIn<T, 1> pb,
     FIn<T, 1> p1,
     FIn<T, 1> p2,
-    FIn<T, 0> etmin_i,
-    FIn<T, 0> etmin_ir,
+    FIn<T, 0> etmin_1,
+    FIn<T, 0> etmin_2,
     FOut<T, 0> t_abs,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
@@ -583,8 +590,9 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     auto tmn = t_min_max.first;
     auto tmx = t_min_max.second;
 
+    // particle 1 = recoil (m1, etmin_1), particle 2 = peeled (m2, etmin_2)
     auto cut =
-        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m2_2, m1_2, etmin_i, etmin_ir);
+        t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m1_2, m2_2, etmin_1, etmin_2);
     auto tmn_c = max(tmn, cut.first);
     auto tmx_c = min(tmx, cut.second);
     auto ok = tmx_c > tmn_c;

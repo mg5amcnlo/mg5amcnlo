@@ -140,10 +140,10 @@ Mapping::Result TPropagatorMapping::build_forward_impl(
         auto mass = m_out.at(sampled_index);
         ValueVec cond{side ? p1_rest : p2_rest, side ? p2_rest : p1_rest};
         if (_has_cut) {
-            Value etmin_i = etmin_particle(sampled_index);
-            running_etmin = fb.add(running_etmin, etmin_i);
-            cond.push_back(etmin_i);
-            cond.push_back(fb.sub(total_etmin, running_etmin));
+            Value etmin_peeled = etmin_particle(sampled_index);
+            running_etmin = fb.add(running_etmin, etmin_peeled);
+            cond.push_back(fb.sub(total_etmin, running_etmin)); // etmin_1 (recoil)
+            cond.push_back(etmin_peeled);                       // etmin_2 (peeled)
         }
         auto ks = scattering.build_forward(
             fb, {next_random(), next_random(), mass_sum, mass}, cond
@@ -216,8 +216,7 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         }
     }
 
-    // ETmin per particle (see forward); etmin_ir is the recoil sum. Only built
-    // when cuts are active.
+    // ETmin per particle (see forward); Only built when cuts are active.
     auto etmin_particle = [&](std::size_t j) {
         return fb.sqrt(fb.add(fb.square(m_out.at(j)), Value(pt2(j))));
     };
@@ -242,10 +241,10 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         k_rest = fb.sub(k_rest, k);
         ValueVec cond{side ? p1_rest : p2_rest, side ? p2_rest : p1_rest};
         if (_has_cut) {
-            Value etmin_i = etmin_particle(sampled_index);
-            running_etmin = fb.add(running_etmin, etmin_i);
-            cond.push_back(etmin_i);
-            cond.push_back(fb.sub(total_etmin, running_etmin));
+            Value etmin_peeled = etmin_particle(sampled_index);
+            running_etmin = fb.add(running_etmin, etmin_peeled);
+            cond.push_back(fb.sub(total_etmin, running_etmin)); // etmin_1 (recoil)
+            cond.push_back(etmin_peeled);                       // etmin_2 (peeled)
         }
         auto rs = scattering.build_inverse(fb, {k_rest, k}, cond);
         random_out.push_back(rs.at(0));

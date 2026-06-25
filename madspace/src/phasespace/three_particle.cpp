@@ -113,8 +113,8 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
                 {"momentum3", batch_four_vec}
             };
             if (has_cut) {
-                cond.push_back("etmin_i", batch_float);
-                cond.push_back("etmin_ir", batch_float);
+                cond.push_back("etmin_1", batch_float);
+                cond.push_back("etmin_2", batch_float);
                 cond.push_back("s23_min_cut", batch_float);
             }
             return cond;
