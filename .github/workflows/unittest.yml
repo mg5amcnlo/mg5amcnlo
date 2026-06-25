@@ -644,6 +644,7 @@ jobs:
     # color algebra, base/diagram object merging, miscellaneous I/O and drawing
     # Includes test_fks_ppzz_in_RS using the restored RS UFO model cache.
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
@@ -659,6 +660,7 @@ jobs:
   unittest_30:
     # Uncovered unit tests in tests/unit_tests/various/test_lhe_parser.py
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
@@ -672,6 +674,7 @@ jobs:
   unittest_31:
     # Uncovered unit tests in tests/unit_tests/various/test_process_checks.py
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
@@ -685,6 +688,7 @@ jobs:
   unittest_32:
     # Uncovered unit tests in tests/unit_tests/various/test_import_ufo.py
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
@@ -698,6 +702,7 @@ jobs:
   unittest_33:
     # Uncovered unit tests in tests/unit_tests/fks/test_ewsudakov.py
     runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5

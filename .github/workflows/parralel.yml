@@ -554,6 +554,7 @@ jobs:
       - name: test test_short_generate_events_nlo_hw6_stdhep
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_nlo_hw6_stdhep -pP -t0 -l INFO
 
 
@@ -570,6 +571,7 @@ jobs:
       - name: test test_short_generate_events_nlo_hw6_split
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_nlo_hw6_split -pP -t0 -l INFO
 
 
@@ -586,6 +588,7 @@ jobs:
       - name: test test_short_generate_events_nlo_py6_stdhep
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_nlo_py6_stdhep -pP -t0 -l INFO
 
 
@@ -602,6 +605,7 @@ jobs:
       - name: test test_short_generate_events_nlo_py6pt_stdhep
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_nlo_py6pt_stdhep -pP -t0 -l INFO
 
 
@@ -618,6 +622,7 @@ jobs:
       - name: test test_short_check_generate_events_nlo_py6pt_fsr
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_check_generate_events_nlo_py6pt_fsr -pP -t0 -l INFO
 
 
@@ -635,6 +640,7 @@ jobs:
       - name: test test_short_generate_events_shower_scripts
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_shower_scripts -pP -t0 -l INFO
 
 
@@ -651,6 +657,7 @@ jobs:
       - name: test test_short_generate_events_name
         run: |
             cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
             ./tests/test_manager.py test_short_generate_events_name -pP -t0 -l INFO
             
 

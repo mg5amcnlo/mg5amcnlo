@@ -30,13 +30,6 @@ if sys.version_info < (3, 7):
 if sys.version_info[1] < 10:
     logging.warning("\033[91mSupport for Python3.9 (and below) has been dropped since end of 2025. Please consider update your version of Python. Continue at your own risk \033[0m")
 
-    
-try:
-    import six
-except ImportError:
-    message = 'madgraph requires the six module. The easiest way to install it is to run "python -m pip install six --user"\n'
-    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
-    sys.exit(message)
 
 import os
 import optparse

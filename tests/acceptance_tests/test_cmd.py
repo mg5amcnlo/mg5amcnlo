@@ -2440,7 +2440,7 @@ class TestCmdShell2(unittest.TestCase,
         ############################################################################
         
         text = f"""generate g g > t t~
-output {self.out_dir}_density0
+output madevent {self.out_dir}_density0
 launch
 reweight=density
 set run_card nevents 50000
@@ -2450,18 +2450,15 @@ set boost_choice [6, -6]
 """
 
         #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
-        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card = open(pjoin(self.tmpdir, 'mg5_cmd.txt'),'w')
         command_card.write(text)
         command_card.close()
 
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         pjoin(self.out_dir+'_density0', '..', 'mg5_cmd.txt')])
 
-
-        
-
-        lhe_path = pjoin(self.out_dir + '_density0/Events/run_01/unweighted_events.lhe.gz')
-        rho_mean_path = pjoin(self.out_dir + '_density0/Events/run_01/Average_density_matrix_unweighted_events.txt')
+        lhe_path = pjoin(self.out_dir+'_density0','Events','run_01','unweighted_events.lhe.gz')
+        rho_mean_path = pjoin(self.out_dir+ '_density0','Events','run_01','Average_density_matrix_unweighted_events.txt')
         
         self.assertTrue(os.path.isfile(lhe_path), f"File not found {lhe_path}")
         self.assertTrue(os.path.isfile(rho_mean_path), f"File not found {rho_mean_path}")
@@ -2504,20 +2501,20 @@ set boost_choice [6, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate g g > t t~
-output {self.out_dir}_density1
+output madevent {self.out_dir}_density1
 launch
 set run_card nevents 1
 set use_syst False
 """
 
         #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
-        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card = open(pjoin(self.tmpdir, 'mg5_cmd.txt'),'w')
         command_card.write(text)
         command_card.close()
 
         logfile = 'test_density_mode_ttbar1.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+                         pjoin(self.tmpdir, 'mg5_cmd.txt')], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -2580,7 +2577,7 @@ set boost_choice [6, -6]
         ############################################################################
         import madgraph.various.Density_functions as dens
         text = f"""generate u u~ > w+ w-
-output {self.out_dir}_density2
+output madevent {self.out_dir}_density2
 launch
 set run_card nevents 1
 set use_syst False
@@ -2681,7 +2678,7 @@ set axis_referential [-1, -2]
         ############################################################################
         import madgraph.various.Density_functions as dens
         text = f"""generate g g > t t~, t > b w+
-output {self.out_dir}_density3
+output madevent {self.out_dir}_density3
 launch
 set run_card nevents 1
 set run_card use_syst False
@@ -2775,7 +2772,7 @@ set boost_choice [5, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate g g > t t~, t > b w+
-output {self.out_dir}_density4
+output madevent {self.out_dir}_density4
 launch
 reweight=density
 set run_card nevents 1
@@ -2858,7 +2855,7 @@ set boost_choice [24, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate p p > t t t~ t~
-output {self.out_dir}_density5
+output madevent {self.out_dir}_density5
 launch
 set run_card nevents 1
 set run_card use_syst False

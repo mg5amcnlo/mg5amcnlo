@@ -463,9 +463,20 @@ class IOTestManager(unittest.TestCase):
         
         if not file_name.startswith('%'):
             return file_name
-        
+
         return pjoin(file_name[1:].split('%'))
-    
+
+    @staticmethod
+    def normalize_diff(diff_output):
+        """ Build a fingerprint of a 'diff' output that is independent of where
+        the change occurs (line numbers) and of which file it concerns, so that
+        the same logical modification appearing in several files can be matched.
+        Only the changed content lines ('<', '>' and the '---' separator) are
+        kept; the hunk headers (e.g. '5c5', '10,12d9') are dropped."""
+        kept = [line for line in diff_output.split('\n')
+                if line[:1] in ('<', '>', '-')]
+        return '\n'.join(kept)
+
 #    def test_IOTests(self):
 #        """ A test function in the mother so that all childs automatically run
 #        their tests when scanned with the test_manager. """
@@ -543,7 +554,14 @@ class IOTestManager(unittest.TestCase):
         # The key of the dictionary are the filenames and the value are string
         # determining the user answer for that file.
         reviewed_file_names = {}
-        
+
+        # Cache the decision taken for a given diff (fingerprinted by its
+        # content only, see normalize_diff) so that an identical diff appearing
+        # in another file during this same session reuses the same answer
+        # automatically. This cache is intentionally session-local and never
+        # persisted to disk.
+        accepted_diffs = {}
+
         # Chose what test to cover
         if testKeys == 'instanceList':
             testKeys = self.instance_tests
@@ -785,38 +803,48 @@ class IOTestManager(unittest.TestCase):
                             file.close()
                             if force==0 or ((force==1 or force==2) and path.basename(\
                             comparison_path) not in list(reviewed_file_names.keys())):
-                                text = \
-"""File %s in test %s/%s differs by the following (reference file first):
-"""%(fname,folder_name,test_name)
-                                text += misc.Popen(['diff',str(comparison_path),
+                                diff_output = misc.Popen(['diff',str(comparison_path),
                                   str(tmp_path)],stdout=subprocess.PIPE).\
                                                                 communicate()[0].decode('utf-8')
-                                # Remove the last newline
-                                if text[-1]=='\n':
-                                    text=text[:-1]
-                                if (len(text.split('\n'))<15) or force==2:
-                                    print(text)
+                                diff_key = self.normalize_diff(diff_output)
+                                if diff_key in accepted_diffs:
+                                    # An identical diff was already reviewed in
+                                    # this session: reuse that decision silently.
+                                    answer = accepted_diffs[diff_key]
+                                    if verbose: print("    > [ %s ] %s "%\
+                                       (colored%(34,"AUTO"),fname)+\
+                                       "(identical diff already answered '%s')"%answer)
                                 else:
-                                    pydoc.pager(text)
-                                    print("Difference displayed in editor.")
-                                answer = ''
-                                if force == 2:
-                                    answer = 'y'
-                                while answer not in ['y', 'n']:
-                                    answer = Cmd.timed_input(question=
+                                    text = \
+"""File %s in test %s/%s differs by the following (reference file first):
+"""%(fname,folder_name,test_name)
+                                    text += diff_output
+                                    # Remove the last newline
+                                    if text[-1]=='\n':
+                                        text=text[:-1]
+                                    if (len(text.split('\n'))<15) or force==2:
+                                        print(text)
+                                    else:
+                                        pydoc.pager(text)
+                                        print("Difference displayed in editor.")
+                                    answer = ''
+                                    if force == 2:
+                                        answer = 'y'
+                                    while answer not in ['y', 'n']:
+                                        answer = Cmd.timed_input(question=
 """Ref. file %s differs from the new one (see diff. before), update it? [y/n/h/r] >"""%fname
                                                                    ,default="y")
-                                    if answer not in ['y','n']:
-                                        if answer == 'r':
-                                            pydoc.pager(text)
-                                        else:
-                                            print("reference path: %s" % comparison_path)
-                                            print("code returns: %s" % tmp_path)
-                                
-                                
+                                        if answer not in ['y','n']:
+                                            if answer == 'r':
+                                                pydoc.pager(text)
+                                            else:
+                                                print("reference path: %s" % comparison_path)
+                                                print("code returns: %s" % tmp_path)
+                                    accepted_diffs[diff_key] = answer
+
                                 os.remove(tmp_path)
                                 reviewed_file_names[path.basename(\
-                                                      comparison_path)] = answer        
+                                                      comparison_path)] = answer
                             elif ((force==1 or force==2) and path.basename(\
                                 comparison_path) in list(reviewed_file_names.keys())):
                                 answer = reviewed_file_names[path.basename(\

@@ -586,16 +586,20 @@ class TestFlavorCheck(unittest.TestCase):
                                     "rel=%g" % (label, me_f, me_cpp, rel))
 
             # MG7 SA must also match Fortran per flavor when it ran.
+            # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
             vm = entry.get('value_mg7')
             if vf is not None and vm is not None:
                 me_f   = vf['m2']
-                me_mg7 = vm['m2']
-                ref = abs(me_f) if me_f != 0 else abs(me_mg7)
-                if ref > 0:
-                    rel = abs(me_f - me_mg7) / ref
-                    self.assertLess(rel, 1e-4,
-                                    "Fortran/MG7 disagree for %s: F=%g MG7=%g "
-                                    "rel=%g" % (label, me_f, me_mg7, rel))
+                for backend, me_mg7 in vm['m2'].items():
+                    if me_mg7 is None:
+                        continue
+                    ref = abs(me_f) if me_f != 0 else abs(me_mg7)
+                    if ref > 0:
+                        rel = abs(me_f - me_mg7) / ref
+                        self.assertLess(rel, 1e-4,
+                                        "Fortran/MG7 disagree for %s (%s): "
+                                        "F=%g MG7=%g rel=%g"
+                                        % (label, backend, me_f, me_mg7, rel))
 
     def test_output_flavor_summary(self):
         """output_flavor returns a string with summary line."""
@@ -986,18 +990,23 @@ class TestMultiLanguageComparison(unittest.TestCase):
 
         me_f   = entry['value_fortran']['m2'] if entry['value_fortran'] else None
         me_cpp = entry['value_cpp']['m2']      if entry['value_cpp']     else None
-        me_mg7 = entry['value_mg7']['m2']      if entry['value_mg7']     else None
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2']    if entry['value_mg7']     else {}
         me_py  = entry['value_python']['m2']   if entry['value_python']  else None
 
         # Every pair of available backends must agree within 1e-4 relative.
-        for a, b, na, nb in (
+        pairs = [
             (me_f,   me_cpp, 'Fortran', 'C++'),
-            (me_f,   me_mg7, 'Fortran', 'MG7'),
             (me_f,   me_py,  'Fortran', 'Python'),
-            (me_cpp, me_mg7, 'C++',     'MG7'),
             (me_cpp, me_py,  'C++',     'Python'),
-            (me_mg7, me_py,  'MG7',     'Python'),
-        ):
+        ]
+        for backend, me_mg7 in mg7_vals.items():
+            pairs.extend([
+                (me_f,   me_mg7, 'Fortran', backend),
+                (me_cpp, me_mg7, 'C++',     backend),
+                (me_mg7, me_py,  backend,   'Python'),
+            ])
+        for a, b, na, nb in pairs:
             if a is None or b is None:
                 continue
             ref = abs(a) if a != 0 else abs(b)
@@ -1059,7 +1068,8 @@ class TestMultiLanguageComparison(unittest.TestCase):
 
         me_f   = entry['value_fortran']['m2']
         me_cpp = entry['value_cpp']['m2']
-        me_mg7 = entry['value_mg7']['m2'] if entry['value_mg7'] else None
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2'] if entry['value_mg7'] else {}
         me_py  = entry['value_python']['m2'] if entry['value_python'] else None
 
         self.assertGreater(abs(me_cpp), 0., 'C++ ME is zero – unexpected')
@@ -1070,12 +1080,14 @@ class TestMultiLanguageComparison(unittest.TestCase):
                         % (me_f, me_cpp, rel_diff))
 
         # MG7 SA must agree with Fortran when the madmatrix backend ran.
-        if me_mg7 is not None:
+        for backend, me_mg7 in mg7_vals.items():
+            if me_mg7 is None:
+                continue
             rel_mg7_f = abs(me_f - me_mg7) / abs(me_f)
             self.assertLess(rel_mg7_f, 1e-4,
-                            'MG7 and Fortran SA disagree for g g > t t~: '
+                            'MG7 and Fortran SA disagree for g g > t t~ (%s): '
                             'MG7=%g  F=%g  rel_diff=%g'
-                            % (me_mg7, me_f, rel_mg7_f))
+                            % (backend, me_mg7, me_f, rel_mg7_f))
 
         # Python must also agree if it ran successfully.
         self.assertIsNotNone(me_py, 'Python evaluation failed for g g > t t~')

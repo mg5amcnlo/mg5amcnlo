@@ -4378,7 +4378,7 @@ def check_language(process_definition, param_card=None, options=None,
         out_mg7_text = None
         if has_mg7:
             if sa_key not in sa_mg7_output_cache:
-                sa_mg7_output_cache[sa_key] = None
+                sa_mg7_output_cache[sa_key] = {}
                 parent_mg7 = tempfile.mkdtemp(prefix='mg5_langcheck_mg7_')
                 sa_dir_mg7 = pjoin(parent_mg7, 'sa_mg7')
                 try:
@@ -4404,19 +4404,21 @@ def check_language(process_definition, param_card=None, options=None,
                     if p_dirs_mg7:
                         check_dir_mg7 = pjoin(sa_dir_mg7, 'SubProcesses',
                                               p_dirs_mg7[0])
-                        with open(os.devnull, 'w') as devnull:
-                            ret = subprocess.call(['make'], cwd=check_dir_mg7,
-                                                  stdout=devnull,
-                                                  stderr=devnull)
-                        if ret == 0:
-                            try:
-                                out_mg7 = subprocess.check_output(
-                                    ['./check_sa.exe', 'matrix', energy_str],
-                                    cwd=check_dir_mg7,
-                                    stderr=subprocess.STDOUT).decode()
-                                sa_mg7_output_cache[sa_key] = out_mg7
-                            except Exception:
-                                pass
+                        backends = ["cppnone", "cppsse4", "cppavx2", "cpp512z", "cuda", "hip"]
+                        for backend in backends:
+                            with open(os.devnull, 'w') as devnull:
+                                ret = subprocess.call(f'make clean && make BACKEND={backend} USEBUILDDIR=1', shell=True, cwd=check_dir_mg7,
+                                                      stdout=devnull,
+                                                      stderr=devnull)
+                            if ret == 0:
+                                try:
+                                    out_mg7 = subprocess.check_output(
+                                        ['./check_sa.exe', 'matrix', energy_str],
+                                        cwd=check_dir_mg7,
+                                        stderr=subprocess.STDOUT).decode()
+                                    sa_mg7_output_cache[sa_key][backend] = out_mg7
+                                except Exception:
+                                    pass
                 except Exception as err:
                     logger.info("Language check: MG7 SA failed for %s: %s"
                                 % (proc.nice_string(), err))
@@ -4432,7 +4434,7 @@ def check_language(process_definition, param_card=None, options=None,
         from collections import OrderedDict as _OD
         flavors_f   = _parse_all_flavors_dict(out_f_text)   if out_f_text   else _OD()
         flavors_cpp = _parse_all_flavors_dict(out_cpp_text) if out_cpp_text else _OD()
-        flavors_mg7 = _parse_all_flavors_dict(out_mg7_text) if out_mg7_text else _OD()
+        flavors_mg7 = { b: _parse_all_flavors_dict(mg7_text) if mg7_text else _OD() for b, mg7_text in out_mg7_text.items() }
 
         # Build the Python phase-space point using the same RAMBO RNG seed as
         # check_sa (Fortran/C++), so all backends compare on the same point.
@@ -4449,9 +4451,12 @@ def check_language(process_definition, param_card=None, options=None,
 
         # Union of PDG keys in order: Fortran first, then any keys seen only
         # by the C++ or MG7 backends.
+        mg7_keys = []
+        for _, flavors in flavors_mg7.items():
+            mg7_keys.extend(list(flavors.keys()))
         all_keys = list(dict.fromkeys(
-            list(flavors_f.keys()) + list(flavors_cpp.keys()) +
-            list(flavors_mg7.keys())))
+            list(flavors_f.keys()) + list(flavors_cpp.keys()) + mg7_keys
+        ))
 
         # ── Python evaluation per PDG tuple ───────────────────────────────────
         # Run the Python back-end with the same phase-space point as Fortran/
@@ -4513,12 +4518,13 @@ def check_language(process_definition, param_card=None, options=None,
         if not all_keys:
             # Neither backend ran → one placeholder entry so the process still
             # appears in the output table.
+            mg7_results = { f"value_mg7_{b}": None for b in flavors_mg7.keys() }
             results.append({
                 'process':        proc,
                 'process_label':  proc.base_string(),
                 'value_fortran':  None,
                 'value_cpp':      None,
-                'value_mg7':      None,
+                **mg7_results,
                 'value_python':   None,
                 'momenta':        sa_momenta,
             })
@@ -4526,7 +4532,7 @@ def check_language(process_definition, param_card=None, options=None,
             for key in all_keys:
                 me_f_val   = flavors_f.get(key)
                 me_cpp_val = flavors_cpp.get(key)
-                me_mg7_val = flavors_mg7.get(key)
+                me_mg7_val = { f"value_mg7_{b}": flv.get(key) for b, flv in flavors_mg7.items() }
                 me_py_val  = py_values.get(key)
 
                 if key is None:
@@ -4539,6 +4545,7 @@ def check_language(process_definition, param_card=None, options=None,
                     'process_label':  label,
                     'value_fortran':  {'m2': me_f_val}   if me_f_val   is not None else None,
                     'value_cpp':      {'m2': me_cpp_val} if me_cpp_val is not None else None,
+                    **{ k: {'m2': val} if val is not None else None for k, val in me_mg7_val.items() },
                     'value_mg7':      {'m2': me_mg7_val} if me_mg7_val is not None else None,
                     'value_python':   {'m2': me_py_val}  if me_py_val  is not None else None,
                     'momenta':        sa_momenta,
@@ -4577,10 +4584,15 @@ def output_language(comparison_results, output='text'):
     no_check_list = []
     failed_list = []
 
+    # in case something broke within MG7, we just write a single N/A column
+    try:
+        mg7_columns = [fixed_string_length(f"MG7 SA ({k.rsplit('_',1)[-1]})", col_size) for k in comparison_results[0]["value_mg7"]["m2"].keys()]
+    except KeyError:
+        mg7_columns = [fixed_string_length("MG7 SA", col_size)]
     res_str = (fixed_string_length(process_header, proc_col_size) +
                fixed_string_length("Fortran SA", col_size) +
                fixed_string_length("C++ SA", col_size) +
-               fixed_string_length("MG7 SA", col_size) +
+               "".join(mg7_columns) + 
                fixed_string_length("Python", col_size) +
                fixed_string_length("max rel.diff.", col_size) +
                "Result")
@@ -4612,24 +4624,34 @@ def output_language(comparison_results, output='text'):
         me_py  = val_py['m2']  if val_py  is not None else None
 
         # Pairwise relative differences across the available backends.
+        # for MG7 separate results from various backends, if something broke
+        # we display a single None
+        mg7_fortran_diffs = [ _reldiff(me_f, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
+        mg7_cpp_diffs = [ _reldiff(me_cpp, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
+        mg7_python_diffs = [ _reldiff(me_py, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
         diffs = [d for d in (
             _reldiff(me_f, me_cpp),
-            _reldiff(me_f, me_mg7),
+            *mg7_fortran_diffs,
             _reldiff(me_f, me_py),
-            _reldiff(me_cpp, me_mg7),
+            *mg7_cpp_diffs,
             _reldiff(me_cpp, me_py),
-            _reldiff(me_mg7, me_py),
+            *mg7_python_diffs,
         ) if d is not None]
         max_diff = max(diffs) if diffs else None
 
+        mg7_strings = [
+            fixed_string_length(_fmt(me_mg7_backend), col_size)
+            for me_mg7_backend in me_mg7.values()
+        ] if me_mg7 is not None else [fixed_string_length(_fmt(None), col_size)]
         row = ('\n' + fixed_string_length(proc, proc_col_size) +
                fixed_string_length(_fmt(me_f),   col_size) +
                fixed_string_length(_fmt(me_cpp), col_size) +
-               fixed_string_length(_fmt(me_mg7), col_size) +
+               "".join(mg7_strings) +
                fixed_string_length(_fmt(me_py),  col_size) +
                fixed_string_length(_fmt_diff(max_diff), col_size))
 
-        n_available = sum(v is not None for v in (me_f, me_cpp, me_mg7, me_py))
+        mg7_available = me_mg7.values() if me_mg7 is not None else [None]
+        n_available = sum(v is not None for v in (me_f, me_cpp, *mg7_available, me_py))
 
         if n_available == 0:
             no_check_proc += 1

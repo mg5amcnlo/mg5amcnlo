@@ -885,16 +885,14 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_density_mode_user_interface
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             ./tests/test_manager.py test_density_mode_user_interface -pA -t0 -l INFO
 
 
@@ -913,7 +911,7 @@ jobs:
       - name: test one of the test test_density_mode_ttbar
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_density_mode_ttbar -pA -t0 -l INFO
+            ./tests/test_manager.py test_density_mode_ttbar -pA -t0 -l DEBUG
 
   acceptancetest_density_wpwm:
     # The type of runner that the job will run on

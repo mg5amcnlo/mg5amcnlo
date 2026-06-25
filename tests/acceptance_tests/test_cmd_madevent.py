@@ -2697,8 +2697,25 @@ set draw_rivet_plots True
         cmd.run_cmd('launch -f')
         data = self.load_result('run_01')
         self.assertNotEqual(data[0]['cross'], 0)
-        
-        
+
+    def test_loop_induced_ggh(self):
+        """Test loop-induced gg > h cross-section via g g > h QCD=0 [QCD]"""
+
+        cmd = MGCmd.MasterCmd()
+        cmd.no_notification()
+        cmd.run_cmd('set automatic_html_opening False --no_save')
+        cmd.run_cmd('generate g g > h QCD=0 [QCD]')
+        cmd.run_cmd('output madevent %s -f' % self.run_dir)
+        #modify the run_cardself
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        run_card['nevents'] = 100
+        run_card['use_syst'] = 'F'
+        run_card.write('%s/Cards/run_card.dat'% self.run_dir,
+                                    '%s/Cards/run_card_default.dat'% self.run_dir)
+
+        cmd.run_cmd('launch -f')
+        self.check_parton_output(cross=15.72, error=0.01514)
+
 
 #===============================================================================
 # TestCmd
