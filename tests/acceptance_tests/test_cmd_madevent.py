@@ -1805,7 +1805,7 @@ set draw_rivet_plots True
         set use_syst False
         set event_norm average
         set nevents %d
-        set HEPMCoutput:file hepmc
+        set HEPMCoutput:file hepmc.gz
         """ % (self.run_dir, nevents)
         open(pjoin(self.path, 'mg5_cmd'), 'w').write(cmd)
 

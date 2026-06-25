@@ -1837,6 +1837,7 @@ jobs:
   acceptancetest_104:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1911,6 +1912,7 @@ jobs:
   acceptancetest_delphes_parallel:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
