@@ -95,6 +95,9 @@ def main() -> None:
     config.cpu_batch_size = args.cpu_batch_size
     config.gpu_batch_size = args.gpu_batch_size
     config.verbosity = args.verbosity
+    config.combine_thread_count = run_args["combine_thread_pool_size"]
+    config.cut_efficiency_threshold = gen_args["cut_efficiency_threshold"]
+    config.max_cut_repetitions = gen_args["max_cut_repetitions"]
 
     # set up contexts
     global_dir = os.path.join("data", "globals")

@@ -360,7 +360,7 @@ PartonDensity::PartonDensity(
     FunctionGenerator(
         "PartonDensity",
         [&] {
-            NamedVector<Type> arg_types{{"x", batch_float}, {"q2", batch_float}};
+            NamedVector<Type> arg_types{{"x", batch_float}, {"q", batch_float}};
             if (dynamic_pid) {
                 arg_types.push_back("flavor_index", batch_int);
             }
@@ -388,7 +388,7 @@ NamedVector<Value> PartonDensity::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
 ) const {
     auto x = args.at(0);
-    auto q2 = args.at(1);
+    auto q = args.at(1);
     auto grid_logx = fb.global(
         prefixed_name(_prefix, "pdf_logx"),
         DataType::dt_float,
@@ -408,14 +408,12 @@ NamedVector<Value> PartonDensity::build_function_impl(
         // TODO: stack/unstack always copy. add instructions to avoid that
         auto indices = fb.unsqueeze(fb.gather_int(args.at(2), _pid_indices));
         auto pdf =
-            fb.interpolate_pdf(x, q2, indices, grid_logx, grid_logq2, grid_coeffs);
+            fb.interpolate_pdf(x, q, indices, grid_logx, grid_logq2, grid_coeffs);
         return {{"pdf", fb.squeeze(pdf)}};
     } else {
         return {
             {"pdf",
-             fb.interpolate_pdf(
-                 x, q2, _pid_indices, grid_logx, grid_logq2, grid_coeffs
-             )}
+             fb.interpolate_pdf(x, q, _pid_indices, grid_logx, grid_logq2, grid_coeffs)}
         };
     }
 }
@@ -574,7 +572,7 @@ void AlphaSGrid::initialize_globals(
 
 RunningCoupling::RunningCoupling(const AlphaSGrid& grid, const std::string& prefix) :
     FunctionGenerator(
-        "RunningCoupling", {{"q2", batch_float}}, {{"alpha_s", batch_float}}
+        "RunningCoupling", {{"q", batch_float}}, {{"alpha_s", batch_float}}
     ),
     _prefix(prefix),
     _logq2_shape(grid.logq2_shape()),
@@ -583,7 +581,7 @@ RunningCoupling::RunningCoupling(const AlphaSGrid& grid, const std::string& pref
 NamedVector<Value> RunningCoupling::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
 ) const {
-    auto q2 = args.at(0);
+    auto q = args.at(0);
     auto grid_logq2 = fb.global(
         prefixed_name(_prefix, "alpha_s_logq2"),
         DataType::dt_float,
@@ -594,5 +592,5 @@ NamedVector<Value> RunningCoupling::build_function_impl(
         DataType::dt_float,
         {_coeffs_shape.begin(), _coeffs_shape.end()}
     );
-    return {{"alpha_s", fb.interpolate_alpha_s(q2, grid_logq2, grid_coeffs)}};
+    return {{"alpha_s", fb.interpolate_alpha_s(q, grid_logq2, grid_coeffs)}};
 }

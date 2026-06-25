@@ -20,20 +20,6 @@ public:
     using AdaptiveMapping = std::variant<std::monostate, VegasMapping, Flow>;
     using AdaptiveDiscrete =
         std::variant<std::monostate, DiscreteSampler, DiscreteFlow>;
-    inline static const int sample = 1;
-    inline static const int unweight = 2;
-    inline static const int return_momenta = 4;
-    inline static const int return_x1_x2 = 8;
-    inline static const int return_indices = 16;
-    inline static const int return_random = 32;
-    inline static const int return_latent = 64;
-    inline static const int return_channel = 128;
-    inline static const int return_chan_weights = 256;
-    inline static const int return_cwnet_input = 512;
-    inline static const int return_discrete = 1024;
-    inline static const int return_discrete_latent = 2048;
-    inline static const int exclude_adaptive_and_chan_weight = 4096;
-    inline static const int drop_cuts_and_rescale = 8192;
 
     inline static const std::vector<MatrixElement::MatrixElementInput>
         matrix_element_inputs = {
@@ -60,20 +46,23 @@ public:
         const AdaptiveDiscrete& discrete_before = std::monostate{},
         const AdaptiveDiscrete& discrete_after = std::monostate{},
         const std::optional<PdfGrid>& pdf_grid = std::nullopt,
+        const std::optional<RunningCoupling>& running_coupling = std::nullopt,
         const std::optional<EnergyScale>& energy_scale = std::nullopt,
         const std::optional<PropagatorChannelWeights>& prop_chan_weights = std::nullopt,
         const std::optional<SubchannelWeights>& subchan_weights = std::nullopt,
         const std::optional<ChannelWeightNetwork>& chan_weight_net = std::nullopt,
         const std::vector<me_int_t>& chan_weight_remap = {},
         std::size_t remapped_chan_count = 0,
-        int flags = 0,
+        bool madnis_training = false,
+        bool drop_cuts_and_rescale = false,
+        bool partial_weights = false,
         const std::vector<std::size_t>& channel_indices = {},
         const std::vector<std::size_t>& active_flavors = {},
         const std::vector<std::size_t>& flavor_remap = {},
         const std::vector<double>& flavor_factors = {}
     );
     std::size_t particle_count() const { return _mapping.particle_count(); }
-    int flags() const { return _flags; }
+    bool madnis_training() const { return _madnis_training; }
     std::optional<std::string> vegas_grid_name() const {
         if (auto vegas = std::get_if<VegasMapping>(&_adaptive_map)) {
             return vegas->grid_name();
@@ -113,48 +102,14 @@ public:
     const std::vector<std::size_t>& active_flavors() const { return _active_flavors; }
 
 private:
-    struct ChannelArgs {
-        Value r, batch_size;
-        bool has_permutations, has_multi_flavor, has_mirror, has_pdf_prior;
-        Value max_weight;
-    };
-    struct ChannelResult {
-        std::array<Value, 23> values;
-
-        Value& r() { return values[0]; }
-        Value& latent() { return values[1]; }
-        Value& momenta() { return values[2]; }
-        Value& momenta_mirror() { return values[3]; }
-        Value& momenta_acc() { return values[4]; }
-        Value& x(std::size_t pdf_index) { return values[5 + pdf_index]; }
-        Value& x_acc(std::size_t pdf_index) { return values[7 + pdf_index]; }
-        Value& pdf_prior() { return values[9]; }
-        Value& chan_index() { return values[10]; }
-        Value& chan_index_in_group() { return values[11]; }
-        Value& flavor_id() { return values[12]; }
-        Value& mirror_id() { return values[13]; }
-        Value& indices_acc() { return values[14]; }
-        Value& weight_before_cuts() { return values[15]; }
-        Value& weight_after_cuts() { return values[16]; }
-        Value& extra_weight_before_cuts() { return values[17]; }
-        Value& extra_weight_after_cuts() { return values[18]; }
-        Value& adaptive_prob() { return values[19]; }
-        Value& pdf_cache(std::size_t pdf_index) { return values[20 + pdf_index]; }
-        Value& scale_cache() { return values[22]; }
-    };
-
     NamedVector<Value> build_function_impl(
         FunctionBuilder& fb, const NamedVector<Value>& args
     ) const override;
-    ChannelResult
-    build_channel_part(FunctionBuilder& fb, const ChannelArgs& args) const;
-    Value scatter_or_drop(
-        FunctionBuilder& fb, ChannelResult& result, Value default_value, Value value
-    ) const;
-    Value optional_cut(FunctionBuilder& fb, ChannelResult& result, Value value) const;
-    NamedVector<Value> build_common_part(
-        FunctionBuilder& fb, const ChannelArgs& args, ChannelResult& result
-    ) const;
+    NamedVector<Type> compute_channel_part_ret_types() const;
+    NamedVector<Value>
+    build_channel_part(FunctionBuilder& fb, const NamedVector<Value>& args) const;
+    NamedVector<Value>
+    build_common_part(FunctionBuilder& fb, const NamedVector<Value>& channel_out) const;
 
     PhaseSpaceMapping _mapping;
     DifferentialCrossSection _diff_xs;
@@ -163,13 +118,16 @@ private:
     AdaptiveDiscrete _discrete_after;
     std::array<std::optional<PartonDensity>, 2> _pdfs;
     std::array<std::vector<me_int_t>, 2> _pdf_indices;
+    std::optional<RunningCoupling> _running_coupling;
     std::optional<EnergyScale> _energy_scale;
     std::optional<PropagatorChannelWeights> _prop_chan_weights;
     std::optional<SubchannelWeights> _subchan_weights;
     std::optional<ChannelWeightNetwork> _chan_weight_net;
     std::vector<me_int_t> _chan_weight_remap;
     me_int_t _remapped_chan_count;
-    int _flags;
+    bool _madnis_training;
+    bool _drop_cuts_and_rescale;
+    bool _partial_weights;
     std::vector<me_int_t> _channel_indices;
     me_int_t _random_dim;
     std::size_t _latent_dim;
@@ -177,9 +135,49 @@ private:
     std::vector<double> _active_flavors_mask;
     std::vector<me_int_t> _flavor_remap;
     std::vector<double> _flavor_factors;
+    NamedVector<Type> _channel_part_ret_types;
 
     friend class IntegrandProbability;
+    friend class IntegrandChannelPart;
+    friend class IntegrandCommonPart;
+    friend class IntegrandConcatenator;
     friend class MultiChannelIntegrand;
+};
+
+class IntegrandChannelPart : public FunctionGenerator {
+public:
+    IntegrandChannelPart(const Integrand& integrand);
+
+private:
+    NamedVector<Value> build_function_impl(
+        FunctionBuilder& fb, const NamedVector<Value>& args
+    ) const override;
+
+    const Integrand& _integrand;
+};
+
+class IntegrandCommonPart : public FunctionGenerator {
+public:
+    IntegrandCommonPart(const Integrand& integrand);
+
+private:
+    NamedVector<Value> build_function_impl(
+        FunctionBuilder& fb, const NamedVector<Value>& args
+    ) const override;
+
+    const Integrand& _integrand;
+};
+
+class IntegrandConcatenator : public FunctionGenerator {
+public:
+    IntegrandConcatenator(const Integrand& integrand);
+
+private:
+    NamedVector<Value> build_function_impl(
+        FunctionBuilder& fb, const NamedVector<Value>& args
+    ) const override;
+
+    const Integrand& _integrand;
 };
 
 class MultiChannelIntegrand : public FunctionGenerator {

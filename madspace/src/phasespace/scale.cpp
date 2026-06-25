@@ -32,9 +32,9 @@ NamedVector<Value> EnergyScale::build_function_impl(
     if (_ren_scale_fixed && _fact_scale_fixed) {
         auto batch_size = fb.batch_size({momenta});
         return {
-            {"ren_scale", fb.full({_ren_scale * _ren_scale, batch_size})},
-            {"fact_scale1", fb.full({_fact_scale1 * _fact_scale1, batch_size})},
-            {"fact_scale2", fb.full({_fact_scale2 * _fact_scale2, batch_size})},
+            {"ren_scale", fb.full({_ren_scale, batch_size})},
+            {"fact_scale1", fb.full({_fact_scale1, batch_size})},
+            {"fact_scale2", fb.full({_fact_scale2, batch_size})},
         };
     }
     Value scale;
@@ -56,12 +56,9 @@ NamedVector<Value> EnergyScale::build_function_impl(
     }
     auto batch_size = fb.batch_size({momenta});
     return {
-        {"ren_scale",
-         _ren_scale_fixed ? fb.full({_ren_scale * _ren_scale, batch_size}) : scale},
+        {"ren_scale", _ren_scale_fixed ? fb.full({_ren_scale, batch_size}) : scale},
         {"fact_scale1",
-         _fact_scale_fixed ? fb.full({_fact_scale1 * _fact_scale1, batch_size})
-                           : scale},
-        {"fact_scale2",
-         _fact_scale_fixed ? fb.full({_fact_scale2 * _fact_scale2, batch_size}) : scale}
+         _fact_scale_fixed ? fb.full({_fact_scale1, batch_size}) : scale},
+        {"fact_scale2", _fact_scale_fixed ? fb.full({_fact_scale2, batch_size}) : scale}
     };
 }

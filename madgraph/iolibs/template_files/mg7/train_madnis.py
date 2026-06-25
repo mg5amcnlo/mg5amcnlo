@@ -9,7 +9,6 @@ from madspace.madnis import (
     kl_divergence,
     kl_divergence_softclip,
     build_madnis_integrand,
-    MADNIS_INTEGRAND_FLAGS,
 )
 
 

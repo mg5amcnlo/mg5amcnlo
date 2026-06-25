@@ -61,6 +61,8 @@ struct GeneratorConfig {
     Verbosity verbosity = Verbosity::silent;
     bool write_live_data = false;
     int combine_thread_count = -1;
+    double cut_efficiency_threshold = 0.7;
+    std::size_t max_cut_repetitions = 100;
 };
 
 struct GeneratorStatus {

@@ -8,27 +8,29 @@ namespace madspace {
 
 class DifferentialCrossSection : public FunctionGenerator {
 public:
+    struct CachedPdf {};
+    struct CachedScale {};
+
     DifferentialCrossSection(
         const MatrixElement& matrix_element,
         double cm_energy,
-        const RunningCoupling& running_coupling,
-        const EnergyScale& energy_scale,
+        const std::optional<RunningCoupling>& running_coupling,
+        const std::variant<std::monostate, EnergyScale, CachedScale>& energy_scale =
+            std::monostate{},
         const nested_vector2<me_int_t>& pid_options = {},
-        bool has_pdf1 = false,
-        bool has_pdf2 = false,
-        const std::optional<PdfGrid>& pdf_grid1 = std::nullopt,
-        const std::optional<PdfGrid>& pdf_grid2 = std::nullopt,
+        const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf1 = std::monostate{},
+        const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf2 = std::monostate{},
         bool has_mirror = false,
         bool input_momentum_fraction = true
     );
 
     const nested_vector2<me_int_t>& pid_options() const { return _pid_options; }
     bool has_mirror() const { return _has_mirror; }
-    bool has_pdf(std::size_t pdf_index) const {
-        return _pdfs.at(pdf_index) != std::nullopt ||
-            _pdf_indices.at(pdf_index).size() > 0;
-    }
+    bool has_pdf(std::size_t pdf_index) const { return _has_pdf.at(pdf_index); }
     const MatrixElement& matrix_element() const { return _matrix_element; }
+    const std::optional<RunningCoupling>& running_coupling() const {
+        return _running_coupling;
+    }
 
 private:
     NamedVector<Value> build_function_impl(
@@ -38,10 +40,10 @@ private:
     nested_vector2<me_int_t> _pid_options;
     MatrixElement _matrix_element;
     std::array<std::optional<PartonDensity>, 2> _pdfs;
-    std::array<std::vector<me_int_t>, 2> _pdf_indices;
-    RunningCoupling _running_coupling;
+    std::array<bool, 2> _has_pdf;
+    std::optional<RunningCoupling> _running_coupling;
     double _e_cm;
-    EnergyScale _energy_scale;
+    std::variant<std::monostate, EnergyScale, CachedScale> _energy_scale;
     bool _has_mirror;
     bool _input_momentum_fraction;
 };

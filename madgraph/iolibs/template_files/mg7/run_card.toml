@@ -38,6 +38,9 @@ gpu_batch_size = 64000
 survey_min_iters = 3
 survey_max_iters = 3
 survey_target_precision = 0.1
+cut_efficiency_threshold = 0.7
+max_cut_repetitions = 1000
+systematics = false
 
 [vegas]
 enable = true

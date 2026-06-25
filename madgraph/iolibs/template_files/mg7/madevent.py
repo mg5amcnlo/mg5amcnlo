@@ -317,6 +317,9 @@ class MadgraphProcess:
         cfg.cpu_batch_size = gen_args["cpu_batch_size"]
         cfg.gpu_batch_size = gen_args["gpu_batch_size"]
         cfg.verbosity = run_args["verbosity"]
+        cfg.combine_thread_count = run_args["combine_thread_pool_size"]
+        cfg.cut_efficiency_threshold = gen_args["cut_efficiency_threshold"]
+        cfg.max_cut_repetitions = gen_args["max_cut_repetitions"]
         self.event_generator_config = cfg
         self.event_generator = None
 
@@ -457,25 +460,17 @@ class MadgraphProcess:
         config.buffer_unweighting_quantile = madnis_args["buffer_unweighting_quantile"]
         config.fixed_cwnet_fraction = madnis_args["fixed_cwnet_fraction"]
         config.softclip_threshold = madnis_args["softclip_threshold"]
-        madnis_integrand_flags = (
-            ms.Integrand.sample
-            | ms.Integrand.return_latent
-            | ms.Integrand.return_channel
-            | ms.Integrand.return_chan_weights
-            | ms.Integrand.return_cwnet_input
-            | ms.Integrand.return_discrete_latent
-            | ms.Integrand.exclude_adaptive_and_chan_weight
-        )
-        if madnis_args["drop_zero_integrands"]:
-            madnis_integrand_flags |= ms.Integrand.drop_cuts_and_rescale
-
         madnis_phasespaces = []
         integrands = []
         cwnets = []
         for subproc, phasespace in zip(self.subprocesses, self.phasespaces):
             phasespace = subproc.build_madnis(phasespace)
             madnis_phasespaces.append(phasespace)
-            integrands.append(subproc.build_integrands(phasespace, madnis_integrand_flags))
+            integrands.append(subproc.build_integrands(
+                phasespace,
+                madnis_training=True,
+                drop_cuts_and_rescale=madnis_args["drop_zero_integrands"]
+            ))
             cwnets.append(phasespace.cwnet)
 
         gen_context = self.contexts[0]
@@ -748,6 +743,8 @@ max_overweight_truncation = {self.run_card["generation"]["max_overweight_truncat
 freeze_max_weight_after = {self.run_card["generation"]["freeze_max_weight_after"]}
 cpu_batch_size = {self.run_card["generation"]["cpu_batch_size"]}
 gpu_batch_size = {self.run_card["generation"]["gpu_batch_size"]}
+cut_efficiency_threshold = {self.run_card["generation"]["cut_efficiency_threshold"]}
+max_cut_repetitions = {self.run_card["generation"]["max_cut_repetitions"]}
 """)
 
         bin_path = os.path.join(gridpack_path, "bin")
@@ -1272,7 +1269,8 @@ class MadgraphSubprocess:
     def build_integrands(
         self,
         phasespace: PhaseSpace,
-        flags: int = ms.ChannelEventGenerator.integrand_flags
+        madnis_training: bool = False,
+        drop_cuts_and_rescale: bool = False
     ) -> list[ms.Integrand]:
         flavors = []
         flavor_remap = []
@@ -1298,24 +1296,20 @@ class MadgraphSubprocess:
                 self.meta["diagram_count"],
                 True,
             )
-        pdf_grid = (
-            None
-            if len(flavors) > 1 or self.process.leptonic
-            else self.process.pdf_grid
-        )
+        pdf_grid = None if self.process.leptonic else self.process.pdf_grid
+        pdf_arg = None if self.process.leptonic else ms.CachedPdf()
         cross_section = ms.DifferentialCrossSection(
             matrix_element=matrix_element,
             cm_energy=self.process.e_cm,
-            running_coupling=self.process.running_coupling,
-            energy_scale=self.scale,
+            running_coupling=None,
+            energy_scale=ms.CachedScale(),
             pid_options=flavors,
-            has_pdf1=not self.process.leptonic,
-            has_pdf2=not self.process.leptonic,
-            pdf_grid1=pdf_grid,
-            pdf_grid2=pdf_grid,
+            pdf1=pdf_arg,
+            pdf2=pdf_arg,
             has_mirror=self.meta["has_mirror_process"],
             input_momentum_fraction=True,
         )
+        partial_weights = self.process.run_card["generation"]["systematics"]
         integrands = []
         for channel in phasespace.channels:
             integrands.append(ms.Integrand(
@@ -1324,14 +1318,17 @@ class MadgraphSubprocess:
                 channel.adaptive_mapping,
                 channel.discrete_before,
                 channel.discrete_after,
-                self.process.pdf_grid,
+                pdf_grid,
+                self.process.running_coupling,
                 self.scale,
                 phasespace.prop_chan_weights,
                 phasespace.subchan_weights,
                 phasespace.cwnet,
                 phasespace.chan_weight_remap,
                 len(phasespace.symfact),
-                flags,
+                madnis_training,
+                drop_cuts_and_rescale,
+                partial_weights,
                 channel.channel_weight_indices,
                 channel.active_flavors,
                 flavor_remap,
@@ -1343,9 +1340,9 @@ class MadgraphSubprocess:
 
     def train_madnis(self, phasespace: PhaseSpace, status_func) -> None:
         # do import here to make pytorch and MadNIS optional dependencies
-        from .train_madnis import train_madnis, MADNIS_INTEGRAND_FLAGS
+        from .train_madnis import train_madnis
         train_madnis(
-            self.build_integrands(phasespace, MADNIS_INTEGRAND_FLAGS),
+            self.build_integrands(phasespace, madnis_training=True),
             phasespace,
             self.process.run_card["madnis"],
             self.process.contexts[0],

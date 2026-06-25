@@ -121,8 +121,8 @@ void add_instructions(py::classh<FunctionBuilder>& fb) {
     fb.def("chili_inverse", &FunctionBuilder::chili_inverse, py::arg("p_ext"), py::arg("e_cm"), py::arg("m_out"), py::arg("pt_min"), py::arg("y_max"));
     fb.def("matrix_element", &FunctionBuilder::matrix_element, py::arg("args"));
     fb.def("collect_channel_weights", &FunctionBuilder::collect_channel_weights, py::arg("amp2"), py::arg("channel_indices"), py::arg("channel_count"));
-    fb.def("interpolate_pdf", &FunctionBuilder::interpolate_pdf, py::arg("x"), py::arg("q2"), py::arg("pid_indices"), py::arg("grid_logx"), py::arg("grid_logq2"), py::arg("grid_coeffs"));
-    fb.def("interpolate_alpha_s", &FunctionBuilder::interpolate_alpha_s, py::arg("q2"), py::arg("grid_logq2"), py::arg("grid_coeffs"));
+    fb.def("interpolate_pdf", &FunctionBuilder::interpolate_pdf, py::arg("x"), py::arg("q"), py::arg("pid_indices"), py::arg("grid_logx"), py::arg("grid_logq2"), py::arg("grid_coeffs"));
+    fb.def("interpolate_alpha_s", &FunctionBuilder::interpolate_alpha_s, py::arg("q"), py::arg("grid_logq2"), py::arg("grid_coeffs"));
     fb.def("matmul", &FunctionBuilder::matmul, py::arg("x"), py::arg("weight"), py::arg("bias"));
     fb.def("relu", &FunctionBuilder::relu, py::arg("in1"));
     fb.def("leaky_relu", &FunctionBuilder::leaky_relu, py::arg("in1"));

@@ -3,6 +3,34 @@
 using namespace madspace;
 using json = nlohmann::json;
 
+namespace {
+
+int event_extra_flags(const std::unordered_map<std::string, std::size_t>& index_map) {
+    int flags = 0;
+    if (index_map.contains("fact_scale1")) {
+        flags |= EventRecord::f_beam1;
+    }
+    if (index_map.contains("fact_scale2")) {
+        flags |= EventRecord::f_beam2;
+    }
+    if (index_map.contains("partial_weight_product")) {
+        flags |= EventRecord::f_partial_weights;
+    }
+    return flags;
+}
+
+int particle_extra_flags(
+    const std::unordered_map<std::string, std::size_t>& index_map
+) {
+    int flags = 0;
+    if (index_map.contains("cluster_scales")) {
+        flags |= ParticleRecord::f_clustering;
+    }
+    return flags;
+}
+
+} // namespace
+
 ChannelEventGenerator::ChannelEventGenerator(
     const std::vector<ContextPtr>& contexts,
     const Integrand& integrand,
@@ -30,49 +58,49 @@ ChannelEventGenerator::ChannelEventGenerator(
         .done = false
     },
     _config(config),
+    _event_layout_extra_flags(event_extra_flags(integrand.return_types().index_map())),
+    _particle_layout_extra_flags(
+        particle_extra_flags(integrand.return_types().index_map())
+    ),
+    _event_file_layout(
+        EventRecord::layout(EventRecord::f_event_data | _event_layout_extra_flags),
+        ParticleRecord::layout(
+            ParticleRecord::f_particle_data | _particle_layout_extra_flags
+        )
+    ),
     _event_file(
         event_file,
-        DataLayout::of<EventIndicesRecord, ParticleRecord>(),
+        _event_file_layout,
         integrand.particle_count(),
         EventFile::create,
         true
     ),
-    _weight_file(
-        weight_file,
-        DataLayout::of<EventWeightRecord, EmptyParticleRecord>(),
-        0,
-        EventFile::create,
-        true
-    ),
+    _weight_file(weight_file, weight_file_layout, 0, EventFile::create, true),
     _batch_size(config.start_batch_size),
     _particle_count(integrand.particle_count()),
-    _integrand_function(integrand.function()),
+    _integrand_channel_function(IntegrandChannelPart(integrand).function()),
+    _integrand_common_function(IntegrandCommonPart(integrand).function()),
+    _integrand_concat_function(IntegrandConcatenator(integrand).function()),
     _unweighter_function(
         Unweighter([&] {
             auto& ret_types = integrand.return_types();
             auto keys = ret_types.keys();
+            std::size_t vegas_index = ret_types.index_map().at("random");
             return NamedVector<Type>(
-                {keys.begin(), keys.begin() + 6},
-                {ret_types.begin(), ret_types.begin() + 6}
+                {keys.begin(), keys.begin() + vegas_index},
+                {ret_types.begin(), ret_types.begin() + vegas_index}
             );
         }())
             .function()
     ) {
-    if (integrand.flags() != integrand_flags) {
+    if (integrand.madnis_training()) {
         throw std::invalid_argument(
-            "Integrand flags must be sample | return_momenta | return_random | "
-            "return_discrete"
+            "Integrand must not be in madnis_training mode for event generation"
         );
     }
-    for (auto& item : _integrand_function.globals()) {
-        _used_globals.insert(item.first);
-    }
-    for (auto& context : contexts) {
-        _runtimes.push_back(
-            {.integrand = build_runtime(_integrand_function, context, false),
-             .unweighter = build_runtime(_unweighter_function, context, false)}
-        );
-    }
+    init_used_globals();
+    init_runtimes();
+    init_field_indices();
     if (const auto& grid_name = integrand.vegas_grid_name(); grid_name) {
         _vegas_optimizer =
             VegasGridOptimizer(contexts, grid_name.value(), config.vegas_damping);
@@ -125,7 +153,9 @@ ChannelEventGenerator::ChannelEventGenerator(
 ChannelEventGenerator::ChannelEventGenerator(
     const std::vector<ContextPtr>& contexts,
     std::size_t particle_count,
-    const Function& integrand_function,
+    const Function& integrand_channel_function,
+    const Function& integrand_common_function,
+    const Function& integrand_concat_function,
     const Function& unweighter_function,
     const std::optional<Function>& histogram_function,
     const std::string& event_file,
@@ -152,34 +182,32 @@ ChannelEventGenerator::ChannelEventGenerator(
         .done = false
     },
     _config(config),
+    _event_layout_extra_flags(
+        event_extra_flags(integrand_common_function.outputs().index_map())
+    ),
+    _particle_layout_extra_flags(
+        particle_extra_flags(integrand_common_function.outputs().index_map())
+    ),
+    _event_file_layout(
+        EventRecord::layout(EventRecord::f_event_data | _event_layout_extra_flags),
+        ParticleRecord::layout(
+            ParticleRecord::f_particle_data | _particle_layout_extra_flags
+        )
+    ),
     _event_file(
-        event_file,
-        DataLayout::of<EventIndicesRecord, ParticleRecord>(),
-        particle_count,
-        EventFile::create,
-        true
+        event_file, _event_file_layout, particle_count, EventFile::create, true
     ),
-    _weight_file(
-        weight_file,
-        DataLayout::of<EventWeightRecord, EmptyParticleRecord>(),
-        0,
-        EventFile::create,
-        true
-    ),
+    _weight_file(weight_file, weight_file_layout, 0, EventFile::create, true),
     _batch_size(config.start_batch_size),
     _particle_count(particle_count),
-    _integrand_function(integrand_function),
+    _integrand_channel_function(integrand_channel_function),
+    _integrand_common_function(integrand_common_function),
+    _integrand_concat_function(integrand_concat_function),
     _unweighter_function(unweighter_function),
     _histograms(histograms) {
-    for (auto& item : _integrand_function.globals()) {
-        _used_globals.insert(item.first);
-    }
-    for (auto& context : contexts) {
-        _runtimes.push_back(
-            {.integrand = build_runtime(_integrand_function, context, false),
-             .unweighter = build_runtime(_unweighter_function, context, false)}
-        );
-    }
+    init_used_globals();
+    init_runtimes();
+    init_field_indices();
     if (histogram_function) {
         for (auto [context, runtimes] : zip(contexts, _runtimes)) {
             runtimes.observable_histograms =
@@ -188,17 +216,76 @@ ChannelEventGenerator::ChannelEventGenerator(
     }
 }
 
+void ChannelEventGenerator::init_used_globals() {
+    for (auto& item : _integrand_channel_function.globals()) {
+        _used_globals.insert(item.first);
+    }
+    for (auto& item : _integrand_common_function.globals()) {
+        _used_globals.insert(item.first);
+    }
+    for (auto& item : _integrand_concat_function.globals()) {
+        _used_globals.insert(item.first);
+    }
+}
+
+void ChannelEventGenerator::init_runtimes() {
+    for (auto& context : _contexts) {
+        _runtimes.push_back(
+            {.integrand_channel =
+                 build_runtime(_integrand_channel_function, context, false),
+             .integrand_common =
+                 build_runtime(_integrand_common_function, context, false),
+             .integrand_concat =
+                 build_runtime(_integrand_concat_function, context, false),
+             .unweighter = build_runtime(_unweighter_function, context, false)}
+        );
+    }
+}
+
+void ChannelEventGenerator::init_field_indices() {
+    auto index_map = _integrand_common_function.outputs().index_map();
+    _field_indices.weight = index_map.at("weight");
+    _field_indices.momenta = index_map.at("momenta");
+    _field_indices.color_index = index_map.at("color_index");
+    _field_indices.helicity_index = index_map.at("helicity_index");
+    _field_indices.diagram_index = index_map.at("diagram_index");
+    _field_indices.flavor_index = index_map.at("flavor_index");
+    _field_indices.ren_scale = index_map.at("ren_scale");
+    _field_indices.alpha_qcd = index_map.at("alpha_qcd");
+    if (index_map.contains("fact_scale1")) {
+        _field_indices.x1 = index_map.at("x1");
+        _field_indices.fact_scale1 = index_map.at("fact_scale1");
+    } else {
+        _field_indices.x1 = -1;
+        _field_indices.fact_scale1 = -1;
+    }
+    if (index_map.contains("fact_scale2")) {
+        _field_indices.x2 = index_map.at("x2");
+        _field_indices.fact_scale2 = index_map.at("fact_scale2");
+    } else {
+        _field_indices.x2 = -1;
+        _field_indices.fact_scale2 = -1;
+    }
+    if (index_map.contains("partial_weight_product")) {
+        _field_indices.partial_weight_product = index_map.at("partial_weight_product");
+    } else {
+        _field_indices.partial_weight_product = -1;
+    }
+    _field_indices.random = index_map.at("random");
+    _field_indices.rest = _field_indices.random + 1;
+}
+
 void ChannelEventGenerator::unweight_file(std::mt19937& rand_gen) {
     std::size_t buf_size = 1000000;
     std::uniform_real_distribution<double> rand_dist;
-    EventBuffer buffer(0, 0, DataLayout::of<EventWeightRecord, EmptyParticleRecord>());
+    EventBuffer buffer(0, 0, weight_file_layout);
     std::size_t accept_count = _unweighted_count;
     for (std::size_t i = _unweighted_count; i < _weight_file.event_count();
          i += buf_size) {
         _weight_file.seek(i);
         _weight_file.read(buffer, buf_size);
         for (std::size_t j = 0; j < buffer.event_count(); ++j) {
-            auto weight = buffer.event<EventWeightRecord>(j).weight();
+            auto weight = buffer.event(j).weight();
             if (weight / _max_weight < rand_dist(rand_gen)) {
                 weight = 0;
             } else {
@@ -273,7 +360,7 @@ void ChannelEventGenerator::optimize_vegas(const GeneratorBatchJob& job) {
 
 double ChannelEventGenerator::channel_weight_sum(std::size_t event_count) {
     std::size_t buf_size = 1000000;
-    EventBuffer buffer(0, 0, DataLayout::of<EventWeightRecord, EmptyParticleRecord>());
+    EventBuffer buffer(0, 0, weight_file_layout);
     double weight_sum = 0;
     _weight_file.seek(0);
     std::size_t unweighted_count = 0;
@@ -285,7 +372,7 @@ double ChannelEventGenerator::channel_weight_sum(std::size_t event_count) {
                 done = true;
                 break;
             }
-            double weight = buffer.event<EventWeightRecord>(j).weight();
+            double weight = buffer.event(j).weight();
             if (weight == 0.) {
                 continue;
             }
@@ -308,17 +395,62 @@ void ChannelEventGenerator::start_job(
         .submit([this, &job, &result_queue]() {
             auto& runtimes = _runtimes.at(job.context_index);
             auto& context = _contexts.at(job.context_index);
-            std::size_t batch_size = context->device()->device_type() == DeviceType::cpu
+            std::size_t max_batch_size =
+                context->device()->device_type() == DeviceType::cpu
                 ? _config.cpu_batch_size
                 : _config.gpu_batch_size;
+            std::size_t batch_size = max_batch_size;
             if (job.vegas_batch_size > 0 && batch_size > job.vegas_batch_size) {
                 batch_size = job.vegas_batch_size;
             }
-            job.events = runtimes.integrand->run({Tensor({batch_size})});
-            job.weights = job.events.at(0).cpu();
+            std::size_t target_count = batch_size;
+
+            std::size_t total_count = 0, repetitions = 0;
+            TensorVec all_ps_points;
+            while (true) {
+                auto ps_points =
+                    runtimes.integrand_channel->run({Tensor({batch_size})});
+                std::size_t acc_count =
+                    ps_points
+                        .at(_integrand_channel_function.outputs().index_map().at(
+                            "indices_acc"
+                        ))
+                        .size(0);
+                if (all_ps_points.size() > 0 && acc_count > 0) {
+                    all_ps_points.insert(
+                        all_ps_points.end(), ps_points.begin(), ps_points.end()
+                    );
+                    all_ps_points = runtimes.integrand_concat->run(all_ps_points);
+                } else {
+                    all_ps_points = ps_points;
+                }
+                total_count += acc_count;
+                ++repetitions;
+                if (total_count >= _config.cut_efficiency_threshold * target_count) {
+                    break;
+                }
+                if (repetitions == _config.max_cut_repetitions) {
+                    throw std::runtime_error(
+                        std::format(
+                            "not enough points passing cuts were found after {} "
+                            "batches",
+                            repetitions
+                        )
+                    );
+                }
+                double cut_eff = static_cast<double>(acc_count) / batch_size;
+                batch_size = std::min(
+                    static_cast<double>(max_batch_size),
+                    (target_count - total_count) / cut_eff
+                );
+            }
+            job.events = runtimes.integrand_common->run(all_ps_points);
+
+            job.weights = job.events.at(_field_indices.weight).cpu();
             if (runtimes.observable_histograms) {
                 auto hists = runtimes.observable_histograms->run(
-                    {job.events.at(0), job.events.at(1)}
+                    {job.events.at(_field_indices.weight),
+                     job.events.at(_field_indices.momenta)}
                 );
                 for (auto& item : hists) {
                     job.hists.push_back(item.cpu());
@@ -327,15 +459,18 @@ void ChannelEventGenerator::start_job(
             if (job.vegas_batch_size != 0) {
                 if (_vegas_optimizer) {
                     auto hist = runtimes.vegas_histogram->run(
-                        {job.events.at(6), job.events.at(0)}
+                        {job.events.at(_field_indices.random),
+                         job.events.at(_field_indices.weight)}
                     );
                     for (auto& item : hist) {
                         job.vegas_hist.push_back(item.cpu());
                     }
                 }
                 if (_discrete_optimizer) {
-                    TensorVec args{job.events.begin() + 7, job.events.end()};
-                    args.push_back(job.events.at(0));
+                    TensorVec args{
+                        job.events.begin() + _field_indices.rest, job.events.end()
+                    };
+                    args.push_back(job.events.at(_field_indices.weight));
                     auto hist = runtimes.discrete_histogram->run(args);
                     for (auto& item : hist) {
                         job.discrete_hist.push_back(item.cpu());
@@ -357,7 +492,7 @@ void ChannelEventGenerator::start_unweight_job(
             auto& runtimes = _runtimes.at(job.context_index);
             auto& context = _contexts.at(job.context_index);
             std::vector<Tensor> unweighter_args(
-                job.events.begin(), job.events.begin() + 6
+                job.events.begin(), job.events.begin() + _field_indices.random
             );
             unweighter_args.push_back(Tensor(job.max_weight, context->device()));
             TensorVec unw_events = runtimes.unweighter->run(unweighter_args);
@@ -439,38 +574,76 @@ void ChannelEventGenerator::update_max_weight(Tensor weights) {
 void ChannelEventGenerator::write_events(
     const std::vector<Tensor>& unweighted_events, double job_max_weight
 ) {
-    auto w_view = unweighted_events.at(0).view<double, 1>();
-    auto mom_view = unweighted_events.at(1).view<double, 3>();
-    auto colors_view = unweighted_events.at(2).view<me_int_t, 1>();
-    auto helicities_view = unweighted_events.at(3).view<me_int_t, 1>();
-    auto diagrams_view = unweighted_events.at(4).view<me_int_t, 1>();
-    auto flavors_view = unweighted_events.at(5).view<me_int_t, 1>();
+    auto w_view = unweighted_events.at(_field_indices.weight).view<double, 1>();
+    auto mom_view = unweighted_events.at(_field_indices.momenta).view<double, 3>();
+    auto colors_view =
+        unweighted_events.at(_field_indices.color_index).view<me_int_t, 1>();
+    auto helicities_view =
+        unweighted_events.at(_field_indices.helicity_index).view<me_int_t, 1>();
+    auto diagrams_view =
+        unweighted_events.at(_field_indices.diagram_index).view<me_int_t, 1>();
+    auto flavors_view =
+        unweighted_events.at(_field_indices.flavor_index).view<me_int_t, 1>();
+    auto ren_scale_view =
+        unweighted_events.at(_field_indices.ren_scale).view<double, 1>();
+    auto alphas_view = unweighted_events.at(_field_indices.alpha_qcd).view<double, 1>();
 
     EventBuffer event_buffer(
-        w_view.size(),
-        _event_file.particle_count(),
-        DataLayout::of<EventIndicesRecord, ParticleRecord>()
+        w_view.size(), _event_file.particle_count(), _event_file_layout
     );
-    EventBuffer weight_buffer(
-        w_view.size(), 0, DataLayout::of<EventWeightRecord, EmptyParticleRecord>()
-    );
+    EventBuffer weight_buffer(w_view.size(), 0, weight_file_layout);
     for (std::size_t i = 0; i < w_view.size(); ++i) {
-        weight_buffer.event<EventWeightRecord>(i).weight() = w_view[i];
-        auto event = event_buffer.event<EventIndicesRecord>(i);
+        weight_buffer.event(i).weight() = w_view[i];
+        auto event = event_buffer.event(i);
         event.diagram_index() = diagrams_view[i];
         event.color_index() = colors_view[i];
         event.flavor_index() = flavors_view[i];
         event.helicity_index() = helicities_view[i];
+        event.ren_scale() = ren_scale_view[i];
+        event.alpha_qcd() = alphas_view[i];
         auto event_mom = mom_view[i];
         for (std::size_t j = 0; j < event_mom.size(); ++j) {
             auto particle_mom = event_mom[j];
-            auto particle = event_buffer.particle<ParticleRecord>(i, j);
+            auto particle = event_buffer.particle(i, j);
             particle.energy() = particle_mom[0];
             particle.px() = particle_mom[1];
             particle.py() = particle_mom[2];
             particle.pz() = particle_mom[3];
         }
     }
+
+    if (_field_indices.fact_scale1 != -1) {
+        auto x1_view = unweighted_events.at(_field_indices.x1).view<double, 1>();
+        auto fact1_view =
+            unweighted_events.at(_field_indices.fact_scale1).view<double, 1>();
+        for (std::size_t i = 0; i < x1_view.size(); ++i) {
+            auto event = event_buffer.event(i);
+            event.x1() = x1_view[i];
+            event.fact_scale1() = fact1_view[i];
+        }
+    }
+
+    if (_field_indices.fact_scale2 != -1) {
+        auto x2_view = unweighted_events.at(_field_indices.x2).view<double, 1>();
+        auto fact2_view =
+            unweighted_events.at(_field_indices.fact_scale2).view<double, 1>();
+        for (std::size_t i = 0; i < x2_view.size(); ++i) {
+            auto event = event_buffer.event(i);
+            event.x2() = x2_view[i];
+            event.fact_scale2() = fact2_view[i];
+        }
+    }
+
+    if (_field_indices.partial_weight_product != -1) {
+        auto pw_view =
+            unweighted_events.at(_field_indices.partial_weight_product)
+                .view<double, 1>();
+        for (std::size_t i = 0; i < pw_view.size(); ++i) {
+            auto event = event_buffer.event(i);
+            event.partial_weight_product() = pw_view[i];
+        }
+    }
+
     _event_file.write(event_buffer);
     _weight_file.write(weight_buffer);
     _status.count_unweighted +=
@@ -512,7 +685,9 @@ ChannelEventGenerator ChannelEventGenerator::load(
     return ChannelEventGenerator(
         contexts,
         channel.at("particle_count").get<std::size_t>(),
-        channel.at("integrand_function").get<Function>(),
+        channel.at("integrand_channel_function").get<Function>(),
+        channel.at("integrand_common_function").get<Function>(),
+        channel.at("integrand_concat_function").get<Function>(),
         channel.at("unweighter_function").get<Function>(),
         hist_function,
         event_file,
@@ -542,7 +717,9 @@ void madspace::to_json(nlohmann::json& j, const ChannelEventGenerator& channel) 
     }
     j = json{
         {"particle_count", channel._particle_count},
-        {"integrand_function", json(channel._integrand_function)},
+        {"integrand_channel_function", json(channel._integrand_channel_function)},
+        {"integrand_common_function", json(channel._integrand_common_function)},
+        {"integrand_concat_function", json(channel._integrand_concat_function)},
         {"unweighter_function", json(channel._unweighter_function)},
         {"histogram_function", histogram_function},
         {"subprocess_index", channel._status.subprocess},

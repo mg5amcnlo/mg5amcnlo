@@ -1149,6 +1149,9 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("fact_scale2")
         );
 
+    py::classh<DifferentialCrossSection::CachedPdf>(m, "CachedPdf").def(py::init<>());
+    py::classh<DifferentialCrossSection::CachedScale>(m, "CachedScale")
+        .def(py::init<>());
     py::classh<DifferentialCrossSection, FunctionGenerator>(
         m, "DifferentialCrossSection"
     )
@@ -1156,13 +1159,20 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::init<
                 const MatrixElement&,
                 double,
-                const RunningCoupling&,
-                const EnergyScale&,
+                const std::optional<RunningCoupling>&,
+                const std::variant<
+                    std::monostate,
+                    EnergyScale,
+                    DifferentialCrossSection::CachedScale>&,
                 const nested_vector2<me_int_t>&,
-                bool,
-                bool,
-                const std::optional<PdfGrid>&,
-                const std::optional<PdfGrid>&,
+                const std::variant<
+                    std::monostate,
+                    PdfGrid,
+                    DifferentialCrossSection::CachedPdf>&,
+                const std::variant<
+                    std::monostate,
+                    PdfGrid,
+                    DifferentialCrossSection::CachedPdf>&,
                 bool,
                 bool>(),
             py::arg("matrix_element"),
@@ -1170,10 +1180,8 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("running_coupling"),
             py::arg("energy_scale"),
             py::arg("pid_options") = nested_vector2<me_int_t>{},
-            py::arg("has_pdf1") = false,
-            py::arg("has_pdf2") = false,
-            py::arg("pdf_grid1") = std::nullopt,
-            py::arg("pdf_grid2") = std::nullopt,
+            py::arg("pdf1") = std::monostate{},
+            py::arg("pdf2") = std::monostate{},
             py::arg("has_mirror") = false,
             py::arg("input_momentum_fraction") = true
         )
@@ -1192,13 +1200,16 @@ PYBIND11_MODULE(_madspace_py, m) {
                 const Integrand::AdaptiveDiscrete&,
                 const Integrand::AdaptiveDiscrete&,
                 const std::optional<PdfGrid>&,
+                const std::optional<RunningCoupling>&,
                 const std::optional<EnergyScale>&,
                 const std::optional<PropagatorChannelWeights>&,
                 const std::optional<SubchannelWeights>&,
                 const std::optional<ChannelWeightNetwork>&,
                 const std::vector<me_int_t>&,
                 std::size_t,
-                int,
+                bool,
+                bool,
+                bool,
                 const std::vector<std::size_t>&,
                 const std::vector<std::size_t>&,
                 const std::vector<std::size_t>&,
@@ -1209,20 +1220,23 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("discrete_before") = std::monostate{},
             py::arg("discrete_after") = std::monostate{},
             py::arg("pdf_grid") = std::nullopt,
+            py::arg("running_coupling") = std::nullopt,
             py::arg("energy_scale") = std::nullopt,
             py::arg("prop_chan_weights") = std::nullopt,
             py::arg("subchan_weights") = std::nullopt,
             py::arg("chan_weight_net") = std::nullopt,
             py::arg("chan_weight_remap") = std::vector<me_int_t>{},
             py::arg("remapped_chan_count") = 0,
-            py::arg("flags") = 0,
+            py::arg("madnis_training") = false,
+            py::arg("drop_cuts_and_rescale") = false,
+            py::arg("partial_weights") = false,
             py::arg("channel_indices") = std::vector<std::size_t>{},
             py::arg("active_flavors") = std::vector<std::size_t>{},
             py::arg("flavor_remap") = std::vector<std::size_t>{},
             py::arg("flavor_factors") = std::vector<double>{}
         )
         .def("particle_count", &Integrand::particle_count)
-        .def("flags", &Integrand::flags)
+        .def("madnis_training", &Integrand::madnis_training)
         .def("vegas_grid_name", &Integrand::vegas_grid_name)
         .def("mapping", &Integrand::mapping)
         .def("diff_xs", &Integrand::diff_xs)
@@ -1234,25 +1248,6 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def("chan_weight_net", &Integrand::chan_weight_net)
         .def("random_dim", &Integrand::random_dim)
         .def("latent_dims", &Integrand::latent_dims)
-        .def_readonly_static("sample", &Integrand::sample)
-        .def_readonly_static("unweight", &Integrand::unweight)
-        .def_readonly_static("return_momenta", &Integrand::return_momenta)
-        .def_readonly_static("return_x1_x2", &Integrand::return_x1_x2)
-        .def_readonly_static("return_indices", &Integrand::return_indices)
-        .def_readonly_static("return_random", &Integrand::return_random)
-        .def_readonly_static("return_latent", &Integrand::return_latent)
-        .def_readonly_static("return_channel", &Integrand::return_channel)
-        .def_readonly_static("return_chan_weights", &Integrand::return_chan_weights)
-        .def_readonly_static("return_cwnet_input", &Integrand::return_cwnet_input)
-        .def_readonly_static("return_discrete", &Integrand::return_discrete)
-        .def_readonly_static(
-            "return_discrete_latent", &Integrand::return_discrete_latent
-        )
-        .def_readonly_static(
-            "exclude_adaptive_and_chan_weight",
-            &Integrand::exclude_adaptive_and_chan_weight
-        )
-        .def_readonly_static("drop_cuts_and_rescale", &Integrand::drop_cuts_and_rescale)
         .def_readonly_static("matrix_element_inputs", &Integrand::matrix_element_inputs)
         .def_readonly_static(
             "matrix_element_outputs", &Integrand::matrix_element_outputs
@@ -1408,7 +1403,11 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def_readwrite("gpu_batch_size", &GeneratorConfig::gpu_batch_size)
         .def_readwrite("verbosity", &GeneratorConfig::verbosity)
         .def_readwrite("write_live_data", &GeneratorConfig::write_live_data)
-        .def_readwrite("combine_thread_count", &GeneratorConfig::combine_thread_count);
+        .def_readwrite("combine_thread_count", &GeneratorConfig::combine_thread_count)
+        .def_readwrite(
+            "cut_efficiency_threshold", &GeneratorConfig::cut_efficiency_threshold
+        )
+        .def_readwrite("max_cut_repetitions", &GeneratorConfig::max_cut_repetitions);
 
     py::classh<GeneratorStatus>(m, "GeneratorStatus")
         .def(py::init<>())
@@ -1682,7 +1681,6 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("name"),
             py::arg("histograms")
         )
-        .def_readonly_static("integrand_flags", &ChannelEventGenerator::integrand_flags)
         .def("status", &ChannelEventGenerator::status)
         .def("save", &ChannelEventGenerator::save, py::arg("save"));
 

@@ -479,12 +479,12 @@ Value collect_channel_weights(Value amp2, Value channel_indices, Value channel_c
     return instruction("collect_channel_weights", {amp2, channel_indices, channel_count})[0];
 }
 
-Value interpolate_pdf(Value x, Value q2, Value pid_indices, Value grid_logx, Value grid_logq2, Value grid_coeffs) {
-    return instruction("interpolate_pdf", {x, q2, pid_indices, grid_logx, grid_logq2, grid_coeffs})[0];
+Value interpolate_pdf(Value x, Value q, Value pid_indices, Value grid_logx, Value grid_logq2, Value grid_coeffs) {
+    return instruction("interpolate_pdf", {x, q, pid_indices, grid_logx, grid_logq2, grid_coeffs})[0];
 }
 
-Value interpolate_alpha_s(Value q2, Value grid_logq2, Value grid_coeffs) {
-    return instruction("interpolate_alpha_s", {q2, grid_logq2, grid_coeffs})[0];
+Value interpolate_alpha_s(Value q, Value grid_logq2, Value grid_coeffs) {
+    return instruction("interpolate_alpha_s", {q, grid_logq2, grid_coeffs})[0];
 }
 
 Value matmul(Value x, Value weight, Value bias) {

@@ -28,14 +28,14 @@ binary_search(FVal<T> x, FIn<T, 1> knots, FVal<T>& x_low, FVal<T>& x_high) {
 template <typename T>
 KERNELSPEC void kernel_interpolate_pdf(
     FIn<T, 0> x,
-    FIn<T, 0> q2,
+    FIn<T, 0> q,
     IIn<T, 1> pid_indices,
     FIn<T, 1> grid_logx,
     FIn<T, 1> grid_logq2,
     FIn<T, 3> grid_coeffs,
     FOut<T, 1> pdf
 ) {
-    auto logx = log(x), logq2 = log(q2);
+    auto logx = log(x), logq2 = log(q * q);
     FVal<T> logx_low, logx_high, logq2_low, logq2_high;
     std::size_t x_index = binary_search<T>(logx, grid_logx, logx_low, logx_high);
     std::size_t q2_index = binary_search<T>(logq2, grid_logq2, logq2_low, logq2_high);
@@ -85,9 +85,9 @@ KERNELSPEC void kernel_interpolate_pdf(
 
 template <typename T>
 KERNELSPEC void kernel_interpolate_alpha_s(
-    FIn<T, 0> q2, FIn<T, 1> grid_logq2, FIn<T, 2> grid_coeffs, FOut<T, 0> alpha_s
+    FIn<T, 0> q, FIn<T, 1> grid_logq2, FIn<T, 2> grid_coeffs, FOut<T, 0> alpha_s
 ) {
-    auto logq2 = log(q2);
+    auto logq2 = log(q * q);
     FVal<T> logq2_low, logq2_high;
     std::size_t q2_index = binary_search<T>(logq2, grid_logq2, logq2_low, logq2_high);
 
