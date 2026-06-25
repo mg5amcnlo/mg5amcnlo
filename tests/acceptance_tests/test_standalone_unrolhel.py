@@ -178,3 +178,22 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # with a shared, ever-incrementing NTRY).
     test_unrolhel_pp_wpwm = unrolhel_consistency_test_factory(
         'p p > w+ w- QCD=0', model='sm')
+
+    # merged-flavor *with both same- and distinct-flavor assignments in a single
+    # subprocess* (e.g. d d > w+ w- d d and d s > w+ w- d s in P1_QQ_wpwmQQ).
+    # This is the process that historically exposed two independent bugs at once:
+    #   - same-flavor lines: stale SCRATCH leaking into a flavor-skipped diagram
+    #     (needs the IAND guard to wrap the whole CALL + SCRATCH->AMP remap);
+    #   - distinct-flavor lines: the missing *BROKEN_SYM(FLAVOR) factor, which
+    #     came out exactly a factor 2 low.
+    # check_sa loops over all flavor combinations, so both classes are compared
+    # against the standard standalone in one go.
+    test_unrolhel_pp_wpwmjj = unrolhel_consistency_test_factory(
+        'p p > w+ w- j j QCD=0', model='sm')
+
+    # merged-flavor QCD process spanning several subprocess groups (q g, g q,
+    # q q~) with a gluon t-channel and a b quark in the jet definition: checks
+    # the flavor machinery together with QCD color flows and a massive merged
+    # flavor member.
+    test_unrolhel_pp_zj = unrolhel_consistency_test_factory(
+        'p p > z j', model='sm')
