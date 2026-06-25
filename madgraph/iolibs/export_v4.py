@@ -3943,6 +3943,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         unrolhel = str(self.cmd_options.get('unrolhel', False)).lower() \
                        in ('true', '1', 'yes')
 
+        # --unrolhel has no flavor-selection mechanism other than the per-flavor
+        # mask, so it must always be on. If the user disabled it with
+        # --mask=False the merged/multi-flavor matrix elements would silently sum
+        # all flavor channels (wrong result), so force it back on and warn once.
+        if unrolhel and not self.use_flavor_mask:
+            if not getattr(self, '_unrolhel_mask_forced', False):
+                logger.warning(
+                    '--unrolhel requires the per-flavor mask; ignoring '
+                    '--mask=False (it would give wrong matrix elements for '
+                    'merged/multi-flavor processes).')
+                self._unrolhel_mask_forced = True
+            self.use_flavor_mask = True
+
         # Flavor-mask optimization: compute per-amp/per-wf masks (only when the
         # toggle is on and the ME has merged-particle flavor variants), build
         # the data/decl/setup blocks, and configure the helas writer so it

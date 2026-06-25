@@ -51,9 +51,11 @@ def _sanitize_process_name(process):
     return re.sub(r'[^A-Za-z0-9]+', '_', process).strip('_').lower()
 
 
-def unrolhel_consistency_test_factory(process, model='sm', tolerance=1e-9):
+def unrolhel_consistency_test_factory(process, model='sm', tolerance=1e-9,
+                                      unrol_opts=''):
     def test(self):
-        self.check_process(process, model=model, tolerance=tolerance)
+        self.check_process(process, model=model, tolerance=tolerance,
+                           unrol_opts=unrol_opts)
     test.__name__ = 'test_%s' % _sanitize_process_name(process)
     test.__doc__ = 'Check --unrolhel and standard standalone |M|^2 agree for %s.' % process
     return test
@@ -85,13 +87,14 @@ class StandaloneUnrolhelConsistency(unittest.TestCase):
     def do(self, line):
         self.cmd.exec_cmd(line)
 
-    def check_process(self, process, model='sm', tolerance=1e-9):
+    def check_process(self, process, model='sm', tolerance=1e-9, unrol_opts=''):
         self.do('set automatic_html_opening False')
         self.do('set group_subprocesses False')
         self.do('import model %s' % model)
         self.do('generate %s' % process)
         self.do('output standalone %s -f' % self.std_dir)
-        self.do('output standalone %s --unrolhel=True -f' % self.unrol_dir)
+        self.do('output standalone %s --unrolhel=True %s -f'
+                % (self.unrol_dir, unrol_opts))
 
         std_subdirs = self._get_subprocess_dirs(pjoin(self.std_dir, 'SubProcesses'))
         unrol_subdirs = self._get_subprocess_dirs(pjoin(self.unrol_dir, 'SubProcesses'))
@@ -197,3 +200,10 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # flavor member.
     test_unrolhel_pp_zj = unrolhel_consistency_test_factory(
         'p p > z j', model='sm')
+
+    # --unrolhel has no flavor selection other than the per-flavor mask, so
+    # --mask=False must be ignored (forced back on) rather than silently summing
+    # all flavor channels.  Same merged process as above with --mask=False must
+    # still agree with the standard standalone.
+    test_unrolhel_pp_wpwm_nomask = unrolhel_consistency_test_factory(
+        'p p > w+ w- QCD=0', model='sm', unrol_opts='--mask=False')
