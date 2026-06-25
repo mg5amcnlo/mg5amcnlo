@@ -1776,8 +1776,10 @@ set draw_rivet_plots True
         run Delphes on the individual Pythia8 splits and combine the ROOT files
         with hadd, keeping every showered event exactly once (normalization)."""
 
-        if not (self._get_delphes_path() and os.environ.get('ROOTSYS')):
-            raise unittest.SkipTest('Delphes/ROOT not configured')
+        delphes_path = self._get_delphes_path()
+        if not (delphes_path and os.environ.get('ROOTSYS') and
+                os.path.exists(pjoin(delphes_path, 'DelphesHepMC2'))):
+            raise unittest.SkipTest('Delphes/ROOT not available')
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')

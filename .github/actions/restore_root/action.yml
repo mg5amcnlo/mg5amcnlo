@@ -25,6 +25,19 @@ runs:
         path: ~/.cache/Delphes
         key: ${{ env.CACHE_KEY }}
 
+    # ROOT (6.40 binaries) links against Intel TBB at build- and run-time. The
+    # apt packages are not part of the cache, so install the runtime dependency
+    # wherever ROOT is used (Delphes build and the Delphes test jobs). The
+    # ldconfig guard makes this a no-op on images that already ship it (e.g.
+    # ubuntu-22.04); ubuntu-24.04 needs it (rootcint fails on libtbb.so.12).
+    - name: Install ROOT runtime dependencies
+      run: |
+        if ! ldconfig -p | grep -q 'libtbb\.so\.12'; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libtbb12
+        fi
+      shell: bash
+
     - run: |
         echo "ROOTSYS=$HOME/.cache/Delphes/root" >> $GITHUB_ENV
         echo "$HOME/.cache/Delphes/root/bin" >> $GITHUB_PATH
