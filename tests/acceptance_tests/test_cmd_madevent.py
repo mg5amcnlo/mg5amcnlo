@@ -2541,8 +2541,39 @@ class TestMEfromfile(unittest.TestCase):
         self.assertEqual(run_card['ptheavy'], 50)
         for event in events:
             event.check()
-        
-        
+
+    def test_generation_from_file_1_mg7(self):
+        """mg7 (madspace) cross-section for MSSM p p > go go, pinned to the
+        madevent reference from test_generation_from_file_1.
+
+        KNOWN-FAILING, intentionally NOT marked xfail: standalone_mg7 already
+        reproduces the per-flavor |M|^2 for p p > go go
+        (test_standalone_mg7_mssm_gogo, ~1e-4), but full mg7 event generation
+        for merged-flavor processes is not wired up yet -- the madspace
+        integrator does not currently produce the cross-section (cf. the SM
+        tracker test_madevent_merged_flavor_uq_mg7, which segfaults). This pins
+        the mg7 cross-section to the madevent reference (run_01 of
+        test_generation_from_file_1, 4.541638 pb) and is expected to fail until
+        the mg7 integrator handles merged-flavor p p > go go; it is left
+        undecorated so the gap stays visible in the mg7 workflow rather than
+        being silently swallowed by expectedFailure. (The mg7 default
+        run_card.toml uses a dynamical HT/2 scale rather than the madevent
+        run_card_matching.dat settings, so a residual scale-driven difference is
+        expected even once the integrator works.) Self-skips where the mg7
+        runtime stack is unavailable.
+        """
+        datadir = _mg7_datadir_or_skip(self)
+        cross, error = _run_mg7_xsec(self,
+            ['set automatic_html_opening False --no_save',
+             'import model MSSM_SLHA2',
+             'generate p p > go go'],
+            pjoin(self.path, 'MG7_mssm_gogo'), datadir)
+        # madevent reference (run_01 in test_generation_from_file_1)
+        target = 4.541638
+        self.assertLess(abs(cross - target) / target, 0.10,
+            'mg7 p p > go go cross-section %s far from madevent reference %s'
+            % (cross, target))
+
     def test_contur_from_file(self):
         """check that contur runs as expected"""
 
