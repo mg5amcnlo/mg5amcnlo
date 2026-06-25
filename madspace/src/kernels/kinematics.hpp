@@ -556,8 +556,15 @@ KERNELSPEC void kernel_t_inv_min_max_cut(
     // particle 1 = recoil (m1, etmin_1), particle 2 = peeled (m2, etmin_2)
     auto cut =
         t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m1_2, m2_2, etmin_1, etmin_2);
-    auto tmn_c = max(tmn, cut.first);
-    auto tmx_c = min(tmx, cut.second);
+
+    // If the incoming particle pa is not along the beam axis, the ETmin cut is
+    // is too tight. In that case, we just use the kinematic bounds.
+    // auto tmn_c = max(tmn, cut.first);
+    // auto tmx_c = min(tmx, cut.second);
+    auto proj_pt2 = pa[1] * pa[1] + pa[2] * pa[2];
+    auto proj_along_z = proj_pt2 <= (pa[0] * pa[0]) * 1e-9;
+    auto tmn_c = where(proj_along_z, max(tmn, cut.first), tmn);
+    auto tmx_c = where(proj_along_z, min(tmx, cut.second), tmx);
     auto ok = tmx_c > tmn_c;
     t_min = where(ok, tmn_c, tmn);
     t_max = where(ok, tmx_c, tmx);
@@ -593,8 +600,12 @@ KERNELSPEC void kernel_t_inv_value_and_min_max_cut(
     // particle 1 = recoil (m1, etmin_1), particle 2 = peeled (m2, etmin_2)
     auto cut =
         t_cut_bounds_etmin<T>(p_tot, load_mom<T>(pa), m1_2, m2_2, etmin_1, etmin_2);
-    auto tmn_c = max(tmn, cut.first);
-    auto tmx_c = min(tmx, cut.second);
+    // auto tmn_c = max(tmn, cut.first);
+    // auto tmx_c = min(tmx, cut.second);
+    auto proj_pt2 = pa[1] * pa[1] + pa[2] * pa[2];
+    auto proj_along_z = proj_pt2 <= (pa[0] * pa[0]) * 1e-9;
+    auto tmn_c = where(proj_along_z, max(tmn, cut.first), tmn);
+    auto tmx_c = where(proj_along_z, min(tmx, cut.second), tmx);
     auto ok = tmx_c > tmn_c;
     t_min = where(ok, tmn_c, tmn);
     t_max = where(ok, tmx_c, tmx);
