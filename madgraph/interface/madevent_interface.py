@@ -4775,7 +4775,17 @@ You can follow PY8 run with the following command (in a separate terminal):
                     n_cores = max(int(self.options['cluster_size']),1)
                 elif self.options['run_mode']==2:
                     n_cores = max(int(self.cluster.nb_core),1)
-                
+
+                # Allow the user to override the number of parallel Pythia8 jobs
+                # independently of the global nb_core via the nb_core_pythia8
+                # option. It directly fixes the number of split jobs and may
+                # exceed nb_core (the splits are statistically equivalent, so
+                # this stays correct - including for MLM since events are
+                # shuffled across the splits).
+                pythia8_nb_core = self.get_nb_core_override('pythia8')
+                if pythia8_nb_core is not None:
+                    n_cores = pythia8_nb_core
+
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
                                                     self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
@@ -4915,6 +4925,17 @@ tar -czf split_$1.tar.gz split_$1
                 
                 logger.info('Submitting Pythia8 jobs...')
 
+                # When a per-step nb_core override is active in multicore mode,
+                # align the scheduler concurrency with the requested number of
+                # Pythia8 jobs (this can be lower or higher than the global
+                # nb_core). The global value is restored once the jobs are done
+                # (configure_run_mode also self-heals the cluster on the next
+                # step if this is skipped).
+                orig_cluster_nb_core = None
+                if self.options['run_mode']==2 and pythia8_nb_core is not None:
+                    orig_cluster_nb_core = self.cluster.nb_core
+                    self.cluster.nb_core = n_cores
+
                 for i, split_file in enumerate(split_files):
                     # We must write a PY8Card tailored for each split so as to correct the normalization
                     # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
@@ -4969,7 +4990,11 @@ tar -czf split_$1.tar.gz split_$1
                     logger.info('Pythia8 shower jobs: %d Idle, %d Running, %d Done [%s]'\
                                 %(Idle, Running, Done, misc.format_time(time.time() - startPY8timer)))
                 self.cluster.wait(parallelization_dir,wait_monitoring)
-                
+
+                # Restore the global multicore parallelization for later steps.
+                if orig_cluster_nb_core is not None:
+                    self.cluster.nb_core = orig_cluster_nb_core
+
                 logger.info('Merging results from the split PY8 runs...')
                 if self.options['cluster_temp_path']:
                     # Decompressing the output
