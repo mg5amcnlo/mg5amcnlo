@@ -217,11 +217,10 @@ def sign(x,y):
             y = y.real
         else:
             raise
-    finally:
-        if (y < 0.):
-            return -abs(x) 
-        else:
-            return abs(x) 
+    if (y < 0.):
+        return -abs(x) 
+    else:
+        return abs(x) 
 
 def sxxxxx(p,nss):
     """initialize a scalar wavefunction"""
