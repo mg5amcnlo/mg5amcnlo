@@ -1,0 +1,26 @@
+name: Install madspace
+description: >
+  Install the madspace wheel built once per commit by the build_madspace job.
+  Restores the cached wheel (content-addressed on the madspace source) and pip
+  installs it; it does NOT build. The build_madspace job must run first (use
+  `needs: build_madspace`) so the cache is populated.
+
+runs:
+  using: composite
+  steps:
+    # Must match the key computed by the build_madspace job exactly, otherwise
+    # the restore misses and the install fails.
+    - name: madspace cache key
+      run: echo "MS_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Restore madspace wheel
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/madspace-wheel
+        key: madspace-${{ runner.os }}-py${{ env.MS_PY }}-${{ hashFiles('madspace/**') }}
+        fail-on-cache-miss: true
+
+    - name: Install madspace from wheel
+      run: python3 -m pip install ~/.cache/madspace-wheel/madspace-*.whl
+      shell: bash
