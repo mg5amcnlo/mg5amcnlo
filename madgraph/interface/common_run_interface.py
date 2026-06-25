@@ -3692,6 +3692,54 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return None
         return max(int(value), 1)
 
+    def resolve_nb_core(self, step):
+        """Return the effective number of cores/jobs for a given step: the
+        per-step nb_core_<step> option when set, otherwise the global nb_core
+        option (falling back to the number of available CPUs when that is also
+        unset). Unlike get_nb_core_override this never returns None."""
+
+        value = self.get_nb_core_override(step)
+        if value is not None:
+            return value
+        value = self.options.get('nb_core', None)
+        if value in (None, 'None', ''):
+            import multiprocessing
+            return multiprocessing.cpu_count()
+        return max(int(value), 1)
+
+    def is_delphes_fusion_active(self):
+        """Decide whether Delphes should run on the individual Pythia8 split
+        files (before the HepMC files are merged) and the resulting ROOT files
+        be combined with hadd, instead of running a single Delphes pass on the
+        merged HepMC file.
+
+        This is the opt-in rule for the fused parallel-Delphes path. It is
+        active when:
+          - Delphes is going to run, i.e. delphes_path is set and a
+            delphes_card.dat is present (this mirrors the post-Pythia8
+            'delphes --no_default' call which is a no-op without the card);
+          - the run is parallel (run_mode != 0);
+          - event_norm is 'average', which guarantees that the per-split HepMC
+            event weights are absolute and therefore combinable (the same
+            restriction already enforced for the Pythia8 splitting itself);
+          - the Pythia8 and Delphes per-step core counts resolve to the same
+            value. Both unset (the default) resolve to the global nb_core and
+            therefore match, so the fused path is on by default; setting them
+            to different values is the explicit opt-out.
+        """
+
+        if not self.options.get('delphes_path'):
+            return False
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            return False
+        if self.options.get('run_mode', 0) == 0:
+            return False
+        if self.run_card['event_norm'] != 'average':
+            return False
+        if self.resolve_nb_core('pythia8') != self.resolve_nb_core('delphes'):
+            return False
+        return True
+
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
 

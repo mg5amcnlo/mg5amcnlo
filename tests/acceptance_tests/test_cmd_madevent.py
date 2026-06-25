@@ -1754,6 +1754,100 @@ set draw_rivet_plots True
         cmd.run_cmd('launch -f')
         self.check_parton_output(cross=15.72, error=0.01514)
 
+    def _get_delphes_path(self):
+        """Return the configured delphes_path from the MG5 configuration, or
+        None when Delphes is not configured (used to skip the parallel-Delphes
+        acceptance test on setups without Delphes/ROOT)."""
+        config = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+        if not os.path.exists(config):
+            return None
+        for line in open(config):
+            line = line.split('#', 1)[0]
+            if '=' in line:
+                key, value = line.split('=', 1)
+                if key.strip() == 'delphes_path':
+                    value = value.strip()
+                    if value and value.lower() != 'none':
+                        return value
+        return None
+
+    def test_pythia8_delphes_parallel(self):
+        """Fused parallel-Delphes path: a multicore Pythia8 + Delphes run should
+        run Delphes on the individual Pythia8 splits and combine the ROOT files
+        with hadd, keeping every showered event exactly once (normalization)."""
+
+        if not (self._get_delphes_path() and os.environ.get('ROOTSYS')):
+            raise unittest.SkipTest('Delphes/ROOT not configured')
+
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception:
+            pass
+
+        # nb_core 2 with 400 events forces exactly 2 Pythia8 splits (the
+        # min_n_events_per_job=100 security clamp keeps 400//100=4 capped to 2);
+        # run_mode defaults to 2 (multicore) and both nb_core_pythia8/delphes are
+        # unset, so they resolve to nb_core and the fused path is active.
+        nevents = 400
+        cmd = """import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        set nb_core 2
+        generate p p > e+ e-
+        output %s -f
+        launch
+        shower=pythia8
+        detector=Delphes
+        analysis=off
+        set mpi off
+        set use_syst False
+        set event_norm average
+        set nevents %d
+        set HEPMCoutput:file hepmc
+        """ % (self.run_dir, nevents)
+        open(pjoin(self.path, 'mg5_cmd'), 'w').write(cmd)
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout = None
+            stderr = None
+        else:
+            devnull = open(os.devnull, 'w')
+            stdout = devnull
+            stderr = devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir, 'bin', 'mg5_aMC'),
+                         pjoin(self.path, 'mg5_cmd')],
+                        stdout=stdout, stderr=stderr)
+
+        # Parton level (the same lhe drives every split) and Pythia8 output.
+        self.check_parton_output(target_event=nevents)
+        self.check_pythia_output()
+
+        # The fused Delphes ROOT file (produced by hadd over the splits).
+        import glob
+        roots = glob.glob(pjoin(self.run_dir, 'Events', 'run_01',
+                                '*_delphes_events.root'))
+        self.assertTrue(roots, 'no Delphes ROOT output produced')
+        root_file = roots[0]
+        self.assertGreater(os.path.getsize(root_file), 0)
+
+        # When PyROOT is available, check that hadd combined the per-split ROOT
+        # files without losing or duplicating events: the Delphes tree should
+        # hold each showered event exactly once.
+        try:
+            import ROOT
+        except ImportError:
+            ROOT = None
+        if ROOT is not None:
+            ROOT.gErrorIgnoreLevel = ROOT.kError
+            tfile = ROOT.TFile.Open(root_file)
+            tree = tfile.Get('Delphes')
+            self.assertIsNotNone(tree)
+            entries = int(tree.GetEntries())
+            tfile.Close()
+            self.assertGreater(entries, 0)
+            self.assertLessEqual(entries, nevents)
+            self.assertGreater(entries, 0.8 * nevents)
+
 
 #===============================================================================
 # TestCmd

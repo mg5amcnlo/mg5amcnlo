@@ -4579,6 +4579,10 @@ already exists and is not a fifo file."""%fifo_path)
     def do_pythia8(self, line):
         """launch pythia8"""
 
+        # Reset the flag tracking whether Delphes was already run on the Pythia8
+        # splits (fused parallel-Delphes path, see run_delphes_on_splits). When
+        # set, the standard post-shower Delphes call at the end is skipped.
+        self._delphes_already_done = False
 
         try:
             import madgraph
@@ -5093,6 +5097,16 @@ tar -czf split_$1.tar.gz split_$1
                     shutil.move(pjoin(self.me_dir,'Events',self.run_name,'pts.HwU'),
                                 pjoin(self.me_dir,'Events',self.run_name,'%s_pts.dat'%tag))
 
+                # Run Delphes in parallel on the individual split HepMC files
+                # *before* they are merged below (the merge mutates them in
+                # place by stripping the HepMC header/footer). On success the
+                # ROOT files are combined with hadd and the standard
+                # post-shower Delphes call is skipped. See
+                # is_delphes_fusion_active for the opt-in rule.
+                if self.is_delphes_fusion_active():
+                    if self.run_delphes_on_splits(split_dirs, parallelization_dir, tag):
+                        self._delphes_already_done = True
+
                 # HepMC events now.
                 all_hepmc_files = []
                 for split_dir in split_dirs:
@@ -5100,8 +5114,19 @@ tar -czf split_$1.tar.gz split_$1
                     if not os.path.isfile(hepmc_file):
                         continue
                     all_hepmc_files.append(hepmc_file)
-                
-                if len(all_hepmc_files)>0:
+
+                # When Delphes has already consumed the split HepMC files and the
+                # user requested the HepMC output to be auto-removed, there is no
+                # point merging them: skip the (otherwise wasted) merge. Note
+                # 'compressHEPMC'/'moveHEPMC' mean the user wants to keep the
+                # HepMC, so the merge is still performed in those cases.
+                skip_hepmc_merge = self._delphes_already_done and \
+                                                  'removeHEPMC' in self.to_store
+                if skip_hepmc_merge:
+                    logger.info('Skipping HepMC merge (Delphes already ran on the '
+                                'splits and HepMC output is set to autoremove).')
+
+                if len(all_hepmc_files)>0 and not skip_hepmc_merge:
                     hepmc_output = pjoin(self.me_dir,'Events',self.run_name,HepMC_event_output)
                     with misc.TMP_directory() as tmp_dir:
                         # Use system calls to quickly put these together
@@ -5285,10 +5310,138 @@ tar -czf split_$1.tar.gz split_$1
         self.banner.write(banner_path)
 
         self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8')
-        if self.options['delphes_path']:
+        if self.options['delphes_path'] and not self._delphes_already_done:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        elif self._delphes_already_done:
+            # Delphes already ran on the Pythia8 splits (fused path); just record
+            # the delphes level now that the shower is marked finished.
+            self.update_status('delphes done', level='delphes', makehtml=False)
         self.print_results_in_shell(self.results.current)
-    
+
+    def run_delphes_on_splits(self, split_dirs, parallelization_dir, tag):
+        """Run Delphes (HepMC2) in parallel on the individual Pythia8 split
+        files and combine the resulting ROOT files with 'hadd'. This is the
+        fused parallel-Delphes path (see is_delphes_fusion_active).
+
+        The per-split HepMC event weights are already absolute (this path
+        requires event_norm='average'), so concatenating the Delphes event
+        trees with hadd preserves the normalization exactly as the standard
+        single Delphes pass on the merged HepMC file would.
+
+        Returns True when the merged Delphes ROOT file was produced, and False
+        when the fused path could not be used; in that case the caller falls
+        back to the standard single Delphes pass on the merged HepMC file."""
+
+        delphes_dir = self.options['delphes_path']
+        # Only Delphes 3 can read HepMC input (Delphes 2 ships a 'data' folder).
+        if os.path.exists(pjoin(delphes_dir, 'data')):
+            logger.warning('Delphes 2 cannot read HepMC input; running the '
+                           'standard Delphes step instead.')
+            return False
+        delphes_exe = pjoin(delphes_dir, 'DelphesHepMC2')
+        if not os.path.exists(delphes_exe):
+            logger.warning('No DelphesHepMC2 executable found in %s; running '
+                           'the standard Delphes step instead.' % delphes_dir)
+            return False
+
+        # Locate hadd (shipped with ROOT, which Delphes requires).
+        hadd_exe = None
+        if os.environ.get('ROOTSYS'):
+            candidate = pjoin(os.environ['ROOTSYS'], 'bin', 'hadd')
+            if os.path.exists(candidate):
+                hadd_exe = candidate
+        if hadd_exe is None:
+            hadd_exe = misc.which('hadd')
+        if not hadd_exe:
+            logger.warning('Could not find the ROOT hadd utility; running the '
+                           'standard Delphes step instead.')
+            return False
+
+        # Collect the split HepMC files still present.
+        split_hepmc = [(d, pjoin(d, 'events.hepmc')) for d in split_dirs
+                       if os.path.isfile(pjoin(d, 'events.hepmc'))]
+        if not split_hepmc:
+            return False
+
+        card = pjoin(self.me_dir, 'Cards', 'delphes_card.dat')
+        self.update_status('Running Delphes on Pythia8 splits', level=None)
+
+        # Update the banner with the Delphes card, as the standard do_delphes does.
+        if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
+            self.banner.add(card)
+            self.banner.write(pjoin(self.me_dir, 'Events', self.run_name,
+                                    '%s_%s_banner.txt' % (self.run_name, tag)))
+
+        # Wrapper setting up the ROOT environment before invoking Delphes.
+        # Arguments: $1 = output ROOT file, $2 = input HepMC file, $3 = log file.
+        wrapper_path = pjoin(parallelization_dir, 'run_delphes_split.sh')
+        with open(wrapper_path, 'w') as wrapper:
+            wrapper.write('#!/bin/bash\n')
+            wrapper.write('export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib\n')
+            wrapper.write('"%s" "%s" "$1" "$2" > "$3" 2>&1\n' % (delphes_exe, card))
+        st = os.stat(wrapper_path)
+        os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+
+        # Throttle the multicore scheduler to the Delphes core count (equal to
+        # the Pythia8 one by the fusion rule), restoring the global value after.
+        orig_cluster_nb_core = None
+        if self.options['run_mode'] == 2:
+            orig_cluster_nb_core = self.cluster.nb_core
+            self.cluster.nb_core = self.resolve_nb_core('delphes')
+
+        logger.info('Submitting Delphes jobs...')
+        split_roots = []
+        for i, (split_dir, hepmc_file) in enumerate(split_hepmc):
+            out_root = pjoin(split_dir, 'delphes_events.root')
+            log = pjoin(split_dir, 'delphes.log')
+            split_roots.append(out_root)
+            self.cluster.submit2(wrapper_path,
+                                 argument=[out_root, hepmc_file, log],
+                                 cwd=split_dir, required_output=[out_root])
+
+        startdelphestimer = time.time()
+        def wait_monitoring(Idle, Running, Done):
+            if Idle+Running+Done == 0:
+                return
+            logger.info('Delphes jobs: %d Idle, %d Running, %d Done [%s]'
+                        % (Idle, Running, Done,
+                           misc.format_time(time.time() - startdelphestimer)))
+        self.cluster.wait(parallelization_dir, wait_monitoring)
+
+        if orig_cluster_nb_core is not None:
+            self.cluster.nb_core = orig_cluster_nb_core
+
+        produced = [r for r in split_roots if os.path.isfile(r)]
+        if not produced:
+            logger.warning('Delphes produced no ROOT output on the splits; '
+                           'running the standard Delphes step instead.')
+            return False
+
+        logger.info('Merging Delphes ROOT files with hadd...')
+        final_root = pjoin(self.me_dir, 'Events', self.run_name,
+                           '%s_delphes_events.root' % tag)
+        hadd_log = pjoin(self.me_dir, 'Events', self.run_name,
+                         '%s_delphes.log' % tag)
+        nb = self.resolve_nb_core('delphes')
+        with open(hadd_log, 'w') as fsock:
+            ret = misc.call([hadd_exe, '-f', '-j', str(nb), final_root] + produced,
+                            stdout=fsock, stderr=subprocess.STDOUT)
+            if ret != 0:
+                # The -j (parallel) option may be unsupported by older ROOT;
+                # retry the merge serially before giving up.
+                fsock.write('\nhadd -j failed, retrying without -j\n')
+                ret = misc.call([hadd_exe, '-f', final_root] + produced,
+                                stdout=fsock, stderr=subprocess.STDOUT)
+        if ret != 0 or not os.path.isfile(final_root):
+            logger.warning('hadd failed to merge the Delphes ROOT files; '
+                           'running the standard Delphes step instead.')
+            return False
+
+        # Note: the 'delphes done' status/level is set by the caller after the
+        # Pythia8 shower is marked finished, to keep the recorded run level in
+        # the natural pythia8 -> delphes order.
+        return True
+
     def parse_PY8_log_file(self, log_file_path):
         """ Parse a log file to extract number of event and cross-section. """
         pythiare = re.compile(r"Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")

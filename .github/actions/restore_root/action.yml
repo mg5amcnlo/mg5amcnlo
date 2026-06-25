@@ -1,0 +1,33 @@
+name: Restore ROOT cache
+description: Restores ROOT from its dedicated cache (separate from HEPtools) and sets ROOTSYS
+
+# ROOT and Delphes are kept in their own cache (~/.cache/Delphes) on purpose:
+# they are large and rarely change, so they should not be bundled with - nor
+# invalidated together with - the HEPtools cache. They are warmed and cleaned
+# independently (see the root_cache/delphes_cache jobs and the reset_delphes
+# input of warm_cache.yml).
+
+inputs:
+  setup_only:
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set cache key
+      run: echo "CACHE_KEY=root-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/Delphes
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        echo "ROOTSYS=$HOME/.cache/Delphes/root" >> $GITHUB_ENV
+        echo "$HOME/.cache/Delphes/root/bin" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.cache/Delphes/root/lib" >> $GITHUB_ENV
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/Delphes/root/lib" >> $GITHUB_ENV
+      shell: bash
