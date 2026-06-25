@@ -867,7 +867,7 @@ set matrix_normalisation False
         misc.sprint(rho_standalone)
 
         for j in range(45): # 45 to raise error if density_check is an empty array
-            self.assertAlmostEqual([j].real, rho_standalone[j].real, places=7)
+            self.assertAlmostEqual(density_check[j].real, rho_standalone[j].real, places=7)
             self.assertAlmostEqual(density_check[j].imag, rho_standalone[j].imag, places=7)
 
 
