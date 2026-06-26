@@ -81,7 +81,9 @@ void EventGenerator::survey() {
                 .unweight = iter >= min_iters - 1,
                 .vegas_batch_size = vegas_batch_size,
             });
-            total_event_count += vegas_batch_size;
+            if (iter >= min_iters) {
+                total_event_count += vegas_batch_size;
+            }
             ++i;
         }
         start_jobs();
@@ -318,15 +320,18 @@ void EventGenerator::update_counts() {
 void EventGenerator::combine_to_compact_npy(const std::string& file_name) {
     reset_start_time();
     auto [channel_data, particle_count, norm_factor] = init_combine();
-    EventBuffer buffer(
-        0, particle_count, DataLayout::of<EventFullRecord, ParticleRecord>()
+    DataLayout layout(
+        EventRecord::layout(
+            EventRecord::f_weight | EventRecord::f_subproc_index |
+            EventRecord::f_event_data | _channels.at(0)->event_layout_extra_flags()
+        ),
+        ParticleRecord::layout(
+            ParticleRecord::f_particle_data |
+            _channels.at(0)->particle_layout_extra_flags()
+        )
     );
-    EventFile event_file(
-        file_name,
-        DataLayout::of<EventFullRecord, ParticleRecord>(),
-        particle_count,
-        EventFile::create
-    );
+    EventBuffer buffer(0, particle_count, layout);
+    EventFile event_file(file_name, layout, particle_count, EventFile::create);
     std::size_t event_count = 0;
     std::size_t last_update_count = 0;
     print_combine_init();
@@ -353,19 +358,29 @@ void EventGenerator::combine_to_lhe_npy(
     std::random_device rand_device;
     std::mt19937 rand_gen(rand_device());
     auto [channel_data, particle_count, norm_factor] = init_combine();
-    EventBuffer buffer(
-        0, particle_count, DataLayout::of<EventFullRecord, ParticleRecord>()
+    DataLayout in_layout(
+        EventRecord::layout(
+            EventRecord::f_weight | EventRecord::f_subproc_index |
+            EventRecord::f_event_data | _channels.at(0)->event_layout_extra_flags()
+        ),
+        ParticleRecord::layout(
+            ParticleRecord::f_particle_data |
+            _channels.at(0)->particle_layout_extra_flags()
+        )
     );
-    EventBuffer buffer_out(
-        0,
-        lhe_completer.max_particle_count(),
-        DataLayout::of<PackedLHEEvent, PackedLHEParticle>()
+    DataLayout out_layout(
+        EventRecord::layout(
+            EventRecord::f_lhe_event | _channels.at(0)->event_layout_extra_flags()
+        ),
+        ParticleRecord::layout(
+            ParticleRecord::f_lhe_particle |
+            _channels.at(0)->particle_layout_extra_flags()
+        )
     );
+    EventBuffer buffer(0, particle_count, in_layout);
+    EventBuffer buffer_out(0, lhe_completer.max_particle_count(), out_layout);
     EventFile event_file(
-        file_name,
-        DataLayout::of<PackedLHEEvent, PackedLHEParticle>(),
-        lhe_completer.max_particle_count(),
-        EventFile::create
+        file_name, out_layout, lhe_completer.max_particle_count(), EventFile::create
     );
     std::size_t event_count = 0;
     std::size_t last_update_count = 0;
@@ -381,17 +396,13 @@ void EventGenerator::combine_to_lhe_npy(
         buffer_out.resize(buffer.event_count());
         for (std::size_t i = 0; i < buffer.event_count(); ++i) {
             fill_lhe_event(lhe_completer, lhe_event, buffer, i, rand_gen);
-            buffer_out.event<PackedLHEEvent>(i).from_lhe_event(lhe_event);
+            buffer_out.event(i).from_lhe_event(lhe_event);
             std::size_t j = 0;
             for (; j < lhe_event.particles.size(); ++j) {
-                buffer_out.particle<PackedLHEParticle>(i, j).from_lhe_particle(
-                    lhe_event.particles[j]
-                );
+                buffer_out.particle(i, j).from_lhe_particle(lhe_event.particles[j]);
             }
             for (; j < lhe_completer.max_particle_count(); ++j) {
-                buffer_out.particle<PackedLHEParticle>(i, j).from_lhe_particle(
-                    LHEParticle{}
-                );
+                buffer_out.particle(i, j).from_lhe_particle(LHEParticle{});
             }
         }
         event_file.write(buffer_out);
@@ -415,10 +426,18 @@ void EventGenerator::combine_to_lhe(
     auto [channel_data, particle_count, norm_factor] = init_combine();
     std::vector<std::pair<EventBuffer, std::string>> buffers;
     std::vector<std::size_t> idle_buffers;
+    DataLayout layout(
+        EventRecord::layout(
+            EventRecord::f_weight | EventRecord::f_subproc_index |
+            EventRecord::f_event_data | _channels.at(0)->event_layout_extra_flags()
+        ),
+        ParticleRecord::layout(
+            ParticleRecord::f_particle_data |
+            _channels.at(0)->particle_layout_extra_flags()
+        )
+    );
     for (std::size_t i = 0; i < 2 * pool.thread_count(); ++i) {
-        buffers.push_back(
-            {{0, particle_count, DataLayout::of<EventFullRecord, ParticleRecord>()}, {}}
-        );
+        buffers.push_back({{0, particle_count, layout}, {}});
         idle_buffers.push_back(i);
     }
     LHEFileWriter event_file(file_name, LHEMeta{});
@@ -565,13 +584,9 @@ EventGenerator::init_combine() {
         channel_data.push_back({
             .cum_count = count_sum,
             .event_buffer = EventBuffer(
-                0,
-                channel->event_file().particle_count(),
-                DataLayout::of<EventIndicesRecord, ParticleRecord>()
+                0, channel->event_file().particle_count(), channel->event_file_layout()
             ),
-            .weight_buffer = EventBuffer(
-                0, 0, DataLayout::of<EventWeightRecord, EmptyParticleRecord>()
-            ),
+            .weight_buffer = EventBuffer(0, 0, weight_file_layout),
             .buffer_index = 0,
         });
     }
@@ -586,6 +601,11 @@ void EventGenerator::read_and_combine(
     std::size_t batch_size = 1000;
     std::size_t event_count = std::min(batch_size, channel_data.back().cum_count);
     buffer.resize(event_count);
+
+    bool has_beam1 = _channels.at(0)->event_layout_extra_flags() & EventRecord::f_beam1;
+    bool has_beam2 = _channels.at(0)->event_layout_extra_flags() & EventRecord::f_beam2;
+    bool has_partial =
+        _channels.at(0)->event_layout_extra_flags() & EventRecord::f_partial_weights;
 
     std::random_device rand_device;
     std::mt19937 rand_gen(rand_device());
@@ -612,39 +632,48 @@ void EventGenerator::read_and_combine(
                 sampled_chan->buffer_index = 0;
             }
             weight =
-                sampled_chan->weight_buffer
-                    .event<EventWeightRecord>(sampled_chan->buffer_index)
-                    .weight();
+                sampled_chan->weight_buffer.event(sampled_chan->buffer_index).weight();
             if (weight != 0.) {
                 break;
             }
             ++sampled_chan->buffer_index;
         }
 
-        auto event_in = sampled_chan->event_buffer.event<EventIndicesRecord>(
-            sampled_chan->buffer_index
-        );
-        auto event_out = buffer.event<EventFullRecord>(event_index);
+        auto event_in = sampled_chan->event_buffer.event(sampled_chan->buffer_index);
+        auto event_out = buffer.event(event_index);
         event_out.weight() = std::max(1., weight / channel->max_weight()) * norm_factor;
         event_out.subprocess_index() = channel->status().subprocess;
         event_out.diagram_index() = event_in.diagram_index();
         event_out.color_index() = event_in.color_index();
         event_out.flavor_index() = event_in.flavor_index();
         event_out.helicity_index() = event_in.helicity_index();
+        event_out.ren_scale() = event_in.ren_scale();
+        event_out.alpha_qcd() = event_in.alpha_qcd();
+
+        if (has_beam1) {
+            event_out.x1() = event_in.x1();
+            event_out.fact_scale1() = event_in.fact_scale1();
+        }
+        if (has_beam2) {
+            event_out.x2() = event_in.x2();
+            event_out.fact_scale2() = event_in.fact_scale2();
+        }
+        if (has_partial) {
+            event_out.partial_weight_product() = event_in.partial_weight_product();
+        }
 
         std::size_t i = 0;
         for (; i < sampled_chan->event_buffer.particle_count(); ++i) {
-            auto particle_in = sampled_chan->event_buffer.particle<ParticleRecord>(
-                sampled_chan->buffer_index, i
-            );
-            auto particle_out = buffer.particle<ParticleRecord>(event_index, i);
+            auto particle_in =
+                sampled_chan->event_buffer.particle(sampled_chan->buffer_index, i);
+            auto particle_out = buffer.particle(event_index, i);
             particle_out.energy() = particle_in.energy();
             particle_out.px() = particle_in.px();
             particle_out.py() = particle_in.py();
             particle_out.pz() = particle_in.pz();
         }
         for (; i < buffer.particle_count(); ++i) {
-            auto particle_out = buffer.particle<ParticleRecord>(event_index, i);
+            auto particle_out = buffer.particle(event_index, i);
             particle_out.energy() = 0.;
             particle_out.px() = 0.;
             particle_out.py() = 0.;
@@ -661,15 +690,15 @@ void EventGenerator::fill_lhe_event(
     std::size_t event_index,
     std::mt19937& rand_gen
 ) {
-    EventRecord event_in = buffer.event<EventFullRecord>(event_index);
+    EventRecord event_in = buffer.event(event_index);
     lhe_event.weight = event_in.weight();
     lhe_event.process_id = 0;
-    lhe_event.scale = 0; // TODO: populate these
-    lhe_event.alpha_qed = 0;
-    lhe_event.alpha_qcd = 0;
+    lhe_event.scale = event_in.ren_scale();
+    lhe_event.alpha_qed = 0; // TODO: populate this
+    lhe_event.alpha_qcd = event_in.alpha_qcd();
     lhe_event.particles.clear();
     for (std::size_t i = 0; i < buffer.particle_count(); ++i) {
-        auto particle_in = buffer.particle<ParticleRecord>(event_index, i);
+        auto particle_in = buffer.particle(event_index, i);
         if (particle_in.energy() == 0.) {
             break;
         }

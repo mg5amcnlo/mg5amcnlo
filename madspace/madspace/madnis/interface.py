@@ -9,16 +9,6 @@ from .channel_grouping import ChannelGrouping
 from .distribution import Distribution
 from .integrand import Integrand
 
-MADNIS_INTEGRAND_FLAGS = (
-    ms.Integrand.sample
-    | ms.Integrand.return_latent
-    | ms.Integrand.return_channel
-    | ms.Integrand.return_chan_weights
-    | ms.Integrand.return_cwnet_input
-    | ms.Integrand.return_discrete_latent
-    | ms.Integrand.exclude_adaptive_and_chan_weight
-)
-
 
 class IntegrandDistribution(nn.Module, Distribution):
     def __init__(

@@ -5265,15 +5265,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             else:
                 return self['allowed_flavors']
         pdgs=[]
+        pdg_signs = []
         external_wfs = sorted([wf for wf in self.get_all_wavefunctions() if len(wf.get('mothers')) == 0],
                               key=lambda w: w['number_external'])
         external_number=1
         id_to_wf =collections.defaultdict(list)
+        next, ninit = self.get_nexternal_ninitial()
         for wf in external_wfs:
             if wf.get('number_external')==external_number:
                 id_to_wf[external_number].append(wf)
                 external_number=external_number+1
-                pdgs.append(wf.get('particle').get_pdg_code())
+                particle = wf.get('particle')
+                pdgs.append(particle.get_pdg_code())
+                if len(pdg_signs) < ninit:
+                    pdg_signs.append(-1 if particle.get_anti_pdg_code() < 0 else 1)
+                else:
+                    pdg_signs.append(-1 if particle.get_pdg_code() < 0 else 1)
         
         to_map = {}
         model = self.get('processes')[0].get('model')
@@ -5313,7 +5320,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
 
             # flip initial states
-            next, ninit = self.get_nexternal_ninitial()
             for i in range(ninit):
                 pdg[i] = -pdg[i]
             init, final = pdg[:ninit], pdg[ninit:]
@@ -5330,9 +5336,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # do the computation
             if self.check_flavor(one_flavor, self.get('processes')[0].get('model')):
                 flavor_list.append(one_flavor)
-                pdg_list.append([
-                    one_flavor[i] * (1 if id > 0 else -1) for i, id in enumerate(pdgs)
-                ])
+                pdg_list.append([flav * sign for flav, sign in zip(one_flavor, pdg_signs)])
                 #misc.sprint('checking flavor:', pdg, one_flavor, True)
                 checked[pdg] = True
                 if allow_triming:

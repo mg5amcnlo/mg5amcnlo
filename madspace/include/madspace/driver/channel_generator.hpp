@@ -20,10 +20,6 @@ namespace madspace {
 
 class ChannelEventGenerator {
 public:
-    static inline const int integrand_flags = Integrand::sample |
-        Integrand::return_momenta | Integrand::return_indices |
-        Integrand::return_random | Integrand::return_discrete;
-
     static ChannelEventGenerator load(
         const std::string& channel_file,
         const std::vector<ContextPtr>& contexts,
@@ -57,6 +53,9 @@ public:
     const std::unordered_set<std::string>& used_globals() const {
         return _used_globals;
     }
+    int event_layout_extra_flags() const { return _event_layout_extra_flags; }
+    int particle_layout_extra_flags() const { return _particle_layout_extra_flags; }
+    const DataLayout& event_file_layout() const { return _event_file_layout; }
 
     void unweight_file(std::mt19937& rand_gen);
     void integrate(const GeneratorBatchJob& job);
@@ -74,7 +73,9 @@ private:
     ChannelEventGenerator(
         const std::vector<ContextPtr>& contexts,
         std::size_t particle_count,
-        const Function& integrand_function,
+        const Function& integrand_channel_function,
+        const Function& integrand_common_function,
+        const Function& integrand_concat_function,
         const Function& unweighter_function,
         const std::optional<Function>& histogram_function,
         const std::string& event_file,
@@ -84,26 +85,44 @@ private:
         const GeneratorConfig& config,
         const std::vector<Histogram>& histograms
     );
+    void init_used_globals();
+    void init_runtimes();
+    void init_field_indices();
 
     struct ContextRuntimes {
-        RuntimePtr integrand = nullptr;
+        RuntimePtr integrand_channel = nullptr;
+        RuntimePtr integrand_common = nullptr;
+        RuntimePtr integrand_concat = nullptr;
         RuntimePtr unweighter = nullptr;
         RuntimePtr vegas_histogram = nullptr;
         RuntimePtr discrete_histogram = nullptr;
         RuntimePtr observable_histograms = nullptr;
     };
 
+    struct FieldIndices {
+        int weight, momenta;
+        int color_index, helicity_index, diagram_index, flavor_index;
+        int ren_scale, alpha_qcd;
+        int x1, fact_scale1, x2, fact_scale2, partial_weight_product;
+        int random, rest;
+    };
+
     GeneratorStatus _status;
     GeneratorConfig _config;
     std::vector<ContextPtr> _contexts;
     std::vector<ContextRuntimes> _runtimes;
+    int _event_layout_extra_flags;
+    int _particle_layout_extra_flags;
+    DataLayout _event_file_layout;
     EventFile _event_file;
     EventFile _weight_file;
     std::optional<VegasGridOptimizer> _vegas_optimizer;
     std::optional<DiscreteOptimizer> _discrete_optimizer;
     std::size_t _batch_size;
     std::size_t _particle_count;
-    Function _integrand_function;
+    Function _integrand_channel_function;
+    Function _integrand_common_function;
+    Function _integrand_concat_function;
     Function _unweighter_function;
     std::optional<Function> _histogram_function;
     RunningIntegral _cross_section;
@@ -114,6 +133,7 @@ private:
     std::vector<double> _large_weights;
     std::vector<Histogram> _histograms;
     std::unordered_set<std::string> _used_globals;
+    FieldIndices _field_indices;
 
     friend void to_json(nlohmann::json& j, const ChannelEventGenerator& channel);
 };

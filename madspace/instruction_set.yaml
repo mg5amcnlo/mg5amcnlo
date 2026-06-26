@@ -2196,7 +2196,7 @@ interpolate_pdf:
     - name: x
       type: [float]
       desc:
-    - name: q2
+    - name: q
       type: [float]
       desc:
     - name: pid_indices
@@ -2219,7 +2219,7 @@ interpolate_pdf:
 
 interpolate_alpha_s:
   inputs:
-    - name: q2
+    - name: q
       type: [float]
       desc:
     - name: grid_logq2

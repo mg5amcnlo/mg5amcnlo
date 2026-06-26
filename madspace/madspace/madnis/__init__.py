@@ -9,7 +9,6 @@ from .distribution import Distribution
 from .integrand import Integrand
 from .integrator import Integrator, SampleBatch, TrainingStatus
 from .interface import (
-    MADNIS_INTEGRAND_FLAGS,
     IntegrandDistribution,
     IntegrandFunction,
     build_madnis_integrand,
@@ -39,7 +38,6 @@ __all__ = [
     "ChannelData",
     "ChannelGrouping",
     "Distribution",
-    "MADNIS_INTEGRAND_FLAGS",
     "IntegrandDistribution",
     "IntegrandFunction",
     "build_madnis_integrand",
