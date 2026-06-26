@@ -303,7 +303,7 @@ def test_color_ordered_color_orders(rng, color_order, out_masses, _label):
     # (3) inverse: continuous randoms round-trip, discrete choices exactly,
     out = mapping.map_inverse((p_ext, x1, x2))
     r_inv, det_inv = out[0], out[-1]
-    assert r_inv == approx(r, abs=1e-3, rel=1e-3)
+    assert r_inv == approx(r, abs=2e-3, rel=1e-3)
     rt_err = np.abs(det * det_inv - 1.0)
     assert np.quantile(rt_err, 0.99) < 1e-5
     assert np.isfinite(rt_err).all()

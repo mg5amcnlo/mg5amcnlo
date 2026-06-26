@@ -129,6 +129,59 @@ t2_inv_min_max_doublet(FVal<T> s, FVal<T> m1_2, FVal<T> mir_min_2, FVal<T> t1_ab
     return {t2_min, t2_max};
 }
 
+// ETmin floor on the double-t central single particle (mass^2 m1_2) and its recoil
+// system, ported from AmpliCol double_t. AmpliCol writes signed-t (lines 605-608);
+// we work in |t| = -t, so its tmin=max/tmax=min map to our |t|_min/|t|_max with both
+// edges negated.
+template <typename T>
+KERNELSPEC Pair<FVal<T>, FVal<T>> doublet_t1_etmin_clamp(
+    FVal<T> t_min,
+    FVal<T> t_max,
+    FVal<T> s,
+    FVal<T> m1_2,
+    FVal<T> etmin_i,
+    FVal<T> etmin_ir
+) {
+    auto sqrt_s = sqrt(max(s, EPS));
+    auto ei2 = etmin_i * etmin_i;
+    auto eir2 = etmin_ir * etmin_ir;
+    auto lam = s * s + ei2 * ei2 + eir2 * eir2 - 2.0 * s * ei2 - 2.0 * ei2 * eir2 -
+        2.0 * eir2 * s;
+    auto pzmax = sqrt(max(lam, 0.)) / (2.0 * sqrt_s);
+    auto Eimax = sqrt_s - sqrt(max(eir2 + pzmax * pzmax, 0.));
+    auto cut_min = sqrt_s * (Eimax - pzmax) - m1_2;
+    auto cut_max = sqrt_s * (Eimax + pzmax) - m1_2;
+    auto active = (etmin_i > EPS) | (etmin_ir > EPS);
+    auto lo = where(active, max(t_min, cut_min), t_min);
+    auto hi = where(active, min(t_max, cut_max), t_max);
+    auto ok = hi > lo;
+    return {where(ok, lo, t_min), where(ok, hi, t_max)};
+}
+
+// ETmin floor on |t2| given the sampled |t1| (= t1_abs). AmpliCol double_t lines
+// 625-626 (signed t).
+template <typename T>
+KERNELSPEC Pair<FVal<T>, FVal<T>> doublet_t2_etmin_clamp(
+    FVal<T> t_min,
+    FVal<T> t_max,
+    FVal<T> s,
+    FVal<T> m1_2,
+    FVal<T> t1_abs,
+    FVal<T> etmin_i,
+    FVal<T> etmin_ir
+) {
+    auto ei2 = etmin_i * etmin_i;
+    auto eir2 = etmin_ir * etmin_ir;
+    auto denom2 = s - t1_abs - m1_2;
+    auto cut_min = s * ei2 / max(m1_2 + t1_abs, EPS) - m1_2;
+    auto cut_max = s * (1.0 - eir2 / max(denom2, EPS)) - m1_2;
+    auto active = (etmin_i > EPS) | (etmin_ir > EPS);
+    auto lo = where(active, max(t_min, cut_min), t_min);
+    auto hi = where(active & (denom2 > EPS), min(t_max, cut_max), t_max);
+    auto ok = hi > lo;
+    return {where(ok, lo, t_min), where(ok, hi, t_max)};
+}
+
 template <typename T>
 KERNELSPEC FVal<T> lsquare(FourMom<T> p) {
     return p[0] * p[0] - p[1] * p[1] - p[2] * p[2] - p[3] * p[3];
@@ -637,6 +690,8 @@ KERNELSPEC void kernel_t1_inv_min_max_doublet(
     FIn<T, 1> pb,
     FIn<T, 0> m1,
     FIn<T, 0> mir_min,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
 ) {
@@ -645,9 +700,13 @@ KERNELSPEC void kernel_t1_inv_min_max_doublet(
         p_tot[i] = pa[i] + pb[i];
     }
     auto s = lsquare<T>(p_tot);
-    auto bounds = t1_inv_min_max_doublet<T>(s, m1 * m1, mir_min * mir_min);
-    t_min = bounds.first;
-    t_max = bounds.second;
+    auto m1_2 = m1 * m1;
+    auto bounds = t1_inv_min_max_doublet<T>(s, m1_2, mir_min * mir_min);
+    auto c = doublet_t1_etmin_clamp<T>(
+        bounds.first, bounds.second, s, m1_2, etmin_i, etmin_ir
+    );
+    t_min = c.first;
+    t_max = c.second;
 }
 
 template <typename T>
@@ -657,6 +716,8 @@ KERNELSPEC void kernel_t1_inv_value_and_min_max_doublet(
     FIn<T, 1> p1,
     FIn<T, 0> m1,
     FIn<T, 0> mir_min,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_abs,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
@@ -667,9 +728,13 @@ KERNELSPEC void kernel_t1_inv_value_and_min_max_doublet(
         p_tot[i] = pa[i] + pb[i];
     }
     auto s = lsquare<T>(p_tot);
-    auto bounds = t1_inv_min_max_doublet<T>(s, m1 * m1, mir_min * mir_min);
-    t_min = bounds.first;
-    t_max = bounds.second;
+    auto m1_2 = m1 * m1;
+    auto bounds = t1_inv_min_max_doublet<T>(s, m1_2, mir_min * mir_min);
+    auto c = doublet_t1_etmin_clamp<T>(
+        bounds.first, bounds.second, s, m1_2, etmin_i, etmin_ir
+    );
+    t_min = c.first;
+    t_max = c.second;
     t_abs = -lsquare<T>(pa1);
 }
 
@@ -680,6 +745,8 @@ KERNELSPEC void kernel_t2_inv_min_max_doublet(
     FIn<T, 0> m1,
     FIn<T, 0> mir_min,
     FIn<T, 0> t1_abs,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
 ) {
@@ -688,9 +755,13 @@ KERNELSPEC void kernel_t2_inv_min_max_doublet(
         p_tot[i] = pa[i] + pb[i];
     }
     auto s = lsquare<T>(p_tot);
-    auto bounds = t2_inv_min_max_doublet<T>(s, m1 * m1, mir_min * mir_min, t1_abs);
-    t_min = bounds.first;
-    t_max = bounds.second;
+    auto m1_2 = m1 * m1;
+    auto bounds = t2_inv_min_max_doublet<T>(s, m1_2, mir_min * mir_min, t1_abs);
+    auto c = doublet_t2_etmin_clamp<T>(
+        bounds.first, bounds.second, s, m1_2, t1_abs, etmin_i, etmin_ir
+    );
+    t_min = c.first;
+    t_max = c.second;
 }
 
 template <typename T>
@@ -701,6 +772,8 @@ KERNELSPEC void kernel_t2_inv_value_and_min_max_doublet(
     FIn<T, 0> m1,
     FIn<T, 0> mir_min,
     FIn<T, 0> t1_abs,
+    FIn<T, 0> etmin_i,
+    FIn<T, 0> etmin_ir,
     FOut<T, 0> t_abs,
     FOut<T, 0> t_min,
     FOut<T, 0> t_max
@@ -711,9 +784,13 @@ KERNELSPEC void kernel_t2_inv_value_and_min_max_doublet(
         p_tot[i] = pa[i] + pb[i];
     }
     auto s = lsquare<T>(p_tot);
-    auto bounds = t2_inv_min_max_doublet<T>(s, m1 * m1, mir_min * mir_min, t1_abs);
-    t_min = bounds.first;
-    t_max = bounds.second;
+    auto m1_2 = m1 * m1;
+    auto bounds = t2_inv_min_max_doublet<T>(s, m1_2, mir_min * mir_min, t1_abs);
+    auto c = doublet_t2_etmin_clamp<T>(
+        bounds.first, bounds.second, s, m1_2, t1_abs, etmin_i, etmin_ir
+    );
+    t_min = c.first;
+    t_max = c.second;
     t_abs = -lsquare<T>(pb1);
 }
 

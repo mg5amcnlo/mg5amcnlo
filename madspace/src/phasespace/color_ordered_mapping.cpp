@@ -213,7 +213,9 @@ ColorOrderedMapping::ColorOrderedMapping(
     _m_inv_min(m_inv_min),
     _dr_min(dr_min),
     _has_cut(has_any_cut(pt_min, m_inv_min, dr_min)),
-    _com_scattering(true, t_invariant_power),
+    _com_scattering(
+        true, t_invariant_power, 0., 0., has_any_cut(pt_min, m_inv_min, dr_min)
+    ),
     _lab_scattering(
         false, t_invariant_power, 0., 0., has_any_cut(pt_min, m_inv_min, dr_min)
     ),
@@ -226,7 +228,15 @@ ColorOrderedMapping::ColorOrderedMapping(
         0.,
         has_any_cut(pt_min, m_inv_min, dr_min)
     ),
-    _double_t(t_invariant_power, 0., 0., t_invariant_power, 0., 0.) {
+    _double_t(
+        t_invariant_power,
+        0.,
+        0.,
+        t_invariant_power,
+        0.,
+        0.,
+        has_any_cut(pt_min, m_inv_min, dr_min)
+    ) {
     auto [s1, s2] = split_sets_from_color_order(color_order);
     _set1 = s1;
     _set2 = s2;
@@ -307,10 +317,29 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         bool single_is_set1 = (_set1.size() == 1);
         Value m_single = single_is_set1 ? m_set1 : m_set2;
         Value mir_min = single_is_set1 ? mass_sum_set2 : mass_sum_set1;
+        // ETmin floors (pt-cut tightening of the central t1/t2 bounds): the lone
+        // particle's ET and the summed ET of the recoil set. Zero (inert) with no cut.
+        Value etmin_i = Value(0.);
+        Value etmin_ir = Value(0.);
+        if (_has_cut) {
+            auto etmin_p = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            std::size_t single_idx = single_is_set1 ? _set1.at(0) : _set2.at(0);
+            const auto& recoil = single_is_set1 ? _set2 : _set1;
+            etmin_i = etmin_p(single_idx);
+            etmin_ir = etmin_p(recoil.at(0));
+            for (std::size_t j = 1; j < recoil.size(); ++j) {
+                etmin_ir = fb.add(etmin_ir, etmin_p(recoil.at(j)));
+            }
+        }
+        ValueVec dt_cond{pa, pb, m_single, mir_min};
+        if (_has_cut) {
+            dt_cond.push_back(etmin_i);
+            dt_cond.push_back(etmin_ir);
+        }
         auto central = _double_t.build_forward(
-            fb,
-            {next_random(), next_random(), next_random()},
-            {pa, pb, m_single, mir_min}
+            fb, {next_random(), next_random(), next_random()}, dt_cond
         );
         Value p_single = central.at(0);
         Value p_recoil = central.at(1);
@@ -370,8 +399,31 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         } else {
             m_set2 = m_out.at(_set2.at(0));
         }
+        // ETmin floors for the central 2->2: each output system must carry enough
+        // transverse energy for its jets, so the floor is the summed ET of the set
+        // (a valid outer bound since ET_sys >= sum ET_constituents). Zero with no cut.
+        Value etmin_set1 = Value(0.);
+        Value etmin_set2 = Value(0.);
+        if (_has_cut) {
+            auto etmin_p = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            etmin_set1 = etmin_p(_set1.at(0));
+            for (std::size_t j = 1; j < _set1.size(); ++j) {
+                etmin_set1 = fb.add(etmin_set1, etmin_p(_set1.at(j)));
+            }
+            etmin_set2 = etmin_p(_set2.at(0));
+            for (std::size_t j = 1; j < _set2.size(); ++j) {
+                etmin_set2 = fb.add(etmin_set2, etmin_p(_set2.at(j)));
+            }
+        }
+        ValueVec com_cond{pa, pb};
+        if (_has_cut) {
+            com_cond.push_back(etmin_set1);
+            com_cond.push_back(etmin_set2);
+        }
         auto central = _com_scattering.build_forward(
-            fb, {next_random(), next_random(), m_set1, m_set2}, {pa, pb}
+            fb, {next_random(), next_random(), m_set1, m_set2}, com_cond
         );
         P_set1 = central.at(0);
         P_set2 = central.at(1);
@@ -438,6 +490,7 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         [&](const std::vector<std::size_t>& s,
             Value P_set,
             Value R_b,
+            Value beam_other,
             const ValueVec& rest_masses) {
             std::size_t k = s.size();
             if (k == 1) {
@@ -472,9 +525,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                 // has im1 subtracted from our previous step, so we pass pb = R_a + im1
                 // to recover p_12 = R_b + R_a inside the kernel.
                 if (first) {
-                    // First peel is a 2->2 LAB block. Cut: ETmin of the recoil
-                    // chain (etmin_1) then the peeled particle (etmin_2).
-                    ValueVec cond{R_b, R_a};
+                    // First peel is a 2->2 LAB block, projecting the own-side on-z
+                    // beam R_a (AmpliCol: gent_one_step beam i). Cut: ETmin of the
+                    // recoil chain (etmin_1) then the peeled particle (etmin_2).
+                    ValueVec cond{R_a, R_b};
                     if (_has_cut) {
                         cond.push_back(etmin_suffix.at(j + 1));
                         cond.push_back(etmin_particle(s.at(j)));
@@ -489,14 +543,13 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
                     dets.push_back(ks["det"]);
                     first = false;
                 } else {
-                    Value pb_for_block = fb.add(R_a, im1);
-                    // 2->3 block. Cuts: ETmin of the recoil chain (etmin_1) then
-                    // the peeled particle (etmin_2); s23_min_cut = adjacent-pair
-                    // floor for {s[j-1], s[j]} (the (2,3) system in the kernel).
-                    ValueVec cond{R_b, pb_for_block, im1};
+                    Value S = fb.add(R_a, R_b);
+                    Value pb_for_block = fb.add(fb.sub(S, beam_other), im1);
+                    ValueVec cond{beam_other, pb_for_block, im1};
                     if (_has_cut) {
                         cond.push_back(etmin_suffix.at(j + 1));
                         cond.push_back(etmin_particle(s.at(j)));
+                        cond.push_back(Value(mat_at(_dr_min, s.at(j - 1), s.at(j))));
                         cond.push_back(Value(cut_floor({s.at(j - 1), s.at(j)})));
                     }
                     auto ks = _two_to_three.build_forward(
@@ -516,10 +569,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
         };
 
     if (!_set1.empty()) {
-        walk(_set1, P_set1, R_b_for_set1, rest_masses_set1);
+        walk(_set1, P_set1, R_b_for_set1, pb, rest_masses_set1);
     }
     if (!_set2.empty()) {
-        walk(_set2, P_set2, R_b_for_set2, rest_masses_set2);
+        walk(_set2, P_set2, R_b_for_set2, pa, rest_masses_set2);
     }
 
     // Assemble outputs: momentum0, momentum1 = beams; momentum_{2+i} = outgoing i.
@@ -677,15 +730,52 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
         Value p_recoil = single_is_set1 ? P_set2 : P_set1;
         Value m_single = single_is_set1 ? m_set1 : m_set2;
         Value mir_min = single_is_set1 ? masses_of(_set2) : masses_of(_set1);
-        auto central = _double_t.build_inverse(
-            fb, {p_single, p_recoil}, {pa, pb, m_single, mir_min}
-        );
+        Value etmin_i = Value(0.);
+        Value etmin_ir = Value(0.);
+        if (_has_cut) {
+            auto etmin_p = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            std::size_t single_idx = single_is_set1 ? _set1.at(0) : _set2.at(0);
+            const auto& recoil = single_is_set1 ? _set2 : _set1;
+            etmin_i = etmin_p(single_idx);
+            etmin_ir = etmin_p(recoil.at(0));
+            for (std::size_t j = 1; j < recoil.size(); ++j) {
+                etmin_ir = fb.add(etmin_ir, etmin_p(recoil.at(j)));
+            }
+        }
+        ValueVec dt_cond{pa, pb, m_single, mir_min};
+        if (_has_cut) {
+            dt_cond.push_back(etmin_i);
+            dt_cond.push_back(etmin_ir);
+        }
+        auto central = _double_t.build_inverse(fb, {p_single, p_recoil}, dt_cond);
         random_out.push_back(central.at(0));
         random_out.push_back(central.at(1));
         random_out.push_back(central.at(2));
         dets.push_back(central["det"]);
     } else {
-        auto central = _com_scattering.build_inverse(fb, {P_set1, P_set2}, {pa, pb});
+        Value etmin_set1 = Value(0.);
+        Value etmin_set2 = Value(0.);
+        if (_has_cut) {
+            auto etmin_p = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            etmin_set1 = etmin_p(_set1.at(0));
+            for (std::size_t j = 1; j < _set1.size(); ++j) {
+                etmin_set1 = fb.add(etmin_set1, etmin_p(_set1.at(j)));
+            }
+            etmin_set2 = etmin_p(_set2.at(0));
+            for (std::size_t j = 1; j < _set2.size(); ++j) {
+                etmin_set2 = fb.add(etmin_set2, etmin_p(_set2.at(j)));
+            }
+        }
+        ValueVec com_cond{pa, pb};
+        if (_has_cut) {
+            com_cond.push_back(etmin_set1);
+            com_cond.push_back(etmin_set2);
+        }
+        auto central = _com_scattering.build_inverse(fb, {P_set1, P_set2}, com_cond);
         random_out.push_back(central.at(0));
         random_out.push_back(central.at(1));
         dets.push_back(central["det"]);
@@ -732,76 +822,81 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
     Value R_b_for_set1 = fb.sub(pb, P_set2);
     Value R_b_for_set2 = fb.sub(pa, P_set1);
 
-    // Phase 3 inverse: peel-off walks
-    auto walk_inverse = [&](const std::vector<std::size_t>& s, Value P_set, Value R_b) {
-        std::size_t k = s.size();
-        if (k == 1) {
-            return;
-        }
-        Value R_a = fb.sub(P_set, R_b);
-        // ETmin suffix sums for the recoil chain (see forward walk); only built
-        // when cuts are active.
-        auto etmin_particle = [&](std::size_t idx) {
-            return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+    // Phase 3 inverse: peel-off walks (mirror the forward restructure: first peel
+    // projects the own-side beam R_a, 2->3 peels project beam_other = 3-i side).
+    auto walk_inverse =
+        [&](
+            const std::vector<std::size_t>& s, Value P_set, Value R_b, Value beam_other
+        ) {
+            std::size_t k = s.size();
+            if (k == 1) {
+                return;
+            }
+            Value R_a = fb.sub(P_set, R_b);
+            // ETmin suffix sums for the recoil chain (see forward walk); only built
+            // when cuts are active.
+            auto etmin_particle = [&](std::size_t idx) {
+                return fb.sqrt(fb.add(fb.square(m_out.at(idx)), Value(pt2(idx))));
+            };
+            ValueVec etmin_suffix;
+            if (_has_cut) {
+                etmin_suffix.resize(k);
+                etmin_suffix.at(k - 1) = etmin_particle(s.at(k - 1));
+                for (std::size_t j = k - 1; j-- > 0;) {
+                    etmin_suffix.at(j) =
+                        fb.add(etmin_particle(s.at(j)), etmin_suffix.at(j + 1));
+                }
+            }
+            Value im1;
+            bool first = true;
+            for (std::size_t j = 0; j < k - 1; ++j) {
+                Value peeled = p_outgoing(s.at(j));
+                // p1_out is the chain carrier (mass m_rest); by conservation
+                // p1_out = R_a + R_b - peeled.
+                Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
+                if (first) {
+                    // Same projection as the forward 2->2 block: own-side beam R_a.
+                    ValueVec cond{R_a, R_b};
+                    if (_has_cut) {
+                        cond.push_back(etmin_suffix.at(j + 1));
+                        cond.push_back(etmin_particle(s.at(j)));
+                    }
+                    auto rs = _lab_scattering.build_inverse(fb, {p1_out, peeled}, cond);
+                    random_out.push_back(rs.at(0));
+                    random_out.push_back(rs.at(1));
+                    dets.push_back(rs["det"]);
+                    first = false;
+                } else {
+                    // Mirror the forward 2->3 restructure: project beam_other, with
+                    // S = R_a + R_b reconstructed as beam_other + (S - beam_other) and
+                    // pb = (S - beam_other) + im1 (the kernel re-subtracts p_3 = im1).
+                    Value S = fb.add(R_a, R_b);
+                    Value pb_for_block = fb.add(fb.sub(S, beam_other), im1);
+                    ValueVec cond{beam_other, pb_for_block, im1};
+                    if (_has_cut) {
+                        cond.push_back(etmin_suffix.at(j + 1));
+                        cond.push_back(etmin_particle(s.at(j)));
+                        cond.push_back(Value(mat_at(_dr_min, s.at(j - 1), s.at(j))));
+                        cond.push_back(Value(cut_floor({s.at(j - 1), s.at(j)})));
+                    }
+                    auto rs = _two_to_three.build_inverse(fb, {p1_out, peeled}, cond);
+                    // rs.at(0) is the discrete choice index (int) emitted by the
+                    // 2->3 inverse; rs.at(1), rs.at(2) are the continuous r_s23, r_t1.
+                    discrete_out.push_back(rs.at(0));
+                    random_out.push_back(rs.at(1));
+                    random_out.push_back(rs.at(2));
+                    dets.push_back(rs["det"]);
+                }
+                R_a = fb.sub(R_a, peeled);
+                im1 = peeled;
+            }
         };
-        ValueVec etmin_suffix;
-        if (_has_cut) {
-            etmin_suffix.resize(k);
-            etmin_suffix.at(k - 1) = etmin_particle(s.at(k - 1));
-            for (std::size_t j = k - 1; j-- > 0;) {
-                etmin_suffix.at(j) =
-                    fb.add(etmin_particle(s.at(j)), etmin_suffix.at(j + 1));
-            }
-        }
-        Value im1;
-        bool first = true;
-        for (std::size_t j = 0; j < k - 1; ++j) {
-            Value peeled = p_outgoing(s.at(j));
-            // p1_out is the chain carrier (mass m_rest); by conservation
-            // p1_out = R_a + R_b - peeled.
-            Value p1_out = fb.sub(fb.add(R_a, R_b), peeled);
-            if (first) {
-                // Same cut conditions as the forward 2->2 block.
-                ValueVec cond{R_b, R_a};
-                if (_has_cut) {
-                    cond.push_back(etmin_suffix.at(j + 1));
-                    cond.push_back(etmin_particle(s.at(j)));
-                }
-                auto rs = _lab_scattering.build_inverse(fb, {p1_out, peeled}, cond);
-                random_out.push_back(rs.at(0));
-                random_out.push_back(rs.at(1));
-                dets.push_back(rs["det"]);
-                first = false;
-            } else {
-                // Mirror the forward's pb restoration: the 2->3 kernel
-                // internally subtracts p_3 = im1, so we pass pb = R_a + im1
-                // to get p_12 = R_b + R_a (the remaining-to-produce system).
-                Value pb_for_block = fb.add(R_a, im1);
-                // Same cut conditions as the forward 2->3 block.
-                ValueVec cond{R_b, pb_for_block, im1};
-                if (_has_cut) {
-                    cond.push_back(etmin_suffix.at(j + 1));
-                    cond.push_back(etmin_particle(s.at(j)));
-                    cond.push_back(Value(cut_floor({s.at(j - 1), s.at(j)})));
-                }
-                auto rs = _two_to_three.build_inverse(fb, {p1_out, peeled}, cond);
-                // rs.at(0) is the discrete choice index (int) emitted by the
-                // 2->3 inverse; rs.at(1), rs.at(2) are the continuous r_s23, r_t1.
-                discrete_out.push_back(rs.at(0));
-                random_out.push_back(rs.at(1));
-                random_out.push_back(rs.at(2));
-                dets.push_back(rs["det"]);
-            }
-            R_a = fb.sub(R_a, peeled);
-            im1 = peeled;
-        }
-    };
 
     if (!_set1.empty()) {
-        walk_inverse(_set1, P_set1, R_b_for_set1);
+        walk_inverse(_set1, P_set1, R_b_for_set1, pb);
     }
     if (!_set2.empty()) {
-        walk_inverse(_set2, P_set2, R_b_for_set2);
+        walk_inverse(_set2, P_set2, R_b_for_set2, pa);
     }
 
     // input_types is [random0..random_{N-1}, discrete0..discrete_{M-1}], so the

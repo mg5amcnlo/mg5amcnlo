@@ -1315,6 +1315,12 @@ t1_inv_min_max_doublet:
     - name: mir_min
       type: [float]
       desc:
+    - name: etmin_i
+      type: [float]
+      desc:
+    - name: etmin_ir
+      type: [float]
+      desc:
   outputs:
     - name: t_min
       type: [float]
@@ -1338,6 +1344,12 @@ t1_inv_value_and_min_max_doublet:
       type: [float]
       desc:
     - name: mir_min
+      type: [float]
+      desc:
+    - name: etmin_i
+      type: [float]
+      desc:
+    - name: etmin_ir
       type: [float]
       desc:
   outputs:
@@ -1368,6 +1380,12 @@ t2_inv_min_max_doublet:
     - name: t1_abs
       type: [float]
       desc:
+    - name: etmin_i
+      type: [float]
+      desc:
+    - name: etmin_ir
+      type: [float]
+      desc:
   outputs:
     - name: t_min
       type: [float]
@@ -1394,6 +1412,12 @@ t2_inv_value_and_min_max_doublet:
       type: [float]
       desc:
     - name: t1_abs
+      type: [float]
+      desc:
+    - name: etmin_i
+      type: [float]
+      desc:
+    - name: etmin_ir
       type: [float]
       desc:
   outputs:
@@ -1486,6 +1510,15 @@ s23_min_max_cut:
     - name: m2
       type: [float]
       desc:
+    - name: etmin_1
+      type: [float]
+      desc:
+    - name: etmin_2
+      type: [float]
+      desc:
+    - name: drcut
+      type: [float]
+      desc:
     - name: s23_min_cut
       type: [float]
       desc:
@@ -1516,6 +1549,15 @@ s23_value_and_min_max_cut:
       desc:
     - name: p2
       type: [float, 4]
+      desc:
+    - name: etmin_1
+      type: [float]
+      desc:
+    - name: etmin_2
+      type: [float]
+      desc:
+    - name: drcut
+      type: [float]
       desc:
     - name: s23_min_cut
       type: [float]

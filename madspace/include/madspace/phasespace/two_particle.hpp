@@ -60,7 +60,8 @@ public:
         double t1_width = 0,
         double t2_invariant_power = 0,
         double t2_mass = 0,
-        double t2_width = 0
+        double t2_width = 0,
+        bool has_cut = false
     );
 
 private:
@@ -77,6 +78,7 @@ private:
 
     Invariant _t1_invariant;
     Invariant _t2_invariant;
+    bool _has_cut;
 };
 
 } // namespace madspace

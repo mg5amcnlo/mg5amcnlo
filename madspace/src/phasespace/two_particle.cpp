@@ -148,7 +148,8 @@ DoubleT::DoubleT(
     double t1_width,
     double t2_invariant_power,
     double t2_mass,
-    double t2_width
+    double t2_width,
+    bool has_cut
 ) :
     Mapping(
         "DoubleT",
@@ -156,13 +157,23 @@ DoubleT::DoubleT(
          {"random_t1", batch_float},
          {"random_t2", batch_float}},
         {{"momentum1", batch_four_vec}, {"momentum2", batch_four_vec}},
-        {{"momentum_in1", batch_four_vec},
-         {"momentum_in2", batch_four_vec},
-         {"mass1", batch_float},
-         {"mass_rest_min", batch_float}}
+        [&] {
+            NamedVector<Type> cond{
+                {"momentum_in1", batch_four_vec},
+                {"momentum_in2", batch_four_vec},
+                {"mass1", batch_float},
+                {"mass_rest_min", batch_float}
+            };
+            if (has_cut) {
+                cond.push_back("etmin_i", batch_float);
+                cond.push_back("etmin_ir", batch_float);
+            }
+            return cond;
+        }()
     ),
     _t1_invariant(t1_invariant_power, t1_mass, t1_width),
-    _t2_invariant(t2_invariant_power, t2_mass, t2_width) {}
+    _t2_invariant(t2_invariant_power, t2_mass, t2_width),
+    _has_cut(has_cut) {}
 
 Mapping::Result DoubleT::build_forward_impl(
     FunctionBuilder& fb,
@@ -173,12 +184,16 @@ Mapping::Result DoubleT::build_forward_impl(
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
     auto m1 = conditions.at(2);
     auto mir_min = conditions.at(3);
+    auto etmin_i = _has_cut ? conditions.at(4) : Value(0.);
+    auto etmin_ir = _has_cut ? conditions.at(5) : Value(0.);
 
-    auto [t1_min, t1_max] = fb.t1_inv_min_max_doublet(p_in1, p_in2, m1, mir_min);
+    auto [t1_min, t1_max] =
+        fb.t1_inv_min_max_doublet(p_in1, p_in2, m1, mir_min, etmin_i, etmin_ir);
     auto t1_result = _t1_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
 
-    auto [t2_min, t2_max] =
-        fb.t2_inv_min_max_doublet(p_in1, p_in2, m1, mir_min, t1_result["invariant"]);
+    auto [t2_min, t2_max] = fb.t2_inv_min_max_doublet(
+        p_in1, p_in2, m1, mir_min, t1_result["invariant"], etmin_i, etmin_ir
+    );
     auto t2_result = _t2_invariant.build_forward(fb, {r_t2}, {t2_min, t2_max});
 
     auto [p1, p2, det_scatter] = fb.double_t_scattering(
@@ -198,15 +213,19 @@ Mapping::Result DoubleT::build_inverse_impl(
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
     auto m1 = conditions.at(2);
     auto mir_min = conditions.at(3);
+    auto etmin_i = _has_cut ? conditions.at(4) : Value(0.);
+    auto etmin_ir = _has_cut ? conditions.at(5) : Value(0.);
 
     auto [r_phi, det_scatter] = fb.double_t_scattering_inverse(p1, p2, p_in1, p_in2);
 
-    auto [t1_abs, t1_min, t1_max] =
-        fb.t1_inv_value_and_min_max_doublet(p_in1, p_in2, p1, m1, mir_min);
+    auto [t1_abs, t1_min, t1_max] = fb.t1_inv_value_and_min_max_doublet(
+        p_in1, p_in2, p1, m1, mir_min, etmin_i, etmin_ir
+    );
     auto t1_result = _t1_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
 
-    auto [t2_abs, t2_min, t2_max] =
-        fb.t2_inv_value_and_min_max_doublet(p_in1, p_in2, p1, m1, mir_min, t1_abs);
+    auto [t2_abs, t2_min, t2_max] = fb.t2_inv_value_and_min_max_doublet(
+        p_in1, p_in2, p1, m1, mir_min, t1_abs, etmin_i, etmin_ir
+    );
     auto t2_result = _t2_invariant.build_inverse(fb, {t2_abs}, {t2_min, t2_max});
 
     auto det_inv = fb.mul(t1_result["det"], t2_result["det"]);

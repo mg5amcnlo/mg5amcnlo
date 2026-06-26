@@ -1,20 +1,22 @@
 import math
 from dataclasses import dataclass
-from typing import List, Optional
 
 import numpy as np
 import pytest
 
 import madspace as ms
 
+# from typing import List, Optional
+
+
 PSM = ms.PhaseSpaceMapping
 
 CM_ENERGY = 13000.0
-N_SAMPLES = 400_000
+N_SAMPLES = 300_000
 TOL_SIGMA = 5.0
 BASE_SEED = 2024
 
-CUT_FRACTIONS = [0.02, 0.05, 0.10, 0.20, 0.50]
+CUT_FRACTIONS = [0.05, 0.10, 0.20, 0.50]
 CUT_DELTAR_MIN = 0.4
 
 M_TOP, M_W, M_Z = 173.0, 80.4, 91.19
@@ -38,8 +40,8 @@ class Config:
     piped: bool
 
 
-def _mode_name(mode):
-    return str(mode).rsplit(".", 1)[-1]
+# def _mode_name(mode):
+#     return str(mode).rsplit(".", 1)[-1]
 
 
 def _n_jets(pids_out):

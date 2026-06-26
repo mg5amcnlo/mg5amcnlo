@@ -115,6 +115,7 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
             if (has_cut) {
                 cond.push_back("etmin_1", batch_float);
                 cond.push_back("etmin_2", batch_float);
+                cond.push_back("drcut", batch_float);
                 cond.push_back("s23_min_cut", batch_float);
             }
             return cond;
@@ -140,7 +141,16 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
     auto t_inv_result = _t_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
     auto [s23_min, s23_max] = _has_cut
         ? fb.s23_min_max_cut(
-              p_a, p_b, p_3, t_inv_result["invariant"], m1, m2, conditions.at(5)
+              p_a,
+              p_b,
+              p_3,
+              t_inv_result["invariant"],
+              m1,
+              m2,
+              conditions.at(3),
+              conditions.at(4),
+              conditions.at(5),
+              conditions.at(6)
           )
         : fb.s23_min_max(p_a, p_b, p_3, t_inv_result["invariant"], m1, m2);
     auto s23_inv_result = _s_invariant.build_forward(fb, {r_s23}, {s23_min, s23_max});
@@ -155,13 +165,6 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
         m1,
         m2
     );
-    // `index_choice` (a discrete 0/1 input) selects one of the 2 two-body
-    // solutions; the det returned here is the per-branch Jacobian ONLY.
-    // The solution multiplicity (factor 2 per 2->3 peel, i.e. 2^discrete_dim
-    // overall) is intentionally NOT applied here -- it is owned by the caller:
-    //   - uniform discrete sampling: multiply the weight by 2^discrete_dim;
-    //   - adaptive discrete classifier (MadNIS q_disc): apply no factor.
-    // This keeps the discrete measure out of madspace and avoids double-counting.
     return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter)};
 }
 
@@ -179,14 +182,23 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
         : fb.t_inv_value_and_min_max(p_a, fb.sub(p_b, p_3), p1, p2);
     auto t_inv_result = _t_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
     auto [s23, s23_min, s23_max] = _has_cut
-        ? fb.s23_value_and_min_max_cut(p_a, p_b, p_3, t1_abs, p1, p2, conditions.at(5))
+        ? fb.s23_value_and_min_max_cut(
+              p_a,
+              p_b,
+              p_3,
+              t1_abs,
+              p1,
+              p2,
+              conditions.at(3),
+              conditions.at(4),
+              conditions.at(5),
+              conditions.at(6)
+          )
         : fb.s23_value_and_min_max(p_a, p_b, p_3, t1_abs, p1, p2);
     auto s23_inv_result = _s_invariant.build_inverse(fb, {s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
     auto [m1, m2, index_choice, det_scatter] =
         fb.two_to_three_particle_scattering_inverse(p1, p2, p_3, p_a, p_b, t1_abs, s23);
-    // per-branch Jacobian only; the solution multiplicity is owned externally
-    // (see forward note), so no compensating 0.5 here.
     return {
         {{"discrete_choice", index_choice},
          {"random_s23", s23_inv_result["random"]},
