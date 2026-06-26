@@ -3491,13 +3491,17 @@ END"""
         # For V4:
         cImag = complex(0,1)
 
+        # exec/eval need an explicit namespace: since Python 3.13 (PEP 667)
+        # exec() at function scope no longer writes into the function locals,
+        # so the TMP* variables defined here would not be visible to eval().
+        namespace = dict(locals())
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))       
+            exec('%s = %s' % (name,expr), namespace)
 
         #for i in range(100):
         ufo_value = []
         for i in range(4):
-            ufo_value.append(eval(str(amp.expr.get_rep([i]))))   
+            ufo_value.append(eval(str(amp.expr.get_rep([i])), namespace))
             #ufo_value = [eval(str(amp.expr.get_rep([i]))) for i in range(4)]
 
         #computed with 1.4.8.4 // 1.5.3 // 1.5.4
@@ -3536,11 +3540,13 @@ END"""
         # For V4:
         cImag = complex(0,1)
 
+        # explicit namespace for exec/eval (PEP 667, Python 3.13+): see above.
+        namespace = dict(locals())
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))       
+            exec('%s = %s' % (name,expr), namespace)
 
 
-        ufo_value = eval(str(amp.expr.get_rep([0])))
+        ufo_value = eval(str(amp.expr.get_rep([0])), namespace)
         self.assertAlmostEqual(ufo_value, 1080j)
 
 
@@ -3564,11 +3570,13 @@ END"""
         # For V4:
         cImag = complex(0,1)
 
+        # explicit namespace for exec/eval (PEP 667, Python 3.13+): see above.
+        namespace = dict(locals())
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))
-            
-        ufo_value = eval(str(amp.expr.get_rep([0])))
-    
+            exec('%s = %s' % (name,expr), namespace)
+
+        ufo_value = eval(str(amp.expr.get_rep([0])), namespace)
+
         #v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
         #            -(F2_1*F1_4+F2_2*F1_3)*V3_2 \
         #            +(F2_1*F1_4-F2_2*F1_3)*V3_3*cImag \
@@ -3586,10 +3594,12 @@ END"""
         builder = create_aloha.AbstractRoutineBuilder(FFV)
         conjg_builder= builder.define_conjugate_builder()
         amp = conjg_builder.compute_routine(0, factorize=False)
+        # explicit namespace for exec/eval (PEP 667, Python 3.13+): see above.
+        namespace = dict(locals())
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))
-                    
-        ufo_value = eval(str(amp.expr.get_rep([0])))
+            exec('%s = %s' % (name,expr), namespace)
+
+        ufo_value = eval(str(amp.expr.get_rep([0])), namespace)
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
         v4_value = (F1_3*F2_1+F1_4*F2_2)*V3_1 \
                           +(F1_3*F2_2+F1_4*F2_1)*V3_2 \

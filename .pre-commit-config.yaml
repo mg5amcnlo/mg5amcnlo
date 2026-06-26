@@ -1,0 +1,56 @@
+ci:
+  autoupdate_commit_msg: "chore: [pre-commit.ci] pre-commit autoupdate"
+  autoupdate_schedule: "monthly"
+  autoupdate_branch: "dev"
+
+repos:
+  # --- Generic hygiene --------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+        files: ^madspace/
+      - id: check-toml
+        files: ^madspace/
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+        files: ^madspace/
+      - id: end-of-file-fixer
+        files: ^madspace/
+      - id: trailing-whitespace
+        files: ^madspace/
+  # --- Python formatting & linting -------------------------------------------
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.2
+    hooks:
+      - id: pyupgrade
+        # set your minimum supported Python here
+        args: ["--py311-plus"]
+        files: ^madspace/
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.12.0
+    hooks:
+      - id: black
+        args: ['--config=madspace/pyproject.toml']
+        files: ^madspace/
+  - repo: https://github.com/pycqa/isort
+    rev: '7.0.0'
+    hooks:
+      - id: isort
+        args: ['--settings-path=madspace/pyproject.toml']
+        files: ^madspace/
+  # --- C++ formatting & analysis ---------------------------------------------
+  - repo: local
+    hooks:
+      - id: generate-headers
+        name: generate headers
+        files: ^madspace/instruction_set.yaml$
+        entry: python madspace/generate_headers.py
+        language: python
+        additional_dependencies: [pyyaml]
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: 'v21.1.8'
+    hooks:
+      - id: clang-format
+        types_or: [c++, c, cuda]
+        files: ^madspace/

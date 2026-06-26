@@ -1704,7 +1704,10 @@ class width_estimate(object):
             for index in range(1,len(particle_set)):
                 commandline+="add process %s > all all \n" % particle_set[index]
 
-        commandline += "output %s/width_calculator -f \n" % path_me
+        # Force the madevent structure regardless of MG5's default output mode
+        # (now 'mg7', whose launcher requires lhapdf and does not give the
+        # standard madevent layout this width computation drives).
+        commandline += "output madevent %s/width_calculator -f \n" % path_me
 
 
         aloha.loop_mode = False

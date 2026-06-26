@@ -1,0 +1,9 @@
+# prevents formatting of auto-generated code
+include/madspace/compgraphs/function_builder_mixin.inc
+src/python/instruction_set.hpp
+src/compgraphs/instruction_set_mixin.inc
+include/madspace/compgraphs/opcode_mixin.inc
+src/cpu/runtime_mixin.inc
+src/gpu/runtime_mixin.inc
+src/cpu/runtime_backward_mixin.inc
+src/gpu/runtime_backward_mixin.inc

@@ -5,41 +5,31 @@
 //--------------------------------------------------------------------------
 // Initialize process. 
   
-void CPPProcess::initProc(string param_card_name) {
+CPPProcess::CPPProcess(string param_card_name) :
+    goodhel(), ntry(), sum_hel(), ngood(), igood(), jhel()
+{
 // Instantiate the model class and set parameters that stay fixed during run
-    pars = Parameters_%(model_name)s::getInstance();
-    SLHAReader slha(param_card_name);
-    pars->setIndependentParameters(slha);
-    pars->setIndependentCouplings();
-    pars->printIndependentParameters();
-    pars->printIndependentCouplings();
+    SLHAReader slha(param_card_name, false);
+    pars.setIndependentParameters(slha);
+    pars.setIndependentCouplings();
     %(initProc_lines)s
 } 
 
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-void CPPProcess::sigmaKin( int* flavor) { 
+double CPPProcess::sigmaKin(int flavor_id) { 
     // Set the parameters which change event by event
-    pars->setDependentParameters();
-    pars->setDependentCouplings();
-    static bool firsttime = true;
-    if (firsttime){
-	pars->printDependentParameters();
-	pars->printDependentCouplings();
-	firsttime = false;
+    pars.setDependentParameters();
+    pars.setDependentCouplings();
+
+    for (int i = 0; i < ndiagrams; ++i) {
+        amp2[i] = 0;
     }
 
     // Reset color flows
     %(reset_jamp_lines)s
     %(sigmaKin_lines)s
-}
-
-//--------------------------------------------------------------------------
-// Evaluate |M|^2, including incoming flavour dependence. 
-
-double CPPProcess::sigmaHat() {  
-    %(sigmaHat_lines)s
 }
 
 //==========================================================================
@@ -53,7 +43,7 @@ double CPPProcess::sigmaHat() {
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-int CPPProcess::broken_sym(int* flavor)
+int CPPProcess::broken_sym(const int* flavor)
 {
     const int n_components = %(broken_sym_ncomponents)d;
     const int n_entries = %(broken_sym_nentries)d;

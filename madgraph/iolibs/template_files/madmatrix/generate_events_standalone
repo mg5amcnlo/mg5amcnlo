@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Integrated with the MadGraph7 project in Feb 2026.
+"""Standalone driver for the MadGraph7 standalone_mg7 mode.
+
+Orchestrates compilation and run of `check_sa.exe matrix` in each SubProcesses/P*/ folder.
+
+When invoked with no command-line options at all, the script exposes an
+interactive interface: it lists the available backends and P* subfolders and asks
+the user to pick one by number.
+Option -f is still available to use default values for options.
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+
+BACKENDS = ['cppauto', 'cppnone', 'cppsse4', 'cppavx2', 'cpp512y', 'cpp512z', 'cuda', 'hip']
+
+DEFAULT_BACKEND = 'cppauto'
+
+
+def list_p_dirs(subproc):
+    return sorted(d for d in os.listdir(subproc)
+                  if d.startswith('P') and os.path.isdir(os.path.join(subproc, d)))
+
+
+def prompt_choice(items, label, default_index=0):
+    while True:
+        print(f"\nSelect {label}:")
+        for i, item in enumerate(items):
+            tag = " (default)" if i == default_index else ""
+            print(f"  [{i}] {item}{tag}")
+        try:
+            answer = input(f"Enter number [{default_index}]: ").strip()
+        except EOFError:
+            print()
+            return items[default_index]
+        if not answer:
+            return items[default_index]
+        if answer.isdigit() and 0 <= int(answer) < len(items):
+            return items[int(answer)]
+        print(f"Invalid choice: {answer!r}", file=sys.stderr)
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="generate_events",
+        description="Build and run check_sa.exe in each SubProcesses/P*/ folder.",
+        epilog=("With no options, the script prompts interactively for the "
+                "backend and the P* subfolder. Pass -f to use defaults without "
+                "prompting."),
+    )
+    parser.add_argument("-f", action="store_true", dest="force_defaults",
+                        help="Use default options without prompting.")
+    parser.add_argument("-b", "--backend", choices=BACKENDS, default=None,
+                        metavar="BACKEND",
+                        help=f"Backend to compile with (default: {DEFAULT_BACKEND}).")
+    parser.add_argument("-p", "--proc", default=None, metavar="P_NAME",
+                        help="P* subfolder to run, or 'all' (default: all).")
+    parser.add_argument("-j", "--jobs", type=int, default=1,
+                        help="Parallel make jobs (default: 1).")
+    parser.add_argument("-l", "--list", action="store_true", dest="list_only",
+                        help="List available P* subfolders and exit.")
+    return parser
+
+
+def resolve_proc(arg_proc, p_dirs):
+    if arg_proc is None or arg_proc == 'all':
+        return p_dirs
+    if arg_proc in p_dirs:
+        return [arg_proc]
+    raise SystemExit(
+        f"ERROR: P* '{arg_proc}' not found. Available: {', '.join(p_dirs)}"
+    )
+
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    interactive = (len(sys.argv) == 1)
+
+    # Run from the process folder root regardless of where this is invoked from.
+    os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    subproc = "SubProcesses"
+    if not os.path.isdir(subproc):
+        raise SystemExit(f"ERROR: {subproc} does not exist")
+
+    p_dirs = list_p_dirs(subproc)
+    if not p_dirs:
+        raise SystemExit(f"ERROR: no P* subfolders found in {subproc}")
+
+    if args.list_only:
+        print(f"Available P* subfolders in {os.path.abspath(subproc)}:")
+        for d in p_dirs:
+            print(f"  {d}")
+        return
+
+    # Backend selection
+    if args.backend is not None:
+        backend = args.backend
+    elif interactive:
+        backend = prompt_choice(BACKENDS, 'backend', default_index=0)
+    else:
+        backend = DEFAULT_BACKEND
+
+    # P* selection
+    if args.proc is not None:
+        chosen = resolve_proc(args.proc, p_dirs)
+    elif interactive:
+        choices = p_dirs + ['<all>']
+        picked = prompt_choice(choices, 'P* subfolder', default_index=len(p_dirs))
+        chosen = p_dirs if picked == '<all>' else [picked]
+    else:
+        chosen = p_dirs
+
+    for d in chosen:
+        path = os.path.join(subproc, d)
+        print(f"\n=== [{backend}] Building {d} ===", flush=True)
+        try:
+            p = subprocess.run(
+                ["make", "-j", str(args.jobs), f"BACKEND={backend}", "USEBUILDDIR=1"],
+                cwd=path, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            )
+            out = p.stdout
+        except OSError as error:
+            if path and not os.path.exists(path):
+                raise OSError("Directory %s doesn't exists. Impossible to run make" % path)
+            else:
+                error_text = "Impossible to compile %s directory\n" % path
+                error_text += "Trying to launch make command returns:\n"
+                error_text += "    " + str(error) + "\n"
+                error_text += "In general this means that your computer is not able to compile."
+                if sys.platform == "darwin":
+                    error_text += "Note that MacOSX doesn't have gmake install by default.\n"
+                    error_text += "Xcode contains gmake."
+                raise Exception(error_text)
+        if p.returncode:
+            try:
+                out = out.decode("utf-8", errors="ignore")
+            except Exception:
+                out = str(out)
+            error_text = "A compilation Error occurs "
+            if path:
+                error_text += "when trying to compile %s.\n" % path
+            error_text += "The compilation fails with the following output message:\n"
+            error_text += "    " + out.replace("\n", "\n    ") + "\n"
+            error_text += "Please try to fix this compilations issue and retry.\n"
+            error_text += "Help might be found at https://github.com/MadGraphTeam/MadGraph7\n"
+            error_text += "If you think that this is a bug, you can report this at https://github.com/MadGraphTeam/MadGraph7/issues"
+            raise Exception(error_text)
+
+        print(f"\n=== [{backend}] Running {d}/check_sa.exe matrix ===", flush=True)
+        subprocess.run(['./check_sa.exe', 'matrix'], cwd=path, check=True)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

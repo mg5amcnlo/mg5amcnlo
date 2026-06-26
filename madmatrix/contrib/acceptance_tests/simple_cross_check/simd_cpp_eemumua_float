@@ -1,0 +1,10 @@
+#title check eemumua in single precision
+import model sm
+                 set automatic_html_opening False --no_save
+                 set notification_center False --no_save
+                 generate e+ e- > mu+ mu- a
+                 output madevent_simd %s -f -nojpeg
+                 launch
+                 set nevents 100
+                 set floating_type f
+#check run_01 0.0266 0.0002854 100

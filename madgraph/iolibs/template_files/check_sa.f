@@ -40,9 +40,11 @@ C
       PARAMETER (MAXFLAVOR=%(maxflavor)d)
       INTEGER FLAVOR(NEXTERNAL, MAXFLAVOR)
       INTEGER PDG_FOR_FLAVOR(NEXTERNAL,MAXFLAVOR)
-C     
+      INTEGER FLAV_IDX
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
+C
 C     EXTERNAL
-C     
+C
       REAL*8 DOT
       EXTERNAL DOT
       
@@ -119,8 +121,9 @@ c     Now we can call the matrix element!
 c
       do I=1, MAXFLAVOR
       IF(unique_flavor.gt.0.and.unique_flavor.ne.I) CYCLE
+      FLAV_IDX = %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR(1,I))
       do J=1, NB_TRY
-      CALL %(proc_prefix)sSMATRIX(P,FLAVOR(1,I), MATELEM)
+      CALL %(proc_prefix)sSMATRIX(P,FLAV_IDX, MATELEM)
       enddo
 c
       write(*,*) "PDG", PDG_FOR_FLAVOR(:,I)

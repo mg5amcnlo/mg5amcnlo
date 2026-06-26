@@ -133,6 +133,7 @@ C INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
 	    GOLEMINIT=.FALSE.
 	    CALL %(proc_prefix)sINITGOLEM()
+	    CALL cite('Cullen:2011kv','one-loop reduction with Golem95')
       ENDIF
 
 C  No stability test intrisic to Golem95 now

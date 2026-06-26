@@ -4,9 +4,27 @@ description: Restores lhapdf from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
-    # setup other environment 
+    # setup other environment
     - run: |
         cd $GITHUB_WORKSPACE
         cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
         cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+      shell: bash
+
+    # madspace (mg7 phase-space / integration backend) should always be present.
+    # Built from the in-tree source via pip (scikit-build-core / cmake; cmake and
+    # BLAS come from the runner image / restored cache).
+    #
+    # Upgrade pip + packaging first: the runner ships an ancient pip
+    # (pip/_vendor/pep517) whose build isolation does not provide a recent
+    # packaging, so scikit-build-core's vendored pyproject_metadata fails with
+    # "canonicalize_name() got an unexpected keyword argument 'validate'" /
+    # "module 'packaging.utils' has no attribute 'InvalidName'" (both need
+    # packaging>=22). A modern pip builds madspace in isolation correctly.
+    - name: Install madspace
+      run: |
+        cd $GITHUB_WORKSPACE
+        sudo sudo apt-get install libopenblas-dev
+        python3 -m pip install --upgrade pip packaging
+        python3 -m pip install ./madspace
       shell: bash

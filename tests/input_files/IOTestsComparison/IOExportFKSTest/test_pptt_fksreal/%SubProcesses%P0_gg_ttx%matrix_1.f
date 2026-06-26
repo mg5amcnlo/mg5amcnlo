@@ -352,13 +352,13 @@ C     JAMPs contributing to orders QCD=3 QED=0
       TMP_JAMP(1) = AMP(12) - AMP(17)  ! used 4 times
       TMP_JAMP(9) = TMP_JAMP(3) + ((0.000000000000000D+00,
      $ -1.000000000000000D+00)) * AMP(8)  ! used 2 times
-      TMP_JAMP(8) = TMP_JAMP(3) + ((-0.000000000000000D+00
+      TMP_JAMP(8) = TMP_JAMP(3) + ((0.000000000000000D+00
      $ ,1.000000000000000D+00)) * AMP(5)  ! used 2 times
-      TMP_JAMP(7) = TMP_JAMP(2) + ((-0.000000000000000D+00
+      TMP_JAMP(7) = TMP_JAMP(2) + ((0.000000000000000D+00
      $ ,1.000000000000000D+00)) * AMP(2)  ! used 2 times
       TMP_JAMP(6) = TMP_JAMP(2) + ((0.000000000000000D+00,
      $ -1.000000000000000D+00)) * AMP(3)  ! used 2 times
-      TMP_JAMP(5) = TMP_JAMP(1) + ((-0.000000000000000D+00
+      TMP_JAMP(5) = TMP_JAMP(1) + ((0.000000000000000D+00
      $ ,1.000000000000000D+00)) * AMP(11)  ! used 2 times
       TMP_JAMP(4) = TMP_JAMP(1) + ((0.000000000000000D+00,
      $ -1.000000000000000D+00)) * AMP(10)  ! used 2 times

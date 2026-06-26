@@ -411,10 +411,42 @@ class SALauncher(ExtLauncher):
                 # check
                 timings = getattr(self, 'timings', 0)
                 if timings and int(timings) > 0:
-                    self._run_with_timings(cur_path, int(timings),
-                                          int(getattr(self, 'nb_run', 1)))
+                    nb_run = int(getattr(self, 'nb_run', 1))
+                    if nb_run == 0:
+                        # --nb_run=0: good-helicity check mode. Evaluate each
+                        # flavor `timings` times (so the good-helicity filter is
+                        # exercised) and print ./check's matrix-element values
+                        # instead of a timing table.
+                        self._run_goodhel_check(cur_path, int(timings))
+                    else:
+                        self._run_with_timings(cur_path, int(timings), nb_run)
                 else:
                     subprocess.call(['./check'], cwd=cur_path)
+
+    def _run_goodhel_check(self, cur_path, nb_try):
+        """Evaluate every flavor nb_try times and print the resulting
+        matrix-element values, with no timing summary.
+
+        Here "every flavor" means every distinct external-flavor assignment the
+        merged matrix element serves: when light quarks/leptons are grouped into
+        merged particles, a single subprocess covers several physical flavor
+        combinations (e.g. u u~ > u u~, d d~ > d d~, ...), enumerated by the
+        flavor index. ./check is invoked with unique_flavor=0 so it loops over
+        all of them, calling SMATRIX nb_try times each (so the good-helicity
+        filter is exercised), and prints the final matrix-element evaluation
+        (with its PDG label) for each. A non-merged process simply has one
+        flavor.
+
+        Parameters
+        ----------
+        cur_path : str
+            Path to the subprocess directory containing the compiled ./check.
+        nb_try : int
+            Number of SMATRIX calls per flavor (the --timings value).
+        """
+        logger.info('Good-helicity check: %d SMATRIX call(s) per flavor '
+                    '(printing matrix-element values, no timing table)' % nb_try)
+        subprocess.call(['./check', '1000', str(nb_try), '0'], cwd=cur_path)
 
     def _run_with_timings(self, cur_path, nb_try, nb_run):
         """Run timing analysis for each flavor and print a summary table.

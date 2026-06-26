@@ -1,0 +1,15 @@
+[rocm]
+name=ROCm 6.4 repository
+baseurl=https://repo.radeon.com/rocm/el8/6.4/main
+enabled=1
+priority=50
+gpgcheck=1
+gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
+
+[amdgraphics]
+name=AMD Graphics 7.1.0 repository
+baseurl=https://repo.radeon.com/graphics/7.1/el/8/main/x86_64/
+enabled=1
+priority=50
+gpgcheck=1
+gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key

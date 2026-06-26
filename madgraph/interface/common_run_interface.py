@@ -70,8 +70,12 @@ except ImportError:
     import internal.FO_analyse_card as FO_analyse_card 
     import internal.sum_html as sum_html
     from internal import InvalidCmd, MadGraph5Error
-    
-    MADEVENT=True    
+    try:
+        import internal.citation as citation
+    except ImportError:
+        citation = None
+
+    MADEVENT=True
 else:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
@@ -86,8 +90,9 @@ else:
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as param_card_mod
     import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.citation as citation
 #    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
-    
+
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
@@ -1693,6 +1698,58 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                                      log=logger)
                     pass
 
+    def get_citation_dir(self):
+        """Directory where the per-process citation logs are written for the
+        current run (Events/<run_name>/citations)."""
+        if not self.run_name:
+            return None
+        return pjoin(self.me_dir, 'Events', self.run_name, 'citations')
+
+    def setup_citation_tracking(self):
+        """Point MG5_CITATION_DIR at the current run so that every piece of code
+        (this process and any executable it launches) records its references
+        there.  Safe no-op if citation tracking is unavailable."""
+        if citation is None:
+            return
+        citation_dir = self.get_citation_dir()
+        if not citation_dir:
+            return
+        try:
+            if not os.path.isdir(citation_dir):
+                os.makedirs(citation_dir)
+        except OSError:
+            return
+        os.environ[citation.ENV_VAR] = citation_dir
+        # seed the run with the citations recorded at generation time
+        # (framework, model, ALOHA/HELAS, UFO format) so they end up in the
+        # final bibliography even when nothing cites them again at run time.
+        gen_log = pjoin(self.me_dir, 'citations.log')
+        if os.path.exists(gen_log):
+            try:
+                files.cp(gen_log, pjoin(citation_dir, 'cite.generation.log'))
+            except Exception:
+                pass
+
+    def finalize_citation_tracking(self):
+        """Collect the run's citation logs and write the two user-facing
+        deliverables (citations.bib and citations.md) next to the events."""
+        if citation is None:
+            return
+        citation_dir = self.get_citation_dir()
+        if not citation_dir:
+            return
+        try:
+            result = citation.finalize(citation_dir,
+                                       output_dir=pjoin(self.me_dir, 'Events',
+                                                        self.run_name),
+                                       run_name=self.run_name)
+        except Exception as error:
+            logger.debug('citation finalization skipped: %s', error)
+            return
+        if result:
+            logger.info('References for this run written to %s',
+                        os.path.relpath(result[0], self.me_dir))
+
     def store_result(self):
         """Dummy routine, to be overwritten by daughter classes"""
 
@@ -1931,6 +1988,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             import madgraph.various.systematics as systematics
 
+        # systematics.py always invokes LHAPDF for PDF variations
+        if citation is not None:
+            citation.cite('Buckley:2014ana',
+                          'LHAPDF6 PDF uncertainties (systematics)')
+
         #one core:
         if nb_submit in [0,1]:
             systematics.call_systematics([input, output] + opts, 
@@ -2085,11 +2147,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             return multicore
             
-        
-        
-        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
-            return
-        
+            
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd('''The module reweight requires that MG5 is installed on the system.
@@ -2140,6 +2198,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         except:
             reweight_card_present = False
 
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
+            return
+
+        # cite the reweighting paper only when reweighting is actually used: an
+        # explicit "reweight" command, or an active "launch" in the from_cards
+        # reweight_card (a default run always calls "reweight -from_cards" with a
+        # template card that has no active launch).
+        if citation is not None:
+            if reweight_mode == 'density':
+                citation.cite('Durupt:2025wuk', 'Density matrix reweighting')
+            elif plugin is None and reweight_mode == 'ON':
+                citation.cite('Mattelaer:2016gcx',
+                    'BSM event reweighting (LO and NLO accuracy)')
+                
 
         if reweight_mode == 'density' and not density_card_flag: #we are in density mode but the reweight card does not exist or does not contain the correct information
             shutil.copyfile(pjoin(self.me_dir, "Cards", "density_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
@@ -3030,6 +3102,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('running rivet', level='rivet')
 
+        if citation is not None:
+            citation.cite('Bierlich:2019rhm', 'analysis with Rivet')
+
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
         if not no_default:
             rivet_config['run_rivet_later'] = False
@@ -3222,6 +3297,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %banner_mod.MadAnalysis5Card._MG5aMC_escape_tag+
                 "in\n  '%s'."%pjoin(self.me_dir, 'Cards','madanalysis5_%s_card.dat'%mode))
             return
+
+        if citation is not None:
+            citation.cite('Conte:2012fm',
+                          '%s-level analysis (MadAnalysis5)' % mode)
 
         MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
                 pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()),
@@ -3467,6 +3546,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
+
+        if citation is not None:
+            citation.cite('deFavereau:2013fsa', 'detector simulation (Delphes)')
+
         if not (no_default or self.force):
             if delphes3:
                 self.ask_edit_cards(['delphes_card.dat'], args)
@@ -4308,6 +4391,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("The decayed event file has been moved to the following location: ")
         logger.info(new_file)
 
+        if citation is not None:
+            citation.cite('Artoisenet:2012st',
+                          'spin-correlated decays (MadSpin)')
+
         if hasattr(self, 'results'):
             current = self.results.current
             nb_event = self.results.current['nb_event']
@@ -4721,6 +4808,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             lhapdf_cluster_possibilities = []
 
         for pdfset in pdfsetname:
+            # Patch the *source* set (the one LHAPDF actually loads from its
+            # data path): LHAPDF resolves the set from pdfsets_dir, not from
+            # the local lib/PDFsets copy, so patching only the copy below is
+            # not enough to inject the missing AlphaS_FlavorScheme metadata.
+            # Done here (before the early 'continue's) so it always runs.
+            self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
         # Check if we need to copy the pdf
             if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
                 any((os.path.exists(pjoin(d, pdfset)) for d in lhapdf_cluster_possibilities)):

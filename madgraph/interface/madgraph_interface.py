@@ -385,7 +385,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     %s"%(', '.join(self._advanced_install_opts)))
         logger.info("   The following options are available:")
         logger.info("     --force        Overwrite without asking any existing installation.")
-        logger.info("     --keep_source  Keep a local copy of the sources of the tools MG5_aMC installed from.")         
+        logger.info("     --keep_source  Keep a local copy of the sources of the tools MG5_aMC installed from.")
         logger.info(" ")
         logger.info("   \"install update\"",'$MG:BOLD')
         logger.info("   check if your MG5 installation is the latest one.")
@@ -393,6 +393,23 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   and apply it to the code. Two options are available for this command:")
         logger.info("     -f: didn't ask for confirmation if it founds an update.")
         logger.info("     --timeout=: Change the maximum time allowed to reach the server.")
+        logger.info(" ")
+        logger.info("   \"install madspace [options]\"",'$MG:BOLD')
+        logger.info("   Install the madspace phase-space library used by the MG7 integrator.")
+        logger.info("   Without options an interactive installer is launched. Available options:")
+        logger.info("     -y/--yes       Re-install non-interactively using saved settings.")
+        logger.info("     --bin          Install pre-compiled package from PyPI (non-interactive).")
+        logger.info("     --source       Build from source (non-interactive).")
+        logger.info("     --cuda         Enable CUDA GPU backend (source build).")
+        logger.info("     --hip          Enable HIP/ROCm GPU backend (source build).")
+        logger.info("     --openblas     Build OpenBLAS from source (default on Linux/Windows, source build).")
+        logger.info("     --no-openblas  Use system BLAS library (default on Apple, source build).")
+        logger.info("     --simd         Enable SIMD backend (source build, experimental).")
+        logger.info("     --debug        Optimized build with debug symbols, RelWithDebInfo (source build).")
+        logger.info("     --full-debug   Debug build without optimization, Debug mode (source build).")
+        logger.info("     --no-debug     Optimized build, no debug symbols, Release (source build, default).")
+        logger.info("     --cuda-arch=ARCHS  Semicolon-separated CUDA compute capabilities, e.g. 75;80;86.")
+        logger.info("     --hip-arch=ARCHS   Semicolon-separated HIP architectures, e.g. gfx900;gfx906.")
 
     def help_display(self):
         logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLUE')
@@ -443,6 +460,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > --timings=N   Number of SMATRIX calls per flavor per run (enables timing mode)")
         logger.info(" > --nb_run=Y    Number of timing repetitions (default: 1)")
         logger.info(" > Prints a table with flavor index, average time and 1-sigma uncertainty.")
+        logger.info(" o Example: launch PROC_sm_1 --timings=100 --nb_run=0",'$MG:color:GREEN')
+        logger.info(" > --nb_run=0  Masking check: skip the timing table and instead")
+        logger.info("                print the matrix-element value per flavor after N SMATRIX calls.")
         logger.info("")
         logger.info("Launch on FKS Born building-block standalone output (output standalone --fks):",'$MG:BOLD')
         logger.info(" o Example: launch PROC_FKS_sm_0 --energy=500",'$MG:color:GREEN')
@@ -1523,6 +1543,12 @@ This will take effect only in a NEW terminal
             return 'amcatnlo_fks_sa'
         if os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
+        elif os.path.isfile(pjoin(subproc_path, 'madmatrix.mk')):
+            # standalone_mg7 writes SubProcesses/madmatrix.mk explicitly
+            # (the regular mg7 export does not).
+            return 'standalone_mg7'
+        elif os.path.isfile(pjoin(card_path, 'run_card.toml')):
+            return 'mg7'
         elif os.path.isdir(src_path):
             return 'standalone_cpp'
         elif os.path.isdir(mw_path):
@@ -1744,11 +1770,14 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('No default path for this file')
 
 
-    def check_output(self, args, default='madevent'):
+    def check_output(self, args, default='mg7'):
         """ check the validity of the line"""
 
         if args and args[0] == 'madweight':
             raise self.InvalidCmd('output madweight is no longer supported; please use a different output mode')
+
+        if args and args[0] == 'pythia8':
+            raise self.InvalidCmd('output pythia8 is no longer supported; please use a different output mode')
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
@@ -1799,14 +1828,14 @@ This will take effect only in a NEW terminal
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp',
-                       'matchbox', 'plugin']:
+                      'matchbox', 'plugin', 'me7', 'mg7', 'mg7_v5', 'standalone_mg7']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
             elif path != 'auto':
                 if path in ['HELAS', 'tests', 'MadSpin', 'madgraph', 'mg5decay', 'vendor','madevent_gpu', 'madevent_simd']:
                     if os.getcwd() == MG5DIR:
-                        raise self.InvalidCmd("This name correspond to a buildin MG5 directory. Please choose another name")
+                        raise self.InvalidCmd("This name correspond to a builtin MG5 directory. Please choose another name")
                 self._export_dir = path
             elif path == 'auto':
                 if self.options['pythia8_path']:
@@ -1953,6 +1982,11 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
+        elif self._export_format in ['mg7', 'mg7_v5']:
+            name_dir = lambda i: 'PROCMG7_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
         elif self._export_format.startswith('madevent'):
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
@@ -1961,6 +1995,11 @@ This will take effect only in a NEW terminal
         elif self._export_format.startswith('standalone'):
             if self._export_format == 'standalone_cpp':
                 name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
+                                    (self._curr_model['name'], i)
+                auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+            elif self._export_format == 'standalone_mg7':
+                name_dir = lambda i: 'PROCMG7_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
                 auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -3005,7 +3044,18 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._install_opts + self._advanced_install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
-        elif len(args)>=2 and args[1] in self._advanced_install_opts:           
+        elif len(args) >= 2 and args[1] == 'madspace':
+            options = ['-y', '--yes', '--bin', '--source',
+                       '--cuda', '--no-cuda', '--hip', '--no-hip',
+                       '--openblas', '--no-openblas',
+                       '--simd', '--no-simd',
+                       '--debug', '--full-debug', '--no-debug',
+                       '--cuda-arch=', '--hip-arch=']
+            for opt in options[:]:
+                if any(a.startswith(opt) for a in args[2:]):
+                    options.remove(opt)
+            return self.list_completion(text, options)
+        elif len(args)>=2 and args[1] in self._advanced_install_opts:
             options = ['--keep_source','--logging=']
             if args[1]=='pythia8':
                 options.append('--pythia8_tarball=')
@@ -3049,7 +3099,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools', 'MadSTR', 'RunningCoupling']
+                     'looptools', 'MadSTR', 'RunningCoupling', 'madspace']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -3061,8 +3111,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw']
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
-                                            'matchbox_cpp', 'matchbox']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'aloha',
+                                            'matchbox_cpp', 'matchbox', 'mg7_v5', 'mg7',
+                                            'standalone_mg7']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -3187,7 +3238,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'MG5_aMC>'
+        #self.prompt = 'MG5_aMC>'
+        self.prompt = " 🚀 "
         if madgraph.ReadWrite: # prevent on read-only disk
             self.do_install('update --mode=mg5_start')
 
@@ -3257,7 +3309,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
                                    'matrix', 'standalone_rw']
-        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'mg7_v5', 'mg7', 'standalone_mg7']
         self._nlo_modes_for_completion = ['all','virt','real']
 
     def do_quit(self, line):
@@ -3324,6 +3376,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] == 'process':
             # Rejoin line
             line = ' '.join(args[1:])
+
+            # the '{...}' syntax selects particle polarizations -> remember it so
+            # the polarization paper is cited at output time
+            if '{' in line:
+                self._uses_polarization = True
 
             # store the first process (for the perl script)
             if not self._generate_info:
@@ -3454,8 +3511,12 @@ This implies that with decay chains:
                 
     def add_model(self, args):
         """merge two model"""
-        
+
         model_path = args[0]
+
+        # adding the taudecay library -> cite the TauDecay paper at output time
+        if 'taudecay' in os.path.basename(model_path.rstrip('/')).lower():
+            self._uses_taudecay = True
         recreate = ('--recreate' in args)
         if recreate:
             args.remove('--recreate')
@@ -4841,7 +4902,7 @@ This implies that with decay chains:
             text += 'Flavor grouping check results:\n'
             text += process_checks.output_flavor(flavor_result) + '\n'
         if language_result:
-            text += 'Language comparison results (Fortran SA / C++ SA):\n'
+            text += 'Language comparison results (Fortran SA / C++ SA / MG7 SA / Python):\n'
             text += process_checks.output_language(language_result) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
@@ -4917,6 +4978,10 @@ This implies that with decay chains:
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = ""
+        # Reset polarization-citation marker (a new process definition starts)
+        self._uses_polarization = False
+        self._uses_density_matrix = False
+        self._uses_quarkonia = False
         # Reset _done_export, since we have new process
         self._done_export = False
         # Also reset _export_format and _export_dir
@@ -5686,6 +5751,32 @@ This implies that with decay chains:
 
         return line, proc_option
 
+    def _expand_merged_pdgs(self, pid_set):
+        """Expand merged-particle PDG codes (e.g. _quark=81) into the signed
+        individual-flavor PDGs defined by the model's ``merged_particles`` map.
+
+        ``get_final_part`` must report the *real* final-state PDG ids (MadSpin
+        matches them against the actual particles in the events). With the
+        merged-flavor multiparticles now used by default (``j = g _quark
+        _anti_quark``), the raw ids would otherwise be the merged codes
+        (81/-81), which never appear in the events.
+        """
+        try:
+            merged = self._curr_model.get('merged_particles') or {}
+        except Exception:
+            merged = {}
+        if not merged:
+            return set(pid_set)
+        result = set()
+        for pid in pid_set:
+            base = abs(pid)
+            if base in merged:
+                sign = 1 if pid > 0 else -1
+                result.update(sign * real for real in merged[base])
+            else:
+                result.add(pid)
+        return result
+
     def get_final_part(self, procline):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
@@ -5739,6 +5830,9 @@ This implies that with decay chains:
                     pid = set(self._multiparticles[first])
                 else:
                     raise Exception('invalid particle name: %s. ' % first)
+                # work in real-PDG space so the removal matches the (already
+                # expanded) core final state for merged-flavor labels.
+                pid = self._expand_merged_pdgs(pid)
                 core_final.difference_update(pid)
                 core_final.update(self.get_final_part(one_decay))
 
@@ -5759,9 +5853,9 @@ This implies that with decay chains:
                 if particle[1:] in pids:
                     final.add(pids[particle[1:]])
                 elif particle in self._multiparticles:
-                    final.update(set(self._multiparticles[particle[1:]]))                
+                    final.update(set(self._multiparticles[particle[1:]]))
 
-        return final
+        return self._expand_merged_pdgs(final)
 
     def extract_particle_ids(self, args, crash_on_duplication=False):
         """Extract particle ids from a list of particle names. If
@@ -6746,7 +6840,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         elif args[0] == 'looptools':
             self.install_reduction_library(force=True)
             return
-        
+        elif args[0] == 'madspace':
+            install_script = pjoin(MG5DIR, 'madspace', 'install.py')
+            subprocess.run([sys.executable, install_script] + args[1:])
+            return
 
         plugin = self.install_plugin
         
@@ -7786,6 +7883,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         options = options.__dict__
         # args is now MODE PATH
 
+<<<<<<< HEAD
         if args[0] == 'amcatnlo_fks_sa':
             # the FKS Born building-block check: ExtLauncher.run() first offers
             # to edit the param_card (skipped under -f), then launch_program()
@@ -7801,6 +7899,21 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             return
 
         if args[0].startswith('standalone'):
+||||||| b9413c95d
+        if args[0].startswith('standalone'):
+=======
+        if args[0] == 'standalone_mg7':
+            class ext_program:
+                @staticmethod
+                def run():
+                    os.chdir(args[1])
+                    try:
+                        subprocess.run(os.path.join("bin", "generate_events"))
+                    except KeyboardInterrupt:
+                        pass
+
+        elif args[0].startswith('standalone'):
+>>>>>>> main
             if os.path.isfile(os.path.join(os.getcwd(),args[1],'Cards',\
               'MadLoopParams.dat')) and not os.path.isfile(os.path.join(\
               os.getcwd(),args[1],'SubProcesses','check_poles.f')):
@@ -7882,6 +7995,16 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             ext_program = launch_ext.MWLauncher( self, args[1],
                                                  shell = isinstance(self, cmd.CmdShell),
                                                  options=self.options,**options)            
+        elif args[0] == 'mg7':
+            class ext_program:
+                @staticmethod
+                def run():
+                    os.chdir(args[1])
+                    try:
+                        subprocess.run(os.path.join("bin", "generate_events"))
+                    except KeyboardInterrupt:
+                        pass
+
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd('%s cannot be run from MG5 interface' % args[0])
@@ -8944,7 +9067,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         self.check_set(args)
         self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0]) 
 
-    def set2_store_rwgt_info(args, log=True):
+    def set2_store_rwgt_info(self,args, log=True):
         """Set whether the code should generate systematics information in the output LHE file at NLO
         Default is set to False.
         Example: set store_rwgt_info True
@@ -9356,8 +9479,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         nojpeg = '-nojpeg' in args
         if '--noeps=True' in args:
             nojpeg = True
+        # density-matrix standalone output
+        if '--density' in args:
+            self._uses_density_matrix = True
         flaglist = []
-                    
+
         if '--postpone_model' in args:
             flaglist.append('store_model')
         if '--hel_recycling=False' in args:
@@ -9442,6 +9568,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
+        config['mg7_v5'] =         {'check': True, 'exporter': 'cpp', 'output': 'Template'}
+        config['mg7'] =            {'check': True, 'exporter': 'cpp', 'output': 'Template'}
+        config['standalone_mg7'] = {'check': True, 'exporter': 'cpp', 'output': 'Template'}
 
         if self._export_format == 'plugin':
             options = {'check': self._export_plugin.check, 'exporter':self._export_plugin.exporter, 'output':self._export_plugin.output}
@@ -10014,13 +10143,93 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                     flaglist,
                                     **add_options)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp', 'matchbox']:
+        # Record into the generated directory the references that are already
+        # known at generation time (framework, model, ALOHA/HELAS, UFO format).
+        # These are picked up by every run launched from this output and merged
+        # into its final citations.bib.
+        self.write_generation_citations()
+
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp', 'matchbox', 'mg7']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
+
+    def write_generation_citations(self):
+        """Persist, into the generated directory, the references that are
+        already known at generation time: the MadGraph5_aMC@NLO framework, the
+        UFO model format (or HELAS for v4 models), the ALOHA/HELAS helicity
+        routines.  Writes citations.log (machine-readable, collected by every
+        run) plus a ready-to-use citations.bib and a citations.md summary.
+        """
+        runnable = ['madevent', 'standalone', 'standalone_cpp', 'NLO',
+                    'madweight', 'matchbox', 'mg7', 'mg7_v5', 'standalone_mg7']
+        if self._export_format not in runnable or not self._export_dir:
+            return
+        try:
+            import madgraph.various.citation as citation
+        except ImportError:
+            return
+
+        try:
+            model_name = self._curr_model.get('name') if self._curr_model else ''
+        except Exception:
+            model_name = ''
+
+        # legacy v4 models are HELAS-based (no UFO/ALOHA); UFO otherwise
+        pairs = citation.generation_pairs(model_name,
+                                          is_ufo=not self._model_v4_path)
+        # TODO: if a UFO model ever exposes its own INSPIRE key (e.g. a
+        # __citation__ attribute), append it here so the physics-model paper is
+        # cited too.
+
+        # optional generation choices: gauge, polarization, TauDecay
+        pairs += citation.optional_generation_pairs(
+            gauge=str(self.options.get('gauge', 'unitary')),
+            polarization=getattr(self, '_uses_polarization', False),
+            taudecay=getattr(self, '_uses_taudecay', False))
+
+        # MadSpace + MadNIS: used by the mg7 / standalone_mg7 integration engine
+        if self._export_format in ('mg7', 'mg7_v5', 'standalone_mg7'):
+            pairs += [('Heimel:2026hgp',
+                       'phase-space integration with MadSpace'),
+                      ('Heimel:2023ngj',
+                       'normalising flows for integration (MadNIS)')]
+            if self._export_format == 'standalone_mg7':
+                pairs.append(('Hagebock:2025jyk',
+                               'data-parallel matrix-element evaluation (MadMatrix)'))
+
+        # running couplings (model-level RGE)
+        try:
+            if self._curr_model and self._curr_model.get('running_elements'):
+                pairs.append(('Aoude:2022aro',
+                               'running couplings (RGE effects on SMEFT model)'))
+        except Exception:
+            pass
+
+        # quarkonium / leptonium (NRQCD/NRQED) models: detect from model name
+        _quarkonia_kws = ('nrqcd', 'nrqed', 'quarkon', 'leptonium')
+        try:
+            _mn = (self._curr_model.get('name') or '').lower() if self._curr_model else ''
+        except Exception:
+            _mn = ''
+        if getattr(self, '_uses_quarkonia', False) or any(k in _mn for k in _quarkonia_kws):
+            pairs.append(('ColpaniSerri:2025vdz',
+                           'S-wave quarkonium/leptonium production (NRQCD/NRQED)'))
+
+        # spin-density matrix output
+        if getattr(self, '_uses_density_matrix', False):
+            pairs.append(('Durupt:2025wuk',
+                           'spin-density matrices and quantum observables'))
+
+        try:
+            gen_log = pjoin(self._export_dir, 'citations.log')
+            citation.write_log(gen_log, pairs)
+            citation.render(citation.collect_file(gen_log), self._export_dir)
+        except Exception as error:
+            logger.debug('could not write generation citations: %s', error)
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -10068,6 +10277,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
 
         self.change_principal_cmd('MadGraph')
+
+        try:
+            import madgraph.various.citation as citation
+            citation.cite('Alwall:2014bza',
+                'automatic decay-width computation (MadWidth)')
+        except ImportError:
+            pass
+
         if '--nlo' not in line:
             warning_text = """Please note that the automatic computation of the width is
     only valid in narrow-width approximation and at tree-level."""
@@ -10547,9 +10764,15 @@ _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
 _launch_parser.add_option("", "--timings", default=0, type='int',
                             help="[standalone] Number of SMATRIX calls per flavor per run for timing analysis (0=disabled)")
 _launch_parser.add_option("", "--nb_run", default=1, type='int',
+<<<<<<< HEAD
                             help="[standalone] Number of timing repetitions for statistics (used with --timings)")
 _launch_parser.add_option("", "--energy", default=0, type='float',
                             help="[FKS standalone] sqrt(s) of the phase-space point (0=built-in default)")
+||||||| b9413c95d
+                            help="[standalone] Number of timing repetitions for statistics (used with --timings)")
+=======
+                            help="[standalone] Number of timing repetitions for statistics (used with --timings); 0 = good-helicity check (print matrix-element values instead of a timing table)")
+>>>>>>> main
 
 #===============================================================================
 # Interface for customize question.

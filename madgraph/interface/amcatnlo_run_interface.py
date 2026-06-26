@@ -1791,8 +1791,20 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
 
+        self.setup_citation_tracking()
+        if common_run.citation is not None:
+            common_run.citation.cite('Alwall:2014hca',
+                'core matrix-element generation (MadGraph5_aMC@NLO)')
+            self.cite_nlo_run_options(mode)
+            try:
+                self.run_card.add_citation(common_run.citation.cite)
+            except Exception:
+                pass
+
         self.run_generate_events(mode, options, argss, switch)
- 
+
+        self.finalize_citation_tracking()
+
         #check if the param_card defines a scan.
         if False:# self.param_card_iterator:
             cpath = pjoin(self.me_dir,'Cards','param_card.dat')
@@ -1827,12 +1839,49 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
             
-        if self.allow_notification_center:    
-            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+        if self.allow_notification_center:
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir),
+                              '%s: %s +- %s ' % (self.results.current['run_name'],
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
-    
+
+    def cite_nlo_run_options(self, mode):
+        """Record the references implied by the NLO run configuration: the
+        general NLO (FKS) formalism, FxFx merging, the parton-shower matching
+        paper for the chosen shower, and MC@NLO-delta/folding."""
+        cite = common_run.citation
+        if cite is None:
+            return
+        rc = self.run_card
+        loop_induced = self.proc_characteristics['loop_induced']
+
+        # general NLO QCD formalism (FKS subtraction), for any NLO computation
+        # on a [QCD] output that is not loop-induced
+        if mode in ['NLO', 'aMC@NLO', 'noshower'] and not loop_induced:
+            cite.cite('Frixione:1997np', 'NLO QCD computation (FKS subtraction)')
+
+        # the following only apply to showered NLO (aMC@NLO)
+        if mode == 'aMC@NLO':
+            try:
+                if int(rc['ickkw']) == 3:
+                    cite.cite('Frederix:2012ps', 'FxFx NLO+PS merging')
+            except (KeyError, ValueError, TypeError):
+                pass
+            shower = str(rc['parton_shower']).upper()
+            if shower == 'HERWIG6':
+                cite.cite('Frixione:2002ik', 'MC@NLO matching to HERWIG6')
+            elif shower.startswith('PYTHIA6'):
+                cite.cite('Torrielli:2010aw', 'MC@NLO matching to PYTHIA6')
+            delta = bool(rc['mcatnlo_delta']) if 'mcatnlo_delta' in rc else False
+            try:
+                folding = list(rc['folding']) if 'folding' in rc else [1, 1, 1]
+            except (KeyError, TypeError):
+                folding = [1, 1, 1]
+            if delta or folding != [1, 1, 1]:
+                cite.cite('Frederix:2020trv',
+                    'MC@NLO-delta / folding (negative-weight reduction)')
+
+
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling(run_card_scan=True)
     def run_generate_events(self, mode, options, args, switch): 
@@ -5271,6 +5320,9 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         pdlabel is in the form epdf:setname
         """
         logger.info('Using eMELA for leptonic densities')
+        if common_run.citation is not None:
+            common_run.citation.cite('Bertone:2022ktl',
+                                     'leptonic PDFs at NLO-QED accuracy (eMELA)')
 
         epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode().strip()
@@ -5339,6 +5391,9 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         pdlabel is in the form epdf:setname
         """
         logger.info('Using eMELA for leptonic densities')
+        if common_run.citation is not None:
+            common_run.citation.cite('Bertone:2022ktl',
+                                     'leptonic PDFs at NLO-QED accuracy (eMELA)')
 
         epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode().strip()

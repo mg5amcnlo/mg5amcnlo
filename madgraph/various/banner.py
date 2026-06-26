@@ -4825,7 +4825,27 @@ class RunCardLO(RunCard):
             logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
             self.set('tmin_for_channel',  -self['tmin_for_channel'])
 
-            
+    def add_citation(self, cite_fn):
+        """Emit citations implied by LO run_card settings.
+
+        Called once citation tracking is active.  cite_fn is a callable
+        (key, context='') – typically CitationLogger.cite or citation.cite.
+        """
+        try:
+            # LHAPDF6
+            if (self['pdlabel'] == 'lhapdf' or
+                    self.get('pdlabel1') == 'lhapdf' or
+                    self.get('pdlabel2') == 'lhapdf'):
+                cite_fn('Buckley:2014ana', 'parton distribution functions (LHAPDF6)')
+            # Lepton/muon collisions with an actual PDF set
+            lpp1 = self['lpp1']
+            lpp2 = self['lpp2']
+            if abs(lpp1) in (3, 4) or abs(lpp2) in (3, 4):
+                if self['pdlabel'] not in ('none',):
+                    cite_fn('Frixione:2021zdp', 'lepton collisions in MadGraph5_aMC@NLO')
+        except Exception:
+            pass
+
     def update_system_parameter_for_include(self):
         """system parameter need to be setupe"""
         
@@ -6084,11 +6104,31 @@ class RunCardNLO(RunCard):
                     logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
                     self.set('ebeam%i' %i, 0.938)
                 else:
-                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
+                    raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")
 
+    def add_citation(self, cite_fn):
+        """Emit citations implied by NLO run_card settings.
+
+        Called once citation tracking is active.  cite_fn is a callable
+        (key, context='') – typically CitationLogger.cite or citation.cite.
+        """
+        try:
+            # LHAPDF6
+            if self['pdlabel'] == 'lhapdf':
+                cite_fn('Buckley:2014ana', 'parton distribution functions (LHAPDF6)')
+            # FastJet is always used at NLO
+            cite_fn('Cacciari:2011ma', 'jet clustering (FastJet)')
+            # Lepton/muon collisions with an actual PDF set
+            lpp1 = self['lpp1']
+            lpp2 = self['lpp2']
+            if abs(lpp1) in (3, 4) or abs(lpp2) in (3, 4):
+                if self['pdlabel'] not in ('none',):
+                    cite_fn('Frixione:2021zdp', 'lepton collisions in MadGraph5_aMC@NLO')
+        except Exception:
+            pass
 
     def update_system_parameter_for_include(self):
-        
+
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(list(self['pt_min_pdg'].keys()) +list(self['pt_max_pdg'].keys())+
                          list(self['mxx_min_pdg'].keys())+ list(self['mxx_only_part_antipart'].keys()))

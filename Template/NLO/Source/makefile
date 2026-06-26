@@ -10,7 +10,7 @@ STDHEPDIR= ./StdHEP/
 
 GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o		\
 	  run_printout.o dgauss.o ranmar.o setrun.o derivative.o	\
-	  zerox64_cernlib.o
+	  zerox64_cernlib.o mg5_citation.o
 
 ifneq ("$(wildcard ./RUNNING)","")
 	LINKLIBS += -lrunning

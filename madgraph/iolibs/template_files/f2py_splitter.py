@@ -17,6 +17,7 @@ CF2PY double precision, intent(in) :: SCALE2
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
   integer flavor(%(maxpart)i),I
+%(flavor_index_decl)s
   include 'coupl.inc'
   
   

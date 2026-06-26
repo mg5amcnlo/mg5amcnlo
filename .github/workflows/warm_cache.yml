@@ -26,11 +26,11 @@ env:
 jobs:
 
   delete-cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
 #
     steps:
       - uses: actions/checkout@v5
@@ -58,11 +58,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   rebuild-numpy-cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
     needs: delete-cache
     steps:
       - name: Set cache key
@@ -75,13 +75,18 @@ jobs:
           path: ~/.cache/pip-packages
           key: pip-numpy-${{ env.CACHE_KEY }}
 
-      - name: Install numpy into cache dir (if not cached)
+      - name: Install numpy (+ meson/ninja for f2py) into cache dir (if not cached)
         if: steps.cache-pip.outputs.cache-hit != 'true'
-        run: pip install --target ~/.cache/pip-packages numpy
+        # meson + ninja are required by numpy>=1.26's f2py meson backend (used on
+        # ubuntu-24 / py3.12 to compile the Fortran matrix-element wrappers, e.g.
+        # all_matrix2py.so for MadSpin/reweight). restore-pip-cache puts this
+        # dir on PYTHONPATH and its bin/ on PATH, so the meson/ninja executables
+        # are then found wherever the pip cache is restored.
+        run: pip install --target ~/.cache/pip-packages --ignore-installed numpy meson ninja
 
   ufo_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
-    runs-on: ubuntu-latest
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+    runs-on: ubuntu-24.04
     needs: delete-cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -110,12 +115,12 @@ jobs:
          cp -r models/2HDM /home/runner/.cache/UFOMODEL
            
   lhapdf_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     needs: delete-cache
     runs-on: ${{ matrix.os }}
     strategy:
      matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -148,17 +153,20 @@ jobs:
          run: |
                cd /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
                wget https://lhapdfsets.web.cern.ch/current/NNPDF23_nlo_as_0118_qed.tar.gz
-               tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz           
+               tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz
                wget https://lhapdfsets.web.cern.ch/lhapdfsets/current/cteq6l1.tar.gz
-               tar -xzpvf cteq6l1.tar.gz           
+               tar -xzpvf cteq6l1.tar.gz
+               # LO set used by the mg7 run_card.toml default (madspace integration)
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF23_lo_as_0130_qed.tar.gz
+               tar -xzpvf NNPDF23_lo_as_0130_qed.tar.gz
                
   pythia8_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     needs: lhapdf_cache
     strategy:
      matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -208,12 +216,12 @@ jobs:
                test -x /home/runner/.cache/HEPtools/pythia8/bin/pythia8-config
 
   emela_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     needs: lhapdf_cache
     strategy:
      matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -252,7 +260,7 @@ jobs:
 #       - emela_cache
 #     strategy:
 #       matrix:
-#         os: [ubuntu-22.04, ubuntu-24.04]
+#         os: [ubuntu-24.04]
 #     steps:
 #       - name: Set cache key                  
 #         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -263,12 +271,12 @@ jobs:
 #             GH_TOKEN: ${{ github.token }}
 
   contur_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     needs: pythia8_cache
     strategy:
      matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -328,11 +336,11 @@ jobs:
        #     GH_TOKEN: ${{ github.token }}
 
   looptools_cache:
-    if: (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     strategy:
      matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
+       os: [ubuntu-24.04]
     needs:
     - delete-cache
 
@@ -380,11 +388,11 @@ jobs:
              ./bin/mg5_aMC cmd
 
   heptools_cache:
-    if: always() && (github.ref_name == '3.x' || github.ref_name == 'test_ci')
+    if: always() && (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}       
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
     needs: [lhapdf_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache]
     steps:
       - name: Set cache key

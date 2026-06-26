@@ -3869,6 +3869,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self['has_mirror_process'] = False
         self['allowed_flavors'] = [] # list of all allowed flavors for the process
         self['allowed_flavors_with_iden'] = [] # list of all allowed flavors for the process but grouped by identical matrix-element
+        self['allowed_flavors_with_iden_sign'] = [] # list of all allowed flavors for the process but grouped by identical matrix-element
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -5270,28 +5271,40 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return allowed_helicity
 
 
-    def get_external_flavors(self, all_perm=False):
+    def get_external_flavors(self, all_perm=False, return_sign=False):
         """If merged particles are used, determine the list of possible flavor that are not zero """
 
         if self['allowed_flavors']:
-            return self['allowed_flavors']
+            if return_sign:
+                return self['allowed_flavors'], self['allowed_flavors_sign']
+            else:
+                return self['allowed_flavors']
         pdgs=[]
+        pdg_signs = []
         external_wfs = sorted([wf for wf in self.get_all_wavefunctions() if len(wf.get('mothers')) == 0],
                               key=lambda w: w['number_external'])
         external_number=1
         id_to_wf =collections.defaultdict(list)
+        next, ninit = self.get_nexternal_ninitial()
         for wf in external_wfs:
             if wf.get('number_external')==external_number:
                 id_to_wf[external_number].append(wf)
                 external_number=external_number+1
-                pdgs.append(wf.get('particle').get_pdg_code())
+                particle = wf.get('particle')
+                pdgs.append(particle.get_pdg_code())
+                if len(pdg_signs) < ninit:
+                    pdg_signs.append(-1 if particle.get_anti_pdg_code() < 0 else 1)
+                else:
+                    pdg_signs.append(-1 if particle.get_pdg_code() < 0 else 1)
         
         to_map = collections.defaultdict(lambda:[1])
         model = self.get('processes')[0].get('model')
         for key in model.get('merged_particles'):
-            to_map[key] = model.get('merged_particles')[key] 
+            to_map[key] = model.get('merged_particles')[key]
             
         flavor_list = []
+        pdg_list = []
+
         restricted_flavor = [None]*len(pdgs)
         for i in range(len(pdgs)):
             wf = id_to_wf[i+1][0]
@@ -5332,7 +5345,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
 
             # flip initial states
-            next, ninit = self.get_nexternal_ninitial()
             for i in range(ninit):
                 pdg[i] = -pdg[i]
             init, final = pdg[:ninit], pdg[ninit:]
@@ -5358,6 +5370,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # do the computation
             if self.check_flavor(one_flavor, self.get('processes')[0].get('model')):
                 flavor_list.append(one_flavor)
+                pdg_list.append([flav * sign for flav, sign in zip(one_flavor, pdg_signs)])
                 #misc.sprint('checking flavor:', pdg, one_flavor, True)
                 checked[pdg] = True
                 if allow_triming:
@@ -5373,6 +5386,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 raise self.NoFlavorError("No diagram left after trimming for flavor!")
              
         self['allowed_flavors'] = flavor_list
+        self['allowed_flavors_sign'] = pdg_list
 
         # Clean up temporary 'flavortag' attributes left on wavefunctions by
         # the last check_flavor call.  These dynamic dict keys are only valid
@@ -5385,26 +5399,38 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             except Exception:
                 pass
 
-        return flavor_list
+        if return_sign:
+            return self['allowed_flavors'], self['allowed_flavors_sign']
+        else:
+            return self['allowed_flavors']
     
-    def get_external_flavors_with_iden(self):
-
+    def get_external_flavors_with_iden(self, return_sign=False):
         if self['allowed_flavors_with_iden']:
-            return self['allowed_flavors_with_iden']
+            if return_sign:
+                return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_sign']
+            else:
+                return self['allowed_flavors_with_iden']
 
         model = self.get('processes')[0].get('model')
-        all_flv = self.get_external_flavors()
+        all_flv, all_flv_sign = self.get_external_flavors(return_sign=True)
         map_all_flv = {}
-        for i, flv1 in  enumerate(all_flv):
+        map_all_flv_sign = {}
+        for i, (flv1, flv1_sign) in  enumerate(zip(all_flv, all_flv_sign)):
             coup = self.get_coupling_for_flv(flv1, model)
             if coup in map_all_flv:
                 map_all_flv[coup].append(flv1)
+                map_all_flv_sign[coup].append(flv1_sign)
             else:
                 map_all_flv[coup] = [flv1]
+                map_all_flv_sign[coup] = [flv1_sign]
 
+        self['allowed_flavors_with_iden_sign'] = map_all_flv_sign.values()
         self['allowed_flavors_with_iden'] = map_all_flv.values()
-        return self['allowed_flavors_with_iden']
-    
+        if return_sign:
+            return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_sign']
+        else:
+            return self['allowed_flavors_with_iden']
+
     def check_flavor(self, real_pdgs, model, debug=False):
         """check if any feynman diagram is compatible with the pdg codes replaced by the real_pdgs"""
         HelasDiagram.done_flavor = []

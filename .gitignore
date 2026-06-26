@@ -17,7 +17,6 @@ input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
 input/mg5_configuration.txt
 TEST_MW_*
-.pre-commit-config.yaml
 .vscode/
 HEPTools/*
 MG5/*
@@ -74,5 +73,7 @@ check_sa_born_splitOrders.f
 models/*.tgz
 tests/status
 nsqso_born.inc
+# Sphinx documentation
+docs/build/
 tests/input_files/IOTestsComparison_BackUp/
 tests/input_files/IOTestsComparison/**/*.BackUp

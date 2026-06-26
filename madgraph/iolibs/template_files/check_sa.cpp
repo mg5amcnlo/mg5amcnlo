@@ -12,18 +12,13 @@
 // ---------------------------------------------------------------------------
 static const int maxflavor  = %(maxflavor)d;
 static const int _nexternal = %(nexternal)d;
-// flavor_arr[iflav][ipart] : flavor index (0 = default/non-merged)
-static const int flavor_arr[%(maxflavor)d][%(nexternal)d] = %(flavor_arr)s;
 // pdg_arr[iflav][ipart]    : actual PDG code for this particle/flavor
 static const int pdg_arr[%(maxflavor)d][%(nexternal)d]    = %(pdg_arr)s;
 
 int main(int argc, char** argv){
 
   // Create a process object
-  CPPProcess process;
-
-  // Read param_card and set parameters
-  process.initProc("../../Cards/param_card.dat");
+  CPPProcess process("../../Cards/param_card.dat");
 
   // Centre-of-mass energy: use argv[1] if provided, else default 1000 GeV
   double energy = 1000.0;
@@ -53,24 +48,19 @@ int main(int argc, char** argv){
   // Set momenta once (shared across all flavor combinations)
   process.setMomenta(p);
 
-  // Loop over flavor combinations
+  // Loop over flavor combinations (sigmaKin holds the flavor lookup table)
   for(int iflav = 0; iflav < maxflavor; iflav++){
-    int flavor[_nexternal];
-    for(int j = 0; j < _nexternal; j++) flavor[j] = flavor_arr[iflav][j];
-
     // Evaluate matrix element for this flavor combination
-    process.sigmaKin(flavor);
-    const double* matrix_elements = process.getMatrixElements();
+    double matrix_element = process.sigmaKin(iflav);
 
     // Print PDG line (same keyword as Fortran so _parse_sa_output can match it)
     cout << " PDG";
     for(int j = 0; j < _nexternal; j++) cout << " " << pdg_arr[iflav][j];
     cout << endl;
 
-    // Print matrix element values
-    for(int iproc = 0; iproc < process.nprocesses; iproc++)
-      cout << " Matrix element = " << matrix_elements[iproc]
-           << " GeV^" << -(2*process.nexternal-8) << endl;
+    // Print matrix element value
+    cout << " Matrix element = " << matrix_element
+         << " GeV^" << -(2*process.nexternal-8) << endl;
 
     cout << " -----------------------------------------------------------------------------" << endl;
   }

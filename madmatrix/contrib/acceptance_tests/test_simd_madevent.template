@@ -1,0 +1,115 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+from __future__ import division
+from __future__ import absolute_import
+import subprocess
+import unittest
+import os
+import re
+import shutil
+import sys
+import logging
+import time
+import tempfile
+import math
+import madgraph
+
+
+logger = logging.getLogger('test_cmd')
+
+import tests.unit_tests.iolibs.test_file_writers as test_file_writers
+
+import madgraph.interface.master_interface as MGCmd
+import madgraph.interface.madevent_interface as MECmd
+import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.iolibs.files as files
+
+import madgraph.various.misc as misc
+import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner_mod
+import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner
+
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+_pickle_path =os.path.join(_file_path, 'input_files')
+
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+
+from tests.acceptance_tests.test_cmd_madevent import check_html_page
+pjoin = os.path.join
+
+
+#===============================================================================
+# TestCmd
+#===============================================================================
+class TestCPPfromfile(unittest.TestCase): # inherit from upstream test_cmd_madevent
+    """test that we can launch everything from a single file"""
+
+
+    def setUp(self):
+        
+        self.debuging = unittest.debug
+        if self.debuging:
+            self.path = pjoin(MG5DIR, 'ACC_TEST')
+            if os.path.exists(self.path):
+                 shutil.rmtree(self.path)
+            os.mkdir(self.path) 
+        else:
+            self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
+        self.run_dir = pjoin(self.path, 'MGPROC') 
+        
+    
+    def tearDown(self):
+
+        if not self.debuging:
+            shutil.rmtree(self.path)
+        self.assertFalse(self.debuging)
+
+    def load_result(self, run_name):
+        
+        import madgraph.iolibs.save_load_object as save_load_object
+        import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
+        
+        result = save_load_object.load_from_file(pjoin(self.run_dir,'HTML/results.pkl'))
+        return result[run_name]
+ 
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99, delta_event=0, html=True):
+        """Check that parton output exists and reach the targert for event"""
+                
+        # check that the number of event is fine:
+        data = self.load_result(run_name)
+        if target_event > 0:
+            if delta_event == 0:
+                self.assertEqual(target_event, int(data[0]['nb_event']))
+            else:
+                self.assertLessEqual(abs(int(data[0]['nb_event'])-target_event), delta_event)
+        self.assertIn('lhe', data[0].parton)
+        
+        if cross:
+            import math
+            new_error = math.sqrt(error**2 + float(data[0]['error'])**2)
+            self.assertLess(
+                abs(cross - float(data[0]['cross']))/new_error,
+                3,
+                'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
+            )
+            self.assertLess(float(data[0]['error']), 3 * error)
+        if html:
+            check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
+        if 'decayed' not in run_name:
+            check_html_page(self, pjoin(self.run_dir,'HTML', run_name, 'results.html'))
+
+
+

@@ -92,7 +92,7 @@ class TestMECmdRWGT(unittest.TestCase):
         mycmd.use_rawinput = False
         mycmd.haspiping = False
         #misc.sprint(mgcmd, dir(mgcmd))
-        mycmd.run_cmd('import model sm; generate e+ e- > mu+ mu-; output %s' % self.run_dir)
+        mycmd.run_cmd('import model sm; generate e+ e- > mu+ mu-; output madevent %s' % self.run_dir)
         
         #os.mkdir(pjoin(self.run_dir, 'Events'))
         os.mkdir(pjoin(self.run_dir, 'Events', 'run_01'))

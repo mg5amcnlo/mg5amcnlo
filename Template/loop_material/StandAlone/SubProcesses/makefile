@@ -162,6 +162,9 @@ else
   LD_F2PY=-lgfortran -lquadmath
 endif
 
+ifeq ($(origin MENUM),undefined)
+  MENUM=2
+endif
 
 liball$(ROOTNAME)_$(MENUM)me.$(dylibext): all_matrix.o libMadLoop.$(dylibext) $(WRAPPER_OBJS) $(LIBS)  $(OLP) 
 	$(CXX) $(DYNLIBFLAG)  $(LIBALLME_DYNFLAG)  $(STDLIB_FLAG)  -o liball$(ROOTNAME)_$(MENUM)me.$(dylibext) all_matrix.o */f2py_wrapper.o ../Source/DHELAS/*.o ../Source/MODEL/*.o $(STAT_LIB) $(RPATH_LIBS) $(LINK_LOOP_LIBS) $(ALL_DOTO) $(STDLIB) $(LINK_LOOP_LIBS) 
@@ -175,9 +178,6 @@ libcollier.$(dylibext):
 
 shared: liball$(ROOTNAME)_$(MENUM)me.$(dylibext)
 
-ifeq ($(origin MENUM),undefined)
-  MENUM=2
-endif
 
 
 

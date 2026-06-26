@@ -1384,11 +1384,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                         if restrict_file and j not in restrict_file:
                             raise Exception # Do not see how this can happen
                         mg5.exec_cmd("add process %s" % proc2)
-                    mg5.exec_cmd("output %s -f" % decay_dir)
+                    # Force the Fortran madevent output: the decay directory is
+                    # driven below through MadEventCmdShell, so it must have the
+                    # madevent structure regardless of MG5's default output mode
+                    # (which is 'mg7' in MadGraph7).
+                    mg5.exec_cmd("output madevent %s -f" % decay_dir)
                 else:
                     misc.sprint(proc)
                     mg5.exec_cmd("generate %s" % proc)
-                    mg5.exec_cmd("output %s -f" % decay_dir)
+                    mg5.exec_cmd("output madevent %s -f" % decay_dir)
                 
                 options = dict(mg5.options)
                 if self.options['ms_dir']:

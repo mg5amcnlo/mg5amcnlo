@@ -1,4 +1,4 @@
-      SUBROUTINE %(proc_prefix)sSMATRIX(P, FLAVOR, ANS_SUMMED)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P, FLAV_IDX, ANS_SUMMED)
 C
 C     Simple routine wrapper to provide the same interface for
 C     backward compatibility for usage without split orders.
@@ -14,7 +14,7 @@ C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C VARIABLES
 C
@@ -23,12 +23,12 @@ C
 C
 C BEGIN CODE
 C
-      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAVOR, ANS)
+      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAV_IDX, ANS)
       ANS_SUMMED=ANS(0)
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL, FLAVOR, ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL, FLAV_IDX, ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -42,7 +42,7 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER HEL
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C GLOBAL VARIABLES
 C
@@ -52,12 +52,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-      CALL %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
+      CALL %(proc_prefix)sSMATRIX(P, FLAV_IDX, ANS)
       USERHEL=-1
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P,HEL, FLAVOR, ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P,HEL, FLAV_IDX, ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -73,7 +73,7 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
       INTEGER HEL
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C GLOBAL VARIABLES
 C
@@ -83,12 +83,12 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAVOR, ANS)
+      CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAV_IDX, ANS)
       USERHEL=-1
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAVOR, ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX_SPLITORDERS(P, FLAV_IDX, ANS)
 C
 %(info_lines)s
 C
@@ -123,20 +123,28 @@ C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
-      INTEGER FLAVOR(NEXTERNAL)
+C     FLAV_IDX (the dummy argument) is declared with NFLAV below.
 C
 C LOCAL VARIABLES
 C
-      INTEGER NTRY
+      INTEGER FLAVOR(NEXTERNAL)
       REAL*8 T(NSQAMPSO), BUFF
       INTEGER IHEL,IDEN, I, J
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER NFLAV
+      PARAMETER (NFLAV=%(nflav)d)
+      INTEGER NNTRY_FLAV, NGOODHEL_FLAV
+      PARAMETER (NNTRY_FLAV=NFLAV)
+      PARAMETER (NGOODHEL_FLAV=NCOMB*NFLAV)
+      INTEGER FLAV_IDX
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
+      INTEGER NTRY(NFLAV)
+      LOGICAL GOODHEL(NCOMB,NFLAV)
+      DATA NTRY/NNTRY_FLAV*0/
+      DATA GOODHEL/NGOODHEL_FLAV*.FALSE./
 %(den_factor_line)s
 C
 C GLOBAL VARIABLES
@@ -166,10 +174,14 @@ c----------
 c   Check if helreset mode is on
 c---------
  if (HELRESET) then
-    NTRY = 0
-    do i=1,NCOMB
-       GOODHEL(I) = .false.
-    enddo
+   do i=1,NFLAV
+      NTRY(i) = 0
+   enddo
+   do i=1,NCOMB
+      do j=1,NFLAV
+         GOODHEL(I,j) = .false.
+      enddo
+   enddo
     HELRESET = .false.
  endif
 
@@ -177,7 +189,16 @@ c---------
 C ----------
 C BEGIN CODE
 C ----------
-      IF(USERHEL.EQ.-1) NTRY=NTRY+1
+C     FLAV_IDX=0 (or out of range): GET_FLAVOR_INDEX could not resolve the
+C     requested flavor -- it is not an allowed combination, so its matrix
+C     element is identically zero. Short-circuit before touching the
+C     1..NFLAV GOODHEL/NTRY arrays.
+      IF (FLAV_IDX.LT.1 .OR. FLAV_IDX.GT.NFLAV) THEN
+        ANS(:) = 0d0
+        RETURN
+      ENDIF
+      CALL %(proc_prefix)sGET_FLAVOR(FLAV_IDX, FLAVOR)
+      IF(USERHEL.EQ.-1) NTRY(FLAV_IDX)=NTRY(FLAV_IDX)+1
       DO IHEL=1,NEXTERNAL
          JC(IHEL) = +1
       ENDDO
@@ -189,15 +210,15 @@ C     if the point is boosted on the z-axis. Remember that HELAS helicity amplit
 C     lorentz invariant with expternal spin-2 particles (only the helicity sum is).
 C     For this reason, we simply remove the filterin when there is only three external particles.
       IF (NEXTERNAL.LE.3) THEN
-        GOODHEL(:) = .True.
+        GOODHEL(:,:) = .True.
       ENDIF
       DO IHEL=1,NCOMB
          IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 20 .OR.USERHEL.NE.-1) THEN
-              IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+           IF (GOODHEL(IHEL,FLAV_IDX) .OR. NTRY(FLAV_IDX) .LT. 20 .OR.USERHEL.NE.-1) THEN
+              IF(NTRY(FLAV_IDX).GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
                 CYCLE
               ENDIF
-              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1),FLAVOR(1), T)
+              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1),FLAV_IDX, T)
               BUFF=0D0
               DO I=1,NSQAMPSO
                 IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
@@ -205,8 +226,8 @@ C     For this reason, we simply remove the filterin when there is only three ex
                 ENDIF
                 BUFF=BUFF+T(I)
               ENDDO
-              IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                GOODHEL(IHEL)=.TRUE.
+              IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL,FLAV_IDX)) THEN
+                GOODHEL(IHEL,FLAV_IDX)=.TRUE.
               ENDIF
             ENDIF
           ENDIF
@@ -235,7 +256,7 @@ C     For this reason, we simply remove the filterin when there is only three ex
       END
 
 
-      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,FLAVOR,RES)
+      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,FLAV_IDX,RES)
       use model_object
 C
 %(info_lines)s
@@ -270,7 +291,7 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
       REAL*8 RES(NSQAMPSO)
 C
 C LOCAL VARIABLES
@@ -300,7 +321,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-       call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+       call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAV_IDX,AMP)
 c      WRITE (*,*) '  -> AMP = ', AMP
        call %(proc_prefix)sGET_JAMP(AMP,JAMP)
 c      WRITE (*,*) '  -> JAMP = ', JAMP
@@ -332,7 +353,7 @@ CF2PY INTENT(OUT) :: IDEN_STAR
        END
 
 
-SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAV_IDX,AMP)
       use model_object
 C
 %(process_lines)s
@@ -341,7 +362,7 @@ CF2PY INTENT(OUT) :: AMP
 CF2PY INTENT(IN) :: NHEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: IC
-CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
 
       use aloha_object
       IMPLICIT NONE
@@ -361,6 +382,7 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER FLAV_IDX
       INTEGER FLAVOR(NEXTERNAL)
 C
 C LOCAL VARIABLES
@@ -643,6 +665,8 @@ c
 c     LOCAL
 c
       INTEGER I,J,SOL,N
+      INTEGER FLAV_IDX
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
 
 C ----------
 C BEGIN CODE
@@ -655,11 +679,12 @@ C ----------
         s_ncomb=n_comb
       endif
       IC(:)=1
+      FLAV_IDX = %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR)
       do I = 1, N_COMB
          do N = 1, N_CHANGING
             NHEL(POS(N)) = ALLOW_HEL((I-1)*N_CHANGING+N)
          enddo
-         call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAVOR,AMP)
+         call %(proc_prefix)sGET_AMP(P,NHEL,IC,FLAV_IDX,AMP)
          call %(proc_prefix)sGET_JAMP(AMP,JAMP(1,1,I))
       enddo
 
@@ -679,6 +704,37 @@ C ----------
 
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL, FLAVOR ,ANS)
+C     f2py interface accepting the full FLAVOR(NEXTERNAL) array (back-compat):
+C     resolve it to FLAV_IDX and forward to GET_value_idx.
+      use model_object
+      IMPLICIT NONE
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C
+C ARGUMENTS
+C
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS
+      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
+
+      FLAV_IDX = %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR)
+      CALL %(proc_prefix)sGET_value_idx(P, ALPHAS, NHEL, FLAV_IDX, ANS)
+      return
+      end
+
+      SUBROUTINE %(proc_prefix)sGET_value_idx(P, ALPHAS, NHEL, FLAV_IDX ,ANS)
+C     f2py interface accepting the flavor index directly.
       use model_object
       IMPLICIT NONE
 C
@@ -693,13 +749,12 @@ C
       INTEGER NHEL
       DOUBLE PRECISION ALPHAS
       real*8 pi
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: NHEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: ALPHAS
-CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
-C     ROUTINE FOR F2PY to read the benchmark point.
+CF2PY INTENT(IN) :: FLAV_IDX
 C     the include file with the values of the parameters and masses
       include "coupl.inc"
 
@@ -707,9 +762,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, FLAVOR, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, FLAV_IDX, ANS)
       else
-        CALL %(proc_prefix)sSMATRIX(P, FLAVOR, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, FLAV_IDX, ANS)
       endif
       return
       end
@@ -779,3 +834,9 @@ C     ----------
       END
 
 %(broken_sym_function)s
+
+
+%(flavor_index_function)s
+
+
+%(flavor_array_function)s
