@@ -235,6 +235,8 @@ class TestCmdShell1(unittest.TestCase):
                     'cluster_vacatetime': '120',
                     'enforce_shared_disk': False,
                     'heptools_install_dir': './HEPTools',
+                    'nb_core_pythia8': None,
+                    'nb_core_delphes': None,
                         }
 
         self.assertEqual(config, expected)
