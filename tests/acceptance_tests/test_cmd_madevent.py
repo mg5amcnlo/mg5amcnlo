@@ -1788,13 +1788,15 @@ set draw_rivet_plots True
 
         # nb_core 2 with 400 events forces exactly 2 Pythia8 splits (the
         # min_n_events_per_job=100 security clamp keeps 400//100=4 capped to 2);
-        # run_mode defaults to 2 (multicore) and both nb_core_pythia8/delphes are
-        # unset, so they resolve to nb_core and the fused path is active.
+        # run_mode defaults to 2 (multicore). Setting nb_core_delphes activates
+        # the fused parallel-Delphes path (Delphes runs on each split, then the
+        # ROOT files are combined with hadd).
         nevents = 400
         cmd = """import model sm
         set automatic_html_opening False --no_save
         set notification_center False --no_save
         set nb_core 2
+        set nb_core_delphes 2
         generate p p > e+ e-
         output %s -f
         launch

@@ -5382,8 +5382,9 @@ tar -czf split_$1.tar.gz split_$1
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
 
-        # Throttle the multicore scheduler to the Delphes core count (equal to
-        # the Pythia8 one by the fusion rule), restoring the global value after.
+        # Throttle the multicore scheduler to the requested Delphes concurrency
+        # (nb_core_delphes); the number of Delphes jobs is fixed by the number of
+        # Pythia8 splits. Restore the global value afterwards.
         orig_cluster_nb_core = None
         if self.options['run_mode'] == 2:
             orig_cluster_nb_core = self.cluster.nb_core

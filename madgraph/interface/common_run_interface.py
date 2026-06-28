@@ -3718,14 +3718,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
           - Delphes is going to run, i.e. delphes_path is set and a
             delphes_card.dat is present (this mirrors the post-Pythia8
             'delphes --no_default' call which is a no-op without the card);
-          - the run is parallel (run_mode != 0);
+          - the run is parallel (run_mode != 0) so Pythia8 splits exist to run
+            Delphes on;
           - event_norm is 'average', which guarantees that the per-split HepMC
             event weights are absolute and therefore combinable (the same
             restriction already enforced for the Pythia8 splitting itself);
-          - the Pythia8 and Delphes per-step core counts resolve to the same
-            value. Both unset (the default) resolve to the global nb_core and
-            therefore match, so the fused path is on by default; setting them
-            to different values is the explicit opt-out.
+          - nb_core_delphes has been explicitly set. Parallel Delphes is opt-in:
+            when nb_core_delphes is left unset Delphes runs on a single core
+            (the standard single pass on the merged HepMC file), which is the
+            default. nb_core_delphes then also sets the concurrency of the
+            per-split Delphes jobs.
         """
 
         if not self.options.get('delphes_path'):
@@ -3736,7 +3738,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return False
         if self.run_card['event_norm'] != 'average':
             return False
-        if self.resolve_nb_core('pythia8') != self.resolve_nb_core('delphes'):
+        if self.get_nb_core_override('delphes') is None:
             return False
         return True
 
