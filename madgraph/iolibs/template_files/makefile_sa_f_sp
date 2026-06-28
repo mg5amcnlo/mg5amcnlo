@@ -27,7 +27,7 @@ ifeq ($(origin MENUM),undefined)
 endif
 
 libme$(PDIR).$(dylibext): $(LIBDIR)/libdhelas.$(dylibext) $(LIBDIR)/libmodel.$(dylibext) matrix.o
-	gfortran $(DYNLIBFLAG) -o libme$(PDIR).$(dylibext) matrix.o ../../Source/DHELAS/*.o ../../Source/MODEL/*.o
+	gfortran $(DYNLIBFLAG) $(RPATHFLAG)libme$(PDIR).$(dylibext) -o libme$(PDIR).$(dylibext) matrix.o ../../Source/DHELAS/*.o ../../Source/MODEL/*.o
 
 
 $(LIBDIR)/libdhelas.$(dylibext):

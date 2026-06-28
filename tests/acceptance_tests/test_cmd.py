@@ -278,6 +278,22 @@ class TestCmdShell2(unittest.TestCase,
     
     join_path = TestCmdShell1.join_path
 
+    @staticmethod
+    def _dens_value_for_key(dm, key):
+        """Return the complex value of DensityMatrix entry whose helicity label
+        tuple matches ``key``.
+
+        Replaces the old ``dm.matrix[ind][1]`` indexing, which relied on the
+        legacy structured-array storage that was removed when DensityMatrix
+        was refactored to parallel ``helicities`` / ``values`` arrays.
+        """
+        import numpy as np
+        key_arr = np.asarray(key, dtype=np.int32)
+        matches = np.where((dm.helicities == key_arr).all(axis=1))[0]
+        if len(matches) == 0:
+            raise KeyError('helicity key %s not found in DensityMatrix' % (key,))
+        return complex(dm.values[matches[0]])
+
     def do(self, line, force=False):
         """ exec a line in the cmd under te
         st """
@@ -1011,26 +1027,33 @@ class TestCmdShell2(unittest.TestCase,
         prod_dec1 = madspin.DensityMatrix(all_dens[2], 1, [-1,0,1], 3) 
         prod_dec2 = madspin.DensityMatrix(all_dens[3], 1, [-1,0,1], 3)  
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./all_me[0], 1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # u u~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
+
+        self.assertAlmostEqual(prod_dec1.trace()/all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/all_me[0], 1,4)
 
 
         prod_dec = prod_dec1.tensor_product(prod_dec2)
         #self.assertNotEqual(str(prod_dec1), str(prod_dec2))
-        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
         symfact = 2 # 2 Z identical particles in the final state
         nb_spin = 2*2
         matrix = prod_dens.scalar_multiplication(prod_dec)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
-        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin 
+        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
 
-        misc.sprint(matrix/all_me[1], all_me[1]/matrix)
-        #misc.sprint(matrix_sym/all_me[1], all_me[1]/matrix_sym) 
         misc.sprint(matrix, all_me[1], )
-        self.assertAlmostEqual(matrix/all_me[1], 1,places=4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1], 1,places=4)
 
 
     def test_standalone_density_dd(self):
@@ -1150,13 +1173,19 @@ class TestCmdShell2(unittest.TestCase,
 
 
         #consistency of the matrix-element and the density matrix
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # d d~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./ all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./ all_me[0],1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        self.assertAlmostEqual(prod_dec1.trace()/ all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/ all_me[0],1,4)
 
         prod_dec =prod_dec1.tensor_product(prod_dec2)
-        prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
@@ -1168,8 +1197,9 @@ class TestCmdShell2(unittest.TestCase,
         misc.sprint(matrix, all_me[1])
         #misc.sprint(matrix/all_me[1], matrix_sym/all_me[1])
 
-
-        self.assertAlmostEqual(matrix/all_me[1],1,4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1],1,4)
         #self.assertAlmostEqual(matrix_sym, all_me[1],4)
 
         #check how madspin build the full event:
@@ -1318,9 +1348,12 @@ class TestCmdShell2(unittest.TestCase,
  ([ 1,  1,  1,  0],  0.01342101+8.17624195e-18j)]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # madspin_report holds the (pre-IDEN) density values reported by madspin;
+        # the standalone prod_dens now carries the 1/IDEN normalisation from
+        # GET_INTER, so we restore iden_prod (resp. iden_dec) when comparing.
         for key in madspin_report_dict:
-            ind = prod_dens.map_density_matrix_ind[key][1]
-            self.assertAlmostEqual(madspin_report_dict[key].real/prod_dens.matrix[ind][1].real, 1, places=4)
+            ref_val = self._dens_value_for_key(prod_dens, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_prod), 1, places=4)
 
 
         madspin_report = [([-1, -1], 296.70587 -7.1793691e-15j),
@@ -1335,8 +1368,8 @@ class TestCmdShell2(unittest.TestCase,
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
         for key in madspin_report_dict:
-            ind = prod_dec1.map_density_matrix_ind[key][1]
-            self.assertAlmostEqual(madspin_report_dict[key].real/prod_dec1.matrix[ind][1].real, 1, places=4) 
+            ref_val = self._dens_value_for_key(prod_dec1, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
         madspin_report =[([-1, -1],  332.7482   -3.3880889e-16j),
                         ([-1,  0],  -84.79217  +1.5662439e+02j),
@@ -1350,8 +1383,8 @@ class TestCmdShell2(unittest.TestCase,
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
         for key in madspin_report_dict:
-            ind = prod_dec2.map_density_matrix_ind[key][1]
-            self.assertAlmostEqual(madspin_report_dict[key].real/prod_dec2.matrix[ind][1].real, 1, places=4) 
+            ref_val = self._dens_value_for_key(prod_dec2, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
 
         madspin_report = [([-1, -1, -1, -1],  9.8728344e+04-2.4894488e-12j),
@@ -1437,17 +1470,11 @@ class TestCmdShell2(unittest.TestCase,
                             ([ 1,  0,  1,  0],  2.0135797e+02+1.5155484e+02j),]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # prod_dec is the tensor product of the two decay density matrices, so it
+        # carries iden_dec**2 from the GET_INTER normalisation.
         for key in madspin_report_dict:
-            ind =-1
-            for i, (key2, value) in enumerate(prod_dec.matrix):
-                if key == tuple(key2):
-                    ind = i
-                    break
-            if ind == -1:
-                raise Exception('key %s not found in density matrix' % str(key))
-            
-            #ind = prod_dec.map_density_matrix_ind[key][1]
-            self.assertAlmostEqual(madspin_report_dict[key].real/prod_dec.matrix[ind][1].real, 1, places=4) 
+            ref_val = self._dens_value_for_key(prod_dec, key)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec**2), 1, places=4)
                                                                              
                                                                              
     def test_standalone_density_f2py(self):       
