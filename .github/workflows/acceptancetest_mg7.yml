@@ -57,13 +57,19 @@ jobs:
       # packaging first: the runner ships an ancient pip whose build isolation
       # does not provide packaging>=22, which scikit-build-core's vendored
       # pyproject_metadata requires.
+      #
+      # ENABLE_OPENBLAS=ON builds OpenBLAS from source and links it statically
+      # into the extension (see madspace/CMakeLists.txt), so the cached wheel is
+      # self-contained and needs no system libopenblas at runtime. This avoids a
+      # dynamic dependency that would otherwise only be satisfied on cache miss
+      # (when apt installed libopenblas-dev) and missing on cache hit.
       - name: Build madspace wheel (only on cache miss)
         if: steps.cache-madspace.outputs.cache-hit != 'true'
         run: |
           cd $GITHUB_WORKSPACE
-          sudo apt-get install -y libopenblas-dev
           python3 -m pip install --upgrade pip packaging
-          python3 -m pip wheel ./madspace --no-deps -w ~/.cache/madspace-wheel
+          python3 -m pip wheel ./madspace --no-deps \
+            -Ccmake.define.ENABLE_OPENBLAS=ON -w ~/.cache/madspace-wheel
         shell: bash
 
   acceptancetest_mg7_ufo_aloha:
