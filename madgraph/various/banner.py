@@ -3236,11 +3236,13 @@ class RunCard(ConfigFile):
 
 
     def get_default(self, name, default=None, log_level=None):
-        """return self[name] if exist otherwise default. log control if we 
-        put a warning or not if we use the default value"""
+        """return self[name] if exist otherwise
+        check run_card_default.dat otherwise python default.
+        log control if we put a warning or not if we use the default value"""
 
         lower_name = name.lower()
         if lower_name not in self.user_set:
+            info = ''
             if log_level is None:
                 if lower_name in self.system_only:
                     log_level = 5
@@ -3255,15 +3257,50 @@ class RunCard(ConfigFile):
                         log_level = 10
                 else:
                     log_level = 20
+
+            def get_template_default(name):
+                try:
+                    if name.lower() in self.parameter_in_block:
+                            block = self.parameter_in_block[name.lower()]
+                            if block.status(self) != block.status(defaultcard):
+                                return  'python'
+                    if name.lower() in defaultcard.user_set:
+                        return 'defaultcard'
+                    else:
+                        return 'python'
+                except Exception as err:
+                    return 'python'
+
+            # RR (June 2026):
+            # The following if-statement has a bug
+            # if  running for first launch, looks for ..._default_default.dat,
+            # exception thrown and pulls last (?) value of __getitem__()
+            # @sourcery-ai, please flag this for @oliviermattelaer during pull request
+            # RR (June 2026):
+            # info = '' moved up to fix bug in case of passing 'default' value
             if not default:
-                default = dict.__getitem__(self, name.lower())
+                if hasattr(self, 'path') and self.path:
+                    try:
+                        defaultcard = RunCard(self.path.replace('.dat', '_default.dat'))
+                        previousdefault = defaultcard.__getitem__(name.lower())
+                        #check special case for parameter in block where the default card shows one block
+                        # but the user card shows another block. In that case we do not want to take the default value from the default card.
+                        if get_template_default(name) == 'defaultcard':
+                            info = ' from run_card_default.dat'
+                            default = previousdefault
+                        else:
+                            default = dict.__getitem__(self, name.lower())
+                    except Exception as err:
+                        default = dict.__getitem__(self, name.lower())
+                else:
+                    default = dict.__getitem__(self, name.lower())
  
-            logger.log(log_level, '%s missed argument %s. Takes default: %s'
-                                   % (self.filename, name, default))
+            logger.log(log_level, '%s missed argument %s. Takes default: %s%s'
+                                   % (self.filename, name, default, info))
             self[name] = default
             return default
         else:
-            return self[name]   
+            return self[name]
 
     def mod_inc_pdlabel(self, value):
         """flag pdlabel has 'dressed' if one of the special lepton PDF with beamstralung.
@@ -4020,6 +4057,9 @@ class PDLabelBlock(RunBlock):
         """check which template is active and fill the parameter in the inactive one. """
 
         if self.status(card):
+            if card['pdlabel'] == 'lhapdf':
+                dict.__setitem__(card, 'pdlabel1','lhapdf')
+                dict.__setitem__(card, 'pdlabel2','lhapdf')
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
             if card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
@@ -4057,6 +4097,11 @@ class PDLabelBlock(RunBlock):
 
         if card['pdlabel'] == 'mixed':
             return True
+        if card['pdlabel'] == card['pdlabel1'] and card['pdlabel2'] == card['pdlabel']:
+            return False
+        if card['pdlabel1'] == 'lhapdf' and card['pdlabel2']=='lhapdf':
+            dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+            return False
 
         return super(PDLabelBlock, self).status(card)
 
@@ -4068,17 +4113,12 @@ class PDLabelBlock(RunBlock):
         if 'pdlabel2' in card.user_set:
             card.user_set.remove('pdlabel2')
 
-        #card['pdlabel1'] = value
-        #card['pdlabel2'] = value
-
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
         """call when change to pdlabel1 or pdlabel2 --do not know which one """
 
         if 'pdlabel' in card.user_set:
             card.user_set.remove('pdlabel')
-
-
 
 template_on = \
 """     %(pdlabel1)s    = pdlabel1     ! PDF type for beam #1
@@ -4092,19 +4132,21 @@ pdlabel_block = PDLabelBlock('pdlabel', template_on=template_on, template_off=te
 class LHALabelBlock(RunBlock):
 
     def check_validity(self, card):
-        """check which template is active and fill accordingly."""
+        """check which template is active and fill inactive accordingly."""
         return
 
     def status(self, card):
-        """return False if template_off to be used, True if template_on to be used"""
+        """return False if template_off to be used, True if template_on to be used
+        inverted mode of display if the block is in card.display_block"""
+
+        if card['lhaid1'] != card['lhaid2']:
+            return True
+
         return super(LHALabelBlock, self).status(card)
 
     @staticmethod
     def post_set_lhaid(card, value, change_userdefine, raiseerror, **opt):
         """if lhaid is set, remove lhaid1 and lhaid2 from run_card"""
-
-        dict.__setitem__(card,'lhaid1',card['lhaid'])
-        dict.__setitem__(card,'lhaid2',card['lhaid'])
 
         if 'lhaid1' in card.user_set:
             card.user_set.remove('lhaid1')
@@ -4113,12 +4155,26 @@ class LHALabelBlock(RunBlock):
         if 'multi_lhaid_alphas_scheme' in card.user_set:
             card.user_set.remove('multi_lhaid_alphas_scheme')
 
+        # update for consistency
+        dict.__setitem__(card,'pdlabel','lhapdf')
+        dict.__setitem__(card,'lhaid1',card['lhaid'])
+        dict.__setitem__(card,'lhaid2',card['lhaid'])
+
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
-        """if lhaid1 or lhaid2 is set, remove lhaid from run_card"""
+        """call if lhaid1 or lhaid2 is set --do not know which one--"""
 
-        if 'lhaid' in card.user_set:
-            card.user_set.remove('lhaid')
+        if name in card.user_set:
+            if 'lhaid' in card.user_set:
+                card.user_set.remove('lhaid')
+
+        # update for consistency
+        if card['lhaid2'] == card['lhaid1']:
+            dict.__setitem__(card, 'lhaid', card['lhaid2'])
+        if name == 'lhaid1' and not (card['pdlabel1'] == 'lhapdf'):
+            dict.__setitem__(card, 'pdlabel1','lhapdf')
+        if name == 'lhaid2' and not (card['pdlabel2'] == 'lhapdf'):
+            dict.__setitem__(card, 'pdlabel2','lhapdf')
 
 template_on = \
 """     %(lhaid1)s    = lhaid1     ! lhapdf number for beam #1
@@ -4149,7 +4205,7 @@ class FixedfacscaleBlock(RunBlock):
 
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name='unknown', **opt):
-        """call when change to fixed_fac_scale1/2 --do not know which one--  """
+        """call when change to fixed_fac_scale1/2 --do not know which one--"""
 
         if name in card.user_set:
             if 'fixed_fac_scale' in card.user_set:
@@ -4487,9 +4543,9 @@ class RunCardLO(RunCard):
              
     def check_validity(self):
         """ """
-        
+
         super(RunCardLO, self).check_validity()
-        
+
         #Make sure that nhel is only either 0 (i.e. no MC over hel) or
         #1 (MC over hel with importance sampling). In particular, it can
         #no longer be > 1.
@@ -4564,7 +4620,7 @@ class RunCardLO(RunCard):
         # check validity of the pdf set 
         # note that pdlabel is automatically set to lhapdf if pdlabel1 or pdlabel2 is set to lhapdf
         if self['pdlabel'] == 'lhapdf':
-            #add warning if lhaid not define
+            #add warning if lhaid not define, update lhaid1(2) to default of 'lhaid'
             self.get_default('lhaid', log_level=20)
 
         mod = False
