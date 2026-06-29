@@ -46,11 +46,15 @@ jobs:
         run: echo "MS_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
         shell: bash
 
-      - name: Cache madspace wheel
+      # Cache the installed madspace/install prefix directly (not just a wheel),
+      # so every test job restores a ready-to-use install and skips pip entirely.
+      # hashFiles is evaluated before the build step creates madspace/install, so
+      # the key is the clean-source hash and matches the install_madspace action.
+      - name: Cache madspace install
         id: cache-madspace
         uses: actions/cache@v5
         with:
-          path: ~/.cache/madspace-wheel
+          path: madspace/install
           key: madspace-${{ runner.os }}-py${{ env.MS_PY }}-${{ hashFiles('madspace/**') }}
 
       # Built from the in-tree source (scikit-build-core / cmake). Upgrade pip +
@@ -59,17 +63,21 @@ jobs:
       # pyproject_metadata requires.
       #
       # ENABLE_OPENBLAS=ON builds OpenBLAS from source and links it statically
-      # into the extension (see madspace/CMakeLists.txt), so the cached wheel is
-      # self-contained and needs no system libopenblas at runtime. This avoids a
-      # dynamic dependency that would otherwise only be satisfied on cache miss
+      # into the extension (see madspace/CMakeLists.txt), so the cached install
+      # is self-contained and needs no system libopenblas at runtime. This avoids
+      # a dynamic dependency that would otherwise only be satisfied on cache miss
       # (when apt installed libopenblas-dev) and missing on cache hit.
-      - name: Build madspace wheel (only on cache miss)
+      #
+      # --target installs into madspace/install, the prefix the mg7 runtime and
+      # madspace/install.py expect.
+      - name: Build and install madspace (only on cache miss)
         if: steps.cache-madspace.outputs.cache-hit != 'true'
         run: |
           cd $GITHUB_WORKSPACE
           python3 -m pip install --upgrade pip packaging
-          python3 -m pip wheel ./madspace --no-deps \
-            -Ccmake.define.ENABLE_OPENBLAS=ON -w ~/.cache/madspace-wheel
+          python3 -m pip install ./madspace \
+            -Ccmake.define.ENABLE_OPENBLAS=ON \
+            --target="$GITHUB_WORKSPACE/madspace/install"
         shell: bash
 
   acceptancetest_mg7_ufo_aloha:

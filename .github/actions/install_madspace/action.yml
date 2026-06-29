@@ -1,35 +1,35 @@
 name: Install madspace
 description: >
-  Install the madspace wheel built once per commit by the build_madspace job.
-  Restores the cached wheel (content-addressed on the madspace source) and pip
-  installs it; it does NOT build. The build_madspace job must run first (use
-  `needs: build_madspace`) so the cache is populated.
+  Make the madspace install (built once per commit by the build_madspace job)
+  available to the mg7 tests. Restores the cached madspace/install directory
+  (content-addressed on the madspace source) and puts it on PYTHONPATH; it does
+  NOT build. The build_madspace job must run first (use `needs: build_madspace`)
+  so the cache is populated.
 
 runs:
   using: composite
   steps:
     # Must match the key computed by the build_madspace job exactly, otherwise
-    # the restore misses and the install fails.
+    # the restore misses and the step fails.
     - name: madspace cache key
       run: echo "MS_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
       shell: bash
 
-    - name: Restore madspace wheel
+    # madspace/install is the local prefix the mg7 runtime expects (see
+    # madevent.py and madspace/install.py, which both use this path). Restoring
+    # it directly avoids a per-job pip install. hashFiles is evaluated before
+    # this step creates the directory, so the key is the clean-source hash and
+    # matches the build_madspace job.
+    - name: Restore madspace install
       uses: actions/cache/restore@v5
       with:
-        path: ~/.cache/madspace-wheel
+        path: madspace/install
         key: madspace-${{ runner.os }}-py${{ env.MS_PY }}-${{ hashFiles('madspace/**') }}
         fail-on-cache-miss: true
 
-    # Install into madspace/install, the local prefix the mg7 runtime expects
-    # (see madevent.py and madspace/install.py, which both use this path); a
-    # site-packages install would not be found and would trigger a rebuild.
-    # Also expose it on PYTHONPATH so the test harness' own `import madspace`
+    # Expose it on PYTHONPATH so the test harness' own `import madspace`
     # availability check resolves and the mg7 tests actually run (instead of
     # self-skipping with "madspace ... unavailable").
-    - name: Install madspace from wheel
-      run: |
-        python3 -m pip install ~/.cache/madspace-wheel/madspace-*.whl \
-          --target="$GITHUB_WORKSPACE/madspace/install"
-        echo "PYTHONPATH=$GITHUB_WORKSPACE/madspace/install:$PYTHONPATH" >> "$GITHUB_ENV"
+    - name: Put madspace on PYTHONPATH
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE/madspace/install:$PYTHONPATH" >> "$GITHUB_ENV"
       shell: bash
