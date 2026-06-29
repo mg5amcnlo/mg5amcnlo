@@ -87,6 +87,9 @@ c timing statistics
 c     This function takes 20 micro seconds to run, so it is ok to profile
 c     it with the 0.3 ms function cpu_time.
       call cpu_time(tbefore)
+c     RR(March 2026): the following may trigger ERROR #5 in pdf_lhapdf62.cc
+c           If this happens (iset=-1,0), then add checks to value of
+c           multi_lhaid_alphas_scheme like at LO
       call getnset(iset)
       ALPHAS=alphasPDFm(iset,Q)
       call cpu_time(tAfter)

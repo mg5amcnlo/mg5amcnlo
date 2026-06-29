@@ -68,8 +68,10 @@
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
+ %(pdlabel)s = pdlabel ! Setting pdlabel overwrites pdlabel1,pdlabel2
  %(pdlabel1)s = pdlabel1 ! PDF set for beam 1
  %(pdlabel2)s = pdlabel2 ! PDF set for beam 2
+ %(lhaid)s  = lhaid    ! Setting lhaid overwrites lhaid1,lhaid2
  %(lhaid1)s = lhaid1   ! If pdlabel=lhapdf1, this is the lhapdf number.
  %(lhaid2)s = lhaid2   ! If pdlabel=lhapdf2, this is the lhapdf number. Only
               ! numbers for central PDF sets are allowed. Can be a list; 
