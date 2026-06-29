@@ -859,12 +859,9 @@ class Systematics(object):
                 # how many pdf sets do we have? ('pdfsets' is dict-type)
                 for kk, key in enumerate(self.pdfsets):
                     nrSets.append(self.pdfsets[key].size)
-                # split 'pdf' into two; there is probably a better way to do this
-                for kk, value in enumerate(getattr(self,'pdf')):
-                    if kk < nrSets[0]:
-                        beam1PDFsets.append(value)
-                    else:
-                        beam2PDFsets.append(value)
+                # split 'pdf' into two:
+                beam1PDFsets = getattr(self,'pdf')[:nrSets[0]]
+                beam2PDFsets = getattr(self,'pdf')[nrSets[0]:]
                 assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
                 # build pairs of pdfs for pdf variation
                 # the following is a key step when calling multiple LHAIDs
@@ -872,20 +869,23 @@ class Systematics(object):
                 #       e.g., multiID=2: fix beam1 to be the central PDF while beam2 is varied
                 # for multiID=-1, trust the user to do something reasonable
                 # note: pairs_of_lhaids must be converted into lists to match self.orig_pdf
-                match self.multiID[0]:
-                    case -1: # vary 1 and 2 separately
-                        self.log("# Building separate variations for PDF(beam1) and PDF(beam2)")
-                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
-                    case 1: # vary 1, fix 2
-                        self.log("# Building variations for PDF(beam1) but fixing PDF(beam2)")
-                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
-                    case 2: # fix 1, vary 2
-                        self.log("# Building variations for PDF(beam2) but fixing PDF(beam1)")
-                        pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
-                    case _: # default, vary 1 and 2 together
-                        self.log("# Building joint variations for PDF(beam1) and PDF(beam2)")
-                        minmax = min(len(beam1PDFsets),len(beam2PDFsets))
-                        pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
+                if self.multiID[0] == -1:
+                    # vary 1 and 2 separately
+                    self.log("# Building separate variations for PDF(beam1) and PDF(beam2)")
+                    pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
+                elif self.multiID[0] == 1:
+                    # vary 1, fix 2
+                    self.log("# Building variations for PDF(beam1) but fixing PDF(beam2)")
+                    pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
+                elif self.multiID[0] == 2:
+                    # fix 1, vary 2
+                    self.log("# Building variations for PDF(beam2) but fixing PDF(beam1)")
+                    pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
+                else:
+                    # default, vary 1 and 2 together
+                    self.log("# Building joint variations for PDF(beam1) and PDF(beam2)")
+                    minmax = min(len(beam1PDFsets),len(beam2PDFsets))
+                    pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
 
                 # add sets of (mur,muf,alps,dyn,pdf) configurations
                 for lhaid_pairs in pairs_of_lhaids:
