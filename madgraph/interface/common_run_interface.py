@@ -4980,12 +4980,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return libdir
 
     def reset_iseed_in_run_card(self):
-        """If iseed is set to a non-zero value in the run_card, reset it to 0
+        """If iseed is set to a positive value in the run_card, reset it to 0
         and write the updated run_card to disk.  This ensures that subsequent
         runs will use an automatically-generated (independent) seed rather than
-        repeating the same one."""
+        repeating the same one. A negative iseed is preserved so the user can
+        keep reusing the same seed across runs (the absolute value is the
+        actual seed passed to the Fortran code)."""
         iseed = self.run_card['iseed']
-        if iseed != 0:
+        if iseed > 0:
             self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
