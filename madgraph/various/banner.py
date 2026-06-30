@@ -3848,12 +3848,12 @@ class RunCard(ConfigFile):
     
     def get_lhapdf_id(self):
         '''return pdf configuration from pdlabel'''
-        logger.warning('pulling pdf configuration from "pdlabel," not "pdlabel1,2"')
+        logger.debug('pulling pdf configuration from "pdlabel," not "pdlabel1,2"')
         return self.get_pdf_id(self['pdlabel'])
     
     def get_lhapdf_id_multi(self):
         '''return pdf configuration from pdlabel1,2'''
-        logger.warning('pulling pdf configuration from "pdlabel1,2" not "pdlabel"')
+        logger.debug('pulling pdf configuration from "pdlabel1,2" not "pdlabel"')
         tmpIDs = []
         for beamID in [1,2]:
             tmpIDs.append(self.get_pdf_id(self['pdlabel'+str(beamID)],beamID))

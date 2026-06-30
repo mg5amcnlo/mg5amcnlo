@@ -1799,7 +1799,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     
         self.update_status('Running Systematics computation', level='parton')
-        logger.warning('sys args = %s' % line)
+        self.update_status('Using the input %s' % line, level='parton')
         args = self.split_arg(line)
         #split arguments and option
         opts= []
