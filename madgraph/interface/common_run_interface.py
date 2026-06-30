@@ -7014,18 +7014,37 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 for beam in beamDict:
                     new_alphas_val.update({beam : as_for_pdf[beamDict[beam]]})
 
-            assert len(new_alphas_val) < 3, 'new_alphas_val is too big: %s' % len(new_alphas_val)
+            try:
+                assert len(new_alphas_val) < 3, 'new_alphas_val is too big: %s' % len(new_alphas_val)
+            except AssertionError as err:
+                logger.warning('AssertionError in size of new_alphas_val: %s' % err)
+                new_alphas_val = {}
+                for beam in beamList:
+                    new_alphas_val.update({beam : 0.118})
+                    logger.warning('Setting new_alphas_val[beam=%s]=%s' % (beam,new_alphas_val[beam]))
+
 
             # determine alpha_s according to multi_lhaid_alphas_scheme
             multiAlphaSscheme=run_card['multi_lhaid_alphas_scheme']
             if multiAlphaSscheme in [1,2]:
                 new_value = new_alphas_val[multiAlphaSscheme]
             elif multiAlphaSscheme in [0]:
-                assert len(new_alphas_val)==2, \
-                    'new_alphas_val is too small (len=%s) for multiAlphaSscheme=%s' % (len(new_alphas_val),multiAlphaSscheme)
+                try:
+                    assert len(new_alphas_val)==2, \
+                        'new_alphas_val is too small (len=%s) for multiAlphaSscheme=%s' % (len(new_alphas_val),multiAlphaSscheme)
+                except AssertionError as err:
+                    logger.warning('AssertionError in size of new_alphas_val: %s' % err)
+                    for beam in [1,2]:
+                        new_alphas_val.update({beam : 0.118})
+                        logger.warning('Setting new_alphas_val[beam=%s]=%s' % (beam,new_alphas_val[beam]))
                 new_value = math.sqrt(new_alphas_val[1]*new_alphas_val[2])
             else:
-                assert False, 'this is a dev area. please check how multi_lhaid_alphas_scheme is set/overwritten'
+                try:
+                    assert False, 'this is a dev area. please check how multi_lhaid_alphas_scheme is set/overwritten. current value is %s' % multiAlphaSscheme
+                except AssertionError as err:
+                    logger.warning('AssertionError in value of multiAlphaSscheme: %s' % err)
+                    new_value = 0.118
+                    logger.warning('Setting new_value=%s' % new_value)
 
             # update alpha_s
             old_value = param_card.get('sminputs').get((3,)).value
