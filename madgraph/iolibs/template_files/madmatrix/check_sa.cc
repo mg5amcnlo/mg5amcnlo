@@ -38,12 +38,15 @@
 #include "umami.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -91,13 +94,71 @@ namespace
 
   enum RamboType { RAMBO_MASSIVE, RAMBO_MASSLESS };
 
+  // One external-particle list per LHE event, each particle stored as (E, px, py, pz).
+  using LheEvent = std::array<std::array<double, 4>, CPPProcess::npar>;
+
+  bool read_lhe_events( const std::string& path, std::vector<LheEvent>& events )
+  {
+    constexpr int npar = CPPProcess::npar;
+    std::ifstream in( path );
+    if( !in )
+    {
+      std::cerr << "ERROR! cannot open LHE file '" << path << "'" << std::endl;
+      return false;
+    }
+    std::string line;
+    while( std::getline( in, line ) )
+    {
+      if( line.find( "<event>" ) == std::string::npos ) continue;
+      if( !std::getline( in, line ) ) break;
+      std::istringstream hdr( line );
+      int nptcl = 0;
+      hdr >> nptcl;
+      if( nptcl != npar )
+      {
+        std::cerr << "ERROR! LHE event has " << nptcl << " particles, expected " << npar << std::endl;
+        return false;
+      }
+      // particle lines: pdg status mother1 mother2 color1 color2 px py pz E m lifetime spin
+      LheEvent ev;
+      int ipar = 0;
+      while( ipar < npar && std::getline( in, line ) )
+      {
+        if( line.empty() ) continue;
+        std::istringstream ls( line );
+        long pdg;
+        int status, m1, m2, c1, c2;
+        double px, py, pz, E;
+        if( !( ls >> pdg >> status >> m1 >> m2 >> c1 >> c2 >> px >> py >> pz >> E ) )
+        {
+          std::cerr << "ERROR! malformed LHE particle line: " << line << std::endl;
+          return false;
+        }
+        ev[ipar] = { E, px, py, pz };
+        ++ipar;
+      }
+      if( ipar != npar )
+      {
+        std::cerr << "ERROR! truncated LHE event (got " << ipar << " of " << npar << " particles)" << std::endl;
+        return false;
+      }
+      events.push_back( ev );
+    }
+    if( events.empty() )
+    {
+      std::cerr << "ERROR! no events found in '" << path << "'" << std::endl;
+      return false;
+    }
+    return true;
+  }
+
   int usage( const char* argv0, int ret = 1 )
   {
     std::cout
       << "Usage:\n"
       << "  " << argv0 << " [matrix] [-v|--verbose] [<energy>]\n"
       << "  " << argv0 << " perf [-v|--verbose] [-f|--flavor <int>] [--rambo-massless]"
-      << " [<#blocksPerGrid> <#threadsPerBlock>] <#iterations>\n"
+      << " [-e|--events <file.lhe>] [<#blocksPerGrid> <#threadsPerBlock>] <#iterations>\n"
       << "  " << argv0 << " -p [opts]   (legacy alias for `perf`)\n"
       << "\n"
       << "Subcommands:\n"
@@ -110,6 +171,12 @@ namespace
       << "                    on a single flavor index, then print performance counters.\n"
       << "                    Always prints inputs + backend/fptype header.\n"
       << "                    With -v also dumps every event's phase-space point and ME.\n"
+      << "\n"
+      << "Options:\n"
+      << "  -e|--events <file.lhe>  (perf only) Read the external momenta from an LHE\n"
+      << "                    file instead of generating them with RAMBO. The events are\n"
+      << "                    processed in batches of #blocks*#threads; #iterations is\n"
+      << "                    ignored (derived from the number of events in the file).\n"
       << "\n"
       << "perf-mode defaults if positional args are omitted:\n"
       << "  #blocksPerGrid = 64, #threadsPerBlock = 256, #iterations = 1.\n";
@@ -693,9 +760,22 @@ namespace
                      unsigned int gputhreads,
                      unsigned int niter,
                      unsigned int flavorID,
-                     RamboType ramboType )
+                     RamboType ramboType,
+                     const std::string& lheFile = "" )
   {
     const unsigned int nevt = gpublocks * gputhreads;
+
+    // LHE instead of generating. Processed in batches of nevt and
+    // niter is derived from the number of events read.
+    std::vector<LheEvent> lheEvents;
+    if( !lheFile.empty() )
+    {
+      if( !read_lhe_events( lheFile, lheEvents ) ) return 2;
+      niter = (unsigned int)( ( lheEvents.size() + nevt - 1 ) / nevt );
+      std::cout << "Reading events from LHE file = " << lheFile
+                << " (" << lheEvents.size() << " events, " << niter
+                << " batches of " << nevt << ")" << std::endl;
+    }
 
     mgOnGpu::TimerMap timermap;
 
@@ -786,37 +866,64 @@ namespace
     for( unsigned int iiter = 0; iiter < niter; ++iiter )
     {
       double genrtime = 0;
-      timermap.start( "1a GenSeed " );
-      prnk->seedGenerator( kSeed + iiter );
-      genrtime += timermap.stop();
-      timermap.start( "1b GenRnGen" );
-      prnk->generateRnarray();
-      genrtime += timermap.stop();
-#ifdef MGONGPUCPP_GPUIMPL
-      if( ramboType == RAMBO_MASSLESS )
+      double rambtime = 0;
+      unsigned int nreal = nevt; // number of real (non-padding) events in this batch
+      if( lheFile.empty() )
       {
-        timermap.start( "1c CpHTDrnd" );
-        copyDeviceFromHost( devRndmom, hstRndmom );
+        timermap.start( "1a GenSeed " );
+        prnk->seedGenerator( kSeed + iiter );
         genrtime += timermap.stop();
-      }
+        timermap.start( "1b GenRnGen" );
+        prnk->generateRnarray();
+        genrtime += timermap.stop();
+#ifdef MGONGPUCPP_GPUIMPL
+        if( ramboType == RAMBO_MASSLESS )
+        {
+          timermap.start( "1c CpHTDrnd" );
+          copyDeviceFromHost( devRndmom, hstRndmom );
+          genrtime += timermap.stop();
+        }
 #endif
 
-      double rambtime = 0;
-      timermap.start( "2a RamboIni" );
-      prsk->getMomentaInitial();
-      rambtime += timermap.stop();
-      timermap.start( "2b RamboFin" );
-      prsk->getMomentaFinal();
-      rambtime += timermap.stop();
+        timermap.start( "2a RamboIni" );
+        prsk->getMomentaInitial();
+        rambtime += timermap.stop();
+        timermap.start( "2b RamboFin" );
+        prsk->getMomentaFinal();
+        rambtime += timermap.stop();
 #ifdef MGONGPUCPP_GPUIMPL
-      // Massive host only (copy)
-      if( ramboType != RAMBO_MASSLESS )
+        // Massive host only (copy)
+        if( ramboType != RAMBO_MASSLESS )
+        {
+          timermap.start( "2c CpHTDmom" );
+          copyDeviceFromHost( devMomenta, hstMomenta );
+          rambtime += timermap.stop();
+        }
+#endif
+      }
+      else
       {
+        // Fill this batch from the LHE events (AOSOA layout, (E,px,py,pz) per leg).
+        // padded by repeating its last real event so the SIMD page is valid
+        // only the nreal real events are counted below.
+        timermap.start( "2e ReadLHE " );
+        const std::size_t base = (std::size_t)iiter * nevt;
+        nreal = (unsigned int)std::min<std::size_t>( nevt, lheEvents.size() - base );
+        for( unsigned int ievt = 0; ievt < nevt; ++ievt )
+        {
+          const std::size_t src = base + std::min<std::size_t>( ievt, (std::size_t)nreal - 1 );
+          const LheEvent& ev = lheEvents[src];
+          for( int ipar = 0; ipar < CPPProcess::npar; ++ipar )
+            for( int ip4 = 0; ip4 < 4; ++ip4 )
+              MemoryAccessMomenta::ieventAccessIp4Ipar( hstMomenta.data(), ievt, ip4, ipar ) = (fptype)ev[ipar][ip4];
+        }
+        rambtime += timermap.stop();
+#ifdef MGONGPUCPP_GPUIMPL
         timermap.start( "2c CpHTDmom" );
         copyDeviceFromHost( devMomenta, hstMomenta );
         rambtime += timermap.stop();
-      }
 #endif
+      }
 
       timermap.start( "2d Aosoa2U " );
 #ifdef MGONGPUCPP_GPUIMPL
@@ -854,7 +961,7 @@ namespace
 #endif
 
       timermap.start( "4@ UpdtStat" );
-      for( unsigned int ievt = 0; ievt < nevt; ++ievt )
+      for( unsigned int ievt = 0; ievt < nreal; ++ievt )
       {
         double me = mes[ievt];
         ++nevtALL;
@@ -876,7 +983,7 @@ namespace
       {
         std::cout << std::string( SEP79, '*' ) << std::endl
                   << "Iteration #" << iiter + 1 << " of " << niter << std::endl;
-        for( unsigned int ievt = 0; ievt < nevt; ++ievt )
+        for( unsigned int ievt = 0; ievt < nreal; ++ievt )
         {
           std::cout << "Event #" << ievt + 1 << std::endl;
           print_momenta_table( std::cout, hstMomenta.data(), ievt );
@@ -956,6 +1063,7 @@ int main( int argc, char** argv )
   unsigned int niter = 1;
   unsigned int numvec[3] = { 0, 0, 0 };
   int nnum = 0;
+  std::string lheFile; // -e/--events: read momenta from this LHE file (perf mode only)
 
   // Optional leading subcommand (no leading dash).
   int firstArg = 1;
@@ -982,6 +1090,11 @@ int main( int argc, char** argv )
       std::string r = argv[++argn];
       ramboType = RAMBO_MASSLESS;
       ramboTypeSet = true;
+    }
+    else if( ( arg == "--events" || arg == "-e" ) && argn + 1 < argc )
+    {
+      lheFile = argv[++argn];
+      mode = MODE_PERF; // reading events from file only makes sense in perf mode
     }
     else if( is_number( argv[argn] ) && nnum < 3 )
     {
@@ -1032,7 +1145,7 @@ int main( int argc, char** argv )
   {
     return usage( argv[0] );
   }
-  if( niter == 0 ) return usage( argv[0] );
+  if( niter == 0 && lheFile.empty() ) return usage( argv[0] ); // niter is derived from the file in LHE mode
 
   if( flavorID >= CPPProcess::nmaxflavor )
   {
@@ -1041,5 +1154,5 @@ int main( int argc, char** argv )
     return 1;
   }
 
-  return run_perf_mode( verbose, gpublocks, gputhreads, niter, flavorID, ramboType );
+  return run_perf_mode( verbose, gpublocks, gputhreads, niter, flavorID, ramboType, lheFile );
 }
