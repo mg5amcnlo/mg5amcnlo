@@ -253,21 +253,22 @@ namespace
 
   void print_momenta_table( std::ostream& os, const fptype* aosoa, unsigned int ievt )
   {
+    auto constexpr prec = std::numeric_limits<fptype>::digits10;	  
     constexpr int npar = CPPProcess::npar;
     os << std::string( SEP79, '-' ) << std::endl
-       << " n        E             px             py              pz" << std::endl;
+       << "   n    E           	 	 px             	  py              	   pz" << std::endl;
     for( int ipar = 0; ipar < npar; ++ipar )
     {
       double E  = (double)MemoryAccessMomenta::ieventAccessIp4IparConst( aosoa, ievt, 0, ipar );
       double px = (double)MemoryAccessMomenta::ieventAccessIp4IparConst( aosoa, ievt, 1, ipar );
       double py = (double)MemoryAccessMomenta::ieventAccessIp4IparConst( aosoa, ievt, 2, ipar );
       double pz = (double)MemoryAccessMomenta::ieventAccessIp4IparConst( aosoa, ievt, 3, ipar );
-      os << std::scientific << std::setprecision( 7 )
-         << std::setw( 2 ) << ipar + 1
-         << std::setw( 16 ) << E
-         << std::setw( 16 ) << px
-         << std::setw( 16 ) << py
-         << std::setw( 16 ) << pz
+      os << std::scientific << std::setprecision( prec )
+         << std::setw( 4 ) << ipar + 1
+         << std::setw( prec + 10 ) << E
+         << std::setw( prec + 10 ) << px
+         << std::setw( prec + 10 ) << py
+         << std::setw( prec + 10 ) << pz
          << std::endl
          << std::defaultfloat;
     }
