@@ -1138,24 +1138,25 @@ extern "C" {
     int id = -1;
     int subid[2] = {-1,-1};
     // Identify the calling program (yuck!)
+    // add 0.1 to avoid cast-int-to-float-to-int truncation error
     if (my_par.find("DEFAULT") != string::npos) {
       message = "==== LHAPDF6 USING DEFAULT-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[...]
-      subid[0] = int(value[1]);
-      subid[1] = int(value[2]);
+      subid[0] = int(value[1]+0.1);
+      subid[1] = int(value[2]+0.1);
     } else if (my_par.find("HWLHAPDF") != string::npos) {
       message = "==== LHAPDF6 USING HERWIG-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[...]
-      subid[0] = int(value[1]);
-      subid[1] = int(value[2]);
+      subid[0] = int(value[1]+0.1);
+      subid[1] = int(value[2]+0.1);
     } else if (my_par.find("NPTYPE") != string::npos) {
       message = "==== LHAPDF6 USING PYTHIA-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
-      id = int(value[2]+1000*value[1]);
+      id = int(value[2]+1000*value[1]+0.1);
     } else {
       message = "==== LHAPDF6 USING PDFLIB-TYPE LHAGLUE INTERFACE ====";
       // Take PDF ID from value[2]
-      id = int(value[2]+1000*value[1]);
+      id = int(value[2]+1000*value[1]+0.1);
     }
     pair<string, int> set_id = LHAPDF::lookupPDF(id);
     pair<string, int> set_subid[2] = {
@@ -1178,21 +1179,22 @@ extern "C" {
       // dbl value[4] carries multi_lhaid_alphas_scheme (see pdf_wrap_lhapdf.f)
       // for 1,2, value[multi_lhaid_alphas_scheme] carries lhasubid(...)
       // lhasubid(...) is the index of ACTIVESETS (see 10 lines above)
-      int tmpIndex = int(value[4]);
+      // add 0.1 to avoid cast-int-to-float-to-int truncation error
+      int tmpIndex = int(value[4]+0.1);
       cout  << "LHAPDF6: using nset="
             << tmpIndex <<" for common block params" << endl;
-      CURRENTSET = int(value[tmpIndex]); // only for initialization
+      CURRENTSET = int(value[tmpIndex]+0.1); // only for initialization
     }else{ // value[4] <= 0
       try{
         cout  << "LHAPDF6: using nset="
-              << int(value[2]) <<" (beam2) for common block params" << endl;
-        CURRENTSET = int(value[2]); // only for initialization (should not matter!)
+              << int(value[2]+0.1) <<" (beam2) for common block params" << endl;
+        CURRENTSET = int(value[2]+0.1); // only for initialization (should not matter!)
       } catch(...){
         cout  << "should not be here! please check logic in banner.py" << endl;
         cout  << "trying to recover..." << endl;
         cout  << "LHAPDF6: using nset="
-              << int(value[1]) <<" for common block params" << endl;
-        CURRENTSET = int(value[1]); // only for initialization (should not matter!)
+              << int(value[1]+0.1) <<" for common block params" << endl;
+        CURRENTSET = int(value[1]+0.1); // only for initialization (should not matter!)
       }
     }
 
