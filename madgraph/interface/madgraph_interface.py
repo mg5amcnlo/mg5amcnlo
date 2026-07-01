@@ -7999,6 +7999,25 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     heptools_dir = os.path.join(MG5DIR, heptools_dir)
                 gen_env['MADGRAPH_HEPTOOLS_DIR'] = os.path.abspath(heptools_dir)
 
+            # Point the run at the configured LHAPDF data directory (e.g. a
+            # lhapdf6 installed via 'install lhapdf6') so it can find the PDF
+            # sets without the user having to set LHAPDF_DATA_PATH by hand.
+            if 'LHAPDF_DATA_PATH' not in gen_env:
+                for _opt in ('lhapdf', 'lhapdf_py3'):
+                    _val = self.options.get(_opt)
+                    if not _val:
+                        continue
+                    _exe = _val.split()[0]  # strip any '--python=' suffix
+                    try:
+                        _datadir = subprocess.check_output(
+                            [_exe, '--datadir'], text=True,
+                            stderr=subprocess.DEVNULL).strip()
+                    except Exception:
+                        continue
+                    if _datadir and os.path.isdir(_datadir):
+                        gen_env['LHAPDF_DATA_PATH'] = _datadir
+                        break
+
             class ext_program:
                 @staticmethod
                 def run():

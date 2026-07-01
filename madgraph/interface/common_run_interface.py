@@ -8070,8 +8070,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if answer in self.modified_card:
             self.write_card(answer)
-        elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
-            self.write_card(os.path.basename(answer.replace('_card.dat','')))
+        else:
+            short = os.path.basename(
+                answer.replace('_card.dat', '').replace('_card.toml', ''))
+            if short in self.modified_card:
+                self.write_card(short)
 
         start = time.time()
         try:
