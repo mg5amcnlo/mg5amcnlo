@@ -1347,8 +1347,61 @@ def ask_edit_cards() -> None:
         old_define_paths(self, **opt)
         self.paths["run"] = os.path.join(self.me_dir, "Cards", "run_card.toml")
         self.paths["run_card.toml"] = os.path.join(self.me_dir, "Cards", "run_card.toml")
+        # the TOML run_card uses its own default file (concrete defaults written
+        # at output time); this powers "set <param> default".
+        self.paths["run_default"] = os.path.join(self.me_dir, "Cards", "run_card_default.toml")
     AskforEditCard.define_paths = define_paths
-    AskforEditCard.reload_card = lambda self, path: None
+
+    # Extra "set" handling for the TOML run_card: madevent-style shortcuts
+    # (lhc/lep/fixed_scale/no_parton_cut), cut editing, energy units and
+    # arithmetic/mass expressions. The generic editor only knows the fixed
+    # [section] parameters, so these are intercepted before delegating.
+    old_do_set = AskforEditCard.do_set
+    def do_set(self, line, *args, **kwargs):
+        targs = self.split_arg(line)
+        run_card = getattr(self, "run_card", None)
+        if isinstance(run_card, RunCardMG7) and targs:
+            start = 1 if targs[0] == "run_card" else 0
+            if len(targs) > start:
+                name = targs[start]
+                nlow = name.lower()
+                rest = " ".join(targs[start + 1:]).split("#")[0].strip()
+                masses = run_card.get_mass_shortcuts(getattr(self, "param_card", None))
+
+                # --- shortcuts ---
+                if nlow in ("no_parton_cut", "nocut", "no_cut"):
+                    run_card.remove_all_cut()
+                    logger.info("removing all cuts from the run_card.toml")
+                    self.modified_card.add("run")
+                    return
+                if nlow in ("lhc", "lep", "ilc", "lcc") and rest:
+                    ecm = run_card.set_collider(nlow, rest, masses)
+                    logger.info("set %s collider: e_cm = %s GeV", nlow, ecm)
+                    self.modified_card.add("run")
+                    return
+                if nlow == "fixed_scale" and rest:
+                    val = run_card.set_fixed_scale(rest, masses)
+                    logger.info("set fixed scales to %s GeV", val)
+                    self.modified_card.add("run")
+                    return
+
+                # --- cut editing (with units/math/mass) ---
+                if rest and run_card.is_cut_name(name):
+                    cut, bound, val = run_card.set_cut(name, run_card.evaluate(rest, masses))
+                    logger.info("modify cut %s.%s of the run_card.toml to %s", cut, bound, val)
+                    self.modified_card.add("run")
+                    return
+
+                # --- numeric params: resolve units/arithmetic/masses ---
+                if rest and nlow in [k.lower() for k in run_card.keys()]:
+                    current = run_card[nlow]
+                    if isinstance(current, (int, float)) and not isinstance(current, bool):
+                        resolved = run_card.evaluate(rest, masses)
+                        if not isinstance(resolved, str):
+                            prefix = "run_card " if start == 1 else ""
+                            line = "%s%s %s" % (prefix, name, resolved)
+        return old_do_set(self, line, *args, **kwargs)
+    AskforEditCard.do_set = do_set
 
     cmd = MG7Cmd()
     CommonRunCmd.ask_edit_card_static(

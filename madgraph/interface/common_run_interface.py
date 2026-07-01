@@ -5325,15 +5325,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if isinstance(cards, list):
             if name in cards:
                 return True
-            elif '%s_card.dat' % name in cards:
+            elif '%s_card.dat' % name in cards or '%s_card.toml' % name in cards:
                 return True
             elif name in self.paths and self.paths[name] in cards:
                 return True
             else:
                 cardnames = [os.path.basename(p) for p in cards]
-                if '%s_card.dat' % name in cardnames:
+                if '%s_card.dat' % name in cardnames or '%s_card.toml' % name in cardnames:
                     return True
-                else:       
+                else:
                     return False
             
         elif isinstance(cards, dict) and name in cards:
@@ -7231,7 +7231,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             log_level=20
 
-        if run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+        if run_card and 'lpp1' in run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+            # The beam-dependent alpha_s/PDF reset only applies to the LO/NLO
+            # run_card (which defines lpp1/lpp2). Other run_card flavours (e.g.
+            # the TOML run_card of the mg7 mode) skip this block.
             # They are likely case like lpp=+-3, where alpas not need reset
             # but those have dedicated name of pdf avoid the reset
             as_for_pdf = {'cteq6_m': 0.118,
