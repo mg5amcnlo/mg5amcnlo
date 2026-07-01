@@ -13,7 +13,7 @@ def import_lib(name):
     sys.path.insert(0, os.path.join('%(path)s',name))
     try:
         os.chdir(os.path.join('%(path)s',name))
-        out = importlib.import_module('ewsudpy_%%s' %% name)
+        out = importlib.import_module('ewsudpy_%s' % name)
         os.chdir(old_dir)
     except:
         os.chdir(old_dir)

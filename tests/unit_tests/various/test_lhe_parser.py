@@ -56,10 +56,10 @@ class TestEvent(unittest.TestCase):
         """ check the static method get_permutation"""
 
 
-        out = lhe_parser.Event.get_permutation([3,4,5], "AAA")
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAA", permutate_two_decay=True)
         self.assertEqual(len(out), 1)
         
-        out = lhe_parser.Event.get_permutation([3,4,5], "AAB")
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAB", permutate_two_decay=True)
         self.assertEqual(len(out), 3)
         self.assertIn((3,4,5), out)
         check = set()
@@ -68,22 +68,421 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(len(check), 3)
         self.assertEqual(check, set([3,4,5]))
 
-        out = lhe_parser.Event.get_permutation([3,4,5], "ABC")
+        out = lhe_parser.Event.get_permutation([3,4,5], "ABC", permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5), out)
         self.assertIn((4,3,5), out)
 
-        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC")
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC",permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5,6), out)
         self.assertNotIn((4,3,6,5), out)
         self.assertIn((4,5,3,6), out)
 
-        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA")
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA",permutate_two_decay=True)
         self.assertEqual(len(out), 6)
         self.assertIn((3,4,5,6), out)
         self.assertIn((4,3,6,5), out)
   
+    def test_all_momenta_for_zz(self):      
+        """ test that for u u~ >  z z only one ordering is returned"""                     
+
+        text_lhe = """<event>
+        84      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+       -1 -1    0    0    0  501 -0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        1 -1    0    0  501    0 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       23  1    1    2    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  1    1    2    0    0 +1.0803264452e+01 +4.0782658931e+01 -9.7070204270e+01 1.3970616197e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       </event>"""
+
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n'))
+        all_p = Event.get_all_momenta(([-1,1],[23,23]),debug_output=False)
+        self.assertEqual(len(all_p), 1)
+        self.assertEqual(len(all_p[0]), 4)
+        # check that particle are in the correct order    
+        self.assertEqual(all_p[0][0][3], 44.934420219, )
+        self.assertEqual(all_p[0][3][3], -9.7070204270e+01)
+
+
+        text_lhe ="""<event>
+ 8      1 +9.3182000e+00 1.24864100e+02 7.54677100e-03 1.23528200e-01
+        1 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1193143155e+02 1.1193143155e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       -1 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -1.4479335429e+02 1.4479335429e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       23  2    1    2    0    0 -3.9109420390e+01 -7.5804058190e+01 +8.5916956812e+00 1.2515938071e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+       23  2    1    2    0    0 +3.9109420390e+01 +7.5804058190e+01 -4.1453618425e+01 1.3156540513e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+      -11  1    3    3    0    0 -3.6688912923e+01 -2.9778691677e+01 -3.7238302752e+01 6.0162596365e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       11  1    3    3    0    0 -2.4205074678e+00 -4.6025366514e+01 +4.5829998433e+01 6.4996784348e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+      -11  1    4    4    0    0 +5.2267279628e+01 +1.6179927919e+01 +4.8591069017e+00 5.4929677835e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       11  1    4    4    0    0 -1.3157859241e+01 +5.9624130265e+01 -4.6312725324e+01 7.6635727286e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+       </event>"""
+
+
+        Event = lhe_parser.Event()
+        Event.parse(text_lhe.split('\n'))
+        all_p = Event.get_all_momenta(([-1,1],[-11,11,-11,11]),debug_output=False)
+        self.assertEqual(len(all_p), 1)
+        self.assertEqual(len(all_p[0]), 6)
+        # check that particle are in the correct order    
+        #self.assertEqual(all_p[0][0][3], 44.934420219, )
+        #self.assertEqual(all_p[0][3][3], -9.7070204270e+01)
+
+
+    def test_lorentzmap(self):
+
+
+        a =  FourMomentum(344.7195012263006,-11.177242457883889,-35.77095442776701,-291.5939687237611) 
+        ma = 180.0 
+        b = FourMomentum(301.2293351026085,-9.18287068059191,-29.38829052593879,-239.56442889624947) 
+        mb = 179.99999999999997 
+
+        t = a.get_lorentz_map(b)
+
+        new_a = a.apply_lorentzmap(t)
+        self.assertAlmostEqual(new_a.E, b.E)
+        self.assertAlmostEqual(new_a.px, b.px) 
+        self.assertAlmostEqual(new_a.py, b.py)
+        self.assertAlmostEqual(new_a.pz, b.pz)
+
+    def test_reshuffle_event_1(self):
+        """check that one can reshuffle some event by change some mass..."""
+
+        # Start by reshuffling a single propagator which does not have subdecay
+        tt_onshell = lhe_parser.Event() 
+        input_event = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  1    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  1    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+        </event>"""
+        tt_onshell.parse(input_event)
+
+
+        tt_onshell[2].new_mass = 180
+        tt_onshell.reshuffle_production()
+        #check all mass of the events are consistent with momenta
+        for part in tt_onshell:    
+            self.assertAlmostEqual(FourMomentum(part).mass, part.mass)
+        #check that the top is on the new mass
+        self.assertAlmostEqual(tt_onshell[2].mass, 180)
+        #check that the anti-top is on the old mass
+        self.assertAlmostEqual(FourMomentum(tt_onshell[3]).mass, 173)
+        #check that the w are onshell (old mass)
+        self.assertEqual(tt_onshell[5].pid, 24) 
+        self.assertAlmostEqual(FourMomentum(tt_onshell[5]).mass, 7.9761361725e+01)
+
+
+        # check that the top decay is consistent with the decay product
+        tmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.event_id == 2:
+                    tmom += FourMomentum(particle)
+            elif particle.mother1 == 3: 
+                tmom += FourMomentum(particle)
+        self.assertAlmostEqual(tmom.E, tt_onshell[2].E)
+        self.assertAlmostEqual(tmom.px, tt_onshell[2].px)
+        self.assertAlmostEqual(tmom.py, tt_onshell[2].py)
+        self.assertAlmostEqual(tmom.pz, tt_onshell[2].pz) 
+
+        # check that initial state is unchanged...
+        self.assertAlmostEqual(tt_onshell[0].E, 1.6801959055e+02)
+        self.assertAlmostEqual(tt_onshell[1].E, 3.6057100553e+02)
+
+
+        # check that the full momenta is consistent
+        tt_onshell.check()
+
+    def test_reshuffle_event_2(self):
+        """test the full top decay (with subdecay)"""
+
+        tt_onshell = lhe_parser.Event() 
+        input_event = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  1    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  2    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+         4  1    6    6  503    0 +3.1108736074e+01 -4.1879413499e+01 -5.2796423914e+01 7.4223319201e+01 0.0000000000e+00  0.0000e+00 -1.0000e+00
+        -3  1    6    6    0  503 -3.5514349605e+01 -4.7862538654e+01 -1.5122786489e+02 1.6254832744e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        </event>"""
+        tt_onshell.parse(input_event)
+
+        tt_onshell[2].new_mass = 180
+        tt_onshell.reshuffle_production()
+        #check all mass of the events are consistent with momenta
+        for part in tt_onshell:    
+            self.assertAlmostEqual(FourMomentum(part).mass, part.mass)
+        #check that the top is on the new mass
+        self.assertAlmostEqual(tt_onshell[2].mass, 180)
+        #check that the anti-top is on the old mass
+        self.assertAlmostEqual(FourMomentum(tt_onshell[3]).mass, 173)
+        #check that the w are onshell (old mass)
+        self.assertAlmostEqual(FourMomentum(tt_onshell[5]).mass, 7.9761361725e+01)
+        #self.assertAlmostEqual(FourMomentum(tt_onshell[9]).mass, 8.0658633731e+01) 
+
+        # check that the top decay is consistent with the decay product
+        tmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 6:
+                    tmom += FourMomentum(particle)
+            elif particle.mother1 == 3: 
+                tmom += FourMomentum(particle)
+        self.assertAlmostEqual(tmom.E, tt_onshell[2].E)
+        self.assertAlmostEqual(tmom.px, tt_onshell[2].px)
+        self.assertAlmostEqual(tmom.py, tt_onshell[2].py)
+        self.assertAlmostEqual(tmom.pz, tt_onshell[2].pz) 
+
+        # check that the wdecay is consistent with the decay product
+        wmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 24:
+                    wmom += FourMomentum(particle)
+            elif particle.mother1 == 6: 
+                wmom += FourMomentum(particle)
+        self.assertAlmostEqual(wmom.E, tt_onshell[5].E)
+        self.assertAlmostEqual(wmom.px, tt_onshell[5].px)
+        self.assertAlmostEqual(wmom.py, tt_onshell[5].py)
+        self.assertAlmostEqual(wmom.pz, tt_onshell[5].pz) 
+
+
+        # check that initial state is unchanged...
+        self.assertAlmostEqual(tt_onshell[0].E, 1.6801959055e+02)
+        self.assertAlmostEqual(tt_onshell[1].E, 3.6057100553e+02)
+
+        # check that the full momenta is consistent
+        tt_onshell.check()
+
+    def test_reshuffle_event_3(self):
+        """test a reshuffling which is linked to a previous decay (reshuffling within a decay)"""
+
+        tt_onshell = lhe_parser.Event() 
+        input_event = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  1    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  2    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+         4  1    6    6  503    0 +3.1108736074e+01 -4.1879413499e+01 -5.2796423914e+01 7.4223319201e+01 0.0000000000e+00  0.0000e+00 -1.0000e+00
+        -3  1    6    6    0  503 -3.5514349605e+01 -4.7862538654e+01 -1.5122786489e+02 1.6254832744e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        </event>"""
+        tt_onshell.parse(input_event)
+
+        tt_onshell[5].new_mass = 90
+        tt_onshell.reshuffle_production()
+        #check all mass of the events are consistent with momenta
+        for part in tt_onshell:    
+            self.assertAlmostEqual(FourMomentum(part).mass, part.mass)
+        #check that the top is on the new mass
+        self.assertAlmostEqual(tt_onshell[2].mass, 173)
+        #check that the anti-top is on the old mass
+        self.assertAlmostEqual(FourMomentum(tt_onshell[3]).mass, 173)
+        #check that the w are onshell (old mass)
+        self.assertAlmostEqual(FourMomentum(tt_onshell[5]).mass, 90)
+        #self.assertAlmostEqual(FourMomentum(tt_onshell[9]).mass, 8.0658633731e+01) 
+
+        # check that the top decay is consistent with the decay product
+        tmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 6:
+                    tmom += FourMomentum(particle)
+            elif particle.mother1 == 3: 
+                tmom += FourMomentum(particle)
+        self.assertAlmostEqual(tmom.E, tt_onshell[2].E)
+        self.assertAlmostEqual(tmom.px, tt_onshell[2].px)
+        self.assertAlmostEqual(tmom.py, tt_onshell[2].py)
+        self.assertAlmostEqual(tmom.pz, tt_onshell[2].pz) 
+
+        # check that the wdecay is consistent with the decay product
+        wmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 24:
+                    wmom += FourMomentum(particle)
+            elif particle.mother1 == 6: 
+                wmom += FourMomentum(particle)
+        self.assertAlmostEqual(wmom.E, tt_onshell[5].E)
+        self.assertAlmostEqual(wmom.px, tt_onshell[5].px)
+        self.assertAlmostEqual(wmom.py, tt_onshell[5].py)
+        self.assertAlmostEqual(wmom.pz, tt_onshell[5].pz) 
+
+
+        # check that initial state is unchanged...
+        self.assertAlmostEqual(tt_onshell[0].E, 1.6801959055e+02)
+        self.assertAlmostEqual(tt_onshell[1].E, 3.6057100553e+02)
+
+        # check that the full momenta is consistent
+        tt_onshell.check()
+
+    def test_reshuffle_event_4(self):
+        """test a reshuffling which is linked to a previous decay (reshuffling within a decay)"""
+
+        tt_onshell = lhe_parser.Event() 
+        input_event = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  2    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  2    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+         4  1    6    6  503    0 +3.1108736074e+01 -4.1879413499e+01 -5.2796423914e+01 7.4223319201e+01 0.0000000000e+00  0.0000e+00 -1.0000e+00
+        -3  1    6    6    0  503 -3.5514349605e+01 -4.7862538654e+01 -1.5122786489e+02 1.6254832744e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -5  1    4    4    0  501 +3.8227405386e+01 -4.3162289065e+01 +1.1048705041e+01 5.8893816339e+01 4.7000000000e+00  0.0000e+00 1.0000e+00
+       -24  2    4    4    0    0 -2.7484833468e+01 +7.7542150821e+01 +7.6654083251e+01 1.3838303689e+02 8.0658633731e+01  0.0000e+00 9.0000e+00
+         3  1   10   10  504    0 +1.0153668697e+01 -6.8313887972e+00 +3.4927101796e+01 3.7009016480e+01 0.0000000000e+00  0.0000e+00 -1.0000e+00
+        -4  1   10   10    0  504 -3.7638502164e+01 +8.4373539619e+01 +4.1726981455e+01 1.0137402041e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        </event>"""
+        tt_onshell.parse(input_event)
+
+
+        tt_onshell[2].new_mass = 180
+        tt_onshell.reshuffle_production()
+        #check all mass of the events are consistent with momenta
+        for part in tt_onshell:    
+            self.assertAlmostEqual(FourMomentum(part).mass, part.mass)
+        #check that the top is on the new mass
+        self.assertAlmostEqual(tt_onshell[2].mass, 180)
+        #check that the anti-top is on the old mass
+        self.assertAlmostEqual(FourMomentum(tt_onshell[3]).mass, 173)
+        #check that the w are onshell (old mass)
+        self.assertAlmostEqual(FourMomentum(tt_onshell[5]).mass, 7.9761361725e+01)
+        self.assertAlmostEqual(FourMomentum(tt_onshell[9]).mass, 8.0658633731e+01) 
+
+        # check that the top decay is consistent with the decay product
+        tmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 6:
+                    tmom += FourMomentum(particle)
+            elif particle.mother1 == 3: 
+                tmom += FourMomentum(particle)
+        self.assertAlmostEqual(tmom.E, tt_onshell[2].E)
+        self.assertAlmostEqual(tmom.px, tt_onshell[2].px)
+        self.assertAlmostEqual(tmom.py, tt_onshell[2].py)
+        self.assertAlmostEqual(tmom.pz, tt_onshell[2].pz) 
+
+        # check that the wdecay is consistent with the decay product
+        wmom = FourMomentum()
+        for particle in tt_onshell:
+            if isinstance(particle.mother1, lhe_parser.Particle):
+                if particle.mother1.pid == 24:
+                    wmom += FourMomentum(particle)
+            elif particle.mother1 == 6: 
+                wmom += FourMomentum(particle)
+        self.assertAlmostEqual(wmom.E, tt_onshell[5].E)
+        self.assertAlmostEqual(wmom.px, tt_onshell[5].px)
+        self.assertAlmostEqual(wmom.py, tt_onshell[5].py)
+        self.assertAlmostEqual(wmom.pz, tt_onshell[5].pz) 
+
+
+        # check that initial state is unchanged...
+        self.assertAlmostEqual(tt_onshell[0].E, 1.6801959055e+02)
+        self.assertAlmostEqual(tt_onshell[1].E, 3.6057100553e+02)
+
+        # check that the full momenta is consistent
+        tt_onshell.check()
+
+        #raise Exception('sucess? does not crash')        
+
+        
+
+
+
+
+
+    def test_identical_final_state(self):
+        """ test that two event can be identified as identical even if the final state
+        is the same and that symmetry factor is correctly computed."""
+
+
+        z_ee_1 = lhe_parser.Event() 
+        z_ee_1.parse("""<event>    
+        3      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+        24 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11 1    1    1    0  501 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11 1    1    1    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+        </event>
+        """.split('\n'))
+
+        z_ee_2 = lhe_parser.Event()
+        z_ee_2.parse("""<event>    
+        3      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+        24 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        -11 1    1    1    0  501 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        11 1    1    1    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+        </event>
+        """.split('\n'))
+
+
+        z_ee_3 = lhe_parser.Event() 
+        z_ee_3.parse("""<event>
+        3      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+        24 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11 1    1    1    0  501 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11 1    1    1    0    0 -2.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+        </event>
+        """.split('\n'))
+
+        z_mu_1 = lhe_parser.Event()
+        z_mu_1.parse("""<event>
+         3      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+        24 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        13 1    1    1    0  501 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -13 1    1    1    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+        </event>
+        """.split('\n'))
+
+        z_mu_2 = lhe_parser.Event()
+        z_mu_2.parse("""<event>
+         3      1 +9.3182000e+00 1.00474800e+02 7.54677100e-03 1.27930100e-01
+        24 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +4.4934420219e+01 4.4934420219e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        -13 1    1    1    0  501 +0.0000000000e+00 -0.0000000000e+00 -2.2525427462e+02 2.2525427462e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        13 1    1    1    0    0 -1.0803264452e+01 -4.0782658931e+01 -8.3249650133e+01 1.3048253287e+02 9.1188000000e+01 0.0000e+00 0.0000e+00
+        </event>
+        """.split('\n'))        
+
+        #check each pair
+        self.assertTrue(z_ee_1.has_same_final_state(z_ee_2))
+        self.assertTrue(z_ee_2.has_same_final_state(z_ee_1))
+        self.assertTrue(z_ee_1.has_same_final_state(z_ee_1))
+        self.assertTrue(z_ee_2.has_same_final_state(z_ee_2))
+        self.assertFalse(z_ee_1.has_same_final_state(z_mu_1))
+        self.assertFalse(z_ee_1.has_same_final_state(z_mu_2))
+        self.assertFalse(z_ee_2.has_same_final_state(z_mu_1))
+        self.assertFalse(z_ee_2.has_same_final_state(z_mu_2))   
+        self.assertTrue(z_ee_1.has_same_final_state(z_ee_3))
+        self.assertTrue(z_ee_2.has_same_final_state(z_ee_3))
+        self.assertTrue(z_ee_3.has_same_final_state(z_ee_1))
+        self.assertTrue(z_ee_3.has_same_final_state(z_ee_2))
+        self.assertTrue(z_ee_3.has_same_final_state(z_ee_3))
+        self.assertFalse(z_ee_3.has_same_final_state(z_mu_1))
+        self.assertFalse(z_ee_3.has_same_final_state(z_mu_2))
+        self.assertTrue(z_mu_1.has_same_final_state(z_mu_2))
+        self.assertTrue(z_mu_1.has_same_final_state(z_mu_1))
+        self.assertTrue(z_mu_2.has_same_final_state(z_mu_2))
+
+        # check symmetry factor
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_ee_2]),2)
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_mu_1]),1)
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_ee_2, z_ee_3]),6)
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_ee_2, z_mu_1]),2)
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_ee_2, z_ee_3, z_mu_1]),6)
+        self.assertEqual(z_ee_1.get_sym_factor_with([z_ee_2, z_ee_3, z_mu_1, z_mu_2]), 12)
+        self.assertEqual(z_ee_1.get_sym_factor_with([]),1)
+
+
+
 
     def test_event_property(self):
         """
@@ -133,14 +532,14 @@ class TestEvent(unittest.TestCase):
 
 
 
-        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2, permutate_two_decay=True)
         self.assertEqual(len(perm_gen), 2)
         self.assertEqual(len(perm_gen[11]), 6)
         self.assertEqual(len(perm_gen[-11]), 6)
         self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(2, 2), (4, 3), (3, 4)], [(3, 2), (2, 3), (4, 4)], [(3, 2), (4, 3), (2, 4)], [(4, 2), (2, 3), (3, 4)], [(4, 2), (3, 3), (2, 4)]], 
                                      11: [[(5, 5), (6, 6), (7, 7)], [(5, 5), (7, 6), (6, 7)], [(6, 5), (5, 6), (7, 7)], [(6, 5), (7, 6), (5, 7)], [(7, 5), (5, 6), (6, 7)], [(7, 5), (6, 6), (5, 7)]]}
         )
-        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2, permutate_two_decay=True)
         self.assertEqual(len(perm_gen2), 2)
         self.assertEqual(len(perm_gen2[11]), 6)
         self.assertEqual(len(perm_gen2[-11]), 6)
@@ -150,9 +549,28 @@ class TestEvent(unittest.TestCase):
         
         )
         
-        
-    
-        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0)
+        # same but does not allow to permutate two decay in the final state
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen), 2)
+        self.assertEqual(len(perm_gen[11]), 3)
+        self.assertEqual(len(perm_gen[-11]), 3)
+        # not clear if this is really the best output
+        # might have been better to get for -11 to have has last entry: 
+        # [(4, 2), (3, 3), (2, 4)] ???
+        # I guess that it should be fine as long has the flipping is consistent for 11 
+        self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(3, 2), (2, 3), (4, 4)], [(4, 2), (2, 3), (3, 4)]], 
+                                    11: [[(5, 5), (6, 6), (7, 7)], [(6, 5), (5, 6), (7, 7)], [(7, 5), (5, 6), (6, 7)]]}            
+        )
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen2), 2)
+        self.assertEqual(len(perm_gen2[11]), 3)
+        self.assertEqual(len(perm_gen2[-11]), 3)
+        self.assertNotEqual(perm_gen, perm_gen2)
+        self.assertEqual(perm_gen2, {-11: [[(2, 2), (4, 4), (6, 6)], [(4, 2), (2, 4), (6, 6)], [(6, 2), (2, 4), (4, 6)]], 
+                                     11: [[(3, 3), (5, 5), (7, 7)], [(5, 3), (3, 5), (7, 7)], [(7, 3), (3, 5), (5, 7)]]}
+        )
+
+        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0, permutate_two_decay=True)
         self.assertEqual(len(all_perms), 36)
         for i in range(len(all_perms)):
             for j in range(i+1, len(all_perms)):
@@ -869,3 +1287,90 @@ class TESTLHEParserNLO(unittest.TestCase):
 
         for cevent in evt3.nloweight.cevents:
             self.assertIn(len(cevent), (4,5))
+
+
+class TestBasicEventCompatibility(unittest.TestCase):
+    """Compatibility tests for NLO_PARTIALWEIGHT.BasicEvent in reweight paths."""
+
+    # Minimal LHE event: 2 initial-state (q qbar), 2 final-state (mu- mu+)
+    _event_str = """
+    4      1 +1.0 100.0 0.01 0.1
+    2  -1    0    0  501    0 +0.0 +0.0 +100.0 100.0 0.0 0.0 1.0
+   -2  -1    0    0    0  501 +0.0 +0.0 -100.0 100.0 0.0 0.0 1.0
+   13   1    1    2    0    0 +10.0 +20.0 +30.0  50.0 0.0 0.0 1.0
+  -13   1    1    2    0    0 -10.0 -20.0 -30.0  50.0 0.0 0.0 1.0
+"""
+
+    def _make_basic_event(self, pdgs):
+        """Build a BasicEvent whose PDGs are given, using a no-merge (real) wgt config."""
+        from madgraph.various.lhe_parser import FourMomentum
+
+        class _FakeWgt:
+            def __init__(self, pdg_list):
+                self.pdgs = list(pdg_list)
+                self.born_related = 1
+                self.real_related = 2
+                self.momenta_config = 2  # == real_related  => constructor skips merge
+                self.to_merge_pdg = [1, 2]
+                self.merge_new_pdg = 21
+                self.type = 1
+
+        event = lhe_parser.Event(self._event_str)
+        momenta = [
+            FourMomentum(100.0, 0.0, 0.0,  100.0),   # initial 1
+            FourMomentum(100.0, 0.0, 0.0, -100.0),   # initial 2
+            FourMomentum( 50.0, 10.0, 20.0,  30.0),  # final 1
+            FourMomentum( 50.0,-10.0,-20.0, -30.0),  # final 2
+        ]
+        return lhe_parser.NLO_PARTIALWEIGHT.BasicEvent(momenta, [_FakeWgt(pdgs)], event)
+
+    def test_identity_mapping(self):
+        """PDGs in the event match the requested order exactly: identity mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]))
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_reordered_final_state(self):
+        """Requesting a permuted final-state order returns the correct mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request final state (-13, 13) instead of (13, -13)
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        # event pos 2 holds pdg 13 -> should map to position 3 (second final)
+        # event pos 3 holds pdg -13 -> should map to position 2 (first final)
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 3, 3: 2})
+        self.assertEqual(out2, {0: 0, 1: 1, 3: 2, 2: 3})
+
+    def test_out1_out2_are_inverse(self):
+        """out1 and out2 must be exact inverses of each other."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        for k in out1:
+            self.assertEqual(out2[out1[k]], k)
+        for k in out2:
+            self.assertEqual(out1[out2[k]], k)
+
+    def test_allow_reversed_initial_state(self):
+        """When the initial-state order is flipped, allow_reversed should recover."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request initial (-2, 2) — reversed from the event's (2, -2)
+        out1, out2 = be.get_mapping(([-2, 2], [13, -13]), allow_reversed=True)
+        # After reversal the request becomes (2, -2) so initial positions swap
+        self.assertEqual(out1, {0: 1, 1: 0, 2: 2, 3: 3})
+        self.assertEqual(out2, {1: 0, 0: 1, 2: 2, 3: 3})
+
+    def test_merged_map_remapping(self):
+        """With merged_map, merged PDG codes are transparently remapped."""
+        # The event stores merged PDG 100 for the quark, but the request uses real PDG 2
+        be = self._make_basic_event([100, -100, 13, -13])
+        merged_map = {100: 2}   # 100 -> 2, and by antiparticle convention -100 -> -2
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]), merged_map=merged_map)
+        # Should still produce an identity mapping once PDGs are remapped
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_get_helicity_accepts_merged_map_kwarg(self):
+        """BasicEvent.get_helicity must accept merged_map for reweight compatibility."""
+        be = self._make_basic_event([100, -100, 13, -13])
+        hel = be.get_helicity(([2, -2], [13, -13]), merged_map={100: 2})
+        self.assertEqual(hel, [9, 9, 9, 9])

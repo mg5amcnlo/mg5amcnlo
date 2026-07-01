@@ -33,7 +33,7 @@ P1[3] = -V1.p[3];
 }
  void VVS1_2_1(ALOHAOBJ V2, ALOHAOBJ S3, std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,ALOHAOBJ  & V1)
 {
- ALOHAOBJ  Vtmp[6];
+ ALOHAOBJ  Vtmp;
  int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
@@ -46,7 +46,7 @@ while (i < 4)
 }
  void VVS1_2_2(ALOHAOBJ V2, ALOHAOBJ S3, std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,ALOHAOBJ  & V1)
 {
- ALOHAOBJ  Vtmp[6];
+ ALOHAOBJ  Vtmp;
  int  i;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);

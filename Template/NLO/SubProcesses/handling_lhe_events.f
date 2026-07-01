@@ -13,7 +13,7 @@ c Utility routines for LHEF. Originally taken from collect_events.f
       use extra_weights
       implicit none 
       include 'run.inc'
-      integer idwgt,kk,ii,jj,nn,n
+      integer idwgt,kk,ii,jj,nn,n,i
       integer ifile,nevents
       character*10 MonteCarlo
       character*13 temp
@@ -24,6 +24,7 @@ c Scales
       integer n_orderstags,oo,tag
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
+      double precision mcmass(-16:21)
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="3.0">'
@@ -102,6 +103,17 @@ c
       write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
       write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
       write(ifile,'(a)')'  </scalesfunctionalform>'
+c MonteCarlo Masses
+      write(ifile,'(a)') '  <MonteCarloMasses>'
+      call fill_MC_mshell_wrap(MonteCarlo,mcmass)
+      do i=1,5
+         write (ifile,'(2x,i6,3x,e12.6)')i,mcmass(i)
+      enddo
+      write (ifile,'(2x,i6,3x,e12.6)')11,mcmass(11)
+      write (ifile,'(2x,i6,3x,e12.6)')13,mcmass(13)
+      write (ifile,'(2x,i6,3x,e12.6)')15,mcmass(15)
+      write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
+      write(ifile,'(a)') '  </MonteCarloMasses>'
       write(ifile,'(a)')
      #     MonteCarlo
       write(ifile,'(a)')
@@ -320,7 +332,7 @@ c Write here the reweight information if need be
       integer ifile,nevents,i,ii,ii2,iistr,itemp
       double precision temp
       character*10 MonteCarlo
-      character*80 string,string0
+      character*180 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
@@ -457,7 +469,7 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       logical already_found
       integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
-      character*80 string,string0
+      character*180 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
       double precision temp,remcmass(-16:21)
@@ -633,23 +645,19 @@ c if the file is a partial file the header is non-standard
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
+     $     ,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
-      integer LPRUP2(100)
-      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
 c
       write(ifile,'(a)')
      # '  <init>'
       write(ifile,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
-      write(ifile,502)XSECUP,XERRUP,XMAXUP,LPRUP
-      if (NPRUP.gt.1) then
-         do i=2,NPRUP
-            write(ifile,502)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
-         enddo
-      endif
+      do i=1,NPRUP
+         write(ifile,502) XSECUP(i),XERRUP(i),XMAXUP(i),LPRUP(i)
+      enddo
       write(ifile,'(a)')
      # '  </init>'
  501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
@@ -663,27 +671,18 @@ c
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
-      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
-      integer LPRUP2(100)
-      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
+     $     ,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       character*80 string
 c
       read(ifile,'(a)')string
       read(ifile,*)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
-      read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
-      XSECUP2(1)=XSECUP
-      XERRUP2(1)=XERRUP
-      XMAXUP2(1)=XMAXUP
-      LPRUP2(1)=LPRUP
-      if (NPRUP.gt.1) then
-         do i=2,NPRUP
-            read(ifile,*)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
-         enddo
-      endif
+      do i=1,NPRUP
+         read(ifile,*) XSECUP(i),XERRUP(i),XMAXUP(i),LPRUP(i)
+      enddo
       read(ifile,'(a)')string
 c
       return

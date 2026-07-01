@@ -204,16 +204,52 @@ class OLDMG5Comparator(unittest.TestCase):
         # add the default value to the comparison
         my_comp.results.append(values)
         my_comp.me_runners =(my_comp.me_runners[0], madevent_comparator.FakeRunner())
-        
+        import madgraph.various.misc as misc
+        misc.sprint(my_comp.results) 
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)
-            
+
         # Do some cleanup
         my_comp.cleanup()
-    
-    ############################################################################    
+
+    def compare_cross_section_mg7(self, my_proc_list=[], orders={}, model='sm',
+                        tolerance=2e-1):
+        """Cross-check the total cross-section of the current default ('mg7')
+        exporter / madspace integrator against the Fortran madevent result for
+        the same process, using a run_card matched to the mg7 defaults (13 TeV,
+        same NNPDF23_lo LHAPDF set, dynamical HT/2 scale, identical jet cuts).
+
+        Skipped only when the mg7 runtime stack is unavailable; a
+        finite-but-disagreeing mg7 result is a real failure.
+        """
+        if 'v4' in model:
+            raise Exception('Not implemented')
+        if not madevent_comparator.MG7Runner.is_available():
+            self.skipTest('mg7 runtime stack (madspace/LHAPDF) not available')
+
+        mg7_runner = madevent_comparator.MG7Runner()
+        mg7_runner.setup(MG5DIR)
+        try:
+            mg7_cross = float(mg7_runner.run(my_proc_list, model, orders)['cross'])
+        except madevent_comparator.MadEventRunner.MERunnerException as err:
+            mg7_runner.cleanup()
+            self.skipTest('mg7 run did not start: %s' % err)
+        mg7_runner.cleanup()
+
+        me_runner = madevent_comparator.MG5RunnerMG7Aligned()
+        me_runner.setup(MG5DIR)
+        me_cross = float(me_runner.run(my_proc_list, model, orders)['cross'])
+        me_runner.cleanup()
+
+        self.assertGreater(me_cross, 0., 'madevent reference cross-section is zero')
+        rel = abs(mg7_cross - me_cross) / me_cross
+        self.assertLess(rel, tolerance,
+                        'mg7 total cross-section disagrees with madevent: '
+                        'mg7=%g madevent=%g rel=%g' % (mg7_cross, me_cross, rel))
+
+    ############################################################################
     #  ROUTINE FOR CREATING THE SHORT TEST (USE by the release script)
-    ############################################################################    
+    ############################################################################
     def test_create_all_pickle(self):
         """re-create all the pickle for the short test (those call in the release).
            Note that if you need to redo this, this is potentially due to a change
@@ -467,10 +503,18 @@ class OLDMG5Comparator(unittest.TestCase):
                   'cross_P0_qq_ttx': '0.65258E+02', 
                   'cross_P0_gg_ttx': '0.43817E+03'}
 
-        # Store list of non-zero processes and results in file                                                                                                                          
+        # Store list of non-zero processes and results in file
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm1.log")
+
+    def test_short_cross_sm1_mg7(self):
+        """Same as test_short_cross_sm1, but exercising the current default
+        ('mg7') exporter / madspace integrator and comparing the integrated
+        cross-section against a run_card-matched madevent run."""
+        my_proc_list = ['p p > t t~']
+        self.compare_cross_section_mg7(my_proc_list,
+                             orders = {'QED':99, 'QCD':99})
 
     def test_short_cross_sqso1(self):
         """Test a process with definite squared order constraints. In this case
@@ -521,7 +565,7 @@ class OLDMG5Comparator(unittest.TestCase):
                    'number_of_P2': '1',
                    'number_of_P3': '1',
                    'cross_P0_qq_z0zT_z_ll_z_ll': '0.00016429',
-                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.0001721', # before 3.7.1: 0.00018
+                   'cross_P1_qq_z0zT_z_ll_z_ll': '0.0001662', #cross from 3.5.16 with 250k
                    'cross_P2_qq_z0zT_z_ll_z_ll': '0.00066055',
                    'cross_P3_qq_zTzT_z_ll_z_ll': '0.0019198',
                    } 

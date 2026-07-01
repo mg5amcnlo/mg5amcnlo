@@ -386,7 +386,8 @@ def import_full_model(model_path, decay=False, prefix='', options={}):
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py', 'coupling_orders.py']
+                       'propagators.py', 'coupling_orders.py',
+                       'CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -395,14 +396,18 @@ def import_full_model(model_path, decay=False, prefix='', options={}):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py','CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']:
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
     files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge == 1: 
+    if aloha.unitary_gauge == 1:
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 2:
+        # axial gauge removes the goldstones (like unitary) and therefore
+        # must not share the Feynman gauge pickle (which keeps them)
+        pickle_name = 'model_axial.pkl'
     elif aloha.unitary_gauge == 3:
         pickle_name = 'model_FDG.pkl'
     else:
@@ -688,6 +693,18 @@ class UFOMG5Converter(object):
 
 
         if aloha.unitary_gauge == 3:
+            # Pre-optimize FFV interactions before goldstone merging so that
+            # interactions like Z-cbar-c (which has a G0 coupling via ymc != 0)
+            # get FFV-optimized first. Without this, goldstone merging adds an
+            # FFS coupling making len(couplings)==3, causing reshape_FFV_coeff
+            # to skip optimization. During merge_flavor the coupling indices
+            # (0,0),(0,1) then map to different lorentz structures for charm
+            # vs the other quarks, producing wrong couplings (e.g. GC_51 instead
+            # of GC_FFV_2) at flavor entry (4,4,0).
+            for interaction in list(self.interactions):
+                self.optimise_interaction(interaction)
+                if not interaction['couplings']:
+                    self.interactions.remove(interaction)
             self.merge_all_goldstone_with_vector()
 
     
@@ -1092,10 +1109,9 @@ class UFOMG5Converter(object):
 
         def is_trivial_coefficient(coef):
             """
-            coef = [(A,B,C,D), (E,F,G,H)]
+            coef = [(A,B,C,D), ...]  — one entry per lorentz structure
             """
-            first, second = coef
-            return is_trivial_quadruple(first) and is_trivial_quadruple(second)
+            return all(is_trivial_quadruple(t) for t in coef)
 
 
 

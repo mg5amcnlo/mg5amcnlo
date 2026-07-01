@@ -356,10 +356,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("")
         logger.info("      Type 'display modellist' to have the list of all model available.",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model_v4 MODEL [--modelname] :",'$MG:BOLD')
-        logger.info("      Import an MG4 model.")
+        logger.info("   import model_v4 MODEL --debug [--modelname] :",'$MG:BOLD')
+        logger.info("      Import an MG4 model in debug mode only.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
+        logger.info("      This deprecated command is no longer supported in normal user mode.")
         logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :",'$MG:BOLD')
@@ -454,6 +455,15 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   the -f option is specified. All other options are ")
         logger.info("   irrelevant for this kind of launch.")
         logger.info("")
+        logger.info("Launch on standalone output with timing analysis:",'$MG:BOLD')
+        logger.info(" o Example: launch PROC_sm_1 --timings=1000 --nb_run=5",'$MG:color:GREEN')
+        logger.info(" > --timings=N   Number of SMATRIX calls per flavor per run (enables timing mode)")
+        logger.info(" > --nb_run=Y    Number of timing repetitions (default: 1)")
+        logger.info(" > Prints a table with flavor index, average time and 1-sigma uncertainty.")
+        logger.info(" o Example: launch PROC_sm_1 --timings=100 --nb_run=0",'$MG:color:GREEN')
+        logger.info(" > --nb_run=0  Masking check: skip the timing table and instead")
+        logger.info("                print the matrix-element value per flavor after N SMATRIX calls.")
+        logger.info("")
         logger.info("Launch on aMC@NLO output:",'$MG:BOLD')
         logger.info(" > launch <dir_path> <mode> <options>",'$MG:color:BLUE')
         logger.info(" o Example: launch MyProc aMC@NLO -f -p",'$MG:color:GREEN')
@@ -514,6 +524,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      --jamp_optim=[True|False]: [madevent(default:True)|standalone(default:False)] allows a more efficient code computing the color-factor.")
         logger.info("      --t_strategy: [madevent] allows to change ordering strategy for t-channel.")
         logger.info("      --hel_recycling=False: [madevent] forbids helicity recycling optimization")
+        logger.info("      --mask=False: [madevent|standalone] disable flavor-mask optimization for grouped/merged flavors (default:True).")
+        logger.info("      --prefix=int|proc: [standalone] prefix matrix-element routine names (int: M<n>_, proc: process name); generates f2py python-linkable routines.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
@@ -1287,12 +1299,17 @@ class CheckValidForCmd(cmd.CheckCmd):
         
         modelname = False
         prefix = True
+        debug = False
         if '-modelname' in args:
             args.remove('-modelname')
             modelname = True
         elif '--modelname' in args:
             args.remove('--modelname')
             modelname = True
+
+        if '--debug' in args:
+            args.remove('--debug')
+            debug = True
             
         if '--noprefix' in args:
             args.remove('--noprefix')
@@ -1348,6 +1365,12 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if modelname:
             args.append('-modelname')
+
+        if args[0] == 'model_v4' and not debug:
+            raise self.InvalidCmd(
+                'The "import model_v4" command is deprecated and no longer '
+                'available in normal user mode. If you really need it for '
+                'debugging, use "import model_v4 MODEL --debug".')
 
 
 
@@ -1739,6 +1762,12 @@ This will take effect only in a NEW terminal
     def check_output(self, args, default='mg7'):
         """ check the validity of the line"""
 
+        if args and args[0] == 'madweight':
+            raise self.InvalidCmd('output madweight is no longer supported; please use a different output mode')
+
+        if args and args[0] == 'pythia8':
+            raise self.InvalidCmd('output pythia8 is no longer supported; please use a different output mode')
+
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         elif args:
@@ -1787,8 +1816,8 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight',
-                      'matchbox', 'plugin', 'me7', 'mg7', 'mg7_v5']:
+                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp',
+                      'matchbox', 'plugin', 'me7', 'mg7', 'mg7_v5', 'standalone_mg7']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1963,11 +1992,6 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
                 auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))                
-        elif self._export_format == 'madweight':
-            name_dir = lambda i: 'PROC_MW_%s_%s' % \
-                                    (self._curr_model['name'], i)
-            auto_path = lambda i: pjoin(self.writing_dir,
-                                               name_dir(i))
         elif self._export_format in ['matchbox_cpp', 'matchbox']:
             name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
                                     (self._curr_model['name'], i)
@@ -2626,7 +2650,8 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_warp=1',
+                                                 '--mask=False', '--prefix=']):
         "Complete the output command"
 
         possible_format = list(self._export_formats)
@@ -2651,6 +2676,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                     return self.aloha_complete_output(text, line, begidx, endidx)
                 except Exception as error:
                     print(error)
+            if 'standalone' in args:
+                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=']
+
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -3066,8 +3094,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
-                          'matrix', 'standalone_rw', 'madweight'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
+                          'matrix', 'standalone_rw']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'aloha',
                                             'matchbox_cpp', 'matchbox', 'mg7_v5', 'mg7',
                                             'standalone_mg7']
     _set_options = ['group_subprocesses',
@@ -3265,7 +3293,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
                                    'matrix', 'standalone_rw']
-        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8', 'mg7_v5', 'mg7', 'standalone_mg7']
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'mg7_v5', 'mg7', 'standalone_mg7']
         self._nlo_modes_for_completion = ['all','virt','real']
 
     def do_quit(self, line):
@@ -3332,6 +3360,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] == 'process':
             # Rejoin line
             line = ' '.join(args[1:])
+
+            # the '{...}' syntax selects particle polarizations -> remember it so
+            # the polarization paper is cited at output time
+            if '{' in line:
+                self._uses_polarization = True
 
             # store the first process (for the perl script)
             if not self._generate_info:
@@ -3462,8 +3495,12 @@ This implies that with decay chains:
                 
     def add_model(self, args):
         """merge two model"""
-        
+
         model_path = args[0]
+
+        # adding the taudecay library -> cite the TauDecay paper at output time
+        if 'taudecay' in os.path.basename(model_path.rstrip('/')).lower():
+            self._uses_taudecay = True
         recreate = ('--recreate' in args)
         if recreate:
             args.remove('--recreate')
@@ -4638,12 +4675,34 @@ This implies that with decay chains:
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
-                self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)              
             else:
-                myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
                 myprocdef_unit = self.extract_process(line)
+            if gauge == 'feynman':
+                myprocdef_feyn = myprocdef
+            else:
+                self.do_set('gauge Feynman', log=False)
+                myprocdef_feyn = self.extract_process(line)
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               0 in self._curr_model.get('gauge'):
+                if gauge == 'axial':
+                    myprocdef_axial = myprocdef
+                else:
+                    self.do_set('gauge axial', log=False)
+                    myprocdef_axial = self.extract_process(line)
+            else:
+                myprocdef_axial = None
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               1 in self._curr_model.get('gauge'):
+                if gauge == 'FD':
+                    myprocdef_fd = myprocdef
+                else:
+                    self.do_set('gauge FD', log=False)
+                    myprocdef_fd = self.extract_process(line)
+            else:
+                myprocdef_fd = None
 
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
@@ -4651,6 +4710,8 @@ This implies that with decay chains:
                 logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
+                                                myprocdef_axial,
+                                                myprocdef_fd,
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
@@ -4795,7 +4856,8 @@ This implies that with decay chains:
             if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
                 text+= "results only for stable particles in final states.\n\ns"
-            elif not myprocdef.get('perturbation_couplings'):
+            elif ((not args or args[0] != 'language') and
+                  not myprocdef.get('perturbation_couplings')):
                 text = "Note That all width have been set to zero for those checks\n\n"
             else:
                 text = "\n"
@@ -4824,13 +4886,18 @@ This implies that with decay chains:
             text += 'Flavor grouping check results:\n'
             text += process_checks.output_flavor(flavor_result) + '\n'
         if language_result:
-            text += 'Language comparison results (Fortran SA / C++ SA):\n'
+            text += 'Language comparison results (Fortran SA / C++ SA / MG7 SA / Python):\n'
             text += process_checks.output_language(language_result) + '\n'
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
+            gauge_labels = ['Unitary', 'Feynman']
+            if any('value_axial' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('Axial')
+            if any('value_fd' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('FD')
+            text += 'Gauge results (switching between %s gauge):\n' % '/'.join(gauge_labels)
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -4895,6 +4962,10 @@ This implies that with decay chains:
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = ""
+        # Reset polarization-citation marker (a new process definition starts)
+        self._uses_polarization = False
+        self._uses_density_matrix = False
+        self._uses_quarkonia = False
         # Reset _done_export, since we have new process
         self._done_export = False
         # Also reset _export_format and _export_dir
@@ -4913,7 +4984,8 @@ This implies that with decay chains:
         args.insert(0, 'process')
         self.do_add(" ".join(args))
 
-    def extract_process(self, line, proc_number = 0, overall_orders = {}):
+    def extract_process(self, line, proc_number = 0, overall_orders = {},
+                        avoid_squared_orders=False):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
@@ -5047,14 +5119,14 @@ This implies that with decay chains:
                     orders[name] = value
                 elif type == "==":
                     constrained_orders[name] = (value, type)
-                    if name not in squared_orders:
+                    if not avoid_squared_orders and name not in squared_orders:
                         squared_orders[name] = (2 * value,'==')
                     if True:#name not in orders:
                         orders[name] = value
                     
                 elif type == ">":
                     constrained_orders[name] = (value, type)
-                    if name not in squared_orders:
+                    if not avoid_squared_orders and name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
             
             line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
@@ -5151,6 +5223,12 @@ This implies that with decay chains:
                     raise self.InvalidCmd("No final state particles")
                 state = True
                 continue
+
+            if part_name.endswith('*'):
+                part_name = part_name[:-1]
+                offshell = True
+            else:
+                offshell = False
 
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
@@ -5377,7 +5455,8 @@ This implies that with decay chains:
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
                                                             'polarization': polarization,
-                                                            'flavor': flavor }))
+                                                            'flavor': flavor,
+                                                            'offshell': offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
@@ -5656,6 +5735,32 @@ This implies that with decay chains:
 
         return line, proc_option
 
+    def _expand_merged_pdgs(self, pid_set):
+        """Expand merged-particle PDG codes (e.g. _quark=81) into the signed
+        individual-flavor PDGs defined by the model's ``merged_particles`` map.
+
+        ``get_final_part`` must report the *real* final-state PDG ids (MadSpin
+        matches them against the actual particles in the events). With the
+        merged-flavor multiparticles now used by default (``j = g _quark
+        _anti_quark``), the raw ids would otherwise be the merged codes
+        (81/-81), which never appear in the events.
+        """
+        try:
+            merged = self._curr_model.get('merged_particles') or {}
+        except Exception:
+            merged = {}
+        if not merged:
+            return set(pid_set)
+        result = set()
+        for pid in pid_set:
+            base = abs(pid)
+            if base in merged:
+                sign = 1 if pid > 0 else -1
+                result.update(sign * real for real in merged[base])
+            else:
+                result.add(pid)
+        return result
+
     def get_final_part(self, procline):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
@@ -5709,6 +5814,9 @@ This implies that with decay chains:
                     pid = set(self._multiparticles[first])
                 else:
                     raise Exception('invalid particle name: %s. ' % first)
+                # work in real-PDG space so the removal matches the (already
+                # expanded) core final state for merged-flavor labels.
+                pid = self._expand_merged_pdgs(pid)
                 core_final.difference_update(pid)
                 core_final.update(self.get_final_part(one_decay))
 
@@ -5729,9 +5837,9 @@ This implies that with decay chains:
                 if particle[1:] in pids:
                     final.add(pids[particle[1:]])
                 elif particle in self._multiparticles:
-                    final.update(set(self._multiparticles[particle[1:]]))                
+                    final.update(set(self._multiparticles[particle[1:]]))
 
-        return final
+        return self._expand_merged_pdgs(final)
 
     def extract_particle_ids(self, args, crash_on_duplication=False):
         """Extract particle ids from a list of particle names. If
@@ -5833,10 +5941,10 @@ This implies that with decay chains:
 
         if min_index > -1:
             core_process = self.extract_process(line[:min_index], proc_number,
-                                                overall_orders)
+                                                overall_orders, avoid_squared_orders=True)
         else:
             core_process = self.extract_process(line, proc_number,
-                                                overall_orders)
+                                                overall_orders, avoid_squared_orders=True)
 
         #level_down = False
 
@@ -5908,10 +6016,6 @@ This implies that with decay chains:
             # Import model
             if args[0].endswith('_v4'):
                 logger.critical("Support for V4 model is deprecated and known to not be fully working in this version of MG5aMC. Please consider to use an older (Long Term Stable) version if you can not use UFO model")
-                if not force:
-                    ans = self.ask("Do you want to continue anyway?", "stop", ["continue", "stop"], timeout=20)
-                    if ans == "stop":
-                        return
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
             else:
@@ -6063,6 +6167,7 @@ This implies that with decay chains:
         for amp in amplitudes:
             mother = [l.get('id') for l in amp['process'].get('legs') \
                                                         if not l.get('state')]
+            misc.sprint(mother)
             if 1 == len(mother):
                 try:
                     decay_table = decay_tables[abs(mother[0])]
@@ -6072,24 +6177,54 @@ This implies that with decay chains:
                 # create the tuple associate to the decay mode
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]
+                                        
                 if not mother[0] > 0:
                     child = [x if self._curr_model.get_particle(x)['self_antipart']
                              else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
+                misc.sprint(child)
+                misc.sprint(list(decay_table.keys()))  
                 #check if the decay is present or not:
                 if tuple(child) not in list(decay_table.keys()):
-                    to_remove.append(amp)
-
-        def remove_amp(amps):
+                    if any(id in self._curr_model.get('merged_particles') for id in child):
+                        all_keys =[list(k) for k in decay_table.keys()]
+                        misc.sprint(all_keys)
+                        for one_key in all_keys:
+                            for i,pid in enumerate(one_key):
+                                if i ==0:
+                                    continue
+                                for mid,pdgs in self._curr_model.get('merged_particles').items():
+                                    if pid in pdgs:
+                                        one_key[i] = mid
+                                    if -pid in pdgs:
+                                        one_key[i] = -mid
+                        misc.sprint(all_keys)
+                        for i,k in enumerate(all_keys):
+                            misc.sprint(k)
+                            new_k = list(k[1:])
+                            new_k.sort()
+                            new_k.insert(0, k[0])
+                            misc.sprint(new_k) 
+                            all_keys[i] = tuple(new_k)            
+                        misc.sprint(all_keys)
+                        if tuple(child) not in all_keys:
+                            misc.sprint('to rm' , child)
+                            to_remove.append(amp)
+                    else:
+                        misc.sprint('to rm' , child)
+                        to_remove.append(amp)
+        def remove_amp(amps, to_remove):
             for amp in amps[:]:
                 if amp in to_remove:
                     amps.remove(amp)
                 if isinstance(amp, diagram_generation.DecayChainAmplitude):
-                    remove_amp(amp.get('decay_chains'))
+                    remove_amp(amp.get('decay_chains'),to_remove)
                     for decay in amp.get('decay_chains'):
-                        remove_amp(decay.get('amplitudes'))
-        remove_amp(self._curr_amps)
+                        remove_amp(decay.get('amplitudes'), to_remove)
+        remove_amp(self._curr_amps, to_remove)
+        misc.sprint("Removed %s amplitudes that are not in the decay table" % len(to_remove))
+        misc.sprint("Remaining amplitudes: %s" % len(self._curr_amps))
 
 
     def import_ufo_model(self, model_name):
@@ -6128,7 +6263,7 @@ This implies that with decay chains:
         if self._mgme_dir:
             # Add comment to history
             self.exec_cmd("# Import the model %s" % reader.model, precmd=True)
-            line = self.exec_cmd('import model_v4 %s -modelname' % \
+            line = self.exec_cmd('import model_v4 %s --debug -modelname' % \
                                  (reader.model), precmd=True, force=True)
         else:
             logging.error('No MG_ME installation detected')
@@ -7555,7 +7690,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3', 'lhapdf']:
                     self.options[name] = value
                 elif hasattr(self, 'set2_%s' % name) and value:
-                    misc.sprint('set configuration option %s to %s' % (name, value) )
                     func = getattr(self, 'set2_%s' % name)
                     func(value.split())
                 if value.lower() == "none" or value=="":
@@ -8601,6 +8735,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if major_version != sys.version_info[0] or \
                minor_version != sys.version_info[1]:
                return  
+            # remove the --python- arguent to not include it in the option/configuration file
+            del args[2]
 
         to_do = True
         if args[0].endswith('_py2'):
@@ -8977,7 +9113,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)   
+        
+        if args[0] in ['None', None, '0', 0]:
+            import multiprocessing
+            self.options['nb_core'] = multiprocessing.cpu_count()
+        else:
+            self.options['nb_core'] = int(args[0])
+       
     
     def set2_cluster_type(self, args, log=True):
         """Set the cluster type to be used for cluster jobs submission.
@@ -9301,8 +9443,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         nojpeg = '-nojpeg' in args
         if '--noeps=True' in args:
             nojpeg = True
+        # density-matrix standalone output
+        if '--density' in args:
+            self._uses_density_matrix = True
         flaglist = []
-                    
+
         if '--postpone_model' in args:
             flaglist.append('store_model')
         if '--hel_recycling=False' in args:
@@ -9387,7 +9532,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         config['matchbox_cpp'] =   {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
-        config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
         config['mg7_v5'] =         {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['mg7'] =            {'check': True, 'exporter': 'cpp', 'output': 'Template'}
         config['standalone_mg7'] = {'check': True, 'exporter': 'cpp', 'output': 'Template'}
@@ -9947,7 +10091,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.do_save('options %s' % filename.replace(' ', r'\ '), check=False, \
                     to_keep = to_keep)
 
-        elif self._export_format in ['madevent', 'madweight']:          
+        elif self._export_format in ['madevent']:
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', r'\ '), check=False,
@@ -9963,13 +10107,93 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                     flaglist,
                                     **add_options)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox', 'mg7']:
+        # Record into the generated directory the references that are already
+        # known at generation time (framework, model, ALOHA/HELAS, UFO format).
+        # These are picked up by every run launched from this output and merged
+        # into its final citations.bib.
+        self.write_generation_citations()
+
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp', 'matchbox', 'mg7']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
+
+    def write_generation_citations(self):
+        """Persist, into the generated directory, the references that are
+        already known at generation time: the MadGraph5_aMC@NLO framework, the
+        UFO model format (or HELAS for v4 models), the ALOHA/HELAS helicity
+        routines.  Writes citations.log (machine-readable, collected by every
+        run) plus a ready-to-use citations.bib and a citations.md summary.
+        """
+        runnable = ['madevent', 'standalone', 'standalone_cpp', 'NLO',
+                    'madweight', 'matchbox', 'mg7', 'mg7_v5', 'standalone_mg7']
+        if self._export_format not in runnable or not self._export_dir:
+            return
+        try:
+            import madgraph.various.citation as citation
+        except ImportError:
+            return
+
+        try:
+            model_name = self._curr_model.get('name') if self._curr_model else ''
+        except Exception:
+            model_name = ''
+
+        # legacy v4 models are HELAS-based (no UFO/ALOHA); UFO otherwise
+        pairs = citation.generation_pairs(model_name,
+                                          is_ufo=not self._model_v4_path)
+        # TODO: if a UFO model ever exposes its own INSPIRE key (e.g. a
+        # __citation__ attribute), append it here so the physics-model paper is
+        # cited too.
+
+        # optional generation choices: gauge, polarization, TauDecay
+        pairs += citation.optional_generation_pairs(
+            gauge=str(self.options.get('gauge', 'unitary')),
+            polarization=getattr(self, '_uses_polarization', False),
+            taudecay=getattr(self, '_uses_taudecay', False))
+
+        # MadSpace + MadNIS: used by the mg7 / standalone_mg7 integration engine
+        if self._export_format in ('mg7', 'mg7_v5', 'standalone_mg7'):
+            pairs += [('Heimel:2026hgp',
+                       'phase-space integration with MadSpace'),
+                      ('Heimel:2023ngj',
+                       'normalising flows for integration (MadNIS)')]
+            if self._export_format == 'standalone_mg7':
+                pairs.append(('Hagebock:2025jyk',
+                               'data-parallel matrix-element evaluation (MadMatrix)'))
+
+        # running couplings (model-level RGE)
+        try:
+            if self._curr_model and self._curr_model.get('running_elements'):
+                pairs.append(('Aoude:2022aro',
+                               'running couplings (RGE effects on SMEFT model)'))
+        except Exception:
+            pass
+
+        # quarkonium / leptonium (NRQCD/NRQED) models: detect from model name
+        _quarkonia_kws = ('nrqcd', 'nrqed', 'quarkon', 'leptonium')
+        try:
+            _mn = (self._curr_model.get('name') or '').lower() if self._curr_model else ''
+        except Exception:
+            _mn = ''
+        if getattr(self, '_uses_quarkonia', False) or any(k in _mn for k in _quarkonia_kws):
+            pairs.append(('ColpaniSerri:2025vdz',
+                           'S-wave quarkonium/leptonium production (NRQCD/NRQED)'))
+
+        # spin-density matrix output
+        if getattr(self, '_uses_density_matrix', False):
+            pairs.append(('Durupt:2025wuk',
+                           'spin-density matrices and quantum observables'))
+
+        try:
+            gen_log = pjoin(self._export_dir, 'citations.log')
+            citation.write_log(gen_log, pairs)
+            citation.render(citation.collect_file(gen_log), self._export_dir)
+        except Exception as error:
+            logger.debug('could not write generation citations: %s', error)
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -10017,6 +10241,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
 
         self.change_principal_cmd('MadGraph')
+
+        try:
+            import madgraph.various.citation as citation
+            citation.cite('Alwall:2014bza',
+                'automatic decay-width computation (MadWidth)')
+        except ImportError:
+            pass
+
         if '--nlo' not in line:
             warning_text = """Please note that the automatic computation of the width is
     only valid in narrow-width approximation and at tree-level."""
@@ -10493,6 +10725,10 @@ _launch_parser.add_option("-R", "--reweight", default=False, action='store_true'
                             help="Run the reweight module (reweighting by different model parameter")
 _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
                             help="Run the madspin package")
+_launch_parser.add_option("", "--timings", default=0, type='int',
+                            help="[standalone] Number of SMATRIX calls per flavor per run for timing analysis (0=disabled)")
+_launch_parser.add_option("", "--nb_run", default=1, type='int',
+                            help="[standalone] Number of timing repetitions for statistics (used with --timings); 0 = good-helicity check (print matrix-element values instead of a timing table)")
 
 #===============================================================================
 # Interface for customize question.

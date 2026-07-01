@@ -100,6 +100,7 @@ C
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 C
 C GLOBAL VARIABLES
 C
@@ -112,6 +113,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 
@@ -128,30 +130,4 @@ C ----------
       MATRIX%(proc_id)s = MATRIX%(proc_id)s/DENOM
       END
 
-      INTEGER FUNCTION BROKEN_SYM%(proc_id)s(FLAV)
-
-      include 'nexternal.inc'
-      INTEGER FLAV(NEXTERNAL)
-      INTEGER PID(NINCOMING+1:NEXTERNAL)
-      INTEGER I,J
-      INTEGER N_BROK, N_TOT
-      INTEGER OLD_FACTOR
-
-      OLD_FACTOR = %(get_old_symmmetry_value)s
-
-      %(get_pid)s
-c     get new symmetry factor
-      do I=NINCOMING+1, NEXTERNAL
-         if (PID(I).eq.0) cycle
-         N_TOT=1
-         do J = I+1,NEXTERNAL
-            if (PID(I).eq.PID(J).and.FLAV(I).EQ.FLAV(J))then
-               PID(J) = 0
-               N_TOT = N_TOT + 1
-               OLD_FACTOR = OLD_FACTOR/N_TOT
-            endif
-        enddo
-    enddo
-   BROKEN_SYM%(proc_id)s = OLD_FACTOR
-   return
-   end
+%(broken_sym_function)s

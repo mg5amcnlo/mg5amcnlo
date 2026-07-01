@@ -196,6 +196,40 @@ class TestMatrixElementChecker(unittest.TestCase):
                                                             output='fail')
                 self.assertEqual(0, nb_fail)
 
+    def test_fd_python_value_matches_unitary_fixed_point(self):
+        """FD Python evaluation should stay close to Unitary at a fixed point."""
+
+        import madgraph.interface.master_interface as interface
+        import madgraph.core.helas_objects as helas_objects
+
+        process_line = 'u u > w+ w- u u QCD=0'
+        p = [
+            [500.0, 0.0, 0.0, 500.0],
+            [500.0, 0.0, 0.0, -500.0],
+            [401.01469431414546, 32.49828279011273, -244.71617101372763, 305.6197414460834],
+            [260.789910425083, 5.193462736487908, -64.91667713260222, -239.38048040727654],
+            [35.78415077155445, 20.545542318439836, 24.517065174688458, 16.04056272400125],
+            [302.41124448921704, -58.237287845040406, 285.11578297164135, -82.27982376280812]
+        ]
+
+        values = {}
+        for gauge in ['unitary', 'FD']:
+            cmd = interface.MasterCmd()
+            cmd.no_notification()
+            cmd.exec_cmd('set gauge %s' % gauge)
+            cmd.exec_cmd('import model sm')
+            cmd.exec_cmd('generate %s' % process_line)
+            me = helas_objects.HelasMatrixElement(cmd._curr_amps[0])
+            evaluator = process_checks.MatrixElementEvaluator(cmd._curr_model, cmd=cmd, reuse=False)
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+            values[gauge], _ = evaluator.evaluate_matrix_element(me, p=p)
+
+        relative_difference = abs(values['unitary'] - values['FD']) / \
+            max(abs(values['unitary']), abs(values['FD']))
+        self.assertLess(relative_difference, 5e-2)
+
     def test_failed_process(self):
         """Test that check process fails for wrong color-Lorentz."""
 
@@ -551,6 +585,22 @@ class TestFlavorCheck(unittest.TestCase):
                                     "Fortran/C++ disagree for %s: F=%g C++=%g "
                                     "rel=%g" % (label, me_f, me_cpp, rel))
 
+            # MG7 SA must also match Fortran per flavor when it ran.
+            # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+            vm = entry.get('value_mg7')
+            if vf is not None and vm is not None:
+                me_f   = vf['m2']
+                for backend, me_mg7 in vm['m2'].items():
+                    if me_mg7 is None:
+                        continue
+                    ref = abs(me_f) if me_f != 0 else abs(me_mg7)
+                    if ref > 0:
+                        rel = abs(me_f - me_mg7) / ref
+                        self.assertLess(rel, 1e-4,
+                                        "Fortran/MG7 disagree for %s (%s): "
+                                        "F=%g MG7=%g rel=%g"
+                                        % (label, backend, me_f, me_mg7, rel))
+
     def test_output_flavor_summary(self):
         """output_flavor returns a string with summary line."""
         q_id = 81
@@ -600,6 +650,11 @@ class TestMultiLanguageComparison(unittest.TestCase):
 
         cls.has_fortran = bool(_misc.which('gfortran'))
         cls.has_cpp = bool(_misc.which('g++'))
+        try:
+            import madmatrix.output  # noqa: F401
+            cls.has_mg7 = cls.has_cpp and bool(_misc.which('make'))
+        except ImportError:
+            cls.has_mg7 = False
 
         cls.model = import_ufo.import_model(
             'sm', options={'apply_flavor_grouping': False})
@@ -898,9 +953,9 @@ class TestMultiLanguageComparison(unittest.TestCase):
         """check_language() must return Passed for e+ e- > a a when at least
         one compiled backend (gfortran or g++) is available.
 
-        The new check_language compares Fortran SA vs C++ SA only (no Python).
-        Both backends use the same fixed energy so RAMBO produces identical
-        momenta and the matrix elements can be compared directly.
+        check_language compares Fortran SA, C++ SA and the pure-Python back-end
+        side by side.  All three use the same RAMBO-generated phase-space
+        point so the matrix-element values must agree.
         """
         model = self.model
 
@@ -925,28 +980,50 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
         entry = results[0]
-        # New API: only Fortran and C++ backends (no Python).
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
-        self.assertNotIn('value_python', entry)
+        self.assertIn('value_mg7', entry)
+        self.assertIn('value_python', entry)
 
         if not (self.has_fortran or self.has_cpp):
             self.skipTest('No compiled backend available')
 
         me_f   = entry['value_fortran']['m2'] if entry['value_fortran'] else None
         me_cpp = entry['value_cpp']['m2']      if entry['value_cpp']     else None
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2']    if entry['value_mg7']     else {}
+        me_py  = entry['value_python']['m2']   if entry['value_python']  else None
 
-        # If both backends ran they must agree within 1e-4 relative.
-        if me_f is not None and me_cpp is not None:
-            ref = abs(me_f)
-            rel = abs(me_f - me_cpp) / ref if ref > 0 else 0.
+        # Every pair of available backends must agree within 1e-4 relative.
+        pairs = [
+            (me_f,   me_cpp, 'Fortran', 'C++'),
+            (me_f,   me_py,  'Fortran', 'Python'),
+            (me_cpp, me_py,  'C++',     'Python'),
+        ]
+        for backend, me_mg7 in mg7_vals.items():
+            pairs.extend([
+                (me_f,   me_mg7, 'Fortran', backend),
+                (me_cpp, me_mg7, 'C++',     backend),
+                (me_mg7, me_py,  backend,   'Python'),
+            ])
+        for a, b, na, nb in pairs:
+            if a is None or b is None:
+                continue
+            ref = abs(a) if a != 0 else abs(b)
+            rel = abs(a - b) / ref if ref > 0 else 0.
             self.assertLess(rel, 1e-4,
-                            'Fortran/C++ disagree: F=%g C++=%g rel=%g'
-                            % (me_f, me_cpp, rel))
+                            '%s/%s disagree: %s=%g %s=%g rel=%g'
+                            % (na, nb, na, a, nb, b, rel))
 
-        # output_language must at least contain a Summary line.
+        # MG7 SA must be available when the madmatrix backend is present.
+        if self.has_mg7:
+            self.assertIsNotNone(entry['value_mg7'],
+                                 'MG7 SA value missing though madmatrix present')
+
+        # output_language must at least contain a Summary line + MG7 column.
         text = process_checks.output_language(results)
         self.assertIn('Summary', text)
+        self.assertIn('MG7 SA', text)
 
     def test_check_language_gg_ttx_cpp_ps_point(self):
         """g g > t t~: Fortran SA and C++ SA must agree within 1e-4 rel.
@@ -979,10 +1056,10 @@ class TestMultiLanguageComparison(unittest.TestCase):
         self.assertEqual(len(results), 1, 'Expected exactly one subprocess result')
 
         entry = results[0]
-        # New API: no Python key.
-        self.assertNotIn('value_python', entry)
         self.assertIn('value_fortran', entry)
         self.assertIn('value_cpp', entry)
+        self.assertIn('value_mg7', entry)
+        self.assertIn('value_python', entry)
 
         if entry['value_fortran'] is None:
             self.skipTest('Fortran SA evaluation failed')
@@ -991,6 +1068,9 @@ class TestMultiLanguageComparison(unittest.TestCase):
 
         me_f   = entry['value_fortran']['m2']
         me_cpp = entry['value_cpp']['m2']
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2'] if entry['value_mg7'] else {}
+        me_py  = entry['value_python']['m2'] if entry['value_python'] else None
 
         self.assertGreater(abs(me_cpp), 0., 'C++ ME is zero – unexpected')
         rel_diff = abs(me_f - me_cpp) / abs(me_f)
@@ -998,6 +1078,24 @@ class TestMultiLanguageComparison(unittest.TestCase):
                         'Fortran and C++ SA disagree for g g > t t~: '
                         'F=%g  C++=%g  rel_diff=%g'
                         % (me_f, me_cpp, rel_diff))
+
+        # MG7 SA must agree with Fortran when the madmatrix backend ran.
+        for backend, me_mg7 in mg7_vals.items():
+            if me_mg7 is None:
+                continue
+            rel_mg7_f = abs(me_f - me_mg7) / abs(me_f)
+            self.assertLess(rel_mg7_f, 1e-4,
+                            'MG7 and Fortran SA disagree for g g > t t~ (%s): '
+                            'MG7=%g  F=%g  rel_diff=%g'
+                            % (backend, me_mg7, me_f, rel_mg7_f))
+
+        # Python must also agree if it ran successfully.
+        self.assertIsNotNone(me_py, 'Python evaluation failed for g g > t t~')
+        rel_py_f = abs(me_f - me_py) / abs(me_f)
+        self.assertLess(rel_py_f, 1e-4,
+                        'Python and Fortran SA disagree for g g > t t~: '
+                        'Python=%g  F=%g  rel_diff=%g'
+                        % (me_py, me_f, rel_py_f))
 
         # output_language must also report Passed
         text = process_checks.output_language(results)

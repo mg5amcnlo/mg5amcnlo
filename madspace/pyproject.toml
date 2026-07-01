@@ -1,5 +1,9 @@
 [build-system]
-requires = ["scikit-build-core>=0.10"]
+# packaging>=22 is required by scikit-build-core's vendored pyproject_metadata
+# (it calls packaging.utils.canonicalize_name(validate=...) / InvalidName, both
+# added in packaging 22.0). Pin it explicitly so the build-isolation env does
+# not fall back to an older system packaging (e.g. on ubuntu-22.04 / old pip).
+requires = ["scikit-build-core>=0.10", "packaging>=22"]
 build-backend = "scikit_build_core.build"
 
 [project]

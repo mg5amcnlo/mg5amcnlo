@@ -582,11 +582,26 @@ class ALOHAWriterForFortran(WriteALOHA):
             if type.startswith('list'):
                 type = type[5:]
                 #determine the size of the list
-                if name[0] in ['F', 'V', 'S', 'T', 'R'] and not aloha.loop_mode:
-                    if name[0] not in ['T', 'R']:
-                        out.write(' type(aloha) %s\n' % (name))
+                if name[0] in ['F', 'V', 'S', 'T', 'R']:
+                    # All wavefunctions (inputs and outputs) are now passed and
+                    # built as type(aloha) / type(aloha2d), regardless of
+                    # loop_mode.  This keeps the body code (which uses %W / %P
+                    # accessors) consistent with the declaration.  MP routines
+                    # must use the mp_aloha* variants whose %W / %P fields are
+                    # complex*32 / real*16 — otherwise the storage layout at
+                    # the call site (type(mp_aloha) caller) does not match the
+                    # callee's view, and %P writes land in the middle of %W,
+                    # leaving the momentum at zero.
+                    if 'MP' in self.tag:
+                        if name[0] not in ['T', 'R']:
+                            out.write(' type(mp_aloha) %s\n' % (name))
+                        else:
+                            out.write(' type(mp_aloha2d) %s\n' % (name))
                     else:
-                        out.write(' type(aloha2d) %s\n' % (name))
+                        if name[0] not in ['T', 'R']:
+                            out.write(' type(aloha) %s\n' % (name))
+                        else:
+                            out.write(' type(aloha2d) %s\n' % (name))
                     if name not in argument_var:
                         size=self.get_size(name, -2)
                         #to_end.append("allocate(%s %% W(%s))" % (name,size))
@@ -597,26 +612,6 @@ class ALOHAWriterForFortran(WriteALOHA):
                         size ='*'
                     elif name.startswith('P'):
                         size='0:3'
-                    elif name[0] in ['F','V']:
-                        if aloha.loop_mode:
-                            size = 8
-                        elif aloha.unitary_gauge == 3 and name[0] in 'V':
-                            size = 7
-                        else:
-                            size = 6
-                    elif name[0] == 'S':
-                        if aloha.loop_mode:
-                            size = 5
-                        elif aloha.unitary_gauge == 3: # FD gauge 
-                            # Need to fix since this need to be dependent if S is a goldstone or not
-                            size = 7
-                        else:
-                            size = 3
-                    elif name[0] in ['R','T']: 
-                        if aloha.loop_mode:
-                            size = 20
-                        else:
-                            size = 18
                     else:
                         size = '*'
                     out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
@@ -671,10 +666,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                if not aloha.loop_mode:
-                    p.append('{0}{1}{2}%P(:)'.format(signs[i],type,i+1))
-                else:
-                    p.append('{0}{1}{2}(%(i)s)'.format(signs[i],type,i+1,type))    
+                # Always use the type(aloha) %P accessor; wavefunctions are
+                # type(aloha) regardless of loop_mode.
+                p.append('{0}{1}{2}%P(:)'.format(signs[i],type,i+1))
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
@@ -725,9 +719,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.offshell and aloha.unitary_gauge == 3: # FD gauge
             type = self.particles[self.outgoing-1]
             if type in ["S","V"]: 
-                out.write("      DO I = 3, 7\n")
-                out.write(" %(type)s%(out)s(I) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
-                out.write(" ENDDO\n")      
+                out.write(" %(type)s%(out)s %% W(:) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
 
         # Returning result
         return out.getvalue()
@@ -754,7 +746,7 @@ class ALOHAWriterForFortran(WriteALOHA):
 
                 out.write('   flv_index1 = F1 %flv_index\n')
                 out.write('   flv_index2 = F2 %flv_index\n')
-                out.write('   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0d0)then  \n %s\n  return\nendif\n' % fail)
+                out.write('   if(flv_index1.ne.flv_index2.or.flv_index1.eq.0)then  \n %s\n  return\nendif\n' % fail)
             else:
                 incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
                 outgoing = self.outgoing
@@ -820,7 +812,11 @@ class ALOHAWriterForFortran(WriteALOHA):
             # a flat integer offset (+momentum_size) into a plain COMPLEX*16
             # array; now all wavefunctions (including those inside loop ALOHA
             # routines) are passed as type(aloha) objects.
-            return '%s %% W(%s)' % (match.group('var'), int(match.group('num')))
+            shift = 0
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4 # In FD gauge Scalar indices goes to 5 (not 1)
+                           # to complement the vector 1-4
+            return '%s %% W(%s)' % (match.group('var'), int(match.group('num'))+ shift)
               
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
@@ -837,8 +833,12 @@ class ALOHAWriterForFortran(WriteALOHA):
         if '_' in name:
             vtype = name.type
             decla = name.split('_',1)[0]
-            # P-momentum variables may be cached as complex from a previous loop
-            # computation; override with the type appropriate for the current mode.
+            # In loop_mode the type(aloha)%P field is double complex so
+            # that the OPP loop-momentum samples (which are complex) are
+            # preserved as they propagate through the loop wavefunctions;
+            # the per-routine momentum scratch variables therefore must
+            # also be complex.  Tree-only generation keeps %P real and
+            # the scratch variables stay real for performance.
             if decla.startswith('P'):
                 vtype = 'complex' if aloha.loop_mode else 'double'
             self.declaration.add(('list_%s' % vtype, decla))
@@ -994,15 +994,14 @@ class ALOHAWriterForFortran(WriteALOHA):
                 shift = 1
                 if aloha.unitary_gauge == 3 and self.outname[0] == "S":
                     shift = 5
-                if not aloha.loop_mode:
-                    shift -= 2
-                    to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s%%W(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+shift, 
-                        coeff, formatted)
-                else:
-                    to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+shift, 
-                        coeff, formatted)
+                # Subtract momentum_size: pass_to_HELAS adds it to obtain a
+                # flat-array index, but the output wavefunction is now a
+                # type(aloha) and we write into %W which is 1-indexed for
+                # Lorentz components only.
+                shift -= self.momentum_size
+                to_order[self.pass_to_HELAS(ind)] = \
+                    '    %s%%W(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+shift,
+                    coeff, formatted)
             key = list(to_order.keys())
             key.sort()
             for i in key:
@@ -1617,7 +1616,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             shift =  -1
             if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
-                shift += 4 # In FD gauge Scalar indices goes to 4 (not 0)
+                shift += 4 # In FD gauge Scalar indices go after vector ones
                            # to complement the vector 0-3
             return '%s.W[%s]' % (match.group('var'), int(match.group('num')) + shift)
               
@@ -1780,9 +1779,16 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         return out.getvalue()
 
-    def get_foot_txt(self):
+    def get_foot_txt(self, combine=False):
         """Prototype for language specific footer"""
-        return '}\n'
+        text = ''
+        if not combine and aloha.unitary_gauge == 3:
+            if self.outgoing and 'P1N' not in self.tag:
+                name = self.particles[self.outgoing-1]
+                if name.startswith(('V', 'S')):
+                    text += '    multiply_propagator_factor(%(name)s%(i)s, M%(i)s, %(name)s%(i)s);\n' % \
+                            {'name': name, 'i': self.outgoing}
+        return text + '}\n'
 
     def get_momenta_txt(self):
         """Define the Header of the fortran file. This include
@@ -1826,6 +1832,10 @@ class ALOHAWriterForCPP(WriteALOHA):
                                              ''.join(p) % dict_energy))
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
+            if aloha.unitary_gauge == 3 and type in ['S', 'V']:
+                for i in range(self.type_to_size[type] - 2):
+                    out.write('    %s%s.W[%s] = std::complex<double>(0.,0.);\n' %
+                              (type, self.outgoing, i))
 
         
         # Returning result
@@ -2060,8 +2070,11 @@ class ALOHAWriterForCPP(WriteALOHA):
                 
             for ind in numerator.listindices():
                 self.momentum_size = 0
+                helas_index = self.pass_to_HELAS(ind)
+                if aloha.unitary_gauge == 3 and self.outname[0] == 'S':
+                    helas_index += 4
                 out.write('    %s.W[%d]= %s*%s;\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind), coeff,
+                                        helas_index, coeff,
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
@@ -2145,7 +2158,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             elif i==1:
                 if self.offshell:
                     type = self.particles[self.offshell-1]
-                    self.declaration.add(('list_complex','%stmp' % type))
+                    self.declaration.add(('aloha%s' % type,'%stmp' % type))
                 else:
                     type = ''
                     self.declaration.add(('complex','%stmp' % type))
@@ -2173,7 +2186,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         #self.declaration.discard
         text.write(self.get_declaration_txt(add_i=False))
         text.write(routine.getvalue())
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
         text = text.getvalue()
         return text
@@ -2465,7 +2478,10 @@ class ALOHAWriterForPython(WriteALOHA):
             return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
         else:
             # Spin components are accessed via the .W view (0-indexed)
-            return '%s.W[%s]' % (match.group('var'), int(match.group('num')) - 1)
+            shift = -1
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4
+            return '%s.W[%s]' % (match.group('var'), int(match.group('num')) + shift)
 
     def change_var_format(self, name): 
         """Formatting the variable name to Python format
@@ -2579,11 +2595,14 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
-                out.write('    %s.W[%d]= %s*%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind) - self.momentum_size, coeff, 
+                shift = -self.momentum_size
+                if aloha.unitary_gauge == 3 and self.outname.startswith('S'):
+                    shift += 4
+                out.write('    %s.W[%d]= %s*%s\n' % (self.outname,
+                                        self.pass_to_HELAS(ind) + shift, coeff,
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
-    
+
     def get_coupling_def(self):
         """Generate flavor-checking / coupling-resolution code for Python routines.
 
@@ -2698,9 +2717,14 @@ class ALOHAWriterForPython(WriteALOHA):
                 out.write('    %s = COUP.val[%s]\n' % (name, flv_for_coup))
         return out.getvalue()
 
-    def get_foot_txt(self):
+    def get_foot_txt(self, combine=False):
         if not self.offshell:
             return '    return vertex\n\n'
+        elif not combine and aloha.unitary_gauge == 3 and \
+             self.outname.startswith(('V','S')) and \
+             'P1N' not in self.tag:
+            return '    %(out)s = wavefunctions.multiply_propagator_factor(%(out)s, M%(num)s)\n    return %(out)s\n\n' % \
+                   {'out': self.outname, 'num': self.outgoing}
         else:
             return '    return %s\n\n' % (self.outname)
             
@@ -2755,7 +2779,11 @@ class ALOHAWriterForPython(WriteALOHA):
                 self.get_one_momenta_def(i+1, out)             
              
         # define the resulting momenta
-        if self.offshell:
+        bypass = False
+        if 'P1N' in self.tag and self.offshell and \
+           not self.declaration.is_used('P%s' % (self.outgoing)):
+            bypass = True
+        if self.offshell and not bypass:
             type = self.particles[self.outgoing-1]
             out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
             for i in range(4):
@@ -2764,6 +2792,10 @@ class ALOHAWriterForPython(WriteALOHA):
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
+            if "P1T" in self.tag or "P1L" in self.tag:
+                for i, value in zip(range(1,4), ("1e-30", "0.0", "1e-15")):
+                    out.write("    if abs(P%(P)s[0])*1e-10 > abs(P%(P)s[%(i)s]): P%(P)s[%(i)s] = %(val)s\n"
+                              % {"P": self.outgoing, "i": i, "val": value})
 
                
         # Returning result
@@ -2837,7 +2869,7 @@ class ALOHAWriterForPython(WriteALOHA):
                     text.write("    for i in range(%s):\n" % size)
                     text.write("        %(main)s.W[i] += tmp.W[i]\n" % {'main': main})
         
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
         #ADD SYMETRY
         if sym:
@@ -2949,4 +2981,3 @@ class WriterFactory(object):
 #        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
 #        ff.write(unknow_fct_template % dico)
 #        ff.close()
-

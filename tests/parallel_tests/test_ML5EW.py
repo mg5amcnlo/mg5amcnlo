@@ -272,6 +272,32 @@ class ML5EWTest(unittest.TestCase):
 
     test_model_name = 'loop_qcd_qed_sm-parallel_test'
 
+    @staticmethod
+    def _install_restrict_card(src, dst):
+        """Copy a hidden restrict card to its visible name, ensuring that
+        SMINPUTS entry 1 (aEW0M1) is present. The shipped Gmu restrict cards
+        only set SMINPUTS 2 (Gf) and 3 (aS); param_card reading then fails
+        with 'sminputs (1,) not define'. Inject a default of 0.0, which is
+        the value parameters.py declares for aEW0M1 and triggers the Gmu
+        scheme (aEW0 = 0 when aEW0M1 == 0)."""
+        with open(src) as f:
+            content = f.read()
+        # Match the SMINPUTS block header and its body up to (but not
+        # including) the next 'Block' / 'DECAY' header or end of file.
+        sminputs_re = re.compile(
+            r'(^Block\s+SMINPUTS\b[^\n]*\n)'
+            r'((?:(?!^Block\b)(?!^DECAY\b).*\n)*)',
+            re.MULTILINE | re.IGNORECASE)
+        match = sminputs_re.search(content)
+        if match:
+            block_body = match.group(2)
+            has_entry_1 = re.search(r'^\s*1\s+\S+', block_body, re.MULTILINE)
+            if not has_entry_1:
+                injected = match.group(1) + '    1 0.000000e+00 # aEW0M1\n' + block_body
+                content = content[:match.start()] + injected + content[match.end():]
+        with open(dst, 'w') as f:
+            f.write(content)
+
     def setUp(self):
         """ Here we just copy the hidden restrict_card to a regular one.
         And we don't bother making it hidden again after the test."""
@@ -281,14 +307,12 @@ class ML5EWTest(unittest.TestCase):
                 model_path = os.path.join(tmp,'loop_qcd_qed_sm')
                 if os.path.exists(model_path):
                     break
-        cp(os.path.join(model_path,
-                        '.restrict_parallel_test.dat'),
-           os.path.join(model_path,
-                        'restrict_parallel_test.dat'))
-        cp(os.path.join(model_path,
-                        '.restrict_parallel_test_MB.dat'),
-           os.path.join(model_path,
-                        'restrict_parallel_test_MB.dat'))
+        self._install_restrict_card(
+            os.path.join(model_path, '.restrict_parallel_test.dat'),
+            os.path.join(model_path, 'restrict_parallel_test.dat'))
+        self._install_restrict_card(
+            os.path.join(model_path, '.restrict_parallel_test_MB.dat'),
+            os.path.join(model_path, 'restrict_parallel_test_MB.dat'))
         model_path = os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu')
         if not os.path.exists(model_path):
             for tmp in os.environ['PYTHONPATH'].split(':'):
@@ -296,18 +320,15 @@ class ML5EWTest(unittest.TestCase):
                 if os.path.exists(model_path):
                     break
 
-        cp(os.path.join(model_path,
-                        '.restrict_parallel_test_WW.dat'),
-           os.path.join(model_path,
-                        'restrict_parallel_test_WW.dat'))
-        cp(os.path.join(model_path,
-                        '.restrict_parallel_test_ZZ.dat'),
-           os.path.join(model_path,
-                        'restrict_parallel_test_ZZ.dat'))
-        cp(os.path.join(model_path,
-                        '.restrict_parallel_test_WZ.dat'),
-           os.path.join(model_path,
-                        'restrict_parallel_test_WZ.dat'))
+        self._install_restrict_card(
+            os.path.join(model_path, '.restrict_parallel_test_WW.dat'),
+            os.path.join(model_path, 'restrict_parallel_test_WW.dat'))
+        self._install_restrict_card(
+            os.path.join(model_path, '.restrict_parallel_test_ZZ.dat'),
+            os.path.join(model_path, 'restrict_parallel_test_ZZ.dat'))
+        self._install_restrict_card(
+            os.path.join(model_path, '.restrict_parallel_test_WZ.dat'),
+            os.path.join(model_path, 'restrict_parallel_test_WZ.dat'))
 
     #===========================================================================
     # First tests consisting in a list of quick 2>2 processes to be run together
@@ -718,6 +739,9 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_aMCatNLO').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_MadLoop').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_plugin').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
     

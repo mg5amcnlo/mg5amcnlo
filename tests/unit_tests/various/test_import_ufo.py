@@ -288,11 +288,14 @@ class TestImportUFO_fromcmd(unittest.TestCase):
         ttz = [i for i  in self.cmd._curr_model.get('interactions') \
                if [p.get_pdg_code() for p in i.get('particles')] == [-6,6,23]]
 
-        nb_lor = [0,0,0,0]
+        # Pre-optimization in FD gauge converts Z-tbar-t from [FFV2,FFV5] to
+        # [FFV6,FFV2,FFS3,FFS1] before goldstone merging, so FFS2 (goldstone)
+        # is appended at index 4 rather than index 2.
+        nb_lor = [0,0,0,0,0]
         for coup in ttz[0].get('couplings').keys():
             nb_lor[coup[1]] += 1
 
-        self.assertEqual(nb_lor, [1,1,1,0])        
+        self.assertEqual(nb_lor, [1,1,0,0,1])
 
         
 

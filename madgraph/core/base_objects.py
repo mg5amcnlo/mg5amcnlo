@@ -379,7 +379,13 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError("Line type %s is unknown" % value)
 
         if name == 'charge':
-            if not isinstance(value, float):
+            if isinstance(value, tuple):
+                if not value:
+                    raise self.PhysicsObjectError("Charge tuple %s is empty" % repr(value))
+                for v in value:
+                    if not isinstance(v, (int, float)):
+                        raise self.PhysicsObjectError("Charge entry %s is not numeric" % repr(v))
+            elif not isinstance(value, float):
                 raise self.PhysicsObjectError("Charge %s is not a float" % repr(value))
 
         if name == 'propagating':
@@ -458,6 +464,11 @@ class Particle(PhysicsObject):
     def get_charge(self):
         """Return the charge code with a correct minus sign"""
 
+        if isinstance(self['charge'], tuple):
+            values = tuple(float(v) for v in self['charge'])
+            if not self['is_part']:
+                return tuple(-v for v in values)
+            return values
         if not self['is_part']:
             return - self['charge']
         else:
@@ -467,6 +478,11 @@ class Particle(PhysicsObject):
         """Return the charge code of the antiparticle with a correct minus sign
         """
 
+        if isinstance(self['charge'], tuple):
+            values = tuple(float(v) for v in self['charge'])
+            if self['is_part']:
+                return tuple(-v for v in values)
+            return values
         if self['is_part']:
             return - self['charge']
         else:
@@ -1499,9 +1515,18 @@ class Model(PhysicsObject):
 
         new_part['name'] = name
         new_part['pdg_code'] = pdg_code
-        new_part['charge'] = particles[0].get('charge') # might not be the same for all particles !
-        if any(p.get('charge') != particles[0].get('charge') for p in particles):
-            self['conserved_charge'].discard('charge')
+        charge_values = set()
+        for p in particles:
+            p_charge = p.get('charge')
+            if isinstance(p_charge, tuple):
+                charge_values.update(round(float(v), 12) for v in p_charge)
+            else:
+                charge_values.add(round(float(p_charge), 12))
+        charge_values = sorted(charge_values)
+        if len(charge_values) == 1:
+            new_part['charge'] = charge_values[0]
+        else:
+            new_part['charge'] = tuple(charge_values)
         # handle all conserved quantum numbers (LeptonNumber, Y, etc.)
         for charge in list(self['conserved_charge']):
             if charge == 'charge':
@@ -1743,9 +1768,16 @@ class Model(PhysicsObject):
         new_part['name'] = name
         new_part['antiname'] = name 
         new_part['pdg_code'] = pdg_code
-        new_part['charge'] = particle.get('charge') # will not be the same 
-        if particle.get('charge') != 0:
-            self['conserved_charge'].discard('charge')
+        charge_values = set()
+        part_charge = particle.get('charge')
+        part_charge_values = part_charge if isinstance(part_charge, tuple) else (part_charge,)
+        for val in part_charge_values:
+            charge_values.update([round(float(val), 12), round(-float(val), 12)])
+        charge_values = sorted(charge_values)
+        if len(charge_values) == 1:
+            new_part['charge'] = charge_values[0]
+        else:
+            new_part['charge'] = tuple(charge_values)
         new_part['self_antipart'] = True
         # handle all parameter that have to be the same
         iden_param = ['mass', 'spin', 'color', 'width', 'line', 'propagator', 'is_part', 'type', 'counterterm']
@@ -2632,6 +2664,7 @@ class Leg(PhysicsObject):
         self['from_group'] = True
         # onshell: decaying leg (True), forbidden s-channel (False), none (None)
         self['onshell'] = None
+        self['offshell'] = False # set on True for "*" mode 
         # filter on the helicty
         self['polarization'] = []
         self['flavor'] = []
@@ -2851,6 +2884,7 @@ class MultiLeg(PhysicsObject):
         self['state'] = True
         self['polarization'] = []
         self['flavor'] = []
+        self['offshell'] = False
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -2890,7 +2924,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state','polarization','flavor']
+        return ['ids', 'state', 'polarization', 'flavor', 'offshell']
 
 #===============================================================================
 # LegList
@@ -3730,15 +3764,18 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name()
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
+                    mystr = mystr + '{%s}' %','.join([str(p) for p in leg.get('polarization')]) 
+
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+
+            mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3865,16 +3902,16 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name()
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
-             
+                    mystr = mystr + '{%s}' %','.join([str(p) for p in leg.get('polarization')])   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3973,15 +4010,17 @@ class Process(PhysicsObject):
                 
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
+                    mystr = mystr + '{%s}' %','.join([str(p) for p in leg.get('polarization')])   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
+
             prevleg = leg
 
         # Remove last space
@@ -4623,9 +4662,11 @@ class ProcessDefinition(Process):
                 elif leg.get('polarization') == [1]:
                     mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %''.join([str(p) for p in leg.get('polarization')])   
+                    mystr = mystr + '{%s}' %''.join([str(p) for p in leg.get('polarization')])
+            if leg.get('offshell'):
+                mystr += '*'   
             else:
-             mystr = mystr + ' '
+                mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 

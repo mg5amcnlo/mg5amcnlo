@@ -1,1 +1,5 @@
-      DATA (MIRRORPROCS(I),I=1,2)/.TRUE.,.FALSE./
+      DATA (MIRRORPROCS(1,I),I=1,1)/.TRUE./
+      DATA (MIRRORPROCS(2,I),I=1,1)/.FALSE./
+      DATA NB_FLAV /1,1/
+      DATA (N_INDIV_FLAV(K,1),K=1,1)/1/
+      DATA (N_INDIV_FLAV(K,2),K=1,1)/1/

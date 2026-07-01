@@ -489,6 +489,8 @@ class ParamCard(dict):
         for particle in model.get('particles'):
             if particle.get('goldstone') or particle.get('ghost'):
                 continue
+            if abs(particle.get_pdg_code()) in model.get('merged_particles'):
+                continue
             mass = model.get_parameter(particle.get('mass'))
             lhacode = abs(particle.get_pdg_code())
 

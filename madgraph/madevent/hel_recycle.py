@@ -448,12 +448,16 @@ class HelicityRecycler():
 
     def function_call(self, line):
         # Check a function is called at all
-        if not 'CALL' in line:
+        if 'CALL' not in line.upper():
+            return None
+
+        function = get_called_function(line)
+        if not function:
             return None
 
         # Now check for external spinor
-        ext_calls = ['CALL OXXXXX', 'CALL IXXXXX', 'CALL VXXXXX', 'CALL SXXXXX']
-        if any( call in line for call in ext_calls ):
+        ext_calls = ['OXXXXX', 'IXXXXX', 'VXXXXX', 'SXXXXX']
+        if function.upper() in ext_calls:
             return 'external'
 
         # Now check for internal
@@ -469,10 +473,6 @@ class HelicityRecycler():
             matches.remove(get_arguments(line)[-1])
         except KeyError:
             pass
-        try:
-            function = (line.split('(', 1)[0]).split()[-1]
-        except IndexError:
-            return None
         # What if [-1] is garbage? Then I'm relying on needs changing.
         # Is that OK?
         if (function.split('_')[-1] != '0'):
@@ -753,10 +753,21 @@ def get_arguments(line):
     '''Find the substrings separated by commas between the first
     closed set of parentheses in 'line'. 
     '''
+    start_idx = None
+    call_idx = line.upper().find('CALL ')
+    if call_idx != -1:
+        start_idx = line.find('(', call_idx)
+    if start_idx is None or start_idx == -1:
+        start_idx = line.find('(')
+    if start_idx == -1:
+        return ['']
+
     bracket_depth = 0
     element = 0
     arguments = ['']
-    for char in line:
+    for i, char in enumerate(line):
+        if i < start_idx:
+            continue
         if char == '(':
             bracket_depth += 1
             if bracket_depth - 1 == 0:
@@ -778,17 +789,63 @@ def get_arguments(line):
 
 
 def apply_args(old_line, all_the_args):
-    function = (old_line.split('(')[0]).split()[-1]
-    old_args = old_line.split(function)[-1]
-    new_lines = [old_line.replace(old_args, f'({",".join(x)})\n')
-                 for x in all_the_args]
+    call_idx = old_line.upper().find('CALL ')
+    if call_idx == -1:
+        function = (old_line.split('(')[0]).split()[-1]
+        old_args = old_line.split(function)[-1]
+        new_lines = [old_line.replace(old_args, f'({",".join(x)})\n')
+                     for x in all_the_args]
+        return ''.join(new_lines)
+
+    call_arg_start = old_line.find('(', call_idx)
+    if call_arg_start == -1:
+        return old_line
+
+    bracket_depth = 0
+    call_arg_end = -1
+    for i, char in enumerate(old_line[call_arg_start:], start=call_arg_start):
+        if char == '(':
+            bracket_depth += 1
+        elif char == ')':
+            bracket_depth -= 1
+            if bracket_depth == 0:
+                call_arg_end = i
+                break
+    if call_arg_end == -1:
+        return old_line
+
+    call_head = old_line[:call_arg_start]
+    call_tail = old_line[call_arg_end+1:]
+    new_lines = [f'{call_head}({",".join(args)}){call_tail}'
+                 for args in all_the_args]
     
     return ''.join(new_lines)
+
+def get_called_function(line):
+    call_idx = line.upper().find('CALL ')
+    if call_idx == -1:
+        return None
+    after_call = line[call_idx+5:]
+    if '(' not in after_call:
+        return None
+    return after_call.split('(', 1)[0].strip().split()[-1]
 
 def split_amps(line, new_amps, gauge):
     if not new_amps:
         return ''
-    fct = line.split('(',1)[0].split('_0')[0]
+    call_idx = line.upper().find('CALL ')
+    call_arg_start = line.find('(', call_idx) if call_idx != -1 else -1
+    called_function = get_called_function(line)
+    if call_idx == -1 or call_arg_start == -1 or not called_function:
+        return ''
+    call_prefix = line[:call_idx]
+    call_keyword = line[call_idx:call_idx+5]
+    function_root = called_function.split('_0')[0]
+    indent = re.match(r'\s*', call_prefix).group(0)
+    guard_stmt = call_prefix.strip()
+    guarded_call = guard_stmt.upper().startswith('IF')
+    call_stmt_prefix = call_prefix if not guarded_call else (indent + '  ')
+    fct = '%s%s%s' % (call_stmt_prefix, call_keyword, function_root)
     for i,amp in enumerate(new_amps):
         if i == 0:
             occur = []
@@ -827,6 +884,7 @@ def split_amps(line, new_amps, gauge):
         windices = []
         hel_calculated = []
         iamp = 0
+        local_lines = []
         for i,amp in enumerate(sub_amps):
             args = amp.args[:]   
             # Remove wav and get its index
@@ -838,8 +896,8 @@ def split_amps(line, new_amps, gauge):
             if i ==0:
                 # Call the original fct with P1N_...
                 # Final arg is replaced with TMP(1)
-                spin = fct.split(None,1)[1][to_remove]
-                lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
+                spin = function_root[to_remove]
+                local_lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
 
             hel, iamp = re.findall(r'AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
@@ -856,15 +914,25 @@ def split_amps(line, new_amps, gauge):
         else:
             raise Exception("split amp not supported for spin2, 3/2")
 
-        lines.append("""      call CombineAmp%(suffix)s(%(nb)i,
+        local_lines.append("""%(call_prefix)s%(call_keyword)sCombineAmp%(suffix)s(%(nb)i,
      & (/%(hel_list)s/), 
      & (/%(w_list)s/),
      & TMP, W, AMP(1,%(iamp)s))""" % {'suffix':suffix,
+                                      'call_prefix': call_stmt_prefix,
+                                      'call_keyword': call_keyword,
                                       'nb': len(sub_amps),
                                       'hel_list': ','.join(hel_calculated),
                                       'w_list': ','.join(windices),
                                       'iamp': iamp
                                      })
+        if guarded_call:
+            if not guard_stmt.upper().endswith('THEN'):
+                guard_stmt = '%s THEN' % guard_stmt
+            lines.append('%s%s' % (indent, guard_stmt))
+            lines.extend(local_lines)
+            lines.append('%sENDIF' % indent)
+        else:
+            lines.extend(local_lines)
 
             
     #lines.append('')
@@ -887,9 +955,18 @@ def do_multiline(line):
     else: 
         comment = None
     char_limit = 72
-    num_splits = len(line)//char_limit
-    if num_splits != 0 and len(line) != 72:
-        split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
+    if len(line) > char_limit:
+        split_line = []
+        remaining = line
+        while len(remaining) > char_limit:
+            split_at = remaining.rfind(' ', 0, char_limit + 1)
+            if split_at <= 0:
+                split_line.append(remaining[:char_limit])
+                remaining = remaining[char_limit:]
+            else:
+                split_line.append(remaining[:split_at+1])
+                remaining = remaining[split_at+1:]
+        split_line.append(remaining)
         indent = ''
         for char in line[6:]:
             if char == ' ':

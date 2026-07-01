@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX(P, FLAVOR, ANS)
+      SUBROUTINE SMATRIX(P, FLAV_IDX, ANS)
 C
 %(info_lines)s
 C
@@ -16,13 +16,15 @@ C CONSTANTS
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NINCOMING
+      PARAMETER (NINCOMING=%(nincoming)d)
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=%(ncomb)d)
 C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS
-      INTEGER FLAVOR(NEXTERNAL)
+C     FLAV_IDX (the dummy argument) is declared with NFLAV below.
 C
 C     GLOBAL
 C
@@ -30,13 +32,25 @@ C
 C
 C LOCAL VARIABLES
 C
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL,NCOMB)
       REAL*8 T
       REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER IHEL,IDEN,I,JJ
+      INTEGER JC(NEXTERNAL)
+      INTEGER NFLAV
+      PARAMETER (NFLAV=%(nflav)d)
+      INTEGER NNTRY_FLAV, NGOODHEL_FLAV
+      PARAMETER (NNTRY_FLAV=NFLAV)
+      PARAMETER (NGOODHEL_FLAV=NCOMB*NFLAV)
+      INTEGER FLAV_IDX
+      INTEGER GET_FLAVOR_INDEX
+      INTEGER NTRY(NFLAV)
+      LOGICAL GOODHEL(NCOMB,NFLAV)
+      DATA NTRY/NNTRY_FLAV*0/
+      DATA GOODHEL/NGOODHEL_FLAV*.FALSE./
+      double precision beampol(2)
+      common /to_beampol/ beampol
 C
 C FUNCTIONS
 C
@@ -46,15 +60,31 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+C     FLAV_IDX=0 (or out of range): GET_FLAVOR_INDEX could not resolve the
+C     requested flavor -- not an allowed combination, matrix element is zero.
+      IF (FLAV_IDX.LT.1 .OR. FLAV_IDX.GT.NFLAV) THEN
+        ANS = 0D0
+        RETURN
+      ENDIF
+      CALL GET_FLAVOR(FLAV_IDX, FLAVOR)
+      NTRY(FLAV_IDX)=NTRY(FLAV_IDX)+1
       ANS = 0D0
           DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),FLAVOR(1))
+             IF (GOODHEL(IHEL,FLAV_IDX) .OR. NTRY(FLAV_IDX) .LT. 100) THEN
+                 T=MATRIX(P ,NHEL(1,IHEL),FLAV_IDX)
                ANS=ANS+T
+C HANDLE POLARISED BEAM               
+              DO JJ=1,NINCOMING
+                IF(BEAMPOL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+                  T=T*ABS(BEAMPOL(JJ))
+                ELSE IF(BEAMPOL(JJ).NE.1D0)THEN
+                  T=T*(2D0-ABS(BEAMPOL(JJ)))
+                ENDIF
+              ENDDO
+
                  HELAMP(IHEL)=T
                IF (T .NE. 0D0) THEN
-                   GOODHEL(IHEL)=.TRUE.
+                   GOODHEL(IHEL,FLAV_IDX)=.TRUE.
                ENDIF
              ENDIF
           ENDDO
@@ -62,7 +92,7 @@ C ----------
       END
 
 
-      REAL*8 FUNCTION MATRIX(P,NHEL,FLAVOR)
+      REAL*8 FUNCTION MATRIX(P,NHEL,FLAV_IDX)
       use model_object
 C
 %(info_lines)s
@@ -92,10 +122,11 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL)
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C LOCAL VARIABLES
 C
+      INTEGER FLAVOR(NEXTERNAL)
       INTEGER I,J
       COMPLEX*16 ZTEMP
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
@@ -105,6 +136,7 @@ C
       type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 C
 C GLOBAL VARIABLES
 C
@@ -116,6 +148,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+%(flavor_mask_setup)s
 %(helas_calls)s
 %(jamp_lines)s
 
@@ -163,30 +196,10 @@ C
       return
       end
 
-      INTEGER FUNCTION BROKEN_SYM(FLAV)
+%(broken_sym_function)s
 
-      include 'nexternal.inc'
-      INTEGER FLAV(NEXTERNAL)
-      INTEGER PID(NINCOMING+1:NEXTERNAL)
-      INTEGER I,J
-      INTEGER N_BROK, N_TOT
-      INTEGER OLD_FACTOR
 
-      OLD_FACTOR = %(get_old_symmmetry_value)s
+%(flavor_index_function)s
 
-      %(get_pid)s
-c     get new symmetry factor
-      do I=NINCOMING+1, NEXTERNAL
-         if (PID(I).eq.0) cycle
-         N_TOT=1
-         do J = I+1,NEXTERNAL
-            if (PID(I).eq.PID(J).and.FLAV(I).EQ.FLAV(J))then
-               PID(J) = 0
-               N_TOT = N_TOT + 1
-               OLD_FACTOR = OLD_FACTOR/N_TOT
-            endif
-        enddo
-    enddo
-   BROKEN_SYM = OLD_FACTOR
-   return
-   end
+
+%(flavor_array_function)s

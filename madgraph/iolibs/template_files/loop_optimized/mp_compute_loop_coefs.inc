@@ -400,11 +400,11 @@ C   Copy back to the quantities computed in DP in the QP containers (but only th
       ENDDO
     ENDDO
     DO I=1,NWAVEFUNCS
-      DO J=1,SIZE(W(I)%%W)
-        W(I)%%W(J)=CMPLX(DPW(I)%%W(J),KIND=16)
+      DO J=1,SIZE(W(I)%W)
+        W(I)%W(J)=CMPLX(DPW(I)%W(J),KIND=16)
       ENDDO
-      W(I)%%P = DPW(I)%%P
-      W(I)%%flv_index = DPW(I)%%flv_index
+      W(I)%P = DPW(I)%P
+      W(I)%flv_index = DPW(I)%flv_index
     ENDDO
   ENDIF
 
@@ -500,11 +500,11 @@ c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
 C This needs to be done once since only the momenta of these WF matters.
   IF(.NOT.DPW_COPIED.AND.COMPUTE_INTEGRAND_IN_QP) THEN
     DO I=1,NWAVEFUNCS
-      DO J=1,SIZE(W(I)%%W)
-        DPW(I)%%W(J)=CMPLX(W(I)%%W(J),KIND=8)
+      DO J=1,SIZE(W(I)%W)
+        DPW(I)%W(J)=CMPLX(W(I)%W(J),KIND=8)
       ENDDO
-      DPW(I)%%P = W(I)%%P
-      DPW(I)%%flv_index = W(I)%%flv_index
+      DPW(I)%P = W(I)%P
+      DPW(I)%flv_index = W(I)%flv_index
     ENDDO
     DPW_COPIED=.True.
   ENDIF

@@ -168,6 +168,20 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+    def test_generate_output_semicolon_preserves_loop_process(self):
+        """Regression test for combined generate/output in one command line."""
+
+        with self.assertRaises(InvalidCmd) as ctx:
+            self.interface.exec_cmd(
+                'import model sm;generate e+ e- > t t~ [virt=QCD]; output bad>path',
+                precmd=True,
+                errorhandling=False
+            )
+
+        self.assertIn('not allowed in the output path', str(ctx.exception))
+        self.assertNotIn('No processes generated', str(ctx.exception))
+        self.assertTrue(self.interface._curr_amps)
+
     def test_ML_check_full_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
         
@@ -196,6 +210,111 @@ class TestCmdLoop(unittest.TestCase):
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+    def test_ML_gauge_invariance_epem_ttx_all_modes(self):
+        """Cross-check e+ e- > t t~ [virt=QCD] in all four combinations
+        of gauge (Feynman/Unitary) and output mode (optimized/non-optimized).
+
+        The matrix element squared should be identical (up to numerical
+        noise) across all four combinations.  In particular, the
+        non-optimized Unitary path goes through the bare-L ALOHA helpers
+        and the type(aloha) / type(mp_aloha) WL wavefunction arrays — it
+        is the path that the recent refactor specifically targets, and
+        any layout / accessor mismatch there will show up as a finite
+        relative deviation from the other three configurations."""
+
+        import aloha
+        import madgraph.various.process_checks as pcheck
+        import madgraph.loop.loop_diagram_generation as ldg
+        import madgraph.loop.loop_helas_objects as lho
+
+        self.setup_logFile_for_logger('madgraph.check_cmd')
+        try:
+            self.do('import model loop_sm')
+
+            # Build the loop amplitude once; we reuse it in every mode.
+            self.interface.exec_cmd('generate e+ e- > t t~ [virt=QCD]')
+            process = self.interface._curr_amps[0].get('process')
+
+            cuttools_dir = pjoin(MG5DIR, 'vendor', 'CutTools')
+            mg_options = self.interface.options
+
+            orig_optimized = mg_options.get('loop_optimized_output')
+            orig_unitary = aloha.unitary_gauge
+
+            # Generate a shared phase-space point so the four evaluations
+            # are comparable.
+            tmp_evaluator = pcheck.LoopMatrixElementEvaluator(
+                cuttools_dir=cuttools_dir,
+                cmd=self.interface,
+                model=self.interface._curr_model,
+                auth_skipping=False,
+                output_path=MG5DIR,
+                reuse=False)
+            shared_p, _ = tmp_evaluator.get_momenta(process)
+
+            results = {}
+            try:
+                for optimized in (True, False):
+                    for unitary in (False, True):
+                        label = ('opt' if optimized else 'noopt') + \
+                                ('_unitary' if unitary else '_feynman')
+
+                        aloha.unitary_gauge = unitary
+                        mg_options['loop_optimized_output'] = optimized
+
+                        amplitude = ldg.LoopAmplitude(process)
+                        matrix_element = lho.LoopHelasMatrixElement(
+                            amplitude, optimized_output=optimized)
+
+                        # Each evaluator gets its own temporary export
+                        # directory; do not let proliferation reuse a
+                        # directory generated under a different gauge.
+                        for d in misc.glob('TMP_CHECK*', MG5DIR):
+                            if path.isdir(d):
+                                shutil.rmtree(d, ignore_errors=True)
+                        evaluator = pcheck.LoopMatrixElementEvaluator(
+                            cuttools_dir=cuttools_dir,
+                            cmd=self.interface,
+                            model=self.interface._curr_model,
+                            auth_skipping=False,
+                            output_path=MG5DIR,
+                            reuse=False)
+
+                        data = evaluator.evaluate_matrix_element(
+                            matrix_element, p=shared_p,
+                            output='jamp')
+                        self.assertIsNotNone(
+                            data,
+                            '%s: evaluator returned None' % label)
+                        self.assertIn(
+                            'm2', data,
+                            '%s: no m2 key in evaluator output' % label)
+                        results[label] = data['m2']
+
+                        for d in misc.glob('TMP_CHECK*', MG5DIR):
+                            if path.isdir(d):
+                                shutil.rmtree(d, ignore_errors=True)
+            finally:
+                mg_options['loop_optimized_output'] = orig_optimized
+                aloha.unitary_gauge = orig_unitary
+
+            # All four answers should agree to a few parts per million.
+            self.assertEqual(len(results), 4)
+            ref_label, ref_value = next(iter(results.items()))
+            tol = 1e-6
+            for label, value in results.items():
+                denom = max(abs(value), abs(ref_value), 1e-30)
+                relerr = abs(value - ref_value) / denom
+                self.assertLess(
+                    relerr, tol,
+                    'm2 mismatch: %s=%.10e vs %s=%.10e (relerr=%.3e). '
+                    'Full table: %s' %
+                    (label, value, ref_label, ref_value, relerr, results))
+        except:
+            self.setup_logFile_for_logger('madgraph.check_cmd', restore=True)
+            raise
+        self.setup_logFile_for_logger('madgraph.check_cmd', restore=True)
 
     def test_ML_check_timing_epem_ttx(self):
         """ Test that check timing e+ e- > t t~ works fine """
@@ -292,6 +411,12 @@ class TestCmdLoop(unittest.TestCase):
         try:
             self.setup_logFile_for_logger('madgraph.check_cmd')
             cwd = os.getcwd()
+            # Disable flavor grouping so multiparticles like l- expand to
+            # individual flavors (e-, mu-) rather than the merged _lepton PDG.
+            # Merged particles are not supported for CMS checks and would cause
+            # only a single merged process to be tested instead of all flavor
+            # combinations.
+            self.do('set apply_flavor_grouping False')
             # Change this when we will make the CMS-ready EW model the default
             self.do('import model sm')
             self.do('define l- = e- mu-')
@@ -548,7 +673,6 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
                     pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
                     'PRINT_MADLOOP_BANNER')
         
-
 
 
 

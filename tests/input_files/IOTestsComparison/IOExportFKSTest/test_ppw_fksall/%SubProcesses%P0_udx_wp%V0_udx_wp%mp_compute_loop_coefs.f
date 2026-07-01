@@ -14,6 +14,7 @@ C
 C     Modules
 C     
       USE POLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
 C     
       IMPLICIT NONE
 C     
@@ -114,10 +115,10 @@ C
       COMMON/MP_AMPS/AMP
       COMPLEX*16 DP_AMP(NBORNAMPS)
       COMMON/AMPS/DP_AMP
-      COMPLEX*32 W(20,NWAVEFUNCS)
+      TYPE(MP_ALOHA) W(NWAVEFUNCS)
       COMMON/MP_W/W
 
-      COMPLEX*16 DPW(20,NWAVEFUNCS)
+      TYPE(ALOHA) DPW(NWAVEFUNCS)
       COMMON/W/DPW
 
       COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,
@@ -333,9 +334,11 @@ C            containers (but only those needed)
               ENDDO
             ENDDO
             DO I=1,NWAVEFUNCS
-              DO J=1,MAXLWFSIZE+4
-                W(J,I)=CMPLX(DPW(J,I),KIND=16)
+              DO J=1,SIZE(W(I)%W)
+                W(I)%W(J)=CMPLX(DPW(I)%W(J),KIND=16)
               ENDDO
+              W(I)%P = DPW(I)%P
+              W(I)%FLV_INDEX = DPW(I)%FLV_INDEX
             ENDDO
           ENDIF
 
@@ -415,9 +418,11 @@ C         This needs to be done once since only the momenta of these
 C          WF matters.
           IF(.NOT.DPW_COPIED.AND.COMPUTE_INTEGRAND_IN_QP) THEN
             DO I=1,NWAVEFUNCS
-              DO J=1,MAXLWFSIZE+4
-                DPW(J,I)=CMPLX(W(J,I),KIND=8)
+              DO J=1,SIZE(W(I)%W)
+                DPW(I)%W(J)=CMPLX(W(I)%W(J),KIND=8)
               ENDDO
+              DPW(I)%P = W(I)%P
+              DPW(I)%FLV_INDEX = W(I)%FLV_INDEX
             ENDDO
             DPW_COPIED=.TRUE.
           ENDIF

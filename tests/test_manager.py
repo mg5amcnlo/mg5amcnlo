@@ -1125,6 +1125,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
         logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
         logging.getLogger('tutorial').setLevel('ERROR')
+        logging.getLogger('tutorial_aMCatNLO').setLevel('ERROR')
+        logging.getLogger('tutorial_MadLoop').setLevel('ERROR')
+        logging.getLogger('tutorial_plugin').setLevel('ERROR')
     except:
         pass
 
@@ -1195,5 +1198,4 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 #    run('test_check_valid_on_file')
 #    run('test_collect_dir.*') # '.*' stands for all possible char (re format)
 #    python tests/test_manager.py test_decay.py -l INFO|less
-
 

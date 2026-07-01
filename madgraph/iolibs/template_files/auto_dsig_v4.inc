@@ -72,9 +72,26 @@ C     MINCFIG has this config number
       common/to_configs/mincfig, maxcfig
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     multi_channel controls whether to apply multi-channel symmetry factors
+      INTEGER ISUM_HEL
+      LOGICAL MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
+C     Per-leshouche-row weight accumulator, shared with
+C      output_subprocess_weights in dsample.f.  The grouped DSIG path
+C      (super_auto_dsig_group_v4.inc) fills this differently; the
+C      non-grouped path used for decay widths has no such mechanism, so we
+C      accumulate here the per-coupling-group contribution (split equally
+C      inside a group of identical-coupling flavors).  Without this,
+C      calculate_decay_widths divides a merged subprocess equally among its
+C      flavors and reports the up/down-type average instead of the true
+C      per-flavor partial widths.
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      INTEGER IRELROW
 %(define_subdiag_lines)s
       include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
@@ -101,9 +118,23 @@ C ----------
       DSIG%(proc_id)s=0D0
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
+C       Initialise the per-leshouche-row weight accumulator.  One entry per
+C        flavor combination (= MAXPROC rows in leshouche.inc).
+        IF (MAXPROC.LE.1024) THEN
+          NREL_SPROC_STORE = MAXPROC
+          DO IRELROW=1,MAXPROC
+            REL_SPROC_STORE(IRELROW) = 0D0
+          ENDDO
+        ELSE
+          NREL_SPROC_STORE = 0
+        ENDIF
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         NFACT=1
+        IF (.NOT.MULTI_CHANNEL) THEN
+          DSIG%(proc_id)s = NFACT
+          RETURN
+        ENDIF
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
           READ(LUN,*,ERR=10,END=10) RCONF, IFACT
@@ -158,28 +189,37 @@ C     Continue only if IMODE is 0, 4 or 5
      %(get_flavor)s
 
      channel = %(get_channel)s
-     
+
      call ranmar(RHEL)
      call ranmar(RCOL)
 
 C     Select a flavor combination (need to do here for right sign)
-         CALL RANMAR(R)
-         IPSEL = 0 
-         DO WHILE (R.GT.0D0)
-            IPSEL=IPSEL+1
-            R=R-DABS(PD(IPSEL))/PD(0)
-         ENDDO
+C     IPROC bound prevents over-indexing PD if floating-point drift
+C     keeps R>0 after the last valid flavor entry.
+          CALL RANMAR(R)
+          IPSEL = 0
+          DO WHILE (R.GT.0D0.AND.IPSEL.LT.IPROC)
+             IPSEL=IPSEL+1
+             R=R-DABS(PD(IPSEL))/PD(0)
+          ENDDO
 
       %(start_ipsel_for_IFLAV)s
       IPSEL = IPSEL + IPSEL_SHIFT
-      rwgt_value=REWGT(PP,FLAVOR, 1)
+C     REWGT can be expensive; skip it in non-sampling IMODEs
+C     (init/reweight/finalize/PDFs-only/squared-only). Note that IPSEL
+C     and IFLAV are still set above so SMATRIX gets valid arguments.
+      if (IMODE.eq.0) then
+         rwgt_value=REWGT(PP,FLAVOR, 1)
+      else
+         rwgt_value=1d0
+      endif
 
      CALL SMATRIX%(proc_id)s(P1, IFLAV, RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
-         
+
      DSIGUU = DSIGUU* rwgt_value
-     
+
          IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN        
+            IF (DSIGUU.LT.1D199) THEN
               DSIG%(proc_id)s = DSIGUU*CONV
             else
               DSIG%(proc_id)s = 0.0d0
@@ -200,6 +240,20 @@ c           Set sign of dsig based on sign of PDF and matrix element
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
+C       Accumulate the contribution of the selected coupling group, split
+C        equally among its identical-coupling leshouche rows.  PD(0) is the
+C        number of such rows, IPSEL_SHIFT their offset in leshouche order.
+C        output_subprocess_weights normalises this to fractions so that
+C        calculate_decay_widths splits the total width per flavor.
+        IF(IMODE.EQ.0.AND.PD(0).GT.0D0
+     &     .AND.IPSEL_SHIFT.GE.0
+     &     .AND.IPSEL_SHIFT+NINT(PD(0)).LE.NREL_SPROC_STORE)THEN
+          DO IRELROW=1,NINT(PD(0))
+            REL_SPROC_STORE(IPSEL_SHIFT+IRELROW) =
+     &        REL_SPROC_STORE(IPSEL_SHIFT+IRELROW)
+     &        + DABS(DSIG%(proc_id)s*WGT)/PD(0)
+          ENDDO
+        ENDIF
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
@@ -389,7 +443,11 @@ C     Select a flavor combination (need to do here for right sign)
 
 
        CALL GET_FLAVOR%(proc_id)s(IFLAV_VEC(IVEC), FLAVOR)
-       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       if (IMODE.eq.0) then
+         ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC),FLAVOR,ivec)
+       else
+         ALL_RWGT(IVEC) = 1d0
+       endif
 
      if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))

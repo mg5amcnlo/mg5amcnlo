@@ -126,22 +126,19 @@ class ProcessExporterPython(object):
             den_factor_line = self.get_den_factor_line(matrix_element)
             replace_dict['den_factor_line'] = den_factor_line
 
-            # Information for the flavor-dependent symmetry factor (broken_sym).
-            # For merged-particle processes different flavor combinations may have
-            # a different identical-particle symmetry factor in the final state.
-            # The base-process PIDs and its identical-particle factorial are stored
-            # so that smatrix can apply the correct per-flavor correction at
-            # runtime, matching the BROKEN_SYM logic in the Fortran/C++ outputs.
-            _pid_data = matrix_element.get('processes')[0].get_final_ids_after_decay()
-            replace_dict['broken_sym_pid'] = repr(list(_pid_data))
-            _old_factor = 1
-            _done = []
-            for _val in _pid_data:
-                if _val not in _done:
-                    _done.append(_val)
-                    _old_factor *= math.factorial(_pid_data.count(_val))
-            replace_dict['broken_sym_old_factor'] = _old_factor
-            replace_dict['ninitial'] = ninitial
+            # Information for the flavor-dependent symmetry factor (broken_sym),
+            # using the same decay-aware component/block logic as Fortran/C++.
+            from madgraph.iolibs import export_v4
+            process = matrix_element.get('processes')[0]
+            sym_data = export_v4.ProcessExporterFortran._get_broken_symmetry_data(
+                process, ninitial)
+            replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+            replace_dict['broken_sym_component_starts'] = repr(list(sym_data['component_starts']))
+            replace_dict['broken_sym_component_ends'] = repr(list(sym_data['component_ends']))
+            replace_dict['broken_sym_component_old_factors'] = repr(list(sym_data['component_old_factors']))
+            replace_dict['broken_sym_pid_list'] = repr(list(sym_data['pid_list']))
+            replace_dict['broken_sym_block_starts'] = repr(list(sym_data['block_starts']))
+            replace_dict['broken_sym_block_lengths'] = repr(list(sym_data['block_lengths']))
 
             # Extract process info lines for all processes
             process_lines = self.get_process_info_lines(matrix_element)
@@ -467,4 +464,3 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + '*complex(0,1)'
 
     return res_str + '*'
-

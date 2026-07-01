@@ -165,30 +165,30 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       ENDDO
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
-C     PJFry++
-      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
-      STOP
+C       PJFry++
+        WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+        STOP
       CASE(3)
-C     IREGI
-      CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN
-     $ ,M2L,MU_R,PJCOEFS,STABLE)
-C     CONVERT TO MADLOOP CONVENTION
-      CALL ML5_0_CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+C       IREGI
+        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN
+     $   ,M2L,MU_R,PJCOEFS,STABLE)
+C       CONVERT TO MADLOOP CONVENTION
+        CALL ML5_0_CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
       CASE(7)
-C     COLLIER
-      CALL ML5_0_COLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L
-     $ ,TIRCOEFS,TIRCOEFSERRORS)
-C     Shift the TIR coefficients by the corresponding COLLIER error if
-C      in CTMODE 2.
-      IF (COLLIERUSEINTERNALSTABILITYTEST.AND.CTMODE.EQ.2) THEN
-C       We add here the numerical inaccuracies linearly to be
-C        conservative 
-        DO I=1,3
-          DO J=0,NLOOPCOEFS-1
-            TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+C       COLLIER
+        CALL ML5_0_COLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L
+     $   ,TIRCOEFS,TIRCOEFSERRORS)
+C       Shift the TIR coefficients by the corresponding COLLIER error
+C        if in CTMODE 2.
+        IF (COLLIERUSEINTERNALSTABILITYTEST.AND.CTMODE.EQ.2) THEN
+C         We add here the numerical inaccuracies linearly to be
+C          conservative 
+          DO I=1,3
+            DO J=0,NLOOPCOEFS-1
+              TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+            ENDDO
           ENDDO
-        ENDDO
-      ENDIF
+        ENDIF
       END SELECT
       DO I=1,3
         RES(I)=(0.0D0,0.0D0)

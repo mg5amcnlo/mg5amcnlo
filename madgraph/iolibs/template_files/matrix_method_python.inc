@@ -44,25 +44,40 @@ class Matrix_%(process_string)s(object):
             ans = ans + t
             self.helEvals.append([hel, t.real / denominator ])
         # Apply flavor-dependent symmetry factor (broken_sym) for merged
-        # processes.  For a merged matrix element the denominator includes the
-        # identical-particle factorial of the *base* process.  When the actual
-        # runtime flavor has a different set of identical final-state particles,
-        # a correction factor must be applied, exactly as in the Fortran/C++
-        # BROKEN_SYM function:  ans = ans * broken_sym / denominator.
+        # processes, following the same decay-aware component/block logic as
+        # Fortran/C++ templates.
         if flavor is not None:
-            _sym_pid = list(%(broken_sym_pid)s)
-            _sym_factor = %(broken_sym_old_factor)d
-            _ninitial = %(ninitial)d
-            for _i in range(len(_sym_pid)):
-                if _sym_pid[_i] == 0:
-                    continue
-                _n_tot = 1
-                for _j in range(_i + 1, len(_sym_pid)):
-                    if _sym_pid[_i] == _sym_pid[_j] and flavor[_ninitial + _i] == flavor[_ninitial + _j]:
-                        _sym_pid[_j] = 0
-                        _n_tot += 1
-                        _sym_factor = _sym_factor // _n_tot
-            ans = ans * _sym_factor / denominator
+            _comp_beg = list(%(broken_sym_component_starts)s)
+            _comp_end = list(%(broken_sym_component_ends)s)
+            _comp_old = list(%(broken_sym_component_old_factors)s)
+            _pid_list = list(%(broken_sym_pid_list)s)
+            _block_start = list(%(broken_sym_block_starts)s)
+            _block_len = list(%(broken_sym_block_lengths)s)
+            _pid_work = list(_pid_list)
+            _total_factor = 1
+            for _icomp in range(%(broken_sym_ncomponents)d):
+                _old_factor = _comp_old[_icomp]
+                if _old_factor > 1:
+                    for _i in range(_comp_beg[_icomp] - 1, _comp_end[_icomp]):
+                        if _pid_work[_i] == 0:
+                            continue
+                        _n_tot = 1
+                        for _j in range(_i + 1, _comp_end[_icomp]):
+                            if _pid_work[_i] != _pid_work[_j]:
+                                continue
+                            if _block_len[_i] != _block_len[_j]:
+                                continue
+                            _same_block = True
+                            for _k in range(_block_len[_i]):
+                                if flavor[_block_start[_i] - 1 + _k] != flavor[_block_start[_j] - 1 + _k]:
+                                    _same_block = False
+                                    break
+                            if _same_block:
+                                _pid_work[_j] = 0
+                                _n_tot += 1
+                                _old_factor = _old_factor // _n_tot
+                _total_factor *= _old_factor
+            ans = ans * _total_factor / denominator
         else:
             ans = ans / denominator
         return ans.real

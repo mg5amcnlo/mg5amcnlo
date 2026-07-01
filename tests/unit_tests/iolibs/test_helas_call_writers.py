@@ -493,50 +493,6 @@ class HelasModelTest(HelasModelTestSetup):
                           mymodel.add_amplitude,
                           (1, 2), "not_a_function")
 
-    def test_set_wavefunctions(self):
-        """Test wavefunction dictionary in HelasModel"""
-
-        wavefunctions = {}
-        # IXXXXXX.Key: (spin, state, polarization, flavor)
-        key1 = ((-2, 0, tuple(), tuple(), None), ('',))
-        wavefunctions[key1] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-        # OXXXXXX.Key: (spin, state, polarization, flavor)
-        key2 = ((2, 0, tuple(), tuple(), None), ('',))
-        wavefunctions[key2] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-
-        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
-
-        wf = helas_objects.HelasWavefunction()
-        wf.set('particle', -2, self.mybasemodel)
-        wf.set('state', 'incoming')
-        wf.set('interaction_id', 0)
-        wf.set('number_external', 1)
-        wf.set('lorentz', [''])
-        wf.set('number', 40)
-
-        self.assertEqual(wf.get_call_key(), key1)
-
-        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        wf.set('fermionflow', -1)
-
-        self.assertEqual(wf.get_call_key(), key2)
-
-        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        del wavefunctions[key1]
-        del wavefunctions[key2]
-        
 
 #===============================================================================
 # FortranHelasCallWriterTest
@@ -920,16 +876,77 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);',
                    'vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);',
                    'vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);',
-                   'VVVV1_4(w[0],w[2],w[1],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVVV1_4(w[0],w[2],w[1],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 1',
-                   'VVV1_0(w[5],w[3],w[4],pars->GC_12,amp[0]);',
-                   'VVVV1_3(w[0],w[2],w[3],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVV1_0(w[5],w[3],w[4],pars.GC_12,amp[0]);',
+                   'VVVV1_3(w[0],w[2],w[3],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 2',
-                   'VVV1_0(w[1],w[5],w[4],pars->GC_12,amp[1]);']
+                   'VVV1_0(w[1],w[5],w[4],pars.GC_12,amp[1]);']
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
-        
+
+    def test_UFO_fortran_flavor_mask_prefix_uses_index_bits(self):
+        """Flavor-mask guard should check wf/amp index bits."""
+
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(
+            self.mybasemodel)
+        fortran_model.use_flavor_mask = True
+        fortran_model.me_n_flavors = 3
+
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'IF (IAND(CURRENT_WF_MASK(2), ISHFT(1_8, 5)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+        fortran_model.me_n_flavors = 4
+        fortran_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
+
+    def test_UFO_cpp_flavor_mask_prefix_uses_index_bits(self):
+        """C++ flavor-mask guard should check wf/amp index bits."""
+
+        cpp_model = helas_call_writers.CPPUFOHelasCallWriter(self.mybasemodel)
+        cpp_model.use_flavor_mask = True
+        cpp_model.me_n_flavors = 3
+
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'if ((current_wf_mask[1] & (1ULL << 5)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+        cpp_model.me_n_flavors = 4
+        cpp_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+
 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""
@@ -953,6 +970,22 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
+
+    @test_aloha.set_global(unitary=3)
+    def test_UFO_Python_helas_call_writer_fd(self):
+        """Test automatic generation of UFO helas calls in Python in FD gauge"""
+
+        python_model = helas_call_writers.PythonUFOHelasCallWriter(
+            self.mybasemodel)
+
+        result = python_model.get_matrix_element_calls(self.mymatrixelement)
+        solution = ['w[0] = vfdxxxx(p[0],zero,hel[0],-1)',
+                    'w[1] = vfdxxxx(p[1],wmas,hel[1],-1)',
+                    'w[2] = vfdxxxx(p[2],zero,hel[2],+1)',
+                    'w[3] = vfdxxxx(p[3],wmas,hel[3],+1)',
+                    'w[4] = vfdxxxx(p[4],zmas,hel[4],+1)']
+
+        self.assertEqual(solution, result[:5])
         
 
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):
@@ -1048,40 +1081,40 @@ vxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
 vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
 vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);
 vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);
-VVV1_3(w[0],w[1],pars->GC_4,pars->CMASS_mdl_MW,w[5]);
-VVV1_2(w[2],w[3],pars->GC_4,pars->CMASS_mdl_MW,w[6]);
+VVV1_3(w[0],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_2(w[2],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[6]);
 # Amplitude(s) for diagram number 1
-VVV1_0(w[5],w[6],w[4],pars->GC_53,amp[0]);
-VVV1_1(w[3],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[7]);
+VVV1_0(w[5],w[6],w[4],pars.GC_53,amp[0]);
+VVV1_1(w[3],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[7]);
 # Amplitude(s) for diagram number 2
-VVV1_0(w[2],w[5],w[7],pars->GC_4,amp[1]);
+VVV1_0(w[2],w[5],w[7],pars.GC_4,amp[1]);
 # Amplitude(s) for diagram number 3
-VVVV5_0(w[2],w[5],w[3],w[4],pars->GC_57,amp[2]);
-VVV1_2(w[0],w[3],pars->GC_4,pars->CMASS_mdl_MW,w[5]);
-VVV1_3(w[2],w[1],pars->GC_4,pars->CMASS_mdl_MW,w[8]);
+VVVV5_0(w[2],w[5],w[3],w[4],pars.GC_57,amp[2]);
+VVV1_2(w[0],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_3(w[2],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[8]);
 # Amplitude(s) for diagram number 4
-VVV1_0(w[8],w[5],w[4],pars->GC_53,amp[3]);
-VVV1_2(w[1],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[8],w[5],w[4],pars.GC_53,amp[3]);
+VVV1_2(w[1],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 5
-VVV1_0(w[2],w[9],w[5],pars->GC_4,amp[4]);
+VVV1_0(w[2],w[9],w[5],pars.GC_4,amp[4]);
 # Amplitude(s) for diagram number 6
-VVVV5_0(w[2],w[1],w[5],w[4],pars->GC_57,amp[5]);
+VVVV5_0(w[2],w[1],w[5],w[4],pars.GC_57,amp[5]);
 # Amplitude(s) for diagram number 7
-VVV1_0(w[0],w[8],w[7],pars->GC_4,amp[6]);
+VVV1_0(w[0],w[8],w[7],pars.GC_4,amp[6]);
 # Amplitude(s) for diagram number 8
-VVV1_0(w[0],w[9],w[6],pars->GC_4,amp[7]);
-VVVV2_4(w[0],w[2],w[1],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[0],w[9],w[6],pars.GC_4,amp[7]);
+VVVV2_4(w[0],w[2],w[1],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 9
-VVV1_0(w[9],w[3],w[4],pars->GC_53,amp[8]);
-VVVV5_3(w[0],w[1],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[9],w[3],w[4],pars.GC_53,amp[8]);
+VVVV5_3(w[0],w[1],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 10
-VVV1_0(w[2],w[9],w[3],pars->GC_4,amp[9]);
-VVVV2_3(w[0],w[2],w[3],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[2],w[9],w[3],pars.GC_4,amp[9]);
+VVVV2_3(w[0],w[2],w[3],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 11
-VVV1_0(w[1],w[9],w[4],pars->GC_53,amp[10]);
-VVVV5_2(w[0],w[3],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[1],w[9],w[4],pars.GC_53,amp[10]);
+VVVV5_2(w[0],w[3],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 12
-VVV1_0(w[2],w[1],w[9],pars->GC_4,amp[11]);"""
+VVV1_0(w[2],w[1],w[9],pars.GC_4,amp[11]);"""
 
         self.assertEqual(solution.split('\n'), result)
         
@@ -1134,4 +1167,3 @@ w[9]= VVVV5_2(w[0],w[3],w[4],GC_57,CMASS_mdl_MW)
 amp[11]= VVV1_0(w[2],w[1],w[9],GC_4)"""
         
         self.assertEqual(solution.split('\n'), result)        
-

@@ -18,11 +18,13 @@
 from __future__ import absolute_import
 import sys
 import os
+import shutil
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
+import madgraph.interface.master_interface as MGCmd
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -34,9 +36,39 @@ import madgraph.core.diagram_generation as diagram_generation
 import copy
 import array
 import models.import_ufo as import_ufo
+from madgraph import MG5DIR
 
 class testFKSHelasObjects(unittest.TestCase):
     """a class to test the module FKSHelasObjects"""
+
+    def _prepare_rs_model(self):
+        cache_root = os.path.join(os.path.expanduser('~'), '.cache', 'UFOMODEL')
+        cached_model = os.path.join(cache_root, 'RS')
+
+        if not os.path.isdir(cached_model):
+            source_model = os.path.join(MG5DIR, 'models', 'RS')
+            if not os.path.isdir(source_model):
+                try:
+                    import_ufo.import_model_from_db('RS')
+                except Exception:
+                    self.skipTest('RS UFO model is unavailable locally and could not be downloaded')
+            if not os.path.isdir(source_model):
+                self.skipTest('RS UFO model is unavailable locally')
+            if not os.path.isdir(cache_root):
+                os.makedirs(cache_root)
+            shutil.copytree(source_model, cached_model)
+
+        object_library = os.path.join(cached_model, 'object_library.py')
+        if os.path.exists(object_library):
+            with open(object_library) as stream:
+                content = stream.read()
+            if '.iteritems()' in content:
+                cmd = MGCmd.MasterCmd()
+                cmd.no_notification()
+                cmd.exec_cmd('convert model %s' % cached_model,
+                             precmd=False, postcmd=False)
+
+        return cached_model
 
     def setUp(self):
         if not hasattr(self, 'mymodel') or \
@@ -204,7 +236,8 @@ class testFKSHelasObjects(unittest.TestCase):
         p_leg = MG.MultiLeg({'ids': p, 'state': False});
         my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
                     + MG.MultiLegList([z_leg, z_leg]))
-        mymodel = import_ufo.import_model('RS')
+        mymodel = import_ufo.import_model(self._prepare_rs_model(),
+                                          options={'apply_flavor_grouping':False})
         my_process_definition = MG.ProcessDefinition({ \
                         'born_sq_orders': {'QCD':0, 'QED':4, 'QTD':4},
                         'squared_orders': {'QCD':2, 'QED':4, 'QTD':4},

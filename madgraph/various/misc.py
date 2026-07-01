@@ -414,7 +414,7 @@ def which_lib(lib):
             return lib
     else:
         locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
-           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+           ["MG5_LIBRARY_PATH", "DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
                                                   if env_path in os.environ],[])
         for path in locations:
             lib_file = os.path.join(path, lib)
@@ -798,11 +798,8 @@ def stdchannel_redirected(stdchannel, dest_filename):
             if dest_file is not None:
                 dest_file.close()
     else:
-        try:
-            logger.debug('no stdout/stderr redirection due to debug level')
-            yield
-        finally:
-            return
+        logger.debug('no stdout/stderr redirection due to debug level')
+        yield
         
         
 def get_open_fds():
@@ -943,6 +940,24 @@ def multiple_replacer(*key_values):
 def multiple_replace(string, *key_values):
     return multiple_replacer(*key_values)(string)
 
+
+_FORMAT_PATTERN = re.compile(
+    r'%\((\w+)\)([-+# 0]*\d*\.?\d*[hlL]?[diouxXeEfgGcrsa])'
+)
+
+def apply_template(template, mapping):
+    """Substitute %(name)<spec> placeholders in template with values from mapping.
+
+    Only matches valid Python %-format specifiers like %(name)s, %(name)d, or
+    %(name)3.3d. Any other '%' character is left untouched, so templates can
+    safely contain Fortran object member access (e.g., W(I)%P) without needing
+    to be escaped as '%%P'.
+    """
+    def replace(match):
+        name, spec = match.group(1), match.group(2)
+        return ('%' + spec) % mapping[name]
+    return _FORMAT_PATTERN.sub(replace, template)
+
 # Control
 def check_system_error(value=1):
     def deco_check(f):
@@ -990,7 +1005,19 @@ def call(arg, *args, **opt):
 @check_system_error()
 def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""
-    return subprocess.Popen(arg, *args, **opt)
+    try:
+        return subprocess.Popen(arg, *args, **opt)
+    except ValueError as error:
+        if 'I/O operation on closed file' not in str(error):
+            raise
+        # In some CI/threaded contexts sys.__stdout__ can be closed while a
+        # subprocess is started with stderr=STDOUT and no explicit stdout.
+        # Retry with explicit /dev/null redirection in that case.
+        if opt.get('stderr') == subprocess.STDOUT and opt.get('stdout') is None:
+            retry_opt = dict(opt)
+            retry_opt['stdout'] = subprocess.DEVNULL
+            return subprocess.Popen(arg, *args, **retry_opt)
+        raise
 
 @check_system_error()
 def call_stdout(arg, *args, **opt):
@@ -1980,11 +2007,25 @@ class EasterEgg(object):
         "*                                                          *\n" + \
         "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
 
+    towel_day_banner = "*      .---------.                                         *\n" + \
+        "*      |  DON'T  |    The Guide: you're reading it.        *\n" + \
+        "*      |  PANIC  |    Type 'help' for in-line help.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*      .---------.                                         *\n" + \
+        "*      |~~~~~~~~~|    The Towel: useful for wrapping       *\n" + \
+        "*      |~ TOWEL ~|    your phase space cuts, or just       *\n" + \
+        "*      |~~~~~~~~~|    crying when your job crashes.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*         ) ) )                                            *\n" + \
+        "*        ( ( (        A cup of tea: feed its Brownian      *\n" + \
+        "*      .-------.-.    motion to The Infinite Improbability *\n" + \
+        "*      |  tea  |-'    Drive (the Monte Carlo integration)  *\n" + \
+        "*      '-------'      to obtain cross sections (probably). *\n"
 
 
-
-
-    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
+    special_banner = {(4,5): May4_banner, (25,5): towel_day_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -2620,5 +2661,4 @@ def tqdm(iterator, **opts):
 #    return newfile(*args)
 #__builtin__.file = newfile
 #__builtin__.open = newopen
-
 

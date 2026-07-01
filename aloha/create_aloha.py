@@ -1079,6 +1079,14 @@ class AbstractALOHAModel(dict):
                 l_lorentz = []
                 for l_name in list_l_name: 
                     l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
+
+                if any(lor.spins != l_lorentz[0].spins for lor in l_lorentz[1:]):
+                    lorentzname = list_l_name[0]
+                    lorentzname += ''.join(tag)
+                    if (lorentzname, outgoing) in self:
+                        self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                    continue
+
                 builder = CombineRoutineBuilder(l_lorentz)
                                
                 for conjg in request[list_l_name[0]]:
@@ -1418,7 +1426,6 @@ if '__main__' == __name__:
     stop = time.time()
     logger.info('done in %s s' % (stop-start))
   
-
 
 
 

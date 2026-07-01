@@ -145,7 +145,9 @@ Function Mapping::forward_function() const {
         {_input_types.keys(), fb.input_range(0, n_inputs)},
         {_condition_types.keys(), fb.input_range(n_inputs, arg_types.size())}
     );
-    fb.output_range(0, outputs.values());
+    NamedVector<Value> sorted_outputs = outputs.sort_like(_output_types.index_map());
+    check_types(sorted_outputs, _output_types, "Output");
+    fb.output_range(0, sorted_outputs.values());
     fb.output(n_outputs, det);
     return fb.function();
 }
@@ -163,7 +165,9 @@ Function Mapping::inverse_function() const {
         {_output_types.keys(), fb.input_range(0, n_outputs)},
         {_condition_types.keys(), fb.input_range(n_outputs, arg_types.size())}
     );
-    fb.output_range(0, outputs.values());
+    NamedVector<Value> sorted_outputs = outputs.sort_like(_input_types.index_map());
+    check_types(sorted_outputs, _input_types, "Output");
+    fb.output_range(0, sorted_outputs.values());
     fb.output(n_inputs, det);
     return fb.function();
 }
@@ -189,6 +193,8 @@ Function FunctionGenerator::function() const {
     auto outputs = build_function_impl(
         fb, {_arg_types.keys(), fb.input_range(0, _arg_types.size())}
     );
-    fb.output_range(0, outputs.values());
+    NamedVector<Value> sorted_outputs = outputs.sort_like(_return_types.index_map());
+    check_types(sorted_outputs, _return_types, "Output");
+    fb.output_range(0, sorted_outputs.values());
     return fb.function();
 }

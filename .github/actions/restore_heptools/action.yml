@@ -22,7 +22,11 @@ runs:
         # Check that all expected HEPtool binaries/directories are present
         VALID=true
         test -d $HOME/.cache/HEPtools/lhapdf6_py3                    || VALID=false
-        test -d $HOME/.cache/HEPtools/pythia8                         || VALID=false
+        # check the header/binary, not just the dir: a network-failed pythia8
+        # install can leave an incomplete pythia8/ dir that MG5 then rejects
+        # (pythia8_path nullified -> no shower -> rivet/contur tests fail).
+        test -f $HOME/.cache/HEPtools/pythia8/include/Pythia8/Pythia.h || VALID=false
+        test -x $HOME/.cache/HEPtools/pythia8/bin/pythia8-config      || VALID=false
         test -x $HOME/.cache/HEPtools/bin/eMELA-config                || VALID=false
         test -x $HOME/.cache/HEPtools/fastjet/bin/fastjet-config      || VALID=false
         test -d $HOME/.cache/HEPtools/rivet                           || VALID=false

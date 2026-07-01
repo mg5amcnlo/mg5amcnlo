@@ -22,6 +22,7 @@ import os
 import re
 
 import tests.unit_tests as unittest
+import tests.IOTests as IOTests
 
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
@@ -50,11 +51,12 @@ from aloha.template_files.wavefunctions import \
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+pjoin = os.path.join
 
 #===============================================================================
 # IOExportPythonTest
 #===============================================================================
-class IOExportPythonTest(unittest.TestCase):
+class IOExportPythonTest(IOTests.IOTestManager):
     """Test class for the export v4 module"""
 
     mymodel = base_objects.Model()
@@ -217,182 +219,29 @@ class IOExportPythonTest(unittest.TestCase):
         self.assertEqual(self.exporter.model, self.mymodel)
         self.assertEqual(self.exporter.matrix_elements, self.mymatrixelement.get('matrix_elements'))
 
-    def test_get_python_matrix_methods(self):
-        """Test getting the matrix methods for Python for a matrix element."""
-        
-        goal_method = (\
-"""class Matrix_0_uux_uux(object):
-
-    def __init__(self):
-        \"\"\"define the object\"\"\"
-        self.clean()
-
-    def clean(self):
-        self.jamp = []
-
-    def smatrix(self, p, model, flavor=None):
-        #  
-        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
-        #  By the MadGraph5_aMC@NLO Development Team
-        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-        # 
-        # MadGraph5_aMC@NLO StandAlone Version
-        # 
-        # Returns amplitude squared summed/avg over colors
-        # and helicities
-        # for the point in phase space P(0:3,NEXTERNAL)
-        #  
-        # Process: u u~ > u u~
-        # Process: c c~ > c c~
-        #  
-        # Clean additional output
-        #
-        self.clean()
-        #  
-        # CONSTANTS
-        #  
-        nexternal = 4
-        ndiags = 4
-        ncomb = 16
-        #  
-        # LOCAL VARIABLES 
-        #  
-        helicities = [ \\
-        [1,-1,-1,1],
-        [1,-1,-1,-1],
-        [1,-1,1,1],
-        [1,-1,1,-1],
-        [1,1,-1,1],
-        [1,1,-1,-1],
-        [1,1,1,1],
-        [1,1,1,-1],
-        [-1,-1,-1,1],
-        [-1,-1,-1,-1],
-        [-1,-1,1,1],
-        [-1,-1,1,-1],
-        [-1,1,-1,1],
-        [-1,1,-1,-1],
-        [-1,1,1,1],
-        [-1,1,1,-1]]
-        denominator = 36
-        # ----------
-        # BEGIN CODE
-        # ----------
-        self.amp2 = [0.] * ndiags
-        self.helEvals = []
-        ans = 0.
-        for hel in helicities:
-            t = self.matrix(p, hel, model, flavor)
-            ans = ans + t
-            self.helEvals.append([hel, t.real / denominator ])
-        # Apply flavor-dependent symmetry factor (broken_sym) for merged
-        # processes.  For a merged matrix element the denominator includes the
-        # identical-particle factorial of the *base* process.  When the actual
-        # runtime flavor has a different set of identical final-state particles,
-        # a correction factor must be applied, exactly as in the Fortran/C++
-        # BROKEN_SYM function:  ans = ans * broken_sym / denominator.
-        if flavor is not None:
-            _sym_pid = list([2, -2])
-            _sym_factor = 1
-            _ninitial = 2
-            for _i in range(len(_sym_pid)):
-                if _sym_pid[_i] == 0:
-                    continue
-                _n_tot = 1
-                for _j in range(_i + 1, len(_sym_pid)):
-                    if _sym_pid[_i] == _sym_pid[_j] and flavor[_ninitial + _i] == flavor[_ninitial + _j]:
-                        _sym_pid[_j] = 0
-                        _n_tot += 1
-                        _sym_factor = _sym_factor // _n_tot
-            ans = ans * _sym_factor / denominator
-        else:
-            ans = ans / denominator
-        return ans.real
-
-    def matrix(self, p, hel, model, flavor=None):
-        #  
-        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
-        #  By the MadGraph5_aMC@NLO Development Team
-        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
-        #
-        # Returns amplitude squared summed/avg over colors
-        # for the point with external lines W(0:6,NEXTERNAL)
-        #
-        # Process: u u~ > u u~
-        # Process: c c~ > c c~
-        #  
-        #  
-        # Process parameters
-        #  
-        ngraphs = 4
-        nexternal = 4
-        nwavefuncs = 5
-        ncolor = 2
-        ZERO = 0.
-        #  
-        # Color matrix
-        #  
-        denom = [1,1];
-        cf = [[9,3],
-        [3,9]];
-        #
-        # Model parameters
-        #
-        MZ = model.get('parameter_dict')["MZ"]
-        WZ = model.get('parameter_dict')["WZ"]
-        GC_10 = model.get('coupling_dict')["GC_10"]
-        GC_35 = model.get('coupling_dict')["GC_35"]
-        GC_47 = model.get('coupling_dict')["GC_47"]
-        # ----------
-        # Begin code
-        # ----------
-        amp = [None] * ngraphs
-        w = [None] * nwavefuncs
-        w[0] = ixxxxx(p[0],ZERO,hel[0],+1, flavor[0] if flavor is not None else -1)
-        w[1] = oxxxxx(p[1],ZERO,hel[1],-1, flavor[1] if flavor is not None else -1)
-        w[2] = oxxxxx(p[2],ZERO,hel[2],+1, flavor[2] if flavor is not None else -1)
-        w[3] = ixxxxx(p[3],ZERO,hel[3],-1, flavor[3] if flavor is not None else -1)
-        w[4]= FFV1_3(w[0],w[1],GC_10,ZERO,ZERO)
-        # Amplitude(s) for diagram number 1
-        amp[0]= FFV1_0(w[3],w[2],w[4],GC_10)
-        w[4]= FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ,WZ)
-        # Amplitude(s) for diagram number 2
-        amp[1]= FFV2_5_0(w[3],w[2],w[4],GC_35,GC_47)
-        w[4]= FFV1_3(w[0],w[2],GC_10,ZERO,ZERO)
-        # Amplitude(s) for diagram number 3
-        amp[2]= FFV1_0(w[3],w[1],w[4],GC_10)
-        w[4]= FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ,WZ)
-        # Amplitude(s) for diagram number 4
-        amp[3]= FFV2_5_0(w[3],w[1],w[4],GC_35,GC_47)
-
-        jamp = [None] * ncolor
-
-        jamp[0] = +1./6.*amp[0]-amp[1]+1./2.*amp[2]
-        jamp[1] = -1./2.*amp[0]-1./6.*amp[2]+amp[3]
-
-        self.amp2[0]+=abs(amp[0]*amp[0].conjugate())
-        self.amp2[1]+=abs(amp[1]*amp[1].conjugate())
-        self.amp2[2]+=abs(amp[2]*amp[2].conjugate())
-        self.amp2[3]+=abs(amp[3]*amp[3].conjugate())
-        matrix = 0.
-        for i in range(ncolor):
-            ztemp = 0
-            for j in range(ncolor):
-                ztemp = ztemp + cf[i][j]*jamp[j]
-            matrix = matrix + ztemp * jamp[i].conjugate()/denom[i]   
-        self.jamp.append(jamp)
-
-        return matrix
-""" % misc.get_pkg_info()).split('\n')
+    @IOTests.createIOTest()
+    def testIO_get_python_matrix_methods(self):
+        """ target: Matrix_0_uux_uux.py
+        """
 
         exporter = export_python.ProcessExporterPython(self.mymatrixelement,
                                                        self.mypythonmodel)
 
-        matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
-                          split('\n')
+        matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"]
+        open(pjoin(self.IOpath, 'Matrix_0_uux_uux.py'), 'w').write(matrix_methods)
 
-        self.assertEqual(matrix_methods, goal_method)
-        
+    def test_python_template_uses_decay_aware_broken_symmetry_metadata(self):
+        with open(os.path.join(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                               'matrix_method_python.inc')) as stream:
+            template = stream.read()
+        self.assertIn('%(broken_sym_ncomponents)d', template)
+        self.assertIn('%(broken_sym_component_starts)s', template)
+        self.assertIn('%(broken_sym_component_ends)s', template)
+        self.assertIn('%(broken_sym_component_old_factors)s', template)
+        self.assertIn('%(broken_sym_pid_list)s', template)
+        self.assertIn('%(broken_sym_block_starts)s', template)
+        self.assertIn('%(broken_sym_block_lengths)s', template)
+
 
     def test_run_python_matrix_element(self):
         """Test a complete running of a Python matrix element without
@@ -698,4 +547,3 @@ class IOExportPythonTest(unittest.TestCase):
                                         subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
                          ['self.amp2[0]+=abs(amp[0]*amp[0].conjugate())', 'self.amp2[1]+=abs(amp[1]*amp[1].conjugate())', 'self.amp2[2]+=abs(amp[2]*amp[2].conjugate())'])
-

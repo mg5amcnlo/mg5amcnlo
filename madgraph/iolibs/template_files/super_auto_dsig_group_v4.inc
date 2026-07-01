@@ -25,7 +25,7 @@ C     ****************************************************
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       
-      INTEGER I,J, IPROC, IMIRROR
+      INTEGER I,J,K, IPROC, IMIRROR
       DOUBLE PRECISION PP(*), WGT
       LOGICAL INIT
       
@@ -45,6 +45,7 @@ c     TODO: MOVE THIS AS A COMMON BLOCK?
       INCLUDE 'symperms.inc'
       LOGICAL MIRRORPROCS(MAXSPROC,MAXFLAVPERPROC)
       INTEGER NB_FLAV(MAXSPROC)
+      INTEGER N_INDIV_FLAV(MAXFLAVPERPROC,MAXSPROC)
       common /flavor_information/nb_flav
       INCLUDE 'mirrorprocs.inc' ! fill MIRRORPROCS and      
 
@@ -199,7 +200,7 @@ C      all, then we pick a point based on PDF only.
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
-              DO K=1,NB_FLAV(IPROC)
+              DO K=1,NB_FLAV(I)
                 DO L=1,2
                   TOTWGT=TOTWGT+SELPROC(L,K,I,J)
                   IF(R.LT.TOTWGT)THEN
@@ -366,7 +367,7 @@ c     ENDIF
          DO I=(CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
         IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
-             SUMWGT(IMIRROR_VEC(CURR_WARP),IPROC,IFLAV_VEC(CURR_WARP),ICONF_VEC(CURR_WARP))=SUMWGT(IMIRROR_VEC(CURR_WARP),IFLAV_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))+DABS(ALL_OUT(I)*ALL_WGT(I))
+             SUMWGT(IMIRROR_VEC(CURR_WARP),IFLAV_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))=SUMWGT(IMIRROR_VEC(CURR_WARP),IFLAV_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))+DABS(ALL_OUT(I)*ALL_WGT(I))
              NUMEVTS(IMIRROR_VEC(CURR_WARP),IFLAV_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))=NUMEVTS(IMIRROR_VEC(CURR_WARP),IFLAV_VEC(CURR_WARP),IPROC,ICONF_VEC(CURR_WARP))+1
             ENDIF  
          ENDDO
@@ -415,7 +416,7 @@ C
 C LOCAL VARIABLES 
 C  
       integer Lmapped
-      INTEGER I,J,K,L,LUN,ICONF,IMIRROR,IFLAV,NPROC
+      INTEGER I,J,K,L,LUN,ICONF,IMIRROR,IFLAV,NPROC,IROW
       SAVE NPROC
       INTEGER SYMCONF(0:LMAXCONFIGS)
       COMMON /TO_SYMCONF/ SYMCONF
@@ -426,8 +427,13 @@ C
       INCLUDE 'symperms.inc'
       LOGICAL MIRRORPROCS(MAXSPROC,MAXFLAVPERPROC)
       INTEGER NB_FLAV(MAXSPROC)
+      INTEGER N_INDIV_FLAV(MAXFLAVPERPROC,MAXSPROC)
       common /flavor_information/nb_flav
       INCLUDE 'mirrorprocs.inc'
+C   Common block to pass per-leshouche-row relative weights to dsample.f
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
 C   SELPROC is vector of selection weights for the subprocesses
 C   SUMWGT is vector of total weight for the subprocesses
 C   NUMEVTS is vector of event calls for the subprocesses
@@ -466,6 +472,10 @@ C      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run.inc'
+C     multi_channel controls whether to apply multi-channel permutations
+      INTEGER ISUM_HEL
+      LOGICAL MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 C   ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
@@ -519,6 +529,10 @@ C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
+        IF (.NOT.MULTI_CHANNEL) THEN
+          SYMCONF(0)=IPROC
+          RETURN
+        ENDIF
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
           READ(LUN,*,ERR=10,END=10) XDUM, ICONF
@@ -572,6 +586,44 @@ C     Output weights and number of events
           WRITE(*,'(%(nsprocs)dI12)')(((NUMEVTS(L,K,I,J),L=1,2),K=1,MAXFLAVPERPROC),I=1,MAXSPROC)
         ENDDO
 C       Reset weights and number of events
+C       First compute and store per-leshouche-row relative weights for results.dat
+        NREL_SPROC_STORE = 0
+        DO I=1,MAXSPROC
+          DO K=1,NB_FLAV(I)
+            NREL_SPROC_STORE = NREL_SPROC_STORE + N_INDIV_FLAV(K,I)
+          ENDDO
+        ENDDO
+        SUMPROB = 0D0
+        DO J=1,SYMCONF(0)
+          DO I=1,MAXSPROC
+            DO K=1,NB_FLAV(I)
+              DO L=1,2
+                SUMPROB = SUMPROB + SUMWGT(L,K,I,J)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        IF (SUMPROB.GT.0D0.AND.NREL_SPROC_STORE.GT.0.AND.NREL_SPROC_STORE.LE.1024) THEN
+          IROW = 0
+          DO I=1,MAXSPROC
+            DO K=1,NB_FLAV(I)
+              TOTWGT=0D0
+              DO J=1,SYMCONF(0)
+                DO L=1,2
+                  TOTWGT=TOTWGT+SUMWGT(L,K,I,J)
+                ENDDO
+              ENDDO
+              DO IFLAV=1,N_INDIV_FLAV(K,I)
+                IROW=IROW+1
+                REL_SPROC_STORE(IROW)=TOTWGT/SUMPROB/DBLE(N_INDIV_FLAV(K,I))
+              ENDDO
+            ENDDO
+          ENDDO
+        ELSE IF (NREL_SPROC_STORE.GT.0.AND.NREL_SPROC_STORE.LE.1024) THEN
+          DO IROW=1,NREL_SPROC_STORE
+            REL_SPROC_STORE(IROW)=1D0/DBLE(NREL_SPROC_STORE)
+          ENDDO
+        ENDIF
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             DO K=1,NB_FLAV(I)
@@ -585,7 +637,7 @@ C       Reset weights and number of events
         ENDDO
         
         RETURN
-      ELSE IF(IMODE.EQ.3)THEN
+       ELSE IF(IMODE.EQ.3)THEN
 C     No finalize needed
         RETURN
       ENDIF

@@ -134,6 +134,17 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
         misc.sprint('Entering ProcessExporterMadMatrix.__init__ (initialise the exporter)')
         args[1]["me_lib_format"] = pjoin("lib", "libmadmatrix_{process_id}_{{device}}.so")
         super().__init__(*args, **kwargs)
+        # Honor the output command's --mask=True|False (flavor-mask
+        # optimization for grouped/merged flavors). Default: enabled.
+        self.use_flavor_mask = self._parse_flavor_mask_option()
+
+    def _parse_flavor_mask_option(self):
+        """Read --mask=True|False from the output command line (default True)."""
+        out_opts = self.opt.get('output_options', {}) if hasattr(self, 'opt') else {}
+        val = out_opts.get('mask', True)
+        if isinstance(val, str):
+            return val.strip().lower() not in ('false', '0', 'no', 'off')
+        return bool(val)
 
     # AV - overload the default version: create CMake directory, do not create lib directory
     def copy_template(self, model):
@@ -152,6 +163,10 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
         misc.sprint('  type(cpp_helas_call_writer)=%s'%type(cpp_helas_call_writer)) # e.g. madgraph.iolibs.helas_call_writers.GPUFOHelasCallWriter
         misc.sprint('  type(proc_number)=%s me=%s'%(type(proc_number) if proc_number is not None else None, proc_number)) # e.g. int
         misc.sprint("need to link", self.to_link_in_P)
+        # Propagate the --mask toggle to the helas call writer that emits the
+        # guarded wavefunction/amplitude calls.
+        if cpp_helas_call_writer is not None:
+            cpp_helas_call_writer.use_flavor_mask = self.use_flavor_mask
         out = super().generate_subprocess_directory(matrix_element, cpp_helas_call_writer, proc_number)
         return out
 

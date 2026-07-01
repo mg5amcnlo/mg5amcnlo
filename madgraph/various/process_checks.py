@@ -57,6 +57,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
+import contextlib
 import madgraph.various.rambo as rambo
 import madgraph.various.misc as misc
 import madgraph.various.progressbar as pbar
@@ -77,7 +78,7 @@ from madgraph.iolibs.files import cp
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
-     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx, sfdxxx, vfdxxxx
 import io
 import io as StringIO
 file = io.FileIO
@@ -1072,7 +1073,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         original_file=""
         gaugeVectorRegExp=re.compile(\
          r"CALL (MP\_)?VXXXXX\(P\(0,(?P<p_id>\d+)\),((D)?CMPLX\()?ZERO((,KIND\=16)?\))?,"+
-         r"NHEL\(\d+\),[\+\-]1\*IC\(\d+\),W\(1,(?P<wf_id>\d+(,H)?)\)\)")
+         r"NHEL\(\d+\),[\+\-]1\,W\((?P<wf_id>\d+(,H)?)\)\)")
         foundGauge=False
         # Now we modify the first massless gauge vector wavefunction
         for line in file:
@@ -3628,9 +3629,12 @@ def check_flavor(process_definition, param_card=None, options=None,
     # process share the same matrix class (the merged PDG codes give the same
     # shell_string), and flavor is a runtime argument passed to smatrix, so
     # the class can safely be reused across different flavor evaluations.
+    # Keep reuse disabled here: Matrix_* classes are module globals keyed only
+    # by process shell string, so reusing across the merged/unmerged evaluators
+    # can pick up a class generated with the other model.
     evaluator_merged = MatrixElementEvaluator(merged_model, param_card,
                                               cmd=cmd,
-                                              auth_skipping=False, reuse=True)
+                                              auth_skipping=False, reuse=False)
     if not cmass_scheme and multiprocess.get('perturbation_couplings') == []:
         logger.info('Setting all widths to zero for flavor check')
         for particle in evaluator_merged.full_model.get('particles'):
@@ -3648,7 +3652,7 @@ def check_flavor(process_definition, param_card=None, options=None,
 
     evaluator_unmerged = MatrixElementEvaluator(unmerged_model, param_card,
                                                 cmd=cmd,
-                                                auth_skipping=False, reuse=True)
+                                                auth_skipping=False, reuse=False)
     if not cmass_scheme:
         for particle in evaluator_unmerged.full_model.get('particles'):
             if particle.get('width') != 'ZERO':
@@ -3875,12 +3879,123 @@ def output_flavor(comparison_results, output='text'):
 
 
 #===============================================================================
+# Marsaglia-Zaman RNG matching the check_sa Fortran/C++ template seed
+#===============================================================================
+class _Ranmar(object):
+    """Marsaglia-Zaman RNG used in the check_sa Fortran/C++ templates.
+
+    Initialising with the same seeds as the templates (``ij=1802, kl=9373``)
+    and drawing numbers in the same sequence gives identical RAMBO phase-space
+    points, allowing the Python backend in ``check_language`` to compare
+    against Fortran/C++ results without relying on printed momenta.
+    """
+
+    def __init__(self, ij=1802, kl=9373):
+        self.ranu = [0.0] * 98
+        self.rmarin(ij, kl)
+
+    def rmarin(self, ij, kl):
+        i = (ij // 177) % 177 + 2
+        j = ij % 177 + 2
+        k = (kl // 169) % 178 + 1
+        l = kl % 169
+        for ii in range(1, 98):
+            s = 0.0
+            t = 0.5
+            for _ in range(24):
+                m = ((i * j) % 179 * k) % 179
+                i, j, k = j, k, m
+                l = (53 * l + 1) % 169
+                if (l * m) % 64 >= 32:
+                    s += t
+                t *= 0.5
+            self.ranu[ii] = s
+        self.ranc = 362436.0 / 16777216.0
+        self.rancd = 7654321.0 / 16777216.0
+        self.rancm = 16777213.0 / 16777216.0
+        self.iranmr = 97
+        self.jranmr = 33
+
+    def ranmar(self):
+        uni = self.ranu[self.iranmr] - self.ranu[self.jranmr]
+        if uni < 0.0:
+            uni += 1.0
+        self.ranu[self.iranmr] = uni
+        self.iranmr -= 1
+        self.jranmr -= 1
+        if self.iranmr == 0:
+            self.iranmr = 97
+        if self.jranmr == 0:
+            self.jranmr = 97
+        self.ranc -= self.rancd
+        if self.ranc < 0.0:
+            self.ranc += self.rancm
+        uni -= self.ranc
+        if uni < 0.0:
+            uni += 1.0
+        return uni
+
+    def rn(self):
+        out = self.ranmar()
+        while out < 1e-16:
+            out = self.ranmar()
+        return out
+
+
+@contextlib.contextmanager
+def _seeded_rambo_rng(ij=1802, kl=9373):
+    """Context manager that temporarily replaces ``rambo.random_nb`` with a
+    fresh Marsaglia-Zaman RNG seeded with *(ij, kl)*.
+
+    This gives a deterministic RAMBO phase-space point that matches the one
+    produced by the check_sa Fortran/C++ binaries, which use the same seed
+    convention.
+
+    .. warning::
+        This patches a module-level function and is therefore **not
+        thread-safe**.  It should only be used in single-threaded context such
+        as the interactive check command.
+    """
+    rng = _Ranmar(ij, kl)
+    old_random_nb = rambo.random_nb
+    rambo.random_nb = lambda _dummy: rng.rn()
+    try:
+        yield rng
+    finally:
+        rambo.random_nb = old_random_nb
+
+
+def _get_seeded_python_momenta(proc, evaluator_obj, energy_value):
+    """Generate Python momenta with the same RAMBO RNG seed as check_sa.
+
+    Uses :func:`_seeded_rambo_rng` to temporarily replace ``rambo.random_nb``
+    with a fresh Marsaglia-Zaman RNG (seeds ``1802, 9373``) identical to those
+    hard-coded in the Fortran/C++ check_sa templates, so that all three
+    backends in ``check_language`` share the same phase-space point without
+    relying on parsed printed output.
+
+    Returns ``None`` on any error.
+    """
+    if evaluator_obj is None:
+        return None
+    try:
+        with _seeded_rambo_rng(1802, 9373):
+            seeded_options = {'energy': float(energy_value),
+                              'events': None,
+                              'skip_evt': 0}
+            p_seeded, _ = evaluator_obj.get_momenta(proc, seeded_options)
+        return p_seeded
+    except Exception:
+        return None
+
+
+#===============================================================================
 # check_language
 #===============================================================================
 def check_language(process_definition, param_card=None, options=None,
                    cmd=FakeInterface()):
-    """Compare Fortran SA and C++ SA matrix elements for each process in
-    *process_definition*.
+    """Compare Fortran SA, C++ SA and Python matrix elements for each process
+    in *process_definition*.
 
     For each process the function:
 
@@ -3888,8 +4003,11 @@ def check_language(process_definition, param_card=None, options=None,
        ``./check <energy>`` where *energy* is fixed so that both backends use
        the same RAMBO seed → identical phase-space points.
     2. Does the same with the C++ SA back-end.
-    3. Parses both outputs, extracts the per-flavor |M|² values, and compares
-       them.
+    3. Evaluates the matrix element in pure Python using the phase-space
+       point printed by the SA binaries (so all three backends see the same
+       momenta).
+    4. Parses the outputs, extracts the per-flavor |M|² values, and compares
+       all three backends.
 
     The centre-of-mass energy defaults to 1000 GeV and can be overridden via
     ``options['energy']``.
@@ -3913,6 +4031,8 @@ def check_language(process_definition, param_card=None, options=None,
         ``'process'``       – :class:`base_objects.Process`,
         ``'value_fortran'`` – ``{'m2': float}`` or ``None``,
         ``'value_cpp'``     – ``{'m2': float}`` or ``None``,
+        ``'value_mg7'``     – ``{'m2': float}`` or ``None``,
+        ``'value_python'``  – ``{'m2': float}`` or ``None``,
         ``'momenta'``       – phase-space point (list of 4-vectors) or ``None``.
     """
     import madgraph.iolibs.export_v4 as export_v4
@@ -3935,6 +4055,17 @@ def check_language(process_definition, param_card=None, options=None,
                         cmd.options.get('fortran_compiler')) or 'gfortran'
     cpp_compiler     = (hasattr(cmd, 'options') and
                         cmd.options.get('cpp_compiler'))     or 'g++'
+
+    # MG7 (standalone_mg7 / madmatrix) availability: needs the madmatrix
+    # package, a C++ compiler and make.  Its check_sa.exe "matrix" mode
+    # evaluates the same phase-space point as the Fortran/C++ drivers and
+    # prints the per-flavor PDG / matrix-element lines in the same format.
+    try:
+        from madmatrix import output as madmatrix_output
+        from madmatrix import model_handling as madmatrix_model_handling
+        has_mg7 = has_cpp and bool(misc.which('make'))
+    except ImportError:
+        has_mg7 = False
 
     # Ensure Template/LO/Source/make_opts exists (written on first MG5 run).
     make_opts     = pjoin(MG5DIR, 'Template', 'LO', 'Source', 'make_opts')
@@ -3980,6 +4111,24 @@ def check_language(process_definition, param_card=None, options=None,
                     result[key] = val
                 current_pdgs = None
         return result
+
+    def _parse_momenta(text):
+        """Parse the phase-space point printed once per SA run.
+
+        Returns the first contiguous block of momentum lines (stopping at the
+        first non-matching line), so the per-flavor matrix element values that
+        follow do not leak into the list.
+        """
+        momenta = []
+        started = False
+        for line in text.split('\n'):
+            m = _mom_re.match(line)
+            if m:
+                momenta.append([float(x) for x in m.groups()[:4]])
+                started = True
+            elif started:
+                break
+        return momenta
 
     def _pdg_tuple_to_label(pdg_tuple, m, proc):
         """Convert a tuple of PDG codes to a human-readable process label.
@@ -4076,11 +4225,32 @@ def check_language(process_definition, param_card=None, options=None,
         'output_dependencies': 'external',
     }
 
+    # ── Python evaluator (always available – pure-Python back-end) ────────────
+    has_python = True
+    evaluator = None
+    try:
+        # Keep reuse disabled to avoid reusing Matrix_* globals generated in a
+        # previous check command with a different model.
+        evaluator = MatrixElementEvaluator(model, param_card, cmd=cmd,
+                                           auth_skipping=False, reuse=False)
+    except Exception as err:
+        logger.info("Language check: Python evaluator setup failed: %s" % err)
+        has_python = False
+
+    # Merged-particle map used to set per-leg flavor tags when the SA output
+    # iterates over individual flavors of a merged multi-leg.
+    try:
+        merged_particles = model.get('merged_particles') or {}
+    except Exception:
+        merged_particles = {}
+
     results = []
     # Cache SA output text (stdout of ./check <energy>) keyed by the leg-id
     # tuple.  All individual-flavor procs share the same matrix element code.
     sa_f_output_cache   = {}
     sa_cpp_output_cache = {}
+    # Cache of MG7 (standalone_mg7) check_sa.exe matrix-mode output text.
+    sa_mg7_output_cache = {}
 
     energy_str = str(energy)
 
@@ -4204,32 +4374,166 @@ def check_language(process_definition, param_card=None, options=None,
 
             out_cpp_text = sa_cpp_output_cache.get(sa_key)
 
+        # ── MG7 SA (standalone_mg7 / madmatrix) ──────────────────────────────
+        out_mg7_text = None
+        if has_mg7:
+            if sa_key not in sa_mg7_output_cache:
+                sa_mg7_output_cache[sa_key] = {}
+                parent_mg7 = tempfile.mkdtemp(prefix='mg5_langcheck_mg7_')
+                sa_dir_mg7 = pjoin(parent_mg7, 'sa_mg7')
+                try:
+                    opt_mg7 = {'export_format': 'standalone_mg7',
+                               'mp': False, 'v5_model': True,
+                               'cpp_compiler': cpp_compiler,
+                               'output_options': {}}
+                    exporter_mg7 = madmatrix_output.\
+                        ProcessExporterMadMatrixStandalone(sa_dir_mg7, opt_mg7)
+                    mg7_writer = madmatrix_model_handling.\
+                        MadMatrixUFOHelasCallWriter(model)
+                    exporter_mg7.copy_template(model)
+                    me_mg7 = copy.deepcopy(me)
+                    exporter_mg7.generate_subprocess_directory(me_mg7,
+                                                               mg7_writer, 0)
+                    exporter_mg7.convert_model(model, wl, wc)
+                    exporter_mg7.finalize({'matrix_elements': [me_mg7]}, '',
+                                          mg5opt, ['nojpeg'])
+                    p_dirs_mg7 = sorted([
+                        d for d in os.listdir(pjoin(sa_dir_mg7, 'SubProcesses'))
+                        if d.startswith('P') and
+                        os.path.isdir(pjoin(sa_dir_mg7, 'SubProcesses', d))])
+                    if p_dirs_mg7:
+                        check_dir_mg7 = pjoin(sa_dir_mg7, 'SubProcesses',
+                                              p_dirs_mg7[0])
+                        backends = ["cppnone", "cppsse4", "cppavx2", "cpp512z", "cuda", "hip"]
+                        for backend in backends:
+                            with open(os.devnull, 'w') as devnull:
+                                ret = subprocess.call(f'make clean && make BACKEND={backend} USEBUILDDIR=1', shell=True, cwd=check_dir_mg7,
+                                                      stdout=devnull,
+                                                      stderr=devnull)
+                            if ret == 0:
+                                try:
+                                    out_mg7 = subprocess.check_output(
+                                        ['./check_sa.exe', 'matrix', energy_str],
+                                        cwd=check_dir_mg7,
+                                        stderr=subprocess.STDOUT).decode()
+                                    sa_mg7_output_cache[sa_key][backend] = out_mg7
+                                except Exception:
+                                    pass
+                except Exception as err:
+                    logger.info("Language check: MG7 SA failed for %s: %s"
+                                % (proc.nice_string(), err))
+                finally:
+                    shutil.rmtree(parent_mg7, ignore_errors=True)
+
+            out_mg7_text = sa_mg7_output_cache.get(sa_key)
+
         # ── per-flavor comparison ─────────────────────────────────────────────
-        # Parse ALL PDG blocks from both SA outputs and match by PDG tuple so
+        # Parse ALL PDG blocks from the SA outputs and match by PDG tuple so
         # that merged-particle processes (e.g. _quark _anti_quark > z g) are
         # compared flavor-by-flavor: u u~ > z g, d d~ > z g, etc.
         from collections import OrderedDict as _OD
         flavors_f   = _parse_all_flavors_dict(out_f_text)   if out_f_text   else _OD()
         flavors_cpp = _parse_all_flavors_dict(out_cpp_text) if out_cpp_text else _OD()
+        flavors_mg7 = { b: _parse_all_flavors_dict(mg7_text) if mg7_text else _OD() for b, mg7_text in out_mg7_text.items() }
 
-        # Union of PDG keys in order: Fortran first, then any C++-only keys.
+        # Build the Python phase-space point using the same RAMBO RNG seed as
+        # check_sa (Fortran/C++), so all backends compare on the same point.
+        sa_momenta = _get_seeded_python_momenta(proc, evaluator, energy)
+        if not sa_momenta:
+            # Fallback to parsing the point printed by SA when seeded generation
+            # is unavailable.
+            if out_f_text:
+                sa_momenta = _parse_momenta(out_f_text)
+            if not sa_momenta and out_cpp_text:
+                sa_momenta = _parse_momenta(out_cpp_text)
+            if not sa_momenta:
+                sa_momenta = None
+
+        # Union of PDG keys in order: Fortran first, then any keys seen only
+        # by the C++ or MG7 backends.
+        mg7_keys = []
+        for _, flavors in flavors_mg7.items():
+            mg7_keys.extend(list(flavors.keys()))
         all_keys = list(dict.fromkeys(
-            list(flavors_f.keys()) + list(flavors_cpp.keys())))
+            list(flavors_f.keys()) + list(flavors_cpp.keys()) + mg7_keys
+        ))
+
+        # ── Python evaluation per PDG tuple ───────────────────────────────────
+        # Run the Python back-end with the same phase-space point as Fortran/
+        # C++.  For merged-particle processes the leg flavor tags are set to
+        # the individual PDG codes before each call so that smatrix selects
+        # the matching FLV-coupling component.  We rebuild the Process from
+        # scratch (rather than deep-copying) because the SA exporters mutate
+        # internal color-algebra objects on the legs in a way that breaks
+        # color_amp.create_color_dict_list when re-evaluated.
+        py_values = {}
+        if has_python and sa_momenta and all_keys:
+            keys_for_python = all_keys if all_keys != [None] else [None]
+            orig_legs = list(proc.get('legs'))
+            for key in keys_for_python:
+                new_legs = base_objects.LegList()
+                for idx, src_leg in enumerate(orig_legs):
+                    leg_data = {
+                        'id':     src_leg.get('id'),
+                        'state':  src_leg.get('state'),
+                        'number': idx + 1,
+                    }
+                    if (key is not None and
+                            abs(src_leg.get('id')) in merged_particles):
+                        leg_data['flavor'] = [abs(key[idx])]
+                    new_legs.append(base_objects.Leg(leg_data))
+                proc_py = base_objects.Process({
+                    'legs':  new_legs,
+                    'model': model,
+                    'orders': proc.get('orders'),
+                    'forbidden_particles': proc.get('forbidden_particles'),
+                    'forbidden_onsh_s_channels':
+                        proc.get('forbidden_onsh_s_channels'),
+                    'forbidden_s_channels': proc.get('forbidden_s_channels'),
+                    'perturbation_couplings':
+                        proc.get('perturbation_couplings'),
+                })
+                try:
+                    amp_py = diagram_generation.Amplitude(proc_py)
+                    if not amp_py.get('diagrams'):
+                        continue
+                    me_py_obj = helas_objects.HelasMatrixElement(amp_py,
+                                                                 gen_color=True)
+                    result = evaluator.evaluate_matrix_element(
+                        me_py_obj, p=sa_momenta, options=options)
+                    if result is None:
+                        continue
+                    if isinstance(result, tuple):
+                        m2_py = result[0]
+                    elif isinstance(result, dict):
+                        m2_py = result.get('m2')
+                    else:
+                        m2_py = result
+                    py_values[key] = m2_py
+                except Exception as err:
+                    logger.info(
+                        "Language check: Python eval failed for %s: %s"
+                        % (proc.nice_string(), err))
 
         if not all_keys:
             # Neither backend ran → one placeholder entry so the process still
             # appears in the output table.
+            mg7_results = { f"value_mg7_{b}": None for b in flavors_mg7.keys() }
             results.append({
                 'process':        proc,
                 'process_label':  proc.base_string(),
                 'value_fortran':  None,
                 'value_cpp':      None,
-                'momenta':        None,
+                **mg7_results,
+                'value_python':   None,
+                'momenta':        sa_momenta,
             })
         else:
             for key in all_keys:
                 me_f_val   = flavors_f.get(key)
                 me_cpp_val = flavors_cpp.get(key)
+                me_mg7_val = { f"value_mg7_{b}": flv.get(key) for b, flv in flavors_mg7.items() }
+                me_py_val  = py_values.get(key)
 
                 if key is None:
                     label = proc.base_string()
@@ -4241,7 +4545,10 @@ def check_language(process_definition, param_card=None, options=None,
                     'process_label':  label,
                     'value_fortran':  {'m2': me_f_val}   if me_f_val   is not None else None,
                     'value_cpp':      {'m2': me_cpp_val} if me_cpp_val is not None else None,
-                    'momenta':        None,
+                    **{ k: {'m2': val} if val is not None else None for k, val in me_mg7_val.items() },
+                    'value_mg7':      {'m2': me_mg7_val} if me_mg7_val is not None else None,
+                    'value_python':   {'m2': me_py_val}  if me_py_val  is not None else None,
+                    'momenta':        sa_momenta,
                 })
 
     clean_added_globals(ADDED_GLOBAL)
@@ -4249,7 +4556,7 @@ def check_language(process_definition, param_card=None, options=None,
 
 
 def output_language(comparison_results, output='text'):
-    """Present the results of a Fortran SA / C++ SA language cross-check.
+    """Present the results of a Fortran SA / C++ SA / MG7 SA / Python cross-check.
 
     Parameters
     ----------
@@ -4268,7 +4575,7 @@ def output_language(comparison_results, output='text'):
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
-    col_size = 18
+    col_size = 16
     process_header = "Process"
 
     pass_proc = 0
@@ -4277,10 +4584,17 @@ def output_language(comparison_results, output='text'):
     no_check_list = []
     failed_list = []
 
+    # in case something broke within MG7, we just write a single N/A column
+    try:
+        mg7_columns = [fixed_string_length(f"MG7 SA ({k.rsplit('_',1)[-1]})", col_size) for k in comparison_results[0]["value_mg7"]["m2"].keys()]
+    except KeyError:
+        mg7_columns = [fixed_string_length("MG7 SA", col_size)]
     res_str = (fixed_string_length(process_header, proc_col_size) +
                fixed_string_length("Fortran SA", col_size) +
                fixed_string_length("C++ SA", col_size) +
-               fixed_string_length("F/C++ rel.diff.", col_size) +
+               "".join(mg7_columns) + 
+               fixed_string_length("Python", col_size) +
+               fixed_string_length("max rel.diff.", col_size) +
                "Result")
 
     def _fmt(v):
@@ -4301,26 +4615,53 @@ def output_language(comparison_results, output='text'):
         proc    = entry.get('process_label', entry['process'].base_string())
         val_f   = entry['value_fortran']
         val_cpp = entry['value_cpp']
+        val_mg7 = entry.get('value_mg7')
+        val_py  = entry.get('value_python')
 
         me_f   = val_f['m2']   if val_f   is not None else None
         me_cpp = val_cpp['m2'] if val_cpp is not None else None
+        me_mg7 = val_mg7['m2'] if val_mg7 is not None else None
+        me_py  = val_py['m2']  if val_py  is not None else None
 
-        diff = _reldiff(me_f, me_cpp)
+        # Pairwise relative differences across the available backends.
+        # for MG7 separate results from various backends, if something broke
+        # we display a single None
+        mg7_fortran_diffs = [ _reldiff(me_f, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
+        mg7_cpp_diffs = [ _reldiff(me_cpp, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
+        mg7_python_diffs = [ _reldiff(me_py, me_mg7_backend) for me_mg7_backend in me_mg7.values() ] if me_mg7 is not None else [None]
+        diffs = [d for d in (
+            _reldiff(me_f, me_cpp),
+            *mg7_fortran_diffs,
+            _reldiff(me_f, me_py),
+            *mg7_cpp_diffs,
+            _reldiff(me_cpp, me_py),
+            *mg7_python_diffs,
+        ) if d is not None]
+        max_diff = max(diffs) if diffs else None
 
+        mg7_strings = [
+            fixed_string_length(_fmt(me_mg7_backend), col_size)
+            for me_mg7_backend in me_mg7.values()
+        ] if me_mg7 is not None else [fixed_string_length(_fmt(None), col_size)]
         row = ('\n' + fixed_string_length(proc, proc_col_size) +
                fixed_string_length(_fmt(me_f),   col_size) +
-               fixed_string_length(_fmt(me_cpp),  col_size) +
-               fixed_string_length(_fmt_diff(diff), col_size))
+               fixed_string_length(_fmt(me_cpp), col_size) +
+               "".join(mg7_strings) +
+               fixed_string_length(_fmt(me_py),  col_size) +
+               fixed_string_length(_fmt_diff(max_diff), col_size))
 
-        if me_f is None and me_cpp is None:
+        mg7_available = me_mg7.values() if me_mg7 is not None else [None]
+        n_available = sum(v is not None for v in (me_f, me_cpp, *mg7_available, me_py))
+
+        if n_available == 0:
             no_check_proc += 1
             no_check_list.append(proc)
-            res_str += row + "No compiled backend"
-        elif diff is None:
+            res_str += row + "No backend available"
+        elif n_available == 1:
             no_check_proc += 1
             no_check_list.append(proc)
             res_str += row + "Only one backend available"
-        elif diff < 1e-4:
+        elif max_diff is not None and max_diff < 1e-4:
             pass_proc += 1
             res_str += row + "Passed"
         else:
@@ -4344,7 +4685,7 @@ def output_language(comparison_results, output='text'):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
+def check_unitary_feynman(processes_unit, processes_feynm, processes_axial=None, processes_fd=None, param_card=None, 
                                options=None, tir={}, output_path=None,
                                cuttools="", reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
@@ -4432,7 +4773,57 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         output_f = run_multiprocs_no_crossings(get_value, multiprocess_feynm,
                                                             evaluator, momentum,
-                                                            options=options)  
+                                                            options=options)
+        output_axial = None
+        if processes_axial is not None:
+            multiprocess_axial = processes_axial
+            model = multiprocess_axial.get('model')
+            with misc.TMP_variable(aloha, 'unitary_gauge', 2):
+                cmd.options['loop_optimized_output'] = True
+                if multiprocess_axial.get('perturbation_couplings')==[]:
+                    evaluator = MatrixElementEvaluator(model, param_card,
+                                            cmd= cmd, auth_skipping = False, reuse = False)
+                else:
+                    evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
+                                                cmd= cmd, model=model,
+                                                param_card=param_card,
+                                                auth_skipping = False,
+                                                output_path=output_path,
+                                                reuse = False)
+
+                if not cmass_scheme and multiprocess_axial.get('perturbation_couplings')==[]:
+                    for particle in evaluator.full_model.get('particles'):
+                        if particle.get('width') != 'ZERO':
+                            evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+                output_axial = run_multiprocs_no_crossings(get_value, multiprocess_axial,
+                                                                   evaluator, momentum,
+                                                                   options=options)
+        output_fd = None
+        if processes_fd is not None:
+            multiprocess_fd = processes_fd
+            model = multiprocess_fd.get('model')
+            with misc.TMP_variable(aloha, 'unitary_gauge', 3):
+                cmd.options['loop_optimized_output'] = True
+                if multiprocess_fd.get('perturbation_couplings')==[]:
+                    evaluator = MatrixElementEvaluator(model, param_card,
+                                            cmd= cmd, auth_skipping = False, reuse = False)
+                else:
+                    evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
+                                                cmd= cmd, model=model,
+                                                param_card=param_card,
+                                                auth_skipping = False,
+                                                output_path=output_path,
+                                                reuse = False)
+
+                if not cmass_scheme and multiprocess_fd.get('perturbation_couplings')==[]:
+                    for particle in evaluator.full_model.get('particles'):
+                        if particle.get('width') != 'ZERO':
+                            evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+                output_fd = run_multiprocs_no_crossings(get_value, multiprocess_fd,
+                                                                    evaluator, momentum,
+                                                                    options=options)
         output = [processes_unit]        
         for data in output_f:
             local_dico = {}
@@ -4440,11 +4831,21 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             local_dico['value_feynm'] = data['value']
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
+            if output_axial is not None:
+                local_dico['value_axial'] = [d['value'] for d in output_axial
+                                             if d['process'] == data['process']][0]
+            if output_fd is not None:
+                local_dico['value_fd'] = [d['value'] for d in output_fd
+                                          if d['process'] == data['process']][0]
             output.append(local_dico)
         
         if processes_feynm.get('perturbation_couplings')!=[] and not reuse:
             # Clean temporary folders created for the running of the loop processes
             clean_up(output_path)
+
+        # Avoid leaking generated Python matrix-element classes/wavefunctions
+        # across subsequent checks (e.g. lorentz/permutation) with different gauges.
+        clean_added_globals(ADDED_GLOBAL)
 
         # Reset the original global variable loop_optimized_output.
         cmd.options['loop_optimized_output'] = loop_optimized_bu
@@ -4539,9 +4940,15 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     # to be used there (the widths should be recycled from those of the NWA run).
     if options['recompute_width'] in ['first_time', 'always'] and has_FRdecay:
         modelname = cmd._curr_model.get('modelpath+restriction')
+        # Preserve apply_flavor_grouping only when explicitly configured by
+        # the caller. Otherwise let import_model use its own default behavior.
+        import_model_kwargs = {'decay': True, 'complex_mass_scheme': False}
+        if hasattr(cmd, 'options') and isinstance(cmd.options, dict) and \
+                                 'apply_flavor_grouping' in cmd.options:
+            import_model_kwargs['options'] = {
+                'apply_flavor_grouping': cmd.options['apply_flavor_grouping']}
         with misc.MuteLogger(['madgraph'], ['INFO']):
-            model = import_ufo.import_model(modelname, decay=True,
-                                                      complex_mass_scheme=False)
+            model = import_ufo.import_model(modelname, **import_model_kwargs)
         multiprocess_nwa.set('model', model)
 
     run_options = copy.deepcopy(options)
@@ -5628,9 +6035,10 @@ def get_value(process, evaluator, p=None, options=None):
     for i, leg in enumerate(process.get('legs')):
         leg.set('number', i+1)
 
+    name = {0:'Feynman', 1:'unitary', 2:'axial', 3:'FD'}[int(aloha.unitary_gauge)]
+
     logger.info("Checking %s in %s gauge" % \
-        ( process.nice_string().replace('Process:', 'process'),
-                               'unitary' if aloha.unitary_gauge else 'feynman'))
+        ( process.nice_string().replace('Process:', 'process'), name))
 
     legs = process.get('legs')
     # Generate a process with these legs
@@ -5644,7 +6052,7 @@ def get_value(process, evaluator, p=None, options=None):
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
         return None
-    
+    logger.debug("number of diagrams %d" % len(amplitude.get('diagrams')))
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
         logging.info("No diagrams for %s" % \
@@ -5874,16 +6282,22 @@ def output_unitary_feynman(comparison_results, output='text'):
     no_check_proc_list = []
 
     col_size = 18
+    use_axial = any('value_axial' in comp for comp in comparison_results)
+    use_fd = any('value_fd' in comp for comp in comparison_results)
+    gauge_columns = [("Unitary", 'value_unit'), ("Feynman", 'value_feynm')]
+    if use_axial:
+        gauge_columns.append(("Axial", 'value_axial'))
+    if use_fd:
+        gauge_columns.append(("FD", 'value_fd'))
 
-    res_str = fixed_string_length(process_header, proc_col_size) + \
-              fixed_string_length("Unitary", col_size) + \
-              fixed_string_length("Feynman", col_size) + \
-              fixed_string_length("Relative diff.", col_size) + \
-              "Result"
+    res_str = fixed_string_length(process_header, proc_col_size)
+    for label, _ in gauge_columns:
+        res_str += fixed_string_length(label, col_size)
+    res_str += fixed_string_length("Relative diff.", col_size) + "Result"
 
     for one_comp in comparison_results:
         proc = one_comp['process']
-        data = [one_comp['value_unit'], one_comp['value_feynm']]
+        data = [one_comp[key] for _, key in gauge_columns]
         
         
         if data[0] == 'pass':
@@ -5899,10 +6313,10 @@ def output_unitary_feynman(comparison_results, output='text'):
         # diff will be negative if there is no abs
         diff = (max_val - min_val) / abs(max_val) 
         
-        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
-                   fixed_string_length("%1.10e" % values[0], col_size) + \
-                   fixed_string_length("%1.10e" % values[1], col_size) + \
-                   fixed_string_length("%1.10e" % diff, col_size)
+        res_str += '\n' + fixed_string_length(proc, proc_col_size)
+        for value in values:
+            res_str += fixed_string_length("%1.10e" % value, col_size)
+        res_str += fixed_string_length("%1.10e" % diff, col_size)
                    
         if diff < 1e-8:
             pass_proc += 1
@@ -5920,7 +6334,7 @@ def output_unitary_feynman(comparison_results, output='text'):
         # is empty.
         if len(data[0]['jamp'])>0:
             for k in range(len(data[0]['jamp'][0])):
-                sum = [0, 0]
+                sum = [0] * len(data)
                 # loop over helicity
                 for j in range(len(data[0]['jamp'])):
                     #values for the different lorentz boost
@@ -5934,10 +6348,10 @@ def output_unitary_feynman(comparison_results, output='text'):
                     continue
                 diff = (max_val - min_val) / max_val 
             
-                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size) + \
-                           fixed_string_length("%1.10e" % sum[0], col_size) + \
-                           fixed_string_length("%1.10e" % sum[1], col_size) + \
-                           fixed_string_length("%1.10e" % diff, col_size)
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , col_size)
+                for value in sum:
+                    tmp_str += fixed_string_length("%1.10e" % value, col_size)
+                tmp_str += fixed_string_length("%1.10e" % diff, col_size)
                        
                 if diff > 1e-10:
                     if not len(failed_proc_list) or failed_proc_list[-1] != proc:

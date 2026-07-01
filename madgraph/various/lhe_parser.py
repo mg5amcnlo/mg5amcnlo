@@ -48,6 +48,25 @@ except Exception as error:
 
 
 logger = logging.getLogger("madgraph.lhe_parser")
+_ENABLE_LHE_TIMERS = False
+_LHE_TIMERS = collections.defaultdict(float)
+_LHE_TIMER_COUNTS = collections.defaultdict(int)
+
+
+def _add_lhe_timer(key, dt):
+    if not _ENABLE_LHE_TIMERS:
+        return
+    _LHE_TIMERS[key] += dt
+    _LHE_TIMER_COUNTS[key] += 1
+
+
+def get_lhe_timers():
+    return dict(_LHE_TIMERS), dict(_LHE_TIMER_COUNTS)
+
+
+def reset_lhe_timers():
+    _LHE_TIMERS.clear()
+    _LHE_TIMER_COUNTS.clear()
 
 class Particle(object):
     """ """
@@ -128,18 +147,40 @@ class Particle(object):
             
     def parse(self, line):
         """parse the line"""
-        
-        args = line.split()
-        keys = ['pid', 'status','mother1','mother2','color1', 'color2', 'px','py','pz','E',
-                'mass','vtim','helicity']
-        
-        for key,value in zip(keys,args):
-            setattr(self, key, float(value))
-        self.pid = int(self.pid)
-            
-        self.comment = ' '.join(args[len(keys):])
-        if self.comment.startswith(('|','#')):
-            self.comment = self.comment[1:]
+        t0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+        try:
+            args = line.split()
+            if len(args) < 13:
+                keys = ['pid', 'status','mother1','mother2','color1', 'color2', 'px','py','pz','E',
+                        'mass','vtim','helicity']
+                for key, value in zip(keys, args):
+                    setattr(self, key, float(value))
+                self.pid = int(self.pid)
+                self.comment = ' '.join(args[len(keys):])
+            else:
+                pid, status, mother1, mother2, color1, color2, px, py, pz, E, mass, vtim, helicity = args[:13]
+
+                # Hot path: avoid setattr loop in per-particle parsing.
+                self.pid = int(float(pid))
+                self.status = float(status)
+                self.mother1 = float(mother1)
+                self.mother2 = float(mother2)
+                self.color1 = float(color1)
+                self.color2 = float(color2)
+                self.px = float(px)
+                self.py = float(py)
+                self.pz = float(pz)
+                self.E = float(E)
+                self.mass = float(mass)
+                self.vtim = float(vtim)
+                self.helicity = float(helicity)
+                self.comment = ' '.join(args[13:])
+
+            if self.comment.startswith(('|','#')):
+                self.comment = self.comment[1:]
+        finally:
+            if _ENABLE_LHE_TIMERS:
+                _add_lhe_timer("particle_parse_total", time.perf_counter() - t0)
 
         # Note that mother1/mother2 will be modified by the Event parse function to replace the
         # integer by a pointer to the actual particle object.
@@ -181,6 +222,23 @@ class Particle(object):
             return True
         return False
         
+    def __isub__(self, delta):
+        """Change only the fourmomentum of the current particle"""
+
+        self.E -= delta.E
+        self.px -= delta.px
+        self.py -= delta.py
+        self.pz -= delta.pz
+
+    def __iadd__(self, delta):
+        """Change only the fourmomentum of the current particle"""
+
+        self.E += delta.E
+        self.px += delta.px
+        self.py += delta.py
+        self.pz += delta.pz         
+
+
     def set_momentum(self, momentum):
         
         self.E = momentum.E
@@ -315,38 +373,70 @@ class EventFile(object):
     __next__ = next
 
     def next_event(self):        
-        
-        text = ''
-        line = ''
+        t_total0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+        t_evt_parse = 0.0
+        readline = self.file.readline
+        decode_needed = ('b' in self.mode) or self.zip_mode
+        encoding = self.encoding
+        parsing = self.parsing
+        allow_empty = self.allow_empty_event
+
         mode = 0
-        
-        while True:
-            # reading the next line of the file
-            line = self.file.readline()
-            if not line:
-                raise StopIteration
-            if 'b' in self.mode or self.zip_mode:
-                line = line.decode(self.encoding,errors='ignore')
-            
-            if '<event' in line:
-                mode = 1
-                text = []
-            if mode:
+        text = None
+        try:
+            while True:
+                line = readline()
+                if not line:
+                    raise StopIteration
+                if decode_needed:
+                    line = line.decode(encoding, errors='ignore')
+
+                if not mode:
+                    c0 = line[:1]
+                    if c0 == '<':
+                        if '<event' in line:
+                            mode = 1
+                            text = [line]
+                    elif c0 == ' ' or c0 == '\t':
+                        s = line.lstrip()
+                        if s and s[:1] == '<' and '<event' in s:
+                            mode = 1
+                            text = [line]
+                    continue
+
                 text.append(line)
-                
-            if '</event>' in line:
-                if self.parsing == "wgt_only":
+
+                c0 = line[:1]
+                is_close = False
+                if c0 == '<':
+                    is_close = '</event>' in line
+                elif c0 == ' ' or c0 == '\t':
+                    s = line.lstrip()
+                    is_close = bool(s and s[:1] == '<' and '</event>' in s)
+
+                if not is_close:
+                    continue
+
+                if parsing == "wgt_only":
+                    t0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
                     out = Event(text, parse_momenta=False)
-                    #if len(out) == 0  and not self.allow_empty_event:
-                    #    raise Exception
+                    if _ENABLE_LHE_TIMERS:
+                        t_evt_parse += time.perf_counter() - t0
                     return out
-                elif self.parsing:
+                elif parsing:
+                    t0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
                     out = Event(text)
-                    if len(out) == 0  and not self.allow_empty_event:
+                    if _ENABLE_LHE_TIMERS:
+                        t_evt_parse += time.perf_counter() - t0
+                    if len(out) == 0 and not allow_empty:
                         raise Exception
                     return out
                 else:
                     return text
+        finally:
+            if _ENABLE_LHE_TIMERS:
+                _add_lhe_timer("next_event_readline_event_parse", t_evt_parse)
+                _add_lhe_timer("next_event_readline_total", time.perf_counter() - t_total0)
                 
                     
     def next_eventgroup(self):
@@ -393,6 +483,8 @@ class EventFile(object):
             
         # We need to loop over the event file to get some information about the 
         # new cross-section/ wgt of event.
+        if self._can_use_header_only_initialize(get_wgt):
+            return self._initialize_unweighting_header_only(trunc_error)
         self.seek(0)
         all_wgt = []
         cross = collections.defaultdict(int)
@@ -418,6 +510,291 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
+
+    @staticmethod
+    def _can_use_header_only_initialize(get_wgt):
+        """Conservative detector for getters equivalent to `lambda event: event.wgt`."""
+        if not callable(get_wgt):
+            return False
+        code = getattr(get_wgt, '__code__', None)
+        if not code:
+            return False
+        # Accept only a single-argument getter referencing the `wgt` attribute.
+        return code.co_argcount == 1 and tuple(code.co_names) == ('wgt',)
+
+    @staticmethod
+    def _parse_raw_event_header(raw_event):
+        """Return (ievent, wgt) from a raw event block (list-of-lines or text)."""
+        if not isinstance(raw_event, list):
+            lines = raw_event.split('\n')
+        else:
+            lines = raw_event
+
+        for raw in lines:
+            line = raw.strip()
+            if not line:
+                continue
+            if line[0] == '#':
+                continue
+            if line.startswith('<event'):
+                continue
+            parts = line.split(None, 5)
+            if len(parts) != 6:
+                raise ValueError("Malformed event header line: %r" % line)
+            return parts[1], float(parts[2])
+        raise ValueError("Failed to locate event header line in raw event block")
+
+    @staticmethod
+    def _extract_raw_event_header_metadata(raw_event):
+        """Legacy block-based header parser used outside the direct stream path."""
+        if isinstance(raw_event, list):
+            lines = raw_event
+        else:
+            lines = raw_event.splitlines(True)
+
+        for i, raw in enumerate(lines):
+            line = raw.strip()
+            if not line:
+                continue
+            if line[0] == '#':
+                continue
+            if line.startswith('<event'):
+                continue
+            if line[0] == '<':
+                break
+
+            parts = line.split(None, 3)
+            if len(parts) < 4:
+                break
+            ievent = parts[1]
+            wgt = float(parts[2])
+            indent = raw[:len(raw) - len(raw.lstrip(' \t'))]
+            raw_noeol = raw.rstrip('\r\n')
+            eol = raw[len(raw_noeol):]
+            meta = (i, indent, parts[0], parts[1], parts[3], eol)
+            return ievent, wgt, meta
+
+        raise ValueError("Failed to locate event header line in raw event block")
+
+    @staticmethod
+    def _rewrite_raw_event_weight(raw_event, new_wgt, header_meta=None):
+        """Rewrite only the central weight in a raw event block."""
+        if isinstance(raw_event, list):
+            lines = list(raw_event)
+        else:
+            lines = raw_event.splitlines(True)
+
+        if header_meta is not None:
+            idx, indent, field0, field1, tail, eol = header_meta
+            lines[idx] = '%s%s %s %+13.7e %s%s' % (
+                indent, field0, field1, float(new_wgt), tail, eol
+            )
+            return ''.join(lines)
+
+        for i, raw in enumerate(lines):
+            line = raw.strip()
+            if not line:
+                continue
+            if line[0] == '#':
+                continue
+            if line.startswith('<event'):
+                continue
+            if line[0] == '<':
+                raise ValueError("Malformed event header line: %r" % line)
+
+            parts = line.split(None, 3)
+            if len(parts) < 4:
+                raise ValueError("Malformed event header line: %r" % line)
+
+            indent = raw[:len(raw) - len(raw.lstrip(' \t'))]
+            raw_noeol = raw.rstrip('\r\n')
+            eol = raw[len(raw_noeol):]
+            lines[i] = '%s%s %s %+13.7e %s%s' % (
+                indent, parts[0], parts[1], float(new_wgt), parts[3], eol
+            )
+            return ''.join(lines)
+
+        raise ValueError("Failed to locate event header line in raw event block")
+
+    def _iter_raw_events_direct(self):
+        """Yield (raw_event, ievent, wgt, header_meta) via one-pass stream scanning.
+
+        Raises ValueError on malformed headers so callers can fall back to the
+        safe generic iterator.
+        """
+        readline = self.file.readline
+        decode_needed = ('b' in self.mode) or self.zip_mode
+        encoding = self.encoding
+
+        mode = 0
+        text = None
+        ievent = None
+        wgt = None
+        header_meta = None
+
+        while True:
+            line = readline()
+            if not line:
+                return
+            if decode_needed:
+                line = line.decode(encoding, errors='ignore')
+
+            if not mode:
+                c0 = line[:1]
+                if c0 == '<':
+                    if '<event' in line:
+                        mode = 1
+                        text = [line]
+                        ievent = None
+                        wgt = None
+                        header_meta = None
+                elif c0 == ' ' or c0 == '\t':
+                    s = line.lstrip()
+                    if s and s[:1] == '<' and '<event' in s:
+                        mode = 1
+                        text = [line]
+                        ievent = None
+                        wgt = None
+                        header_meta = None
+                continue
+
+            text.append(line)
+
+            if header_meta is None:
+                sline = line.strip()
+                if sline and sline[:1] != '#' and not sline.startswith('<event'):
+                    if sline[:1] == '<':
+                        raise ValueError("Malformed event header line: %r" % sline)
+                    parts = sline.split(None, 3)
+                    if len(parts) < 4:
+                        raise ValueError("Malformed event header line: %r" % sline)
+                    ievent = parts[1]
+                    wgt = float(parts[2])
+                    raw_noeol = line.rstrip('\r\n')
+                    eol = line[len(raw_noeol):]
+                    indent = line[:len(line) - len(line.lstrip(' \t'))]
+                    header_meta = (len(text) - 1, indent, parts[0], parts[1], parts[3], eol)
+
+            c0 = line[:1]
+            is_close = False
+            if c0 == '<':
+                is_close = '</event>' in line
+            elif c0 == ' ' or c0 == '\t':
+                s = line.lstrip()
+                is_close = bool(s and s[:1] == '<' and '</event>' in s)
+
+            if not is_close:
+                continue
+
+            if header_meta is None:
+                raise ValueError("Failed to locate event header line in raw event block")
+            yield text, ievent, wgt, header_meta
+            mode = 0
+            text = None
+
+    def _iter_raw_events_for_unweight(self):
+        """Yield (raw_event, ievent, wgt, header_meta) without Event objects."""
+        self.seek(0)
+        try:
+            for raw_event, ievent, wgt, header_meta in self._iter_raw_events_direct():
+                yield raw_event, ievent, wgt, header_meta
+            return
+        except Exception:
+            # Any parser edge case falls back to the safe generic event iterator
+            self.seek(0)
+
+        old_parsing = self.parsing
+        self.parsing = False
+        try:
+            for raw_event in self:
+                ievent, wgt = self._parse_raw_event_header(raw_event)
+                yield raw_event, ievent, wgt, None
+        finally:
+            self.parsing = old_parsing
+
+    def _initialize_unweighting_header_only(self, trunc_error):
+        """Fast initialize scan: parse only the event header line (ievent, wgt)."""
+        self.seek(0)
+        all_wgt = []
+        cross = collections.defaultdict(int)
+        nb_event = 0
+
+        readline = self.file.readline
+        decode_needed = ('b' in self.mode) or self.zip_mode
+        encoding = self.encoding
+        mode = 0  # 0: outside event, 1: waiting for scale line
+
+        while True:
+            line = readline()
+            if not line:
+                break
+            if decode_needed:
+                line = line.decode(encoding, errors='ignore')
+
+            if not mode:
+                c0 = line[:1]
+                if c0 == '<':
+                    if '<event' in line:
+                        mode = 1
+                elif c0 == ' ' or c0 == '\t':
+                    s = line.lstrip()
+                    if s and s[:1] == '<' and '<event' in s:
+                        mode = 1
+                continue
+
+            sline = line.strip()
+            if not sline or sline[0] == '#':
+                continue
+            if sline[0] == '<':
+                # malformed/unexpected event block, defer to safe parser path
+                self.seek(0)
+                return self._initialize_unweighting_fallback(trunc_error)
+
+            parts = sline.split(None, 5)
+            if len(parts) != 6:
+                self.seek(0)
+                return self._initialize_unweighting_fallback(trunc_error)
+
+            nb_event += 1
+            ievent = parts[1]
+            wgt = float(parts[2])
+            cross['all'] += wgt
+            cross['abs'] += abs(wgt)
+            cross[ievent] += wgt
+            all_wgt.append(abs(wgt))
+            if nb_event % 20000 == 0:
+                all_wgt.sort()
+                nb_keep = max(20, int(nb_event*trunc_error*15))
+                all_wgt = all_wgt[-nb_keep:]
+            mode = 0
+
+        all_wgt.sort()
+        nb_keep = max(20, int(nb_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:]
+        self.seek(0)
+        return all_wgt, cross, nb_event
+
+    def _initialize_unweighting_fallback(self, trunc_error):
+        """Original initialize scan path using event parsing."""
+        all_wgt = []
+        cross = collections.defaultdict(int)
+        nb_event = 0
+        for event in self:
+            nb_event +=1
+            wgt = event.wgt
+            cross['all'] += wgt
+            cross['abs'] += abs(wgt)
+            cross[event.ievent] += wgt
+            all_wgt.append(abs(wgt))
+            if nb_event % 20000 == 0:
+                all_wgt.sort()
+                nb_keep = max(20, int(nb_event*trunc_error*15))
+                all_wgt = all_wgt[-nb_keep:]
+        all_wgt.sort()
+        nb_keep = max(20, int(nb_event*trunc_error*10))
+        all_wgt = all_wgt[-nb_keep:]
+        self.seek(0)
+        return all_wgt, cross, nb_event
     
     def write_events(self, event):
         """ write a single events or a list of event
@@ -438,13 +815,14 @@ class EventFile(object):
                 self.write('</eventgroup>\n')
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
-                 event_target=0, log_level=logging.INFO, normalization='average'):
+                 event_target=0, log_level=logging.INFO, normalization='average',
+                 keep_overshoot=False):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
         trunc_error allow for dynamical partial unweighting
         event_target reweight for that many event with maximal trunc_error.
-        (stop to write event when target is reached)
+        (stop to write event when target is reached but if keep_overshoot is True)
         """
         self.parsing = 'wgt_only'
 
@@ -467,7 +845,13 @@ class EventFile(object):
         else: 
             written_weight = lambda x: x
                     
+        #t0 = time.perf_counter()
         all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
+        #msg = "unweight timing: initialize_unweighting=%.3fs (%s)" % (
+        #    time.perf_counter() - t0, self.__class__.__name__
+        #)
+        #print(msg)
+        #logger.warning(msg)
 
         # function that need to be define on the flight
         def max_wgt_for_trunc(trunc):
@@ -527,6 +911,8 @@ class EventFile(object):
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
+        use_fast_second_pass = bool(getattr(self, '_force_fast_unweight_wgt_only', False)
+                                    or self._can_use_header_only_initialize(get_wgt))
         for i in range(nb_try):
             self.seek(0)
             if event_target:
@@ -560,27 +946,59 @@ class EventFile(object):
             # scan the file
             nb_keep = 0
             trunc_cross = 0
-            for event in self:
-                r = random.random()
-                wgt = get_wgt(event)
-                if abs(wgt) < r * max_wgt:
-                    continue
-                elif wgt > 0:
-                    nb_keep += 1
-                    event.wgt = written_weight(max(wgt, max_wgt))
-                    if abs(wgt) > max_wgt:
-                        trunc_cross += abs(wgt) - max_wgt 
-                    if event_target ==0 or nb_keep <= event_target:
-                        if outputpath:                         
-                            outfile.write(str(event))
+            if use_fast_second_pass:
+                for raw_event, _ievent, wgt, header_meta in self._iter_raw_events_for_unweight():
+                    r = random.random()
+                    if abs(wgt) < r * max_wgt:
+                        continue
+                    elif wgt > 0:
+                        nb_keep += 1
+                        if abs(wgt) > max_wgt:
+                            trunc_cross += abs(wgt) - max_wgt
+                        if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
+                            final_wgt = written_weight(max(wgt, max_wgt))
+                            try:
+                                outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
+                            except Exception:
+                                # Per-event fallback preserves behavior on malformed blocks.
+                                event = Event(raw_event, parse_momenta=False)
+                                event.wgt = final_wgt
+                                outfile.write(str(event))
+                    elif wgt < 0:
+                        nb_keep += 1
+                        if abs(wgt) > max_wgt:
+                            trunc_cross += abs(wgt) - max_wgt
+                        if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
+                            final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
+                            try:
+                                outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
+                            except Exception:
+                                # Per-event fallback preserves behavior on malformed blocks.
+                                event = Event(raw_event, parse_momenta=False)
+                                event.wgt = final_wgt
+                                outfile.write(str(event))
+            else:
+                for event in self:
+                    r = random.random()
+                    wgt = get_wgt(event)
+                    if abs(wgt) < r * max_wgt:
+                        continue
+                    elif wgt > 0:
+                        nb_keep += 1
+                        event.wgt = written_weight(max(wgt, max_wgt))
+                        if abs(wgt) > max_wgt:
+                            trunc_cross += abs(wgt) - max_wgt 
+                        if event_target ==0 or keep_overshoot or nb_keep <= event_target:
+                            if outputpath:                         
+                                outfile.write(str(event))
 
-                elif wgt < 0:
-                    nb_keep += 1
-                    event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
-                    if abs(wgt) > max_wgt:
-                        trunc_cross += abs(wgt) - max_wgt
-                    if outputpath and (event_target ==0 or nb_keep <= event_target):
-                        outfile.write(str(event))
+                    elif wgt < 0:
+                        nb_keep += 1
+                        event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
+                        if abs(wgt) > max_wgt:
+                            trunc_cross += abs(wgt) - max_wgt
+                        if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
+                            outfile.write(str(event))
             
             if event_target and nb_keep > event_target:
                 if not outputpath:
@@ -612,7 +1030,7 @@ class EventFile(object):
 #        logger.log(log_level, "Final maximum weight used for final "+\
 #                    "unweighting is %s yielding %s events." % (max_wgt,nb_keep))
             
-        if event_target:
+        if event_target and not keep_overshoot:
             nb_events_unweighted = nb_keep
             nb_keep = min( event_target, nb_keep)
         else:
@@ -916,16 +1334,17 @@ class MultiEventFile(EventFile):
     
     parsing = True # check if/when we need to parse the event.
 
-    def __new__(cls, start_list=[],parse=True):
+    def __new__(cls, start_list=[],parse=True, parse_LHE=True):
         return object.__new__(MultiEventFile)
     
-    def __init__(self, start_list=[], parse=True):
+    def __init__(self, start_list=[], parse=True, parse_LHE=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
         self.eventgroup = False
         self.files = []
         #self.filesiter = []
         self.parsefile = parse #if self.files is formatted or just the path
+        self.parseLHE = parse_LHE
         self.banner = ''
         self.initial_nb_events = []
         self.total_event_in_files = 0
@@ -934,6 +1353,7 @@ class MultiEventFile(EventFile):
         self.error = []
         self.across = []
         self.scales = []
+        self._remaining_event_counter = 0
         if start_list:
             if parse:
                 for p in start_list:
@@ -970,6 +1390,7 @@ class MultiEventFile(EventFile):
         if nb_event:
             obj.len = nb_event
         self._configure = False
+        self._remaining_event_counter = 0
         return obj
         
     def __iter__(self):
@@ -981,7 +1402,8 @@ class MultiEventFile(EventFile):
     def next(self):
         if not self._configure:
             self.configure()
-        remaining_event = self.total_event_in_files - sum(self.curr_nb_events)
+        # remaining-event tracking avoids repeated sum(self.curr_nb_events)
+        remaining_event = self._remaining_event_counter
         if remaining_event == 0:
             raise StopIteration
         # determine which file need to be read
@@ -992,6 +1414,7 @@ class MultiEventFile(EventFile):
             sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
+                self._remaining_event_counter -= 1
                 event = next(obj)
                 if not self.eventgroup:
                     event.sample_scale = self.scales[i] # for file reweighting
@@ -1122,28 +1545,41 @@ class MultiEventFile(EventFile):
         all_wgt = []
         total_event = 0
         sum_cross = collections.defaultdict(int)
+        use_header_only = bool(getattr(self, '_force_header_only_initialize', False))
         for i,f in enumerate(self.files):
-            f.parsing = 'wgt_only'
-            nb_event = 0 
-            # We need to loop over the event file to get some information about the 
-            # new cross-section/ wgt of event.
+            nb_event = 0
             cross = collections.defaultdict(int)
-            new_wgt =[] 
-            for event in f:
-                nb_event += 1
-                total_event += 1
-                event.sample_scale = 1
-                wgt = getwgt(event)
-                cross['all'] += wgt
-                cross['abs'] += abs(wgt)
-                cross[event.ievent] += wgt
-                new_wgt.append(abs(wgt))
-                # avoid all_wgt to be too large
-                if nb_event % 20000 == 0:
-                    new_wgt.sort()
-                    # drop the lowest weight
-                    nb_keep = max(20, int(nb_event*trunc_error*15))
-                    new_wgt = new_wgt[-nb_keep:]
+            new_wgt = []
+            if use_header_only:
+                try:
+                    raw_wgts, raw_cross, nb_event = f._initialize_unweighting_header_only(trunc_error)
+                    new_wgt = raw_wgts
+                    cross = raw_cross
+                    total_event += nb_event
+                except Exception:
+                    use_header_only = False
+            if not use_header_only:
+                f.parsing = 'wgt_only'
+                # We need to loop over the event file to get some information about the
+                # new cross-section/ wgt of event.
+                cross = collections.defaultdict(int)
+                new_wgt = []
+                nb_event = 0
+                for event in f:
+                    nb_event += 1
+                    total_event += 1
+                    event.sample_scale = 1
+                    wgt = getwgt(event)
+                    cross['all'] += wgt
+                    cross['abs'] += abs(wgt)
+                    cross[event.ievent] += wgt
+                    new_wgt.append(abs(wgt))
+                    # avoid all_wgt to be too large
+                    if nb_event % 20000 == 0:
+                        new_wgt.sort()
+                        # drop the lowest weight
+                        nb_keep = max(20, int(nb_event*trunc_error*15))
+                        new_wgt = new_wgt[-nb_keep:]
             if nb_event == 0:
                 misc.sprint(i,f)
                 raise Exception
@@ -1176,6 +1612,7 @@ class MultiEventFile(EventFile):
         for i,f in enumerate(self.files):
             self.initial_nb_events[i] = len(f)
         self.total_event_in_files = sum(self.initial_nb_events)
+        self._remaining_event_counter = self.total_event_in_files
     
     def __len__(self):
         
@@ -1190,7 +1627,49 @@ class MultiEventFile(EventFile):
             self.curr_nb_events[i] = 0         
         for f in self.files:
             f.seek(pos)
-            
+        self._remaining_event_counter = self.total_event_in_files
+        if hasattr(self, "_raw_unweight_iterators"):
+            self._raw_unweight_iterators = None
+
+    def _iter_raw_events_for_unweight(self):
+        """Yield (raw_event, ievent, scaled_wgt, header_meta) with sampling."""
+        if not self._configure:
+            self.configure()
+        # Keep one raw iterator per file so each file is scanned sequentially once
+        self._raw_unweight_iterators = [None] * len(self.files)
+        remaining_event = self.total_event_in_files
+        self._remaining_event_counter = remaining_event
+        while True:
+            if remaining_event == 0:
+                return
+            nb_event = random.randint(1, remaining_event)
+            sum_nb = 0
+            for i, obj in enumerate(self.files):
+                sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
+                if nb_event <= sum_nb:
+                    self.curr_nb_events[i] += 1
+                    remaining_event -= 1
+                    self._remaining_event_counter = remaining_event
+                    try:
+                        iterator = self._raw_unweight_iterators[i]
+                        if iterator is None:
+                            iterator = obj._iter_raw_events_direct()
+                            self._raw_unweight_iterators[i] = iterator
+                        raw_event, ievent, wgt, header_meta = next(iterator)
+                    except Exception:
+                        old_parsing = obj.parsing
+                        obj.parsing = False
+                        try:
+                            raw_event = next(obj)
+                        finally:
+                            obj.parsing = old_parsing
+                        ievent, wgt = EventFile._parse_raw_event_header(raw_event)
+                        header_meta = None
+                    yield raw_event, ievent, wgt * self.scales[i], header_meta
+                    break
+            else:
+                raise StopIteration
+
     def unweight(self, outputpath, get_wgt, **opts):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
@@ -1238,7 +1717,18 @@ class MultiEventFile(EventFile):
         elif 'write_init' in opts and opts['write_init']:
             self.define_init_banner(0,0, proc_charac=proc_charac)
             del opts['write_init']
-        return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
+
+
+        force_header_only = EventFile._can_use_header_only_initialize(get_wgt)
+        old_force = getattr(self, '_force_header_only_initialize', False)
+        old_fast = getattr(self, '_force_fast_unweight_wgt_only', False)
+        self._force_header_only_initialize = force_header_only
+        self._force_fast_unweight_wgt_only = force_header_only
+        try:
+            return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
+        finally:
+            self._force_header_only_initialize = old_force
+            self._force_fast_unweight_wgt_only = old_fast
 
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
@@ -1277,16 +1767,21 @@ class MultiEventFile(EventFile):
                             lhe = EventFile(f)
                     else:
                         lhe = EventFile(f)
+                    if not self.parseLHE:
+                        lhe.parsing = False #we need to propagate the information to not parse the file to EventFile
                 else:
                     lhe = f
                 for event in lhe:
                     nb_event +=1
-                    if get_info:
+                    if get_info and self.parseLHE: # if we don't parse the file, we cannot parse the reweight information
                         event.parse_reweight()
                         for key, value in event.reweight_data.items():
                             info[key] += value
                         info['central'] += event.wgt
-                    out.write(str(event))
+                        out.write(str(event))
+                    else: #in this case we did not parse the file, we just copy the file as a string
+                        for elem in event:
+                            out.write(str(elem))
                 lhe.close()
         out.write("</LesHouchesEvents>\n") 
         return nb_event, info
@@ -1326,14 +1821,77 @@ class Event(list):
         self.reweight_data = {}
         self.matched_scale_data = None
         self.syscalc_data = {}
+        #Spin Information
+        self.density = []
         if text:
             self.parse(text, parse_momenta=parse_momenta)
 
 
     event_flag_pattern = re.compile(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""")   
+    def _parse_wgt_only(self, text):
+        """Fast parser for parse_momenta=False."""
+
+        if not isinstance(text, list):
+            text = text.split('\n')
+
+        tags = []
+        comments = []
+        got_scale_line = False
+        in_tag_mode = False
+        flag_pattern = Event.event_flag_pattern
+
+        for raw in text:
+            line = raw.strip()
+            if not line:
+                continue
+            if line[0] == '#':
+                comments.append(line)
+                continue
+            if line.startswith('<event'):
+                if '=' in line:
+                    found = flag_pattern.findall(line)
+                    self.eventflag = dict((n, a1) if a1 else (n, a2) for n, a1, a2 in found)
+                continue
+
+            if not got_scale_line:
+                if '<rwgt>' in line:
+                    in_tag_mode = True
+                    tags.append(line)
+                else:
+                    self.assign_scale_line(line, convert=False)
+                got_scale_line = True
+                continue
+
+            if '<' in line:
+                in_tag_mode = True
+
+            if '</event>' in line:
+                line = line.replace('</event>','',1)
+
+            if in_tag_mode and '<density>' in line:
+                temp = line.strip('<>density/[]').split()
+                self.density = [complex(temp[o].strip(',()')) for o in range(len(temp))]
+
+            tags.append(line)
+
+        if comments:
+            self.comment += ''.join('%s\n' % c for c in comments)
+        self.tag += "\n".join(tags)
+
     def parse(self, text, parse_momenta=True):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
+        if not parse_momenta:
+            t0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+            self._parse_wgt_only(text)
+            if _ENABLE_LHE_TIMERS:
+                _add_lhe_timer("event_parse_total", time.perf_counter() - t0)
+            return
+
+        t0_total = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+        t_particle = 0.0
+        t_tag = 0.0
+        t_assign = 0.0
         status = 'first' 
         tags = []
         if not isinstance(text, list):
@@ -1348,7 +1906,7 @@ class Event(list):
                 continue
             elif line.startswith('<event'):
                 if '=' in line:
-                    found = re.findall(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""",line)
+                    found = Event.event_flag_pattern.findall(line)
                     #for '<event line=4 value=\'3\' error="5" test=" 1 and 2">\n'
                     #return [('line', '', '4'), ('value', '3', ''), ('error', '5', ''), ('test', ' 1 and 2', '')]
                     self.eventflag = dict((n, a1) if a1 else (n,a2) for n,a1,a2 in found)
@@ -1367,20 +1925,42 @@ class Event(list):
                 
             if 'part' == status:
                 if parse_momenta:
+                    t_part0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
                     part = Particle(line, event=self)
                     if part.E != 0 or part.status==-1:
                         self.append(part)
                     elif self.nexternal:
                         self.nexternal-=1
+                    if _ENABLE_LHE_TIMERS:
+                        t_particle += time.perf_counter() - t_part0
+                else:
+                    t_tag0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+                    tags.append(line)
+                    if _ENABLE_LHE_TIMERS:
+                        t_tag += time.perf_counter() - t_tag0
+            else:
+                t_tag0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
+                if '<density>' in line:
+                    temp = line.strip('<>density/[]').split()
+                    self.density = [complex(temp[o].strip(',()')) for o in range(len(temp))]   
+                elif '</event>' in line:
+                    tags.append(line.replace('</event>','',1)) #tags contains everything the parser does not know about. The tag <density> should not part of it
                 else:
                     tags.append(line)
-            else:
-                if line.endswith('</event>'):
-                    line = line.replace('</event>','',1)
-                tags.append(line) 
+                
+                if _ENABLE_LHE_TIMERS:
+                    t_tag += time.perf_counter() - t_tag0
         self.tag += "\n".join(tags)
         if parse_momenta:     
+            t_assign0 = time.perf_counter() if _ENABLE_LHE_TIMERS else None
             self.assign_mother()
+            if _ENABLE_LHE_TIMERS:
+                t_assign += time.perf_counter() - t_assign0
+        if _ENABLE_LHE_TIMERS:
+            _add_lhe_timer("event_parse_particle_block", t_particle)
+            _add_lhe_timer("event_parse_tag_block", t_tag)
+            _add_lhe_timer("event_parse_assign_mother", t_assign)
+            _add_lhe_timer("event_parse_total", time.perf_counter() - t0_total)
     
     
     def assign_mother(self):
@@ -1560,7 +2140,7 @@ class Event(list):
                 return
             wgt = self.nloweight
             
-        data = {'total_wgt': wgt.total_wgt, #need to check name and meaning,
+        data = {'total_wgt': wgt.total_wgt,
                 'nb_wgt': wgt.nb_wgt,
                 'nb_event': wgt.nb_event,
                 'event': '\n'.join(p.__str__(mode='fortran') for p in wgt.momenta),
@@ -1699,10 +2279,33 @@ class Event(list):
         this_4mom = FourMomentum(this_particle)
         nb_part = len(self) #original number of particle
         
-        thres = decay_particle.E*1e-10
-        assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
-            "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
+        thres = decay_particle.E*1e-5
         
+        # Absolute momentum of decay mother
+        R = max(abs(decay_particle.px),
+                abs(decay_particle.py),
+                abs(decay_particle.pz))
+
+        # Difference to production particle momentum
+        D = max(abs(decay_particle.px - this_particle.px),
+                abs(decay_particle.py - this_particle.py),
+                abs(decay_particle.pz - this_particle.pz))
+        
+        at_rest = R < thres
+
+        if R > thres and D > thres:
+            raise AssertionError(
+                "inconsistent decay boost: "
+                "decay p=(%s,%s,%s,%s) prod p=(%s,%s,%s,%s)" % (
+                    decay_particle.E,
+                    decay_particle.px, decay_particle.py, decay_particle.pz,
+                    this_particle.E,
+                    this_particle.px, this_particle.py, this_particle.pz
+                )
+            )
+        if hasattr(decay_particle, 'new_mass'):
+            this_particle.new_mass = decay_particle.new_mass
+            this_particle.reshuffle_info = decay_particle.reshuffle_info
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
@@ -1719,7 +2322,10 @@ class Event(list):
             if old_scales:
                 self.matched_scale_data.append(old_scales[initial_pos+jet_position])
             # compute and assign the new four_momenta
-            new_momentum = FourMomentum(new_particle).boost(this_4mom)
+            if at_rest:
+                new_momentum = FourMomentum(new_particle).boost(this_4mom)
+            else:
+                new_momentum = FourMomentum(new_particle) 
             new_particle.set_momentum(new_momentum)
             # compute the new mother
             for tag in ['mother1', 'mother2']:
@@ -1779,7 +2385,7 @@ class Event(list):
             if particle.status != 1:
                 continue
             if particle.pdg in pdg_to_decay and pdg_to_decay[particle.pdg]:
-                one_decay = pdg_to_decay[particle.pdg].pop()
+                one_decay = pdg_to_decay[particle.pdg].pop(0)
                 self.add_decay_to_particle(i, one_decay)
                 particle.helicity = 9
                 return self.add_decays(pdg_to_decay)
@@ -2233,22 +2839,23 @@ class Event(list):
         format of the line is:
         Nexternal IEVENT WEIGHT SCALE AEW AS
         """
-        inputs = line.split()
+        inputs = line.split(None, 5)
         assert len(inputs) == 6
+        n_external, i_event, weight, scale, aqed, aqcd = inputs
         if convert:
-            self.nexternal=int(inputs[0])
-            self.ievent=int(inputs[1])
-            self.wgt=float(inputs[2])
-            self.scale=float(inputs[3])
-            self.aqed=float(inputs[4])
-            self.aqcd=float(inputs[5])
+            self.nexternal = int(n_external)
+            self.ievent = int(i_event)
+            self.wgt = float(weight)
+            self.scale = float(scale)
+            self.aqed = float(aqed)
+            self.aqcd = float(aqcd)
         else:
-            self.nexternal=inputs[0]
-            self.ievent=inputs[1]
-            self.wgt=float(inputs[2])
-            self.scale=inputs[3]
-            self.aqed=inputs[4]
-            self.aqcd=inputs[5]
+            self.nexternal = n_external
+            self.ievent = i_event
+            self.wgt = float(weight)
+            self.scale = scale
+            self.aqed = aqed
+            self.aqcd = aqcd
         
     def get_tag_and_order(self, merged_particle=None):
         """Return the unique tag identifying the SubProcesses for the generation.
@@ -2292,11 +2899,12 @@ class Event(list):
         oldm = [p.mass_sqr for p in momenta]
         newm = [m**2 for m in new_mass]
         tot_mom = sum(momenta, FourMomentum())
-        if tot_mom.pt2 > 1e-5:
-            boost_back = FourMomentum(tot_mom.mass,0,0,0).boost_to_restframe(tot_mom)
-            for i,m in enumerate(momenta):
-                momenta[i] = m.boost_to_restframe(tot_mom)
+        lor = tot_mom.get_lorentz_map(FourMomentum(sqrts, 0, 0, 0))
+        back_lor =FourMomentum(sqrts, 0, 0, 0).get_lorentz_map(tot_mom) 
+        for i,m in enumerate(momenta):
+            momenta[i] = m.apply_lorentzmap(lor) 
         
+        tot_mom2 = sum(momenta, FourMomentum())
         # this is the equation 4.3 of RAMBO paper        
         f = lambda chi: new_sqrts - sum(math.sqrt(max(0, M + chi**2*(p.E**2-m))) 
                                     for M,p,m in zip(newm, momenta,oldm))
@@ -2310,6 +2918,7 @@ class Event(list):
             chi = misc.newtonmethod(f, df, 1.0, error=1e-7,maxiter=1000)
         except:
             return momenta, 0 
+
         # create the new set of momenta # eq. (4.2)        
         new_momenta = []
         for i,p in enumerate(momenta):
@@ -2317,6 +2926,7 @@ class Event(list):
                 FourMomentum(math.sqrt(newm[i]+chi**2*(p.E**2-oldm[i])),
                               chi*p.px, chi*p.py, chi*p.pz))
         
+        new_tot = sum(new_momenta, FourMomentum())
         #if __debug__:
         #    for i,p in enumerate(new_momenta):
         #        misc.sprint(p.mass_sqr, new_mass[i]**2, i,p, momenta[i])
@@ -2329,9 +2939,10 @@ class Event(list):
         jac /= sum(k.norm_sq/k.E for k in new_momenta)
         
         # boost back the events in the lab-frame
-        if tot_mom.pt2 > 1e-5:
-            for i,m in enumerate(new_momenta):
-                new_momenta[i] = m.boost_to_restframe(boost_back)
+        for i,m in enumerate(new_momenta):
+            new_momenta[i] = m.apply_lorentzmap(back_lor) 
+
+        new_tot2 = sum(new_momenta, FourMomentum())
         return new_momenta, jac
         
         
@@ -2434,11 +3045,296 @@ class Event(list):
         else:
             raise Exception
                             
-        return jac        
+        return jac     
+
+
+    def split_event_by_onshell_propagator(self ):
+        """ This split the events in production x decay
+        with format [production, decay1, ...., decayN]
+        ONLY one level is split here (so all decay are attached to the production)
+        if the argument fromlast then the production event does not have
+        any propagator remaining.
+        """
+
+        production=[]
+        out = production
+        particle2event = {}
+
+        nb_final = 0 
+        for particle in self:
+            if particle.status==-1: #initial state -> production
+                production.append(particle)
+                particle2event[particle.event_id] = production
+            elif particle.status==1: #final state -> assign to the event related to mother
+                decay = particle2event[particle.mother1.event_id]
+                decay.append(particle)
+            elif particle.status ==2: # onshell propagator 
+                # need to assign within the "production" part and start a decay part
+                prod = particle2event[particle.mother1.event_id]
+                prod.append(particle)
+                decay = [particle]
+                prod.append(decay) 
+                particle2event[particle.event_id] = decay
+
+        return out, particle2event
+
+
+
+    def reshuffle_momenta(self, final_state_mass):
+        """change the momenta to set the mass of the particle to final_state_mass.
+           if the event has onshell propagator preserve those invariant mass.
+        """
+
+        mod = {}
+        nb_final = 0 
+        for particle in self:
+            if particle.status != 1.0 :
+                continue
+            if particle.mass != final_state_mass[nb_final]:
+                particle.new_mass = final_state_mass[nb_final] 
+                if particle.mother1.event_id in mod:
+                    mod[particle.mother1.event_id].append(particle.event_id)
+                else:
+                    mod[particle.mother1.event_id] = [particle.event_id] 
+            nb_final +=1
+
+        tot_jac =1
+        if 0 in mod:
+            prod, jac  = self.reshufle_keep_onshell()
+            tot_jac*=jac
+        
+        if len(mod) ==2:
+            misc.sprint(self)
+            misc.sprint(prod)
+            raise Exception
+
+
+
+    nb_reshuffle_issue=0
+    _warned_2to1_reshuffle = False
+    def reshuffle_production(self):
+        """ particle that need new mass have the "new_mass" attribute
+        """
+
+        # create a nice data structure for the reshuffling
+        subdiags, mapping = self.split_event_by_onshell_propagator()
+
+        #filter outsubdecay
+        production = [p for p in subdiags if not isinstance(p, list)]
+
+        old_momenta = [FourMomentum(p) for p in production if p.status!=-1]
+        new_masses = [getattr(p, 'new_mass', p.mass) for p in production if p.status!=-1]
+        sqrts = self.sqrts
+
+        # 2 -> 1 production: the single final-state mass is fully determined
+        # by sqrt(shat), so RAMBO has no phase-space to redistribute and
+        # mass_shuffle would divide by zero. Skip reshuffling, drop any
+        # new_mass attribute so callers fall back to the original momenta,
+        # and return jac = 1 (treat as narrow-width approximation at the
+        # production-determined virtuality, i.e. equivalent to running with
+        # density_do_reshuffle=False for this event).
+        if len(old_momenta) <= 1:
+            for p in production:
+                if hasattr(p, 'new_mass'):
+                    del p.new_mass
+            if not Event._warned_2to1_reshuffle:
+                import logging as _logging
+                _logging.getLogger('decay.stdout').info(
+                    "PA reshuffling skipped for 2 -> 1 production: there is "
+                    "no phase space to redistribute via RAMBO. Keeping the "
+                    "production-determined virtuality (NWA-style)."
+                )
+                Event._warned_2to1_reshuffle = True
+            return 1
+
+        if sum(new_masses,0) <=  sqrts:
+            # apply the RAMBO algo
+            new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)
+        else:
+            jac = -1
+        #if __debug__:
+        #    sum_mom = sum([FourMomentum(p) for p in new_mom], FourMomentum())
+        #    sum_old = sum([FourMomentum(p) for p in old_momenta], FourMomentum()) 
+        #    sum2 = FourMomentum(production[0]) + FourMomentum(production[1])
+        if jac in [0,-1]: 
+            #reshuffle momenta if 
+            for p in production:
+                if p.status !=-1 and hasattr(p, 'new_mass'):
+                    p.new_mass = Event.generate_random_mass(*p.reshuffle_info)
+            Event.nb_reshuffle_issue +=1 
+            if jac != -1:
+                misc.sprint('jac was 0 -> retry', Event.nb_reshuffle_issue)
+            return self.reshuffle_production()
+
+        
+        #modify the momenta of the particles:
+        ind =0
+        for part in production:
+            if part.status == -1:
+                continue
+            if part.event_id in mapping: # means that particle is itself decaying
+                decay = mapping[part.event_id]
+                decaying = part
+                if getattr(part, 'new_mass', False):
+                    # Need to reshugffle the decay part
+                    old_p = FourMomentum(part)
+                    jac *= self.reshuffle_decay(decay, new_mom[ind], part.new_mass, mapping)
+                    assert part.E == new_mom[ind][0]
+                    ind+=1
+                else:
+                    # Need to rotate/boost the decay part
+                    self.rotateboost_decay(decay, new_mom[ind], mapping)
+                    ind+=1
+            elif part.status == 1.0:
+                part.E, part.px, part.py, part.pz, part.mass = \
+                new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
+                ind+=1
+
+        return jac
+    
+    def reshuffle_decayevt(self):
+        """ particle that need new mass have the "new_mass" attribute
+        """
+
+        # create a nice data structure for the reshuffling
+        subdiags, mapping = self.split_event_by_onshell_propagator()
+
+        #filter outsubdecay
+        main_decay = [p for p in subdiags if not isinstance(p, list)]
+        new_mass = main_decay[0].new_mass
+        new_mom = FourMomentum(new_mass, 0 , 0, 0)
+
+        jac = self.reshuffle_decay(main_decay, new_mom, new_mass, mapping)
+        return jac
+
+  
+
+
+    @staticmethod
+    def reshuffle_decay(subdiag, new_incoming, offshellmass, mapping):
+        """subdiag is a list with the first particle the one to reshuffle the mass
+        the rest are the particles on which it's decaying (and if an element of the list is itself a list 
+        this is a subdecay -- that just need to be boosted accordingly)
+        """
+        
+        old_momenta = []
+        incoming = FourMomentum(subdiag[0])
+        evtid = []
+        masses = []     
+        nb_dec = 0   
+        for decay in subdiag[1:]:
+            if not isinstance(decay, list): #list means that this particle has a subdecay
+                old_momenta.append(FourMomentum(decay))
+                masses.append(decay.mass)
+            
+        
+        old_sqrts = incoming.mass
+        assert old_sqrts != offshellmass
+        #assert offshellmass == new_incoming.mass
+        new_mom, jac = Event.mass_shuffle(old_momenta, old_sqrts, masses, new_sqrts=offshellmass)
+
+        check = sum([FourMomentum(p) for p in new_mom], FourMomentum())
+        transformation = check.get_lorentz_map(new_incoming)
+   
+
+        all_final = [p for p in subdiag[1:] if not isinstance(p, list)]
+
+        #modify the momenta of the final state particles:
+        for ind,particle in enumerate(all_final):
+            pnew = FourMomentum(new_mom[ind]).apply_lorentzmap(transformation)
+            if particle.event_id in mapping:
+                jac *= Event.rotateboost_decay(mapping[particle.event_id], pnew, mapping)
+            else:
+                particle.set_momentum(pnew)
+                particle.mass = pnew.mass
+        
+        # assign now the momenta of the decaying particle
+        subdiag[0].set_momentum(new_incoming)
+        subdiag[0].mass = offshellmass
+
+                            
+        return jac   
+
+    @staticmethod
+    def reshuffle_decay_final(subdiag, new_decay_mom, mapping):
+        """reshuffle the decay part since some final state mass needs to be 
+           modified. If needed apply boost/rotation such that the production
+           momentum match new_decay_mom (note that the invariant mass of that 
+           particle should be preserve)"""
+
+        final = [p for p in subdiag[1:] if not isinstance(p, list)]
+        new_masses = [getattr(p, 'new_mass', p.mass) for p in final]
+        old_momenta = [FourMomentum(p) for p in final]
+        sqrts = subdiag[0].mass
+        
+
+
+        # apply the RAMBO algo
+        new_mom, jac = Event.mass_shuffle(old_momenta, sqrts, new_masses)
+        
+        #modify the momenta of the particles:
+        ind =0
+        for part in final:
+            if part.event_id in mapping: # means that particle is itself decaying
+                decay = mapping[part.event_id]
+                decaying = part
+                if getattr(part, 'new_mass', False):
+                    # Need to reshugffle the decay part
+                    jac *= Event.reshuffle_decay(decay, new_mom[ind], part.new_mass, mapping)
+                    ind+=1
+                else:
+                    # Need to rotate/boost the decay part
+                    jac *= Event.rotateboost_decay(decay, new_mom[ind], mapping)
+                    ind+=1
+            elif part.status == 1.0:
+                part.E, part.px, part.py, part.pz, part.mass = \
+                new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
+                ind+=1
+
+        return jac       
+
+    @staticmethod
+    def rotateboost_decay(subdiag, new_mom, mapping):
+        """rotate/boost the full subdiag such that the momenta of the decaying 
+        particle correspond to new_mom"""
+
+        
+        # some usefull information
+        decay_particle = subdiag[0]
+        orig_mom = FourMomentum(decay_particle) 
+        #nb_part = len(self) #original number of particle
+        all_particle = [part for part in subdiag if not isinstance(part, list)]
+
+
+        # check if some of the particle are tagged with a new mass
+        if any(hasattr(p, 'new_mass') for p in all_particle[1:]):
+            return Event.reshuffle_decay_final(subdiag, new_mom, mapping)
+
+        lor = orig_mom.get_lorentz_map(new_mom)
+        jac = 1.
+        # add the particle with only handling the 4-momenta
+        for particle in all_particle[1:]:
+            old_momenta = FourMomentum(particle)
+            new_p = old_momenta.apply_lorentzmap(lor)
+            if particle.event_id not in mapping:
+                particle.set_momentum(new_p)
+                particle.mass = new_p.mass
+            else:
+                jac *= Event.rotateboost_decay(mapping[particle.event_id], new_p, mapping)
+        # set initial decay
+        decay_particle.set_momentum(new_mom)
+        decay_particle.mass = new_mom.mass
+
+        return jac
         
     
-    def get_helicity(self, get_order, allow_reversed=True, merged_map=None):
+    def get_helicity(self, get_order=None, allow_reversed=True, merged_map=None):
         """return a list with the helicities in the order asked for"""
+
+        if get_order is None:
+            init = [part.pid for part in self if part.status == -1]
+            final = [part.pid for part in self if part.status == 1]
+            get_order = [init, final]
 
         if not merged_map:
             map = lambda x: x
@@ -2611,13 +3507,14 @@ class Event(list):
                
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
-        
+
         out="""<event%(event_flag)s>
 %(scale)s
 %(particles)s
 %(comments)s
 %(tag)s
 %(reweight)s
+%(density)s
 </event>
 """ 
         if event_id not in ['', None]:
@@ -2679,13 +3576,24 @@ class Event(list):
                 sys_str += template % replace
             sys_str += "</mgrwt>\n"
             reweight_str = sys_str + reweight_str
+
+        
+
+        if self.density == []: #if we are not in density mode
+            density_to_write = ''
+        else:
+            info_density = ''
+            for i in range(len(self.density)):
+                info_density += str(self.density[i]) + ' '
+            density_to_write = "<density> " + info_density + "</density>"
         
         out = out % {'event_flag': event_flag,
                      'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
                       'tag': tag_str,
                       'comments': self.comment,
-                      'reweight': reweight_str}
+                      'reweight': reweight_str,
+                      'density': density_to_write}
         
         return re.sub('[\n]+', '\n', out)
     
@@ -2823,20 +3731,35 @@ class Event(list):
 
         return out
 
-    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None):
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None, permutate_two_decay=False):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
               for easier development debug output allow to return internal variable for the unittest to check
+              permutate_two_decay allow to also consider the case with flip between two decay products
         """  
 
-        misc.sprint(self)
         p = self.get_momenta(get_order, allow_reversed, merged_map=merged_map)
+
+        # When the ME legs use merged-particle IDs, event PDGs need the same
+        # remap before being looked up in get_order[1]; otherwise
+        # final.index(raw_pdg) raises ValueError.
+        if merged_map:
+            def map_pdg(x):
+                try:
+                    return merged_map[x]
+                except KeyError:
+                    try:
+                        return -merged_map[-x]
+                    except KeyError:
+                        return x
+        else:
+            map_pdg = lambda x: x
 
         nbin = len(get_order[0])
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
         final = list(get_order[1])
         for i, part in enumerate(self):
-            pdg = part.pid
+            pdg = map_pdg(part.pid)
             if part.status != 1:
                 continue
             try:
@@ -2875,11 +3798,12 @@ class Event(list):
                     for val in data[pdg][mother]:
                         mapping.append(mother)
                         positions.append(val)
-                all_perms = Event.get_permutation(positions, mapping)
+                all_perms = Event.get_permutation(positions, mapping, permutate_two_decay=permutate_two_decay)
                 perms_perid[pdg] = [[(pos, positions[i]) for i,pos in enumerate(perm)] for perm in all_perms]
 
         if debug_output == 2:
             return perms_perid
+    
 
         all_perms = []
         import itertools
@@ -2904,6 +3828,9 @@ class Event(list):
         so (3,4,5) and (4,3,5) are the same for mapping={0:"a",1:"a",2:"b"}
         since a is assocated to 3,4 in both case (and b to 5 in each case
         but (3,4,5) and (3,5,4) are not the same because b has 5 in one case and 4 in the second
+
+        if permutate_two_decay is False, then two permutation are consider equivalent if they differ by a swap of particles having not
+        (1,2) as mothers
         """
         content1 = collections.defaultdict(set)
         content2 = collections.defaultdict(set)
@@ -2914,10 +3841,11 @@ class Event(list):
         for key in content1:
             if content1[key] != content2[key]:
                 return False
+            
         return True
 
     @staticmethod
-    def get_permutation(orig, belong):
+    def get_permutation(orig, belong, permutate_two_decay=False):
         """
         orig is the position of the various particle to permutate
         belong is the class to which they belong
@@ -2925,14 +3853,18 @@ class Event(list):
         three permutation of orig (like)
         [3,4,5], [3,5,4], [4,5,3] 
         """
+        if not permutate_two_decay:
+            belong = list(belong)
+            # then all belong different from (1,2) should be mapped to "D"
+            for i,mother in enumerate(belong):
+                if mother != (0,1):
+                    belong[i] = "D"
 
         import itertools
-
         assert(len(orig) == len(belong))
         invert = {}
         for i in range(len(orig)):
             invert[i] = belong[i]
-
         allperms = []
         for perm in itertools.permutations(orig):
             if not any(Event.equiv_sequence(perm, prev, invert) for prev in allperms):
@@ -2999,8 +3931,18 @@ class Event(list):
             return init[0].mass
         elif len(init)==2:
             return math.sqrt((init[0]+init[1])**2)
-                   
     
+    @staticmethod
+    def generate_random_mass(pole, width, min_mass, max_mass):
+        """generate invariant mass according to a breit-wigner"""
+
+        # R = arctan((q^2-m^2)/mGamma)
+        # q^2 = m^2 + m Gamma tan(R)
+        min_R = math.atan((min_mass**2-pole**2)/pole/width)
+        max_R = math.atan((max_mass**2-pole**2)/pole/width) 
+        R = min_R + (max_R-min_R)*random.random()
+        m2 = pole**2 + pole * width * math.tan(R)
+        return math.sqrt(m2)
     
     
     def get_momenta_str(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
@@ -3012,7 +3954,48 @@ class Event(list):
         format_line = ' '.join([format]*4) + ' \n'
         out = [format_line % one for one in out]
         out = ''.join(out).replace('e','d')
-        return out    
+        return out   
+
+
+    def  get_sym_factor_with(self, event_list):
+        """return the symmetry factor of the event with respect to a list of event
+           WARNING: no check on the initial state is done."""
+        
+        all_events = [self] + event_list
+        done = []
+
+        global_factor = 1
+        for i, event in enumerate(all_events):
+            nb_iden = 1
+            factor =1 
+            for j, event2 in enumerate(all_events[i+1:],start=i+1):
+                if j in done:
+                    continue
+                if event.has_same_final_state(event2):
+                    done.append(j)
+                    nb_iden += 1
+                    factor *= nb_iden
+            global_factor *= factor
+        return global_factor
+
+    def has_same_final_state(self, other):
+        """return True if the two event have the same final state (up to permutation)
+        """
+        
+        if other is None:
+            return False
+        
+        self_final = [p.pid for p in self if p.status == 1]
+        other_final = [p.pid for p in other if p.status == 1]
+        if len(self_final) != len(other_final):
+            return False
+        self_final.sort()
+        other_final.sort()
+        return self_final == other_final
+
+
+
+
 
 class FourMomentum(object):
     """a convenient object for 4-momenta operation"""
@@ -3160,6 +4143,9 @@ class FourMomentum(object):
     def get_tuple(self):
         return (self.E, self.px, self.py,self.pz)
     
+    def __getitem__(self, item):
+         return getattr(self, {0:'E', 1:'px',2:'py',3:'pz'}[item])
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -3295,6 +4281,8 @@ class FourMomentum(object):
                            pz= -gamma*vz*self.E + gammo*vz*vx/v2*self.px + gammo*vz*vy/v2*self.py + (1+gammo*vz**2/v2)*self.pz)
 
         return out
+
+
         
     def rotate_to_z(self,prot):
 
@@ -3339,6 +4327,241 @@ class FourMomentum(object):
     def threedot(self,a,b):
 
         return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
+
+
+    def get_lorentz_map(self, p2: "FourMomentum", tol: float = 1e-6) -> "LorentzMap":
+        """
+        Build and return a reusable LorentzMap that maps this momentum (self) to p2.
+        Example:
+            T = p1.get_lorentz_map(p2)
+            for q in particles: q.apply_lorentzmap(T)
+        """
+        return LorentzMap.from_p1_to_p2(self, p2, tol=tol)
+
+    def apply_lorentzmap(self, T: "LorentzMap") -> "FourMomentum":
+        """
+        Apply a prebuilt LorentzMap to this momentum (in place).
+        Example:
+            q.apply_lorentzmap(T)
+        """
+        T.apply_to(self)
+        return self
+
+    # -----------------------
+    # Private helpers used by LorentzMap
+    # -----------------------
+    def _beta(self) -> tuple[float, float, float]:
+        """Return the rotationless-boost β = p/E (assumes E != 0)."""
+        if abs(self.E) < 1e-30:
+            raise ValueError("Cannot compute β = p/E with E ≈ 0.")
+        return (self.px / self.E, self.py / self.E, self.pz / self.E)
+
+    def _spatial_vec(self) -> tuple[float, float, float]:
+        """Return the 3-vector (px, py, pz)."""
+        return (self.px, self.py, self.pz)
+
+    @staticmethod
+    def _dot3(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
+        return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+    @staticmethod
+    def _cross3(a: tuple[float, float, float], b: tuple[float, float, float]) -> tuple[float, float, float]:
+        return (
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0],
+        )
+
+    @staticmethod
+    def _norm3(a: tuple[float, float, float]) -> float:
+        return math.sqrt(max(0.0, FourMomentum._dot3(a, a)))
+
+    @staticmethod
+    def _rot_from_to(a: tuple[float, float, float],
+                     b: tuple[float, float, float]) -> list[list[float]]:
+        """
+        Build a 3x3 rotation matrix R that maps unit vector a -> unit vector b.
+        Robust Rodrigues formula, handling parallel and antiparallel cases.
+        Returns R as a list-of-lists with row-major order.
+        """
+        ax = (float(a[0]), float(a[1]), float(a[2]))
+        bx = (float(b[0]), float(b[1]), float(b[2]))
+        I = [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]]
+
+        na, nb = FourMomentum._norm3(ax), FourMomentum._norm3(bx)
+        if na < 1e-30 or nb < 1e-30:
+            return I
+
+        ax = (ax[0]/na, ax[1]/na, ax[2]/na)
+        bx = (bx[0]/nb, bx[1]/nb, bx[2]/nb)
+
+        c = FourMomentum._dot3(ax, bx)          # cosθ
+        v = FourMomentum._cross3(ax, bx)
+        s = FourMomentum._norm3(v)              # sinθ
+
+        if s < 1e-15:
+            # Collinear
+            if c > 0.0:
+                return I
+            # 180° rotation around any axis perpendicular to ax
+            trial = (1.0, 0.0, 0.0) if abs(ax[0]) < 0.9 else (0.0, 1.0, 0.0)
+            k = FourMomentum._cross3(ax, trial)
+            nk = FourMomentum._norm3(k)
+            kx, ky, kz = k[0]/nk, k[1]/nk, k[2]/nk
+            # R = 2 k kᵀ − I
+            return [
+                [2*kx*kx - 1.0, 2*kx*ky,       2*kx*kz],
+                [2*kx*ky,       2*ky*ky - 1.0, 2*ky*kz],
+                [2*kx*kz,       2*ky*kz,       2*kz*kz - 1.0],
+            ]
+
+        # General Rodrigues: R = c I + (1−c) k kᵀ + s K
+        kx, ky, kz = (v[0]/s, v[1]/s, v[2]/s)
+        one_mc = 1.0 - c
+        R = [[0.0]*3 for _ in range(3)]
+        for i in range(3):
+            for j in range(3):
+                R[i][j] = c*(1.0 if i==j else 0.0)
+        # +(1−c) k kᵀ
+        R[0][0] += one_mc*kx*kx; R[0][1] += one_mc*kx*ky; R[0][2] += one_mc*kx*kz
+        R[1][0] += one_mc*ky*kx; R[1][1] += one_mc*ky*ky; R[1][2] += one_mc*ky*kz
+        R[2][0] += one_mc*kz*kx; R[2][1] += one_mc*kz*ky; R[2][2] += one_mc*kz*kz
+        # + sK
+        R[0][1] -= s*kz; R[0][2] += s*ky
+        R[1][0] += s*kz; R[1][2] -= s*kx
+        R[2][0] -= s*ky; R[2][1] += s*kx
+        return R
+
+    # ---- in-place elementary transforms used by LorentzMap ----
+    def _apply_R3(self, R: list[list[float]]) -> None:
+        """Rotate only the spatial part by 3×3 matrix R; E unchanged."""
+        px, py, pz = self.px, self.py, self.pz
+        self.px = R[0][0]*px + R[0][1]*py + R[0][2]*pz
+        self.py = R[1][0]*px + R[1][1]*py + R[1][2]*pz
+        self.pz = R[2][0]*px + R[2][1]*py + R[2][2]*pz
+
+    def _apply_zboost_eta(self, eta: float) -> None:
+        """Pure z-boost with rapidity eta (proper, orthochronous)."""
+        ch = math.cosh(eta)
+        th = math.tanh(eta)
+        E, pz = self.E, self.pz
+        self.E  = ch*E + ch*th*pz
+        self.pz = ch*pz + ch*th*E
+        # px, py unchanged
+
+    def _apply_boost_beta(self, bx: float, by: float, bz: float) -> None:
+        """
+        Rotationless boost with 3-velocity β = (bx, by, bz), c=1, metric (+,-,-,-).
+        """
+        b2 = bx*bx + by*by + bz*bz
+        if b2 < 1e-30:
+            return
+        if b2 >= 1.0:
+            raise ValueError(f"Invalid boost |β|^2={b2} ≥ 1.")
+        gamma = 1.0 / math.sqrt(1.0 - b2)
+
+        E, px, py, pz = self.E, self.px, self.py, self.pz
+        bp = bx*px + by*py + bz*pz
+
+        Ep = gamma * (E + bp)
+        fac = (gamma - 1.0) / b2
+
+        self.px = px + fac*bp*bx + gamma*E*bx
+        self.py = py + fac*bp*by + gamma*E*by
+        self.pz = pz + fac*bp*bz + gamma*E*bz
+        self.E  = Ep
+
+
+class LorentzMap:
+    """
+    Reusable Lorentz transformation represented as an ordered list of steps,
+    each of which is applied via FourMomentum's in-place helpers:
+        - ("boost_beta", (bx, by, bz))
+        - ("rot", R3)
+        - ("zboost_eta", eta)
+    """
+    __slots__ = ("steps",)
+
+    def __init__(self, steps: list[tuple[str, object]]):
+        self.steps = steps
+
+    def apply_to(self, p: FourMomentum) -> FourMomentum:
+        """Apply the map to a single 4-vector (mutates and returns p)."""
+        for kind, payload in self.steps:
+            if kind == "boost_beta":
+                bx, by, bz = payload
+                p._apply_boost_beta(bx, by, bz)
+            elif kind == "rot":
+                R = payload
+                p._apply_R3(R)
+            elif kind == "zboost_eta":
+                eta = payload
+                p._apply_zboost_eta(eta)
+            else:
+                raise RuntimeError(f"LorentzMap: unknown step kind '{kind}'")
+        return p
+
+    def apply_to_many(self, plist: list[FourMomentum]) -> list[FourMomentum]:
+        """Apply the map to a list/iterable of 4-vectors (mutates all)."""
+        for p in plist:
+            self.apply_to(p)
+        return plist
+
+    # ---------- Factory ----------
+    @classmethod
+    def from_p1_to_p2(cls, p1: FourMomentum, p2: FourMomentum, tol: float = 1e-6) -> "LorentzMap":
+        """
+        Build the canonical proper, orthochronous Lorentz transformation that maps p1 -> p2.
+        - Timelike:   Λ = B(β2) · B(−β1)
+        - Lightlike:  Λ = R(n1→z) · Bz(η) · R(z→n2),   η = ln(|p2|/|p1|)
+        Requires p1.mass_sqr == p2.mass_sqr within tolerance.
+        Spacelike inputs are not implemented here.
+        """
+        # Get invariant masses via properties
+        m1_2 = float(p1.mass_sqr)
+        m2_2 = float(p2.mass_sqr)
+
+        if abs(m1_2 - m2_2) > tol * max(abs(m1_2), abs(m2_2)):
+            misc.sprint(abs(abs(m1_2 - m2_2))/max(abs(m1_2), abs(m2_2)), tol)
+            raise ValueError("No Lorentz transformation exists: p1^2 != p2^2.")
+
+        # -------- Timelike (massive) --------
+        if m1_2 > tol:
+            # β = p/E
+            beta1 = p1._beta()
+            beta2 = p2._beta()
+            steps = [
+                ("boost_beta", (-beta1[0], -beta1[1], -beta1[2])),
+                ("boost_beta", ( beta2[0],  beta2[1],  beta2[2])),
+            ]
+            return cls(steps)
+
+        # -------- Lightlike (massless) --------
+        if abs(m1_2) <= tol:
+            v1 = p1._spatial_vec()
+            v2 = p2._spatial_vec()
+            n1 = p1.norm
+            n2 = p2.norm 
+            if n1 < tol or n2 < tol:
+                raise ValueError("Massless case requires nonzero spatial |p| for p1 and p2.")
+
+            # Minimal map (no null-rotation): align -> boost_z -> align back
+            R1 = FourMomentum._rot_from_to(v1, (0.0, 0.0, 1.0))   # n1 → +z
+            R2 = FourMomentum._rot_from_to((0.0, 0.0, 1.0), v2)   # +z → n2
+            eta = math.log(n2 / n1)
+
+            steps = [
+                ("rot", R1),
+                ("zboost_eta", eta),
+                ("rot", R2),
+            ]
+            return cls(steps)
+
+        # -------- Spacelike --------
+        raise NotImplementedError("Spacelike 4-vectors not supported in this minimal implementation.")
+
+
+
 
 class OneNLOWeight(object):
         
@@ -3603,9 +4826,9 @@ class NLO_PARTIALWEIGHT(object):
         def get_pdg_code(self):
             return self.pdgs
             
-        def get_tag_and_order(self):
+        def get_tag_and_order(self, merged_particle=None):
             """ return the tag and order for this basic event""" 
-            (initial, _), _ = self.event.get_tag_and_order()
+            (initial, _), _ = self.event.get_tag_and_order(merged_particle)
             order = self.get_pdg_code()
             
             
@@ -3613,25 +4836,87 @@ class NLO_PARTIALWEIGHT(object):
             initial.sort()
             out.sort()
             return (tuple(initial), tuple(out)), order
+
+        def get_mapping(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
+            """return (event_pos2order, orderevent_2pos); allow_crossing is ignored for API compatibility"""
+
+            _ = allow_crossing
+
+            if merged_map:
+                def map_pdg(x):
+                    try:
+                        return merged_map[x]
+                    except KeyError:
+                        try:
+                            return -merged_map[-x]
+                        except KeyError:
+                            return x
+            else:
+                def map_pdg(x):
+                    return x
+
+            out1 = {}
+            out2 = {}
+            order = [list(get_order[0]), list(get_order[1])]
+            pdgs = self.get_pdg_code()
+            for pos, pdg in enumerate(pdgs):
+                pdg = map_pdg(pdg)
+                if pos < len(get_order[0]):
+                    try:
+                        ind = order[0].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = ind
+                    order[0][ind] = 0
+                else:
+                    try:
+                        ind = order[1].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = len(order[0]) + ind
+                    order[1][ind] = 0
+
+                out1[pos] = position
+                out2[position] = pos
+            return out1, out2
         
-        def get_momenta(self, get_order, allow_reversed=True):
+        def get_momenta(self, get_order, allow_reversed=True, merged_map=None):
             """return the momenta vector in the order asked for"""
              
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
             out = [''] *(len(order[0])+len(order[1]))
             pdgs = self.get_pdg_code()
+            if merged_map:
+                def map_pdg(x):
+                    try:
+                        return merged_map[x]
+                    except KeyError:
+                        try:
+                            return -merged_map[-x]
+                        except KeyError:
+                            return x
+            else:
+                def map_pdg(x):
+                    return x
             for pos, part in enumerate(self):
+                pdg = map_pdg(pdgs[pos])
                 if pos < len(get_order[0]): #initial
                     try:
-                        ind = order[0].index(pdgs[pos])
+                        ind = order[0].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error   
                             
@@ -3640,14 +4925,14 @@ class NLO_PARTIALWEIGHT(object):
                     order[0][ind] = 0             
                 else: #final   
                     try:
-                        ind = order[1].index(pdgs[pos])
+                        ind = order[1].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error     
                     position = len(order[0]) + ind
@@ -3657,17 +4942,21 @@ class NLO_PARTIALWEIGHT(object):
                 
             return out
 
-        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None):
             """ same as get_momenta but return all valid permutation of the final state 
                     where identical particle does NOT have the same parent
                     for easier development debug output allow to return internal variable for the unittest to check
             """  
 
 
-            return [self.get_momenta(get_order, allow_reversed)]
+            return [self.get_momenta(get_order, allow_reversed, merged_map=merged_map)]
             
             
-        def get_helicity(self, *args):
+        def get_helicity(self, get_order=None, allow_reversed=True, merged_map=None):
+            """Return default helicities; keep signature compatible with Event.get_helicity."""
+            _ = (allow_reversed, merged_map)
+            if get_order:
+                return [9] * (len(get_order[0]) + len(get_order[1]))
             return [9] * len(self)
         
         @property
@@ -4077,4 +5366,3 @@ if '__main__' == __name__:
     
     
     
-

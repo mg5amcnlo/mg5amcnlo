@@ -4,19 +4,32 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.7.1 ():
-    OM: Allow easier syntax in the run_card. 
+3.7.2 (XX/XX/XX):
+    RF: Fixed the writing of LHE files in fixed-order computations that was broken since previous release (3.7.1).
+
+3.7.1 (29/04/26):
+    OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
+        to 0 (automatic) meaning that the next run in the directory will be with a different seed. 
+        Note that this was the behavior at LO already.
+    OM: Allow easier syntax in the run_card.
         You can now use "set lpp1 e-" instead of "set lpp1 3"
         You can now use "set fixed_scale mz" instead of "set fixed_scale 91.1880"
         You can now use "set dynamical_scale_choice ht/2" instead of "set dynamical_scale_choice 3"
     OM: Change the implementation of the "$" syntax such that the implementation moves at the amplitude level
         This means that the syntax is now also supported at standalone level (bwcutoff hardcoded to 15)
         This has no impact if sde_strategy=1 but avoids issue with sde_strategy=2.
-        We still recomend sde_strategy=1 when using $ syntax since you can have spurious writting of resonances
-        in the lhef with sde_stragegy=2.
-    Team: INclude all bug fix from 3.5.14 (see below)
+        We still recommend sde_strategy=1 when using $ syntax since you can have spurious writting of resonances
+        in the lhef with sde_strategy=2.
+    RF: Refactored the code that collects all the events from the various channels
+        into a single event file at the end of an MC@NLO run.
+    OM: Remove the dependency to the six package
+    MZ+LJ: Bug fix in ew_sudkavov (one in the color matrix and one in the value for alphas)
+    OM: Fix a couple of issue with the linking of the heptools library (especially on ubuntu)
+    RR: Extended propagator support for polarised boson (https://arxiv.org/abs/2512.10015)
+        See https://github.com/mg5amcnlo/mg5amcnlo/pull/215 for simple instructions
+    OM: Cleaner version on how MLM select color for events
+    Team: include all bug fix from 3.5.14 (see below)
         Note slightly different handling of default parameter when a parameter is not within the run_card
-        
 
 3.7.0 (05/01/26):
     RR: When carrying out parameter scans in MadGraph/MadEvent or MG5aMC@NLO with systematics (use_syst True or reweight_scale/pdf True), then the uncertain information is also recorded in the scan summary.
@@ -96,6 +109,10 @@ ANNOUNCEMENT:
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
 
+
+3.5.15 (17/4/26):
+  OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
+  OM: Additional fix related to the matchbox template
 
 3.5.14 (10/4/26):
   OM: Fix issue on how Sextet where written within lhef output

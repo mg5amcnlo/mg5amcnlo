@@ -177,14 +177,18 @@ class LoopExporterFortran(object):
             # his environmental paths
             CTlib = misc.which_lib('libcts.a')
             CTmod = misc.which_lib('mpmodule.mod')
-            if not CTlib is None and not CTmod is None:
+            if CTlib is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " libcts.a in your environment paths.")
+            elif CTmod is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " mpmodule.mod in your environment paths.")
+            else:
                 logger.info('MG5_aMC is using CutTools installation found at %s.'%\
-                                                         os.path.dirname(CTlib)) 
+                                                         os.path.dirname(CTlib))
                 ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
                 ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
-            else:
-                raise InvalidCmd("Could not find the location of the files"+\
-                    " libcts.a and mp_module.mod in you environment paths.")
+
     
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
@@ -1426,8 +1430,8 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
             
             file = open(os.path.join(self.template_dir,\
                                              'helas_loop_amplitude.inc')).read()
-            file = file % replace_dict
-            files.append(file)   
+            file = misc.apply_template(file, replace_dict)
+            files.append(file)
         
         file="\n".join(files)
         
@@ -1543,14 +1547,14 @@ C                ENDIF
                          ANS(2)=ANS(2)+DBLE(CFTOT*AMPL(2,I))+DIMAG(CFTOT*AMPL(2,I))
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
-        else: 
+        else:
             replace_dict['compute_born']=\
 """C Compute the born, for a specific helicity if asked so.
-call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
+call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,FLAVOR,ANS(0))
 """%matrix_element.rep_dict
             replace_dict['set_reference']=\
 """C We chose to use the born evaluation for the reference
-call %(proc_prefix)ssmatrix(p,ref)"""%matrix_element.rep_dict
+call %(proc_prefix)ssmatrix(p,FLAVOR,ref)"""%matrix_element.rep_dict
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""
@@ -1731,11 +1735,11 @@ C               ENDIF""")%replace_dict
         else:
             replace_dict['born_amps_and_wfs_calls']=\
                                             '\n'.join(born_amps_and_wfs_calls)
-        
-        file = file % replace_dict
+
+        file = misc.apply_template(file, replace_dict)
         if writer:
             # Write the file
-            writer.writelines(file)  
+            writer.writelines(file)
         else:
             # Return it to be written along with the others
             return file
@@ -2338,8 +2342,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['include_vector'] = '' 
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
- 
-        file = file % replace_dict
+
+        file = misc.apply_template(file, replace_dict)
 
         FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
                                                     coef_format=replace_dict['complex_dp_format'],\
@@ -2535,9 +2539,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
         else:
             replace_dict['include_vector'] = ''
-                    
-        file = file % replace_dict
- 
+
+        file = misc.apply_template(file, replace_dict)
+
         # Write the file
         writer.writelines(file,context=context)
 
@@ -2656,8 +2660,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                            replace_dict['nmultichannel_configs']        
         
         
-        file = open(os.path.join(self.template_dir,\
-                                 'compute_color_flows.inc')).read()%replace_dict
+        file = misc.apply_template(
+            open(os.path.join(self.template_dir,
+                              'compute_color_flows.inc')).read(),
+            replace_dict)
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
@@ -3235,8 +3241,8 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-        file = file % replace_dict
-        
+        file = misc.apply_template(file, replace_dict)
+
         # Write the file
         writer.writelines(file)
 

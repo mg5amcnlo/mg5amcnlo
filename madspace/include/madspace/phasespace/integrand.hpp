@@ -59,7 +59,8 @@ public:
         const std::vector<std::size_t>& channel_indices = {},
         const std::vector<std::size_t>& active_flavors = {},
         const std::vector<std::size_t>& flavor_remap = {},
-        const std::vector<double>& flavor_factors = {}
+        const std::vector<double>& flavor_factors = {},
+        const std::vector<bool>& flavor_mirror = {}
     );
     std::size_t particle_count() const { return _mapping.particle_count(); }
     bool madnis_training() const { return _madnis_training; }
@@ -135,6 +136,8 @@ private:
     std::vector<double> _active_flavors_mask;
     std::vector<me_int_t> _flavor_remap;
     std::vector<double> _flavor_factors;
+    std::vector<me_int_t> _flavor_mirror;
+    bool _has_mirror;
     NamedVector<Type> _channel_part_ret_types;
 
     friend class IntegrandProbability;

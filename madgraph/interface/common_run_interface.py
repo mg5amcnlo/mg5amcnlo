@@ -70,8 +70,12 @@ except ImportError:
     import internal.FO_analyse_card as FO_analyse_card 
     import internal.sum_html as sum_html
     from internal import InvalidCmd, MadGraph5Error
-    
-    MADEVENT=True    
+    try:
+        import internal.citation as citation
+    except ImportError:
+        citation = None
+
+    MADEVENT=True
 else:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
@@ -86,8 +90,9 @@ else:
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as param_card_mod
     import madgraph.madevent.sum_html as sum_html
+    import madgraph.various.citation as citation
 #    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
-    
+
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
@@ -711,7 +716,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.me_dir = pjoin(os.getcwd(),me_dir)
             
-        self.options = options
+        self.options = dict(options)
         
         self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
@@ -1224,6 +1229,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     r'@MG5aMC\s*reconstruction_name', # MA5 hadronique
                     '@MG5aMC', # MA5 hadronique
                     'run_rivet_later', # Rivet
+                    'change particle_in_density_matrix' # density mode of reweight
                     ]
         
         
@@ -1273,6 +1279,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'pythia8_card.dat'
         elif 'run_rivet_later' in text:
             return 'rivet_card.dat'
+        elif 'change particle_in_density_matrix' in text:
+            return 'reweight_card.dat'
         elif 'launch' in text:
             # need to separate madspin/reweight.
             # decay/set can be in both...
@@ -1690,6 +1698,58 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                                      log=logger)
                     pass
 
+    def get_citation_dir(self):
+        """Directory where the per-process citation logs are written for the
+        current run (Events/<run_name>/citations)."""
+        if not self.run_name:
+            return None
+        return pjoin(self.me_dir, 'Events', self.run_name, 'citations')
+
+    def setup_citation_tracking(self):
+        """Point MG5_CITATION_DIR at the current run so that every piece of code
+        (this process and any executable it launches) records its references
+        there.  Safe no-op if citation tracking is unavailable."""
+        if citation is None:
+            return
+        citation_dir = self.get_citation_dir()
+        if not citation_dir:
+            return
+        try:
+            if not os.path.isdir(citation_dir):
+                os.makedirs(citation_dir)
+        except OSError:
+            return
+        os.environ[citation.ENV_VAR] = citation_dir
+        # seed the run with the citations recorded at generation time
+        # (framework, model, ALOHA/HELAS, UFO format) so they end up in the
+        # final bibliography even when nothing cites them again at run time.
+        gen_log = pjoin(self.me_dir, 'citations.log')
+        if os.path.exists(gen_log):
+            try:
+                files.cp(gen_log, pjoin(citation_dir, 'cite.generation.log'))
+            except Exception:
+                pass
+
+    def finalize_citation_tracking(self):
+        """Collect the run's citation logs and write the two user-facing
+        deliverables (citations.bib and citations.md) next to the events."""
+        if citation is None:
+            return
+        citation_dir = self.get_citation_dir()
+        if not citation_dir:
+            return
+        try:
+            result = citation.finalize(citation_dir,
+                                       output_dir=pjoin(self.me_dir, 'Events',
+                                                        self.run_name),
+                                       run_name=self.run_name)
+        except Exception as error:
+            logger.debug('citation finalization skipped: %s', error)
+            return
+        if result:
+            logger.info('References for this run written to %s',
+                        os.path.relpath(result[0], self.me_dir))
+
     def store_result(self):
         """Dummy routine, to be overwritten by daughter classes"""
 
@@ -1928,6 +1988,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             import madgraph.various.systematics as systematics
 
+        # systematics.py always invokes LHAPDF for PDF variations
+        if citation is not None:
+            citation.cite('Buckley:2014ana',
+                          'LHAPDF6 PDF uncertainties (systematics)')
+
         #one core:
         if nb_submit in [0,1]:
             systematics.call_systematics([input, output] + opts, 
@@ -2082,26 +2147,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             return multicore
             
-        
-        
-        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
-            return
-        # option for multicore to avoid that all of them create the same directory
-        if '--multicore=create' in line:
-            multicore='create'
-        elif '--multicore=wait' in line:
-            multicore='wait'
-        else:
-            multicore=False
-            
-        # plugin option
-        plugin = False
-        if '--plugin=' in line:
-            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
-        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF']:
-            plugin=self.switch['reweight']
-            
-
             
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
@@ -2114,7 +2159,66 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         except ImportError:
             raise self.ConfigurationError('''Can\'t load Reweight module.
             The variable mg5_path might not be correctly configured.''')
+
+        # plugin option
+        plugin = False
+        reweight_mode = None
+        if '--mode=density' in line:
+            reweight_mode = 'density'
+            line = line.replace('--mode=density', '')
+        elif '--mode=ON' in line:
+            reweight_mode = 'ON'
+            line = line.replace('--mode=ON', '')
+        elif '--mode=OFF' in line:
+            return
+
+        if '--plugin=' in line:
+            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
+        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF', 'density']:
+            plugin=self.switch['reweight']
         
+        # option for multicore to avoid that all of them create the same directory
+        if '--multicore=create' in line:
+            multicore='create'
+        elif '--multicore=wait' in line:
+            multicore='wait'
+        else:
+            multicore=False
+            
+        #We are checking if the reweight card exists and is in density mode
+        density_card_flag = False #flag is False if the reweight card is not in mode density
+        reweight_card_present = True
+        try:
+            with open(pjoin(self.me_dir,"Cards", "reweight_card.dat"), 'r') as reweight_card_data:
+                text =reweight_card_data.readlines()
+                for elem in text:
+                    if 'change particle_in_density_matrix' in elem:
+                        density_card_flag = True
+                        break
+        except:
+            reweight_card_present = False
+
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
+            return
+
+        # cite the reweighting paper only when reweighting is actually used: an
+        # explicit "reweight" command, or an active "launch" in the from_cards
+        # reweight_card (a default run always calls "reweight -from_cards" with a
+        # template card that has no active launch).
+        if citation is not None:
+            if reweight_mode == 'density':
+                citation.cite('Durupt:2025wuk', 'Density matrix reweighting')
+            elif plugin is None and reweight_mode == 'ON':
+                citation.cite('Mattelaer:2016gcx',
+                    'BSM event reweighting (LO and NLO accuracy)')
+                
+
+        if reweight_mode == 'density' and not density_card_flag: #we are in density mode but the reweight card does not exist or does not contain the correct information
+            shutil.copyfile(pjoin(self.me_dir, "Cards", "density_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+        elif reweight_mode == 'ON' and (density_card_flag or not reweight_card_present): #we are in reweight mode but the reweight card is in mode density
+            shutil.copyfile(pjoin(self.me_dir, "Cards", "reweight_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+
+
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'], ignore=['*'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
@@ -2163,6 +2267,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     command += args
                 if '-from_cards' not in command:
                     command.append('-from_cards')
+                if reweight_mode == 'density':
+                    command.append('--mode=density')
                 p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
                 while p.poll() is None:
                     line = p.stdout.readline().decode(errors='ignore')
@@ -2240,6 +2346,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         new_command.append('-from_cards')
                     if plugin:
                         new_command.append('--plugin=%s' % plugin)
+                    if reweight_mode == 'density':
+                        new_command.append('--mode=density')
+                    
                     if i==0:
                         if __debug__:
                             stdout = None
@@ -2255,8 +2364,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
+                try:
+                    os.remove(new_args[0])
+                except OSError:
+                    pass
+                if new_args[0].endswith('.gz') and os.path.exists(new_args[0][:-3]):
+                    try:
+                        os.remove(new_args[0][:-3])
+                    except OSError:
+                        pass
 
-                lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
+                if reweight_mode == 'density':
+                    lhe = lhe_parser.MultiEventFile(all_lhe, parse=False, parse_LHE=False)
+                else:
+                    lhe = lhe_parser.MultiEventFile(all_lhe, parse=False, parse_LHE=True)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
                     for f in all_lhe:
@@ -2282,18 +2403,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        rwgt_interface = reweight_interface.ReweightInterface 
-        if plugin:
+
+        #According to the reweight mode chosen by the user, we instantiate the correct reweight interface
+        #could improve it with a __new__ in ReweightInterface so we would always call ReweightInterface instead of DensityInterface ?
+        if reweight_mode == 'density':
+            rwgt_interface = reweight_interface.DensityInterface
+        else:
+            rwgt_interface = reweight_interface.ReweightInterface
+        
+    
+        if plugin: 
             rwgt_interface = misc.from_plugin_import(self.plugin_path, 'new_reweight', 
                                         plugin, warning=False, 
-                                        info="Will use re-weighting from pluging %(plug)s")    
-        
+                                        info="Will use re-weighting from pluging %(plug)s")
+                
+
         reweight_cmd = rwgt_interface(args[0], mother=self)
         #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
         if wgt_names == [''] and reweight_cmd.has_nlo:
             self.update_status('Running Reweighting (LO approximate)', level='madspin')
+        elif wgt_names == [''] and reweight_mode == 'density':
+            self.update_status('Running Reweighting Density mode', level='madspin')
         else:
             self.update_status('Running Reweighting', level='madspin')
         
@@ -2970,6 +3102,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('running rivet', level='rivet')
 
+        if citation is not None:
+            citation.cite('Bierlich:2019rhm', 'analysis with Rivet')
+
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
         if not no_default:
             rivet_config['run_rivet_later'] = False
@@ -3162,6 +3297,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %banner_mod.MadAnalysis5Card._MG5aMC_escape_tag+
                 "in\n  '%s'."%pjoin(self.me_dir, 'Cards','madanalysis5_%s_card.dat'%mode))
             return
+
+        if citation is not None:
+            citation.cite('Conte:2012fm',
+                          '%s-level analysis (MadAnalysis5)' % mode)
 
         MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
                 pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()),
@@ -3407,6 +3546,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
+
+        if citation is not None:
+            citation.cite('deFavereau:2013fsa', 'detector simulation (Delphes)')
+
         if not (no_default or self.force):
             if delphes3:
                 self.ask_edit_cards(['delphes_card.dat'], args)
@@ -4248,6 +4391,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("The decayed event file has been moved to the following location: ")
         logger.info(new_file)
 
+        if citation is not None:
+            citation.cite('Artoisenet:2012st',
+                          'spin-correlated decays (MadSpin)')
+
         if hasattr(self, 'results'):
             current = self.results.current
             nb_event = self.results.current['nb_event']
@@ -4551,10 +4698,59 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.proc_characteristics
 
 
+    @staticmethod
+    def patch_lhapdf_info_file(pdfset_dir):
+        """Inject AlphaS_FlavorScheme / AlphaS_NumFlavors into a PDF set
+        .info file when the keys are missing but their non-AlphaS_*
+        counterparts are present. Older LHAPDF metadata sometimes ships
+        without these keys, which makes recent LHAPDF abort at PDF load
+        time (e.g. when setting up the shower or MadSpin at NLO).
+        """
+        if not pdfset_dir or not os.path.isdir(pdfset_dir):
+            return
+        try:
+            info_names = [n for n in os.listdir(pdfset_dir) if n.endswith('.info')]
+        except OSError:
+            return
+        for name in info_names:
+            path = pjoin(pdfset_dir, name)
+            try:
+                with open(path, 'r') as f:
+                    content = f.read()
+            except (OSError, IOError):
+                continue
+            present = set()
+            mirror = {}
+            for line in content.split('\n'):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#') or ':' not in stripped:
+                    continue
+                key = stripped.split(':', 1)[0].strip()
+                present.add(key)
+                if key in ('FlavorScheme', 'NumFlavors'):
+                    mirror[key] = stripped.split(':', 1)[1].strip()
+            extra = []
+            if 'AlphaS_FlavorScheme' not in present and 'FlavorScheme' in mirror:
+                extra.append('AlphaS_FlavorScheme: %s' % mirror['FlavorScheme'])
+            if 'AlphaS_NumFlavors' not in present and 'NumFlavors' in mirror:
+                extra.append('AlphaS_NumFlavors: %s' % mirror['NumFlavors'])
+            if not extra:
+                continue
+            logger.info('Patching LHAPDF metadata in %s: adding %s',
+                        path, ', '.join(e.split(':')[0] for e in extra))
+            try:
+                with open(path, 'a') as f:
+                    if content and not content.endswith('\n'):
+                        f.write('\n')
+                    f.write('\n'.join(extra) + '\n')
+            except (OSError, IOError) as e:
+                logger.debug('Could not patch %s: %s', path, e)
+
+
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
-        """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
+        """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list
         into lib/PDFsets.
-        if require_local is False, just ensure that the pdf is in pdfsets_dir 
+        if require_local is False, just ensure that the pdf is in pdfsets_dir
         """
 
         if not hasattr(self, 'lhapdf_pdfsets'):
@@ -4612,6 +4808,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             lhapdf_cluster_possibilities = []
 
         for pdfset in pdfsetname:
+            # Patch the *source* set (the one LHAPDF actually loads from its
+            # data path): LHAPDF resolves the set from pdfsets_dir, not from
+            # the local lib/PDFsets copy, so patching only the copy below is
+            # not enough to inject the missing AlphaS_FlavorScheme metadata.
+            # Done here (before the early 'continue's) so it always runs.
+            self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
         # Check if we need to copy the pdf
             if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
                 any((os.path.exists(pjoin(d, pdfset)) for d in lhapdf_cluster_possibilities)):
@@ -4653,7 +4855,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
                 elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
                     files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
-            
+
+            self.patch_lhapdf_info_file(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset))
+
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
@@ -4928,6 +5132,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return libdir
 
+    def reset_iseed_in_run_card(self):
+        """If iseed is set to a non-zero value in the run_card, reset it to 0
+        and write the updated run_card to disk.  This ensures that subsequent
+        runs will use an automatically-generated (independent) seed rather than
+        repeating the same one."""
+        iseed = self.run_card['iseed']
+        if iseed != 0:
+            self.run_card['iseed'] = 0
+            # Reset seed in run_card to 0, to ensure that following runs
+            # will be statistically independent
+            self.run_card.write(pjoin(self.me_dir, 'Cards', 'run_card.dat'),
+                                template=pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
     set command define and modifying the param_card/run_card correctly
@@ -4938,9 +5155,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
-                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
+                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card', 'reweight_card']
     to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
-                    'shower', 'pythia8','delphes','madspin', 'rivet']
+                    'shower', 'pythia8','delphes','madspin', 'rivet', 'reweight']
     special_shortcut = {}
     special_shortcut_help = {}
     
@@ -4970,6 +5187,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_delphes = False
         self.has_rivet = False
         self.has_fo_card = False
+        self.has_density = False
         self.paths = {}
         self.update_block = []
 
@@ -5012,6 +5230,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madanalysis5_parton_default'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')
         self.paths['madanalysis5_hadron_default'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')
         self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards', 'FO_analyse_card.dat')
+        self.paths['reweight_default'] = pjoin(self.me_dir, 'Cards', 'density_card_default.dat')
+        self.paths['reweight'] = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        #
 
 
      
@@ -5350,11 +5571,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         self.special_shortcut.update({
             'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s']),
-            'nodecay':([], ['edit madspin_card --comment_line="decay"'])
+            'nodecay':([], ['edit madspin_card --comment_line="decay"'],),
+            'no_madspin_options':([], ['edit madspin_card --comment_line="set"'],),
             })
+        
         self.special_shortcut_help.update({
             'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
             'nodecay': 'remove all decay previously defined in madspin',
+            'no_madspin_options': 'remove all options previously defined in madspin',
              })
         return []
     
@@ -5375,6 +5599,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
         return list(self.fo_card.string_vars)
 
+    def init_reweight(self, cards):
+        self.has_density = False
+        is_valid_path = self.get_path('reweight', cards)
+        if not is_valid_path:
+            return []
+        self.has_density = True
+        self.reweight_card = banner_mod.DensityCard(self.paths['reweight'])
+        self.reweight_card_default = banner_mod.DensityCard(self.paths['reweight_default'])
+
+        self.reweight_vars = [k.lower() for k in self.reweight_card.keys()]
+        #we define here the reweight_card for the density mode as a dictionnary. And we read it off the default cards
+        return []
 
     def set_CM_velocity(self, line):
         """compute sqrts from the velocity in the center of mass frame"""
@@ -5637,6 +5873,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['rivet_card'] = ''
             if self.has_fo_card:
                 allowed['fo_card'] = ''
+            if self.has_density:
+                allowed['reweight_card'] = ''
         
         elif len(args) == 2:
             if args[1] == 'run_card':
@@ -5663,6 +5901,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'rivet_card':'default'}
             elif args[1] == 'fo_card':
                 allowed = {'fo_card':'default'} 
+            elif args[1] == 'reweight_card':
+                allowed = {'reweight_card': 'default'}
             else:
                 allowed = {'value':''}
 
@@ -5670,8 +5910,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
-                            'fo_card',
-                            'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
+                            'fo_card', 'madanalysis5_parton_card','madanalysis5_hadron_card',
+                            'rivet_card', 'reweight_card']:
                 start = 2
 
             if args[-1] in list(self.pname2block.keys()):
@@ -5710,6 +5950,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('rivet_card')
             if self.has_fo_card:
                 categories.append('fo_card')
+            if self.has_density:
+                categories.append('reweight_card')
 
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -5754,6 +5996,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['rivet_card'] == 'default':
                 opts.append('default')
             possibilities['Rivet Card'] = self.list_completion(text, opts)
+        
+        if 'reweight_card' in list(allowed.keys()):
+            opts = self.reweight_vars
+            if allowed['reweight_card'] == 'default':
+                opts.append('default')
+            possibilities['Reweight Card'] = self.list_completion(text, opts)
 
         if 'shower_card' in list(allowed.keys()):
             opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
@@ -5854,7 +6102,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
          
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
-        
+
 
         args = self.split_arg(line)
         
@@ -5990,6 +6238,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'rivet_card'
 
+        if args[0] == 'reweight_card':
+            if not self.has_density:
+                logger.warning('Invalid Command: No Reweight card defined')
+                return
+            args[0] = 'reweight_card'
+
         if args[0] == 'delphes_card':
             if not self.has_delphes:
                 logger.warning('Invalid Command: No Delphes card defined.')
@@ -6006,7 +6260,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
-                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
+                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card',
+                       'rivet_card', 'reweight_card']:
 
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
@@ -6017,6 +6272,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.run_card = banner_mod.RunCard(self.paths['run'])
                 elif args[0] == 'shower_card':
                     self.shower_card = shower_card_mod.ShowerCard(self.paths['shower'])
+                elif args[0] == 'reweight_card':
+                    self.reweight_card = banner_mod.DensityCard(self.paths['reweight_default'])
                 return
             else:
                 card = args[0]
@@ -6339,7 +6596,26 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 value = args[start+1]
                 default = False 
             self.fo_card[args[start]] = value
-            self.modified_card.add('fo_card') 
+            self.modified_card.add('fo_card')
+
+        # Density Parameter -----------------------------------------------------
+        elif self.has_density and (card in ['', 'reweight_card'])\
+             and args[start].lower() in [k.lower() for k in self.reweight_card.keys()]:
+
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.reweight_card_default[args[start]]
+                default = True
+            else:
+                value = args[start +1:]
+                value = ' '.join(value)
+                default = False
+            
+            self.setReweight(args[start], value, default=default)
+            self.reweight_card.write(self.paths['reweight']) #we write over the reweight_card with the new information
 
         #INVALID --------------------------------------------------------------
         else:      
@@ -6426,6 +6702,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('modify parameter %s of the rivet_card.dat to %s' % (name, value), '$MG:BOLD')
         if default and name.lower() in self.rivet_card.user_set:
             self.rivet_card.user_set.remove(name.lower())
+    
+    def setReweight(self, name, value, default):
+        try:
+            self.reweight_card.set(name, value, user=True)
+        except Exception as error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the reweight_card.dat to %s' % (name, value), '$MG:BOLD')
+        if default and name.lower() in self.reweight_card.user_set:
+            self.reweight_card.user_set.remove(name.lower())
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
@@ -7191,7 +7477,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         # check if the line need to be modified by a trigger
         line = self.trigger(line)
-        
         # splitting the line
         line = line.strip()
         args = line.split()
@@ -7224,9 +7509,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     os.write(fsock, line)
                 os.close(fsock)
                 self.copy_file(path, pathname=url)
-                os.remove(path)
-                
-                
+                os.remove(path)   
         else:
             self.value = line
 
@@ -7274,7 +7557,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-    
+    def do_set_madspin(self, line):
+        """edit the madspin_card to define the decay of the associate particle"""
+        signal.alarm(0) # avoid timer if any
+        path = self.paths['madspin']
+        args = line.split()
+        if '=' == args[1]:
+            del args[1]
+        opt = args[0]
+        value = ' '.join(args[1:])
+
+        cmd = f'madspin --replace_line="set {opt}.*" --after_line=banner set {opt} {value}'
+        self.do_edit(cmd)
+
+         
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
@@ -7520,9 +7816,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # found the line position "posline"
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
-                if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
-                    new_line = re.split(search_pattern,new_line)[-1]
+                # Matches (optional leading ws) + --before_line=VALUE or --after_line=VALUE + (trailing ws)
+                drop_first_before_after = re.compile(r'''
+                    ^\s*                               # optional leading whitespace
+                    --                                # optional single dash or literal double dash (usually "--")
+                    (?:before|after)_line=             # the option name
+                    (                                  # VALUE:
+                    "(?:\\.|[^"])*"                #   double-quoted value, with escapes
+                  | '(?:\\.|[^'])*'                #   single-quoted value, with escapes
+                  | [^ \t\r\n'"#]+                 #   unquoted value until whitespace or delimiter
+                    )
+                    \s*                                # optional whitespace after the argument
+                ''', re.VERBOSE)
+                new_line = drop_first_before_after.sub('', new_line, count=1)
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
@@ -7820,7 +8126,9 @@ You can also copy/paste, your event file here.''')
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
         elif path == self.paths['FO_analyse']:
-            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
+            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse'])
+        elif path == self.paths['reweight']:
+            self.reweight_card = banner_mod.DensityCard(self.paths['reweight'])
         else:
             logger.debug('not keep in sync: %s', path)
         return path

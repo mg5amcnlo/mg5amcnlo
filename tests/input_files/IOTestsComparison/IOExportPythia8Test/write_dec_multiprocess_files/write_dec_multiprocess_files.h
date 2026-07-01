@@ -94,7 +94,8 @@ class Sigma_sm_gd_ddxd : public Sigma3Process
 
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
-    void calculate_wavefunctions(const int perm[], const int hel[]); 
+    void calculate_wavefunctions(const int perm[], const int hel[], const int
+        flavor[]);
     static const int nwavefuncs = 13; 
     std::complex<double> w[nwavefuncs][18]; 
     static const int namplitudes = 18; 

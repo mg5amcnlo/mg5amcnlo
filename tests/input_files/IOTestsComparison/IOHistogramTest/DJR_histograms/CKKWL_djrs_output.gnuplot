@@ -110,7 +110,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 #-- rendering subhistograms 'None and None results'
 
-set format y '10^{%%T}'
+set format y '10^{%T}'
 set logscale y
 set yrange [8.3799e-11:4.0170e-07]
 set origin 0.0000e+00, 5.0000e-01
@@ -181,7 +181,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 #-- rendering subhistograms 'None and None results'
 
-set format y '10^{%%T}'
+set format y '10^{%T}'
 set logscale y
 set yrange [7.7524e-11:5.2950e-07]
 set origin 0.0000e+00, 5.0000e-01
@@ -252,7 +252,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 #-- rendering subhistograms 'None and None results'
 
-set format y '10^{%%T}'
+set format y '10^{%T}'
 set logscale y
 set yrange [8.3880e-11:5.4483e-07]
 set origin 0.0000e+00, 5.0000e-01
@@ -323,7 +323,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 #-- rendering subhistograms 'None and None results'
 
-set format y '10^{%%T}'
+set format y '10^{%T}'
 set logscale y
 set yrange [8.4280e-11:6.0376e-07]
 set origin 0.0000e+00, 5.0000e-01

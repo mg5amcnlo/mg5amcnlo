@@ -86,6 +86,13 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat', 'shower_card.dat',
                                                     'pythia8_card.dat'],
                                         mode='auto', mother_interface=fakemother)
+        
+        #Reweight
+        files.cp(pjoin(template_path, 'Common/Cards/density_card_default.dat'), '/tmp/edit_card/Cards/density_card_default.dat') #create density_card_default.dat
+        files.cp(pjoin(template_path, 'Common/Cards/density_card_default.dat'), '/tmp/edit_card/Cards/reweight_card.dat') #create reweight_card.dat
+        
+        fakemother = FakeInterface('/tmp/edit_card/')
+        self.rwcmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'reweight_card.dat'], mother_interface=fakemother)
 
     def get_completion(self, text):
         if readline:
@@ -96,7 +103,15 @@ class TestEditCardCmd(unittest.TestCase):
         
         return fct("", text, len(text),len(text))
         
+    #just changed the class from which one gets the attributes
+    def get_completion_reweight(self, text):
+        if readline:
+            readline.__doc__ = 'libedit'
+        data = text.split()
+        fct = getattr(self.rwcmd, 'complete_%s' % (data[0]))
+        line = ' '.join(data[1:])
         
+        return fct("", text, len(text),len(text))
         
         
     def test_autocompletion(self):
@@ -400,6 +415,28 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertIn('default', first_level)
         self.assertNotIn('iregimode', first_level)
         
+        # First Level for density module (set) ----------
+        first_level = self.get_completion_reweight('set')
+        self.assertIn('reweight_card', first_level)
+        self.assertIn('helicity_direction', first_level)
+        self.assertIn('particle_in_density_matrix', first_level)
+        self.assertIn('boost_choice', first_level)
+        self.assertIn('order_helicities', first_level)
+        self.assertIn('axis_referential', first_level)
+        self.assertIn('symmetrise_initial_state', first_level)
+        self.assertNotIn('default', first_level)
+        self.assertNotIn('[6]', first_level)
+
+        # Second Level for density module (set reweight_card) ---------------
+        second_level = self.get_completion_reweight('set reweight_card')
+        self.assertIn('default', second_level)
+        self.assertIn('helicity_direction', second_level)
+        self.assertIn('particle_in_density_matrix', second_level)
+        self.assertIn('boost_choice', second_level)
+        self.assertIn('order_helicities', second_level)
+        self.assertIn('axis_referential', second_level)
+        self.assertIn('symmetrise_initial_state', second_level)
+        self.assertNotIn('[6]', second_level)
         
     def test_modif_param_card(self):
         """ """
@@ -545,3 +582,33 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(py8['JetMatching:qCut'], qcut)
         self.assertEqual(py8['JetMatching:nJetMax'], 2)
         
+    def test_modif_reweight_card(self):
+        """we try every set command for the density module"""
+        
+        #testing each parameter of reweight_card
+        self.rwcmd.do_set('helicity_direction [6]')
+        self.assertEqual(self.rwcmd.reweight_card['helicity_direction'], '[6]')
+
+        self.rwcmd.do_set('particle_in_density_matrix [6, -6] pt [0, 0]')
+        self.assertEqual(self.rwcmd.reweight_card['particle_in_density_matrix'], '[6, -6] pt [0, 0]')
+
+        self.rwcmd.do_set('boost_choice [24, -24]')
+        self.assertEqual(self.rwcmd.reweight_card['boost_choice'], '[24, -24]')
+
+        self.rwcmd.do_set('order_helicities [-1, -1, -1, 1, 1, -1, 1, 1]')
+        self.assertEqual(self.rwcmd.reweight_card['order_helicities'], [-1, -1, -1, 1, 1, -1, 1, 1])
+
+        self.rwcmd.do_set('axis_referential [2, 3]')
+        self.assertEqual(self.rwcmd.reweight_card['axis_referential'], [2, 3])
+
+        self.rwcmd.do_set('symmetrise_initial_state True')
+        self.assertEqual(self.rwcmd.reweight_card['symmetrise_initial_state'], True)
+
+        #testing the reset the reweight_card
+        self.rwcmd.do_set('reweight_card default')
+        self.assertEqual(self.rwcmd.reweight_card['helicity_direction'], '[0]')
+        self.assertEqual(self.rwcmd.reweight_card['particle_in_density_matrix'], '[6, -6]')
+        self.assertEqual(self.rwcmd.reweight_card['boost_choice'], '[0]')
+        self.assertEqual(self.rwcmd.reweight_card['order_helicities'], [0])
+        self.assertEqual(self.rwcmd.reweight_card['axis_referential'], [0])
+        self.assertEqual(self.rwcmd.reweight_card['symmetrise_initial_state'], False)

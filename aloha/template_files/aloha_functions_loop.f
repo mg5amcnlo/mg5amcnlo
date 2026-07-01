@@ -14,25 +14,25 @@ C###############################################################################
          TYPE ALOHA
             SEQUENCE
             double complex::W(4)
-            double precision :: P(0:3)
+            double complex :: P(0:3)
             integer :: flv_index
          END TYPE ALOHA
          TYPE ALOHA2D
             SEQUENCE
             double complex::W(16)
-            double precision :: P(0:3)
+            double complex :: P(0:3)
             integer :: flv_index
          END TYPE ALOHA2D
          TYPE MP_ALOHA
             SEQUENCE
             complex*32 :: W(4)
-            real*16 :: P(0:3)
+            complex*32 :: P(0:3)
             integer :: flv_index
          END TYPE MP_ALOHA
          TYPE MP_ALOHA2D
             SEQUENCE
             complex*32 :: W(16)
-            real*16 :: P(0:3)
+            complex*32 :: P(0:3)
             integer :: flv_index
          END TYPE MP_ALOHA2D
       end module ALOHA_OBJECT
@@ -2021,10 +2021,10 @@ C===============================================================================
       W%W(4)=(0.d0,0.d0)
       W%W(CFIG)=(1.d0,0.d0)
       
-      W%P(0)=DBLE(Q(0))
-      W%P(1)=DBLE(Q(1))
-      W%P(2)=DBLE(Q(2))
-      W%P(3)=DBLE(Q(3))
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -2037,10 +2037,10 @@ C===============================================================================
 
       W%W(1)=(1.D0,0.D0)
 
-      W%P(0)=DBLE(Q(0))
-      W%P(1)=DBLE(Q(1))
-      W%P(2)=DBLE(Q(2))
-      W%P(3)=DBLE(Q(3))
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -2053,10 +2053,10 @@ C===============================================================================
 
       W%W(1)=(1.D0,0.D0)
 
-      W%P(0)=DBLE(Q(0))
-      W%P(1)=DBLE(Q(1))
-      W%P(2)=DBLE(Q(2))
-      W%P(3)=DBLE(Q(3))
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -2096,10 +2096,10 @@ C===============================================================================
       W%W(4)=IZERO
       W%W(CFIG)=IONE
 
-      W%P(0)=REAL(Q(0),KIND=16)
-      W%P(1)=REAL(Q(1),KIND=16)
-      W%P(2)=REAL(Q(2),KIND=16)
-      W%P(3)=REAL(Q(3),KIND=16)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -2114,10 +2114,10 @@ C===============================================================================
 
       W%W(1)=IONE
 
-      W%P(0)=REAL(Q(0),KIND=16)
-      W%P(1)=REAL(Q(1),KIND=16)
-      W%P(2)=REAL(Q(2),KIND=16)
-      W%P(3)=REAL(Q(3),KIND=16)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -2132,10 +2132,10 @@ C===============================================================================
 
       W%W(1)=IONE
 
-      W%P(0)=REAL(Q(0),KIND=16)
-      W%P(1)=REAL(Q(1),KIND=16)
-      W%P(2)=REAL(Q(2),KIND=16)
-      W%P(3)=REAL(Q(3),KIND=16)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 

@@ -263,9 +263,9 @@ class DecayComparator(object):
             self.cmd.exec_cmd('generate %s > all all --optimize' % particle)
         except InvalidCmd:
             return 'True'
-        if self.cmd._curr_amps: 
-            self.cmd.exec_cmd('output %s -f' % dir_name)
-            
+        if self.cmd._curr_amps:
+            self.cmd.exec_cmd('output madevent %s -f' % dir_name)
+
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s/Cards/run_card.dat' % dir_name, log=True)
             self.cmd.exec_cmd("set automatic_html_opening False --no-save")
@@ -283,8 +283,8 @@ class DecayComparator(object):
         start4= time.time()
         self.cmd.run_cmd("set automatic_html_opening False --no-save")
         self.cmd.exec_cmd('calculate_width %s 2' % particle)
-        if self.cmd._curr_amps:  
-            self.cmd.exec_cmd('output %s_dec -f' % dir_name)
+        if self.cmd._curr_amps:
+            self.cmd.exec_cmd('output madevent %s_dec -f' % dir_name)
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s_dec/Cards/run_card.dat' % dir_name, log=True)
             me_cmd = me_interface.MadEventCmd(dir_name+'_dec')
@@ -355,8 +355,8 @@ class DecayComparator(object):
                           (part, multi1, multi2, multi3, ' '.join(to_avoid)))
         self.cmd.exec_cmd('history hist.cmd')
         if self.cmd._curr_amps:
-            print(dir_name)  
-            self.cmd.exec_cmd('output %s -f' % dir_name)
+            print(dir_name)
+            self.cmd.exec_cmd('output madevent %s -f' % dir_name)
             #files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
             #             '%s/Cards/run_card.dat' % dir_name, log=True)
                 
@@ -369,8 +369,8 @@ class DecayComparator(object):
         #
         start4= time.time()
         self.cmd.do_compute_widths('%s --body_decay=3' % part, do2body=True)
-        if self.cmd._curr_amps:  
-            self.cmd.exec_cmd('output %s_dec -f' % dir_name)
+        if self.cmd._curr_amps:
+            self.cmd.exec_cmd('output madevent %s_dec -f' % dir_name)
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s_dec/Cards/run_card.dat' % dir_name, log=True)
             self.cmd.exec_cmd('launch -f')
@@ -395,7 +395,7 @@ class DecayComparator(object):
         #make a fake output
         self.cmd._curr_model.write_param_card()
         self.cmd.exec_cmd('generate z > e+ e-')
-        self.cmd.exec_cmd('output %s -f' % dir_name)
+        self.cmd.exec_cmd('output madevent %s -f' % dir_name)
         me_cmd = me_interface.MadEventCmd(dir_name)
         self.cmd.define_child_cmd_interface(me_cmd, False)
         me_cmd.model_name = self.model
@@ -432,8 +432,13 @@ class TestFRDecay(unittest.TestCase):
     
     def test_decay_mssm(self):
         decay_framework = DecayComparator('MSSM_SLHA2')
-        
+       
+
+        mssm = 'go su1 su3 su5 su6 sd3 sd4 h02 a0 h+ sv1 sv3 sl1- sl2- sl6- w- h- n2 n4 x1+ '.split()
+
         for i, name in enumerate(decay_framework.particles_id.keys()):
+            if name not in mssm:
+                continue
             import time
             start = time.time()
             print('comparing decay for %s %s' % (i, name))

@@ -318,6 +318,96 @@ def sxxxxx(p,nss):
     sc.momenta = [p[0]*nss, p[1]*nss, p[2]*nss, p[3]*nss]
     return sc
 
+def sfdxxx(p,nss):
+    """initialize a scalar wavefunction for FD gauge"""
+
+    sc = WaveFunction(size=7)
+
+    sc[0] = complex(p[0]*nss,p[3]*nss)
+    sc[1] = complex(p[1]*nss,p[2]*nss)
+    sc[6] = complex(1.,0.)
+    return sc
+
+def define_gauge_dir(q):
+    """define the gauge direction used in FD gauge"""
+
+    qabs2 = q[1].real**2 + q[2].real**2 + q[3].real**2
+    n = [0.0] * 5
+
+    if qabs2 > 0.:
+        qabs = sqrt(qabs2)
+        n[0] = sign(1., q[0].real)
+        n[1] = -q[1].real / qabs
+        n[2] = -q[2].real / qabs
+        n[3] = -q[3].real / qabs
+        n[4] = 0.
+    else:
+        n[0] = sign(1., q[0].real)
+        n[1] = 0.
+        n[2] = 0.
+        n[3] = sign(-1., q[0].real)
+        n[4] = 0.
+
+    return n
+
+def multiply_propagator_factor(win, m):
+    """apply the FD gauge propagator projector"""
+
+    wout = WaveFunction(size=7)
+    wout[0] = win[0]
+    wout[1] = win[1]
+
+    q = [0j] * 5
+    q[0] = complex(-win[0].real, 0.)
+    q[1] = complex(-win[1].real, 0.)
+    q[2] = complex(-win[1].imag, 0.)
+    q[3] = complex(-win[0].imag, 0.)
+    q[4] = -1j * m
+
+    n = define_gauge_dir(q)
+    w0 = list(win[2:7])
+
+    nq = n[0] * q[0].real - n[1] * q[1].real - n[2] * q[2].real - n[3] * q[3].real
+    js1 = (n[0] * w0[0] - n[1] * w0[1] - n[2] * w0[2] - n[3] * w0[3]) / nq
+    js2 = (q[0] * w0[0] - q[1] * w0[1] - q[2] * w0[2] - q[3] * w0[3] - q[4].conjugate() * w0[4]) / nq
+
+    for i in range(5):
+        wout[i+2] = w0[i] - q[i] * js1 - n[i] * js2
+
+    return wout
+
+def vfdxxxx(p,vmass,nhel,nsv):
+    """initialize a vector wavefunction for FD gauge"""
+
+    vc = vxxxxx(p,vmass,nhel,nsv)
+    vcfd = WaveFunction(size=7)
+
+    for i in range(6):
+        vcfd[i] = vc[i]
+
+    if vmass != 0.:
+        pt2 = p[1]**2 + p[2]**2
+        pp = min(p[0],sqrt(pt2 + p[3]**2))
+        if pp > 0.:
+            n = [sign(1., p[0]), -p[1]/pp, -p[2]/pp, -p[3]/pp, 0.]
+        else:
+            n = [sign(1., p[0]), 0., 0., -sign(1., p[0]), 0.]
+
+        nk = n[0] * p[0] - n[1] * p[1] - n[2] * p[2] - n[3] * p[3]
+
+        if abs(nhel) == 1:
+            vcfd[6] = complex(0.,0.)
+        else:
+            vcfd[2] = -vmass / nk * n[0]
+            vcfd[3] = -vmass / nk * n[1]
+            vcfd[4] = -vmass / nk * n[2]
+            vcfd[5] = -vmass / nk * n[3]
+            vcfd[6] = -nsv * complex(0.,1.)
+    else:
+        vcfd[6] = complex(0.,0.)
+
+    return vcfd
+
 
 def txxxxx(p, tmass, nhel, nst):
     """ initialize a tensor wavefunction"""
@@ -965,5 +1055,3 @@ def orxxxx(p, mass, nhel, nsr):
     
     return ro
     
-
-

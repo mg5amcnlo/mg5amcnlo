@@ -41,7 +41,11 @@ else:
         lhapdf.setVerbosity(0)
         PDF_PATH = lhapdf.paths()[0]
     except ImportError:
-        raise RuntimeError("Can't load lhapdf module. Please set LHAPDF_DATA_PATH manually")
+        # Do not abort at import time: lhapdf is only needed when a PDF grid is
+        # actually loaded (see PdfGrid/AlphaSGrid below). Leave PDF_PATH unset
+        # so that code paths which do not require an external PDF still work;
+        # the missing-lhapdf error is raised lazily at the point of use.
+        PDF_PATH = None
 
 import madspace as ms
 from models.check_param_card import ParamCard
@@ -285,6 +289,8 @@ class MadgraphProcess:
         )
 
         pdf_set = beam_args["pdf"]
+        if PDF_PATH is None:
+            raise RuntimeError("Can't load lhapdf module. Please set LHAPDF_DATA_PATH manually")
         self.pdf_grid = ms.PdfGrid(os.path.join(PDF_PATH, pdf_set, f"{pdf_set}_0000.dat"))
         self.alphas_grid = ms.AlphaSGrid(os.path.join(PDF_PATH, pdf_set, f"{pdf_set}.info"))
         for context in self.contexts:
@@ -794,7 +800,7 @@ class MadgraphSubprocess:
             devices = [devices]
         for device in devices:
             subproc_dir = os.path.dirname(subproc_path)
-            # 'cppauto' resolve quick fix 
+            # 'cppauto' resolve quick fix
             resolved = device
             if device == "cppauto":
                 out = subprocess.run(
@@ -1269,11 +1275,12 @@ class MadgraphSubprocess:
         flavors = []
         flavor_remap = []
         flavor_factors = []
+        flavor_mirror = []
         for flav in self.meta["flavors"]:
             flavors.append(flav["options"][0])
             flavor_remap.append(flav["index"])
             flavor_factors.append(len(flav["options"]))
-        flavor_remap
+            flavor_mirror.append(flav["mirror"])
         if self.matrix_element:
             matrix_element = ms.MatrixElement(
                 self.matrix_element,
@@ -1300,7 +1307,6 @@ class MadgraphSubprocess:
             pid_options=flavors,
             pdf1=pdf_arg,
             pdf2=pdf_arg,
-            has_mirror=self.meta["has_mirror_process"],
             input_momentum_fraction=True,
         )
         partial_weights = self.process.run_card["generation"]["systematics"]
@@ -1327,6 +1333,7 @@ class MadgraphSubprocess:
                 channel.active_flavors,
                 flavor_remap,
                 flavor_factors,
+                flavor_mirror,
             ))
         #print(integrands[0].function())
         #print(integrands[1].function())

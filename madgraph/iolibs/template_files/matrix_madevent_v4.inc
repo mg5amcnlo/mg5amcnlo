@@ -40,8 +40,11 @@ C
 c
 c global (due to reading writting)
 c 
-    LOGICAL GOODHEL(NCOMB)
-    INTEGER NTRY
+C   Good-helicity filter is per (helicity, flavor): a helicity that is zero for
+C   one merged flavor but non-zero for another must not be dropped, so
+C   GOODHEL/NTRY carry an extra MAXFLAVPERPROC (IFLAV) dimension.
+    LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC)
+    INTEGER NTRY(MAXFLAVPERPROC)
     common/BLOCK_GOODHEL/NTRY,GOODHEL
     integer nb_spin_state(2)
     data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
@@ -59,6 +62,16 @@ C
     REAL     XRAN1
     EXTERNAL XRAN1
     INTEGER FLAVOR(NEXTERNAL)
+    INTEGER FLAVOR_FOR_SYM(NEXTERNAL)
+C   Per-row FLAVOR lookup used by BROKEN_SYM. The IFLAV-indexed FLAVOR
+C   table above can collapse distinct same-flavor / different-flavor
+C   leshouche rows that share the same coupling group; BROKEN_SYM needs
+C   row-level information to apply the identical-particle correction.
+    INTEGER FLAVOR_ROW(NEXTERNAL,%(max_flavor_row)s)
+    %(get_flavor_row_matrix)s
+    INTEGER IPSEL
+    COMMON /SUBPROC/ IPSEL
+    INTEGER BROKEN_SYM%(proc_id)s
 
 C
 C GLOBAL VARIABLES
@@ -86,7 +99,7 @@ C ----------
 C BEGIN CODE
 C ----------
     CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
-    NTRY=NTRY+1
+    NTRY(IFLAV)=NTRY(IFLAV)+1
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
@@ -109,8 +122,8 @@ c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 !   If the helicity grid status is 0, this means that it is not yet initialized.
     IF (ISUM_HEL.EQ.0.or.(DS_get_dim_status('Helicity').eq.0)) THEN
         DO I=1,NCOMB
-           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
-               T=MATRIX%(proc_id)s(P,NHEL(1,I),FLAVOR, IVEC)            
+           IF (GOODHEL(I,IFLAV) .OR. NTRY(IFLAV) .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
+               T=MATRIX%(proc_id)s(P,NHEL(1,I),IFLAV, IVEC)
             %(beam_polarization)s
              IF (ISUM_HEL.NE.0) then
                call DS_add_entry('Helicity',I,T)
@@ -119,7 +132,7 @@ c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
              TS(I)=T
            ENDIF
         ENDDO
-        IF(NTRY.EQ.(MAXTRIES+1)) THEN
+        IF(NTRY(IFLAV).EQ.(MAXTRIES+1)) THEN
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
     IF (ISUM_HEL.NE.0) then
@@ -134,16 +147,16 @@ c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
             CALL DS_SET_GRID_MODE('Helicity','init')
           endif
         ELSE
-          IF(NTRY.LE.MAXTRIES)THEN
+          IF(NTRY(IFLAV).LE.MAXTRIES)THEN
            DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-                 GOODHEL(I)=.TRUE.
+              IF (.NOT.GOODHEL(I,IFLAV) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,IFLAV)=.TRUE.
                  NGOOD = NGOOD +1
-                 print *,'Adding good helicity ',I,TS(I)/ANS
+                 print *,'Adding good helicity ',I,' flavor ',IFLAV,TS(I)/ANS
               ENDIF
            ENDDO
           ENDIF
-          IF(NTRY.EQ.MAXTRIES)THEN
+          IF(NTRY(IFLAV).EQ.MAXTRIES)THEN
              ISUM_HEL=MIN(ISUM_HEL,NGOOD)
           ENDIF
         endif
@@ -151,8 +164,8 @@ c    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
        
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
-            
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),FLAVOR, IVEC)            
+
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),IFLAV, IVEC)
             %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
@@ -187,7 +200,12 @@ c          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
             stop 1
         ENDIF
     ENDIF
-    ANS=ANS/DBLE(IDEN)
+    IF (IPSEL.GE.1.AND.IPSEL.LE.%(max_flavor_row)s) THEN
+       FLAVOR_FOR_SYM(:) = FLAVOR_ROW(:, IPSEL)
+    ELSE
+       FLAVOR_FOR_SYM(:) = FLAVOR(:)
+    ENDIF
+    ANS=ANS/DBLE(IDEN)*BROKEN_SYM%(proc_id)s(FLAVOR_FOR_SYM)
 
     CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG, 1,  SELECTED_COL, IVEC)
 
@@ -207,7 +225,7 @@ C     Returns the flavor array for a given flavor index IFLAV
       END
 
 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,FLAVOR, IVEC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IFLAV, IVEC)
 use model_object
 use aloha_object
 C  
@@ -218,7 +236,6 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
 C  
-    use model_object
     IMPLICIT NONE
 C  
 C CONSTANTS
@@ -246,6 +263,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL)
+    INTEGER IFLAV
     INTEGER FLAVOR(NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     INTEGER IVEC
@@ -261,6 +279,7 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+%(flavor_mask_decl)s
 
     %(fake_width_declaration)s
     logical first
@@ -291,6 +310,10 @@ if (first) then
     %(fake_width_definitions)s
 endif
 
+C   Rebuild the FLAVOR(NEXTERNAL) array from the threaded flavor index.
+    CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
+%(flavor_mask_setup)s
+AMP(:) = (0d0,0d0)
 %(helas_calls)s
 %(jamp_lines)s
 
@@ -324,3 +347,6 @@ endif
     Enddo
 
     END
+
+
+%(broken_sym_function)s

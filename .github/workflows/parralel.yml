@@ -10,6 +10,9 @@ on:
       - 'docs/**'
 #      - '.github/**'
 
+  pull_request:
+    types: [opened, synchronize, reopened]
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -31,21 +34,21 @@ jobs:
 
   test_short_cross_sqso1:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_sqso1
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_cross_sqso1 -pP -t0 -l INFO
 
@@ -53,63 +56,63 @@ jobs:
 
   test_gauge_4_e500:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_4_e500
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_4_e500 -pP -t0 -l INFO
 
 
   test_gauge_6_e500:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_6_e500
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_6_e500 -pP -t0 -l INFO
 
 
   test_gauge_6_e90:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_gauge_6_e90
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_gauge_6_e90 -pP -t0 -l INFO
 
@@ -117,21 +120,21 @@ jobs:
 
   test_short_cross_pol:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_pol
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py  test_short_cross_pol -pP -t0 -l INFO
 
@@ -139,21 +142,21 @@ jobs:
 
   test_short_cross_sm1:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_cross_sm1
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_cross_sm1 -pP -t0 -l INFO
 
@@ -161,62 +164,661 @@ jobs:
 
   test_short_ppgogo_amcatnlo_nlo:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_ppgogo_amcatnlo_nlo
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py  test_short_amcatnlo_int_nlo -pP -t0 -l INFO
 
 
   test_short_softcol_nlo:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
       - name: test test_short_ppgogo_amcatnlo_nlo
         run: |
             cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_short_ppgogo_amcatnlo_nlo -pP -t0 -l INFO
-#  test_short_madweight:
-#    # The type of runner that the job will run on
-#    runs-on: ubuntu-latest
-#
-#    # Steps represent a sequence of tasks that will be executed as part of the job
-#    steps:
-#      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-#      - uses: actions/checkout@v2
-#
-#      # Runs a set of commands using the runners shell
-#      - name: test test_short_madweight
-#        run: |
-#            cd $GITHUB_WORKSPACE
-#            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-#            sudo pip install numpy
-#            which f2py
-#            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-#            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-#            ./tests/test_manager.py test_short_mw.* -pP -t0 -l INFO
 
+
+  test_short_cross_gauge:
+    # Short gauge cross-section comparison (tests/parallel_tests/compare_gauge.py)
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_cross_gauge
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_cross_gauge -pP -t0 -l INFO
+
+
+  test_short_gauge:
+    # Short LO gauge-invariance comparison (tests/parallel_tests/compare_gauge.py)
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_gauge
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_gauge -pP -t0 -l INFO
+
+
+  test_short_gauge_loop:
+    # Short loop gauge-invariance comparison (tests/parallel_tests/compare_gauge.py)
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_gauge_loop
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_gauge_loop -pP -t0 -l INFO
+
+
+  # ---------------------------------------------------------------------------
+  # tests/parallel_tests/compare_with_old_mg5_version.py — pickle-based short
+  # tests. These do NOT need the old MG5 install: test_short_{sm,mssm,heft,
+  # polarization,sqso} use comparisons stored in input_files/*.pkl, and the
+  # test_short_cross_{sm1,sm2,sm3,mssm1} variants compare against hard-coded
+  # cross-section values. Only numpy (+ UFO MSSM_SLHA2 / heft for the model
+  # variants) is needed.
+  # ---------------------------------------------------------------------------
+
+  test_short_sm:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_sm
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_sm -pP -t0 -l INFO
+
+
+  test_short_sqso:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_sqso
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_sqso -pP -t0 -l INFO
+
+
+  test_short_polarization:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_polarization
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_polarization -pP -t0 -l INFO
+
+
+  test_short_mssm:
+    # Needs MSSM_SLHA2 UFO model from the UFOmodeldb cache.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_ufomodel
+
+      - name: test test_short_mssm
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_mssm -pP -t0 -l INFO
+
+
+  test_short_heft:
+    # Needs heft UFO model from the UFOmodeldb cache.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_ufomodel
+
+      - name: test test_short_heft
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_heft -pP -t0 -l INFO
+
+
+  test_short_cross_sm2:
+    # Compares MadEvent cross-section against hard-coded u j > W+ g / g g > W+ j j values.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_cross_sm2
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_cross_sm2 -pP -t0 -l INFO
+
+
+  test_short_cross_sm3:
+    # Compares MadEvent cross-section against hard-coded g g > t t~ decay-chain values.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test test_short_cross_sm3
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_cross_sm3 -pP -t0 -l INFO
+
+
+  test_short_cross_mssm1:
+    # Compares MadEvent cross-section against hard-coded g g > go go (MSSM) values.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reset MG5 config
+        run: cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_ufomodel
+
+      - name: test test_short_cross_mssm1
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_short_cross_mssm1 -pP -t0 -l INFO
+
+
+  # ---------------------------------------------------------------------------
+  # tests/parallel_tests/test_cmd_amcatnlo.py — NLO command tests. These use
+  # the aMC@NLO command shell and need the full heptools cache (CutTools,
+  # IREGI, ninja, collier for loop integrals; lhapdf for PDFs).
+  # Tests that drive HERWIG6 / PYTHIA6PT / PYTHIA6Q showers are NOT wired
+  # because the parton shower binaries are not part of the heptools cache.
+  # ---------------------------------------------------------------------------
+
+  test_short_check_eejjj_lo_lhapdf:
+    # e+ e- > p p p [real=QCD] at LO with pdlabel='lhapdf'.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_check_eejjj_lo_lhapdf
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_check_eejjj_lo_lhapdf -pP -t0 -l INFO
+
+
+  test_short_split_evt_gen_zeroev:
+    # p p > e+ e- [real=QCD] with split event generation when a channel has zero events.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_split_evt_gen_zeroev
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_split_evt_gen_zeroev -pP -t0 -l INFO
+
+
+  test_short_check_ppwy:
+    # p p > w+ y [QCD] using the loop_smgrav model (spin-2 graviton wavefunction).
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_check_ppwy
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_check_ppwy -pP -t0 -l INFO
+
+
+  test_short_launch_amcatnlo_name:
+    # p p > e+ ve [QCD] launched via aMC@NLO with an explicit run name.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_launch_amcatnlo_name
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_launch_amcatnlo_name -pP -t0 -l INFO
+
+
+  test_short_calculate_xsect_script:
+    # Cross-section computation driven by bin/calculate_xsect for p p > e+ ve [QCD].
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_calculate_xsect_script
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_calculate_xsect_script -pP -t0 -l INFO
+
+
+  # ---------------------------------------------------------------------------
+  # tests/parallel_tests/test_ML5.py — MadLoop5 standalone comparisons against
+  # stored ML4/ML5 reference pickles. Needs the loop infrastructure (CutTools,
+  # IREGI, ninja, collier) from heptools.
+  # ---------------------------------------------------------------------------
+
+  test_short_ML5_sm_vs_stored_ML5:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_ML5_sm_vs_stored_ML5
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_ML5_sm_vs_stored_ML5 -pP -t0 -l INFO
+
+
+  test_short_ML5_sm_vs_stored_ML4:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_ML5_sm_vs_stored_ML4
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_short_ML5_sm_vs_stored_ML4 -pP -t0 -l INFO
+
+
+  # ---------------------------------------------------------------------------
+  # tests/parallel_tests/test_cmd_amcatnlo.py shower-driven short tests.
+  # HERWIG6 / PYTHIA6 sources ship in Template/NLO/MCatNLO/{srcHerwig,srcPythia}
+  # and StdHEP is built on demand from vendor/StdHEP, so restore_all is enough.
+  # ---------------------------------------------------------------------------
+
+  test_short_generate_events_nlo_hw6_stdhep:
+    # NLO event generation, showered with HERWIG6, output as StdHEP.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_hw6_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_nlo_hw6_stdhep -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_hw6_split:
+    # NLO event generation split into multiple HERWIG6 shower sub-jobs.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_hw6_split
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_nlo_hw6_split -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_py6_stdhep:
+    # NLO event generation, showered with PYTHIA6 (PYTHIA6Q), output as StdHEP.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_py6_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_nlo_py6_stdhep -pP -t0 -l INFO
+
+
+  test_short_generate_events_nlo_py6pt_stdhep:
+    # NLO event generation, showered with PYTHIA6PT, output as StdHEP.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_nlo_py6pt_stdhep
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_nlo_py6pt_stdhep -pP -t0 -l INFO
+
+
+  test_short_check_generate_events_nlo_py6pt_fsr:
+    # Negative test: PYTHIA6PT must refuse to shower a process with final-state radiation.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_check_generate_events_nlo_py6pt_fsr
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_check_generate_events_nlo_py6pt_fsr -pP -t0 -l INFO
+
+
+  test_short_generate_events_shower_scripts:
+    # Exercises bin/generate_events + bin/shower with HERWIG6 hep and top output,
+    # including nsplit_jobs > 1 splitting.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_shower_scripts
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_shower_scripts -pP -t0 -l INFO
+
+
+  test_short_generate_events_name:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_short_generate_events_name
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install libtirpc-dev
+            ./tests/test_manager.py test_short_generate_events_name -pP -t0 -l INFO
+            
+
+
+  test_decay_comparator_mssm:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay_mssm
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py -pP -t0 -l INFO test_decay_mssm
+
+
+  test_decay_comparator_heft:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_heft test_decay_sm -pP -t0 -l INFO
+            
+
+  test_decay_comparator_nmssm1:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_nmssm1 -pP -t0 -l INFO
+            
+
+  test_decay_comparator_nmssm2:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_nmssm2 -pP -t0 -l INFO
+            
+
+  test_decay_comparator_nmssm3:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_nmssm3 -pP -t0 -l INFO
+            
+
+  test_ML5_uux_ddx:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_uuxddx_SplitOrders_vs_stored_ML5 -pP -t0 -l INFO
+            
+
+  test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py  test_long_sm_vs_stored_ML5_sqso_ddx_ddx_WEIGHTEDgt6 -pP -t0 -l INFO
+            
+
+  test_long_sm_vs_stored_ML5_gg_zccx:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_long_sm_vs_stored_ML5_gg_zccx -pP -t0 -l INFO
+            
+
+  test_long_sm_vs_stored_HCR_uxu_zz_QED:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_uxu_zz_QED -pP -t0 -l INFO
+            
+
+  test_long_sm_vs_stored_HCR_uxu_zz_QCD:
+    # bin/generate_events with an explicit run name, default HERWIG6 shower.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      - name: test test_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_long_sm_vs_stored_HCR_uxu_zz_QCD -pP -t0 -l INFO
+            
 

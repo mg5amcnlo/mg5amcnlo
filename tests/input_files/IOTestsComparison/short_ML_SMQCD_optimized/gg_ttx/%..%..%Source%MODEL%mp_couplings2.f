@@ -3,7 +3,7 @@ c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       SUBROUTINE MP_COUP2( )
-
+      USE MODEL_OBJECT
       IMPLICIT NONE
 
       INCLUDE 'model_functions.inc'

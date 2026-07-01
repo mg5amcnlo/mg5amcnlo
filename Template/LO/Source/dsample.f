@@ -355,6 +355,7 @@ c      do i=1,cur_it-1
       enddo
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -364,6 +365,7 @@ c     Write out MadLoop statistics, if any
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
          call output_run_statistics(66)
+         call output_subprocess_weights(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -528,6 +530,7 @@ c      do i=1,cur_it-1
       enddo
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)      
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -537,6 +540,7 @@ c     Write out MadLoop statistics, if any
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
          call output_run_statistics(66)
+         call output_subprocess_weights(66)
          flush(66)
          close(66, status='KEEP')
 
@@ -685,6 +689,57 @@ c     $     ntot/1000,'</th><th align=right>',teff,'</th></tr>'
  48   format(a,a,a,a)
  49   format(a)
  50   format(a)
+      end
+
+
+
+      subroutine output_subprocess_weights(outUnit)
+c***********************************************************************
+c     Appends per-leshouche-row relative weights to the results.dat file
+c     as an XML block.  The weights are set by the grouped DSIG function
+c     (super_auto_dsig_group_v4.inc) via the DSIG_RELSPROC common block.
+c     When no grouped subprocess is present, NREL_SPROC_STORE stays 0
+c     and nothing is written.
+c***********************************************************************
+      implicit none
+c
+c     Arguments
+c
+      integer outUnit
+c
+c     Local
+c
+      integer i
+      double precision relsum, relout
+c
+c     Global: common block shared with the grouped DSIG function
+c
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      DATA NREL_SPROC_STORE /0/
+
+      if (NREL_SPROC_STORE.gt.0) then
+c       Write fractions of the total.  The grouped DSIG path already stores
+c       normalised weights (sum = 1) so this is a no-op there; the
+c       non-grouped path accumulates raw per-group sums that need it.  The
+c       common block is left untouched (idempotent across repeated calls
+c       and safe if accumulation continues afterwards).
+        relsum = 0d0
+        do i=1,NREL_SPROC_STORE
+          relsum = relsum + REL_SPROC_STORE(i)
+        enddo
+        write(outUnit,'(A)') '<subprocess_weights>'
+        do i=1,NREL_SPROC_STORE
+          if (relsum.gt.0d0) then
+            relout = REL_SPROC_STORE(i)/relsum
+          else
+            relout = REL_SPROC_STORE(i)
+          endif
+          write(outUnit,'(E20.10)') relout
+        enddo
+        write(outUnit,'(A)') '</subprocess_weights>'
+      endif
       end
 
 
@@ -2490,6 +2545,7 @@ c 23   close(22)
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
 

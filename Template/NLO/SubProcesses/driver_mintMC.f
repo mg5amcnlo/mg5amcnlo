@@ -19,7 +19,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,nndim,nevts
+      integer i,j,k,l,l1,l2,nndim,nevts,p_label
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -146,7 +146,7 @@ c     Get user input
 c
       write(*,*) "getting user params"
       call get_user_params(ncalls0,itmax,
-     &     ixi_i,iphi_i,iy_ij,SHsep)
+     &     ixi_i,iphi_i,iy_ij,SHsep,nevts,p_label,event_weight)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
          doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
@@ -229,13 +229,6 @@ c Mass-shell stuff. This is MC-dependent
          putonshell=.true.
          if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
-         open (unit=99,file='nevts',status='old',err=999)
-         if (event_norm(1:4).ne.'bias') then
-            read (99,*) nevts
-         else
-            read (99,*) nevts,event_weight
-         endif
-         close(99)
          write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
             write (*,*)
@@ -263,12 +256,7 @@ c fill the information for the write_header_init common block
          inter=ans(2,1)
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
-
-         if (event_norm(1:4).ne.'bias') then
-            weight=(ans(1,1)+ans(5,1))/ncalls0
-         else
-            weight=event_weight
-         endif
+         weight=event_weight
 
          if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
      $        abrv(1:4).ne.'virt') then
@@ -308,7 +296,7 @@ c Randomly pick the contribution that will be written in the event file
             endif
             call fill_rwgt_lines
             call finalize_event(x_save(1,ifold_picked),weight,lunlhe
-     $           ,putonshell)
+     $           ,putonshell,p_label)
          enddo
          call deallocate_weight_lines
          vn=-1
@@ -435,7 +423,7 @@ c timing statistics
 
 
       subroutine get_user_params(ncall,nitmax,
-     &     ixi_i,iphi_i,iy_ij,SHsep)
+     &     ixi_i,iphi_i,iy_ij,SHsep,nevts,p_label,event_weight)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -506,6 +494,20 @@ c alazi and beazi are the parameters that control gfunazi
       logical SHsep
       logical Hevents
       common/SHevents/Hevents
+
+      character*7 event_norm
+      common /event_normalisation/event_norm
+c Les Houches init block (for the <init> info)
+      integer maxpup
+      parameter(maxpup=100)
+      integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
+      double precision ebmup,xsecup,xerrup,xmaxup
+      common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
+     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
+     &     xmaxup(maxpup),lprup(maxpup)
+      double precision dum1,dum2,dum3
+      integer p_label,nevts,nevents
+      double precision event_weight
 c
 c MINT stuff
 c
@@ -655,6 +657,35 @@ c$$$            endif
       endif
 c
       lbw(0)=0
+
+      if (imode.eq.2) then
+         read(*,*) p_label,nevts
+         read(*,*) nevents,event_weight,dum1,dum2,dum3
+         read(*,*) NPRUP
+         do i=1,NPRUP
+            read(*,*)LPRUP(i),dum1,dum2,XSECUP(i),XERRUP(i)
+         enddo
+      endif
+      if (event_norm(1:5).eq.'unity'.or.event_norm(1:3).eq.'sum') then
+         IDWTUP=-3
+         if (event_norm(1:5).eq.'unity') then
+            XMAXUP(1:NPRUP)=1d0
+         elseif(event_norm(1:3).eq.'sum') then
+            XMAXUP(1:NPRUP)=XMAXUP(1:NPRUP)/nevents
+         endif
+      else
+         IDWTUP=-4
+         if (event_norm(1:4).eq.'bias') then
+            XMAXUP(1:NPRUP)=-1d0
+         else
+            XMAXUP(1:NPRUP)=event_weight
+         endif
+      endif
+      if (event_norm(1:5).eq.'unity') then
+         event_weight=1d0
+      elseif(event_norm(1:3).eq.'sum') then
+         event_weight=event_weight/dble(nevents)
+      endif
       end
 
 

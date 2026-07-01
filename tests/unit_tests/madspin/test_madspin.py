@@ -182,6 +182,62 @@ class TestBanner(unittest.TestCase):
 
           
 
+class TestDensity(unittest.TestCase):
+    """Test class for the reading of the lhe input file"""
+
+    def test_get_density_mapping(self):
+        """test the utility function that return the order of the density matrix-elements"""
+
+        fct = madspin.DensityMatrix.get_map_density_matrix
+
+        # check one single fermion case first
+        out = fct([-1,1], n_changing=1)
+
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(ordered_keys, [(-1, -1), (-1, 1), (1, -1), (1, 1)])
+
+        self.assertEqual(out[(-1, -1)], (True, 0))
+        self.assertEqual(out[(-1,  1)], (True, 1))    
+        self.assertEqual(out[( 1, -1)], (False,1))
+        self.assertEqual(out[(1, 1)], (True, 2))
+
+        # check one massive boson next
+        out = fct([-1,0,1], n_changing=1)
+
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(ordered_keys, [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1)])
+
+        self.assertEqual(out[(-1, -1)], (True, 0))
+        self.assertEqual(out[(-1,  0)], (True, 1))    
+        self.assertEqual(out[(-1, 1)],  (True ,2))
+        self.assertEqual(out[(0, 0)], (True, 3))
+        self.assertEqual(out[(0, 1)], (True,4))
+        self.assertEqual(out[(1, 1)], (True, 5))
+
+        self.assertEqual(out[(1,  0)], (False, 4))    
+        self.assertEqual(out[(1, -1)], (False,2))
+
+
+        # check a tt~ case
+        out = fct([1,1,-1,1,1,-1,-1,-1], n_changing=2)
+        ordered_keys = list(out.keys())
+        ordered_keys.sort()
+        self.assertEqual(len(ordered_keys), 16) 
+        self.assertEqual(out[(1,1,1,1)], (True,0))
+        self.assertEqual(out[(1,-1,1,1)], (True,1))
+        self.assertEqual(out[(1,1,1,-1)], (True,2))
+        self.assertEqual(out[(1,-1,1,-1)], (True,3))
+        self.assertEqual(out[(-1,-1,1,1)], (True,4))
+        self.assertEqual(out[(-1,1,1,-1)], (True,5))
+        self.assertEqual(out[(-1,-1,1,-1)], (True,6))
+        self.assertEqual(out[(1,1,-1,-1)], (True,7))
+        self.assertEqual(out[(1,-1,-1,-1)], (True,8))
+        self.assertEqual(out[(-1,-1,-1,-1)], (True,9))    
+
+        nb_false = len([True for key in out if not out[key][0]])
+        self.assertEqual(nb_false, 6)
 
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
@@ -273,7 +329,73 @@ class TestEvent(unittest.TestCase):
         # Third event ! Not existing
         event = events.get_next_event()
         self.assertEqual(event, "no_event")
-        
+
+    def test_decay_output_uses_selected_flavor_pid(self):
+        """Merged-particle IDs must be replaced by the selected concrete flavor in LHE output."""
+
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('sm')
+        model = cmd._curr_model
+
+        handler = madspin.decay_all_events.__new__(madspin.decay_all_events)
+        object.__setattr__(handler, 'model', model)
+        object.__setattr__(handler, 'pid2color',
+                           {23: 1, -82: 1, 82: 1, 2: 3, -2: -3, 21: 8})
+        object.__setattr__(handler, 'MC_masses', {})
+        object.__setattr__(handler, 'pid2mass', lambda pid: 0.0)
+
+        curr_event = madspin.Event(model=model)
+        curr_event.ievent = 7
+        curr_event.wgt = 1.0
+        curr_event.scale = 91.188
+        curr_event.aqed = 0.007297
+        curr_event.aqcd = 0.118
+        curr_event.diese = ''
+        curr_event.rwgt = ''
+        curr_event.event_init_line = '<event>\n'
+        curr_event.max_col = 503
+        curr_event.resonance = {}
+        curr_event.event2mg = {1: 1, 2: 2, 3: 3, 4: 4}
+        curr_event.particle = {
+            1: {'pid': 2, 'istup': -1, 'mothup1': 0, 'mothup2': 0, 'colup1': 501, 'colup2': 0,
+                'momentum': madspin.momentum(500.0, 0.0, 0.0, 500.0), 'mass': 0.0, 'helicity': 9.0},
+            2: {'pid': -2, 'istup': -1, 'mothup1': 0, 'mothup2': 0, 'colup1': 0, 'colup2': 501,
+                'momentum': madspin.momentum(500.0, 0.0, 0.0, -500.0), 'mass': 0.0, 'helicity': 9.0},
+            3: {'pid': 23, 'istup': 1, 'mothup1': 1, 'mothup2': 2, 'colup1': 0, 'colup2': 0,
+                'momentum': madspin.momentum(300.0, 0.0, 0.0, 0.0), 'mass': 91.188, 'helicity': 9.0},
+            4: {'pid': 21, 'istup': 1, 'mothup1': 1, 'mothup2': 2, 'colup1': 502, 'colup2': 503,
+                'momentum': madspin.momentum(700.0, 0.0, 0.0, 0.0), 'mass': 0.0, 'helicity': 9.0},
+        }
+
+        decay_struct = {
+            3: {
+                'mg_tree': [[-1, 3, 4]],
+                'tree': {
+                    -1: {
+                        'label': 23,
+                        'd1': {'label': -82, 'index': 3},
+                        'd2': {'label': 82, 'index': 4},
+                    }
+                }
+            }
+        }
+        momenta_in_decay = {
+            -1: madspin.momentum(300.0, 0.0, 0.0, 0.0),
+            3: madspin.momentum(150.0, 10.0, 0.0, 149.66629547095766),
+            4: madspin.momentum(150.0, -10.0, 0.0, -149.66629547095766),
+        }
+        helicities = [9.0, 9.0, -1.0, 1.0]
+
+        decayed_event = handler.decay_one_event_new(
+            curr_event, decay_struct, {0: 0, 1: 1, 2: 2, 3: 3}, momenta_in_decay,
+            False, helicities, full_flavor_tuple=[2, -2, 2, 2, 21])
+
+        output = decayed_event.string_event()
+        self.assertIn('      -13', output)
+        self.assertIn('       13', output)
+        self.assertNotIn('      -82', output)
+        self.assertNotIn('       82', output)
+
 
 
 
@@ -368,3 +490,641 @@ class TestEvent(unittest.TestCase):
 #        os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
         
+# --------------------------------------------------------------------------- #
+#  Shared test helpers for the flavor-mapping test classes                    #
+# --------------------------------------------------------------------------- #
+
+def _make_event(pid_list):
+    """Return a minimal Event whose .particle dict contains the given PIDs.
+
+    pid_list: sequence of PDG codes in event order (1-indexed internally).
+    """
+    ev = madspin.Event()
+    for i, pid in enumerate(pid_list, 1):
+        ev.particle[i] = {'pid': pid}
+    return ev
+
+
+def _make_handler(curr_event):
+    """Return a bare decay_all_events instance with only curr_event set."""
+    obj = madspin.decay_all_events.__new__(madspin.decay_all_events)
+    object.__setattr__(obj, 'curr_event', curr_event)
+    object.__setattr__(obj, 'all_ME', {})
+    return obj
+
+
+class TestEventGetFlavorIndex(unittest.TestCase):
+    """Tests for Event.get_flavor_index."""
+
+    def test_production_flavor_index_with_extra_event_particles(self):
+        """Extra particles in the event record must not force flavor index 1."""
+        self.cmd = Cmd.MasterCmd()
+        self.cmd.do_import('sm')
+        model = self.cmd._curr_model
+        ev = madspin.Event(model=model)
+
+        ev.particle = {
+            1: {'pid': 2},     # initial
+            2: {'pid': -2},    # initial
+            3: {'pid': 24},    # production resonance
+            4: {'pid': -24},   # production resonance
+            5: {'pid': 2},     # decay daughter (extra for production map)
+            6: {'pid': -1},    # decay daughter
+            7: {'pid': -2},    # decay daughter
+            8: {'pid': 1},     # decay daughter
+        }
+        event_map = {0: 0, 1: 1, 2: 2, 3: 3}
+        flavor_groups_prod = [
+            [(1, 1, 1, 1)],
+            [(2, 2, 1, 1)],
+            [(3, 3, 1, 1)],
+            [(4, 4, 1, 1)],
+        ]
+
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 2)
+
+        ev.particle = {
+            1: {'pid': 1},     # initial
+            2: {'pid': -1},    # initial
+            3: {'pid': 24},    # production resonance
+            4: {'pid': -24},   # production resonance
+            5: {'pid': 2},     # decay daughter (extra for production map)
+            6: {'pid': -1},    # decay daughter
+            7: {'pid': -2},    # decay daughter
+            8: {'pid': 1},     # decay daughter
+        } 
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 1)
+
+
+        # Handling W+W- j 
+
+        event_map =  {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}
+        flavor_groups_prod =  [[[1, 1, 1, 1, 1]], [[2, 2, 1, 1, 1]], [[3, 3, 1, 1, 1]], [[4, 4, 1, 1, 1]]] 
+        ev.particle =   {1: {'pid': 4}, 2: {'pid': -4}, 3: {'pid': 24}, 4: {'pid': -24}, 5: {'pid': 21}} 
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 4)
+
+        event_map =  {0: 1, 1: 0, 2: 2, 3: 3, 4: 4} 
+        flavor_groups_prod =  [[[1, 1, 1, 1, 1]], [[1, 2, 1, 1, 2]], [[1, 3, 1, 1, 3]], [[1, 4, 1, 1, 4]]]
+        ev.particle=  {1: {'pid': 21}, 2: {'pid': -1}, 3: {'pid': 24}, 4: {'pid': -24}, 5: {'pid': -1}} 
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 1)
+        event_map =  {0: 0, 1: 1, 2: 2, 3: 3, 4: 4} 
+        flavor_groups_prod =  [[[1, 1, 1, 1, 1]], [[1, 2, 1, 1, 2]], [[1, 3, 1, 1, 3]], [[1, 4, 1, 1, 4]]]
+        ev.particle=  {1: {'pid': 21}, 2: {'pid': 2}, 3: {'pid': 24}, 4: {'pid': -24}, 5: {'pid': 2}} 
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 2)        
+        event_map =  {0: 1, 1: 0, 2: 2, 3: 3, 4: 4} 
+        flavor_groups_prod =  [[[1, 1, 1, 1, 1]], [[1, 2, 1, 1, 2]], [[1, 3, 1, 1, 3]], [[1, 4, 1, 1, 4]]]
+        ev.particle=  {1: {'pid': 2}, 2: {'pid': 21}, 3: {'pid': 24}, 4: {'pid': -24}, 5: {'pid': 2}} 
+        flavor_index = ev.get_flavor_index(flavor_groups_prod, event_map)
+        self.assertEqual(flavor_index, 2)   
+
+
+
+# Shared flavor-group fixture used by several tests.
+# Models p p > W+ W- with W+ > j j, W- > j j (j = u d s c).
+# prod2full: production particles 0,1 are initial-state (at full-ME positions
+# 1,2); particles 2,3 (W+, W-) decay (negative entries).
+_PROD2FULL_WW = [1, 2, -2, -4]
+
+# Four per-tuple groups – one per decay-product combination – plus one
+# d u~ incompatible group.
+_FLAVOR_GROUPS_WW = [
+    [(2, -1,  2, -1, -2,  1)],   # group 1: W+ -> u d~,  W- -> u~ d
+    [(2, -1,  2, -1, -4,  3)],   # group 2: W+ -> u d~,  W- -> c~ s
+    [(2, -1,  4, -3, -2,  1)],   # group 3: W+ -> c s~,  W- -> u~ d
+    [(2, -1,  4, -3, -4,  3)],   # group 4: W+ -> c s~,  W- -> c~ s
+    [(1, -2,  1, -2, -1,  2)],   # group 5: d u~ initial (incompatible with u d~)
+]
+
+# pdg -> group position within j = {d, u, s, c} (ordered by PDG code).
+# d=1 -> pos1, u=2 -> pos2, s=3 -> pos3, c=4 -> pos4.
+_PDG_TO_POS_J = {1: 1, 2: 2, 3: 3, 4: 4}
+
+
+def _get_ww_prod_position_combos():
+    """Return the 4 production position tuples for p p > W+ W-."""
+    return [
+        [1, 1, 1, 1],
+        [2, 2, 1, 1],
+        [3, 3, 1, 1],
+        [4, 4, 1, 1],
+    ]
+
+
+def _get_ww_full_position_combos():
+    """Return the 16 full WW -> jjjj position tuples.
+
+    The ordering follows the flattened full external-leg order:
+      (init1, init2, W+ child1, W+ child2, W- child1, W- child2)
+
+    with W+ children taking one of (2,1) or (4,3), and W- children taking
+    one of (1,2) or (3,4).
+    """
+    full = []
+    for init in (1, 2, 3, 4):
+        for wp_children in ((2, 1), (4, 3)):
+            for wm_children in ((1, 2), (3, 4)):
+                full.append([init, init] + list(wp_children) + list(wm_children))
+    return full
+
+
+# --------------------------------------------------------------------------- #
+#  TestGetCompatibleFlavorIndices – pure flavor-mapping (no BR)               #
+# --------------------------------------------------------------------------- #
+
+class TestGetCompatibleFlavorIndices(unittest.TestCase):
+    """Tests for decay_all_events.get_compatible_flavor_indices.
+
+    This method does *only* the flavor-mapping step: it returns the list of
+    1-based flavor-group indices in ``decay_me['flavor_groups_full']`` whose
+    production-particle positions match the current event.  No branching-ratio
+    information is involved.
+
+    For ``p p > W+ W-, W+ > j j, W- > j j`` the full flavor file now contains
+    the full production x decay cross product: 4 production entries times
+    4 decay combinations = 16 full entries.  For a fixed production event
+    such as u d~, exactly 4 of those full entries are compatible, one per
+    decay-product combination.
+    """
+
+    def test_no_flavor_groups_returns_single_entry(self):
+        """Without flavor_groups_full the method returns a length-1 fallback."""
+        ev = _make_event([2, -1])      # u, d~
+        handler = _make_handler(ev)
+
+        decay_me = {'br': 0.15, 'prod2full': [1, 2]}
+        event_map = {0: 0, 1: 1}
+
+        indices = handler.get_compatible_flavor_indices(decay_me, event_map)
+
+        self.assertEqual(len(indices), 1)
+
+    def test_single_matching_group(self):
+        """With one matching group the method returns exactly that group."""
+        ev = _make_event([2, -1])      # u, d~ in the event
+        handler = _make_handler(ev)
+
+        prod2full = [1, 2, -2, -4]
+        flavor_groups_full = [
+            [(2, -1, 2, -1, -2, 1)],   # u d~ initial, W+->ud~, W-->u~d
+        ]
+        decay_me = {'br': 0.10, 'prod2full': prod2full,
+                    'flavor_groups_full': flavor_groups_full,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices = handler.get_compatible_flavor_indices(decay_me, event_map)
+
+        self.assertEqual(indices, [1])
+
+    def test_pp_ww_jj_jj_four_compatible_groups(self):
+        """Core regression: u d~ event matches all four decay-product groups.
+
+        For p p > W+ W- (W+ > j j, W- > j j) with four separate per-tuple
+        flavor groups (one per decay combination), a u d~ production event
+        must yield compatible_indices = [1, 2, 3, 4].  Group 5 (d u~ initial)
+        must be excluded.
+
+        This confirms that the per-tuple grouping strategy used by
+        get_flavor_data_from_me enables the correct multi-index return.
+        """
+        ev_ud = _make_event([2, -1])
+        handler = _make_handler(ev_ud)
+
+        decay_me = {'br': 0.12, 'prod2full': _PROD2FULL_WW,
+                    'flavor_groups_full': _FLAVOR_GROUPS_WW,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices = handler.get_compatible_flavor_indices(decay_me, event_map)
+
+        self.assertEqual(sorted(indices), [1, 2, 3, 4],
+            msg="Expected 4 compatible flavor groups for u d~ event, got %s"
+                % indices)
+
+    def test_pp_ww_incompatible_initial_state_excluded(self):
+        """Groups whose initial-state PDGs mismatch the event are excluded."""
+        ev_du = _make_event([1, -2])    # d u~ in the event
+        handler = _make_handler(ev_du)
+
+        decay_me = {'br': 0.12, 'prod2full': _PROD2FULL_WW,
+                    'flavor_groups_full': _FLAVOR_GROUPS_WW,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices = handler.get_compatible_flavor_indices(decay_me, event_map)
+
+        # Only group 5 (d u~ initial state) is compatible
+        self.assertEqual(indices, [5])
+
+    def test_old_grouped_structure_returns_length_one(self):
+        """Documents pre-fix behaviour: all four decay combos lumped in one group.
+
+        When decay-product combinations share the same group (as
+        get_external_flavors_with_iden used to produce), only 1 index is
+        returned for a u d~ event – the bug that the per-tuple strategy fixes.
+        The companion test_pp_ww_jj_jj_four_compatible_groups shows the
+        corrected behaviour.
+        """
+        ev_ud = _make_event([2, -1])
+        handler = _make_handler(ev_ud)
+
+        prod2full = [1, 2, -2, -4]
+        # Old behaviour: all four decay combinations in ONE group
+        flavor_groups_full = [
+            [
+                (2, -1,  2, -1, -2,  1),
+                (2, -1,  2, -1, -4,  3),
+                (2, -1,  4, -3, -2,  1),
+                (2, -1,  4, -3, -4,  3),
+            ],  # group 1 – all u d~ initial variants lumped together
+            [(1, -2,  1, -2, -1,  2)],   # group 2 – d u~ initial state
+        ]
+        decay_me = {'br': 0.12, 'prod2full': prod2full,
+                    'flavor_groups_full': flavor_groups_full,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices = handler.get_compatible_flavor_indices(decay_me, event_map)
+
+        # With the old grouped structure only 1 group is returned –
+        # cannot distinguish the 4 decay combinations.
+        self.assertEqual(len(indices), 1,
+            msg="Old grouped structure returns 1 (bug: cannot distinguish "
+                "decay combinations). With per-tuple groups this would be 4.")
+
+
+# --------------------------------------------------------------------------- #
+#  TestGetCompatibleFlavorData – delegates to indices + attaches BR           #
+# --------------------------------------------------------------------------- #
+
+class TestGetCompatibleFlavorData(unittest.TestCase):
+    """Tests for decay_all_events.get_compatible_flavor_data.
+
+    This wrapper calls get_compatible_flavor_indices and attaches the
+    per-channel BR from decay_me['br'].  Tests here focus exclusively on the
+    BR-related behaviour; flavor-matching correctness is covered in
+    TestGetCompatibleFlavorIndices.
+    """
+
+    def test_br_preserved_and_not_normalized(self):
+        """rel_brs must equal decay_me['br'] without normalisation."""
+        ev = _make_event([2, -1])
+        handler = _make_handler(ev)
+
+        prod2full = [1, 2, -2, -4]
+        flavor_groups_full = [
+            [(2, -1, 2, -1, -2, 1)],
+            [(2, -1, 4, -3, -2, 1)],
+        ]
+        br_value = 0.347
+        decay_me = {'br': br_value, 'prod2full': prod2full,
+                    'flavor_groups_full': flavor_groups_full,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices, brs = handler.get_compatible_flavor_data(
+            None, decay_me, event_map)
+
+        self.assertEqual(len(brs), 2)
+        for br in brs:
+            self.assertAlmostEqual(br, br_value,
+                msg="BR must not be normalised; expected %s, got %s"
+                    % (br_value, br))
+
+    def test_indices_match_get_compatible_flavor_indices(self):
+        """get_compatible_flavor_data returns the same indices as
+        get_compatible_flavor_indices – it is purely a BR-attaching wrapper."""
+        ev = _make_event([2, -1])
+        handler = _make_handler(ev)
+
+        decay_me = {'br': 0.12, 'prod2full': _PROD2FULL_WW,
+                    'flavor_groups_full': _FLAVOR_GROUPS_WW,
+                    'flavor_combos_full': (6, [], _PDG_TO_POS_J)}
+        event_map = {0: 0, 1: 1}
+
+        indices_direct = handler.get_compatible_flavor_indices(
+            decay_me, event_map)
+        indices_via_data, brs = handler.get_compatible_flavor_data(
+            None, decay_me, event_map)
+
+        self.assertEqual(sorted(indices_direct), sorted(indices_via_data),
+            msg="get_compatible_flavor_data must return the same indices as "
+                "get_compatible_flavor_indices")
+        self.assertEqual(len(brs), len(indices_via_data))
+
+    def test_no_flavor_groups_preserves_br(self):
+        """Fallback (no flavor_groups_full) still attaches the correct BR."""
+        ev = _make_event([2, -1])
+        handler = _make_handler(ev)
+
+        decay_me = {'br': 0.15, 'prod2full': [1, 2]}
+        event_map = {0: 0, 1: 1}
+
+        indices, brs = handler.get_compatible_flavor_data(
+            None, decay_me, event_map)
+
+        self.assertEqual(len(indices), 1)
+        self.assertEqual(len(brs), 1)
+        self.assertAlmostEqual(brs[0], 0.15)
+
+
+# --------------------------------------------------------------------------- #
+#  TestGetFlavorDataFromME – get_flavor_data_from_me static method            #
+# --------------------------------------------------------------------------- #
+
+class TestGetFlavorDataFromME(unittest.TestCase):
+    """Tests for decay_all_events.get_flavor_data_from_me.
+
+    The static method extracts (nexternal, flavor_combos, pdg_to_group_pos,
+    flavor_groups) from a HelasMatrixElement.  The key invariant is that every
+    valid external-flavor tuple becomes its own flavor_group entry (length-1
+    list), rather than being merged based on coupling structure.  This
+    one-tuple-per-group layout is what allows get_compatible_flavor_indices to
+    return multiple indices for events where several decay-product combinations
+    are kinematically equivalent at the production level.
+    """
+
+    @staticmethod
+    def _make_mock_me(flavor_tuples):
+        """Build a minimal MockME returning the given flavor tuples."""
+
+        class MockModel:
+            def get(self, key):
+                return {}   # no merged particles
+
+        class MockProcess:
+            def get(self, key):
+                if key == 'model':
+                    return MockModel()
+                return None
+
+        common_coupling = ('coupling_A',)
+
+        class MockME:
+            def get_nexternal_ninitial(self):
+                return (len(flavor_tuples[0]), 2)
+
+            def get(self, key):
+                if key == 'processes':
+                    return [MockProcess()]
+                return None
+
+            def get_external_flavors(self):
+                return list(flavor_tuples)
+
+            def get_external_flavors_with_iden(self):
+                return {common_coupling: list(flavor_tuples)}.values()
+
+        return MockME()
+
+    def test_per_tuple_groups(self):
+        """Each flavor tuple must become exactly one flavor_group entry."""
+        flavor_tuples = [
+            (2, -1,  2, -1, -2,  1),
+            (2, -1,  2, -1, -4,  3),
+            (2, -1,  4, -3, -2,  1),
+            (2, -1,  4, -3, -4,  3),
+        ]
+        mock_me = self._make_mock_me(flavor_tuples)
+        nexternal, flavor_combos, _, flavor_groups = \
+            madspin.decay_all_events.get_flavor_data_from_me(mock_me)
+
+        self.assertEqual(len(flavor_groups), len(flavor_tuples),
+            msg="Expected one group per flavor tuple (%d tuples), got %d"
+                % (len(flavor_tuples), len(flavor_groups)))
+        for i, grp in enumerate(flavor_groups):
+            self.assertEqual(len(grp), 1,
+                msg="flavor_groups[%d] has %d tuples; expected 1" % (i, len(grp)))
+        self.assertEqual(len(flavor_combos), len(flavor_tuples))
+
+    def test_nexternal_matches_tuple_length(self):
+        """nexternal must equal the number of external particles."""
+        flavor_tuples = [(2, -1, 24, -24)]
+        mock_me = self._make_mock_me(flavor_tuples)
+        nexternal, _, _, _ = \
+            madspin.decay_all_events.get_flavor_data_from_me(mock_me)
+        self.assertEqual(nexternal, len(flavor_tuples[0]))
+
+
+# --------------------------------------------------------------------------- #
+#  TestBuildFullFlavorData – combine prod and decay flavor blocks             #
+# --------------------------------------------------------------------------- #
+
+class TestBuildFullFlavorData(unittest.TestCase):
+    """Tests for decay_all_events.build_full_flavor_data."""
+
+    def setUp(self):
+        import tempfile
+        self.tmpdirs = []
+        self.cmd = Cmd.MasterCmd()
+        self.cmd.exec_cmd('import model sm', precmd=True)
+        self.cmd.exec_cmd('define p = g u c d s u~ c~ d~ s~', precmd=True)
+        self.cmd.exec_cmd('define j = u c d s u~ c~ d~ s~', precmd=True)
+        self.cmd.exec_cmd('set group_subprocesses False', precmd=True)
+
+    def tearDown(self):
+        for path in self.tmpdirs:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+
+    def _new_output_dir(self):
+        import tempfile
+        base = tempfile.mkdtemp(prefix='madspin_test_')
+        self.tmpdirs.append(base)
+        return pjoin(base, 'out')
+
+    def test_ww_jjjj_full_flavor_data_has_16_entries(self):
+        """WW -> jjjj full flavor data must contain 16 entries."""
+
+        # Production ME: 4 entries
+        prod_out = self._new_output_dir()
+        self.cmd.exec_cmd('generate p p > w+ w-', precmd=True)
+        self.cmd.exec_cmd('output standalone_msP %s w+' % prod_out, precmd=True)
+        prod_me = self.cmd._curr_matrix_elements.get_matrix_elements()[0]
+        prod_tag = prod_me.get('processes')[0].get_initial_final_ids()
+        prod_nexternal, prod_flavor_combos, prod_pdg_to_group_pos, _ = \
+            madspin.decay_all_events.get_flavor_data_from_me(prod_me)
+        prod_fdata = (prod_nexternal, prod_flavor_combos,
+                      prod_pdg_to_group_pos)
+
+        # Full ME process object
+        full_out = self._new_output_dir()
+        self.cmd.exec_cmd('generate p p > w+ w-, w+ > j j, w- > j j', precmd=True)
+        self.cmd.exec_cmd('output standalone_msF %s w+' % full_out, precmd=True)
+        full_me = self.cmd._curr_matrix_elements.get_matrix_elements()[0]
+        full_proc = full_me.get('processes')[0]
+
+        # Decay-only MEs for W+ and W-
+        decay_out = self._new_output_dir()
+        self.cmd.exec_cmd('generate w+ > j j', precmd=True)
+        self.cmd.exec_cmd('add process w- > j j', precmd=True)
+        self.cmd.exec_cmd('output standalone_msF %s' % decay_out, precmd=True)
+
+        handler = madspin.decay_all_events.__new__(madspin.decay_all_events)
+        object.__setattr__(handler, 'all_ME', {
+            prod_tag: {'flavor_combos_prod': prod_fdata}
+        })
+        all_decay = {}
+        for decay_me in self.cmd._curr_matrix_elements.get_matrix_elements():
+            decay_proc = decay_me.get('processes')[0]
+            nexternal, flavor_combos, pdg_to_group_pos, flavor_groups = \
+                madspin.decay_all_events.get_flavor_data_from_me(decay_me)
+            all_decay[decay_proc.shell_string()] = {
+                'tag': decay_proc.shell_string(pdg_order=True),
+                'flavor_combos_decay': (nexternal, flavor_combos,
+                                        pdg_to_group_pos),
+                'flavor_groups_decay': flavor_groups,
+            }
+        object.__setattr__(handler, 'all_decay', all_decay)
+
+        nexternal, flavor_combos, _, flavor_groups = \
+            handler.build_full_flavor_data(prod_tag, full_proc)
+
+        self.assertEqual(nexternal, 6)
+        self.assertEqual(len(flavor_combos), 16)
+        self.assertEqual(len(flavor_groups), 16)
+        self.assertEqual(set(tuple(row) for row in flavor_combos),
+                         set(tuple(row) for row in _get_ww_full_position_combos()))
+
+
+# --------------------------------------------------------------------------- #
+#  TestWriteFlavorMsInc – Fortran file content                                #
+# --------------------------------------------------------------------------- #
+
+class TestWriteFlavorMsInc(unittest.TestCase):
+    """Tests for decay_all_events.write_flavor_ms_inc.
+
+    Each test generates a flavor_ms.inc file from hand-crafted flavor data,
+    reads it back, and checks that the Fortran DATA statements contain the
+    correct group-position values.
+
+    This allows strong, self-contained verification of the flavor-file
+    content without requiring a full MadGraph run.
+
+    For ``p p > W+ W-, W+ > j j, W- > j j`` the expected file layout is now:
+      - ``GET_FLAVOR_MS_PROD``: 4 production entries
+      - ``GET_FLAVOR_MS_FULL``: 16 full entries = 4 production entries times
+        the 4 allowed decay combinations.
+    """
+
+    def setUp(self):
+        self.tmpdir = None
+
+    def tearDown(self):
+        if self.tmpdir and os.path.isdir(self.tmpdir):
+            shutil.rmtree(self.tmpdir)
+
+    def _write_and_read(self, flavor_data):
+        """Call write_flavor_ms_inc and return the file content."""
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        madspin.decay_all_events.write_flavor_ms_inc(self.tmpdir, flavor_data)
+        with open(pjoin(self.tmpdir, 'flavor_ms.inc')) as f:
+            return f.read()
+
+    def _extract_data_rows(self, content, subroutine_name):
+        """Parse DATA(I, k) rows from the named subroutine in the file.
+
+        Returns a list of position-tuple lists, one entry per IFLAV value.
+        """
+        import re
+        # Locate the subroutine block
+        start = content.find('SUBROUTINE %s' % subroutine_name)
+        end = content.find('\n      END\n', start)
+        if start == -1:
+            return []
+        block = content[start:end]
+        rows = []
+        for m in re.finditer(
+                r'DATA\s*\(FLAVOR_DATA\(I,\s*\d+\),\s*I=\d+,\w+\)\s*/\s*([^/]+)/',
+                block):
+            vals = [int(v.strip()) for v in m.group(1).split(',')]
+            rows.append(vals)
+        return rows
+
+    def test_prod_file_nflavs_and_nexternal(self):
+        """NFLAVS_MS and NEXTERNAL_MS are written correctly for PROD."""
+        prod_combos = _get_ww_prod_position_combos()
+        flavor_data = {'prod': (4, prod_combos, _PDG_TO_POS_J)}
+        content = self._write_and_read(flavor_data)
+
+        self.assertIn('SUBROUTINE GET_FLAVOR_MS_PROD', content)
+        self.assertIn('INTEGER, PARAMETER :: NFLAVS_MS = 4', content)
+        self.assertIn('INTEGER, PARAMETER :: NEXTERNAL_MS = 4', content)
+
+    def test_prod_group_positions_diagonal(self):
+        """PROD DATA rows contain correct group positions for qq~ initial state.
+
+        For j = {d, u, s, c} (d=pos1, u=pos2, s=pos3, c=pos4):
+          d d~  -> W+ W-  : positions [1, 1, 1, 1]
+          u u~  -> W+ W-  : positions [2, 2, 1, 1]
+          s s~  -> W+ W-  : positions [3, 3, 1, 1]
+          c c~  -> W+ W-  : positions [4, 4, 1, 1]
+
+        W+ (pdg=24) and W- (pdg=-24) are not in any merged group so their
+        group position defaults to 1.  The initial-state positions are
+        "diagonal" in the sense that both quarks of the same flavour share
+        the same group index.
+        """
+        prod_combos = _get_ww_prod_position_combos()
+        flavor_data = {'prod': (4, prod_combos, _PDG_TO_POS_J)}
+        content = self._write_and_read(flavor_data)
+
+        rows = self._extract_data_rows(content, 'GET_FLAVOR_MS_PROD')
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(rows[0], [1, 1, 1, 1],
+            msg="d d~ initial: expected [1,1,1,1], got %s" % rows[0])
+        self.assertEqual(rows[1], [2, 2, 1, 1],
+            msg="u u~ initial: expected [2,2,1,1], got %s" % rows[1])
+        self.assertEqual(rows[2], [3, 3, 1, 1],
+            msg="s s~ initial: expected [3,3,1,1], got %s" % rows[2])
+        self.assertEqual(rows[3], [4, 4, 1, 1],
+            msg="c c~ initial: expected [4,4,1,1], got %s" % rows[3])
+
+    def test_full_file_has_16_entries_for_ww_jjjj(self):
+        """FULL WW -> jjjj file must contain the full 16-entry cross product."""
+        full_combos = _get_ww_full_position_combos()
+        flavor_data = {'full': (6, full_combos, _PDG_TO_POS_J)}
+        content = self._write_and_read(flavor_data)
+
+        self.assertIn('SUBROUTINE GET_FLAVOR_MS_FULL', content)
+        self.assertIn('INTEGER, PARAMETER :: NFLAVS_MS = 16', content)
+        self.assertIn('INTEGER, PARAMETER :: NEXTERNAL_MS = 6', content)
+
+        rows = self._extract_data_rows(content, 'GET_FLAVOR_MS_FULL')
+        self.assertEqual(len(rows), 16,
+            msg="Expected 16 DATA rows (4 initial-state variants times 4 "
+                "decay combination); got %d" % len(rows))
+
+        self.assertEqual(set(tuple(row) for row in rows),
+                         set(tuple(row) for row in full_combos))
+
+    def test_prod_and_full_initial_positions_consistent(self):
+        """Each FULL row must start with one of the 4 PROD initial-state pairs."""
+        prod_combos = _get_ww_prod_position_combos()
+        full_combos = _get_ww_full_position_combos()
+        flavor_data = {
+            'prod': (4, prod_combos, _PDG_TO_POS_J),
+            'full': (6, full_combos, _PDG_TO_POS_J),
+        }
+        content = self._write_and_read(flavor_data)
+
+        prod_rows = self._extract_data_rows(content, 'GET_FLAVOR_MS_PROD')
+        full_rows = self._extract_data_rows(content, 'GET_FLAVOR_MS_FULL')
+
+        self.assertEqual(len(prod_rows), 4)
+        self.assertEqual(len(full_rows), 16)
+
+        prod_initial_pairs = [tuple(row[:2]) for row in prod_rows]
+        full_initial_pairs = [tuple(row[:2]) for row in full_rows]
+        self.assertEqual(set(full_initial_pairs), set(prod_initial_pairs))
+        for pair in prod_initial_pairs:
+            self.assertEqual(full_initial_pairs.count(pair), 4,
+                msg="Expected production initial-state pair %s to appear 4 "
+                    "times in FULL rows, got %d" %
+                    (pair, full_initial_pairs.count(pair)))
