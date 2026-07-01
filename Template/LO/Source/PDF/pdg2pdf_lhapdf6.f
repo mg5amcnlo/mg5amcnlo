@@ -149,7 +149,7 @@ c              q2max = xmu*xmu
       endif
 
       iporg=ipart
-c     Determine which member set being used (see pdf_lhapdf62.cc for definition)
+c     Determine which member set is being called (see pdf_lhapdf62.cc for definition)
       iset = lhasubid(iabs(beamid))
       call getnmem(iset,imem) ! CURRENTSET = nset = iset (see pdf_lhapdf62.cc)
 
