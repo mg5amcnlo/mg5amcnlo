@@ -651,6 +651,7 @@ class Systematics(object):
         pindex = max(0,self.multiID[0]-1)
 
         default = self.args[0]
+        got_weightgroup_name=False # needed for multiID!=0
         for arg in self.args[1:]:
             mur, muf, alps, dyn, pdf = arg[:5]
             if pdf == self.orig_pdf and alps ==1 and (mur!=1 or muf!=1 or dyn!=-1):
@@ -673,14 +674,22 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
-                if pdf[pindex].lhapdfID in self.pdfsets:
+                if (pdf[0].lhapdfID in self.pdfsets or pdf[-1].lhapdfID in self.pdfsets) and not got_weightgroup_name:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
-                    pdfset = self.pdfsets[pdf[pindex].lhapdfID]
-                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
-                    text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
-                    in_pdf=pdf[pindex].lhapdfID
+
+                    wgtGrpName = ['','']
+                    print(f"{pdf=}")
+                    for kk,pset in enumerate(pdf):
+                        pdfset = self.pdfsets[pset.lhapdfID]
+                        descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
+                        wgtGrpName[0] += 'name%s=\"%s\" combine%s=\"%s\" ' % (kk+1,pdfset.name,kk+1,pdfset.errorType)
+                        wgtGrpName[1] += '# %s: %s ' % (pdfset.lhapdfID, descrip)
+                        in_pdf=pset.lhapdfID
+
+                    text +="<weightgroup %s> %s\n" % (wgtGrpName[0],wgtGrpName[1])
+                    got_weightgroup_name=True
+
                 elif pdf[pindex].memberID == 0 and (pdf[pindex].lhapdfID - pdf[pindex].memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
@@ -717,19 +726,22 @@ class Systematics(object):
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
             if self.banner.run_card['pdlabel']=='eva':
-                tag += 'PDF="%s" ' % 0                
+                tag += 'PDF1="%s" ' % 0
+                tag += 'PDF2="%s" ' % 0
             elif pdf != self.orig_pdf:
-                tag += 'PDF="%s" ' % pdf[pindex].lhapdfID
-                info += 'PDF=%s MemberID=%s' % (pdf[pindex].lhapdfID-pdf[pindex].memberID, pdf[pindex].memberID)
+                tag += 'PDF1="%s" ' % pdf[0].lhapdfID
+                tag += 'PDF2="%s" ' % pdf[-1].lhapdfID
+                info += 'PDF1=%s MemberID=%s' % (pdf[ 0].lhapdfID-pdf[ 0].memberID, pdf[ 0].memberID)
+                info += 'PDF2=%s MemberID=%s' % (pdf[-1].lhapdfID-pdf[-1].memberID, pdf[-1].memberID)
             else:
-                tag += 'PDF="%s" ' % pdf[pindex].lhapdfID
+                tag += 'PDF1="%s" ' % pdf[ 0].lhapdfID
+                tag += 'PDF2="%s" ' % pdf[-1].lhapdfID
             
             wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
             tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
             info = self.get_wgt_info(mur, muf, alps, dyn, pdf, cid)
             text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
             cid+=1
-        
         if in_scale or in_alps or in_pdf:
              text += "</weightgroup>\n"
             
@@ -797,15 +809,18 @@ class Systematics(object):
                 info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
-            if self.banner.run_card['pdlabel']=='eva':
-                info += 'PDF=%s MemberID=%s' % (0,0)
+            if self.banner.run_card['pdlabel1']=='eva':
+                info += 'PDF1=%s MemberID=%s ' % (0,0)
             elif pdf != self.orig_pdf:
-                info += 'PDF=%s MemberID=%s' % (pdf[pindex].lhapdfID-pdf[pindex].memberID, pdf[pindex].memberID)
+                info += 'PDF1=%s MemberID=%s ' % (pdf[ 0].lhapdfID-pdf[ 0].memberID, pdf[ 0].memberID)
+            if self.banner.run_card['pdlabel2']=='eva':
+                info += 'PDF2=%s MemberID=%s ' % (0,0)
+            elif pdf != self.orig_pdf:
+                info += 'PDF2=%s MemberID=%s ' % (pdf[-1].lhapdfID-pdf[-1].memberID, pdf[-1].memberID)
 
         return info
 
     def get_wgt_tag (self, mur, muf, alps, dyn, pdf, cid=0):
-            pindex = max(0,self.multiID[0]-1)
             tags = []
             tags.append('MUR="%s" ' % mur)
             tags.append('MUF="%s" ' % muf)
@@ -813,10 +828,15 @@ class Systematics(object):
                 tags.append('ALPSFACT="%s" ' % alps)
             if dyn!=-1.:
                 tags.append('DYN_SCALE="%s" ' % dyn)
-            if self.banner.run_card['pdlabel']=='eva':
-                tags.append('PDF="%s" ' % 0)
+            if self.banner.run_card['pdlabel1']=='eva':
+                tags.append('PDF1="%s" ' % 0)
             else:
-                tags.append('PDF="%s" ' % pdf[pindex].lhapdfID)
+                tags.append('PDF1="%s" ' % pdf[0].lhapdfID)
+            if self.banner.run_card['pdlabel2']=='eva':
+                tags.append('PDF2="%s" ' % 0)
+            else:
+                tags.append('PDF2="%s" ' % pdf[-1].lhapdfID)
+
             return " ".join(tags)
      
 
@@ -889,21 +909,21 @@ class Systematics(object):
                 if self.multiID[0] == -1:
                     # vary 1 and 2 separately
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
-                    self.log("# Preparing %s separate variation(s) of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
+                    self.log("# Preparing %s independent variations of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
                 elif self.multiID[0] == 1:
                     # vary 1, fix 2
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
-                    self.log("# Preparing %s variation(s) for PDF(beam1) while fixing PDF(beam2)" % len(pairs_of_lhaids))
+                    self.log("# Preparing %s variations from PDF(beam1) while fixing PDF(beam2)" % len(pairs_of_lhaids))
                 elif self.multiID[0] == 2:
                     # fix 1, vary 2
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
-                    self.log("# Preparing %s variation(s) for PDF(beam2) while fixing PDF(beam1)" % len(pairs_of_lhaids))
+                    self.log("# Preparing %s variations from PDF(beam2) while fixing PDF(beam1)" % len(pairs_of_lhaids))
                 else:
                     # default, vary 1 and 2 together
                     #minmax = min(len(beam1PDFsets),len(beam2PDFsets),USERSET)
                     minmax = min(len(beam1PDFsets),len(beam2PDFsets))
                     pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
-                    self.log("# Preparing %s joint variation(s) of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
+                    self.log("# Preparing %s simultaneous variations of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
 
                 # add sets of (mur,muf,alps,dyn,pdf) configurations
                 for lhaid_pairs in pairs_of_lhaids:
