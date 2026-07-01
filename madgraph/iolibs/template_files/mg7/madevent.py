@@ -736,9 +736,20 @@ class MadgraphProcess:
         cards_path = os.path.join(gridpack_path, "Cards")
         os.mkdir(cards_path)
         shutil.copy(os.path.join("Cards", "param_card.dat"), cards_path)
-        # Re-emit the full run_card from its Python representation so the
-        # gridpack copy stays in sync with every parameter (and its template).
-        self.run_card.write(os.path.join(cards_path, "run_card.toml"))
+        # Full run card with a header noting it is read-only in gridpack context.
+        import io as _io
+        _buf = _io.StringIO()
+        self.run_card.write(_buf)
+        _header = (
+            "# This is the run card used to generate this gridpack.\n"
+            "# Modifying this file will have no effect on gridpack execution.\n"
+            "# To change event-generation settings, edit grid_run_card.toml.\n\n"
+        )
+        with open(os.path.join(cards_path, "run_card.toml"), 'w') as _f:
+            _f.write(_header + _buf.getvalue())
+        # Minimal card containing only the settings used by generate_events.
+        self.run_card.write_gridpack_card(
+            os.path.join(cards_path, "grid_run_card.toml"))
 
         bin_path = os.path.join(gridpack_path, "bin")
         os.mkdir(bin_path)

@@ -6402,6 +6402,8 @@ class RunCardMG7(RunCard):
         self.toml_sections = collections.OrderedDict()
         # internal_key -> section
         self.section_of = {}
+        # set of internal keys (section.key) relevant during gridpack execution
+        self.gridpack_params = set()
         # free-form sections kept as nested dicts
         self.dynamic_sections = collections.OrderedDict()
         # unknown sections preserved for round-trip
@@ -6411,8 +6413,11 @@ class RunCardMG7(RunCard):
     # ------------------------------------------------------------------
     # parameter declaration
     # ------------------------------------------------------------------
-    def add_toml_param(self, section, key, value, **opts):
-        """Declare one fixed (typed) TOML parameter belonging to ``section``."""
+    def add_toml_param(self, section, key, value, gridpack=False, **opts):
+        """Declare one fixed (typed) TOML parameter belonging to ``section``.
+
+        ``gridpack=True`` marks the parameter as relevant during gridpack
+        execution; such params are written to ``grid_run_card.toml``."""
         section = section.lower()
         key = key.lower()
         internal = '%s.%s' % (section, key)
@@ -6423,23 +6428,25 @@ class RunCardMG7(RunCard):
         self.toml_sections.setdefault(section, [])
         if key not in self.toml_sections[section]:
             self.toml_sections[section].append(key)
+        if gridpack:
+            self.gridpack_params.add(internal)
 
     def default_setup(self):
         """Define every parameter of the default ``run_card.toml``."""
 
         # ----------------------------- [run] --------------------------
-        self.add_toml_param('run', 'run_name', "run")
-        self.add_toml_param('run', 'devices', ["cppnone"], typelist=str,
+        self.add_toml_param('run', 'run_name', "run", gridpack=True)
+        self.add_toml_param('run', 'devices', ["cppnone"], typelist=str, gridpack=True,
             comment="options: cuda, hip, cpp, cppnone, cppsse4, cppavx2, cpp512y, cpp512z, cppauto")
         self.add_toml_param('run', 'simd_vector_size', -1,
             comment="-1 chooses automatically; on x86: 1, 4, 8; on Apple silicon: 1, 2")
-        self.add_toml_param('run', 'cpu_thread_pool_size', -1,
+        self.add_toml_param('run', 'cpu_thread_pool_size', -1, gridpack=True,
             comment="-1 sets count automatically based on number of CPUs")
-        self.add_toml_param('run', 'gpu_thread_pool_size', 1)
-        self.add_toml_param('run', 'combine_thread_pool_size', -1)
-        self.add_toml_param('run', 'output_format', "compact_npy",
+        self.add_toml_param('run', 'gpu_thread_pool_size', 1, gridpack=True)
+        self.add_toml_param('run', 'combine_thread_pool_size', -1, gridpack=True)
+        self.add_toml_param('run', 'output_format', "compact_npy", gridpack=True,
             allowed=['compact_npy', 'lhe_npy', 'lhe'])
-        self.add_toml_param('run', 'verbosity', "pretty",
+        self.add_toml_param('run', 'verbosity', "pretty", gridpack=True,
             allowed=['silent', 'pretty', 'log'])
         self.add_toml_param('run', 'dummy_matrix_element', False)
         self.add_toml_param('run', 'save_gridpack', False)
@@ -6459,16 +6466,16 @@ class RunCardMG7(RunCard):
                      'half_transverse_mass', 'partonic_energy'])
 
         # -------------------------- [generation] ----------------------
-        self.add_toml_param('generation', 'events', 100000)
-        self.add_toml_param('generation', 'max_overweight_truncation', 0.01)
-        self.add_toml_param('generation', 'freeze_max_weight_after', 10000)
-        self.add_toml_param('generation', 'cpu_batch_size', 1000)
-        self.add_toml_param('generation', 'gpu_batch_size', 64000)
+        self.add_toml_param('generation', 'events', 100000, gridpack=True)
+        self.add_toml_param('generation', 'max_overweight_truncation', 0.01, gridpack=True)
+        self.add_toml_param('generation', 'freeze_max_weight_after', 10000, gridpack=True)
+        self.add_toml_param('generation', 'cpu_batch_size', 1000, gridpack=True)
+        self.add_toml_param('generation', 'gpu_batch_size', 64000, gridpack=True)
         self.add_toml_param('generation', 'survey_min_iters', 3)
         self.add_toml_param('generation', 'survey_max_iters', 3)
         self.add_toml_param('generation', 'survey_target_precision', 0.1)
-        self.add_toml_param('generation', 'cut_efficiency_threshold', 0.7)
-        self.add_toml_param('generation', 'max_cut_repetitions', 1000)
+        self.add_toml_param('generation', 'cut_efficiency_threshold', 0.7, gridpack=True)
+        self.add_toml_param('generation', 'max_cut_repetitions', 1000, gridpack=True)
         self.add_toml_param('generation', 'systematics', False)
 
         # ----------------------------- [vegas] ------------------------
@@ -6888,6 +6895,37 @@ class RunCardMG7(RunCard):
             for key, value in content.items():
                 block += '%s = %s\n' % (key, self.format_toml_value(value))
             text += block
+
+        if isinstance(output_file, str):
+            with open(output_file, 'w') as fsock:
+                fsock.write(text)
+        else:
+            output_file.write(text)
+
+    def write_gridpack_card(self, output_file):
+        """Write a minimal ``grid_run_card.toml`` containing only the parameters
+        marked ``gridpack=True`` in :meth:`default_setup`, i.e. those actually
+        read by the gridpack's ``generate_events`` script."""
+        sections = collections.OrderedDict()
+        for section, keys in self.toml_sections.items():
+            for key in keys:
+                internal = '%s.%s' % (section, key)
+                if internal in self.gridpack_params:
+                    sections.setdefault(section, []).append(
+                        (key, self[internal]))
+
+        lines = [
+            '# MadGraph7 gridpack run card',
+            '# Only the settings relevant during gridpack execution are included.',
+            '# To change physics or integration settings, re-generate the gridpack.',
+            '',
+        ]
+        for section, kvs in sections.items():
+            lines.append('[%s]' % section)
+            for key, value in kvs:
+                lines.append('%s = %s' % (key, self.format_toml_value(value)))
+            lines.append('')
+        text = '\n'.join(lines)
 
         if isinstance(output_file, str):
             with open(output_file, 'w') as fsock:

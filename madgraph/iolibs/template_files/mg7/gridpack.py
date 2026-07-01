@@ -11,7 +11,7 @@ def main() -> None:
     # load run card and metadata. Use the RunCardMG7 representation when the
     # madgraph package is importable; gridpacks are meant to be portable, so
     # fall back to a plain tomllib parse otherwise (the card is the same TOML).
-    run_card_path = os.path.join("Cards", "run_card.toml")
+    run_card_path = os.path.join("Cards", "grid_run_card.toml")
     try:
         from madgraph.various.banner import RunCardMG7
         run_card = RunCardMG7(run_card_path)
