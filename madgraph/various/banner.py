@@ -6980,6 +6980,213 @@ class RunCardMG7(RunCard):
             if key.startswith('jet'):
                 del self.dynamic_sections['cuts'][key]
 
+    # ------------------------------------------------------------------
+    # conversion from the legacy LO run_card (see
+    # madgraph/various/RunCardLO_to_MG7_mapping.md for the full analysis)
+    # ------------------------------------------------------------------
+    # LO scalar parameter -> MG7 "section.key" (same meaning, maybe renamed)
+    _LO_SCALAR_MAP = {
+        'nevents': 'generation.events',
+        'gridpack': 'run.save_gridpack',
+        'fixed_ren_scale': 'beam.fixed_ren_scale',
+        'scale': 'beam.ren_scale',
+        'dsqrt_q2fact1': 'beam.fact_scale1',
+        'dsqrt_q2fact2': 'beam.fact_scale2',
+        'bwcutoff': 'phasespace.bw_cutoff',
+        'use_syst': 'generation.systematics',
+    }
+    # LO dynamical_scale_choice (int) -> MG7 string
+    _LO_DYNSCALE_MAP = {1: 'transverse_energy', 2: 'transverse_mass',
+                        3: 'half_transverse_mass', 4: 'partonic_energy'}
+    # LO cut parameter -> (MG7 cut key, bound)
+    _LO_CUT_MAP = {
+        'ptj': ('jet-pt', 'min'), 'ptjmax': ('jet-pt', 'max'),
+        'ptb': ('bottom-pt', 'min'), 'ptbmax': ('bottom-pt', 'max'),
+        'pta': ('photon-pt', 'min'), 'ptamax': ('photon-pt', 'max'),
+        'ptl': ('lepton-pt', 'min'), 'ptlmax': ('lepton-pt', 'max'),
+        'misset': ('missing-pt', 'min'), 'missetmax': ('missing-pt', 'max'),
+        'etaj': ('jet-eta_abs', 'max'), 'etab': ('bottom-eta_abs', 'max'),
+        'etaa': ('photon-eta_abs', 'max'), 'etal': ('lepton-eta_abs', 'max'),
+        'drjj': ('jet-delta_r', 'min'), 'drjjmax': ('jet-delta_r', 'max'),
+        'drbb': ('bottom-delta_r', 'min'), 'drbbmax': ('bottom-delta_r', 'max'),
+        'drll': ('lepton-delta_r', 'min'), 'drllmax': ('lepton-delta_r', 'max'),
+        'draa': ('photon-delta_r', 'min'), 'draamax': ('photon-delta_r', 'max'),
+        'drbj': ('bottom-jet-delta_r', 'min'), 'drbjmax': ('bottom-jet-delta_r', 'max'),
+        'draj': ('photon-jet-delta_r', 'min'), 'drajmax': ('photon-jet-delta_r', 'max'),
+        'drab': ('photon-bottom-delta_r', 'min'), 'drabmax': ('photon-bottom-delta_r', 'max'),
+        'drbl': ('bottom-lepton-delta_r', 'min'), 'drblmax': ('bottom-lepton-delta_r', 'max'),
+        'drjl': ('jet-lepton-delta_r', 'min'), 'drjlmax': ('jet-lepton-delta_r', 'max'),
+        'dral': ('photon-lepton-delta_r', 'min'), 'dralmax': ('photon-lepton-delta_r', 'max'),
+        'mmjj': ('jet-mass', 'min'), 'mmjjmax': ('jet-mass', 'max'),
+        'mmbb': ('bottom-mass', 'min'), 'mmbbmax': ('bottom-mass', 'max'),
+        'mmaa': ('photon-mass', 'min'), 'mmaamax': ('photon-mass', 'max'),
+        'mmll': ('lepton-mass', 'min'), 'mmllmax': ('lepton-mass', 'max'),
+        'dsqrt_shat': ('sqrt_s', 'min'), 'dsqrt_shatmax': ('sqrt_s', 'max'),
+    }
+    # built-in LO pdlabel -> LHAPDF set name
+    _LO_PDF_LABEL_MAP = {
+        'nn23lo': 'NNPDF23_lo_as_0130_qed', 'nn23lo1': 'NNPDF23_lo_as_0130_qed',
+        'cteq6l1': 'cteq6l1', 'cteq6l': 'cteq6l1',
+    }
+    # LO lhaid -> LHAPDF set name (common cases)
+    _LO_LHAID_MAP = {
+        230000: 'NNPDF23_lo_as_0130_qed', 247000: 'NNPDF23_lo_as_0130_qed',
+        10042: 'cteq6l1',
+    }
+    # LO parameters that have no MG7 equivalent (reported when non-default).
+    # NB: a set literal, not set([...]) -- the class defines a set() method
+    # that would otherwise shadow the builtin here.
+    _LO_UNSUPPORTED = {
+        # beam polarization / heavy ion
+        'polbeam1', 'polbeam2', 'nb_proton1', 'nb_proton2', 'nb_neutron1',
+        'nb_neutron2', 'mass_ion1', 'mass_ion2',
+        # scale extras / helicity / seed
+        'scalefact', 'mue_over_ref', 'mue_ref_fixed', 'fixed_extra_scale',
+        'iseed', 'nhel', 'limhel', 'hel_recycling', 'hel_filtering',
+        'hel_splitamp', 'hel_zeroamp',
+        # matching / merging
+        'ickkw', 'xqcut', 'ktdurham', 'dparameter', 'ptlund', 'highestmult',
+        'ktscheme', 'alpsfact', 'chcluster', 'pdfwgt', 'asrwgtflavor',
+        'clusinfo', 'auto_ptj_mjj', 'pdgs_for_merging_cut',
+        # bias
+        'bias_module', 'bias_parameters',
+        # unsupported cuts
+        'etajmin', 'etabmin', 'etaamin', 'etalmin',
+        'ej', 'eb', 'ea', 'el', 'ejmax', 'ebmax', 'eamax', 'elmax',
+        'ptj1min', 'ptj1max', 'ptj2min', 'ptj2max', 'ptj3min', 'ptj3max',
+        'ptj4min', 'ptj4max', 'ptl1min', 'ptl1max', 'ptl2min', 'ptl2max',
+        'ptl3min', 'ptl3max', 'ptl4min', 'ptl4max', 'cutuse',
+        'htjmin', 'htjmax', 'ihtmin', 'ihtmax', 'ht2min', 'ht3min', 'ht4min',
+        'ht2max', 'ht3max', 'ht4max', 'xptj', 'xptb', 'xpta', 'xptl',
+        'ptllmin', 'ptllmax', 'mmnl', 'mmnlmax', 'ptheavy', 'ptonium',
+        'etaonium', 'ptgmin', 'r0gamma', 'xn', 'epsgamma', 'isoem',
+        'xetamin', 'deltaeta', 'cut_decays',
+        'pt_min_pdg', 'pt_max_pdg', 'e_min_pdg', 'e_max_pdg', 'eta_min_pdg',
+        'eta_max_pdg', 'mxx_min_pdg', 'mxx_only_part_antipart',
+        # systematics detail / eva / frame
+        'systematics_program', 'systematics_arguments', 'sys_scalefact',
+        'sys_alpsfact', 'sys_matchscale', 'sys_pdf', 'sys_scalecorrelation',
+        'ievo_eva', 'evaorder', 'eva_xcut',
+        'boost_event', 'me_frame', 'frame_id', 'event_norm', 'lhe_version',
+    }
+
+    @classmethod
+    def _resolve_pdf(cls, lo, dropped):
+        """Map the LO pdlabel/lhaid to an LHAPDF set name (or None to keep the
+        MG7 default, recording the reason in ``dropped``)."""
+        pdlabel = str(lo['pdlabel']).lower() if 'pdlabel' in lo else ''
+        if str(lo['pdlabel1']).lower() != str(lo['pdlabel2']).lower():
+            dropped.append('pdlabel1/pdlabel2 differ (mg7 uses a single pdf)')
+        if pdlabel in ('none', '', 'no'):
+            return None
+        if pdlabel == 'lhapdf':
+            lhaid = lo['lhaid']
+            if isinstance(lhaid, list):
+                lhaid = lhaid[0]
+            if lhaid in cls._LO_LHAID_MAP:
+                return cls._LO_LHAID_MAP[lhaid]
+            dropped.append('lhaid=%s (unknown LHAPDF id; keeping mg7 default pdf)' % lhaid)
+            return None
+        if pdlabel in cls._LO_PDF_LABEL_MAP:
+            return cls._LO_PDF_LABEL_MAP[pdlabel]
+        dropped.append('pdlabel=%s (unknown PDF label; keeping mg7 default pdf)' % pdlabel)
+        return None
+
+    @classmethod
+    def from_LO(cls, lo, warn=True):
+        """Build a :class:`RunCardMG7` reproducing, as far as possible, the setup
+        of a legacy :class:`RunCardLO`.
+
+        Returns ``(mg7_card, dropped)`` where ``dropped`` lists the LO settings
+        (those differing from the LO default) that could not be transferred --
+        the information a retro-compatible mode needs to be transparent about
+        what it ignored. See RunCardLO_to_MG7_mapping.md for the full analysis."""
+        mg7 = cls()
+        dropped = []
+        lo_default = RunCardLO()
+
+        def nondefault(name):
+            return name in lo and name in lo_default and lo[name] != lo_default[name]
+
+        # --- scalar direct / renamed parameters ---
+        for loname, mg7key in cls._LO_SCALAR_MAP.items():
+            if loname in lo:
+                mg7.set(mg7key, lo[loname])
+
+        # --- beams ---
+        mg7.set('beam.e_cm', float(lo['ebeam1']) + float(lo['ebeam2']))
+        lpps = [lo['lpp1'], lo['lpp2']]
+        is_lep = lambda l: isinstance(l, int) and abs(l) in (3, 4)
+        # lpp 0 = fixed-energy beam with no PDF, typically a lepton collider
+        mg7.set('beam.leptonic',
+                all(l == 0 for l in lpps) or any(is_lep(l) for l in lpps))
+        for i, lpp in ((1, lpps[0]), (2, lpps[1])):
+            if isinstance(lpp, int) and abs(lpp) not in (0, 1, 3, 4):
+                dropped.append('lpp%d=%s (beam type not representable in mg7)' % (i, lpp))
+            elif isinstance(lpp, int) and lpp < 0:
+                dropped.append('lpp%d=%s (antiparticle beam: mg7 keeps the particle PDF)' % (i, lpp))
+            elif lpp == 0:
+                dropped.append('lpp%d=0 (no-PDF fixed-energy beam: check beam.leptonic/beam.pdf)' % i)
+
+        # --- scales ---
+        if 'fixed_fac_scale' in lo:
+            mg7.set('beam.fixed_fact_scale', lo['fixed_fac_scale'])
+        if lo['fixed_fac_scale1'] != lo['fixed_fac_scale2']:
+            dropped.append('fixed_fac_scale1/2 differ (mg7 has a single factorization flag)')
+        dyn = lo['dynamical_scale_choice']
+        if isinstance(dyn, list):
+            dyn = dyn[0]
+        if dyn in cls._LO_DYNSCALE_MAP:
+            mg7.set('beam.dynamical_scale_choice', cls._LO_DYNSCALE_MAP[dyn])
+        elif dyn not in (-1, 10) and nondefault('dynamical_scale_choice'):
+            dropped.append('dynamical_scale_choice=%s (no mg7 equivalent)' % dyn)
+
+        # --- SDE strategy ---
+        sde = lo['SDE_strategy'] if 'SDE_strategy' in lo else 1
+        mg7.set('phasespace.sde_strategy',
+                'denominators' if int(sde) == 2 else 'diagrams')
+
+        # --- PDF ---
+        pdf_name = cls._resolve_pdf(lo, dropped)
+        if pdf_name:
+            mg7.set('beam.pdf', pdf_name)
+
+        # --- maxjetflavor -> jet multiparticle ---
+        if 'maxjetflavor' in lo:
+            mjf = int(lo['maxjetflavor'])
+            mg7.dynamic_sections['multiparticles']['jet'] = \
+                list(range(1, mjf + 1)) + [-i for i in range(1, mjf + 1)] + [21]
+
+        # --- cuts (rebuild from the LO card) ---
+        cuts = collections.OrderedDict()
+        for loname, (cutkey, bound) in cls._LO_CUT_MAP.items():
+            if loname not in lo:
+                continue
+            val = lo[loname]
+            active = (bound == 'min' and val > 0) or (bound == 'max' and val >= 0)
+            if active:
+                cuts.setdefault(cutkey, collections.OrderedDict())[bound] = float(val)
+        mg7.dynamic_sections['cuts'] = cuts
+
+        # --- report the non-default settings we could not transfer ---
+        for name in sorted(cls._LO_UNSUPPORTED):
+            if not nondefault(name):
+                continue
+            val = lo[name]
+            # skip inactive cut sentinels (they impose no real constraint)
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                if name.endswith('max') and (val < 0 or val >= 1e5):
+                    continue
+                if name.endswith('min') and val <= 0:
+                    continue
+            dropped.append('%s=%s (not supported in mg7)' % (name, val))
+
+        if warn and dropped:
+            logger.warning("Converting run_card.dat to run_card.toml: the "
+                           "following settings could not be transferred:\n  - %s",
+                           "\n  - ".join(dropped))
+        return mg7, dropped
+
 
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

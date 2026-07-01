@@ -1258,6 +1258,38 @@ class TestRunCardMG7(unittest.TestCase):
         rc.remove_all_cut()
         self.assertEqual(dict(rc['cuts']), {})
 
+    def test_from_LO_conversion(self):
+        """RunCardMG7.from_LO ports the supported LO settings and reports the rest"""
+        lo = bannermod.RunCardLO()
+        lo['ebeam1'] = 6500
+        lo['ebeam2'] = 6500
+        lo['nevents'] = 25000
+        lo['ptj'] = 30
+        lo['etaj'] = 4.5
+        lo['dynamical_scale_choice'] = 3
+        lo['SDE_strategy'] = 2
+        lo['maxjetflavor'] = 5
+        lo['xqcut'] = 20          # merging -> not supported
+        lo['polbeam1'] = 80       # polarization -> not supported
+        mg7, dropped = bannermod.RunCardMG7.from_LO(lo, warn=False)
+        # ported
+        self.assertEqual(mg7['beam']['e_cm'], 13000.0)
+        self.assertEqual(mg7['generation']['events'], 25000)
+        self.assertEqual(mg7['beam']['dynamical_scale_choice'], 'half_transverse_mass')
+        self.assertEqual(mg7['phasespace']['sde_strategy'], 'denominators')
+        self.assertIn(5, mg7['multiparticles']['jet'])
+        self.assertEqual(mg7['cuts']['jet-pt'], {'min': 30.0})
+        self.assertEqual(mg7['cuts']['jet-eta_abs'], {'max': 4.5})
+        # reported as not transferable
+        joined = ' '.join(dropped)
+        self.assertIn('xqcut', joined)
+        self.assertIn('polbeam1', joined)
+        # the produced card is valid TOML
+        import io, tomllib
+        buf = io.StringIO()
+        mg7.write(buf, template=self.template)
+        tomllib.loads(buf.getvalue())
+
     def test_defaults_and_section_access(self):
         """default values are accessible through nested-section views"""
         rc = bannermod.RunCardMG7()
