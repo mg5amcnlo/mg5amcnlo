@@ -279,6 +279,32 @@ class MadgraphProcess:
             if key != "order_by"
         ]
 
+    def ensure_pdf_set(self, pdf_set: str) -> None:
+        """Make sure the requested LHAPDF set is available, downloading it if
+        needed. The destination follows LHAPDF_DATA_PATH, otherwise the data
+        dir of the configured lhapdf (e.g. lhapdf6 in HEPTools), otherwise a
+        local directory -- and PDF_PATH is pointed at it so madspace uses it.
+        Both LHAPDF_DATA_PATH and MADGRAPH_LHAPDF_CONFIG are provided by
+        do_launch; nothing is downloaded when the set is already present."""
+        global PDF_PATH
+        data_path = os.environ.get("LHAPDF_DATA_PATH") or PDF_PATH
+        if data_path and os.path.isdir(os.path.join(data_path, pdf_set)):
+            PDF_PATH = data_path
+            return
+        lhapdf_config = os.environ.get("MADGRAPH_LHAPDF_CONFIG")
+        if not lhapdf_config:
+            return  # can't download; the missing-PDF error is raised below
+        if not data_path:
+            data_path = os.path.join(os.getcwd(), "lhapdf_pdfsets")
+        try:
+            from madgraph.interface.common_run_interface import CommonRunCmd
+            os.makedirs(data_path, exist_ok=True)
+            logger.info("PDF set %s not found; downloading into %s", pdf_set, data_path)
+            CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, data_path, pdf_set)
+            PDF_PATH = data_path
+        except Exception as err:
+            logger.warning("Could not download PDF set %s: %s", pdf_set, err)
+
     def init_beam(self) -> None:
         beam_args = self.run_card["beam"]
 
@@ -305,6 +331,7 @@ class MadgraphProcess:
         )
 
         pdf_set = beam_args["pdf"]
+        self.ensure_pdf_set(pdf_set)
         if PDF_PATH is None:
             raise RuntimeError("Can't load lhapdf module. Please set LHAPDF_DATA_PATH manually")
         self.pdf_grid = ms.PdfGrid(os.path.join(PDF_PATH, pdf_set, f"{pdf_set}_0000.dat"))
