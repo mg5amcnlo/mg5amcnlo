@@ -1163,6 +1163,174 @@ c
         self.assertIn("True = fixed_fac_scale2", f.getvalue())
 
 
+class TestRunCardMG7(unittest.TestCase):
+    """Test the TOML run_card (RunCardMG7) used by the mg7/madnis mode."""
+
+    template = pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files',
+                     'mg7', 'run_card.toml')
+
+    def test_runcard_dispatches_to_mg7_for_toml(self):
+        """banner.RunCard(...) returns a RunCardMG7 for TOML input"""
+        rc = bannermod.RunCardMG7()
+        out = io.StringIO()
+        rc.write(out, template=self.template)
+        content = out.getvalue()
+        # dispatch from string content
+        self.assertIsInstance(bannermod.RunCard(content), bannermod.RunCardMG7)
+        # dispatch from a .toml path
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False)
+        tmp.write(content)
+        tmp.close()
+        try:
+            self.assertIsInstance(bannermod.RunCard(tmp.name), bannermod.RunCardMG7)
+        finally:
+            os.remove(tmp.name)
+
+    def test_numeric_suffix_like_legacy(self):
+        """integer/float k/M suffixes are parsed as in the legacy RunCard"""
+        rc = bannermod.RunCardMG7()
+        rc.set('generation.events', '10k', user=True)
+        self.assertEqual(rc['generation']['events'], 10000)
+        rc.set('generation.events', '2M', user=True)
+        self.assertEqual(rc['generation']['events'], 2000000)
+
+    def test_energy_units(self):
+        """energy units are converted to GeV for energy parameters"""
+        rc = bannermod.RunCardMG7()
+        rc.set('beam.e_cm', '13 TeV', user=True)
+        self.assertEqual(rc['beam']['e_cm'], 13000.0)
+        rc.set('beam.ren_scale', '500GeV', user=True)
+        self.assertEqual(rc['beam']['ren_scale'], 500.0)
+        # parse_energy leaves unit-less / non-energy strings untouched
+        self.assertEqual(rc.parse_energy('30'), '30')
+        self.assertEqual(rc.parse_energy('1 TeV'), 1000.0)
+        self.assertAlmostEqual(rc.parse_energy('500 MeV'), 0.5)
+
+    def test_set_cut_with_units(self):
+        """cut bounds are settable and converted to GeV; dimensionless ok"""
+        rc = bannermod.RunCardMG7()
+        rc.set_cut('jet-pt.min', '1 TeV')
+        self.assertEqual(rc['cuts']['jet-pt'], {'min': 1000.0})
+        rc.set_cut('lepton-pt.min', '500 MeV')
+        self.assertAlmostEqual(rc['cuts']['lepton-pt']['min'], 0.5)
+        rc.set_cut('jet-eta_abs.max', '4')   # dimensionless, no unit
+        self.assertEqual(rc['cuts']['jet-eta_abs'], {'max': 4.0})
+        self.assertTrue(rc.is_cut_name('jet-pt.min'))
+        self.assertTrue(rc.is_cut_name('cuts.jet-pt.max'))
+        self.assertFalse(rc.is_cut_name('generation.events'))
+
+    def test_evaluate_math_and_masses(self):
+        """values support arithmetic and mass references"""
+        rc = bannermod.RunCardMG7()
+        masses = {'mz': 91.0, 'mh': 125.0}
+        self.assertEqual(rc.evaluate('91.0*2', masses), 182.0)
+        self.assertEqual(rc.evaluate('mz/2', masses), 45.5)
+        self.assertEqual(rc.evaluate('2*mh', masses), 250.0)
+        self.assertEqual(rc.evaluate('mz+9', masses), 100.0)
+        self.assertEqual(rc.evaluate('1 TeV', masses), 1000.0)
+        # non-evaluable values are returned unchanged (k/M, strings, bools)
+        self.assertEqual(rc.evaluate('10k', masses), '10k')
+        self.assertEqual(rc.evaluate('default', masses), 'default')
+        self.assertEqual(rc.evaluate('True', masses), 'True')
+
+    def test_collider_shortcuts(self):
+        """lhc/lep shortcuts set e_cm (GeV) and leptonic"""
+        rc = bannermod.RunCardMG7()
+        rc.set_collider('lhc', '13')            # unit-less -> TeV
+        self.assertEqual(rc['beam']['e_cm'], 13000.0)
+        self.assertIs(rc['beam']['leptonic'], False)
+        rc.set_collider('lhc', '13 TeV')        # explicit unit
+        self.assertEqual(rc['beam']['e_cm'], 13000.0)
+        rc.set_collider('lep', '250')           # unit-less -> GeV
+        self.assertEqual(rc['beam']['e_cm'], 250.0)
+        self.assertIs(rc['beam']['leptonic'], True)
+
+    def test_fixed_scale_and_remove_cuts(self):
+        """fixed_scale sets all scales; remove_all_cut clears cuts"""
+        rc = bannermod.RunCardMG7()
+        rc.set_fixed_scale('mz', {'mz': 91.0})
+        self.assertIs(rc['beam']['fixed_ren_scale'], True)
+        self.assertIs(rc['beam']['fixed_fact_scale'], True)
+        self.assertEqual(rc['beam']['ren_scale'], 91.0)
+        self.assertEqual(rc['beam']['fact_scale1'], 91.0)
+        self.assertEqual(rc['beam']['fact_scale2'], 91.0)
+        self.assertTrue(rc['cuts'])
+        rc.remove_all_cut()
+        self.assertEqual(dict(rc['cuts']), {})
+
+    def test_defaults_and_section_access(self):
+        """default values are accessible through nested-section views"""
+        rc = bannermod.RunCardMG7()
+        # fixed (typed) parameters, via card["section"]["key"]
+        self.assertEqual(rc['generation']['events'], 100000)
+        self.assertEqual(rc['beam']['e_cm'], 13000.0)
+        self.assertIs(rc['vegas']['enable'], True)
+        self.assertIs(rc['madnis']['enable'], False)
+        self.assertEqual(rc['phasespace']['mode'], 'both')
+        # the "enable" key colliding between [vegas] and [madnis] is stored
+        # independently, so editing one does not affect the other
+        rc['madnis']['enable'] = True
+        self.assertIs(rc['vegas']['enable'], True)
+        self.assertIs(rc['madnis']['enable'], True)
+        # dynamic sections are plain nested dicts
+        self.assertEqual(rc['multiparticles']['jet'],
+                         [1, 2, 3, 4, -1, -2, -3, -4, 21])
+        self.assertEqual(rc['cuts']['jet-pt'], {'min': 20.0})
+        self.assertEqual(rc['cuts'].get('order_by', 'pt'), 'pt')
+
+    def test_write_is_valid_toml(self):
+        """write() produces valid TOML identical to the python defaults"""
+        import tomllib
+        rc = bannermod.RunCardMG7()
+        out = io.StringIO()
+        rc.write(out, template=self.template)
+        data = tomllib.loads(out.getvalue())
+        self.assertEqual(data['run']['output_format'], 'compact_npy')
+        self.assertEqual(data['beam']['e_cm'], 13000.0)
+        self.assertIs(data['vegas']['enable'], True)
+        self.assertEqual(data['multiparticles']['photon'], [22])
+        self.assertEqual(data['cuts']['sqrt_s'], {'min': 0.0})
+        self.assertEqual(data['madnis']['adam_eps'], 1e-8)
+
+    def test_round_trip(self):
+        """write() then read() preserves every value"""
+        rc = bannermod.RunCardMG7()
+        rc['generation']['events'] = 250
+        rc['phasespace']['mode'] = 'flat'
+        out = io.StringIO()
+        rc.write(out, template=self.template)
+        rc2 = bannermod.RunCardMG7(out.getvalue())
+        self.assertEqual(rc2['generation']['events'], 250)
+        self.assertEqual(rc2['phasespace']['mode'], 'flat')
+        self.assertEqual(rc2['multiparticles']['lepton'], rc['multiparticles']['lepton'])
+        self.assertEqual(rc2['cuts']['jet-delta_r'], {'min': 0.4})
+
+    def test_allowed_value(self):
+        """allowed-value enforcement preserves the previous value on bad input"""
+        rc = bannermod.RunCardMG7()
+        rc.set('phasespace.mode', 'not_a_mode', raiseerror=False)
+        self.assertEqual(rc['phasespace']['mode'], 'both')
+        rc.set('phasespace.mode', 'multichannel', raiseerror=False)
+        self.assertEqual(rc['phasespace']['mode'], 'multichannel')
+
+    def test_create_default_for_process(self):
+        """process dependent defaults: lepton collider drops jet cuts"""
+        class PC(dict):
+            def __init__(self):
+                super().__init__(ninitial=2, loop_induced=False, colored_pdgs=[])
+
+        def proc(initial):
+            legs = [{'state': False, 'id': i} for i in initial]
+            legs.append({'state': True, 'id': 11})
+            return [{'legs': legs}]
+
+        rc = bannermod.RunCardMG7()
+        rc.create_default_for_process(PC(), '', [proc([11, -11])])
+        self.assertIs(rc['beam']['leptonic'], True)
+        self.assertEqual(rc['beam']['e_cm'], 1000.0)
+        self.assertFalse([k for k in rc['cuts'] if k.startswith('jet')])
+
+
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
     """ A class to test the MadLoopParam functionality """

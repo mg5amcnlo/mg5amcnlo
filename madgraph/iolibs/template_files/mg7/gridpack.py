@@ -8,9 +8,16 @@ import tomllib
 import argparse
 
 def main() -> None:
-    # load run card and metadata
-    with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
-        run_card = tomllib.load(f)
+    # load run card and metadata. Use the RunCardMG7 representation when the
+    # madgraph package is importable; gridpacks are meant to be portable, so
+    # fall back to a plain tomllib parse otherwise (the card is the same TOML).
+    run_card_path = os.path.join("Cards", "run_card.toml")
+    try:
+        from madgraph.various.banner import RunCardMG7
+        run_card = RunCardMG7(run_card_path)
+    except ImportError:
+        with open(run_card_path, "rb") as f:
+            run_card = tomllib.load(f)
     run_args = run_card["run"]
     gen_args = run_card["generation"]
     param_card_path = os.path.join("Cards", "param_card.dat")

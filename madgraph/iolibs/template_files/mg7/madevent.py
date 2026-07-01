@@ -49,6 +49,7 @@ else:
 
 import madspace as ms
 from models.check_param_card import ParamCard
+from madgraph.various.banner import RunCardMG7
 from madgraph.various import misc
 
 logger = logging.getLogger("madevent7")
@@ -131,8 +132,7 @@ class MadgraphProcess:
         self.init_subprocesses()
 
     def load_cards(self) -> None:
-        with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
-            self.run_card = tomllib.load(f)
+        self.run_card = RunCardMG7(os.path.join("Cards", "run_card.toml"))
         self.param_card_path = os.path.join("Cards", "param_card.dat")
         self.param_card = ParamCard(self.param_card_path)
         with open(os.path.join("SubProcesses", "subprocesses.json")) as f:
@@ -720,32 +720,9 @@ class MadgraphProcess:
         cards_path = os.path.join(gridpack_path, "Cards")
         os.mkdir(cards_path)
         shutil.copy(os.path.join("Cards", "param_card.dat"), cards_path)
-        device_list = ",".join(f'"{device}"' for device in self.run_card["run"]["devices"])
-        with open(os.path.join(cards_path, "run_card.toml"), "w") as f:
-            f.write(f"""[run]
-run_name = "{self.run_card["run"]["run_name"]}"
-devices = [{device_list}] # options: cpu, cuda
-# options:
-#   -1 to choose automatically
-#   on x86: 1, 4, 8
-#   on Apple silicon: 1, 2
-simd_vector_size = {self.run_card["run"]["simd_vector_size"]}
-# pool sizes: -1 sets count automatically based on number of CPUs
-cpu_thread_pool_size = {self.run_card["run"]["cpu_thread_pool_size"]}
-gpu_thread_pool_size = {self.run_card["run"]["gpu_thread_pool_size"]}
-combine_thread_pool_size = {self.run_card["run"]["combine_thread_pool_size"]}
-output_format = "{self.run_card["run"]["output_format"]}" # options: compact_npy, lhe_npy, lhe
-verbosity = "{self.run_card["run"]["verbosity"]}" # options: silent, pretty, log
-
-[generation]
-events = {self.run_card["generation"]["events"]}
-max_overweight_truncation = {self.run_card["generation"]["max_overweight_truncation"]}
-freeze_max_weight_after = {self.run_card["generation"]["freeze_max_weight_after"]}
-cpu_batch_size = {self.run_card["generation"]["cpu_batch_size"]}
-gpu_batch_size = {self.run_card["generation"]["gpu_batch_size"]}
-cut_efficiency_threshold = {self.run_card["generation"]["cut_efficiency_threshold"]}
-max_cut_repetitions = {self.run_card["generation"]["max_cut_repetitions"]}
-""")
+        # Re-emit the full run_card from its Python representation so the
+        # gridpack copy stays in sync with every parameter (and its template).
+        self.run_card.write(os.path.join(cards_path, "run_card.toml"))
 
         bin_path = os.path.join(gridpack_path, "bin")
         os.mkdir(bin_path)

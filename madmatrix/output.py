@@ -98,7 +98,9 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
                                       'MatrixElementKernels.cc', 'MatrixElementKernels.h',
                                       'EventStatistics.h',
                                       'umami.h', 'umami.cc', 'rambo.h']),
-                     'Cards': relative_path_list(mg7_templates, ["run_card.toml"])}
+                     # run_card.toml is generated in finalize() (ProcessExporterMG7.create_run_card)
+                     # from the template, not copied verbatim.
+                     'Cards': []}
 
     to_link_in_P = ['nvtx.h', 'GpuRuntime.h', 'GpuAbstraction.h', 'color_sum.h',
                     'MemoryAccessHelpers.h', 'MemoryAccessVectors.h',

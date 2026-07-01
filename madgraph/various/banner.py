@@ -2858,7 +2858,10 @@ class RunCard(ConfigFile):
                 path = finput
                 if '\n' not in finput:
                     finput = open(finput).read()
-                if 'req_acc_FO' in finput:
+                if path.endswith('.toml') or \
+                   re.search(r'(?m)^\s*\[(?:run|beam|generation|vegas|phasespace|madnis)\]\s*$', finput):
+                    target_class = RunCardMG7
+                elif 'req_acc_FO' in finput:
                     target_class = RunCardNLO
                 else:
                     target_class = RunCardLO
@@ -6295,7 +6298,635 @@ class RunCardNLO(RunCard):
         # This has to be LAST !!
         if os.path.exists(self.default_run_card):
             self.read(self.default_run_card, consistency=False)
-    
+
+
+class TOMLSectionView(object):
+    """A light read/edit view on one section of a RunCardMG7.
+
+    It lets the rest of the code keep the nested ``card["section"]["key"]``
+    idiom (as produced by ``tomllib.load``) while the actual values live in the
+    flat ``RunCardMG7`` storage (keyed ``"<section>.<key>"``). Values are read
+    live, so the view always reflects the current state of the card."""
+
+    def __init__(self, card, section):
+        self.card = card
+        self.section = section
+
+    def _key(self, name):
+        return '%s.%s' % (self.section, name.lower())
+
+    def __getitem__(self, name):
+        return self.card[self._key(name)]
+
+    def __setitem__(self, name, value):
+        self.card[self._key(name)] = value
+
+    def __contains__(self, name):
+        return self._key(name) in self.card
+
+    def get(self, name, default=None):
+        key = self._key(name)
+        if key in self.card:
+            return self.card[key]
+        return default
+
+    def __iter__(self):
+        return iter(self.card.toml_sections[self.section])
+
+    def keys(self):
+        return list(self.card.toml_sections[self.section])
+
+    def items(self):
+        return [(name, self[name]) for name in self]
+
+    def values(self):
+        return [self[name] for name in self]
+
+    def __len__(self):
+        return len(self.card.toml_sections[self.section])
+
+    def __repr__(self):
+        return repr(dict(self.items()))
+
+
+class RunCardMG7(RunCard):
+    """Python representation of the TOML ``run_card.toml`` used by the default
+    (mg7/madnis) generation mode.
+
+    It reuses the :class:`ConfigFile`/:class:`RunCard` machinery (typed
+    parameters, allowed values, comments, ``user_set`` tracking, ``set``) so
+    that the card can be edited programmatically (and, later, via a ``set``
+    command or a card editor) exactly like the legacy ``run_card.dat``.
+
+    TOML specifics handled here:
+
+    - Section-aware flat storage: each fixed parameter is stored under the
+      unique key ``"<section>.<key>"`` (TOML keys are only unique within a
+      section, e.g. ``enable`` exists in both ``[vegas]`` and ``[madnis]``).
+    - Nested ``card["section"]["key"]`` access via :class:`TOMLSectionView`.
+    - Dynamic, user-extensible sections (``[multiparticles]``, ``[cuts]``,
+      ``[histograms]``) are kept as plain nested dicts in ``dynamic_sections``.
+    - ``read``/``write`` are overridden to parse/emit TOML (the base class is
+      line oriented ``value = name``).
+    """
+
+    LO = True
+    filename = 'run_card'
+
+    # dynamic (free-form) sections, stored as nested dicts rather than as
+    # fixed typed parameters
+    dynamic_section_names = ('multiparticles', 'cuts', 'histograms')
+
+    # energy units, expressed in GeV (the unit everything is stored in)
+    energy_units = {'ev': 1e-9, 'kev': 1e-6, 'mev': 1e-3,
+                    'gev': 1.0, 'tev': 1e3, 'pev': 1e6}
+    # typed parameters carrying an energy dimension (stored in GeV); a value
+    # like "13 TeV" is converted to 13000.0 when assigned to one of these.
+    energy_params = ('beam.e_cm', 'beam.ren_scale',
+                     'beam.fact_scale1', 'beam.fact_scale2')
+    # name -> pdg for masses that can be referenced in expressions (e.g. a scale
+    # set to "mz/2"); resolved against the param_card by get_mass_shortcuts.
+    mass_shortcuts = {'mz': 23, 'mw': 24, 'mh': 25, 'mt': 6, 'mb': 5,
+                      'mc': 4, 'mtau': 15, 'mta': 15, 'mmu': 13}
+
+    if MG5DIR:
+        template_run_card = pjoin(MG5DIR, 'madgraph', 'iolibs',
+                                  'template_files', 'mg7', 'run_card.toml')
+        default_run_card = pjoin(MG5DIR, "internal", "default_run_card_mg7.toml")
+    else:
+        template_run_card = None
+        default_run_card = None
+
+    def __init__(self, *args, **opts):
+        # ordered {section: [shortkey, ...]} for the fixed (typed) parameters
+        self.toml_sections = collections.OrderedDict()
+        # internal_key -> section
+        self.section_of = {}
+        # free-form sections kept as nested dicts
+        self.dynamic_sections = collections.OrderedDict()
+        # unknown sections preserved for round-trip
+        self.extra_sections = collections.OrderedDict()
+        super(RunCardMG7, self).__init__(*args, **opts)
+
+    # ------------------------------------------------------------------
+    # parameter declaration
+    # ------------------------------------------------------------------
+    def add_toml_param(self, section, key, value, **opts):
+        """Declare one fixed (typed) TOML parameter belonging to ``section``."""
+        section = section.lower()
+        key = key.lower()
+        internal = '%s.%s' % (section, key)
+        # not a fortran parameter: never goes to an include file
+        opts.setdefault('include', False)
+        self.add_param(internal, value, **opts)
+        self.section_of[internal] = section
+        self.toml_sections.setdefault(section, [])
+        if key not in self.toml_sections[section]:
+            self.toml_sections[section].append(key)
+
+    def default_setup(self):
+        """Define every parameter of the default ``run_card.toml``."""
+
+        # ----------------------------- [run] --------------------------
+        self.add_toml_param('run', 'run_name', "run")
+        self.add_toml_param('run', 'devices', ["cppnone"], typelist=str,
+            comment="options: cuda, hip, cpp, cppnone, cppsse4, cppavx2, cpp512y, cpp512z, cppauto")
+        self.add_toml_param('run', 'simd_vector_size', -1,
+            comment="-1 chooses automatically; on x86: 1, 4, 8; on Apple silicon: 1, 2")
+        self.add_toml_param('run', 'cpu_thread_pool_size', -1,
+            comment="-1 sets count automatically based on number of CPUs")
+        self.add_toml_param('run', 'gpu_thread_pool_size', 1)
+        self.add_toml_param('run', 'combine_thread_pool_size', -1)
+        self.add_toml_param('run', 'output_format', "compact_npy",
+            allowed=['compact_npy', 'lhe_npy', 'lhe'])
+        self.add_toml_param('run', 'verbosity', "pretty",
+            allowed=['silent', 'pretty', 'log'])
+        self.add_toml_param('run', 'dummy_matrix_element', False)
+        self.add_toml_param('run', 'save_gridpack', False)
+        self.add_toml_param('run', 'gridpack_include_source', False)
+
+        # ----------------------------- [beam] -------------------------
+        self.add_toml_param('beam', 'e_cm', 13000.0)
+        self.add_toml_param('beam', 'leptonic', False)
+        self.add_toml_param('beam', 'pdf', "NNPDF23_lo_as_0130_qed")
+        self.add_toml_param('beam', 'fixed_ren_scale', True)
+        self.add_toml_param('beam', 'fixed_fact_scale', True)
+        self.add_toml_param('beam', 'ren_scale', 91.188)
+        self.add_toml_param('beam', 'fact_scale1', 91.188)
+        self.add_toml_param('beam', 'fact_scale2', 91.188)
+        self.add_toml_param('beam', 'dynamical_scale_choice', "half_transverse_mass",
+            allowed=['transverse_energy', 'transverse_mass',
+                     'half_transverse_mass', 'partonic_energy'])
+
+        # -------------------------- [generation] ----------------------
+        self.add_toml_param('generation', 'events', 100000)
+        self.add_toml_param('generation', 'max_overweight_truncation', 0.01)
+        self.add_toml_param('generation', 'freeze_max_weight_after', 10000)
+        self.add_toml_param('generation', 'cpu_batch_size', 1000)
+        self.add_toml_param('generation', 'gpu_batch_size', 64000)
+        self.add_toml_param('generation', 'survey_min_iters', 3)
+        self.add_toml_param('generation', 'survey_max_iters', 3)
+        self.add_toml_param('generation', 'survey_target_precision', 0.1)
+        self.add_toml_param('generation', 'cut_efficiency_threshold', 0.7)
+        self.add_toml_param('generation', 'max_cut_repetitions', 1000)
+        self.add_toml_param('generation', 'systematics', False)
+
+        # ----------------------------- [vegas] ------------------------
+        self.add_toml_param('vegas', 'enable', True)
+        self.add_toml_param('vegas', 'bins', 64)
+        self.add_toml_param('vegas', 'damping', 0.4)
+        self.add_toml_param('vegas', 'optimization_patience', 5)
+        self.add_toml_param('vegas', 'optimization_threshold', 0.9)
+        self.add_toml_param('vegas', 'start_batch_size', 1000)
+        self.add_toml_param('vegas', 'max_batch_size', 32000)
+
+        # -------------------------- [phasespace] ----------------------
+        self.add_toml_param('phasespace', 'mode', "both",
+            allowed=['multichannel', 'flat', 'both'])
+        self.add_toml_param('phasespace', 'sde_strategy', "diagrams",
+            allowed=['diagrams', 'denominators'])
+        self.add_toml_param('phasespace', 'decays', "all",
+            allowed=['all', 'massive', 'none'])
+        self.add_toml_param('phasespace', 't_channel', "propagator",
+            allowed=['propagator', 'rambo', 'chili'])
+        self.add_toml_param('phasespace', 'flat_mode', "rambo",
+            allowed=['propagator', 'rambo', 'chili'])
+        self.add_toml_param('phasespace', 'simplified_channel_count', 10)
+        self.add_toml_param('phasespace', 'invariant_power', 0.7)
+        self.add_toml_param('phasespace', 'bw_cutoff', 15)
+
+        # ----------------------------- [madnis] -----------------------
+        self.add_toml_param('madnis', 'enable', False)
+        self.add_toml_param('madnis', 'flow_hidden_dim', 64)
+        self.add_toml_param('madnis', 'flow_layers', 3)
+        self.add_toml_param('madnis', 'flow_spline_bins', 10)
+        self.add_toml_param('madnis', 'flow_activation', "leaky_relu",
+            allowed=['relu', 'leaky_relu', 'elu', 'gelu', 'sigmoid', 'softplus'])
+        self.add_toml_param('madnis', 'flow_invert_spline', False)
+        self.add_toml_param('madnis', 'discrete_hidden_dim', 64)
+        self.add_toml_param('madnis', 'discrete_layers', 3)
+        self.add_toml_param('madnis', 'discrete_activation', "leaky_relu",
+            allowed=['relu', 'leaky_relu', 'elu', 'gelu', 'sigmoid', 'softplus'])
+        self.add_toml_param('madnis', 'cwnet_hidden_dim', 64)
+        self.add_toml_param('madnis', 'cwnet_layers', 3)
+        self.add_toml_param('madnis', 'cwnet_activation', "leaky_relu",
+            allowed=['relu', 'leaky_relu', 'elu', 'gelu', 'sigmoid', 'softplus'])
+        self.add_toml_param('madnis', 'loss', "stratified_variance",
+            allowed=['stratified_variance', 'kl_divergence', 'rkl_divergence'])
+        self.add_toml_param('madnis', 'train_batches', 1000)
+        self.add_toml_param('madnis', 'log_interval', 100)
+        self.add_toml_param('madnis', 'batch_size_offset', 512)
+        self.add_toml_param('madnis', 'batch_size_per_channel', 128)
+        self.add_toml_param('madnis', 'generator_target_size_factor', 32)
+        self.add_toml_param('madnis', 'gpu_generator_batch_granularity', 1000)
+        self.add_toml_param('madnis', 'lr', 1e-3)
+        self.add_toml_param('madnis', 'lr_decay', 0.01)
+        self.add_toml_param('madnis', 'lr_max', 3e-3)
+        self.add_toml_param('madnis', 'lr_scheduler', "cosine",
+            allowed=['none', 'cosine'])
+        self.add_toml_param('madnis', 'adam_beta1', 0.9)
+        self.add_toml_param('madnis', 'adam_beta2', 0.999)
+        self.add_toml_param('madnis', 'adam_eps', 1e-8)
+        self.add_toml_param('madnis', 'train_mcw', True)
+        self.add_toml_param('madnis', 'buffer_capacity', 0)
+        self.add_toml_param('madnis', 'minimum_buffer_size', 50000)
+        self.add_toml_param('madnis', 'buffered_steps', 0)
+        self.add_toml_param('madnis', 'buffer_unweighting_quantile', 0.99)
+        self.add_toml_param('madnis', 'uniform_channel_ratio', 0.1)
+        self.add_toml_param('madnis', 'integration_history_length', 100)
+        self.add_toml_param('madnis', 'max_stored_channel_weights', 100)
+        self.add_toml_param('madnis', 'channel_dropping_threshold', 0.01)
+        self.add_toml_param('madnis', 'channel_dropping_interval', 100)
+        self.add_toml_param('madnis', 'drop_zero_integrands', True)
+        self.add_toml_param('madnis', 'batch_size_threshold', 0.5)
+        self.add_toml_param('madnis', 'channel_grouping_mode', "uniform",
+            allowed=['none', 'uniform', 'learned'])
+        self.add_toml_param('madnis', 'fixed_cwnet_fraction', 0.33)
+        self.add_toml_param('madnis', 'softclip_threshold', 30.0)
+
+        # ----------------- dynamic (free-form) sections ---------------
+        self.dynamic_sections['multiparticles'] = collections.OrderedDict([
+            ('jet', [1, 2, 3, 4, -1, -2, -3, -4, 21]),
+            ('bottom', [-5, 5]),
+            ('lepton', [11, 13, 15, -11, -13, -15]),
+            ('missing', [12, 14, 16, -12, -14, -16]),
+            ('photon', [22]),
+        ])
+        self.dynamic_sections['cuts'] = collections.OrderedDict([
+            ('jet-pt', {'min': 20.0}),
+            ('jet-eta_abs', {'max': 5.0}),
+            ('jet-delta_r', {'min': 0.4}),
+            ('lepton-pt', {'min': 10.0}),
+            ('lepton-eta_abs', {'max': 2.5}),
+            ('lepton-delta_r', {'min': 0.4}),
+            ('jet-lepton-delta_r', {'min': 0.4}),
+            ('sqrt_s', {'min': 0.0}),
+        ])
+        self.dynamic_sections['histograms'] = collections.OrderedDict()
+
+    # ------------------------------------------------------------------
+    # access: nested section views
+    # ------------------------------------------------------------------
+    def __getitem__(self, name):
+        if isinstance(name, str):
+            lname = name.lower()
+            if lname in self.dynamic_sections:
+                return self.dynamic_sections[lname]
+            if lname in self.toml_sections:
+                return TOMLSectionView(self, lname)
+        return super(RunCardMG7, self).__getitem__(name)
+
+    get = __getitem__
+
+    # ------------------------------------------------------------------
+    # reading TOML
+    # ------------------------------------------------------------------
+    def read(self, finput, consistency=True, unknown_warning=True, **opt):
+        """Read a TOML run_card from a path, a file object or a string."""
+        import tomllib
+
+        self.path = None
+        if isinstance(finput, str):
+            if '\n' in finput:
+                text = finput
+            elif os.path.isfile(finput):
+                self.path = finput
+                with open(finput) as fsock:
+                    text = fsock.read()
+            else:
+                raise Exception("No such file %s" % finput)
+        elif hasattr(finput, 'read'):
+            text = finput.read()
+            if isinstance(text, bytes):
+                text = text.decode()
+        else:
+            raise Exception("RunCardMG7 cannot read input of type %s" % type(finput))
+
+        data = tomllib.loads(text)
+        self.read_data(data, unknown_warning=unknown_warning)
+
+        if consistency:
+            try:
+                self.check_validity()
+            except InvalidRunCard as error:
+                if consistency == 'warning':
+                    logger.warning(str(error))
+                else:
+                    raise
+
+    def read_data(self, data, unknown_warning=True):
+        """Fill the card from a parsed TOML mapping (section -> {key: value})."""
+        for section, content in data.items():
+            sl = section.lower()
+            if sl in self.dynamic_sections:
+                self.dynamic_sections[sl] = collections.OrderedDict(content)
+            elif sl in self.toml_sections:
+                for key, value in content.items():
+                    internal = '%s.%s' % (sl, key.lower())
+                    if internal in self:
+                        self.set(internal, value, user=True)
+                    else:
+                        if unknown_warning:
+                            logger.warning("Unexpected entry %s in section [%s] of run_card.toml", key, sl)
+                        self.add_toml_param(sl, key.lower(), value)
+                        self.set(internal, value, user=True)
+            else:
+                if unknown_warning:
+                    logger.warning("Unexpected section [%s] in run_card.toml", sl)
+                self.extra_sections[sl] = collections.OrderedDict(content)
+
+    # ------------------------------------------------------------------
+    # value setting (energy units + cuts)
+    # ------------------------------------------------------------------
+    @classmethod
+    def parse_energy(cls, value):
+        """Convert an energy string carrying a unit (eV/keV/MeV/GeV/TeV/PeV)
+        to GeV. ``"1 TeV"`` -> ``1000.0``, ``"500GeV"`` -> ``500.0``.
+
+        If ``value`` is not a string, or has no (recognised) unit, it is
+        returned unchanged so that the normal numeric parsing (including the
+        ``k``/``M`` suffixes handled by :func:`ConfigFile.format_variable`)
+        still applies."""
+        if not isinstance(value, str):
+            return value
+        m = re.match(r'^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][-+]?\d+)?)\s*([a-zA-Z]+)\s*$',
+                     value)
+        if not m:
+            return value
+        if m.group(2).lower() not in cls.energy_units:
+            return value
+        number = float(m.group(1).replace('d', 'e').replace('D', 'e'))
+        return number * cls.energy_units[m.group(2).lower()]
+
+    def set(self, name, value, *args, **opts):
+        """Like :meth:`ConfigFile.set` but understands energy units for the
+        energy-dimensioned parameters (e.g. ``set beam.e_cm 13 TeV``)."""
+        if isinstance(name, str) and name.lower() in self.energy_params:
+            value = self.parse_energy(value)
+        return super(RunCardMG7, self).set(name, value, *args, **opts)
+
+    def is_cut_name(self, name):
+        """True if ``name`` addresses a cut entry of the ``[cuts]`` section
+        (e.g. ``jet-pt.min``, ``cuts.jet-pt.max``)."""
+        if not isinstance(name, str):
+            return False
+        name = name.strip().lower()
+        if name.startswith('cuts.'):
+            return True
+        base = name.rsplit('.', 1)[0] if '.' in name else name
+        return base in self.dynamic_sections['cuts']
+
+    def set_cut(self, name, value):
+        """Set a value in the ``[cuts]`` section. ``name`` is of the form
+        ``<cut>.<bound>`` (bound = min/max/mode), optionally prefixed with
+        ``cuts.``. Numeric bounds accept energy units and are stored in GeV.
+        Returns ``(cut, bound, value)``."""
+        name = name.strip().lower()
+        if name.startswith('cuts.'):
+            name = name[len('cuts.'):]
+        if '.' in name:
+            cut, bound = name.rsplit('.', 1)
+        else:
+            cut, bound = name, 'min'
+        if bound not in ('min', 'max', 'mode'):
+            cut, bound = name, 'min'
+        if bound == 'mode':
+            value = str(value).strip()
+        else:
+            value = self.parse_energy(value)
+            if isinstance(value, str):
+                value = self.format_variable(value, float, name=name)
+        self.dynamic_sections['cuts'].setdefault(cut, collections.OrderedDict())[bound] = value
+        return cut, bound, value
+
+    # ------------------------------------------------------------------
+    # expression evaluation (energy units + arithmetic + masses)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _safe_eval(expr, names):
+        """Evaluate a pure-arithmetic expression (``+ - * / **`` and unary
+        signs) where identifiers are resolved from ``names``. No function
+        calls/attributes are allowed (so it is safe on untrusted input)."""
+        import ast, operator
+        ops = {ast.Add: operator.add, ast.Sub: operator.sub,
+               ast.Mult: operator.mul, ast.Div: operator.truediv,
+               ast.Pow: operator.pow, ast.USub: operator.neg,
+               ast.UAdd: operator.pos}
+
+        def ev(node):
+            if isinstance(node, ast.Expression):
+                return ev(node.body)
+            if isinstance(node, ast.Constant):
+                if isinstance(node.value, bool) or not isinstance(node.value, (int, float)):
+                    raise ValueError("not a number")
+                return node.value
+            if isinstance(node, ast.Name):
+                if node.id.lower() in names:
+                    return names[node.id.lower()]
+                raise ValueError("unknown name %s" % node.id)
+            if isinstance(node, ast.BinOp) and type(node.op) in ops:
+                return ops[type(node.op)](ev(node.left), ev(node.right))
+            if isinstance(node, ast.UnaryOp) and type(node.op) in ops:
+                return ops[type(node.op)](ev(node.operand))
+            raise ValueError("unsupported expression")
+
+        return ev(ast.parse(expr, mode='eval'))
+
+    def evaluate(self, value, masses=None):
+        """Resolve a user-supplied value into a number when possible.
+
+        Handles, in order: energy units (``13 TeV`` -> 13000), then arithmetic
+        expressions possibly referencing masses (``mz/2``, ``2*mh``). If the
+        value cannot be turned into a number it is returned unchanged, so plain
+        strings, ``k``/``M`` suffixes, ``default``/``auto`` etc. keep working."""
+        if not isinstance(value, str):
+            return value
+        v = value.strip()
+        if not v:
+            return value
+        converted = self.parse_energy(v)
+        if not isinstance(converted, str):
+            return converted
+        try:
+            return float(self._safe_eval(v, masses or {}))
+        except Exception:
+            return value
+
+    def get_mass_shortcuts(self, param_card):
+        """Build the {name: mass} mapping (mz, mh, ...) from a param_card."""
+        out = {}
+        if not param_card:
+            return out
+        for name, pdg in self.mass_shortcuts.items():
+            try:
+                out[name] = float(param_card.get_value('mass', pdg))
+            except Exception:
+                continue
+        return out
+
+    # ------------------------------------------------------------------
+    # madevent-style shortcuts
+    # ------------------------------------------------------------------
+    def remove_all_cut(self):
+        """Remove every cut (``set no_parton_cut`` / ``set nocut``)."""
+        self.dynamic_sections['cuts'] = collections.OrderedDict()
+
+    def set_collider(self, name, arg, masses=None):
+        """Collider shortcuts: ``lhc``/``lcc`` (hadron, unit-less = TeV) and
+        ``lep``/``ilc`` (lepton, unit-less = GeV). Sets e_cm and leptonic."""
+        name = name.lower()
+        had_unit = not isinstance(self.parse_energy(arg), str)
+        val = self.evaluate(arg, masses)
+        if isinstance(val, str):
+            val = self.format_variable(val, float, name=name)
+        if not had_unit and name in ('lhc', 'lcc'):
+            val = val * 1000.0  # unit-less hadron collider energy is in TeV
+        self.set('beam.e_cm', float(val), user=True)
+        self.set('beam.leptonic', name in ('lep', 'ilc'), user=True)
+        return float(val)
+
+    def set_fixed_scale(self, value, masses=None):
+        """``set fixed_scale X``: switch to fixed scales and set them all to X
+        (X may use units, arithmetic or a mass reference, e.g. ``mz``)."""
+        val = self.evaluate(value, masses)
+        if isinstance(val, str):
+            val = self.format_variable(val, float, name='fixed_scale')
+        val = float(val)
+        self.set('beam.fixed_ren_scale', True, user=True)
+        self.set('beam.fixed_fact_scale', True, user=True)
+        self.set('beam.ren_scale', val, user=True)
+        self.set('beam.fact_scale1', val, user=True)
+        self.set('beam.fact_scale2', val, user=True)
+        return val
+
+    def check_validity(self):
+        """Minimal consistency checks for the TOML run_card."""
+        if self['generation']['survey_min_iters'] > self['generation']['survey_max_iters']:
+            raise InvalidRunCard("survey_min_iters can not be larger than survey_max_iters")
+
+    # ------------------------------------------------------------------
+    # writing TOML
+    # ------------------------------------------------------------------
+    @staticmethod
+    def format_toml_value(value):
+        """Render a Python value as a TOML literal."""
+        if isinstance(value, bool):
+            return 'true' if value else 'false'
+        elif isinstance(value, str):
+            return '"%s"' % value
+        elif isinstance(value, (list, tuple)):
+            return '[%s]' % ', '.join(RunCardMG7.format_toml_value(v) for v in value)
+        else:
+            return str(value)
+
+    def format_dynamic_section(self, section):
+        """Render a free-form section (multiparticles/cuts/histograms)."""
+        lines = []
+        for key, value in self.dynamic_sections.get(section, {}).items():
+            if isinstance(value, dict):
+                # nested keys: e.g. jet-pt.min = 20.0
+                for subkey, subval in value.items():
+                    lines.append('%s.%s = %s' % (key, subkey,
+                                                 self.format_toml_value(subval)))
+            else:
+                lines.append('%s = %s' % (key, self.format_toml_value(value)))
+        return '\n'.join(lines)
+
+    def write(self, output_file, template=None, python_template=True, **opt):
+        """Write a valid ``run_card.toml``.
+
+        Values are rendered from the placeholder template (the one shipped in
+        template_files/mg7). ``template`` may be passed by the generic card
+        editor as a concrete default card (``run_card_default.toml``); since
+        that file has no ``%(...)s`` placeholders it cannot drive the
+        rendering, so in that case (or when it is missing) we fall back to the
+        shipped placeholder template."""
+        text = None
+        if template and os.path.exists(template):
+            with open(template) as fsock:
+                text = fsock.read()
+            if '%(' not in text:
+                text = None  # concrete card, not a placeholder template
+        if text is None:
+            if not self.template_run_card or not os.path.exists(self.template_run_card):
+                raise Exception("RunCardMG7.write requires a template (run_card.toml)")
+            with open(self.template_run_card) as fsock:
+                text = fsock.read()
+
+        # fixed (typed) parameters: substitute %(section.key)s placeholders
+        data = {}
+        for section, keys in self.toml_sections.items():
+            for key in keys:
+                internal = '%s.%s' % (section, key)
+                data[internal] = self.format_toml_value(self[internal])
+        text = text % data
+
+        # free-form sections inserted at their markers
+        for section in self.dynamic_section_names:
+            text = text.replace('$%s' % section,
+                                self.format_dynamic_section(section))
+
+        # preserve any unknown section read from an existing card
+        for section, content in self.extra_sections.items():
+            block = '\n[%s]\n' % section
+            for key, value in content.items():
+                block += '%s = %s\n' % (key, self.format_toml_value(value))
+            text += block
+
+        if isinstance(output_file, str):
+            with open(output_file, 'w') as fsock:
+                fsock.write(text)
+        else:
+            output_file.write(text)
+
+    # ------------------------------------------------------------------
+    # process dependent defaults (mirrors RunCardLO.create_default_for_process)
+    # ------------------------------------------------------------------
+    def create_default_for_process(self, proc_characteristic, history, proc_def):
+        """Adjust default values depending on the process, then read the
+        site/user default file (``input/default_run_card_mg7.toml``)."""
+
+        # collect the initial-state (beam) particle ids
+        beam_id = set()
+        try:
+            for proc in proc_def:
+                for oneproc in proc:
+                    for leg in oneproc['legs']:
+                        if not leg['state']:
+                            beam_id.add(leg['id'])
+        except (TypeError, KeyError, IndexError):
+            beam_id = set()
+
+        # 81/-81 and 82/-82 are MadGraph composite beam codes (light-jet and
+        # lepton beams respectively); treat them like their concrete partners.
+        hadronic = set([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 21, 22, 81, -81])
+        leptons = set([11, -11, 13, -13, 15, -15, 82, -82])
+
+        if beam_id and beam_id <= leptons:
+            # lepton collider: no PDF, lower default energy, no hadronic cuts
+            self['beam']['leptonic'] = True
+            self['beam']['e_cm'] = 1000.0
+            self['beam']['fixed_fact_scale'] = True
+            self.remove_jet_cuts()
+        elif beam_id and not (beam_id & hadronic):
+            # e.g. photon/neutrino initiated: also no proton PDF
+            self['beam']['leptonic'] = True
+
+        # 1 -> N decay: no cuts at all
+        if proc_characteristic and proc_characteristic['ninitial'] == 1:
+            self.dynamic_sections['cuts'] = collections.OrderedDict()
+
+        # site/user defaults win (this has to be LAST, like the LO run_card)
+        if self.default_run_card and os.path.exists(self.default_run_card):
+            self.read(self.default_run_card, consistency=False)
+
+    def remove_jet_cuts(self):
+        """Drop jet related cuts (used for lepton colliders)."""
+        for key in list(self.dynamic_sections['cuts']):
+            if key.startswith('jet'):
+                del self.dynamic_sections['cuts'][key]
+
+
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat
     contains a parser to read it, facilities to write a new file,...

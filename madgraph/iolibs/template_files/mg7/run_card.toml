@@ -1,141 +1,126 @@
 [run]
-run_name = "run"
+run_name = %(run.run_name)s
 # options: cuda, hip, cpp, cppnone, cppsse4, cppavx2, cpp512y, cpp512z, cppauto
-devices = ["cppnone"] 
+devices = %(run.devices)s
 # options:
 #   -1 to choose automatically
 #   on x86: 1, 4, 8
 #   on Apple silicon: 1, 2
-simd_vector_size = -1
+simd_vector_size = %(run.simd_vector_size)s
 # pool sizes: -1 sets count automatically based on number of CPUs
-cpu_thread_pool_size = -1
-gpu_thread_pool_size = 1
-combine_thread_pool_size = -1
-output_format = "compact_npy" # options: compact_npy, lhe_npy, lhe
-verbosity = "pretty" # options: silent, pretty, log
-dummy_matrix_element = false
-save_gridpack = false
-gridpack_include_source = false
+cpu_thread_pool_size = %(run.cpu_thread_pool_size)s
+gpu_thread_pool_size = %(run.gpu_thread_pool_size)s
+combine_thread_pool_size = %(run.combine_thread_pool_size)s
+output_format = %(run.output_format)s # options: compact_npy, lhe_npy, lhe
+verbosity = %(run.verbosity)s # options: silent, pretty, log
+dummy_matrix_element = %(run.dummy_matrix_element)s
+save_gridpack = %(run.save_gridpack)s
+gridpack_include_source = %(run.gridpack_include_source)s
 
 [beam]
-e_cm = 13000.0
-leptonic = false
-pdf = "NNPDF23_lo_as_0130_qed"
-fixed_ren_scale = true
-fixed_fact_scale = true
-ren_scale = 91.188
-fact_scale1 = 91.188
-fact_scale2 = 91.188
+e_cm = %(beam.e_cm)s
+leptonic = %(beam.leptonic)s
+pdf = %(beam.pdf)s
+fixed_ren_scale = %(beam.fixed_ren_scale)s
+fixed_fact_scale = %(beam.fixed_fact_scale)s
+ren_scale = %(beam.ren_scale)s
+fact_scale1 = %(beam.fact_scale1)s
+fact_scale2 = %(beam.fact_scale2)s
 # options: transverse_energy, transverse_mass, half_transverse_mass, partonic_energy
-dynamical_scale_choice = "half_transverse_mass"
+dynamical_scale_choice = %(beam.dynamical_scale_choice)s
 
 [generation]
-events = 100000
-max_overweight_truncation = 0.01
-freeze_max_weight_after = 10000
-cpu_batch_size = 1000
-gpu_batch_size = 64000
-survey_min_iters = 3
-survey_max_iters = 3
-survey_target_precision = 0.1
-cut_efficiency_threshold = 0.7
-max_cut_repetitions = 1000
-systematics = false
+events = %(generation.events)s
+max_overweight_truncation = %(generation.max_overweight_truncation)s
+freeze_max_weight_after = %(generation.freeze_max_weight_after)s
+cpu_batch_size = %(generation.cpu_batch_size)s
+gpu_batch_size = %(generation.gpu_batch_size)s
+survey_min_iters = %(generation.survey_min_iters)s
+survey_max_iters = %(generation.survey_max_iters)s
+survey_target_precision = %(generation.survey_target_precision)s
+cut_efficiency_threshold = %(generation.cut_efficiency_threshold)s
+max_cut_repetitions = %(generation.max_cut_repetitions)s
+systematics = %(generation.systematics)s
 
 [vegas]
-enable = true
-bins = 64
-damping = 0.4
-optimization_patience = 5
-optimization_threshold = 0.9
-start_batch_size = 1000
-max_batch_size = 32000
+enable = %(vegas.enable)s
+bins = %(vegas.bins)s
+damping = %(vegas.damping)s
+optimization_patience = %(vegas.optimization_patience)s
+optimization_threshold = %(vegas.optimization_threshold)s
+start_batch_size = %(vegas.start_batch_size)s
+max_batch_size = %(vegas.max_batch_size)s
 
 [phasespace]
-mode = "both" #options: multichannel, flat, both
-sde_strategy = "diagrams" #options: diagrams, denominators
-decays = "all" # options: all, massive, none
-t_channel = "propagator" # options: propagator, rambo, chili
-flat_mode = "rambo" # options: propagator, rambo, chili
-simplified_channel_count = 10
-invariant_power = 0.7
-bw_cutoff = 15
+mode = %(phasespace.mode)s #options: multichannel, flat, both
+sde_strategy = %(phasespace.sde_strategy)s #options: diagrams, denominators
+decays = %(phasespace.decays)s # options: all, massive, none
+t_channel = %(phasespace.t_channel)s # options: propagator, rambo, chili
+flat_mode = %(phasespace.flat_mode)s # options: propagator, rambo, chili
+simplified_channel_count = %(phasespace.simplified_channel_count)s
+invariant_power = %(phasespace.invariant_power)s
+bw_cutoff = %(phasespace.bw_cutoff)s
 
 [multiparticles]
-jet = [1, 2, 3, 4, -1, -2, -3, -4, 21]
-bottom = [-5, 5]
-lepton = [11, 13, 15, -11, -13, -15]
-missing = [12, 14, 16, -12, -14, -16]
-photon = [22]
+$multiparticles
 
 [cuts]
 # possible groups: jet, bottom, lepton, missing, photon
 # possible observables: pt, eta, dR, mass, sqrt_s
 #     (mass is for pairs of particles from the same group, sqrt_s is for all outgoing particles)
 # for all cuts, min or max can be specified
-
-jet-pt.min = 20.0
-jet-eta_abs.max = 5.0
-jet-delta_r.min = 0.4
-
-lepton-pt.min = 10.0
-lepton-eta_abs.max = 2.5
-lepton-delta_r.min = 0.4
-
-jet-lepton-delta_r.min=0.4
-
-sqrt_s.min = 0.0
+$cuts
 
 [histograms]
-
+$histograms
 
 [madnis]
-enable = false
+enable = %(madnis.enable)s
 
 # normalizing flow parameters
-flow_hidden_dim = 64
-flow_layers = 3
-flow_spline_bins = 10
-flow_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
-flow_invert_spline = false
+flow_hidden_dim = %(madnis.flow_hidden_dim)s
+flow_layers = %(madnis.flow_layers)s
+flow_spline_bins = %(madnis.flow_spline_bins)s
+flow_activation = %(madnis.flow_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+flow_invert_spline = %(madnis.flow_invert_spline)s
 
 # discrete dimensions
-discrete_hidden_dim = 64
-discrete_layers = 3
-discrete_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+discrete_hidden_dim = %(madnis.discrete_hidden_dim)s
+discrete_layers = %(madnis.discrete_layers)s
+discrete_activation = %(madnis.discrete_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
 
 # channel weight network
-cwnet_hidden_dim = 64
-cwnet_layers = 3
-cwnet_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+cwnet_hidden_dim = %(madnis.cwnet_hidden_dim)s
+cwnet_layers = %(madnis.cwnet_layers)s
+cwnet_activation = %(madnis.cwnet_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
 
 # training parameters
-loss = "stratified_variance" # options: stratified_variance, kl_divergence, rkl_divergence
-train_batches = 1000
-log_interval = 100
-batch_size_offset = 512
-batch_size_per_channel = 128
-generator_target_size_factor = 32
-gpu_generator_batch_granularity = 1000
-lr = 1e-3
-lr_decay = 0.01
-lr_max = 3e-3
-lr_scheduler = "cosine" # options: none, cosine
-adam_beta1 = 0.9
-adam_beta2 = 0.999
-adam_eps = 1e-8
-train_mcw = true
-buffer_capacity = 0
-minimum_buffer_size = 50000
-buffered_steps = 0
-buffer_unweighting_quantile = 0.99
-uniform_channel_ratio = 0.1
-integration_history_length = 100
-max_stored_channel_weights = 100
-channel_dropping_threshold = 0.01
-channel_dropping_interval = 100
-drop_zero_integrands = true
-batch_size_threshold = 0.5
-channel_grouping_mode = "uniform" # options: none, uniform, learned
-fixed_cwnet_fraction = 0.33
-softclip_threshold = 30.0
+loss = %(madnis.loss)s # options: stratified_variance, kl_divergence, rkl_divergence
+train_batches = %(madnis.train_batches)s
+log_interval = %(madnis.log_interval)s
+batch_size_offset = %(madnis.batch_size_offset)s
+batch_size_per_channel = %(madnis.batch_size_per_channel)s
+generator_target_size_factor = %(madnis.generator_target_size_factor)s
+gpu_generator_batch_granularity = %(madnis.gpu_generator_batch_granularity)s
+lr = %(madnis.lr)s
+lr_decay = %(madnis.lr_decay)s
+lr_max = %(madnis.lr_max)s
+lr_scheduler = %(madnis.lr_scheduler)s # options: none, cosine
+adam_beta1 = %(madnis.adam_beta1)s
+adam_beta2 = %(madnis.adam_beta2)s
+adam_eps = %(madnis.adam_eps)s
+train_mcw = %(madnis.train_mcw)s
+buffer_capacity = %(madnis.buffer_capacity)s
+minimum_buffer_size = %(madnis.minimum_buffer_size)s
+buffered_steps = %(madnis.buffered_steps)s
+buffer_unweighting_quantile = %(madnis.buffer_unweighting_quantile)s
+uniform_channel_ratio = %(madnis.uniform_channel_ratio)s
+integration_history_length = %(madnis.integration_history_length)s
+max_stored_channel_weights = %(madnis.max_stored_channel_weights)s
+channel_dropping_threshold = %(madnis.channel_dropping_threshold)s
+channel_dropping_interval = %(madnis.channel_dropping_interval)s
+drop_zero_integrands = %(madnis.drop_zero_integrands)s
+batch_size_threshold = %(madnis.batch_size_threshold)s
+channel_grouping_mode = %(madnis.channel_grouping_mode)s # options: none, uniform, learned
+fixed_cwnet_fraction = %(madnis.fixed_cwnet_fraction)s
+softclip_threshold = %(madnis.softclip_threshold)s
