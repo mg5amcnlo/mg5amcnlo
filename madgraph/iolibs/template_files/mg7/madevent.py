@@ -12,22 +12,38 @@ import re
 import logging
 from dataclasses import dataclass
 from typing import Literal, NamedTuple
-import tomllib
 import resource
 
 # Locate the madspace installation bundled alongside MadGraph.
 # madgraph/__init__.py lives one level below the MadGraph root, so .parents[1]
 # reaches the root and then "madspace/install" is the local install prefix.
 import madgraph as _mg_pkg
-_MADSPACE_DIR = Path(_mg_pkg.__file__).parents[1] / "madspace"
+_MG_ROOT = Path(_mg_pkg.__file__).parents[1]
+_MADSPACE_DIR = _MG_ROOT / "madspace"
 _INSTALL_DIR = _MADSPACE_DIR / "install"
 if not (_INSTALL_DIR / "madspace").is_dir():
     print()
     print("You don't have madspace installed for this madgraph instance")
-    print("Running interactive madspace installation script")
+    print("Running the madspace installation script")
     print()
 
-    _result = subprocess.run([sys.executable, str(_MADSPACE_DIR / "install.py")])
+    _install_cmd = [sys.executable, str(_MADSPACE_DIR / "install.py")]
+    # Propagate non-interactive context (parent -f or piped stdin) so the
+    # installer routes its questions through cmd.ask in force mode rather than
+    # blocking on input(); also expose madgraph on PYTHONPATH so the installer
+    # subprocess can import cmd.ask in the first place.
+    _noninteractive = "-f" in sys.argv or not sys.stdin.isatty()
+    # When non-interactive, run the installer with defaults and keep it away
+    # from our stdin (which may carry the run's scripted card-editing commands);
+    # when interactive, let it share the terminal so the user can answer.
+    _install_stdin = subprocess.DEVNULL if _noninteractive else None
+    if _noninteractive:
+        _install_cmd.append("-f")
+    _install_env = os.environ.copy()
+    _install_env["PYTHONPATH"] = os.pathsep.join(
+        [str(_MG_ROOT)] + ([_install_env["PYTHONPATH"]] if _install_env.get("PYTHONPATH") else [])
+    )
+    _result = subprocess.run(_install_cmd, env=_install_env, stdin=_install_stdin)
     if _result.returncode != 0:
         raise RuntimeError("madspace installation failed — see output above")
 if str(_INSTALL_DIR) not in sys.path:

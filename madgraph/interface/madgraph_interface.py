@@ -7963,12 +7963,43 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                  shell = isinstance(self, cmd.CmdShell),
                                                  options=self.options,**options)            
         elif args[0] == 'mg7':
+            me_dir = args[1]
+            # When MG5 runs non-interactively (a command file / piped input),
+            # drive bin/generate_events from the card-editing commands that
+            # follow `launch` in the script. Feeding them on stdin also makes
+            # the subprocess non-interactive, so the one-off madspace install
+            # runs with defaults instead of blocking on a prompt.
+            scripted = not self.use_rawinput
+            feed_lines = []
+            if scripted and self.inputfile is not None:
+                stop_prefixes = ('generate', 'add process', 'define', 'output',
+                                 'launch', 'import', 'quit', 'exit')
+                while True:
+                    try:
+                        nxt = next(self.inputfile)
+                    except (StopIteration, TypeError):
+                        break
+                    stripped = nxt.replace('\n', '').strip()
+                    if not stripped:
+                        continue
+                    if stripped.lower().startswith(stop_prefixes):
+                        self.store_line(nxt)  # belongs to MG5, hand it back
+                        break
+                    feed_lines.append(stripped)
+                    if stripped.lower() in ('done', '0'):
+                        break
+
             class ext_program:
                 @staticmethod
                 def run():
-                    os.chdir(args[1])
+                    os.chdir(me_dir)
+                    gen = os.path.join("bin", "generate_events")
                     try:
-                        subprocess.run(os.path.join("bin", "generate_events"))
+                        if scripted:
+                            stdin_text = "\n".join(feed_lines + ["done"]) + "\n"
+                            subprocess.run([gen], input=stdin_text, text=True)
+                        else:
+                            subprocess.run(gen)
                     except KeyboardInterrupt:
                         pass
 

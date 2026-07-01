@@ -39,23 +39,85 @@ _PLATFORM_SOURCE_DEFAULTS: dict = {
 
 
 # Interactive helpers
+#
+# Prompts are routed through MadGraph's cmd.ask when it is importable, so that
+# non-interactive / scripted runs behave consistently with the rest of MG5
+# (piped stdin, the launcher's -f flag, input command files): the default is
+# taken without blocking instead of hanging on input(). When madgraph is not
+# importable (truly standalone use) we fall back to input(), still honouring
+# the non-interactive flag.
+
+_NONINTERACTIVE = (not sys.stdin.isatty()) or any(
+    a in ("-f", "--force", "-y", "--yes") for a in sys.argv[1:]
+)
+
+
+def _set_noninteractive(flag: bool) -> None:
+    """Force non-interactive mode (called from main once args are parsed)."""
+    global _NONINTERACTIVE
+    if flag:
+        _NONINTERACTIVE = True
+
+
+class _Prompter:
+    """Ask a question through MG5's cmd.ask when available, else input()."""
+
+    _cmd = False  # False = not tried yet, None = unavailable
+
+    @classmethod
+    def _get_cmd(cls):
+        if cls._cmd is False:
+            try:
+                from madgraph.interface.extended_cmd import Cmd
+                cls._cmd = Cmd()
+            except Exception:
+                cls._cmd = None
+        return cls._cmd
+
+    @classmethod
+    def ask(cls, question: str, default: str, choices=None) -> str:
+        default = str(default)
+        cmd = cls._get_cmd()
+        if cmd is not None:
+            try:
+                ans = cmd.ask(
+                    question, default, choices=list(choices or []),
+                    timeout=0, force=_NONINTERACTIVE,
+                )
+                return default if ans is None else str(ans)
+            except Exception:
+                pass
+        # standalone fallback (no madgraph on path)
+        if _NONINTERACTIVE:
+            return default
+        try:
+            raw = input(f"{question} [{default}]: ").strip()
+        except EOFError:
+            return default
+        return raw if raw else default
+
+
+def _ask(question, default, choices=None) -> str:
+    return _Prompter.ask(question, default, choices)
 
 
 def ask_yes_no(prompt: str, default: bool = True) -> bool:
-    hint = "Y/n" if default else "y/N"
+    default_s = "y" if default else "n"
     while True:
-        raw = input(f"{prompt} [{hint}]: ").strip().lower()
+        raw = _ask(prompt, default_s, choices=["y", "n"]).strip().lower()
         if not raw:
             return default
         if raw in ("y", "yes"):
             return True
         if raw in ("n", "no"):
             return False
+        if _NONINTERACTIVE:
+            return default
         print("  Please enter 'y' or 'n'.")
 
 
 def ask_string(prompt: str, default: str) -> str:
-    raw = input(f"{prompt} [default: {default}]: ").strip()
+    raw = _ask(prompt, default).strip()
     return raw if raw else default
 
 
@@ -128,19 +190,26 @@ def ask_compile_options(
     else:
         hint = "Enter for none"
 
+    def _defaults():
+        # Convert checkbox state back to output values
+        return {ok: (prev[mk] != inv) for mk, _, ok, inv in entries}
+
     while True:
-        raw = input(
-            f"Enter numbers separated by commas/spaces, or press {hint}: "
+        raw = _ask(
+            f"Enter numbers separated by commas/spaces, or press Enter ({hint})", ""
         ).strip()
         if not raw:
-            # Convert checkbox state back to output values
-            return {ok: (prev[mk] != inv) for mk, _, ok, inv in entries}
+            return _defaults()
         try:
             chosen = {int(x) for x in raw.replace(",", " ").split()}
         except ValueError:
+            if _NONINTERACTIVE:
+                return _defaults()
             print("  Invalid input — please enter numbers, e.g. 1,3 or 1 3")
             continue
         if not all(1 <= c <= len(entries) for c in chosen):
+            if _NONINTERACTIVE:
+                return _defaults()
             print(f"  Numbers must be between 1 and {len(entries)}.")
             continue
         return {
@@ -169,17 +238,21 @@ def ask_build_type(saved: dict) -> str:
     for i, (key, label) in enumerate(options, 1):
         marker = " [*]" if key == current else ""
         print(f"  {i}. {label}{marker}")
-    hint = f"Enter to keep {current}" if current != "Release" else "Enter for Release"
+    hint = f"keep {current}" if current != "Release" else "Release"
     while True:
-        raw = input(f"Choose (1-{len(options)}), or press {hint}: ").strip()
+        raw = _ask(f"Choose (1-{len(options)}), or press Enter ({hint})", "").strip()
         if not raw:
             return current
         try:
             idx = int(raw)
         except ValueError:
+            if _NONINTERACTIVE:
+                return current
             print(f"  Please enter a number between 1 and {len(options)}.")
             continue
         if not 1 <= idx <= len(options):
+            if _NONINTERACTIVE:
+                return current
             print(f"  Please enter a number between 1 and {len(options)}.")
             continue
         return options[idx - 1][0]
@@ -272,6 +345,13 @@ def main() -> None:
         help="Re-install non-interactively using saved settings; falls back to built-in defaults.",
     )
     parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        default=False,
+        help="Do not prompt; accept the defaults (for scripted/non-interactive use).",
+    )
+    parser.add_argument(
         "--system",
         action="store_true",
         default=False,
@@ -362,6 +442,7 @@ def main() -> None:
     # None = not provided by user; overridden by set_defaults below
     parser.set_defaults(cuda=None, hip=None, openblas=None, simd=None, build_type=None)
     args = parser.parse_args()
+    _set_noninteractive(args.force or args.yes)
 
     # Load saved settings when a previous installation is present
     saved = load_settings() if (INSTALL_DIR / "madspace").is_dir() else {}
