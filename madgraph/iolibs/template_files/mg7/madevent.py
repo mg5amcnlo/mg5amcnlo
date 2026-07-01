@@ -1368,6 +1368,25 @@ def ask_edit_cards() -> None:
         self.paths["run_default"] = os.path.join(self.me_dir, "Cards", "run_card_default.toml")
     AskforEditCard.define_paths = define_paths
 
+    # Make sure the run_card is loaded as a RunCardMG7 regardless of whether the
+    # generic editor recognised run_card.toml (older common_run_interface, an
+    # unexpected me_dir, ...). Without this self.run_card can stay {} and every
+    # "set <param>" is rejected as an invalid command.
+    old_init_run = AskforEditCard.init_run
+    def init_run(self, cards):
+        out = old_init_run(self, cards)
+        if not isinstance(getattr(self, "run_card", None), RunCardMG7):
+            toml_path = self.paths.get("run") or os.path.join(
+                self.me_dir, "Cards", "run_card.toml")
+            if os.path.exists(toml_path):
+                try:
+                    self.run_card = RunCardMG7(toml_path, consistency="warning")
+                    self.run_set = list(self.run_card.keys())
+                except Exception as err:
+                    logger.warning("could not load %s: %s", toml_path, err)
+        return getattr(self, "run_set", out)
+    AskforEditCard.init_run = init_run
+
     # Extra "set" handling for the TOML run_card: madevent-style shortcuts
     # (lhc/lep/fixed_scale/no_parton_cut), cut editing, energy units and
     # arithmetic/mass expressions. The generic editor only knows the fixed
