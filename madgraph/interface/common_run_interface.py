@@ -5960,10 +5960,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             possibilities['special values'] = self.list_completion(text, list(self.special_shortcut.keys())+['qcut', 'showerkt'])
 
         if 'run_card' in list(allowed.keys()):
-            opts = self.run_set
+            opts = list(self.run_set)
             if allowed['run_card'] == 'default':
                 opts.append('default')
-
+            # For RunCardMG7, also offer bare key names that are unambiguous
+            # (appear in exactly one section), so `set events <tab>` works.
+            if hasattr(self.run_card, 'toml_sections'):
+                seen = {}
+                for sec, keys in self.run_card.toml_sections.items():
+                    for key in keys:
+                        seen[key] = seen.get(key, 0) + 1
+                opts += [key for key, count in seen.items() if count == 1]
 
             possibilities['Run Card'] = self.list_completion(text, opts)
 
