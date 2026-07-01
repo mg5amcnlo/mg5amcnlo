@@ -6660,9 +6660,25 @@ class RunCardMG7(RunCard):
 
     def set(self, name, value, *args, **opts):
         """Like :meth:`ConfigFile.set` but understands energy units for the
-        energy-dimensioned parameters (e.g. ``set beam.e_cm 13 TeV``)."""
-        if isinstance(name, str) and name.lower() in self.energy_params:
-            value = self.parse_energy(value)
+        energy-dimensioned parameters (e.g. ``set beam.e_cm 13 TeV``) and
+        resolves bare key names (e.g. ``set events 1000``) when unambiguous
+        across all sections."""
+        if isinstance(name, str):
+            lname = name.lower()
+            if '.' not in lname:
+                matches = ['%s.%s' % (sec, lname)
+                           for sec, keys in self.toml_sections.items()
+                           if lname in keys]
+                if len(matches) == 1:
+                    name = matches[0]
+                    lname = name
+                elif len(matches) > 1:
+                    logger.warning(
+                        "Ambiguous key %r — use the full section.key form, e.g.: %s",
+                        name, ' or '.join(matches))
+                    return
+            if lname in self.energy_params:
+                value = self.parse_energy(value)
         return super(RunCardMG7, self).set(name, value, *args, **opts)
 
     def is_cut_name(self, name):

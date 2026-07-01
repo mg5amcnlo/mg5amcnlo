@@ -6321,6 +6321,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
+        # For mg7 TOML run cards, resolve bare keys (e.g. 'events' -> 'generation.events')
+        # before the membership check below.
+        if card in ('', 'run_card') and hasattr(self.run_card, 'toml_sections') \
+                and '.' not in args[start]:
+            matches = ['%s.%s' % (sec, args[start])
+                       for sec, keys in self.run_card.toml_sections.items()
+                       if args[start] in keys]
+            if len(matches) == 1:
+                args[start] = matches[0]
+            elif len(matches) > 1:
+                logger.warning(
+                    "Ambiguous key %r — use the full section.key form, e.g.: %s",
+                    args[start], ' or '.join(matches))
+                return
+
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
 
             if args[start] not in self.run_set:
