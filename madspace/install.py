@@ -13,6 +13,8 @@ import argparse
 import json
 import os
 import platform
+import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -258,6 +260,111 @@ def ask_build_type(saved: dict) -> str:
         return options[idx - 1][0]
 
 
+# CMake discovery
+#
+# The source build (scikit-build-core) needs cmake >= 3.15 on PATH. When it is
+# missing (or too old) we fall back to a cmake installed through MadGraph's
+# HEPTools installer (`install cmake` in MG5), which lives next to this package
+# under <MG5>/HEPTools. An explicit MADGRAPH_CMAKE / CMAKE env var wins.
+
+CMAKE_MIN_VERSION = (3, 15)
+
+
+def _cmake_version_ok(path, minimum=CMAKE_MIN_VERSION) -> bool:
+    try:
+        out = subprocess.run(
+            [str(path), "--version"], capture_output=True, text=True, timeout=30
+        ).stdout
+    except Exception:
+        return False
+    m = re.search(r"(\d+)\.(\d+)", out)
+    return bool(m) and (int(m.group(1)), int(m.group(2))) >= minimum
+
+
+def _heptools_dir_from_config() -> str | None:
+    """Read heptools_install_dir from the MG5 configuration files (same
+    locations MG5 itself uses), so the value is available even when the
+    installer is run directly rather than launched from MG5."""
+    home = os.environ.get("HOME") or os.path.expanduser("~")
+    candidates = []
+    if home:
+        candidates.append(os.path.join(home, ".mg5", "mg5_configuration.txt"))
+        xdg = os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config"))
+        candidates.append(os.path.join(xdg, "mg5_configuration.txt"))
+    candidates.append(str(SCRIPT_DIR.parent / "input" / "mg5_configuration.txt"))
+    for cfg in candidates:
+        try:
+            with open(cfg) as f:
+                for line in f:
+                    line = line.split("#", 1)[0].strip()
+                    if line.startswith("heptools_install_dir"):
+                        val = line.partition("=")[2].strip()
+                        if val:
+                            if not os.path.isabs(val):
+                                val = os.path.join(str(SCRIPT_DIR.parent), val)
+                            return val
+        except OSError:
+            continue
+    return None
+
+
+def find_cmake() -> str | None:
+    """Return a path to a cmake >= CMAKE_MIN_VERSION, or None."""
+    # 1. explicit override
+    for var in ("MADGRAPH_CMAKE", "CMAKE"):
+        p = os.environ.get(var)
+        if p and _cmake_version_ok(p):
+            return p
+    # 2. system cmake on PATH (ignored if too old)
+    p = shutil.which("cmake")
+    if p and _cmake_version_ok(p):
+        return p
+    # 3. cmake installed via MadGraph's HEPTools installer. The HEPTools
+    #    location is configurable in MG5 (heptools_install_dir); MG5 passes it
+    #    down as MADGRAPH_HEPTOOLS_DIR. Fall back to the default <MG5>/HEPTools.
+    hep_dirs = []
+    env_hep = os.environ.get("MADGRAPH_HEPTOOLS_DIR")
+    if env_hep:
+        hep_dirs.append(Path(env_hep))
+    cfg_hep = _heptools_dir_from_config()
+    if cfg_hep:
+        hep_dirs.append(Path(cfg_hep))
+    hep_dirs.append(SCRIPT_DIR.parent / "HEPTools")
+    seen = set()
+    for heptools in hep_dirs:
+        for pattern in ("cmake/bin/cmake", "bin/cmake", "cmake",
+                        "cmake*/bin/cmake", "*/bin/cmake"):
+            for cand in sorted(heptools.glob(pattern)):
+                cand = cand.resolve()
+                if cand in seen:
+                    continue
+                seen.add(cand)
+                if cand.is_file() and _cmake_version_ok(cand):
+                    return str(cand)
+    return None
+
+
+def add_cmake_to_path(env: dict) -> dict:
+    """Ensure a suitable cmake (and co-located tools such as ninja) is on the
+    PATH of the build environment."""
+    cmake = find_cmake()
+    if cmake:
+        cmake_dir = os.path.dirname(os.path.abspath(cmake))
+        parts = [cmake_dir]
+        if existing := env.get("PATH"):
+            parts.append(existing)
+        env["PATH"] = os.pathsep.join(parts)
+        print(f"Using cmake: {cmake}")
+    else:
+        print(
+            "WARNING: no cmake >= %d.%d found. The source build will likely fail.\n"
+            "  Install one with MG5 ('install cmake'), via your package manager,\n"
+            "  or point to it with MADGRAPH_CMAKE=/path/to/cmake."
+            % CMAKE_MIN_VERSION
+        )
+    return env
+
+
 # Command execution
 
 
@@ -296,6 +403,8 @@ def install_build_deps(system: bool = False) -> dict:
         if existing := env.get("PYTHONPATH"):
             pythonpath_parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    # make sure the source build can find a recent-enough cmake
+    env = add_cmake_to_path(env)
     return env
 
 

@@ -7989,6 +7989,16 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if stripped.lower() in ('done', '0'):
                         break
 
+            # Expose the configured HEPTools location so that the one-off
+            # madspace build can pick up a cmake installed there via MG5's
+            # 'install cmake' (heptools_install_dir may point outside MG5DIR).
+            gen_env = os.environ.copy()
+            heptools_dir = self.options.get('heptools_install_dir')
+            if heptools_dir:
+                if not os.path.isabs(heptools_dir):
+                    heptools_dir = os.path.join(MG5DIR, heptools_dir)
+                gen_env['MADGRAPH_HEPTOOLS_DIR'] = os.path.abspath(heptools_dir)
+
             class ext_program:
                 @staticmethod
                 def run():
@@ -7997,9 +8007,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     try:
                         if scripted:
                             stdin_text = "\n".join(feed_lines + ["done"]) + "\n"
-                            subprocess.run([gen], input=stdin_text, text=True)
+                            subprocess.run([gen], input=stdin_text, text=True, env=gen_env)
                         else:
-                            subprocess.run(gen)
+                            subprocess.run(gen, env=gen_env)
                     except KeyboardInterrupt:
                         pass
 
