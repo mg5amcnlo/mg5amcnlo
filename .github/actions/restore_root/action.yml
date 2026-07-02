@@ -19,8 +19,10 @@ runs:
       run: echo "CACHE_KEY=root-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
-    - uses: actions/cache/restore@v5
+    - name: Restore ROOT cache
+      id: cache
       if: ${{ inputs.setup_only != 'true' }}
+      uses: actions/cache/restore@v5
       with:
         path: ~/.cache/Delphes
         key: ${{ env.CACHE_KEY }}
@@ -38,9 +40,45 @@ runs:
         fi
       shell: bash
 
-    - run: |
+    # Self-heal on a cache miss instead of silently configuring a non-existent
+    # ROOTSYS: when this level is the one responsible for restoring ROOT
+    # (setup_only != true) and the cache was not found, install ROOT inline,
+    # exactly like the root_cache warm job. Keep ROOT_VERSION / the tarball
+    # names in sync with the root_cache job in warm_cache.yml.
+    - name: Install ROOT (cache miss fallback)
+      if: ${{ inputs.setup_only != 'true' && steps.cache.outputs.cache-hit != 'true' }}
+      run: |
+        echo "::warning::ROOT cache miss for ${CACHE_KEY}; installing ROOT inline."
+        ROOT_VERSION=6.40.02
+        case "$ImageOS" in
+          ubuntu22) ROOT_TARBALL=root_v${ROOT_VERSION}.Linux-ubuntu22.04-x86_64-gcc11.4.tar.gz ;;
+          ubuntu24) ROOT_TARBALL=root_v${ROOT_VERSION}.Linux-ubuntu24.04-x86_64-gcc13.3.tar.gz ;;
+          *) echo "Unsupported runner image: $ImageOS"; exit 1 ;;
+        esac
+        mkdir -p "$HOME/.cache/Delphes"
+        cd "$HOME/.cache/Delphes"
+        rm -rf root
+        wget -q "https://root.cern/download/${ROOT_TARBALL}"
+        tar -xzf "${ROOT_TARBALL}"
+        rm -f "${ROOT_TARBALL}"
+      shell: bash
+
+    - name: Configure ROOT environment
+      run: |
         echo "ROOTSYS=$HOME/.cache/Delphes/root" >> $GITHUB_ENV
         echo "$HOME/.cache/Delphes/root/bin" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.cache/Delphes/root/lib" >> $GITHUB_ENV
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/Delphes/root/lib" >> $GITHUB_ENV
+      shell: bash
+
+    # Fail fast (only when this level is responsible for ROOT) if ROOT is still
+    # missing after restore + fallback install, rather than letting downstream
+    # steps run against a non-existent ROOTSYS.
+    - name: Verify ROOT is available
+      if: ${{ inputs.setup_only != 'true' }}
+      run: |
+        if [ ! -x "$HOME/.cache/Delphes/root/bin/root-config" ]; then
+          echo "::error::ROOT is not available at $HOME/.cache/Delphes/root after restore/install."
+          exit 1
+        fi
       shell: bash

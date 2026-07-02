@@ -4929,75 +4929,68 @@ tar -czf split_$1.tar.gz split_$1
                 
                 logger.info('Submitting Pythia8 jobs...')
 
-                # When a per-step nb_core override is active in multicore mode,
-                # align the scheduler concurrency with the requested number of
-                # Pythia8 jobs (this can be lower or higher than the global
-                # nb_core). The global value is restored once the jobs are done
-                # (configure_run_mode also self-heals the cluster on the next
-                # step if this is skipped).
-                orig_cluster_nb_core = None
-                if self.options['run_mode']==2 and pythia8_nb_core is not None:
-                    orig_cluster_nb_core = self.cluster.nb_core
-                    self.cluster.nb_core = n_cores
-
-                for i, split_file in enumerate(split_files):
-                    # We must write a PY8Card tailored for each split so as to correct the normalization
-                    # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
-                    # same original number of events
-                    split_PY8_Card = banner_mod.PY8Card(pjoin(parallelization_dir,'PY8Card.dat'), setter='user')
-                    assert split_PY8_Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
-
-        
-
-                    # Make sure to sure the number of split_events determined during the splitting.
-                    split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i], force=True)
-                    assert split_PY8_Card['Main:numberOfEvents'] == partition_for_PY8[i]
-                    split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
-                                                             (float(partition_for_PY8[i])), force=True)
-                    # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
-                    # the ones in the original PY8 param_card copied.
-                    split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
-                                         pjoin(parallelization_dir,'PY8Card.dat'), add_missing=False,
-                                         direct_pythia_input=True,
-                                         use_mg5amc_py8_interface=use_mg5amc_py8_interface)
-                    in_files = [pjoin(parallelization_dir,os.path.basename(pythia_main)),
-                                pjoin(parallelization_dir,'PY8Card_%d.dat'%i), 
-                                pjoin(parallelization_dir,split_file)]
-                    if self.options['cluster_temp_path'] is None:
-                        out_files = []
-                        os.mkdir(pjoin(parallelization_dir,'split_%d'%i))
-                        selected_cwd = pjoin(parallelization_dir,'split_%d'%i)
-                        for in_file in in_files+[pjoin(parallelization_dir,'run_PY8.sh')]:
-                            # Make sure to rename the split_file link from events_<x>.lhe.gz to events.lhe.gz
-                            # and similarly for PY8Card
-                            if os.path.basename(in_file)==split_file:
-                                ln(in_file,selected_cwd,name='events.lhe.gz')
-                            elif os.path.basename(in_file).startswith('PY8Card'):
-                                ln(in_file,selected_cwd,name='PY8Card.dat')                                
-                            else:
-                                ln(in_file,selected_cwd)                                
-                        in_files  = []
-                        wrapper_path = os.path.basename(wrapper_path)
-                    else:
-                        out_files = ['split_%d.tar.gz'%i]
-                        selected_cwd = parallelization_dir
-
-                    self.cluster.submit2(wrapper_path, 
-                            argument=[str(i)], cwd=selected_cwd, 
-                            input_files=in_files,
-                            output_files=out_files,
-                            required_output=out_files)
-                
                 def wait_monitoring(Idle, Running, Done):
                     if Idle+Running+Done == 0:
                         return
                     logger.info('Pythia8 shower jobs: %d Idle, %d Running, %d Done [%s]'\
                                 %(Idle, Running, Done, misc.format_time(time.time() - startPY8timer)))
-                self.cluster.wait(parallelization_dir,wait_monitoring)
 
-                # Restore the global multicore parallelization for later steps.
-                if orig_cluster_nb_core is not None:
-                    self.cluster.nb_core = orig_cluster_nb_core
+                # When a per-step nb_core override is active in multicore mode,
+                # align the scheduler concurrency with the requested number of
+                # Pythia8 jobs (this can be lower or higher than the global
+                # nb_core). The context manager restores the global value once the
+                # jobs are done, even if submission/wait raises.
+                pythia8_concurrency = n_cores if pythia8_nb_core is not None else None
+                with self.multicore_concurrency(pythia8_concurrency):
+                    for i, split_file in enumerate(split_files):
+                        # We must write a PY8Card tailored for each split so as to correct the normalization
+                        # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
+                        # same original number of events
+                        split_PY8_Card = banner_mod.PY8Card(pjoin(parallelization_dir,'PY8Card.dat'), setter='user')
+                        assert split_PY8_Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
+
+
+
+                        # Make sure to sure the number of split_events determined during the splitting.
+                        split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i], force=True)
+                        assert split_PY8_Card['Main:numberOfEvents'] == partition_for_PY8[i]
+                        split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
+                                                                 (float(partition_for_PY8[i])), force=True)
+                        # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
+                        # the ones in the original PY8 param_card copied.
+                        split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
+                                             pjoin(parallelization_dir,'PY8Card.dat'), add_missing=False,
+                                             direct_pythia_input=True,
+                                             use_mg5amc_py8_interface=use_mg5amc_py8_interface)
+                        in_files = [pjoin(parallelization_dir,os.path.basename(pythia_main)),
+                                    pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
+                                    pjoin(parallelization_dir,split_file)]
+                        if self.options['cluster_temp_path'] is None:
+                            out_files = []
+                            os.mkdir(pjoin(parallelization_dir,'split_%d'%i))
+                            selected_cwd = pjoin(parallelization_dir,'split_%d'%i)
+                            for in_file in in_files+[pjoin(parallelization_dir,'run_PY8.sh')]:
+                                # Make sure to rename the split_file link from events_<x>.lhe.gz to events.lhe.gz
+                                # and similarly for PY8Card
+                                if os.path.basename(in_file)==split_file:
+                                    ln(in_file,selected_cwd,name='events.lhe.gz')
+                                elif os.path.basename(in_file).startswith('PY8Card'):
+                                    ln(in_file,selected_cwd,name='PY8Card.dat')
+                                else:
+                                    ln(in_file,selected_cwd)
+                            in_files  = []
+                            wrapper_path = os.path.basename(wrapper_path)
+                        else:
+                            out_files = ['split_%d.tar.gz'%i]
+                            selected_cwd = parallelization_dir
+
+                        self.cluster.submit2(wrapper_path,
+                                argument=[str(i)], cwd=selected_cwd,
+                                input_files=in_files,
+                                output_files=out_files,
+                                required_output=out_files)
+
+                    self.cluster.wait(parallelization_dir,wait_monitoring)
 
                 logger.info('Merging results from the split PY8 runs...')
                 if self.options['cluster_temp_path']:
@@ -5382,24 +5375,8 @@ tar -czf split_$1.tar.gz split_$1
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
 
-        # Throttle the multicore scheduler to the requested Delphes concurrency
-        # (nb_core_delphes); the number of Delphes jobs is fixed by the number of
-        # Pythia8 splits. Restore the global value afterwards.
-        orig_cluster_nb_core = None
-        if self.options['run_mode'] == 2:
-            orig_cluster_nb_core = self.cluster.nb_core
-            self.cluster.nb_core = self.resolve_nb_core('delphes')
-
         logger.info('Submitting Delphes jobs...')
         split_roots = []
-        for i, (split_dir, hepmc_file) in enumerate(split_hepmc):
-            out_root = pjoin(split_dir, 'delphes_events.root')
-            log = pjoin(split_dir, 'delphes.log')
-            split_roots.append(out_root)
-            self.cluster.submit2(wrapper_path,
-                                 argument=[out_root, hepmc_file, log],
-                                 cwd=split_dir, required_output=[out_root])
-
         startdelphestimer = time.time()
         def wait_monitoring(Idle, Running, Done):
             if Idle+Running+Done == 0:
@@ -5407,15 +5384,29 @@ tar -czf split_$1.tar.gz split_$1
             logger.info('Delphes jobs: %d Idle, %d Running, %d Done [%s]'
                         % (Idle, Running, Done,
                            misc.format_time(time.time() - startdelphestimer)))
-        self.cluster.wait(parallelization_dir, wait_monitoring)
 
-        if orig_cluster_nb_core is not None:
-            self.cluster.nb_core = orig_cluster_nb_core
+        # Run the Delphes jobs at the requested concurrency (nb_core_delphes); the
+        # number of jobs is fixed by the number of Pythia8 splits. The context
+        # manager restores the global concurrency afterwards, even on error.
+        with self.multicore_concurrency(self.resolve_nb_core('delphes')):
+            for i, (split_dir, hepmc_file) in enumerate(split_hepmc):
+                out_root = pjoin(split_dir, 'delphes_events.root')
+                log = pjoin(split_dir, 'delphes.log')
+                split_roots.append(out_root)
+                self.cluster.submit2(wrapper_path,
+                                     argument=[out_root, hepmc_file, log],
+                                     cwd=split_dir, required_output=[out_root])
+            self.cluster.wait(parallelization_dir, wait_monitoring)
 
         produced = [r for r in split_roots if os.path.isfile(r)]
-        if not produced:
-            logger.warning('Delphes produced no ROOT output on the splits; '
-                           'running the standard Delphes step instead.')
+        if len(produced) != len(split_hepmc):
+            # A missing split ROOT would silently drop those events from the
+            # hadd-ed sample (wrong event count and normalization). Never do a
+            # partial merge: fall back to the standard single Delphes pass on the
+            # merged HepMC file (the split HepMC files are still intact here).
+            logger.warning('Delphes produced only %d of %d expected ROOT files on '
+                           'the splits; falling back to the standard Delphes step.'
+                           % (len(produced), len(split_hepmc)))
             return False
 
         logger.info('Merging Delphes ROOT files with hadd...')

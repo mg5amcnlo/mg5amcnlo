@@ -534,6 +534,8 @@ jobs:
          # ROOT.cern publishes per-image binary builds. Bump ROOT_VERSION / the
          # gcc tags below when moving to a newer image; the filename must match
          # an existing build at https://root.cern/download/ .
+         # NOTE: the same install logic is duplicated in the cache-miss fallback
+         # of .github/actions/restore_root/action.yml - keep them in sync.
          run: |
                mkdir -p $HOME/.cache/Delphes
                cd $HOME/.cache/Delphes

@@ -1808,6 +1808,8 @@ set draw_rivet_plots True
         set event_norm average
         set nevents %d
         set HEPMCoutput:file hepmc.gz
+        launch -i
+        delphes run_01 --tag=single
         """ % (self.run_dir, nevents)
         open(pjoin(self.path, 'mg5_cmd'), 'w').write(cmd)
 
@@ -1826,31 +1828,52 @@ set draw_rivet_plots True
         self.check_parton_output(target_event=nevents)
         self.check_pythia_output()
 
-        # The fused Delphes ROOT file (produced by hadd over the splits).
-        import glob
-        roots = glob.glob(pjoin(self.run_dir, 'Events', 'run_01',
-                                '*_delphes_events.root'))
-        self.assertTrue(roots, 'no Delphes ROOT output produced')
-        root_file = roots[0]
-        self.assertGreater(os.path.getsize(root_file), 0)
+        # Two Delphes outputs of the *same* showered events:
+        #   - tag_1_delphes_events.root : fused (Delphes per split -> hadd),
+        #   - single_delphes_events.root: standard single Delphes pass on the
+        #     merged HepMC (the 'delphes run_01 --tag=single' command above).
+        # They must be equivalent: same number of events and same total weight
+        # (this is the real normalization check for the fused path).
+        eventdir = pjoin(self.run_dir, 'Events', 'run_01')
+        fused_root = pjoin(eventdir, 'tag_1_delphes_events.root')
+        single_root = pjoin(eventdir, 'single_delphes_events.root')
+        self.assertTrue(os.path.exists(fused_root), 'no fused Delphes ROOT produced')
+        self.assertTrue(os.path.exists(single_root), 'no single-core Delphes ROOT produced')
+        self.assertGreater(os.path.getsize(fused_root), 0)
 
-        # When PyROOT is available, check that hadd combined the per-split ROOT
-        # files without losing or duplicating events: the Delphes tree should
-        # hold each showered event exactly once.
+        # PyROOT is bundled with ROOT but its bindings may not import under the
+        # test interpreter; when available, compare the two samples directly.
         try:
             import ROOT
         except ImportError:
             ROOT = None
         if ROOT is not None:
             ROOT.gErrorIgnoreLevel = ROOT.kError
-            tfile = ROOT.TFile.Open(root_file)
-            tree = tfile.Get('Delphes')
-            self.assertIsNotNone(tree)
-            entries = int(tree.GetEntries())
-            tfile.Close()
-            self.assertGreater(entries, 0)
-            self.assertLessEqual(entries, nevents)
-            self.assertGreater(entries, 0.8 * nevents)
+
+            def read(path):
+                tfile = ROOT.TFile.Open(path)
+                tree = tfile.Get('Delphes')
+                self.assertIsNotNone(tree)
+                n = int(tree.GetEntries())
+                total = 0.0
+                try:
+                    for event in tree:
+                        total += event.Event.At(0).Weight
+                except Exception:
+                    total = None  # branch layout differs; fall back to counts
+                tfile.Close()
+                return n, total
+
+            n_fused, w_fused = read(fused_root)
+            n_single, w_single = read(single_root)
+            # Same events processed either way: no loss or duplication from hadd.
+            self.assertGreater(n_fused, 0)
+            self.assertEqual(n_fused, n_single)
+            # Same absolute normalization: the per-split HepMC weights are the
+            # ones the single pass sees on the merged file, so the totals match.
+            if w_fused is not None and w_single is not None:
+                self.assertAlmostEqual(w_fused, w_single,
+                                       delta=1e-6 * abs(w_single) + 1e-30)
 
 
 #===============================================================================
