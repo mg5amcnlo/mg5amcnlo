@@ -1319,6 +1319,64 @@ class ALOHAWriterForFortranH(ALOHAWriterForFortran):
         else:
             coup_name = '%s' % self.change_number_format(1)
 
+        # ---- helicity-recycling amplitude: current (P1N) + final contraction ----
+        # self.routine.expr here is the P1N current with the last leg left open
+        # (built in AbstractRoutineBuilder.compute_routine).  We compute each
+        # current component once at the outer-leg loop level (invariant over the
+        # closed leg) and close it with a plain dot product in the inner loop.
+        contract_leg = getattr(self.routine, 'contract_leg', None)
+        if not self.offshell and contract_leg:
+            L = contract_leg
+            ptype = self.particles[L - 1]
+            outers = [p for p in self.input_positions if p != L]
+            # the closed leg is an input argument here but is never rendered via
+            # write_obj (it was the open output of the P1N current), so declare
+            # its type(aloha_H) wavefunction explicitly.
+            self.declaration.add(('list_complex', '%s%d' % (ptype, L)))
+            comp_shift = 1 - self.momentum_size
+            fd_shift = 4 if (aloha.unitary_gauge == 3 and ptype == 'S') else 0
+            comp_terms = []
+            for ind in numerator.listindices():
+                rep = numerator.get_rep(ind)
+                if rep == 0:
+                    continue
+                formatted = self.write_obj(rep)
+                if formatted.startswith(('+', '-')):
+                    if '*' in formatted:
+                        formatted = '(%s)*%s' % tuple(formatted.split('*', 1))
+                    elif formatted.startswith('+'):
+                        formatted = formatted[1:]
+                    else:
+                        formatted = '(-1)*%s' % formatted[1:]
+                comp_terms.append((self.pass_to_HELAS(ind) + comp_shift, formatted))
+            out = StringIO()
+            out.write(preloop.getvalue())
+            out.write('    %s = 0\n' % self.out_counter)
+            for pos in outers:
+                out.write('    do IH%d = 1, %s%d %% n\n' % (pos, self.particles[pos - 1], pos))
+            # current components + shared TMP/FCT (all invariant over the closed
+            # leg) are hoisted here, out of the inner loop
+            out.write(inloop.getvalue())
+            contraction = []
+            for i, (comp, formatted) in enumerate(comp_terms):
+                tmp = 'TMPHEL%d' % (i + 1)
+                self.declaration.add(('complex', tmp))
+                out.write('    %s = %s\n' % (tmp, formatted))
+                contraction.append('%s*%s%d %% W(%d, IH%d)'
+                                   % (tmp, ptype, L, comp + fd_shift, L))
+            out.write('    do IH%d = 1, %s%d %% n\n' % (L, ptype, L))
+            out.write('    %s = %s + 1\n' % (self.out_counter, self.out_counter))
+            out.write('    if (.not. MASK(%s)) cycle\n' % self.out_counter)
+            body = ' + '.join(contraction)
+            if coup_name == 'COUP':
+                out.write('    vertex(%s) = COUP*(%s)\n' % (self.out_counter, body))
+            else:
+                out.write('    vertex(%s) = %s*(%s)\n' % (self.out_counter, coup_name, body))
+            out.write('    enddo\n')
+            for pos in outers:
+                out.write('    enddo\n')
+            return out.getvalue()
+
         if not self.offshell:
             # ---- amplitude output: vertex(IOUT), one per combination ----
             formatted = self.write_obj(numerator.get_rep([0]))

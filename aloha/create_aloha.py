@@ -74,6 +74,10 @@ class AbstractRoutine(object):
         self.tag = []
         self.contracted = {}
         self.model = model
+        # For the cartesian-product ('H') amplitude written as a P1N current
+        # closed by a final contraction: the (1-based) leg whose wavefunction
+        # the writer must dot the current with.  None for ordinary routines.
+        self.contract_leg = None
 
         
     def add_symmetry(self, outgoing):
@@ -165,9 +169,28 @@ class AbstractRoutineBuilder(object):
         if __debug__:
             if mode == 0:
                 assert not any(t.startswith('L') for t in tag)
-        self.expr = self.compute_aloha_high_kernel(mode, factorize)
+        # Cartesian-product ('H') amplitude of a 3- or 4-point vertex: instead of
+        # the fully-contracted scalar (which recomputes the current for every
+        # helicity of the last leg), compute the P1N current with the last leg
+        # left open (numerator only, no propagator).  The H writer then closes
+        # it with a plain final contraction, hoisting the current out of the
+        # inner (last-leg) loop -- the helicity-recycling speed-up.  The routine
+        # keeps outgoing=0 so it is still named/called as the amplitude '_0'.
+        contract_leg = None
+        if mode == 0 and len(self.spins) in (3, 4) and any(t == 'H' for t in tag) \
+                and not any(t.startswith('P') for t in tag):
+            contract_leg = len(self.spins)
+            self.tag = tag + ['P1N']
+            self.outgoing = contract_leg
+            self.expr = self.compute_aloha_high_kernel(contract_leg, factorize)
+            self.tag = tag
+            self.outgoing = 0
+        else:
+            self.expr = self.compute_aloha_high_kernel(mode, factorize)
 
-        return self.define_simple_output()
+        output = self.define_simple_output()
+        output.contract_leg = contract_leg
+        return output
     
     def define_all_conjugate_builder(self, pair_list):
         """ return the full set of AbstractRoutineBuilder linked to fermion 

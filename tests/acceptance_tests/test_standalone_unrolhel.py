@@ -207,3 +207,10 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # still agree with the standard standalone.
     test_unrolhel_pp_wpwm_nomask = unrolhel_consistency_test_factory(
         'p p > w+ w- QCD=0', model='sm', unrol_opts='--mask=False')
+
+    # 4-point (VVVV) contact vertex: exercises the helicity-recycling amplitude
+    # factorization for a 4-leg vertex (the H '_0' routine is built as the P1N
+    # current of the last leg over the three other legs and closed by the final
+    # contraction).  Must agree bit-for-bit with the standard standalone.
+    test_unrolhel_aa_wpwm = unrolhel_consistency_test_factory(
+        'a a > w+ w-', model='sm')
