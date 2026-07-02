@@ -57,7 +57,7 @@ public:
         bool drop_cuts_and_rescale = false,
         bool partial_weights = false,
         const std::vector<std::size_t>& channel_indices = {},
-        const std::vector<std::size_t>& active_flavors = {},
+        const nested_vector2<std::size_t>& active_flavors = {},
         const std::vector<std::size_t>& flavor_remap = {},
         const std::vector<double>& flavor_factors = {},
         const std::vector<bool>& flavor_mirror = {}
@@ -133,7 +133,7 @@ private:
     me_int_t _random_dim;
     std::size_t _latent_dim;
     std::vector<std::size_t> _active_flavors;
-    std::vector<double> _active_flavors_mask;
+    nested_vector2<double> _active_flavors_mask;
     std::vector<me_int_t> _flavor_remap;
     std::vector<double> _flavor_factors;
     std::vector<me_int_t> _flavor_mirror;
