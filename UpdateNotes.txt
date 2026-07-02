@@ -6,6 +6,8 @@ ANNOUNCEMENT:
 
 3.7.2 (XX/XX/XX):
     RF: Fixed the writing of LHE files in fixed-order computations that was broken since previous release (3.7.1).
+    OM: Ensure that goldstone are merged with SM coupling for FD gauge. 
+        Note that FD needs model that are built such that the renormalization does not induced a shift of the SM values
 
 3.7.1 (29/04/26):
     OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
