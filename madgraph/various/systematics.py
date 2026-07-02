@@ -873,24 +873,39 @@ class Systematics(object):
             if name in done:
                 continue
             if name == 'pdf':
+                # note:
+                # self.pdfsets [dict-type] is the collection of *sets* used
+                #       in the original  calculation and its variations.
+                #       since determined get_lhapdf_id_multi(), len(...) = 0,1,2
+                # self.pdf is the *full* collection of central+replica pdfs that
+                #       are recorded in the run_card. since this includes
+                #       hidden options in the run card, len(...) >= 2
+                # get original pdfs in run_card (always two, even if hidden)
+
+                # how many replica pdf sets do we have? ('pdfsets' is dict-type)
                 nrSets = []
                 beam1PDFsets = []
                 beam2PDFsets = []
-                # how many pdf sets do we have? ('pdfsets' is dict-type)
-                for kk, key in enumerate(self.pdfsets):
-                    nrSets.append(self.pdfsets[key].size)
-                # split 'pdf' into two:
-                try: # fast way
-                    beam1PDFsets = getattr(self,'pdf')[:nrSets[0]]
-                    beam2PDFsets = getattr(self,'pdf')[nrSets[0]:]
-                except Exception as err: # slow way
-                    beam1PDFsets = []
-                    beam2PDFsets = []
-                    for kk, value in enumerate(getattr(self,'pdf')):
-                        if kk < nrSets[0]:
-                            beam1PDFsets.append(value)
-                        else:
-                            beam2PDFsets.append(value)
+                if len(self.pdfsets)==0:
+                    # no pdf variation taking place (e.g., lpp=0 but pdlabel=lhapdf)
+                    nrSets = [1,1]
+                    beam1PDFsets = [self.pdf[0]]
+                    beam2PDFsets = [self.pdf[1]]
+                else:
+                    for kk, key in enumerate(self.pdfsets):
+                        nrSets.append(self.pdfsets[key].size)
+                    # split 'pdf' into two:
+                    try: # fast way
+                        beam1PDFsets = getattr(self,'pdf')[:nrSets[0]]
+                        beam2PDFsets = getattr(self,'pdf')[nrSets[0]:]
+                    except Exception as err: # slow way
+                        beam1PDFsets = []
+                        beam2PDFsets = []
+                        for kk, value in enumerate(getattr(self,'pdf')):
+                            if kk < nrSets[0]:
+                                beam1PDFsets.append(value)
+                            else:
+                                beam2PDFsets.append(value)
                 try:
                     assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
                 except AssertionError as err:
@@ -909,21 +924,25 @@ class Systematics(object):
                 if self.multiID[0] == -1:
                     # vary 1 and 2 separately
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
-                    self.log("# Preparing %s independent variations of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
+                    noS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s independent variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),noS))
                 elif self.multiID[0] == 1:
                     # vary 1, fix 2
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
-                    self.log("# Preparing %s variations from PDF(beam1) while fixing PDF(beam2)" % len(pairs_of_lhaids))
+                    noS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s variation%s from PDF(beam1) while fixing PDF(beam2)" % (len(pairs_of_lhaids),noS))
                 elif self.multiID[0] == 2:
                     # fix 1, vary 2
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
-                    self.log("# Preparing %s variations from PDF(beam2) while fixing PDF(beam1)" % len(pairs_of_lhaids))
+                    noS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s variation%s from PDF(beam2) while fixing PDF(beam1)" % (len(pairs_of_lhaids),noS))
                 else:
                     # default, vary 1 and 2 together
-                    #minmax = min(len(beam1PDFsets),len(beam2PDFsets),USERSET)
+                    #minmax = min(len(beam1PDFsets),len(beam2PDFsets),USERSET?)
                     minmax = min(len(beam1PDFsets),len(beam2PDFsets))
                     pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
-                    self.log("# Preparing %s simultaneous variations of PDF(beam1) and PDF(beam2)" % len(pairs_of_lhaids))
+                    noS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s simultaneous variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),noS))
 
                 # add sets of (mur,muf,alps,dyn,pdf) configurations
                 for lhaid_pairs in pairs_of_lhaids:
@@ -960,7 +979,7 @@ class Systematics(object):
                 index = self.args.index(pdfplusone)
                 self.args.insert(index, default)
 
-        self.log("# Will Compute %s weights per event." % (len(self.args)-1))
+        self.log("# Will compute %s weights per event." % (len(self.args)-1))
         return
     
     def new_event(self):
