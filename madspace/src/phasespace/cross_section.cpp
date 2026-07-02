@@ -10,7 +10,6 @@ DifferentialCrossSection::DifferentialCrossSection(
     const nested_vector2<me_int_t>& pid_options,
     const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf1,
     const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf2,
-    bool has_mirror,
     bool input_momentum_fraction
 ) :
     FunctionGenerator(
@@ -30,9 +29,6 @@ DifferentialCrossSection::DifferentialCrossSection(
                 arg_types.push_back("x2", batch_float);
             }
             arg_types.push_back("pdf_id", batch_int);
-            if (has_mirror) {
-                arg_types.push_back("mirror", batch_int);
-            }
             bool uses_cached_pdf = false;
             auto add_pdf_args = [&](auto& pdf, int index) {
                 if (std::holds_alternative<CachedPdf>(pdf)) {
@@ -64,7 +60,6 @@ DifferentialCrossSection::DifferentialCrossSection(
     _running_coupling(running_coupling),
     _e_cm(cm_energy),
     _energy_scale(energy_scale),
-    _has_mirror(has_mirror),
     _input_momentum_fraction(input_momentum_fraction) {
     auto init_pdf = [&](auto& pdf, int index) {
         if (std::holds_alternative<PdfGrid>(pdf)) {
@@ -106,10 +101,6 @@ NamedVector<Value> DifferentialCrossSection::build_function_impl(
         x1x2 = fb.momenta_to_x1x2(momenta, _e_cm);
     }
     auto pdf_flavor_id = args.at(arg_index++);
-    if (_has_mirror) {
-        Value mirror_id = args.at(arg_index++);
-    }
-    // TODO: need to use mirror_id if we have two different PDFs
     NamedVector<Value> scales;
     if (std::holds_alternative<EnergyScale>(_energy_scale)) {
         scales = std::get<EnergyScale>(_energy_scale).build_function(fb, {momenta});

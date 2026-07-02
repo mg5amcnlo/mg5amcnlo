@@ -45,8 +45,11 @@ c
 c
 c global (due to reading writting) 
 c
-        LOGICAL GOODHEL(NCOMB, MAXSPROC)
-	    INTEGER NTRY(MAXSPROC)
+C       Good-helicity filter is per (helicity, flavor, subprocess): a helicity
+C       that is zero for one merged flavor but non-zero for another must not be
+C       dropped, so GOODHEL/NTRY carry an extra MAXFLAVPERPROC (IFLAV) dimension.
+        LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC, MAXSPROC)
+	    INTEGER NTRY(MAXFLAVPERPROC, MAXSPROC)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
 
 C  
@@ -126,7 +129,7 @@ C ----------
 C BEGIN CODE
 C ----------
     CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
-    NTRY(%(proc_id)s)=NTRY(%(proc_id)s)+1
+    NTRY(IFLAV,%(proc_id)s)=NTRY(IFLAV,%(proc_id)s)+1
      
     IF (multi_channel) THEN
         DO I=1,NDIAGS
@@ -146,8 +149,8 @@ C ----------
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL.EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,%(proc_id)s) .OR. NTRY(%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),FLAVOR,I,AMP2, JAMP2, IVEC)
+         IF (GOODHEL(I,IFLAV,%(proc_id)s) .OR. NTRY(IFLAV,%(proc_id)s).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),IFLAV,I,AMP2, JAMP2, IVEC)
             %(beam_polarization)s
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
 			  call DS_add_entry('Helicity',I,T)
@@ -156,7 +159,7 @@ C ----------
             TS(I)=T
          ENDIF
       ENDDO
-      IF(NTRY(%(proc_id)s).EQ.(MAXTRIES+1).and.DS_get_dim_status('Helicity').ne.-1) THEN
+      IF(NTRY(IFLAV,%(proc_id)s).EQ.(MAXTRIES+1).and.DS_get_dim_status('Helicity').ne.-1) THEN
          call reset_cumulative_variable() ! avoid biais of the initialization
       ENDIF
       IF (ISUM_HEL.NE.0) then
@@ -173,20 +176,20 @@ C ----------
 			CALL DS_SET_GRID_MODE('Helicity','init')
           endif
 	  ELSE
-        IF(NTRY(%(proc_id)s).LE.MAXTRIES)THEN
+        IF(NTRY(IFLAV,%(proc_id)s).LE.MAXTRIES)THEN
            DO I=1,NCOMB
 	      IF(init_mode) THEN
                   IF (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB) THEN
                      PRINT *, 'Matrix Element/Good Helicity: %(proc_id)s ', i, 'IMIRROR', IMIRROR
 	          ENDIF
-	      ELSE IF (.NOT.GOODHEL(I,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
-                 GOODHEL(I,%(proc_id)s)=.TRUE.
+	      ELSE IF (.NOT.GOODHEL(I,IFLAV,%(proc_id)s) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
+                 GOODHEL(I,IFLAV,%(proc_id)s)=.TRUE.
                  NGOOD = NGOOD +1
-                 PRINT *,'Added good helicity ',I, 'for process %(proc_id)s',TS(I)*NCOMB/ANS,' in event ',NTRY(%(proc_id)s) 
+                 PRINT *,'Added good helicity ',I, 'for process %(proc_id)s flavor ',IFLAV,TS(I)*NCOMB/ANS,' in event ',NTRY(IFLAV,%(proc_id)s)
               ENDIF
            ENDDO
 		endif
-        IF(NTRY(%(proc_id)s).EQ.MAXTRIES)THEN
+        IF(NTRY(IFLAV,%(proc_id)s).EQ.MAXTRIES)THEN
            ISHEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
       ENDIF
@@ -194,7 +197,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),FLAVOR,I,AMP2, JAMP2, IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),IFLAV,I,AMP2, JAMP2, IVEC)
 
             %(beam_polarization)s
 c           Always one helicity at a time
@@ -271,7 +274,7 @@ C     Returns the flavor array for a given flavor index IFLAV
       END
 
 
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,FLAVOR, IHEL,AMP2, JAMP2, IVEC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IFLAV, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -310,6 +313,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL)
+    INTEGER IFLAV
     INTEGER NHEL(NEXTERNAL), FLAVOR(NEXTERNAL)
     INTEGER IHEL
     INTEGER IVEC
@@ -369,10 +373,11 @@ if (first) then
 
 	if(init_mode) then
 	   zeroamp_%(proc_id)s(:,:) = .true.
-	endif	
+	endif
 endif
 
-
+C   Rebuild the FLAVOR(NEXTERNAL) array from the threaded flavor index.
+    CALL GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR)
 %(flavor_mask_setup)s
 AMP(:) = (0d0,0d0)
 %(helas_calls)s

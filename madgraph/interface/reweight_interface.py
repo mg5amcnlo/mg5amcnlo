@@ -1945,7 +1945,7 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = 'output %s %s --prefix=int --prefixf2py=%s' % (self.sa_class, pjoin(path_me,data['paths'][0]), self.nb_rw)
         self.path2prefix[pjoin(path_me,data['paths'][0])] = self.nb_rw
         self.nb_rw += 1
-        commandline = 'output %s %s --prefix=int' % (self.sa_class, pjoin(path_me,data['paths'][0]))
+        commandline = 'output %s %s --prefix=int --density=1' % (self.sa_class, pjoin(path_me,data['paths'][0]))
         if self.inc_sudakov:
             # in this case, the sudakov output format has to be changed
             commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
@@ -2720,12 +2720,14 @@ class DensityInterface(ReweightInterface):
         self.allowed_helicities = [0] #basis of helicities
         self.axis_referential = [0]
         self.symmetrise_initial_state = False
+        self.matrix_normalisation = True
         self.spins = None 
         self.number_changing_helicities = None
         self.number_combinations = None
         self.new_param_card = False #Needed to not call ask_edit_card_static
         self.average_rho = 0
         self.total_wgt = 0
+        self.nevents = 0
         
         ReweightInterface.__init__(self, *args, **opts)
         self.flag_density_matrix = True
@@ -2919,12 +2921,28 @@ class DensityInterface(ReweightInterface):
             else:
                 return #if "change axis_referential None" is the option, we do not change the default value 
         self.axis_referential = line
+    
+    def do_change_matrix_normalisation(self,line):
+        """
+        Choses if the production matrix should be normalised by its trace or not.
+        Default = True
+        """
+        for i in range(len(line)): 
+            line[i] = line[i].strip("[],()") 
+        if line[0] == 'True':
+            self.matrix_normalisation = True
+        elif line[0] == 'False':
+            self.matrix_normalisation = False
+        else:
+            logger.warning('Option matrix_normalisation not understood, set it to True. Please use the syntax: change matrix_normalisation True if you want to enable it.')
+            self.matrix_normalisation = False
 
 
     def do_change_particle_in_density_matrix(self, line):
         """change the particle in the density matrix, calculates the number of particles changes,
            their spins and the number of combinations"""
-        
+        import itertools
+
         pdg_codes = []
         lambda_function = ''
         order_particles = []
@@ -2979,21 +2997,23 @@ class DensityInterface(ReweightInterface):
 
         #if the user didn't use the option or if it has not been read yet, fill it automatically here
         if self.allowed_helicities == None or self.allowed_helicities == [0]:
-            if self.number_combinations == 2:
-                self.allowed_helicities = [+1, -1]
-            elif self.number_combinations == 3:
-                self.allowed_helicities = [+1, 0, -1]
-            elif self.number_combinations == 4:
-                self.allowed_helicities = [+1, +1, +1, -1, -1, +1, -1, -1]
-            elif self.number_combinations == 6 and self.spins[0] == 2:
-                self.allowed_helicities = [+1, +1, +1, 0, +1, -1, -1, +1, -1, 0, -1, -1]
-            elif self.number_combinations == 6 and self.spins[0] == 3:
-                self.allowed_helicities = [+1, +1, +1, -1, 0, +1, 0, -1, -1, +1, -1, -1]
-            elif self.number_combinations == 9:
-                self.allowed_helicities = [+1, +1, +1, 0, +1, -1, 0, +1, 0, 0, 0, -1, -1, +1, -1, 0, -1, -1]
-            else:
-                logger.error("Tried to use density mode selecting more than 2 particles or selecting a spin 0 or spin > 1 particle")
-        
+            base = {"2": [1, -1], "3": [1, 0, -1]} #if you want to have particles with higher spin, you need to add it here
+            list_base = []
+            for spin in self.spins:
+                list_base.append(base[str(spin)])
+                        
+            new_combination = list_base[0]
+            for i in range(1, len(list_base)):
+                new_combination = list(itertools.product(new_combination, list_base[i]))
+            aux = str(new_combination)
+            new_combination_corrected = aux[1:-1].replace("(", "").replace(")", "").split(",")
+            self.allowed_helicities = [int(elem) for elem in new_combination_corrected]
+
+        # the default values for allowed_helicities are:
+        # [+1, +1, +1, -1, -1, +1, -1, -1]
+        # [+1, +1, +1, 0, +1, -1, 0, +1, 0, 0, 0, -1, -1, +1, -1, 0, -1, -1]
+        # ....
+
         self.flag_particle_in_density_matrix = True
 
 
@@ -3014,6 +3034,7 @@ class DensityInterface(ReweightInterface):
         logger.info("number_combinations = \t" + str(self.number_combinations))
         logger.info("axis_referential = \t" + str(self.axis_referential))
         logger.info("symmetrise_initial_state = \t" + str(self.symmetrise_initial_state))
+        logger.info("matrix_normalisation = \t" + str(self.matrix_normalisation))
 
         if self.flag_particle_in_density_matrix == False:
             logger.error("Error: the reweight_card contains no option for the density mode")
@@ -3048,7 +3069,8 @@ class DensityInterface(ReweightInterface):
                                     'number_changing_helicities = ' + str(self.number_changing_helicities) + '\n' + \
                                     'number_combinations = ' + str(self.number_combinations) + '\n' + \
                                     'axis_referential = ' + str(self.axis_referential) + '\n' + \
-                                    'symmetrise_initial_state = ' + str(self.symmetrise_initial_state)
+                                    'symmetrise_initial_state = ' + str(self.symmetrise_initial_state) + '\n' + \
+                                    'matrix_normalisation = ' + str(self.matrix_normalisation)
         self.banner.pop('initrwgt') #we remove the reweight header because it does not correspond to the operations done
         output = open( self.lhe_input.path +'rw', 'w')
         #write the banner to the output file
@@ -3066,20 +3088,18 @@ class DensityInterface(ReweightInterface):
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
+            
             weight = self.calculate_weight(event)
             rho_temp = dens.DensityMatrixObservables(weight['orig'])
-            event.density = rho_temp.get_rho_normalised().tolist()
 
-            if not isinstance(weight, dict):
-                weight = {'':weight}
-                avg_rho_instance = dens.DensityMatrixObservables(weight[''])
-                self.average_rho += avg_rho_instance.get_rho_normalised() * event.wgt
+            if self.matrix_normalisation:
+                event.density = rho_temp.get_rho_normalised().tolist()
+                self.average_rho += rho_temp.get_rho_normalised() * event.wgt # weighted sum of the density matrices for the total density matrix
                 self.total_wgt += event.wgt
             else:
-                avg_rho_instance = dens.DensityMatrixObservables(weight['orig'])
-                self.average_rho += avg_rho_instance.get_rho_normalised() * event.wgt # weighted sum of the density matrices for the total density matrix
-                self.total_wgt += event.wgt
-
+                event.density = weight['orig']
+                self.average_rho += rho_temp.density_array() # direct sum of non-normalised density matrices
+                self.nevents +=1
 
             output.write(str(event))
                 
@@ -3088,8 +3108,13 @@ class DensityInterface(ReweightInterface):
         
         # Compute the average density matrix on write it on a .txt file
         rho_avg = [0 for i in range(len(self.average_rho))]
-        for i in range(len(rho_avg)):
-            rho_avg[i] = self.average_rho[i] / self.total_wgt
+        if self.matrix_normalisation:
+            for i in range(len(rho_avg)):
+                rho_avg[i] = self.average_rho[i] / self.total_wgt
+        else:
+            for i in range(len(rho_avg)):
+                rho_avg[i] = self.average_rho[i] / self.nevents
+
         rho_avg_instance = dens.DensityMatrixObservables(rho_avg)
         rho_avg_square = rho_avg_instance.square_matrix()
 
@@ -3185,7 +3210,7 @@ class DensityInterface(ReweightInterface):
             except KeyError:
                 misc.sprint(tag)
                 misc.sprint(self.id_to_path)
-                raise KeyError('Try to fix it')
+                raise KeyError('This issue is caused because two different processes were used in the same terminal session with the density mode. Please retry in a new terminal.')
 
         base = os.path.basename(os.path.dirname(Pdir))
 
@@ -3255,7 +3280,7 @@ class DensityInterface(ReweightInterface):
 
 
         pos_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
-        
+
         status = []
         for particle in event:
             status.append(int(particle.status))
@@ -3289,18 +3314,19 @@ class DensityInterface(ReweightInterface):
                 if pdg in All_PDGs[k]:
                     prefix = prefix_cor[k]
 
-        me_value = 0
         get_density = lambda *args: module.py_get_density(pdg, *args)
         for i in range(len(all_p)):
             pinv = self.invert_momenta(all_p[i])
+            # npdg = len(all_p[i]) #number of particles in the event
+            # the argument event.scale**2 is a dummy argument for LO processes, else it is taken as the value given in the LHE file
             production_matrix = get_density(-1, pinv, pos_corrected, #self.number_changing_helicities,
-                                            self.allowed_helicities, self.number_combinations,
-                                            event.aqcd)    
+                                            self.allowed_helicities, event.aqcd, event.scale**2)
+
             if self.symmetrise_initial_state:
                 pinv_bis = self.invert_momenta(all_p_bis[i])
-                production_matrix_bis = get_density(-1, pinv_bis, pos_corrected, self.allowed_helicities, self.number_combinations,
-                                                    event.aqcd) #event.aqcd can be also fixed.
-
+                production_matrix_bis = get_density(-1, pinv_bis, pos_corrected, #self.number_changing_helicities,
+                                            self.allowed_helicities, event.aqcd, event.scale**2)
+                
             if self.symmetrise_initial_state:
                 rho_instance = dens.DensityMatrixObservables(production_matrix + production_matrix_bis, self.number_combinations * (self.number_combinations + 1) / 2)
                 new_value = rho_instance.density_matrix

@@ -18,7 +18,7 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
         )
         self.diagrams = self.amplitude.get("diagrams")
         self.helas_diagrams = self.matrix_element.get("diagrams")
-        self.all_flavors, self.all_flavors_sign = self.matrix_element.get_external_flavors_with_iden(return_sign=True)
+        self.all_flavors, self.all_flavors_pdgs = self.matrix_element.get_external_flavors_with_iden(return_pdgs=True)
         self.process = self.amplitude.get("process")
         self.legs = self.process.get("legs_with_decays")
         self.color_basis = self.matrix_element.get("color_basis")
@@ -45,7 +45,7 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
     def set_flavor_indices(self):
         self.all_flavors_same_initial = []
         self.all_flavors_indices = []
-        for i, flavors in enumerate(self.all_flavors_sign):
+        for i, flavors in enumerate(self.all_flavors_pdgs):
             flv_dict = defaultdict(list)
             for flv in flavors:
                 flv_dict[(flv[0], flv[1])].append(flv)
@@ -187,8 +187,16 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
                     sign = -1 if part_id < 0 else 1
                     pdg_color_types[sign * pdg] = sign * self.model.get_particle(part_id).get_color()
 
+        has_mirror_all = self.matrix_element.get("has_mirror_process")
+        same_initial_multiparticle = self.incoming[0] == self.incoming[1]
         flavors = [
-            {"index": index, "options": options}
+            {
+                "index": index,
+                "options": options,
+                "mirror": has_mirror_all or (
+                    same_initial_multiparticle and options[0][0] != options[0][1]
+                )
+            }
             for index, options in self.all_flavors_same_initial
         ]
         return {
@@ -202,5 +210,4 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
             "pdg_color_types": pdg_color_types,
             "diagram_count": len(self.diagrams),
             "helicities": list(self.matrix_element.get_helicity_matrix()),
-            "has_mirror_process": self.matrix_element.get("has_mirror_process"),
         }

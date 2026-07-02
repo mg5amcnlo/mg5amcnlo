@@ -1196,6 +1196,57 @@ class OneProcessExporterCPP(object):
         else:
             return replace_dict
 
+    def _cpp_flav_rows(self, matrix_element, allowed_flavors):
+        """Return the per-flavor group-position rows (as C++ initialiser
+        strings like '{0, 0, 1, 1}') for *allowed_flavors*. Group positions are
+        0-based, matching the convention used by the C++ flavor-mask table and
+        the HELAS ixxxxx/oxxxxx flv argument."""
+        model = matrix_element.get('processes')[0].get('model')
+        merged_particles = model.get('merged_particles') or {}
+        pdg_to_group_index = {}
+        max_group_size = 0
+        for merged_id, members in merged_particles.items():
+            members = list(members)
+            if members:
+                max_group_size = max(max_group_size, len(members))
+                pdg_to_group_index[int(merged_id)] = 0
+                pdg_to_group_index[-int(merged_id)] = 0
+            for pos, pdg in enumerate(members):
+                pdg = int(pdg)
+                pdg_to_group_index[pdg] = pos
+                pdg_to_group_index[-pdg] = pos
+        flav_rows = []
+        for flavor in allowed_flavors:
+            row = []
+            for p in flavor:
+                p = int(p)
+                if p in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[p]))
+                elif abs(p) in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[abs(p)]))
+                elif max_group_size and 1 <= abs(p) <= max_group_size:
+                    row.append(str(abs(p) - 1))
+                else:
+                    row.append('0')
+            flav_rows.append('{%s}' % ', '.join(row))
+        return flav_rows
+
+    def _cpp_sigmakin_flavor(self, matrix_element):
+        """Return (n_flavors, flav_rows, n_legs) for the always-on per-flavor
+        good-helicity filter in sigmaKin. n_flavors is always >= 1: an ME with
+        no merged-particle variants is a single flavor whose group index is 0 on
+        every leg (C++ group indices are 0-based), matching the flavor[] = 0
+        convention the callers use for an unmerged leg. n_legs is the number of
+        external legs (the length of each flav_table row), returned explicitly
+        so callers need not infer it from the initialiser string."""
+        nexternal = matrix_element.get_nexternal_ninitial()[0]
+        allowed_flavors = matrix_element.compute_flavor_masks()
+        if not allowed_flavors:
+            return (1, ['{%s}' % ', '.join(['0'] * nexternal)], nexternal)
+        return (len(allowed_flavors),
+                self._cpp_flav_rows(matrix_element, allowed_flavors),
+                len(allowed_flavors[0]))
+
     def get_flavor_mask_blocks(self, matrix_element):
         """Return declaration/setup blocks for C++ flavor-mask guards."""
 
@@ -1417,6 +1468,60 @@ class OneProcessExporterCPP(object):
                                         for m in self.matrix_elements])
             replace_dict['nb_amp'] = len(self.amplitudes.get_all_amplitudes())
             replace_dict['nexternal'] = len(self.processes[0].get('legs'))
+
+            # Always-on per-flavor good-helicity filter: goodhel/ntry/igood/
+            # ngood/sum_hel/jhel are indexed by a per-point flav_idx resolved
+            # from flavor[] via sk_flav_table, so a helicity that is zero for one
+            # flavor is never dropped for another. nflav is >= 1 (an unmerged ME
+            # is a single flavor); for nproc > 1 there is no single flavor table,
+            # so fall back to one flavor (flav_idx stays 0).
+            single_me = len(self.matrix_elements) == 1
+            if single_me:
+                sk_nflav, sk_flav_rows, n_legs = \
+                    self._cpp_sigmakin_flavor(self.matrix_elements[0])
+            else:
+                n_legs = replace_dict['nexternal']
+                sk_nflav, sk_flav_rows = \
+                    (1, ['{%s}' % ', '.join(['0'] * n_legs)])
+            replace_dict['cpp_goodhel_decl'] = (
+                "const int nflav = %d;\n" % sk_nflav +
+                "static const int sk_flav_table[nflav][%d] = {%s};\n"
+                % (n_legs, ', '.join(sk_flav_rows)) +
+                "static bool goodhel[nflav][ncomb] = {};\n"
+                "static int ntry[nflav] = {}, sum_hel[nflav] = {}, ngood[nflav] = {};\n"
+                "static int igood[nflav][ncomb];\n"
+                "static int jhel[nflav];")
+            # Resolve flavor[] -> flav_idx via sk_flav_table. For the single-ME
+            # case a flavor absent from the table is not an allowed combination
+            # (its |M|^2 is zero): flav_idx stays -1 and we short-circuit to a
+            # zero matrix element before indexing the per-flavor goodhel/ntry
+            # arrays. For the multi-ME fallback there is a single (all-zero) row
+            # and no real per-flavor split, so flav_idx defaults to 0.
+            if single_me:
+                replace_dict['cpp_flav_idx_compute'] = (
+                    "int flav_idx = -1;\n"
+                    "for (int fi = 0; fi < nflav; ++fi) {\n"
+                    "  bool fmatch = true;\n"
+                    "  for (int fj = 0; fj < %d; ++fj) {\n" % n_legs +
+                    "    if (flavor[fj] != sk_flav_table[fi][fj]) { fmatch = false; break; }\n"
+                    "  }\n"
+                    "  if (fmatch) { flav_idx = fi; break; }\n"
+                    "}\n"
+                    "if (flav_idx < 0) {\n"
+                    "  for (int i = 0; i < nprocesses; i++) matrix_element[i] = 0.;\n"
+                    "  return;\n"
+                    "}\n")
+            else:
+                replace_dict['cpp_flav_idx_compute'] = (
+                    "int flav_idx = 0;\n"
+                    "for (int fi = 0; fi < nflav; ++fi) {\n"
+                    "  bool fmatch = true;\n"
+                    "  for (int fj = 0; fj < %d; ++fj) {\n" % n_legs +
+                    "    if (flavor[fj] != sk_flav_table[fi][fj]) { fmatch = false; break; }\n"
+                    "  }\n"
+                    "  if (fmatch) { flav_idx = fi; break; }\n"
+                    "}\n")
+
             if write:
                 file = \
                  self.read_template_file(\
@@ -2526,7 +2631,8 @@ class ProcessExporterCPP(VirtualExporter):
     oneprocessclass = OneProcessExporterCPP
     s= _file_path + 'iolibs/template_files/'
     dirs_to_create = ['src', 'lib', 'Cards', 'SubProcesses']
-    from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc'],
+    from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc',
+                             s+'mg5_citation.h', s+'mg5_citation.cc'],
                      'SubProcesses': []}
     to_link_in_P = ['Makefile']
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_src')

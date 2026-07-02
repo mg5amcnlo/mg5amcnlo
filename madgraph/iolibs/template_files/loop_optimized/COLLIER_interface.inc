@@ -120,10 +120,11 @@ C ----------
         N_CACHES =1
       ENDIF
 
-C     Initialize COLLIER if needed 
+C     Initialize COLLIER if needed
       IF (COLLIERINIT) THEN
         COLLIERINIT=.FALSE.
         CALL INITCOLLIER()
+        CALL cite('Denner:2016kdg','one-loop reduction with COLLIER')
       ENDIF
 
 C     Initialize the event if it is the first time collier is called on this PS point

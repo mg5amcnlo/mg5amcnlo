@@ -34,6 +34,7 @@ C     LOCAL
 C     
       INTEGER I,J,K
       INTEGER flavor_index
+      INTEGER GET_FLAVOR_INDEX_PROD
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
       INTEGER FLAVOR(NEXTERNAL)
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
@@ -75,12 +76,16 @@ c
 c     Now we can call the matrix element!
 c
       call GET_FLAVOR_MS_PROD(flavor_index, FLAVOR)
+c     Map MadSpin's flavor index to the matrix element's own (different)
+c     flavor enumeration via the ME forward lookup; passing it directly can
+c     select the wrong ME flavor (|M|=0).
+      flavor_index = GET_FLAVOR_INDEX_PROD(FLAVOR)
 
       do i=1,n_max_cg
       amp2(i)=0d0
       enddo
       call coup()
-      CALL SMATRIX_PROD(P,FLAVOR,MATELEM)
+      CALL SMATRIX_PROD(P,flavor_index,MATELEM)
 c
 
 c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	

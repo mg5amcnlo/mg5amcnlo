@@ -1,4 +1,5 @@
-%(python_information)s
+C this is a f2py wrapper for reweight mode at loop-induced level
+
 
       SUBROUTINE INITIALISE(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.
@@ -79,3 +80,59 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
       END
 
 
+
+      SUBROUTINE %(f2py_prefix)sREFCHOICEP(PREF, PHI, THETA)
+          implicit none
+CF2PY DOUBLE PRECISION, INTENT(OUT) :: PHI
+CF2PY DOUBLE PRECISION INTENT(OUT) :: THETA
+CF2PY DOUBLE PRECISION, INTENT(IN) :: PREF(0:3)
+          double precision PREF(0:3)
+          double precision PHI, THETA
+
+      call f77_refchoicep(PREF, PHI, THETA)
+      RETURN
+      END
+
+      SUBROUTINE %(f2py_prefix)sROTATIONP(P, PHI, THETA, NEXTERNAL, PROT)
+          implicit none
+CF2PY DOUBLE PRECISION, INTENT(OUT) :: PROT(0:3, NEXTERNAL)
+CF2PY INTEGER, INTENT(IN) :: NEXTERNAL
+CF2PY DOUBLE PRECISION, INTENT(IN) :: PHI
+CF2PY DOUBLE PRECISION, INTENT(IN) :: THETA
+CF2PY DOUBLE PRECISION, INTENT(IN) :: P(0:3, NEXTERNAL)
+          double precision P(0:3, NEXTERNAL), PROT(0:3, NEXTERNAL)
+          integer NEXTERNAL
+          double precision PHI, THETA
+      
+      call f77_rotationp(P, PHI, THETA, NEXTERNAL, PROT)
+      RETURN
+      END
+
+      SUBROUTINE %(f2py_prefix)sPY_GET_DENSITY(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2, INTER, N_CHANGING, N_COMB, NPDG)
+
+CF2PY double precision, intent(in) :: p
+CF2PY integer, intent(in) :: pdgs
+CF2PY integer, intent(in) :: procid
+CF2PY integer, intent(in) :: pos(N_CHANGING)
+CF2PY integer, INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY double precision INTENT(IN) :: ALPHAS
+CF2PY double precision INTENT(IN) :: SCALE2
+CF2PY double complex INTENT(OUT), dimension(N_COMB*(N_COMB+1)/2) :: INTER
+CF2PY integer, intent(hide), depend(allow_hel, pos) :: N_COMB = len(ALLOW_HEL)/len(pos)
+CF2PY integer, intent(hide), depend(pos) :: N_CHANGING = len(pos)
+CF2PY integer, intent(hide), depend(pdgs) :: NPDG = len(pdgs)
+
+      INTEGER PDGS(*), N_CHANGING, NPDG
+      INTEGER PROCID
+      INTEGER POS(N_CHANGING)
+      DOUBLE PRECISION ALPHAS, SCALE2
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2) !what value instead of 0:1
+      DOUBLE PRECISION P(0:3,*)
+
+      CALL %(f2py_prefix)sF77_DENSITY(PDGS, NPDG, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2, N_CHANGING, N_COMB, INTER)
+
+      RETURN
+      END
+
+C     GET_ALL_INTER is not present, it can be added but is not practical to use outside of the main framework because of the way JAMPL_ALL is computed.

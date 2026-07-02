@@ -1814,8 +1814,9 @@ class GECluster(Cluster):
 
         a = misc.Popen(['qsub','-o', stdout,
                                      '-e', stderr,
+                                     '-V', # export the submission environment (incl. MG5_CITATION_DIR)
                                      tmp_submit],
-                                     stdout=subprocess.PIPE, 
+                                     stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
 
@@ -1995,8 +1996,12 @@ class SLURMCluster(Cluster):
         if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
               and self.options['cluster_walltime'] != 'None':
                 command.insert(1, '-t')
-                command.insert(2, self.options['cluster_walltime'])            
-            
+                command.insert(2, self.options['cluster_walltime'])
+
+        # export the full submission environment to the job (incl.
+        # MG5_CITATION_DIR) regardless of the site default for SBATCH_EXPORT
+        command.insert(1, '--export=ALL')
+
 
         jobenv = os.environ.copy()
         if MADEVENT: jobenv['RUN_DIR'] = LOCALDIR

@@ -1,3 +1,7 @@
+C     f2py wrappers. Each entry comes in two flavors: a FLAVOR(NEXTERNAL)
+C     variant (back-compat) that resolves the flavor index via
+C     GET_FLAVOR_INDEX, and a *_IDX variant taking the flavor index directly.
+C     The Python dispatch wrapper (flavor_dispatch.py) picks the right one.
       SUBROUTINE PY_%(proc_prefix)sSMATRIXHEL(P,HEL,FLAVOR,ANS)
       IMPLICIT NONE
 C
@@ -18,8 +22,24 @@ C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER HEL
       INTEGER FLAVOR(NEXTERNAL)
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
 
-      CALL %(proc_prefix)sSMATRIXHEL(P,HEL,FLAVOR,ANS)
+      CALL %(proc_prefix)sSMATRIXHEL(P,HEL,
+     &     %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR),ANS)
+      END
+
+      SUBROUTINE PY_%(proc_prefix)sSMATRIXHEL_IDX(P,HEL,FLAV_IDX,ANS)
+      IMPLICIT NONE
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER HEL
+      INTEGER FLAV_IDX
+      CALL %(proc_prefix)sSMATRIXHEL(P,HEL,FLAV_IDX,ANS)
       END
 
       SUBROUTINE PY_%(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
@@ -46,10 +66,24 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER FLAVOR(NEXTERNAL)
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
-      call %(proc_prefix)sSMATRIX(P,FLAVOR,ANS)
+      call %(proc_prefix)sSMATRIX(P,
+     &     %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR),ANS)
+      END
+
+      SUBROUTINE PY_%(proc_prefix)sSMATRIX_IDX(P,FLAV_IDX,ANS)
+      IMPLICIT NONE
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER FLAV_IDX
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
+      call %(proc_prefix)sSMATRIX(P,FLAV_IDX,ANS)
       END
 
 
@@ -81,7 +115,24 @@ C
 C  FUNCTIONS
 C
       real*8 %(proc_prefix)sMATRIX
-      PY_%(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX(P,NHEL,IC,FLAVOR)
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
+      PY_%(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX(P,NHEL,IC,
+     &     %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR))
+      END
+
+      REAL*8 FUNCTION PY_%(proc_prefix)sMATRIX_IDX(P,NHEL,IC,FLAV_IDX)
+      IMPLICIT NONE
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER FLAV_IDX
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: NHEL(NEXTERNAL)
+CF2PY INTENT(IN) :: IC(NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
+      real*8 %(proc_prefix)sMATRIX
+      PY_%(proc_prefix)sMATRIX_IDX = %(proc_prefix)sMATRIX(P,NHEL,IC,FLAV_IDX)
       END
 
       SUBROUTINE PY_%(proc_prefix)sGET_value(P, ALPHAS, NHEL,
@@ -108,6 +159,24 @@ CF2PY INTENT(IN) :: FLAVOR(NEXTERNAL)
       return
       end
 
+      SUBROUTINE PY_%(proc_prefix)sGET_value_idx(P, ALPHAS, NHEL,
+     &     FLAV_IDX, ANS)
+      IMPLICIT NONE
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      INTEGER FLAV_IDX
+      DOUBLE PRECISION ALPHAS
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: FLAV_IDX
+      call %(proc_prefix)sGET_value_idx(P, ALPHAS, NHEL, FLAV_IDX, ANS)
+      return
+      end
+
       SUBROUTINE PY_%(proc_prefix)sINITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
@@ -118,7 +187,7 @@ CF2PY INTENT(IN) :: PATH
       end
 
       SUBROUTINE PY_%(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING,
-     &     ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)
+     &     ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
 C     F2PY wrapper around %(proc_prefix)sGET_DENSITY so the density-matrix
 C     computation is exposed in the standalone matrix2py module.
 C     The CF2PY directives mirror the working pattern used by the
@@ -133,6 +202,7 @@ CF2PY integer, intent(in), dimension(N_CHANGING*N_COMB) :: ALLOW_HEL
 CF2PY integer, intent(in) :: N_COMB
 CF2PY integer, intent(in), dimension(%(nexternal)d) :: FLAVOR
 CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALE2
 CF2PY double complex, intent(out), dimension(N_COMB*(N_COMB+1)/2) :: INTER
 C     ARGUMENTS
       INTEGER    NEXTERNAL
@@ -142,18 +212,24 @@ C     ARGUMENTS
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
       INTEGER FLAVOR(NEXTERNAL)
-      DOUBLE PRECISION ALPHAS
-      DOUBLE COMPLEX INTER(*)
+      DOUBLE PRECISION ALPHAS, SCALE2
+C     INTER must be declared with its explicit size (not INTER(*)): f2py reads
+C     this Fortran declaration to size the intent(out) array, and an assumed-size
+C     (*) makes it allocate a zero-length buffer, corrupting memory at runtime.
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2)
+C     GET_DENSITY takes (..., ALPHAS, SCALE2, INTER): SCALE2 must be passed,
+C     otherwise INTER lands on the SCALE2 slot and the real INTER pointer is
+C     undefined, corrupting memory when the density matrix is written.
       CALL %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL,
-     &     N_COMB, FLAVOR, ALPHAS, INTER)
+     &     N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
       RETURN
       END
 
       LOGICAL FUNCTION PY_%(proc_prefix)sIS_BORN_HEL_SELECTED(HELID)
       IMPLICIT NONE
-C     
+C
 C     CONSTANTS
-C     
+C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 C

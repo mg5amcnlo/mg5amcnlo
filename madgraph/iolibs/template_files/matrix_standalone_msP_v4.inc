@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX_PROD(P, FLAVOR, ANS)
+      SUBROUTINE SMATRIX_PROD(P, FLAV_IDX, ANS)
 C
 %(info_lines)s
 C
@@ -24,18 +24,27 @@ C
 C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL),ANS
-      INTEGER FLAVOR(NEXTERNAL)
+C     FLAV_IDX (the dummy argument) is declared with NFLAV below.
 C
 C LOCAL VARIABLES
 C
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL,NCOMB)
       REAL*8 T
       REAL*8 MATRIX_PROD
       INTEGER IHEL,IDEN,I,JJ
       INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER NFLAV
+      PARAMETER (NFLAV=%(nflav)d)
+      INTEGER NNTRY_FLAV, NGOODHEL_FLAV
+      PARAMETER (NNTRY_FLAV=NFLAV)
+      PARAMETER (NGOODHEL_FLAV=NCOMB*NFLAV)
+      INTEGER FLAV_IDX
+      INTEGER GET_FLAVOR_INDEX_PROD
+      INTEGER NTRY(NFLAV)
+      LOGICAL GOODHEL(NCOMB,NFLAV)
+      DATA NTRY/NNTRY_FLAV*0/
+      DATA GOODHEL/NGOODHEL_FLAV*.FALSE./
       double precision beampol(2)
       common /to_beampol/ beampol
 C
@@ -47,11 +56,18 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+C     FLAV_IDX=0 (or out of range): GET_FLAVOR_INDEX could not resolve the
+C     requested flavor -- not an allowed combination, matrix element is zero.
+      IF (FLAV_IDX.LT.1 .OR. FLAV_IDX.GT.NFLAV) THEN
+        ANS = 0D0
+        RETURN
+      ENDIF
+      CALL GET_FLAVOR_PROD(FLAV_IDX, FLAVOR)
+      NTRY(FLAV_IDX)=NTRY(FLAV_IDX)+1
       ANS = 0D0
           DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
-                 T=MATRIX_PROD(P ,NHEL(1,IHEL),FLAVOR(1))
+             IF (GOODHEL(IHEL,FLAV_IDX) .OR. NTRY(FLAV_IDX) .LT. 100) THEN
+                 T=MATRIX_PROD(P ,NHEL(1,IHEL),FLAV_IDX)
 C Support for polarised beam
                  DO JJ=1,NINCOMING
                    IF(BEAMPOL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
@@ -63,7 +79,7 @@ C Support for polarised beam
 
                ANS=ANS+T
                IF (T .NE. 0D0) THEN
-                   GOODHEL(IHEL)=.TRUE.
+                   GOODHEL(IHEL,FLAV_IDX)=.TRUE.
                ENDIF
              ENDIF
           ENDDO
@@ -71,7 +87,7 @@ C Support for polarised beam
       END
 
 
-      REAL*8 FUNCTION MATRIX_PROD(P,NHEL,FLAVOR)
+      REAL*8 FUNCTION MATRIX_PROD(P,NHEL,FLAV_IDX)
       use model_object
 C
 %(info_lines)s
@@ -101,10 +117,11 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL)
-      INTEGER FLAVOR(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C LOCAL VARIABLES
 C
+      INTEGER FLAVOR(NEXTERNAL)
       INTEGER I,J
       COMPLEX*16 ZTEMP
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
@@ -147,3 +164,9 @@ C ----------
 
 
 %(broken_sym_function)s
+
+
+%(flavor_index_function)s
+
+
+%(flavor_array_function)s

@@ -274,6 +274,7 @@ decay z > l+ l-
 
         with open(log_path) as log_file:
             log = log_file.read()
+            misc.sprint(log)
 
         # MadSpin's default spinmode is "PA" (pole approximation), which
         # routes through the density code path. The density path emits a

@@ -239,7 +239,12 @@ C
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
-
+C     Flavor table for the FLAV_IDX -> FLAVOR rebuild.
+      INTEGER NMASK_FLAV
+      PARAMETER (NMASK_FLAV=1)
+      INTEGER MASK_J
+      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)
+      DATA FLAV_TABLE / 1, 1, 1, 1 /
 C     
 C     FUNCTION
 C     
@@ -259,7 +264,16 @@ C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
-
+C     Rebuild FLAVOR(NEXTERNAL) from the resolved flavor index.
+      IF (FLAV_IDX .GE. 1 .AND. FLAV_IDX .LE. NMASK_FLAV) THEN
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, FLAV_IDX)
+        ENDDO
+      ELSE
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, 1)
+        ENDDO
+      ENDIF
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1, FLAVOR(3),W(3))
@@ -373,7 +387,12 @@ C     REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
-
+C     Flavor table for the FLAV_IDX -> FLAVOR rebuild.
+      INTEGER NMASK_FLAV
+      PARAMETER (NMASK_FLAV=1)
+      INTEGER MASK_J
+      INTEGER FLAV_TABLE(NEXTERNAL, NMASK_FLAV)
+      DATA FLAV_TABLE / 1, 1, 1, 1 /
 
 C     
 C     GLOBAL VARIABLES
@@ -395,7 +414,16 @@ C     ----------
       ENDDO
 
 
-
+C     Rebuild FLAVOR(NEXTERNAL) from the resolved flavor index.
+      IF (FLAV_IDX .GE. 1 .AND. FLAV_IDX .LE. NMASK_FLAV) THEN
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, FLAV_IDX)
+        ENDDO
+      ELSE
+        DO MASK_J = 1, NEXTERNAL
+          FLAVOR(MASK_J) = FLAV_TABLE(MASK_J, 1)
+        ENDDO
+      ENDIF
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1, FLAVOR(1),W(1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1, FLAVOR(2),W(2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1, FLAVOR(3),W(3))

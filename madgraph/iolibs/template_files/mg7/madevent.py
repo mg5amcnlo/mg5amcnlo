@@ -800,7 +800,7 @@ class MadgraphSubprocess:
             devices = [devices]
         for device in devices:
             subproc_dir = os.path.dirname(subproc_path)
-            # 'cppauto' resolve quick fix 
+            # 'cppauto' resolve quick fix
             resolved = device
             if device == "cppauto":
                 out = subprocess.run(
@@ -1275,11 +1275,12 @@ class MadgraphSubprocess:
         flavors = []
         flavor_remap = []
         flavor_factors = []
+        flavor_mirror = []
         for flav in self.meta["flavors"]:
             flavors.append(flav["options"][0])
             flavor_remap.append(flav["index"])
             flavor_factors.append(len(flav["options"]))
-        flavor_remap
+            flavor_mirror.append(flav["mirror"])
         if self.matrix_element:
             matrix_element = ms.MatrixElement(
                 self.matrix_element,
@@ -1306,7 +1307,6 @@ class MadgraphSubprocess:
             pid_options=flavors,
             pdf1=pdf_arg,
             pdf2=pdf_arg,
-            has_mirror=self.meta["has_mirror_process"],
             input_momentum_fraction=True,
         )
         partial_weights = self.process.run_card["generation"]["systematics"]
@@ -1333,6 +1333,7 @@ class MadgraphSubprocess:
                 channel.active_flavors,
                 flavor_remap,
                 flavor_factors,
+                flavor_mirror,
             ))
         #print(integrands[0].function())
         #print(integrands[1].function())
