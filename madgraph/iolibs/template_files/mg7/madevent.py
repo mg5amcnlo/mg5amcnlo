@@ -28,17 +28,17 @@ if not (_INSTALL_DIR / "madspace").is_dir():
     print()
 
     _install_cmd = [sys.executable, str(_MADSPACE_DIR / "install.py")]
-    # Propagate non-interactive context (parent -f or piped stdin) so the
-    # installer routes its questions through cmd.ask in force mode rather than
-    # blocking on input(); also expose madgraph on PYTHONPATH so the installer
-    # subprocess can import cmd.ask in the first place.
+    # Expose madgraph on PYTHONPATH so the installer subprocess can import
+    # cmd.ask for its prompts.
     _noninteractive = "-f" in sys.argv or not sys.stdin.isatty()
-    # When non-interactive, run the installer with defaults and keep it away
-    # from our stdin (which may carry the run's scripted card-editing commands);
-    # when interactive, let it share the terminal so the user can answer.
+    # When the run is non-interactive (scripted / piped), install
+    # non-interactively with a source build and default options (--source --yes),
+    # and keep the installer away from our stdin (which may carry the run's
+    # scripted card-editing commands); when interactive, let it share the
+    # terminal so the user can answer.
     _install_stdin = subprocess.DEVNULL if _noninteractive else None
     if _noninteractive:
-        _install_cmd.append("-f")
+        _install_cmd += ["--source", "--yes"]
     _install_env = os.environ.copy()
     _install_env["PYTHONPATH"] = os.pathsep.join(
         [str(_MG_ROOT)] + ([_install_env["PYTHONPATH"]] if _install_env.get("PYTHONPATH") else [])

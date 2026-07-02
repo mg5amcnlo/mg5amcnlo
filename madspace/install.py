@@ -50,7 +50,7 @@ _PLATFORM_SOURCE_DEFAULTS: dict = {
 # the non-interactive flag.
 
 _NONINTERACTIVE = (not sys.stdin.isatty()) or any(
-    a in ("-f", "--force", "-y", "--yes") for a in sys.argv[1:]
+    a in ("-y", "--yes") for a in sys.argv[1:]
 )
 
 
@@ -451,14 +451,8 @@ def main() -> None:
         "--yes",
         action="store_true",
         default=False,
-        help="Re-install non-interactively using saved settings; falls back to built-in defaults.",
-    )
-    parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        default=False,
-        help="Do not prompt; accept the defaults (for scripted/non-interactive use).",
+        help="Non-interactive: accept defaults / reuse saved settings, no prompts. "
+        "Combine with --source/--bin to force the install mode.",
     )
     parser.add_argument(
         "--system",
@@ -551,18 +545,19 @@ def main() -> None:
     # None = not provided by user; overridden by set_defaults below
     parser.set_defaults(cuda=None, hip=None, openblas=None, simd=None, build_type=None)
     args = parser.parse_args()
-    _set_noninteractive(args.force or args.yes)
+    _set_noninteractive(args.yes)
 
     # Load saved settings when a previous installation is present
     saved = load_settings() if (INSTALL_DIR / "madspace").is_dir() else {}
 
-    # Determine install mode
-    if args.yes:
-        from_source = saved.get("mode", "bin") == "source"
-    elif args.bin:
+    # Determine install mode. An explicit --bin/--source always wins; --yes
+    # alone reuses the saved mode (built-in default otherwise).
+    if args.bin:
         from_source = False
     elif args.source:
         from_source = True
+    elif args.yes:
+        from_source = saved.get("mode", "bin") == "source"
     else:
         print("Welcome to the MadSpace interactive installer")
         print()
