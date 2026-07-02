@@ -26,7 +26,7 @@ Integrand::Integrand(
     bool drop_cuts_and_rescale,
     bool partial_weights,
     const std::vector<std::size_t>& channel_indices,
-    const std::vector<std::size_t>& active_flavors,
+    const nested_vector2<std::size_t>& active_flavors,
     const std::vector<std::size_t>& flavor_remap,
     const std::vector<double>& flavor_factors,
     const std::vector<bool>& flavor_mirror
@@ -131,8 +131,7 @@ Integrand::Integrand(
         std::any_of(flavor_mirror.begin(), flavor_mirror.end(), std::identity{})
     ),
     _flavor_remap(flavor_remap.begin(), flavor_remap.end()),
-    _flavor_factors(flavor_factors),
-    _active_flavors(active_flavors) {
+    _flavor_factors(flavor_factors) {
     if (pdf_grid) {
         for (std::size_t i = 0; i < 2; ++i) {
             std::set<int> pids;
@@ -146,12 +145,26 @@ Integrand::Integrand(
             }
             _pdfs.at(i) = PartonDensity(pdf_grid.value(), {pids.begin(), pids.end()});
         }
-        if (active_flavors.size() > 0 &&
-            active_flavors.size() < diff_xs.pid_options().size()) {
-            _active_flavors_mask.resize(diff_xs.pid_options().size());
-            for (auto index : active_flavors) {
-                _active_flavors_mask.at(index) = 1.;
+    }
+
+    if (active_flavors.size() > 0) {
+        if (active_flavors.size() != mapping.channel_count()) {
+            throw std::invalid_argument(
+                "a list of active flavors must be provided for each permutation"
+            );
+        }
+        _active_flavors_mask.resize(mapping.channel_count());
+        std::vector<bool> mask_all(diff_xs.pid_options().size());
+        for (auto [mask, active] : zip(_active_flavors_mask, active_flavors)) {
+            mask.resize(diff_xs.pid_options().size());
+            for (auto index : active) {
+                mask.at(index) = 1.;
+                mask_all.at(index) = 1.;
             }
+        }
+        for (std::size_t i = 0; bool active : mask_all) {
+            _active_flavors.push_back(i);
+            ++i;
         }
     }
 
@@ -387,7 +400,9 @@ NamedVector<Value> Integrand::build_channel_part(
         if (has_multi_flavor) {
             pdf_prior = fb.product(pdf_priors);
             if (_active_flavors_mask.size() > 0) {
-                pdf_prior = fb.mul(pdf_prior, _active_flavors_mask);
+                Value index = fb.batch_gather(indices_acc, chan_index_in_group);
+                Value mask = fb.gather_vector(index, _active_flavors_mask);
+                pdf_prior = fb.mul(pdf_prior, mask);
             }
             has_pdf_prior = true;
         }

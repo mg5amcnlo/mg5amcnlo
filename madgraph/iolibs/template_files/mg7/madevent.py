@@ -99,7 +99,7 @@ class MultiChannelData(NamedTuple):
     channel_weight_indices: list[list[list[int]]]
     diagram_indices: list[list[int]]
     diagram_color_indices: list[list[list[int]]]
-    active_flavors: list[list[int]]
+    active_flavors: list[list[list[int]]]
 
 
 @dataclass
@@ -658,7 +658,7 @@ class MadgraphProcess:
                 _,
                 diagram_indices,
                 diagram_color_indices,
-                active_flavors,
+                _,
             ) = subproc.build_multi_channel_data()
             subproc_args.append(
                 ms.SubprocArgs(
@@ -930,7 +930,7 @@ class MadgraphSubprocess:
             ])
             diagram_indices.append([d["diagram"] for d in diagrams])
             diagram_color_indices.append([d["active_colors"] for d in diagrams])
-            active_flavors.append(channel["active_flavors"])
+            active_flavors.append([d["active_flavors"] for d in diagrams])
         self.multi_channel_data = MultiChannelData(
             amp2_remap,
             symfact,
@@ -1336,7 +1336,7 @@ class MadgraphSubprocess:
                 flavor_mirror,
             ))
         #print(integrands[0].function())
-        #print(integrands[1].function())
+        #for i in integrands: print(i.function())
         return integrands
 
     def train_madnis(self, phasespace: PhaseSpace, status_func) -> None:
