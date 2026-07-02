@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, proc_id, ANS, HEL_SELECTED, ICOL)
+SUBROUTINE SMATRIX%(proc_id)s(P, iflav, RHEL, RCOL, channel, ivec, ANS, HEL_SELECTED, ICOL)
 C  
 %(info_lines)s
 C 
@@ -13,7 +13,7 @@ C
     use DiscreteSampler
     IMPLICIT NONE
     double precision RHEL, RCOL
-    integer channel, proc_id, hel_selected, icol
+    integer iflav, channel, hel_selected, icol, ivec
 C  
 C CONSTANTS
 C  
@@ -55,7 +55,6 @@ c
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER IVEC
     INTEGER NHEL(NEXTERNAL,NCOMB)
     REAL*8 T,MATRIX%(proc_id)s
     REAL*8 R,SUMHEL,TS(NCOMB)
@@ -173,7 +172,8 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
             JAMP2(I)=0D0
         ENDDO
     ANS = 0D0
-    ivec = 1
+C   ivec is now received as an argument (the call site passes the vector index,
+C   or 1 for the non-vectorised path); do not overwrite it here.
     WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
     DO I=1,NCOMB
@@ -325,9 +325,23 @@ c           Include the Jacobian from helicity sampling
     ENDIF
 
 C Amplitude(s) for diagram number %(n_tot_diags)d
-C This last line is a tag do not remove it. 
+C This last line is a tag do not remove it.
     END
- 
+
+
+      SUBROUTINE GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR_OUT)
+C     Returns the flavor array for a given flavor index IFLAV
+C     (called by the flavor dispatcher in auto_dsig).
+      IMPLICIT NONE
+      include 'nexternal.inc'
+      INTEGER IFLAV, I
+      INTEGER FLAVOR_OUT(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL,%(max_flavor)s)
+      %(get_flavor_matrix)s
+      FLAVOR_OUT(:) = FLAVOR(:, IFLAV)
+      RETURN
+      END
+
 	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
 c
 c   Simply registers the madloop return code and timing into the

@@ -56,10 +56,12 @@ void CPPProcess::sigmaKin(int * flavor)
 
   // Local variables and constants
   const int ncomb = 16; 
-  static bool goodhel[ncomb] = {ncomb * false}; 
-  static int ntry = 0, sum_hel = 0, ngood = 0; 
-  static int igood[ncomb]; 
-  static int jhel; 
+  const int nflav = 1; 
+  static const int sk_flav_table[nflav][4] = {{0, 0, 0, 0}}; 
+  static bool goodhel[nflav][ncomb] = {}; 
+  static int ntry[nflav] = {}, sum_hel[nflav] = {}, ngood[nflav] = {}; 
+  static int igood[nflav][ncomb]; 
+  static int jhel[nflav]; 
   std::complex<double> * * wfs; 
   double t[nprocesses]; 
   // Helicities for the process
@@ -71,7 +73,29 @@ void CPPProcess::sigmaKin(int * flavor)
   // Denominators: spins, colors and identical particles
   const int denominators[nprocesses] = {72, 72}; 
 
-  ntry = ntry + 1; 
+  int flav_idx = -1; 
+  for (int fi = 0; fi < nflav; ++ fi)
+  {
+    bool fmatch = true; 
+    for (int fj = 0; fj < 4; ++ fj)
+    {
+      if (flavor[fj] != sk_flav_table[fi][fj])
+      {
+        fmatch = false; break; 
+      }
+    }
+    if (fmatch)
+    {
+      flav_idx = fi; break; 
+    }
+  }
+  if (flav_idx < 0)
+  {
+    for (int i = 0; i < nprocesses; i++ )
+      matrix_element[i] = 0.; 
+    return; 
+  }
+  ntry[flav_idx] = ntry[flav_idx] + 1; 
 
   // Reset the matrix elements
   for(int i = 0; i < nprocesses; i++ )
@@ -85,12 +109,12 @@ void CPPProcess::sigmaKin(int * flavor)
     perm[i] = i; 
   }
 
-  if (sum_hel == 0 || ntry < 10)
+  if (sum_hel[flav_idx] == 0 || ntry[flav_idx] < 10)
   {
     // Calculate the matrix element for all helicities
     for(int ihel = 0; ihel < ncomb; ihel++ )
     {
-      if (goodhel[ihel] || ntry < 2)
+      if (goodhel[flav_idx][ihel] || ntry[flav_idx] < 2)
       {
         calculate_wavefunctions(perm, helicities[ihel], flavor); 
         t[0] = matrix_uux_gogo(); 
@@ -116,27 +140,27 @@ void CPPProcess::sigmaKin(int * flavor)
           tsum += t[iproc]; 
         }
         // Store which helicities give non-zero result
-        if (tsum != 0. && !goodhel[ihel])
+        if (tsum != 0. && !goodhel[flav_idx][ihel])
         {
-          goodhel[ihel] = true; 
-          ngood++; 
-          igood[ngood] = ihel; 
+          goodhel[flav_idx][ihel] = true; 
+          ngood[flav_idx]++; 
+          igood[flav_idx][ngood[flav_idx]] = ihel; 
         }
       }
     }
-    jhel = 0; 
-    sum_hel = min(sum_hel, ngood); 
+    jhel[flav_idx] = 0; 
+    sum_hel[flav_idx] = min(sum_hel[flav_idx], ngood[flav_idx]); 
   }
   else
   {
     // Only use the "good" helicities
-    for(int j = 0; j < sum_hel; j++ )
+    for(int j = 0; j < sum_hel[flav_idx]; j++ )
     {
-      jhel++; 
-      if (jhel >= ngood)
-        jhel = 0; 
-      double hwgt = double(ngood)/double(sum_hel); 
-      int ihel = igood[jhel]; 
+      jhel[flav_idx]++; 
+      if (jhel[flav_idx] >= ngood[flav_idx])
+        jhel[flav_idx] = 0; 
+      double hwgt = double(ngood[flav_idx])/double(sum_hel[flav_idx]); 
+      int ihel = igood[flav_idx][jhel[flav_idx]]; 
       calculate_wavefunctions(perm, helicities[ihel], flavor); 
       t[0] = matrix_uux_gogo(); 
       // Mirror initial state momenta for mirror process

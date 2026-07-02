@@ -138,7 +138,7 @@ InstructionOwner instructions[] {
     mi("rqs_inverse", 120, true, {{DataType::dt_float, false, {"n"}, false}, {DataType::dt_float, false, {"n", 6}, false}}, {{DataType::dt_float, false, {"n"}, false}, {DataType::dt_float, false, {"n"}, false}}),
     mi("softmax", 121, true, {{DataType::dt_float, false, {std::monostate{}}, false}}, {{DataType::dt_float, false, {std::monostate{}}, false}}),
     mi("softmax_prior", 122, true, {{DataType::dt_float, false, {"n"}, false}, {DataType::dt_float, false, {"n"}, false}}, {{DataType::dt_float, false, {"n"}, false}}),
-    mi("sample_discrete", 123, true, {{DataType::dt_float, false, {}, false}, {DataType::dt_int, true, {}, false}}, {{DataType::dt_int, false, {}, false}, {DataType::dt_float, false, {}, false}}),
+    mi("sample_discrete", 123, true, {{DataType::dt_float, false, {}, false}, {DataType::dt_int, false, {}, false}}, {{DataType::dt_int, false, {}, false}, {DataType::dt_float, false, {}, false}}),
     mi("sample_discrete_inverse", 124, true, {{DataType::dt_int, false, {}, false}, {DataType::dt_int, true, {}, false}}, {{DataType::dt_float, false, {}, false}, {DataType::dt_float, false, {}, false}}),
     mi("sample_discrete_probs", 125, true, {{DataType::dt_float, false, {}, false}, {DataType::dt_float, false, {"n"}, false}}, {{DataType::dt_int, false, {}, false}, {DataType::dt_float, false, {}, false}}),
     mi("sample_discrete_probs_inverse", 126, true, {{DataType::dt_int, false, {}, false}, {DataType::dt_float, false, {"n"}, false}}, {{DataType::dt_float, false, {}, false}, {DataType::dt_float, false, {}, false}}),

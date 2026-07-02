@@ -3699,12 +3699,30 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         #flavor_status = {}
         #pdg_for_number = {}
-        # remove the information from previous check
-        for wfct in self['wavefunctions'] + self['amplitudes']:
+        # remove the information from previous check.
+        # NB: self['wavefunctions'] only lists the wavefunctions *introduced*
+        # by this diagram.  In a HELAS-optimised matrix element a diagram also
+        # reuses wavefunctions (and their sub-trees) introduced by earlier
+        # diagrams; those appear here only as mothers.  If we cleared the tag
+        # for self['wavefunctions'] alone, such shared mothers would keep a
+        # stale flavortag computed for a *different* flavor, and
+        # propagate_flavor_tag would silently reuse it instead of recomputing
+        # it -- wrongly rejecting (or accepting) this diagram depending on the
+        # order in which flavors are checked.  Clear the whole ancestor closure
+        # of every wavefunction and amplitude instead.
+        _seen_clear = set()
+        def _clear_flavor_tag(wf):
+            if id(wf) in _seen_clear:
+                return
+            _seen_clear.add(id(wf))
             try:
-                del wfct['flavortag']
-            except:
+                del wf['flavortag']
+            except Exception:
                 pass
+            for m in wf.get('mothers'):
+                _clear_flavor_tag(m)
+        for wfct in self['wavefunctions'] + self['amplitudes']:
+            _clear_flavor_tag(wfct)
 
         # In decay-chain diagrams, a wavefunction may have external mothers
         # (wavefunctions with no mothers) that do not appear in
@@ -5271,12 +5289,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return allowed_helicity
 
 
-    def get_external_flavors(self, all_perm=False, return_sign=False):
+    def get_external_flavors(self, all_perm=False, return_pdgs=False):
         """If merged particles are used, determine the list of possible flavor that are not zero """
 
         if self['allowed_flavors']:
-            if return_sign:
-                return self['allowed_flavors'], self['allowed_flavors_sign']
+            if return_pdgs:
+                return self['allowed_flavors'], self['allowed_flavors_pdgs']
             else:
                 return self['allowed_flavors']
         pdgs=[]
@@ -5297,7 +5315,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 else:
                     pdg_signs.append(-1 if particle.get_pdg_code() < 0 else 1)
         
-        to_map = collections.defaultdict(lambda:[1])
+        to_map = {}
         model = self.get('processes')[0].get('model')
         for key in model.get('merged_particles'):
             to_map[key] = model.get('merged_particles')[key]
@@ -5329,7 +5347,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # trusted to skip a sibling assignment for decay-chain ME (see below).
         is_decay_chain = bool(self.get('processes')[0].get('decay_chains'))
 
-        for one_flavor in itertools.product(*[to_map[abs(id)] for id in pdgs]):
+        for one_flavor, one_flavor_pdg in zip(
+            itertools.product(*[to_map.get(abs(id), [1]) for id in pdgs]),
+            itertools.product(*[to_map.get(abs(id), [abs(id)]) for id in pdgs]),
+        ):
             # get the actual pdg code (with the sign)
             pdg = [one_flavor[i] if id > 0 else -one_flavor[i] for i,id in enumerate(pdgs)]
 
@@ -5370,7 +5391,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             # do the computation
             if self.check_flavor(one_flavor, self.get('processes')[0].get('model')):
                 flavor_list.append(one_flavor)
-                pdg_list.append([flav * sign for flav, sign in zip(one_flavor, pdg_signs)])
+                pdg_list.append([flav * sign for flav, sign in zip(one_flavor_pdg, pdg_signs)])
                 #misc.sprint('checking flavor:', pdg, one_flavor, True)
                 checked[pdg] = True
                 if allow_triming:
@@ -5386,7 +5407,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 raise self.NoFlavorError("No diagram left after trimming for flavor!")
              
         self['allowed_flavors'] = flavor_list
-        self['allowed_flavors_sign'] = pdg_list
+        self['allowed_flavors_pdgs'] = pdg_list
 
         # Clean up temporary 'flavortag' attributes left on wavefunctions by
         # the last check_flavor call.  These dynamic dict keys are only valid
@@ -5399,35 +5420,35 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             except Exception:
                 pass
 
-        if return_sign:
-            return self['allowed_flavors'], self['allowed_flavors_sign']
+        if return_pdgs:
+            return self['allowed_flavors'], self['allowed_flavors_pdgs']
         else:
             return self['allowed_flavors']
     
-    def get_external_flavors_with_iden(self, return_sign=False):
+    def get_external_flavors_with_iden(self, return_pdgs=False):
         if self['allowed_flavors_with_iden']:
-            if return_sign:
-                return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_sign']
+            if return_pdgs:
+                return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_pdgs']
             else:
                 return self['allowed_flavors_with_iden']
 
         model = self.get('processes')[0].get('model')
-        all_flv, all_flv_sign = self.get_external_flavors(return_sign=True)
+        all_flv, all_flv_pdgs = self.get_external_flavors(return_pdgs=True)
         map_all_flv = {}
-        map_all_flv_sign = {}
-        for i, (flv1, flv1_sign) in  enumerate(zip(all_flv, all_flv_sign)):
+        map_all_flv_pdgs = {}
+        for i, (flv1, flv1_pdgs) in  enumerate(zip(all_flv, all_flv_pdgs)):
             coup = self.get_coupling_for_flv(flv1, model)
             if coup in map_all_flv:
                 map_all_flv[coup].append(flv1)
-                map_all_flv_sign[coup].append(flv1_sign)
+                map_all_flv_pdgs[coup].append(flv1_pdgs)
             else:
                 map_all_flv[coup] = [flv1]
-                map_all_flv_sign[coup] = [flv1_sign]
+                map_all_flv_pdgs[coup] = [flv1_pdgs]
 
-        self['allowed_flavors_with_iden_sign'] = map_all_flv_sign.values()
+        self['allowed_flavors_with_iden_pdgs'] = map_all_flv_pdgs.values()
         self['allowed_flavors_with_iden'] = map_all_flv.values()
-        if return_sign:
-            return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_sign']
+        if return_pdgs:
+            return self['allowed_flavors_with_iden'], self['allowed_flavors_with_iden_pdgs']
         else:
             return self['allowed_flavors_with_iden']
 

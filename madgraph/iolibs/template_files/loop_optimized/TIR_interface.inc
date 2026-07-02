@@ -211,6 +211,7 @@ C     PJFry++
       CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)
 C     CONVERT TO MADLOOP CONVENTION
       CALL %(proc_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+      CALL cite('Fleischer:2011bi','one-loop reduction with PJFry++')
 ## } else {
       WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
       STOP

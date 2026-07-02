@@ -1,24 +1,34 @@
-import numpy as np
-from numpy import linalg as la
-from typing import Union
+#We add a try/except to the import of numpy because all the unittests need to pass without numpy
+try:
+    import numpy as np
+    from numpy import linalg as la
 
-#%% Global variables for fermions and bosons
-Identity2 = np.array([[1, 0], [0, 1]])
-sigma1 = np.array([[0, 1], [1, 0]])
-sigma2 = np.array([[0, -1j], [1j, 0]])
-sigma3 = np.array([[1, 0], [0, -1]])
-sigma = [sigma1, sigma2, sigma3]
+    #%% Global variables for fermions and bosons
+    Identity2 = np.array([[1, 0], [0, 1]])
+    sigma1 = np.array([[0, 1], [1, 0]])
+    sigma2 = np.array([[0, -1j], [1j, 0]])
+    sigma3 = np.array([[1, 0], [0, -1]])
+    sigma = [sigma1, sigma2, sigma3]
 
-Identity3 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-Lambda1 = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]])
-Lambda2 = np.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]])
-Lambda3 = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]])
-Lambda4 = np.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]])
-Lambda5 = np.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]])
-Lambda6 = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]])
-Lambda7 = np.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]])
-Lambda8 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]])/np.sqrt(3)
-Lambda = [Lambda1, Lambda2, Lambda3, Lambda4, Lambda5, Lambda6, Lambda7, Lambda8]
+    Identity3 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    Lambda1 = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]])
+    Lambda2 = np.array([[0, -1j, 0], [1j, 0, 0], [0, 0, 0]])
+    Lambda3 = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 0]])
+    Lambda4 = np.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]])
+    Lambda5 = np.array([[0, 0, -1j], [0, 0, 0], [1j, 0, 0]])
+    Lambda6 = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]])
+    Lambda7 = np.array([[0, 0, 0], [0, 0, -1j], [0, 1j, 0]])
+    Lambda8 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -2]])/np.sqrt(3)
+    Lambda = [Lambda1, Lambda2, Lambda3, Lambda4, Lambda5, Lambda6, Lambda7, Lambda8]
+
+except:
+    pass
+
+try:
+    from typing import Union
+except:
+    pass
+
 
 # Momenta operations
 def opp_momentum(p: list[float]) -> list[float]:
@@ -51,6 +61,10 @@ def trace_distance(Matrix1: list[complex, complex], Matrix2: list[complex, compl
        Input: Matrix1, Matrix2 -> 2 square matrices
        Output: trace distance between the two matrices
     """
+    if isinstance(Matrix1, list):
+        Matrix1 = np.array(Matrix1)
+    if isinstance(Matrix2, list):
+        Matrix2 = np.array(Matrix2)
     aux1 = Matrix1 - Matrix2
     aux2 = np.dot(np.conjugate(np.transpose(aux1)), aux1)
     eigvals, eigvecs = la.eigh(np.array(aux2))
@@ -261,6 +275,9 @@ class DensityMatrixObservables(list):
             return True
         else:
             return False
+    
+    def density_array(self):
+        return np.array(self.density_matrix)
 
     def square_or_line_or_string(self, user_input=None) -> str:
         """This method determines if user_input is a line matrix, a square matrix, a string or something else."""
@@ -449,6 +466,9 @@ class DensityMatrixObservables(list):
         """
         rho = self.square_matrix()
 
+        if isinstance(rho, list):
+            rho = np.array(rho)
+
         if rho.shape[0] != rho.shape[1]:
             raise ValueError('Asked the partial trace of a non-square matrix, problem')
         
@@ -521,7 +541,7 @@ class DensityMatrixObservables(list):
     def Negativity(self, particle_type:list[str], epsilon=1e-10) -> tuple[float, float]:
             """
             Input:  self -> density matrix
-                    pdg_pos -> list of the pdg code of the particles in the density matrix
+                    particle_type -> list of the particle type: "fermion" or "boson"
             Output: negativity and logarithmic negativity
             This functions computes the negativity of a density matrix composed of any two particles.
             """
@@ -728,6 +748,16 @@ class DensityMatrixObservables(list):
         else:
             return Wigner / (d1 * d2)
 
+    def Get_Coherence(self):
+        """Computes the coherence (the sum of the absolute value of the non-diagonal elements of the density matrix)."""
+        rho_square = self.square_matrix()
+        coherence = 0
+        for i in range(len(rho_square)):
+            for j in range(len(rho_square[0])):
+                if j != i:
+                    coherence += abs(rho_square[i][j])
+        
+        return coherence
 
 class DensityMatrixObservables22(DensityMatrixObservables):
     """
@@ -964,7 +994,7 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         from scipy.optimize import minimize
 
         Srho = self.Von_Neumann_entropy() # S(rho)
-        rhoB = self.Partial_Trace(2, ['fermion', 'fermion'])
+        rhoB = self.Partial_Trace(1, ['fermion', 'fermion'])
         SrhoB = self.Von_Neumann_entropy(rho=rhoB) #S(rho_B)
 
         B_plus, B_minus = self.Get_Polarisations()
@@ -973,7 +1003,7 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         def proba_n(n: list[float]) -> float: #B- = B2
             return (1 + np.dot(B_minus, n)) / 2
         def Bn_plus(n: list[float]) -> list[complex]:
-            return np.array(B_plus) + np.dot(Corr,n) / (1 + np.dot(B_minus, n))
+            return (np.array(B_plus) + np.dot(Corr,n)) / (1 + np.dot(B_minus, n))
         def rho_n(n: list[float]) -> list[complex, complex]:
             Bnp = Bn_plus(n)
             return (np.eye(2) + Bnp[0]*sigma[0] + Bnp[1]*sigma[1] + Bnp[2]*sigma[2])/2

@@ -424,6 +424,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertIn('order_helicities', first_level)
         self.assertIn('axis_referential', first_level)
         self.assertIn('symmetrise_initial_state', first_level)
+        self.assertIn('matrix_normalisation', first_level)
         self.assertNotIn('default', first_level)
         self.assertNotIn('[6]', first_level)
 
@@ -436,6 +437,7 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertIn('order_helicities', second_level)
         self.assertIn('axis_referential', second_level)
         self.assertIn('symmetrise_initial_state', second_level)
+        self.assertIn('matrix_normalisation', second_level)
         self.assertNotIn('[6]', second_level)
         
     def test_modif_param_card(self):
@@ -604,6 +606,9 @@ class TestEditCardCmd(unittest.TestCase):
         self.rwcmd.do_set('symmetrise_initial_state True')
         self.assertEqual(self.rwcmd.reweight_card['symmetrise_initial_state'], True)
 
+        self.rwcmd.do_set('matrix_normalisation False')
+        self.assertEqual(self.rwcmd.reweight_card['matrix_normalisation'], False)
+
         #testing the reset the reweight_card
         self.rwcmd.do_set('reweight_card default')
         self.assertEqual(self.rwcmd.reweight_card['helicity_direction'], '[0]')
@@ -612,3 +617,4 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(self.rwcmd.reweight_card['order_helicities'], [0])
         self.assertEqual(self.rwcmd.reweight_card['axis_referential'], [0])
         self.assertEqual(self.rwcmd.reweight_card['symmetrise_initial_state'], False)
+        self.assertEqual(self.rwcmd.reweight_card['matrix_normalisation'], True)

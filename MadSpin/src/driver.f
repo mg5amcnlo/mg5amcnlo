@@ -38,6 +38,7 @@ c      integer mapconfig(0:lmaxconfigs)
       logical notpass
       integer counter,mode,nbpoints, counter2, counter3
       integer flavor_index_prod, flavor_index_full
+      integer GET_FLAVOR_INDEX, GET_FLAVOR_INDEX_PROD
       integer FLAVOR(NEXTERNAL)
       integer FLAVOR_PROD(NEXTERNAL_PROD)
       double precision mean, variance, maxweight,weight,std
@@ -138,7 +139,17 @@ c      enddo
 
       call GET_FLAVOR_MS_FULL(flavor_index_full, FLAVOR)
       call GET_FLAVOR_MS_PROD(flavor_index_prod, FLAVOR_PROD)
- 
+c     Bridge MadSpin's flavor index (its own enumeration) to the matrix
+c     element's flavor index.  The full/production MEs enumerate flavors
+c     differently (and more finely) than MadSpin, so passing MadSpin's index
+c     straight to SMATRIX/SMATRIX_PROD selects the wrong ME flavor -- often
+c     giving |M|=0, so the unweighting loop never accepts and spins forever.
+c     Resolve via the ME's own forward lookup on the FLAVOR array instead.
+      if (mode.ge.1 .and. mode.le.3) then
+        flavor_index_full = GET_FLAVOR_INDEX(FLAVOR)
+        flavor_index_prod = GET_FLAVOR_INDEX_PROD(FLAVOR_PROD)
+      endif
+
 
       if (mode.eq.1) then    ! calculate the maximum weight
          nbpoints=int(temp)
@@ -195,7 +206,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
       amp2(i)=0d0
       enddo
       call coup()
-      CALL SMATRIX_PROD(P,FLAVOR_PROD,M_PROD)
+      CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
 c      write(*,*) 'M_prod ', M_prod
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   IV. select one topology                        c
@@ -269,7 +280,7 @@ c           enddo
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,FLAVOR_PROD,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do k=-nexternal_prod+2,-1
                 do j=1,2
@@ -290,7 +301,7 @@ c           enddo
           
 c          Compute M_prod from boosted production momenta.
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,FLAVOR_PROD,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
 c          Boost the full-event momenta, then loop over all compatible
 c          full-ME flavor groups.  For each group j:
@@ -300,7 +311,7 @@ c          per-flavor maxweight as G * br_factor(j).
            call  boost_to_frame(pfull, frame_id, P2)
            do k=1, nflavs_compat
               call GET_FLAVOR_MS_FULL(compat_flav_idx(k), FLAVOR_TMP)
-              call SMATRIX(P2,FLAVOR_TMP,M_full_tmp)
+              call SMATRIX(P2,GET_FLAVOR_INDEX(FLAVOR_TMP),M_full_tmp)
               weight_tmp=M_full_tmp*jac/M_prod/rel_brs_compat(k)
               if (weight_tmp.gt.maxweight) then
                 maxweight=weight_tmp
@@ -349,7 +360,7 @@ c        initialize the helicity amps
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,FLAVOR_PROD,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do i=-nexternal_prod+2,-1
                 do j=1,2
@@ -369,11 +380,11 @@ c        initialize the helicity amps
            endif
 
            call  boost_to_frame(pfull, frame_id, P2)
-           call SMATRIX(P2,FLAVOR,M_full)
+           call SMATRIX(P2,flavor_index_full,M_full)
 
 
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,FLAVOR_PROD,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
 
            weight=M_full*jac/M_prod
@@ -438,7 +449,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) cycle
            notpass=.false.
-           call SMATRIX(pfull,FLAVOR,M_full)
+           call SMATRIX(pfull,flavor_index_full,M_full)
 
            write(*,*) M_full
         enddo

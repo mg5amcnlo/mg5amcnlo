@@ -463,6 +463,18 @@ namespace mg5amcCpu
     fptype hstMEs[maxtry0];
     const int maxtry = std::min( maxtry0, nevt ); // 16, but at most nevt (avoid invalid memory access if nevt<maxtry0)
     //std::cout << "sigmaKin_getGoodHel nevt=" << nevt << " maxtry=" << maxtry << std::endl;
+    // Per-flavor good-helicity union (merged flavors, e.g. PDG=81): sample every
+    // flavor combination on the same momenta and OR the result, so cGoodHel is
+    // the union over all flavors (see the C++ branch below for the rationale).
+    for( int ihel = 0; ihel < ncomb; ihel++ ) isGoodHel[ihel] = false;
+    (void)iflavorVec; // flavor is forced below to scan every flavor combination
+    unsigned int hstFlavorVec[maxtry0] = {};
+    unsigned int* devFlavorVec = nullptr;
+    gpuMalloc( (void**)&devFlavorVec, maxtry * sizeof( unsigned int ) );
+    for( int iflav = 0; iflav < nmaxflavor; ++iflav )
+    {
+    for( int i = 0; i < maxtry; ++i ) hstFlavorVec[i] = (unsigned int)iflav;
+    gpuMemcpy( devFlavorVec, hstFlavorVec, maxtry * sizeof( unsigned int ), gpuMemcpyHostToDevice );
     for( int ihel = 0; ihel < ncomb; ihel++ )
     {
       const int gpublocks = 1;
@@ -473,7 +485,7 @@ namespace mg5amcCpu
       gpuMemset( allMEs, 0, maxtry * sizeof( fptype ) );
       // NB: color_sum ADDS |M|^2 for one helicity to the running sum of |M|^2 over helicities for the given event(s)
       constexpr fptype_sv* allJamp2s = nullptr; // no need for color selection during helicity filtering
-      gpuLaunchKernel( calculate_jamps, gpublocks, gputhreads, ihel, allmomenta, allcouplings, iflavorVec, allJamps, false, allNumerators, allDenominators, allJamp2s, gpublocks * gputhreads, false );
+      gpuLaunchKernel( calculate_jamps, gpublocks, gputhreads, ihel, allmomenta, allcouplings, devFlavorVec, allJamps, false, allNumerators, allDenominators, allJamp2s, gpublocks * gputhreads, false );
       gpuLaunchKernel( color_sum_kernel, gpublocks, gputhreads, allMEs, allJamps, nOneHel, 0 );
       gpuMemcpy( hstMEs, allMEs, maxtry * sizeof( fptype ), gpuMemcpyDeviceToHost );
       //std::cout << "sigmaKin_getGoodHel ihel=" << ihel << std::endl;
@@ -487,6 +499,8 @@ namespace mg5amcCpu
         }
       }
     }
+    } // end loop over flavor combinations (per-flavor good-helicity union)
+    gpuFree( devFlavorVec );
   }
 #else
   void
@@ -517,6 +531,18 @@ namespace mg5amcCpu
 #else
     const int npagV2 = npagV; // loop on one SIMD page (neppV events) at a time
 #endif /* clang-format on */
+    // Per-flavor good-helicity union (merged flavors, e.g. PDG=81): a helicity
+    // that vanishes for the sampled flavor may be non-zero for another merged
+    // flavor and must not be dropped. Sample every flavor combination on the
+    // same momenta and OR the result, so cGoodHel becomes the union over all
+    // flavors (extra helicities simply contribute 0 for a given flavor at run
+    // time, exactly as in the scalar standalone_cpp per-flavor good-hel filter).
+    for( int ihel = 0; ihel < ncomb; ihel++ ) isGoodHel[ihel] = false;
+    (void)iflavorVec; // flavor is forced below to scan every flavor combination
+    unsigned int hgFlavorVec[maxtry0] = {}; // forced single-flavor index buffer
+    for( int iflav = 0; iflav < nmaxflavor; ++iflav )
+    {
+    for( int i = 0; i < maxtry0; ++i ) hgFlavorVec[i] = (unsigned int)iflav;
     for( int ipagV2 = 0; ipagV2 < npagV2; ++ipagV2 )
     {
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT /* clang-format off */
@@ -544,7 +570,7 @@ namespace mg5amcCpu
 #else
         cxtype_sv jamp_sv[ncolor] = {};  // all zeros
 #endif
-        calculate_jamps( ihel, allmomenta, allcouplings, iflavorVec, jamp_sv, false, allNumerators, allDenominators, jamp2_sv, ievt00 ); //maxtry?
+        calculate_jamps( ihel, allmomenta, allcouplings, hgFlavorVec, jamp_sv, false, allNumerators, allDenominators, jamp2_sv, ievt00 ); //maxtry?
         color_sum_cpu( allMEs, jamp_sv, ievt00 );
         for( int ieppV = 0; ieppV < neppV; ++ieppV )
         {
@@ -566,6 +592,7 @@ namespace mg5amcCpu
         }
       }
     }
+    } // end loop over flavor combinations (per-flavor good-helicity union)
   }
 #endif
 

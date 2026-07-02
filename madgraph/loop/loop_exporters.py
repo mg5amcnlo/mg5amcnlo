@@ -294,6 +294,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     
     f2py_matrix_splitter_template = pjoin(os.pardir,"loop", "f2py_wrapper_subproccesses.f")
     all_matrix_template = pjoin(os.pardir, "loop", "all_matrix.f")
+
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
 
@@ -330,11 +331,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                     text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, len(pdgs)))
                 else:
                     text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,len(pdgs)))
-                text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[(pdgs,pid)][0])
-            text.append( ' else if(procid.gt.0) then !')
-            text.append( ' procid = -1' )
-            text.append( ' goto 1' )
-            
+                # text.append(' call %sget_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[(pdgs,pid)][0])
+                text.append(' call %s%%(fct_name)s' % self.prefix_info[(pdgs,pid)][0])
+            # text.append( ' else if(procid.gt.0) then !')
+            # text.append( ' procid = -1' )
+            # text.append( ' goto 1' )
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -345,22 +346,40 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         for key, var in params.items():
             parameter_setup.append('        CASE ("%s")\n          %s = value\n        MP__%s = value' 
                                    % (key, var, var))
-            
-            
+        
+               # part for the resetting of the helicity
+        helreset_def = []
+        helreset_setup = []
+        for prefix in set(allprefix):
+            helreset_setup.append(' %shelreset = .true. ' % prefix)
+            helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
+        
+
+        f2py_prefix = ''
+        if self.opt['output_options'] and 'prefixf2py' in self.opt['output_options']:
+            f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
+
+
+        # Build IDENS entries ONCE per ME slot (must align 1-to-1 with get_pdg_order / allids).
 
         formatting = {'python_information':'\n'.join(info), 
-                          'smatrixhel': '\n'.join(text),
-                          'maxpart': max_nexternal,
-                          'nb_me': len(allids),
-                          'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
-                                             for i in range(max_nexternal) \
-                                             for (pdg,pid) in allids]),
+                    #   'smatrixhel': '\n'.join(text) % {'fct_name': 'smatrixhel(p, nhel, ans)'},
+                      'smatrixhel': '\n'.join(text) % {'fct_name': 'get_me(p, ALPHAS, DSQRT(SCALES2), NHEL, ANS, RETURNCODE)'},
+                      'maxpart': max_nexternal,
+                      'nb_me': len(allids),
+                      'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
+                                    for i in range(max_nexternal) \
+                                    for (pdg,pid) in allids]),
                       'prefix':'\',\''.join(allprefix),
                       'parameter_setup': '\n'.join(parameter_setup),
                       'pids':  ','.join(str(pid) for (pdg,pid) in allids),
+                      'helreset_def' : '\n'.join(helreset_def),
+                      'helreset_setup' : '\n'.join(helreset_setup),
+                      'f2py_prefix': f2py_prefix,
+                      'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)'},
                       }
     
-    
+        formatting['lenprefix'] = len(formatting['prefix'])
         text = template_matrix % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
@@ -816,12 +835,14 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Even when not reducing at the amplitude level, the TIR caching
         # is useful when there is more than one squared split order config.
         TIRCaching = AmplitudeReduction or n_squared_split_orders>1
+        UseDensity = 'density' in self.cmd_options #detects if we want to compute the density matrix
         MadEventOutput = False
         return {'LoopInduced': LoopInduced,
                 'ComputeColorFlows': ComputeColorFlows,
                 'AmplitudeReduction': AmplitudeReduction,
                 'TIRCaching': TIRCaching,
-                'MadEventOutput': MadEventOutput}
+                'MadEventOutput': MadEventOutput,
+                'UseDensity': UseDensity}
 
 
     #===========================================================================
@@ -1197,6 +1218,31 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
             if key not in list(replace_dict.keys()):
                 replace_dict[key]=''
         
+        #initialisation of the parameters for density matrix (dont think it is needed)
+        replace_dict['use_density'] = '.false.'
+        replace_dict['dens_nchanging'] = 1
+        replace_dict['dens_ncomb'] = 2
+        replace_dict['dens_pos'] = '\n'
+        replace_dict['dens_allow_hel'] = '\n'
+
+        if 'density' in self.cmd_options:
+            import math
+            replace_dict['use_density'] = '.true.'
+            changing = [int(i) for i in self.cmd_options['density'].split(',')]
+            replace_dict['dens_nchanging'] = len(changing)
+            replace_dict['dens_pos'] = '\n        '.join(
+                   ['POS(%s) = %i' % (i+1, pos) for i,pos in enumerate(changing)])
+            get_helicity_per_particle = matrix_element.get_helicity_per_particle()
+            changing_hels = [get_helicity_per_particle[pos-1] for pos in changing]
+            replace_dict['dens_ncomb'] = math.prod([len(hel) for hel in changing_hels])
+
+            i = 0
+            replace_dict['dens_allow_hel'] = ''
+            for comb in  itertools.product(*changing_hels):
+                for h in comb:
+                    i += 1
+                    replace_dict['dens_allow_hel'] += ' ALLOW_HEL(%i) = %i\n       ' % (i, h)
+
         if matrix_element.get('processes')[0].get('has_born'):
             file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
         else:
@@ -1207,7 +1253,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
             else:
                replace_dict["include_vector"] = '' 
         file=file%replace_dict
-        writer.writelines(file)
+        #we add the context to distinguish density mode from regular mode
+        writer.writelines(file, context=self.get_context(matrix_element))
          
         # We can always write the f2py wrapper if present (in loop optimized mode, it is)
         if not os.path.isfile(pjoin(self.template_dir,'check_py.f.inc')):
@@ -2658,6 +2705,21 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                   replace_dict['nmultichannels']
         matrix_element.rep_dict['nmultichannel_configs'] = \
                                            replace_dict['nmultichannel_configs']        
+
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        den_factor_line = self.get_den_factor_line(matrix_element)
+        replace_dict['den_factor_line'] = den_factor_line
+
+        # Helicity offset convention
+        # For a given helicity, the attached integer 'i' means
+        # 'i' in ]-inf;-HELOFFSET[ -> Helicity is equal, up to a sign, 
+        #                             to helicity number abs(i+HELOFFSET)
+        # 'i' == -HELOFFSET        -> Helicity is analytically zero
+        # 'i' in ]-HELOFFSET,inf[  -> Helicity is contributing with weight 'i'.
+        #                             If it is zero, it is skipped.
+        # Typically, the hel_offset is 10000
+        replace_dict['hel_offset'] = 10000
         
         
         file = misc.apply_template(
@@ -2929,6 +2991,11 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
         else:
             replace_dict['include_vector'] = ''
+
+        if 'density' in self.cmd_options:
+            replace_dict['use_density'] = '.true.'
+        else:
+            replace_dict['use_density'] = '.false.'
 
         if write_auxiliary_files:
             # Write out the color matrix
@@ -3238,6 +3305,21 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         n_tot_diags = len(matrix_element.get_loop_diagrams())
         replace_dict['n_tot_diags'] = n_tot_diags
+
+        # Flavor table for GET_FLAVOR<proc_id>, called by the flavor dispatcher
+        # in auto_dsig of the MadEvent output (otherwise auto_dsig fails to link
+        # with 'undefined reference to get_flavor<proc_id>_'). Loop-induced
+        # subprocesses carry only the trivial all-1 flavor (the loop ME exposes
+        # no merged-flavor position data), matching the FLAVOR /NEXTERNAL*1/
+        # convention used elsewhere in the loop matrix template.
+        nexternal, _ = matrix_element.get_nexternal_ninitial()
+        all_flav = matrix_element.get_external_flavors_with_iden()
+        replace_dict['max_flavor'] = len(all_flav)
+        get_flavor_matrix = ''
+        for i in range(len(all_flav)):
+            get_flavor_matrix += ' DATA (FLAVOR(i,  %d),i=  1, NEXTERNAL) /%s/\n' \
+                                 % (i+1, ', '.join(['1'] * nexternal))
+        replace_dict['get_flavor_matrix'] = get_flavor_matrix
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()

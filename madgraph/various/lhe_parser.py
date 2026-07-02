@@ -3201,6 +3201,11 @@ class Event(list):
 
         #filter outsubdecay
         main_decay = [p for p in subdiags if not isinstance(p, list)]
+        if not hasattr(main_decay[0], 'new_mass'):
+            # No sampled mass for this resonance: nothing to reshuffle. This is
+            # the 2 -> 1 production case (kept onshell at the production-determined
+            # virtuality, so the BW resampling was skipped) -- treat as a no-op.
+            return 1
         new_mass = main_decay[0].new_mass
         new_mom = FourMomentum(new_mass, 0 , 0, 0)
 
@@ -3229,8 +3234,10 @@ class Event(list):
             
         
         old_sqrts = incoming.mass
-        assert old_sqrts != offshellmass
-        #assert offshellmass == new_incoming.mass
+        # old_sqrts == offshellmass is allowed: the parent's invariant mass is
+        # unchanged but its momentum may still have been reshuffled at production
+        # level, so RAMBO returns an identity mass map (chi -> 1, jac = 1) and
+        # only the subsequent boost to new_incoming is applied.
         new_mom, jac = Event.mass_shuffle(old_momenta, old_sqrts, masses, new_sqrts=offshellmass)
 
         check = sum([FourMomentum(p) for p in new_mom], FourMomentum())

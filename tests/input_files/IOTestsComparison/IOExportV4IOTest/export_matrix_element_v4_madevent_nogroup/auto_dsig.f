@@ -299,14 +299,14 @@ C       Call UNWGT to unweight and store events
 C     
 C     Functionality to handling grid
 C     
-
       SUBROUTINE WRITE_GOOD_HEL(STREAM_ID)
       IMPLICIT NONE
+      INCLUDE 'maxamps.inc'
       INTEGER STREAM_ID
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
+      LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC)
+      INTEGER NTRY(MAXFLAVPERPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
       WRITE(STREAM_ID,*) GOODHEL
       RETURN
@@ -316,29 +316,29 @@ C
       SUBROUTINE READ_GOOD_HEL(STREAM_ID)
       IMPLICIT NONE
       INCLUDE 'genps.inc'
+      INCLUDE 'maxamps.inc'
       INTEGER STREAM_ID
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
+      LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC)
+      INTEGER NTRY(MAXFLAVPERPROC)
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
       READ(STREAM_ID,*) GOODHEL
-      NTRY = MAXTRIES + 1
+      NTRY(:) = MAXTRIES + 1
       RETURN
       END
 
       SUBROUTINE INIT_GOOD_HEL()
       IMPLICIT NONE
+      INCLUDE 'maxamps.inc'
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
-      LOGICAL GOODHEL(NCOMB)
-      INTEGER NTRY
+      LOGICAL GOODHEL(NCOMB, MAXFLAVPERPROC)
+      INTEGER NTRY(MAXFLAVPERPROC)
       INTEGER I
 
-      DO I=1,NCOMB
-        GOODHEL(I) = .FALSE.
-      ENDDO
-      NTRY = 0
+      GOODHEL(:,:) = .FALSE.
+      NTRY(:) = 0
       END
 
       INTEGER FUNCTION GET_MAXSPROC()

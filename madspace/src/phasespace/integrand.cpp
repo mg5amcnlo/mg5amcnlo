@@ -28,7 +28,8 @@ Integrand::Integrand(
     const std::vector<std::size_t>& channel_indices,
     const std::vector<std::size_t>& active_flavors,
     const std::vector<std::size_t>& flavor_remap,
-    const std::vector<double>& flavor_factors
+    const std::vector<double>& flavor_factors,
+    const std::vector<bool>& flavor_mirror
 ) :
     FunctionGenerator(
         "Integrand",
@@ -126,7 +127,8 @@ Integrand::Integrand(
         mapping.random_dim() +               // phasespace
         (mapping.channel_count() > 1) +      // symmetric channel
         (diff_xs.pid_options().size() > 1) + // flavor
-        diff_xs.has_mirror()                 // flipped initial state
+        // flipped initial state/
+        std::any_of(flavor_mirror.begin(), flavor_mirror.end(), std::identity{})
     ),
     _flavor_remap(flavor_remap.begin(), flavor_remap.end()),
     _flavor_factors(flavor_factors),
@@ -153,6 +155,12 @@ Integrand::Integrand(
         }
     }
 
+    _flavor_mirror.reserve(flavor_mirror.size());
+    _has_mirror = false;
+    for (bool mirror : flavor_mirror) {
+        _flavor_mirror.push_back(mirror ? 2 : 1);
+        _has_mirror |= mirror;
+    }
     _channel_part_ret_types = compute_channel_part_ret_types();
 }
 
@@ -191,7 +199,6 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     };
 
     bool has_multi_flavor = _diff_xs.pid_options().size() > 1;
-    bool has_mirror = _diff_xs.has_mirror();
     int particle_count = static_cast<int>(_mapping.particle_count());
     int random_dim = static_cast<int>(_mapping.random_dim());
 
@@ -206,12 +213,6 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     ret.push_back("chan_index_in_group", batch_int);
     if (!_madnis_training) {
         ret.push_back("momenta", batch_four_vec_array(particle_count));
-        if (has_mirror) {
-            ret.push_back("momenta_mirror", batch_four_vec_array(particle_count));
-        }
-    }
-    if (has_mirror) {
-        ret.push_back("mirror_id", batch_int);
     }
     if (_madnis_training) {
         ret.push_back("extra_weight_before_cuts", batch_float);
@@ -220,6 +221,12 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     // outputs after cuts
     ret.push_back("indices_acc", Type(DataType::dt_int, acc_batch_size, {}));
     ret.push_back("momenta_acc", acc_four_vec_array(particle_count));
+    if (_has_mirror) {
+        if (!_madnis_training) {
+            ret.push_back("momenta_mirror_acc", acc_four_vec_array(particle_count));
+        }
+        ret.push_back("mirror_id_acc", acc_int);
+    }
     ret.push_back("x1_acc", acc_float);
     ret.push_back("x2_acc", acc_float);
     ret.push_back("flavor_id", acc_int);
@@ -249,7 +256,6 @@ NamedVector<Value> Integrand::build_channel_part(
 ) const {
     bool has_multi_flavor = _diff_xs.pid_options().size() > 1;
     bool has_permutations = _mapping.channel_count() > 1;
-    bool has_mirror = _diff_xs.has_mirror();
     auto batch_size_val = args.at("batch_size");
 
     Value r = fb.random(batch_size_val, _random_dim);
@@ -268,7 +274,7 @@ NamedVector<Value> Integrand::build_channel_part(
         r = r_rest;
         flavor_random = r_val;
     }
-    if (has_mirror) {
+    if (_has_mirror) {
         auto [r_rest, r_val] = fb.pop(r);
         r = r_rest;
         mirror_random = r_val;
@@ -344,15 +350,6 @@ NamedVector<Value> Integrand::build_channel_part(
     Value momenta = mapping_result["momenta"];
     Value x0 = mapping_result["x1"];
     Value x1 = mapping_result["x2"];
-
-    Value momenta_mirror, mirror_id;
-    if (has_mirror) {
-        auto [index, mirror_det] =
-            fb.sample_discrete(mirror_random, static_cast<me_int_t>(2));
-        mirror_id = index;
-        momenta_mirror = fb.mirror_momenta(momenta, mirror_id);
-        weights_before_cuts.push_back(mirror_det);
-    }
 
     // Filter events that pass cuts
     Value weight_before_cuts = fb.product(weights_before_cuts);
@@ -462,6 +459,25 @@ NamedVector<Value> Integrand::build_channel_part(
         }
     }
 
+    Value momenta_mirror_acc, mirror_id_acc;
+    if (_has_mirror) {
+        Value option_count;
+        if (std::all_of(
+                _flavor_mirror.begin(), _flavor_mirror.end(), [](me_int_t mirror) {
+                    return mirror == 2;
+                }
+            )) {
+            option_count = static_cast<me_int_t>(2);
+        } else {
+            option_count = fb.gather_int(flavor_id, _flavor_mirror);
+        }
+        Value mirror_random_acc = fb.batch_gather(indices_acc, mirror_random);
+        auto [index, mirror_det] = fb.sample_discrete(mirror_random_acc, option_count);
+        mirror_id_acc = index;
+        momenta_mirror_acc = fb.mirror_momenta(momenta_acc, mirror_id_acc);
+        weights_after_cuts.push_back(mirror_det);
+    }
+
     Value weight_after_cuts = weights_after_cuts.empty()
         ? fb.full({1., batch_size_acc})
         : fb.product(weights_after_cuts);
@@ -480,12 +496,6 @@ NamedVector<Value> Integrand::build_channel_part(
     out.push_back("chan_index_in_group", chan_index_in_group);
     if (!_madnis_training) {
         out.push_back("momenta", momenta);
-        if (has_mirror) {
-            out.push_back("momenta_mirror", momenta_mirror);
-        }
-    }
-    if (has_mirror) {
-        out.push_back("mirror_id", mirror_id);
     }
     if (_madnis_training) {
         out.push_back("extra_weight_before_cuts", extra_weight_before_cuts);
@@ -494,6 +504,12 @@ NamedVector<Value> Integrand::build_channel_part(
     // outputs after cuts
     out.push_back("indices_acc", indices_acc);
     out.push_back("momenta_acc", momenta_acc);
+    if (_has_mirror) {
+        if (!_madnis_training) {
+            out.push_back("momenta_mirror_acc", momenta_mirror_acc);
+        }
+        out.push_back("mirror_id_acc", mirror_id_acc);
+    }
     out.push_back("x1_acc", x_acc.at(0));
     out.push_back("x2_acc", x_acc.at(1));
     out.push_back("flavor_id", flavor_id);
@@ -522,7 +538,6 @@ NamedVector<Value> Integrand::build_common_part(
 ) const {
     bool has_multi_flavor = _diff_xs.pid_options().size() > 1;
     bool has_permutations = _mapping.channel_count() > 1;
-    bool has_mirror = _diff_xs.has_mirror();
     bool has_pdf_prior =
         (_pdfs.at(0) || _pdfs.at(1)) && _energy_scale && has_multi_flavor;
 
@@ -568,9 +583,6 @@ NamedVector<Value> Integrand::build_common_part(
     xs_args.push_back(x1_acc);
     xs_args.push_back(x2_acc);
     xs_args.push_back(flavor_id);
-    if (has_mirror) {
-        xs_args.push_back(args.at("mirror_id"));
-    }
     if (_diff_xs.has_pdf(0)) {
         xs_args.push_back(args.at("pdf1"));
     }
@@ -702,10 +714,14 @@ NamedVector<Value> Integrand::build_common_part(
         }
     } else {
         outputs.push_back("weight", optional_cut(weight));
-        outputs.push_back(
-            "momenta",
-            optional_cut(has_mirror ? args.at("momenta_mirror") : args.at("momenta"))
-        );
+        if (_has_mirror) {
+            outputs.push_back(
+                "momenta",
+                scatter_or_drop(args.at("momenta"), args.at("momenta_mirror_acc"))
+            );
+        } else {
+            outputs.push_back("momenta", args.at("momenta"));
+        }
         auto zeros_int = fb.full({static_cast<me_int_t>(0), batch_size_val});
         auto zeros_float = fb.full({0., batch_size_val});
         outputs.push_back("color_index", scatter_or_drop(zeros_int, dxs_vec.at(2)));
