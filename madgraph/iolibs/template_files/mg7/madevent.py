@@ -1131,18 +1131,28 @@ class MadgraphSubprocess:
         madnis_args = self.process.run_card["madnis"]
         channels = []
         for channel_id, channel in enumerate(phasespace.channels):
+            prefix = f"subproc{self.subproc_id}.channel{channel_id}"
+            cond_dim = 0
+
             discrete_before = channel.discrete_before
             if discrete_before is not None:
-                #TODO: build discrete flows
-                pass
+                perm_count = channel.phasespace_mapping.channel_count()
+                discrete_before = ms.DiscreteFlow(
+                    option_counts=[perm_count],
+                    prefix=f"{prefix}.discrete_flow_before",
+                    dims_with_prior=[],
+                    condition_dim=0,
+                    subnet_hidden_dim=madnis_args["discrete_hidden_dim"],
+                    subnet_layers=madnis_args["discrete_layers"],
+                    subnet_activation=self.activation(madnis_args["discrete_activation"]),
+                )
+                discrete_before.initialize_globals(self.process.contexts[0])
+                cond_dim += perm_count
 
-            perm_count = channel.phasespace_mapping.channel_count()
-            #cond_dim = perm_count if perm_count > 1 else 0
             flow_dim = channel.phasespace_mapping.random_dim()
-            prefix = f"subproc{self.subproc_id}.channel{channel_id}"
             flow = ms.Flow(
                 input_dim=flow_dim,
-                condition_dim=0,
+                condition_dim=cond_dim,
                 prefix=prefix,
                 bin_count=madnis_args["flow_spline_bins"],
                 subnet_hidden_dim=madnis_args["flow_hidden_dim"],
@@ -1156,15 +1166,15 @@ class MadgraphSubprocess:
                 flow.initialize_from_vegas(
                     self.process.contexts[0], channel.adaptive_mapping.grid_name()
                 )
-            #cond_dim += flow_dim
+            cond_dim += flow_dim
 
             discrete_after = channel.discrete_after
             if discrete_after is not None:
                 discrete_after = ms.DiscreteFlow(
                     option_counts=[len(self.meta["flavors"])],
-                    prefix=f"{prefix}.discrete_after",
+                    prefix=f"{prefix}.discrete_flow_after",
                     dims_with_prior=[0],
-                    condition_dim=flow_dim,
+                    condition_dim=cond_dim,
                     subnet_hidden_dim=madnis_args["discrete_hidden_dim"],
                     subnet_layers=madnis_args["discrete_layers"],
                     subnet_activation=self.activation(madnis_args["discrete_activation"]),
@@ -1207,13 +1217,13 @@ class MadgraphSubprocess:
     def build_discrete(
         self, permutation_count: int, flavor_count: int, prefix: str
     ) -> tuple[ms.DiscreteSampler | None, ms.DiscreteSampler | None]:
-        #return None, None
         discrete_before = None
         #if permutation_count > 1:
         #    discrete_before = ms.DiscreteSampler(
         #        [permutation_count], f"{prefix}.discrete_before"
         #    )
-        #    discrete_before.initialize_globals(self.process.context)
+        #    for context in self.process.contexts:
+        #        discrete_before.initialize_globals(context)
         #else:
         #    discrete_before = None
 

@@ -315,13 +315,15 @@ NamedVector<Value> Integrand::build_channel_part(
                         weights_before_cuts.push_back(discrete_result["det"]);
                     }
                     adaptive_probs.push_back(discrete_result["det"]);
+                    flow_conditions.push_back(
+                        fb.one_hot(chan_index_in_group, opt_count)
+                    );
                 }
             },
             _discrete_before
         );
         chan_index = fb.gather_int(chan_index_in_group, _channel_indices);
         mapping_conditions.push_back(chan_index_in_group);
-        // flow_conditions.push_back(fb.one_hot(chan_index_in_group, opt_count));
     } else {
         chan_index =
             fb.full({static_cast<me_int_t>(_channel_indices.at(0)), batch_size_val});
@@ -994,6 +996,9 @@ NamedVector<Value> IntegrandProbability::build_function_impl(
                     auto discrete_result =
                         discrete_before.build_inverse(fb, {chan_index}, {});
                     probs.push_back(discrete_result["det"]);
+                    flow_conditions.push_back(fb.one_hot(
+                        chan_index, static_cast<me_int_t>(_permutation_count)
+                    ));
                 }
             },
             _discrete_before

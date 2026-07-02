@@ -54,11 +54,8 @@ KERNELSPEC void
 kernel_gather_vector(IIn<T, 0> index, FIn<T, 2> choices, FOut<T, 1> output) {
     auto choice_i = choices[index];
     for (std::size_t j = 0; j < output.size(); ++j) {
-        // println("index={}, size={}, j={}, choice={}", static_cast<me_int_t>(index),
-        // choices.size(), j, static_cast<double>(choice_i[j]));
         output[j] = choice_i[j];
     }
-    // println("---");
 }
 
 template <typename T>
