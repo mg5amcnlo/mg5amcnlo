@@ -214,3 +214,13 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # contraction).  Must agree bit-for-bit with the standard standalone.
     test_unrolhel_aa_wpwm = unrolhel_consistency_test_factory(
         'a a > w+ w-', model='sm')
+
+    # 2 -> 5 process: large helicity space (NCOMB=288), many diagrams and a deep
+    # wavefunction chain -- exercises the good-helicity warmup/masking and the
+    # per-wavefunction cartesian indexing at scale, well beyond the 2 -> 4 cases
+    # above.  Single-flavor (no merge), so it must agree bit-for-bit.
+    # NOTE: the *merged*-flavor 2 -> 5 case (e.g. q q > w+ w- q q g with a
+    # multi-flavor q) currently disagrees with the standard standalone by ~1-4%;
+    # that is a separate, pre-existing bug and is intentionally NOT covered here.
+    test_unrolhel_uu_wpwmuug = unrolhel_consistency_test_factory(
+        'u u > w+ w- u u g', model='sm')
