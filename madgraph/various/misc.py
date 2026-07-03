@@ -802,7 +802,8 @@ def stdchannel_redirected(stdchannel, dest_filename):
             logger.debug('no stdout/stderr redirection due to debug level')
             yield
         finally:
-            return
+            pass
+        return
         
         
 def get_open_fds():
