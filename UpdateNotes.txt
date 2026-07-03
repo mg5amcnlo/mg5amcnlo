@@ -4,6 +4,11 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+3.5.16 (3/6/26):
+  OM: fix a crash with systematics when original pdf was not detected
+  OM: fix some loop-induced compilation issue
+  OM: avoid new Python syntax warning
+
 3.5.15 (17/4/26):
   OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
   OM: Additional fix related to the matchbox template
