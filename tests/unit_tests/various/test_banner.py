@@ -1163,6 +1163,76 @@ c
         self.assertIn("True = fixed_fac_scale2", f.getvalue())
 
 
+    def test_negative_iseed(self):
+        """Check that a negative iseed is preserved on disk across runs but
+        exported as its absolute value to the Fortran include file. This is
+        verified for both LO and NLO run cards, and for the
+        `reset_iseed_in_run_card` helper used at run time.
+        """
+        import madgraph.interface.common_run_interface as common_run
+
+        for run_card_class in (bannermod.RunCardLO, bannermod.RunCardNLO):
+            # 1. write_include_file must export abs(iseed)
+            run_card = run_card_class()
+            run_card.set('iseed', -42, user=True)
+            f = io.StringIO()
+            run_card.write_include_file(None, output_file=f)
+            content = f.getvalue()
+            self.assertIn("iseed = 42", content)
+            self.assertNotIn("iseed = -42", content)
+
+            # positive value is unchanged
+            run_card = run_card_class()
+            run_card.set('iseed', 7, user=True)
+            f = io.StringIO()
+            run_card.write_include_file(None, output_file=f)
+            self.assertIn("iseed = 7", content := f.getvalue())
+            self.assertNotIn("iseed = -7", content)
+
+            # 2. reset_iseed_in_run_card preserves negative iseed on disk
+            #    but resets a positive iseed to 0
+            me_dir = tempfile.mkdtemp(prefix='amc_iseed_')
+            os.mkdir(pjoin(me_dir, 'Cards'))
+            try:
+                # negative case: must NOT be reset to 0
+                run_card = run_card_class()
+                run_card.set('iseed', -42, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+
+                class FakeCmd:
+                    pass
+                fake = FakeCmd()
+                fake.run_card = run_card
+                fake.me_dir = me_dir
+
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], -42)
+                # also check the on-disk value
+                reloaded = bannermod.RunCard(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                self.assertEqual(reloaded['iseed'], -42)
+
+                # positive case: must be reset to 0
+                run_card = run_card_class()
+                run_card.set('iseed', 7, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                fake.run_card = run_card
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], 0)
+                reloaded = bannermod.RunCard(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                self.assertEqual(reloaded['iseed'], 0)
+
+                # zero case: nothing happens, stays at zero
+                run_card = run_card_class()
+                run_card.set('iseed', 0, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                fake.run_card = run_card
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], 0)
+            finally:
+                import shutil
+                shutil.rmtree(me_dir)
+
+
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
     """ A class to test the MadLoopParam functionality """
