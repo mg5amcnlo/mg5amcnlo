@@ -5662,32 +5662,38 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if not allowed_flavors:
             return []
 
-        # 1) Per-diagram mask via existing diag.check_flavor primitive.
-        # IMPORTANT: diag.check_flavor only resets the 'flavortag' attribute on
-        # *its own* wavefunctions+amplitudes. propagate_flavor_tag then reads
-        # mothers' flavortag and trusts it as up-to-date. When a diagram's
-        # amplitude has a mother wavefunction owned by a *different* diagram
-        # (cross-diagram dependency via the reuse_outdated_wavefunctions
-        # graph), that mother retains the flavortag from whichever flavor we
-        # last checked it against — producing the WRONG answer here.
+        # 1) Per-diagram mask.
+        # We never call HelasDiagram.check_flavor directly here: that primitive
+        # re-clears (and recomputes) the flavortag of its whole ancestor closure
+        # on every call, which is wasteful when the same wavefunctions and
+        # propagators are shared across diagrams.  Instead we go through the
+        # HelasMatrixElement-level check_flavor_for_all_diagrams, which clears the
+        # flavortag state exactly once per flavor and then tags every compatible
+        # diagram (has_flavor=True), letting diagrams reuse each other's
+        # already-computed flavor information within a given flavor.
         #
-        # Fix: clear flavortag globally before each diagram check so every
-        # check starts from a clean slate. The cost is O(N_wfs) per check,
-        # which is negligible at generation time.
-        all_wfs_amps = self.get_all_wavefunctions() + self.get_all_amplitudes()
+        # check_flavor_for_all_diagrams is cumulative (it skips diagrams already
+        # flagged), so to recover the *per-flavor* active-diagram set we reset the
+        # has_flavor flags before each flavor and read them back afterwards.
         for diag in self.get('diagrams'):
-            diag_mask = 0
-            for flav_idx, flavor in enumerate(allowed_flavors):
-                for wfct in all_wfs_amps:
-                    try:
-                        del wfct['flavortag']
-                    except Exception:
-                        pass
-                if diag.check_flavor(flavor, model):
-                    diag_mask |= (1 << flav_idx)
-            diag['flavor_mask'] = diag_mask
+            diag['flavor_mask'] = 0
+
+        for flav_idx, flavor in enumerate(allowed_flavors):
+            self.reset_has_flavor()
+            self.check_flavor_for_all_diagrams(flavor, model)
+            bit = 1 << flav_idx
+            for diag in self.get('diagrams'):
+                if diag.has_flavor:
+                    diag['flavor_mask'] |= bit
+
+        # The per-flavor loop above leaves has_flavor reflecting only the last
+        # flavor.  This is not a trimming pass, so restore has_flavor to the
+        # union state (a diagram is active iff it contributes to some flavor) to
+        # keep it consistent for any later remove_diagrams_without_flavor call.
+        for diag in self.get('diagrams'):
+            diag.has_flavor = bool(diag['flavor_mask'])
             for amp in diag.get('amplitudes'):
-                amp['flavor_mask'] = diag_mask
+                amp['flavor_mask'] = diag['flavor_mask']
 
         # 2) Initialise every wavefunction mask to 0, then OR each amplitude's
         # mask into all reachable ancestor wavefunctions via the 'mothers'
