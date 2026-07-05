@@ -703,7 +703,7 @@ jobs:
       - name: process_checks unit tests not previously covered
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
+            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_fd_python_value_matches_unitary_fixed_point test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
 
 
   unittest_32:
