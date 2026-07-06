@@ -51,6 +51,19 @@ import madspace as ms
 from models.check_param_card import ParamCard
 from madgraph.various import misc
 
+_source_hash = subprocess.run(
+    [sys.executable, str(_MADSPACE_DIR / "source_hash.py")],
+    capture_output=True, text=True, check=True,
+).stdout.strip()
+if _source_hash != ms.SOURCE_HASH:
+    print()
+    print(
+        "\033[1m\033[31mWARNING\033[39m: madspace source and installed binaries "
+        "are not compatible (source hash mismatch) — consider recompiling "
+        "madspace\033[0m"
+    )
+    print()
+
 logger = logging.getLogger("madevent7")
 
 
@@ -758,6 +771,7 @@ max_cut_repetitions = {self.run_card["generation"]["max_cut_repetitions"]}
         data = {
             "channels": channel_files,
             "matrix_elements": matrix_elements,
+            "source_hash": ms.SOURCE_HASH,
         }
         with open(os.path.join(data_path, "data.json"), "w") as f:
             json.dump(data, f)

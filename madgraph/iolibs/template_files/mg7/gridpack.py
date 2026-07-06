@@ -16,6 +16,14 @@ def main() -> None:
     param_card_path = os.path.join("Cards", "param_card.dat")
     with open(os.path.join("data", "data.json")) as f:
         madspace_data = json.load(f)
+    if madspace_data["source_hash"] != ms.SOURCE_HASH:
+        print()
+        print(
+            "\033[1m\033[31mWARNING\033[39m: The madspace version is not identical "
+            "to the one used to generate the gridpack. This can lead to errors or "
+            "incorrect results\033[0m"
+        )
+        print()
 
     # parse command line arguments
     parser = argparse.ArgumentParser()
