@@ -14,8 +14,11 @@ combine_thread_pool_size = -1
 output_format = "compact_npy" # options: compact_npy, lhe_npy, lhe
 verbosity = "pretty" # options: silent, pretty, log
 dummy_matrix_element = false
+
+[gridpack]
 save_gridpack = false
-gridpack_include_source = false
+include_source = false
+include_madspace = true
 
 [beam]
 e_cm = 13000.0

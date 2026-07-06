@@ -1,7 +1,15 @@
 #! /usr/bin/env python3
 
-import madspace as ms
 import os
+import sys
+from pathlib import Path
+
+# prefer madspace included in gridpack over system-wide package
+_GRIDPACK_DIR = Path(os.path.realpath(__file__)).parent.parent
+if (_GRIDPACK_DIR / "madspace").is_dir():
+    sys.path.insert(0, str(_GRIDPACK_DIR))
+
+import madspace as ms
 import glob
 import json
 import tomllib

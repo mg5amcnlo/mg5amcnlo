@@ -697,7 +697,7 @@ class MadgraphProcess:
         )
 
     def save_gridpack(self) -> None:
-        if not self.run_card["run"]["save_gridpack"]:
+        if not self.run_card["gridpack"]["save_gridpack"]:
             return
 
         gridpack_path = os.path.join(self.run_path, "gridpack")
@@ -718,12 +718,17 @@ class MadgraphProcess:
             channel.save(os.path.join(channel_path, file))
 
         lib_path = os.path.join(gridpack_path, "lib")
-        if self.run_card["run"]["gridpack_include_source"]:
+        if self.run_card["gridpack"]["include_source"]:
             os.mkdir(lib_path)
             shutil.copytree("src", os.path.join(gridpack_path, "src"))
             shutil.copytree("SubProcesses", os.path.join(gridpack_path, "SubProcesses"))
         else:
             shutil.copytree("lib", lib_path)
+
+        if self.run_card["gridpack"]["include_madspace"]:
+            shutil.copytree(
+                _INSTALL_DIR / "madspace", os.path.join(gridpack_path, "madspace")
+            )
 
         matrix_elements = []
         for subproc in self.subprocess_data:
