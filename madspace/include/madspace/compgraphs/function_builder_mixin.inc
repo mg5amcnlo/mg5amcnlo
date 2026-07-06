@@ -300,23 +300,33 @@ std::array<Value, 3> t_inv_value_and_min_max(Value pa, Value pb, Value p1, Value
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 
-std::array<Value, 2> t1_inv_min_max_doublet(Value pa, Value pb, Value m1, Value mir_min) {
-    auto output_vector = instruction("t1_inv_min_max_doublet", {pa, pb, m1, mir_min});
+std::array<Value, 2> t_inv_min_max_cut(Value pa, Value pb, Value m1, Value m2, Value etmin_1, Value etmin_2) {
+    auto output_vector = instruction("t_inv_min_max_cut", {pa, pb, m1, m2, etmin_1, etmin_2});
     return {output_vector[0], output_vector[1]};
 }
 
-std::array<Value, 3> t1_inv_value_and_min_max_doublet(Value pa, Value pb, Value p1, Value m1, Value mir_min) {
-    auto output_vector = instruction("t1_inv_value_and_min_max_doublet", {pa, pb, p1, m1, mir_min});
+std::array<Value, 3> t_inv_value_and_min_max_cut(Value pa, Value pb, Value p1, Value p2, Value etmin_1, Value etmin_2) {
+    auto output_vector = instruction("t_inv_value_and_min_max_cut", {pa, pb, p1, p2, etmin_1, etmin_2});
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 
-std::array<Value, 2> t2_inv_min_max_doublet(Value pa, Value pb, Value m1, Value mir_min, Value t1_abs) {
-    auto output_vector = instruction("t2_inv_min_max_doublet", {pa, pb, m1, mir_min, t1_abs});
+std::array<Value, 2> t1_inv_min_max_doublet(Value pa, Value pb, Value m1, Value mir_min, Value etmin_i, Value etmin_ir) {
+    auto output_vector = instruction("t1_inv_min_max_doublet", {pa, pb, m1, mir_min, etmin_i, etmin_ir});
     return {output_vector[0], output_vector[1]};
 }
 
-std::array<Value, 3> t2_inv_value_and_min_max_doublet(Value pa, Value pb, Value p1, Value m1, Value mir_min, Value t1_abs) {
-    auto output_vector = instruction("t2_inv_value_and_min_max_doublet", {pa, pb, p1, m1, mir_min, t1_abs});
+std::array<Value, 3> t1_inv_value_and_min_max_doublet(Value pa, Value pb, Value p1, Value m1, Value mir_min, Value etmin_i, Value etmin_ir) {
+    auto output_vector = instruction("t1_inv_value_and_min_max_doublet", {pa, pb, p1, m1, mir_min, etmin_i, etmin_ir});
+    return {output_vector[0], output_vector[1], output_vector[2]};
+}
+
+std::array<Value, 2> t2_inv_min_max_doublet(Value pa, Value pb, Value m1, Value mir_min, Value t1_abs, Value etmin_i, Value etmin_ir) {
+    auto output_vector = instruction("t2_inv_min_max_doublet", {pa, pb, m1, mir_min, t1_abs, etmin_i, etmin_ir});
+    return {output_vector[0], output_vector[1]};
+}
+
+std::array<Value, 3> t2_inv_value_and_min_max_doublet(Value pa, Value pb, Value p1, Value m1, Value mir_min, Value t1_abs, Value etmin_i, Value etmin_ir) {
+    auto output_vector = instruction("t2_inv_value_and_min_max_doublet", {pa, pb, p1, m1, mir_min, t1_abs, etmin_i, etmin_ir});
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 
@@ -327,6 +337,16 @@ std::array<Value, 2> s23_min_max(Value pa, Value pb, Value p3, Value t1_abs, Val
 
 std::array<Value, 3> s23_value_and_min_max(Value pa, Value pb, Value p3, Value t1_abs, Value p1, Value p2) {
     auto output_vector = instruction("s23_value_and_min_max", {pa, pb, p3, t1_abs, p1, p2});
+    return {output_vector[0], output_vector[1], output_vector[2]};
+}
+
+std::array<Value, 2> s23_min_max_cut(Value pa, Value pb, Value p3, Value t1_abs, Value m1, Value m2, Value etmin_1, Value etmin_2, Value drcut, Value s23_min_cut) {
+    auto output_vector = instruction("s23_min_max_cut", {pa, pb, p3, t1_abs, m1, m2, etmin_1, etmin_2, drcut, s23_min_cut});
+    return {output_vector[0], output_vector[1]};
+}
+
+std::array<Value, 3> s23_value_and_min_max_cut(Value pa, Value pb, Value p3, Value t1_abs, Value p1, Value p2, Value etmin_1, Value etmin_2, Value drcut, Value s23_min_cut) {
+    auto output_vector = instruction("s23_value_and_min_max_cut", {pa, pb, p3, t1_abs, p1, p2, etmin_1, etmin_2, drcut, s23_min_cut});
     return {output_vector[0], output_vector[1], output_vector[2]};
 }
 
