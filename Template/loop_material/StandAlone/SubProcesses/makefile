@@ -113,8 +113,8 @@ $(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 $(DOTO) : $(DOTF)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
 
-$(OLP): $(OLP_PROCESS) $(LIBS) 
-	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)
+$(OLP): $(OLP_PROCESS) $(LIBS) mg5_citation.o
+	$(FC) -shared $(OLP_PROCESS) mg5_citation.o -o libMadLoop.$(dylibext) $(LINKLIBS)
 
 $(OLP)_static: $(OLP_PROCESS)
 	ar rcs libMadLoop.$(libext) $(OLP_PROCESS)
