@@ -19,6 +19,7 @@ dummy_matrix_element = false
 save_gridpack = false
 include_source = false
 include_madspace = true
+include_madspace_source = false
 
 [beam]
 e_cm = 13000.0

@@ -1,13 +1,29 @@
 #! /usr/bin/env python3
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
-# prefer madspace included in gridpack over system-wide package
+# search order for madspace package:
+#   1. a precompiled install (madspace/install/madspace)
+#   2. bundled source that still needs to be built (madspace/install.py)
+#   3. otherwise fall back to madspace is available in the environment
 _GRIDPACK_DIR = Path(os.path.realpath(__file__)).parent.parent
-if (_GRIDPACK_DIR / "madspace").is_dir():
-    sys.path.insert(0, str(_GRIDPACK_DIR))
+_LOCAL_MADSPACE_DIR = _GRIDPACK_DIR / "madspace"
+_LOCAL_INSTALL_DIR = _LOCAL_MADSPACE_DIR / "install"
+if (_LOCAL_INSTALL_DIR / "madspace").is_dir():
+    sys.path.insert(0, str(_LOCAL_INSTALL_DIR))
+elif (_LOCAL_MADSPACE_DIR / "install.py").is_file():
+    print()
+    print("You don't have madspace installed for this gridpack")
+    print("Running interactive madspace installation script")
+    print()
+
+    _result = subprocess.run([sys.executable, str(_LOCAL_MADSPACE_DIR / "install.py")])
+    if _result.returncode != 0:
+        raise RuntimeError("madspace installation failed — see output above")
+    sys.path.insert(0, str(_LOCAL_INSTALL_DIR))
 
 import madspace as ms
 import glob
