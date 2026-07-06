@@ -34,6 +34,8 @@ C integer    n_max_cg
       INCLUDE "ngraphs.inc" 
       include "nsquaredSO.inc"
 
+      include 'MadLoopParams.inc'
+
 C     
 C     LOCAL
 C     
@@ -54,6 +56,25 @@ C sqrt(s)= center of mass energy
       DATA INIT/.TRUE./
       COMMON/INITCHECKSA/INIT
 
+      INTEGER NLOOPFLOWS
+      PARAMETER (NLOOPFLOWS=1)
+      INTEGER NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+      INTEGER N_CHANGING
+      PARAMETER (N_CHANGING=2)
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i)
+      INTEGER H
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      DOUBLE PRECISION ALPHAS, MU_R2
+
+      double complex INTER_DENS(0:3,0:NSQUAREDSO)
+      DOUBLE COMPLEX RMATRIX((N_COMB_RHO*(N_COMB_RHO+1))/2, 0:NSQUAREDSO)
+      double precision RES(0:3,0:NSQUAREDSO), SUM_INT
+      integer HEL_MULT
+      parameter (HEL_MULT = 1)
+      integer H1, H2
+
 C
 C     GLOBAL VARIABLES
 C
@@ -73,7 +94,6 @@ C
       
       INTEGER NHEL(NEXTERNAL)
       INTEGER, allocatable :: POS(:)
-      INTEGER N_CHANGING, N_COMB
       INTEGER, allocatable :: allow_hel(:) 
       double complex, allocatable :: INTER(:)
       integer sol
@@ -203,45 +223,11 @@ C
 C     Now we can call the matrix element
 C
       CALL %(proc_prefix)sSLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
-C
-C        write the information on the four momenta 
-C
 
-C     YOU CAN EDIT THOSE NUMBERS
-      N_CHANGING =1
-      N_COMB=2
-
-      allocate( POS(N_CHANGING))
-      allocate( ALLOW_HEL(N_CHANGING*N_COMB))
-      allocate(INTER(N_COMB*(N_COMB+1)/2))
-
-c     THIS IS PROCESS SPECIFIC -> need to be tuned... 
-      NHEL(1) = 1
-      NHEL(2) = -1
-      NHEL(3) = 1
-      NHEL(4) = -1
-      ALLOW_HEL(1) = 1
-      ALLOW_HEL(2) = -1
-      POS(1) = 3
-
-      CALL %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
-
-        NB_INTER=0
-        DO I=1, N_COMB
-           DO J = I, N_COMB
-              NB_INTER = NB_INTER + 1
-              DO L=1, N_CHANGING
-                 WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((I-1)*N_CHANGING+K), ALLOW_HEL((J-1)*N_CHANGING+K)
-             ENDDO
-              write(*,*) 'value is ',NB_INTER , INTER(NB_INTER)
-           ENDDO
-        ENDDO
+      CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES,HEL_MULT)
+C      WRITE(*,*) "%(proc_prefix)sCOMPUTE_RES_FROM_JAMP", RES(1:3,0)
 
 
-
-      deallocate (POS)
-      deallocate(ALLOW_HEL)
-      deallocate(INTER)
       if (K.eq.NPSPOINTS) then
       write (*,*)
       write (*,*) " Phase space point:"
@@ -299,8 +285,14 @@ c     THIS IS PROCESS SPECIFIC -> need to be tuned...
       write (*,*) "---------------------------------"
       write (*,*) "Matrix element finite = ", MATELEM(1,0), " GeV^",-(2*nexternal-8)
       write (*,*) "---------------------------------"
-
-
+## if(UseDensity) {
+      IF ((HelicityFilterLevel.eq.0).OR.(HelicityFilterLevel.eq.1)) THEN
+        write (*,*) "Spin-density matrix (non normalised)."
+        write (*,*) "Only the independent coefficients are calculated."
+        write (*,*) "---------------------------------"
+      call get_density_matrix(P, RMATRIX)
+      ENDIF
+## }
       open(69, file="result.dat", err=976, action='WRITE')
       do i=1,nexternal      
           write (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
@@ -317,7 +309,14 @@ c     THIS IS PROCESS SPECIFIC -> need to be tuned...
       write (69,*) 'Born_kept F'
       write (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1,NSQUAREDSO)
       %(write_so_born_results)s
-      %(write_so_loop_results)s   
+      %(write_so_loop_results)s
+
+## if(UseDensity) {
+c      write(*,*) "RHO written", RMATRIX(:, 0)
+      IF ((HelicityFilterLevel.eq.0).OR.(HelicityFilterLevel.eq.1)) THEN
+        write (69,*) "RHO", RMATRIX(:, 0)
+      ENDIF
+## }
       close(69)
       else
           write (*,*) "PS Point #",K," done."
@@ -357,9 +356,91 @@ C      &-(2*nexternal-8)
 C      write (*,*) "-------------------------------------------------"
 
       end
+
+## if(UseDensity) {
+
+      SUBROUTINE get_density_trace(TRACE, RHO)
+C     This subrouitne allows to compute the trace of a density matrix to
+C     check that is is equal to the matrix element
+      implicit none
+      include "nsquaredSO.inc"
+
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i)
+
+
+      DOUBLE COMPLEX RHO((N_COMB_RHO*(N_COMB_RHO+1))/2)
+      DOUBLE PRECISION TRACE
+
+      INTEGER COUNTER, IDIAG, I
+      INTEGER DIAG_INDICES(N_COMB_RHO)
+
+      COUNTER = 0
+      DO IDIAG = 1, N_COMB_RHO
+        DIAG_INDICES(IDIAG) = (IDIAG-1) * N_COMB_RHO - COUNTER + 1
+        COUNTER = COUNTER + (IDIAG-1)
+      ENDDO
+
+      TRACE = 0
+      DO I = 1, N_COMB_RHO
+        TRACE = TRACE + DREAL(RHO(DIAG_INDICES(I)))
+      ENDDO
+      END
       
+      SUBROUTINE get_density_matrix(P, RMATRIX)
+      implicit none
+
+      %(include_vector)s
+      INCLUDE "coupl.inc"
+      include "nsquaredSO.inc"
+
+      INTEGER N_CHANGING
+      PARAMETER (N_CHANGING=%(dens_nchanging)i)
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i) ! total number of different helicity combination to consider
+      INTEGER NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+
+      INTEGER POS(N_CHANGING)
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB_RHO)
+      DOUBLE COMPLEX RMATRIX((N_COMB_RHO*(N_COMB_RHO+1))/2)
+      REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+
+      INTEGER I,J,K,SOL
+      DOUBLE PRECISION ALPHAS, MU_R2
+      DOUBLE PRECISION TRACE
+
+      %(dens_pos)s
+
+c      density matrix helicity index value for particle
+      %(dens_allow_hel)s
+
+C     We take the values of alpha_s and mu_r from the param card
+      ALPHAS = (G/2)**2/3.14159265358979323846d0
+      MU_R2 = MU_R**2
+
+      CALL %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB_RHO, ALPHAS, MU_R2, RMATRIX)
+
+      CALL get_density_trace(TRACE, RMATRIX)
+
+      write(*,*) "Trace of the non-normalised spin-density matrix =", TRACE
+      write(*,*) "It should be equal to the matrix element"
+      write (*,*) "---------------------------------"
+
+      SOL=0
+      DO I=1, N_COMB_RHO
+         DO J = I, N_COMB_RHO
+            SOL= SOL + 1
+            DO K =1, N_CHANGING
+               WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((I-1)*N_CHANGING+K), ALLOW_HEL((J-1)*N_CHANGING+K)
+           ENDDO
+            write(*,*) 'value is ',SOL , RMATRIX(SOL)
+         ENDDO
+      ENDDO
+      return
+      END
         
-        
+## }        
         
          double precision function dot(p1,p2)
 C *************************************************************

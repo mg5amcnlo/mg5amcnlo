@@ -5576,7 +5576,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             })
         
         self.special_shortcut_help.update({
-            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
+            'spinmode' : 'PA|madspin|onshell|none|full|madspin_v1|onshell_v1. Choose the MadSpin spinmode.\n   - PA: spin correlation and off-shell effects with a pure Breit-Wigner\n  - madspin: spin correlation and off-shell effects with off-shell matrix elements\n  - onshell: spin correlation without off-shell effects\n  - none: no spin correlation and no off-shell effects\n  - full: same as madspin',
             'nodecay': 'remove all decay previously defined in madspin',
             'no_madspin_options': 'remove all options previously defined in madspin',
              })
@@ -8317,6 +8317,5 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
 
         return new_fct
     return decorator    
-
 
 

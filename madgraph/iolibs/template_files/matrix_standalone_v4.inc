@@ -409,7 +409,8 @@ CF2PY INTENT(IN) :: JAMP_2
       PARAMETER (NCOLOR=%(ncolor)d)
       INTEGER CF_INDEX
       INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
-      INTEGER %(proc_prefix)sDENOM
+      INTEGER %(proc_prefix)sDENOM, IDEN
+      %(den_factor_line)s
       common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
       COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),INTER
 
@@ -425,19 +426,19 @@ C        ZTEMP = DCONJG(JAMP_2(I))
           INTER = INTER + %(proc_prefix)sCF(CF_INDEX) * (JAMP_1(J) * DCONJG(JAMP_2(I)) +JAMP_1(I) * DCONJG(JAMP_2(J)))
         ENDDO
       ENDDO
-      INTER = INTER/ (2d0*%(proc_prefix)sDENOM)
+      INTER = INTER/ (2d0*%(proc_prefix)sDENOM*IDEN)
 
       END
 
 
 
-      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)
+      SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
 c     P momenta
 c     NHEL base of helicity that are not changing
 c     POS(N_CHNGING): position of the changing helicity
 c     n_changing: number of changing helicity
 c     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to consider (all jamp computed)
-c     INTER((NCOMB*NCOMB+1)/2: all interference term (not the symmetric one)
+c     INTER(NCOMB*(NCOMB+1)/2): all interference term (not the symmetric one)
       use model_object
       implicit none
 CF2PY INTENT(IN) :: P(0:3,%(nexternal)d)
@@ -447,7 +448,9 @@ CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY INTENT(IN) :: N_COMB
 CF2PY INTENT(IN) :: FLAVOR(%(nexternal)d)
 CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: SCALE2
 CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
+C  SCALE2 is a dummy argument added to have the same syntax as in loop-induced
 c
 C
 C ARGUMENTS
@@ -460,7 +463,7 @@ C
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
       INTEGER FLAVOR(NEXTERNAL)
-      DOUBLE PRECISION ALPHAS
+      DOUBLE PRECISION ALPHAS, SCALE2
       DOUBLE COMPLEX INTER(*)
       INTEGER NINTER
       INTEGER NB_NHEL
@@ -470,7 +473,7 @@ c LOCAL
       INTEGER I,IHEL,IPART
       DOUBLE PRECISION PI
 C
-      INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
+      INTEGER NHEL(NEXTERNAL,NB_NHEL)
 C     put in common block to expose this variable to python interface
       COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL
 C

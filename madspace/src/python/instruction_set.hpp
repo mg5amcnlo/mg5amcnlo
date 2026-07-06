@@ -148,6 +148,7 @@ void add_instructions(py::classh<FunctionBuilder>& fb) {
     fb.def("permute_momenta", &FunctionBuilder::permute_momenta, py::arg("momenta"), py::arg("permutations"), py::arg("index"));
     fb.def("gather", &FunctionBuilder::gather, py::arg("index"), py::arg("choices"));
     fb.def("gather_int", &FunctionBuilder::gather_int, py::arg("index"), py::arg("choices"));
+    fb.def("gather_vector", &FunctionBuilder::gather_vector, py::arg("index"), py::arg("choices"));
     fb.def("select_int", &FunctionBuilder::select_int, py::arg("input"), py::arg("indices"));
     fb.def("select", &FunctionBuilder::select, py::arg("input"), py::arg("indices"));
     fb.def("select_vector", &FunctionBuilder::select_vector, py::arg("input"), py::arg("indices"));

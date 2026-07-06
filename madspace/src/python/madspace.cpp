@@ -1229,7 +1229,7 @@ PYBIND11_MODULE(_madspace_py, m) {
                 bool,
                 bool,
                 const std::vector<std::size_t>&,
-                const std::vector<std::size_t>&,
+                const nested_vector2<std::size_t>&,
                 const std::vector<std::size_t>&,
                 const std::vector<double>&,
                 const std::vector<bool>&>(),
@@ -1250,7 +1250,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("drop_cuts_and_rescale") = false,
             py::arg("partial_weights") = false,
             py::arg("channel_indices") = std::vector<std::size_t>{},
-            py::arg("active_flavors") = std::vector<std::size_t>{},
+            py::arg("active_flavors") = nested_vector2<std::size_t>{},
             py::arg("flavor_remap") = std::vector<std::size_t>{},
             py::arg("flavor_factors") = std::vector<double>{},
             py::arg("flavor_mirror") = std::vector<bool>{}

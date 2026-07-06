@@ -36,7 +36,7 @@ void LHEEvent::format_to(std::string& buffer) const {
     for (auto particle : particles) {
         std::format_to(
             insert_iter,
-            "{:4} {:4} {:4} {:4} {:4} {:4} {:+.10e} {:+.10e} {:+.10e} {:.10e} {:.10e} "
+            "{:4} {:4} {:4} {:4} {:4} {:4} {:+.16e} {:+.16e} {:+.16e} {:.16e} {:.16e} "
             "{:.4e} {:+.4e}\n",
             particle.pdg_id,
             particle.status_code,

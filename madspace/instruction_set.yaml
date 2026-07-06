@@ -2564,6 +2564,20 @@ gather_int:
       type: [int]
       desc:
 
+gather_vector:
+  inputs:
+    - name: index
+      type: [int]
+      desc:
+    - name: choices
+      type: [float, n, m]
+      desc:
+  outputs:
+    - name: output
+      type: [float, m]
+      desc:
+  vectorized: False
+
 select_int:
   inputs:
     - name: input

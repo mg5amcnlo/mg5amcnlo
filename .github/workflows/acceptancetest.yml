@@ -1078,89 +1078,89 @@ jobs:
             ./tests/test_manager.py test_split_evt_gen -pA -t0 -l INFO
 
 
-acceptancetest_100:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/checkout_mg5 
-    - uses: ./.github/actions/restore-pip-cache
-    - name: test one of the test testIO_gnuplot_histo_output
-      run: |
+  acceptancetest_100:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test one of the test testIO_gnuplot_histo_output
+        run: |
           cd $GITHUB_WORKSPACE
           ./tests/test_manager.py testIO_gnuplot_histo_output -pA -t0 -l INFO
 
-acceptancetest_100_2:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/checkout_mg5 
-    - uses: ./.github/actions/restore-pip-cache
-    - uses: ./.github/actions/restore_heptools
-    - name: test one of the test test_loop_improved_reweighting
-      run: |
-          cd $GITHUB_WORKSPACE
-          sudo apt install pigz
-          ./tests/test_manager.py test_loop_improved_reweighting -pA -t0 -l INFO --debug
-
-acceptancetest_101:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/checkout_mg5 
-    - uses: ./.github/actions/restore_all
-    - name: test one of the test test_loop_improved_reweighting
-      run: |
-          cd $GITHUB_WORKSPACE
-          ./tests/test_manager.py test_nlo_output2 -pA -t0 -l INFO
-
-acceptancetest_102:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/checkout_mg5 
-    - uses: ./.github/actions/restore-pip-cache
-    - uses: ./.github/actions/restore_heptools
-    - name: Install Meson and Ninja
-      run: |
-         sudo apt-get update
-         sudo apt-get install -y meson ninja-build
-    - name: test one of the test test_loop_improved_reweighting
-      run: |
-          cd $GITHUB_WORKSPACE
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib
-          export PYTHONPATH=$PYTHONPATH:~/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages
-          export PYTHONPATH=$PYTHONPATH:~/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages
-          ./tests/test_manager.py test_nlo_reweighting -pA -t0 -l INFO
-
-acceptancetest_104:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/checkout_mg5
-    - uses: ./.github/actions/restore-pip-cache
-    - uses: ./.github/actions/restore_all
-    - name: test loop-induced gg>h cross-section
-      run: |
-          cd $GITHUB_WORKSPACE
-          ./tests/test_manager.py test_loop_induced_ggh -pA -t0 -l INFO
-
-acceptancetest_103_polarization:
-  runs-on: ubuntu-24.04
-  if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-  steps:
-    # kept previous version (checkout@v2)
-    - uses: actions/checkout@v2
-    - name: test one of the test test_polarization_top_decay
-      run: |
-          cd $GITHUB_WORKSPACE
-          cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-          ./tests/test_manager.py test_polarization_top_decay -pA -t0 -l INFO
-
+  acceptancetest_100_2:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo apt install pigz
+            ./tests/test_manager.py test_loop_improved_reweighting -pA -t0 -l INFO --debug
+  
+  acceptancetest_101:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore_all
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_nlo_output2 -pA -t0 -l INFO
+  
+  acceptancetest_102:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
+      - name: test one of the test test_loop_improved_reweighting
+        run: |
+            cd $GITHUB_WORKSPACE
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib
+            export PYTHONPATH=$PYTHONPATH:~/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages
+            export PYTHONPATH=$PYTHONPATH:~/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages
+            ./tests/test_manager.py test_nlo_reweighting -pA -t0 -l INFO
+  
+  acceptancetest_104:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_all
+      - name: test loop-induced gg>h cross-section
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_loop_induced_ggh -pA -t0 -l INFO
+  
+  acceptancetest_103_polarization:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      # kept previous version (checkout@v2)
+      - uses: actions/checkout@v2
+      - name: test one of the test test_polarization_top_decay
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            ./tests/test_manager.py test_polarization_top_decay -pA -t0 -l INFO
+  
   acceptancetest_ewsudakov:
     # The type of runner that the job will run on
     runs-on: ubuntu-24.04
@@ -1269,4 +1269,123 @@ acceptancetest_103_polarization:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             ./tests/test_manager.py test_standalone_density_f2py -pA -t0 -l INFO
+
+  acceptancetest_density_decay2:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_density_mode_decay2
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_decay2 -pA -t0 -l INFO
+
+  acceptancetest_density_tttbartbar:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Runs a set of commands using the runners shell
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      - name: test one of the test test_density_mode_doublettbar
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_doublettbar -pA -t0 -l INFO
+
+
+  acceptancetest_density_LI_standalone1:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      # Runs a set of commands using the runners shell
+      - name: test the loop induced standalone mode of the density matrix code
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_loop_induced_standalone1 -pA -t0 -l INFO
+
+  acceptancetest_density_LI_standalone2:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+
+      # Runs a set of commands using the runners shell
+      - name: test the loop induced standalone mode of the density matrix code
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_loop_induced_standalone2 -pA -t0 -l INFO
+
+  acceptancetest_density_LI_standalone3:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      # Runs a set of commands using the runners shell
+      - name: test the loop induced standalone mode of the density matrix code
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_loop_induced_standalone3 -pA -t0 -l INFO
+
+  acceptancetest_density_LI_f2py:
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/checkout_mg5 
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+
+      - name: Install Meson and Ninja
+        run: |
+           sudo apt-get update
+           sudo apt-get install -y meson ninja-build
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the density mode for f2py loop-induced
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_vs_standalone_LI1 -pA -t0 -l INFO
 

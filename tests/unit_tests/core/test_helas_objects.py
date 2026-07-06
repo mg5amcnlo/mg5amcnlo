@@ -5212,6 +5212,128 @@ class TestIdentifyMETagFKS(unittest.TestCase):
         self.assertNotEqual(tags1, tags2)
 
 
+#===============================================================================
+# TestDiagramFlavorCheck
+#===============================================================================
+class TestDiagramFlavorCheck(unittest.TestCase):
+    """Regression test for HelasDiagram.check_flavor on the t-channel gluon
+    diagram of d d~ > d d~.
+
+    Context: a colleague reported that for ``_quark _anti_quark > d d~`` the
+    t-channel diagram had ``check_flavor((1, 1, 1, 1))`` return False even
+    though that flavor combination (d d~ > d d~) is valid for the t-channel
+    gluon exchange.
+
+    With flavor grouping enabled the light quarks are merged into the ``_quark``
+    particle (PDG 81).  Entering ``_quark _anti_quark > d d~`` therefore does
+    *not* build a mixed merged/unmerged process (that generates no diagrams);
+    instead the parser keeps the merged PDG 81 on every leg and records the
+    requested individual flavor as a *per-leg flavor restriction* on the final
+    state -- i.e. the legs are ``[(81, []), (-81, []), (81, [1]), (-81, [-1])]``
+    (verified against madgraph_interface's own parsing).  This is the code path
+    the colleague suspected: the flavor filtering lives on the final-state legs.
+
+    ``check_flavor`` then maps a tuple of per-leg flavor indices (1 == d, the
+    first quark of the merged group) onto each diagram and decides whether the
+    diagram survives for that flavor assignment.
+
+    This test pins down the correct behaviour: the t-channel gluon diagram is
+    valid for d d~ > d d~ (so the colleague's report is the symptom of a bug to
+    be fixed, not the intended behaviour), while still being correctly rejected
+    for flavor-changing combinations the t-channel gluon cannot produce.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Flavor grouping merges the light quarks into the _quark (PDG 81) and
+        # _anti_quark (PDG -81) multiparticles; this is what enables the
+        # diagram-level check_flavor machinery.
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        # _quark _anti_quark > d d~, restricted to pure QCD so we get exactly
+        # the two gluon diagrams (s-channel annihilation and t-channel
+        # exchange).  This mirrors what the command-line parser produces for
+        # that input: merged PDG 81 on every leg, with the requested individual
+        # flavor recorded as a per-leg restriction on the *final* state
+        # (flavor=[1] for d, [-1] for d~).
+        q_id = 81
+        proc = base_objects.Process({
+            'legs': base_objects.LegList([
+                base_objects.Leg({'id': q_id,  'number': 1,
+                                   'state': False, 'flavor': []}),
+                base_objects.Leg({'id': -q_id, 'number': 2,
+                                   'state': False, 'flavor': []}),
+                base_objects.Leg({'id': q_id,  'number': 3,
+                                   'state': True,  'flavor': [1]}),
+                base_objects.Leg({'id': -q_id, 'number': 4,
+                                   'state': True,  'flavor': [-1]}),
+            ]),
+            'model': self.model,
+            'orders': {'QED': 0},
+        })
+        amplitude = diagram_generation.Amplitude(proc)
+        self.assertTrue(amplitude.get('diagrams'),
+                        "_quark _anti_quark > d d~ generated no diagrams")
+        self.me = helas_objects.HelasMatrixElement(amplitude, gen_color=True)
+        self.diagrams = self.me.get('diagrams')
+
+    def _is_gluon_propagator(self, diagram):
+        """True if every internal wavefunction of the diagram is a gluon."""
+        internal = [wf.get('pdg_code') for wf in diagram.get('wavefunctions')
+                    if len(wf.get('mothers')) > 0]
+        return bool(internal) and all(pdg == 21 for pdg in internal)
+
+    def test_two_gluon_diagrams_generated(self):
+        """The pure-QCD process has exactly an s-channel and a t-channel gluon
+        diagram."""
+        self.assertEqual(len(self.diagrams), 2)
+        nb_t = sorted(d.get_nb_t_channel() for d in self.diagrams)
+        self.assertEqual(nb_t, [0, 1])
+        for diagram in self.diagrams:
+            self.assertTrue(self._is_gluon_propagator(diagram))
+
+    def test_t_channel_gluon_valid_for_dd(self):
+        """The reported case: the t-channel gluon diagram MUST be valid for
+        d d~ > d d~, i.e. check_flavor((1, 1, 1, 1)) is True."""
+        t_diagrams = [d for d in self.diagrams if d.get_nb_t_channel() == 1]
+        self.assertEqual(len(t_diagrams), 1,
+                         "expected exactly one t-channel gluon diagram")
+        t_diagram = t_diagrams[0]
+        self.assertTrue(self._is_gluon_propagator(t_diagram),
+                        "the t-channel diagram should exchange a gluon")
+        self.assertTrue(
+            t_diagram.check_flavor((1, 1, 1, 1), self.model),
+            "t-channel gluon diagram must be valid for d d~ > d d~ "
+            "(check_flavor((1,1,1,1)) should return True)")
+
+    def test_t_channel_gluon_flavor_discrimination(self):
+        """check_flavor genuinely discriminates: the t-channel gluon diagram is
+        valid for same-flavor combinations but rejects flavor-changing ones a
+        single gluon exchange cannot produce."""
+        t_diagram = [d for d in self.diagrams
+                     if d.get_nb_t_channel() == 1][0]
+        # d d~ > d d~ and u u~ > u u~ : valid t-channel gluon exchange.
+        self.assertTrue(t_diagram.check_flavor((1, 1, 1, 1), self.model))
+        self.assertTrue(t_diagram.check_flavor((2, 2, 2, 2), self.model))
+        # d d~ > u u~ / u u~ > d d~ : impossible via a flavor-diagonal gluon
+        # in the t-channel.
+        self.assertFalse(t_diagram.check_flavor((1, 1, 2, 2), self.model))
+        self.assertFalse(t_diagram.check_flavor((2, 2, 1, 1), self.model))
+
+    def test_s_channel_gluon_flavor_discrimination(self):
+        """Sanity counterpart: the s-channel (annihilation) gluon diagram
+        allows the flavor-changing final states that the t-channel rejects, and
+        rejects the t-channel-only assignment."""
+        s_diagram = [d for d in self.diagrams
+                     if d.get_nb_t_channel() == 0][0]
+        # Annihilation to a gluon then back to any quark pair.
+        self.assertTrue(s_diagram.check_flavor((1, 1, 1, 1), self.model))
+        self.assertTrue(s_diagram.check_flavor((1, 1, 2, 2), self.model))
+        # d s~ > d s~ cannot proceed through s-channel annihilation.
+        self.assertFalse(s_diagram.check_flavor((1, 2, 1, 2), self.model))
+
 
 #===============================================================================
 # TestDiagramFlavorCheckQQG

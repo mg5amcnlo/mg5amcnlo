@@ -1580,11 +1580,12 @@ class DensityCard(ConfigFile):
         self.add_param('order_helicities', [0])
         self.add_param('axis_referential', [0])
         self.add_param('symmetrise_initial_state', False)
+        self.add_param('matrix_normalisation', True)
 
     def read(self, finput):
         list_parameters = ["helicity_direction", "particle_in_density_matrix",\
                            "boost_choice", "order_helicities", "axis_referential",\
-                           "symmetrise_initial_state"]
+                           "symmetrise_initial_state", "matrix_normalisation"]
         if isinstance(finput, str):
             if "\n" in finput:
                 finput = finput.split('\n')
@@ -1648,7 +1649,7 @@ class DensityCard(ConfigFile):
     def write(self, output_file, template=None):
         list_parameters = ["helicity_direction", "particle_in_density_matrix",\
                            "boost_choice", "order_helicities", "axis_referential",\
-                           "symmetrise_initial_state"]
+                           "symmetrise_initial_state", "matrix_normalisation"]
         if not template: #this template only works for density module
             if not MADEVENT:
                 template = pjoin(MG5DIR, 'Template', 'Common', 'Cards', 'density_card_default.dat')
