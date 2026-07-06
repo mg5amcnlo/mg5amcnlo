@@ -43,7 +43,7 @@ def test_pdf():
     x_grid, q2_grid = np.meshgrid(xs, q2s)
     x, q2 = x_grid.flatten(), q2_grid.flatten()
 
-    result = pdf(x, q2)
+    result = pdf(x, np.sqrt(q2))
     reference = np.array(reference_pdf.xfxQ2(pids, x.tolist(), q2.tolist()))
     assert result == approx(reference)
 
@@ -58,6 +58,6 @@ def test_alpha_s():
         np.log10(reference_pdf.q2Min) + 1e-6, np.log10(reference_pdf.q2Max), 1000
     )
 
-    result = alpha_s(q2)
+    result = alpha_s(np.sqrt(q2))
     reference = np.array([reference_pdf.alphasQ2(q2_item) for q2_item in q2])
     assert result == approx(reference)

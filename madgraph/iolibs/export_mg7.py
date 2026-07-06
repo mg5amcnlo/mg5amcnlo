@@ -74,24 +74,24 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
                 continue
 
             active_colors = diag_jamps[diagram_index] if self.color_basis else [0]
+            helas_diagram = self.helas_diagrams[diagram_index]
+            active_flavors = [
+                flav_id
+                for indices, flavors in zip(self.all_flavors_indices, self.all_flavors)
+                if helas_diagram.check_flavor(list(flavors[0]), self.model)
+                for flav_id in indices
+            ]
             if sym_index < 0:
                 self.channels[self.channel_indices[-sym_index - 1]]["diagrams"].append(
                     {
                         "diagram": diagram_index,
                         "permutation": sym_perm,
+                        "active_flavors": active_flavors,
                         "active_colors": active_colors,
                     }
                 )
                 self.channel_indices.append(-1)
                 continue
-
-            helas_diagram = self.helas_diagrams[diagram_index]
-            active_flavors = [
-                flav_id
-                for indices, flavors in zip(self.all_flavors_indices, self.all_flavors)
-                if helas_diagram.check_flavor([flv for flv in flavors[0]], self.model)
-                for flav_id in indices
-            ]
 
             diagram = self.diagrams[diagram_index]
             vertices = []
@@ -123,11 +123,11 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
                     "propagators": propagators,
                     "vertices": vertices,
                     "on_shell_propagators": on_shell_propagators,
-                    "active_flavors": active_flavors,
                     "diagrams": [
                         {
                             "diagram": diagram_index,
                             "permutation": sym_perm,
+                            "active_flavors": active_flavors,
                             "active_colors": active_colors,
                         }
                     ],

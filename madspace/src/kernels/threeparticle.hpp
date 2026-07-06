@@ -537,6 +537,178 @@ KERNELSPEC void kernel_s23_value_and_min_max(
     s_23 = lsquare<T>(p_23);
 }
 
+// AmpliCol block-B s-channel ETmin refinement (gen23 lines 745-762). Tightens
+// the sampled s-channel mass s23 = (peeled + im1)^2 using the recoil's ETmin
+// floor (upper bound, smax) and the peeled particle's ETmin + dR cut (lower
+// bound, smin -- only for a massless peeled particle).
+template <typename T>
+KERNELSPEC Pair<FVal<T>, FVal<T>> s23_etmin_clamp(
+    FVal<T> smn,
+    FVal<T> smx,
+    FourMom<T> piir,
+    FourMom<T> pim1,
+    FourMom<T> pib,
+    FVal<T> m1_2,
+    FVal<T> m2_2,
+    FVal<T> m3_2,
+    FVal<T> t1_abs,
+    FVal<T> etmin_1,
+    FVal<T> etmin_2,
+    FVal<T> drcut
+) {
+    auto active = (etmin_2 > EPS) | (etmin_1 > EPS);
+    // Block B works in the frame where pz(im1)=0 (z-boost by the IM1 rapidity),
+    // with im1 rotated onto +x. mT(im1)=sqrt(E^2-pz^2)=sqrt(m3^2+pt(p3)^2).
+    auto Eim1 = pim1[0];
+    auto pzim1 = pim1[3];
+    auto mT_im1 = sqrt(max(Eim1 * Eim1 - pzim1 * pzim1, EPS));
+    // Boost p_12 (=piir, the i+ir system) and pa (=pib) into that frame; im1's
+    // own energy there is mT(im1) and its x-momentum is pt(p3).
+    auto piir_0 = (piir[0] * Eim1 - piir[3] * pzim1) / mT_im1;
+    auto pim1_0 = mT_im1;
+    auto pim1_1 = sqrt(pim1[1] * pim1[1] + pim1[2] * pim1[2]);
+    auto pib_0 = max((pib[0] * Eim1 - pib[3] * pzim1) / mT_im1, EPS);
+    // Block-B recoil ET floor (t-dependent): invm(ir)-invm(ir+ib) = m1_2 + t1_abs.
+    auto denom = max(m1_2 + t1_abs, EPS);
+    auto etminir_b =
+        max(etmin_1, pib_0 * etmin_1 * etmin_1 / denom + denom / (4. * pib_0));
+    // smax: the recoil's ETmin caps the s-channel mass from above.
+    auto e_eff = piir_0 - etminir_b;
+    auto disc = e_eff * e_eff - m2_2;
+    auto smax_b = m2_2 + m3_2 + 2. * e_eff * pim1_0 + 2. * sqrt(max(disc, 0.)) * pim1_1;
+    auto smax_ok = active & (e_eff > 0.) & (disc > 0.) & (smax_b > smn);
+    auto smx_new = where(smax_ok, min(smx, smax_b), smx);
+    // smin: a massless peeled particle needs ET -> minimum s-channel mass.
+    auto smin_b = 2. * etmin_2 * (pim1_0 - pim1_1 * cos(drcut));
+    auto smin_ok = active & (m2_2 < EPS) & (smin_b > smn) & (smin_b < smx_new);
+    auto smn_new = where(smin_ok, max(smn, smin_b), smn);
+    smx_new = where(smx_new > smn_new, smx_new, smn_new + EPS);
+    return {smn_new, smx_new};
+}
+
+// Clamp the s23 invariant-mass range against the cut-derived lower bound.
+// s23_min_cut is the minimum invariant mass^2 of the (2,3) system implied by
+// the pt / m_inv_min / dR cuts (gen23's invm_min).
+template <typename T>
+KERNELSPEC void kernel_s23_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p3,
+    FIn<T, 0> t1_abs,
+    FIn<T, 0> m1,
+    FIn<T, 0> m2,
+    FIn<T, 0> etmin_1,
+    FIn<T, 0> etmin_2,
+    FIn<T, 0> drcut,
+    FIn<T, 0> s23_min_cut,
+    FOut<T, 0> s23_min,
+    FOut<T, 0> s23_max
+) {
+    FourMom<T> p_tot, p_12, pt2;
+    for (int i = 0; i < 4; ++i) {
+        p_tot[i] = pa[i] + pb[i];
+        p_12[i] = pa[i] + pb[i] - p3[i];
+        pt2[i] = pb[i] - p3[i];
+    }
+    auto m0_2 = lsquare<T>(p_tot);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m3_2 = lsquare<T>(load_mom<T>(p3));
+    auto s12 = lsquare<T>(p_12);
+    auto m1_2 = m1 * m1;
+    auto m2_2 = m2 * m2;
+    auto t2 = lsquare<T>(pt2);
+
+    auto s23_out = s23_min_max<T>(m0_2, ma_2, mb_2, m1_2, m2_2, m3_2, t1_abs, t2, s12);
+    auto smn = s23_out.first;
+    auto smx = s23_out.second;
+
+    FVal<T> smin_cut(s23_min_cut);
+    smn = where(smin_cut > 0., max(smn, smin_cut), smn);
+    smx = where(smx > smn, smx, smn + EPS);
+
+    // Block-B ETmin refinement: piir = p_12 (recoil system), pim1 = p3, pib = pa.
+    auto sb = s23_etmin_clamp<T>(
+        smn,
+        smx,
+        p_12,
+        load_mom<T>(p3),
+        load_mom<T>(pa),
+        m1_2,
+        m2_2,
+        m3_2,
+        t1_abs,
+        etmin_1,
+        etmin_2,
+        drcut
+    );
+
+    s23_min = sb.first;
+    s23_max = sb.second;
+}
+
+template <typename T>
+KERNELSPEC void kernel_s23_value_and_min_max_cut(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p3,
+    FIn<T, 0> t1_abs,
+    FIn<T, 1> p1,
+    FIn<T, 1> p2,
+    FIn<T, 0> etmin_1,
+    FIn<T, 0> etmin_2,
+    FIn<T, 0> drcut,
+    FIn<T, 0> s23_min_cut,
+    FOut<T, 0> s_23,
+    FOut<T, 0> s23_min,
+    FOut<T, 0> s23_max
+) {
+    FourMom<T> p_tot, p_12, pt2, p_23;
+    for (int i = 0; i < 4; ++i) {
+        p_tot[i] = pa[i] + pb[i];
+        p_12[i] = p1[i] + p2[i];
+        pt2[i] = pb[i] - p3[i];
+        p_23[i] = p2[i] + p3[i];
+    }
+    auto m0_2 = lsquare<T>(p_tot);
+    auto ma_2 = lsquare<T>(load_mom<T>(pa));
+    auto mb_2 = lsquare<T>(load_mom<T>(pb));
+    auto m3_2 = lsquare<T>(load_mom<T>(p3));
+    auto s12 = lsquare<T>(p_12);
+    auto m1_2 = lsquare<T>(load_mom<T>(p1));
+    auto m2_2 = lsquare<T>(load_mom<T>(p2));
+    auto t2 = lsquare<T>(pt2);
+
+    auto s23_out = s23_min_max<T>(m0_2, ma_2, mb_2, m1_2, m2_2, m3_2, t1_abs, t2, s12);
+    auto smn = s23_out.first;
+    auto smx = s23_out.second;
+
+    FVal<T> smin_cut(s23_min_cut);
+    smn = where(smin_cut > 0., max(smn, smin_cut), smn);
+    smx = where(smx > smn, smx, smn + EPS);
+
+    // Block-B ETmin refinement (must mirror the forward kernel exactly so the
+    // sampled s23 range is identical and the round-trip stays invertible).
+    auto sb = s23_etmin_clamp<T>(
+        smn,
+        smx,
+        p_12,
+        load_mom<T>(p3),
+        load_mom<T>(pa),
+        m1_2,
+        m2_2,
+        m3_2,
+        t1_abs,
+        etmin_1,
+        etmin_2,
+        drcut
+    );
+
+    s23_min = sb.first;
+    s23_max = sb.second;
+    s_23 = lsquare<T>(p_23);
+}
+
 template <typename T>
 KERNELSPEC void kernel_two_to_three_particle_scattering(
     IIn<T, 0> phi_index,

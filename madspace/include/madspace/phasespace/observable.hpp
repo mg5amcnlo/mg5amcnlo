@@ -48,6 +48,8 @@ public:
         const std::string& name = ""
     );
     ObservableOption observable() const { return _observable; }
+    const nested_vector2<me_int_t>& indices() const { return _indices; }
+    bool sum_momenta() const { return _sum_momenta; }
     std::vector<std::size_t> simple_observable_indices() const {
         if (_sum_momenta || _sum_observable || _indices.size() != 1) {
             return {};
