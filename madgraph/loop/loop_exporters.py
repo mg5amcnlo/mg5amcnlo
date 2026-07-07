@@ -1356,7 +1356,6 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
                 replace_dict['masses_def'] += f'MASSES({i+1})=SQRT(ABS(P(0,{i+1})**2-P(1,{i+1})**2-P(2,{i+1})**2-P(3,{i+1})**2))\n'
         
         # misc.sprint('\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'%{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for i, m in enumerate(mass_list)]))
-        misc.sprint(replace_dict['masses_def'])
         
         if self.opt['vector_size']:
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
