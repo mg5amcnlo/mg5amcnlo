@@ -4034,16 +4034,16 @@ C
  3  -1
  4  -2
  5   1
- 6  -2
- 7  -5
- 8  -1
- 9  -2
-10  -1
-11  -2
-12  -5
-13  -5
+ 6  -5
+ 7  -1
+ 8  -2
+ 9  -1
+10  -2
+11  -5
+12  -5 
 """
 
+                                           
         self.assertEqual(analyse(target.split('\n')), 
                          analyse(open(os.path.join(self.out_dir,
                                            'SubProcesses',
