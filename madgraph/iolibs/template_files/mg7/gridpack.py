@@ -1,7 +1,31 @@
 #! /usr/bin/env python3
 
-import madspace as ms
 import os
+import subprocess
+import sys
+from pathlib import Path
+
+# search order for madspace package:
+#   1. a precompiled install (madspace/install/madspace)
+#   2. bundled source that still needs to be built (madspace/install.py)
+#   3. otherwise fall back to madspace is available in the environment
+_GRIDPACK_DIR = Path(os.path.realpath(__file__)).parent.parent
+_LOCAL_MADSPACE_DIR = _GRIDPACK_DIR / "madspace"
+_LOCAL_INSTALL_DIR = _LOCAL_MADSPACE_DIR / "install"
+if (_LOCAL_INSTALL_DIR / "madspace").is_dir():
+    sys.path.insert(0, str(_LOCAL_INSTALL_DIR))
+elif (_LOCAL_MADSPACE_DIR / "install.py").is_file():
+    print()
+    print("You don't have madspace installed for this gridpack")
+    print("Running interactive madspace installation script")
+    print()
+
+    _result = subprocess.run([sys.executable, str(_LOCAL_MADSPACE_DIR / "install.py")])
+    if _result.returncode != 0:
+        raise RuntimeError("madspace installation failed — see output above")
+    sys.path.insert(0, str(_LOCAL_INSTALL_DIR))
+
+import madspace as ms
 import glob
 import json
 import tomllib
@@ -16,6 +40,14 @@ def main() -> None:
     param_card_path = os.path.join("Cards", "param_card.dat")
     with open(os.path.join("data", "data.json")) as f:
         madspace_data = json.load(f)
+    if madspace_data["source_hash"] != ms.SOURCE_HASH:
+        print()
+        print(
+            "\033[1m\033[31mWARNING\033[39m: The madspace version is not identical "
+            "to the one used to generate the gridpack. This can lead to errors or "
+            "incorrect results\033[0m"
+        )
+        print()
 
     # parse command line arguments
     parser = argparse.ArgumentParser()

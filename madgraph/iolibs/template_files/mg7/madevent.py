@@ -51,6 +51,19 @@ import madspace as ms
 from models.check_param_card import ParamCard
 from madgraph.various import misc
 
+_source_hash = subprocess.run(
+    [sys.executable, str(_MADSPACE_DIR / "source_hash.py")],
+    capture_output=True, text=True, check=True,
+).stdout.strip()
+if _source_hash != ms.SOURCE_HASH:
+    print()
+    print(
+        "\033[1m\033[31mWARNING\033[39m: madspace source and installed binaries "
+        "are not compatible (source hash mismatch) — consider recompiling "
+        "madspace\033[0m"
+    )
+    print()
+
 logger = logging.getLogger("madevent7")
 
 
@@ -684,7 +697,7 @@ class MadgraphProcess:
         )
 
     def save_gridpack(self) -> None:
-        if not self.run_card["run"]["save_gridpack"]:
+        if not self.run_card["gridpack"]["save_gridpack"]:
             return
 
         gridpack_path = os.path.join(self.run_path, "gridpack")
@@ -705,12 +718,25 @@ class MadgraphProcess:
             channel.save(os.path.join(channel_path, file))
 
         lib_path = os.path.join(gridpack_path, "lib")
-        if self.run_card["run"]["gridpack_include_source"]:
+        if self.run_card["gridpack"]["include_source"]:
             os.mkdir(lib_path)
             shutil.copytree("src", os.path.join(gridpack_path, "src"))
             shutil.copytree("SubProcesses", os.path.join(gridpack_path, "SubProcesses"))
         else:
             shutil.copytree("lib", lib_path)
+
+        if self.run_card["gridpack"]["include_madspace_source"]:
+            shutil.copytree(
+                _MADSPACE_DIR,
+                os.path.join(gridpack_path, "madspace"),
+                ignore=shutil.ignore_patterns("build", "install"),
+            )
+
+        if self.run_card["gridpack"]["include_madspace"]:
+            shutil.copytree(
+                _INSTALL_DIR / "madspace",
+                os.path.join(gridpack_path, "madspace", "install", "madspace"),
+            )
 
         matrix_elements = []
         for subproc in self.subprocess_data:
@@ -758,6 +784,7 @@ max_cut_repetitions = {self.run_card["generation"]["max_cut_repetitions"]}
         data = {
             "channels": channel_files,
             "matrix_elements": matrix_elements,
+            "source_hash": ms.SOURCE_HASH,
         }
         with open(os.path.join(data_path, "data.json"), "w") as f:
             json.dump(data, f)
