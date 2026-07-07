@@ -64,9 +64,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
-        self.add_param('mode', 'full', allowed=['full', 'onshell', 'none', 'madspin', 'madspin_v1', 'onshell_v1'])
-        self.add_param('spinmode', "PA", allowed=['full','madspin','none','onshell','PA'])
-
+        self.add_param('spinmode', "PA", allowed=['full', 'madspin', 'none', 'onshell', 'PA', 'madspin_v1', 'onshell_v1'])
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for decay_events (in onshell frame). Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -82,8 +80,6 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('density_keep_jacobian', False, comment='keep track of the phase-space volume change related to the offshell reshuffling')
-        self.add_param('density_do_reshuffle', True, comment='In density mode with pole approximation, sample Breit-Wigner masses and reshuffle the accepted event. Disable to keep pure onshell kinematics.')
-        self.add_param('density_pole_approximation', True, comment='In density mode, use the multiple approximation, leaving offshell as pure BW (via reshuffling). Set on False, means using offshell matrix-element that impacts the shape of the Breit-Wigner. False is equivalent to the old Madspin mode/decay chain syntax of MadGraph')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -202,7 +198,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             
     
     def setup_for_pure_decay(self):
-        """this is for mode=None -> simple decay
+        """this is for spinmode=none -> simple decay
            We go here if they are no banner.
            -> this requires that a command import model appears in the card!
         """
@@ -311,7 +307,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
 
         self.inputfile = inputfile
-        if self.options['mode'] == 'none' and \
+        if self.options['spinmode'] == 'none' and \
            (self.options['input_format'] not in ['lhe','auto'] or 
              (self.options['input_format'] == 'auto' and '.lhe'  not in inputfile[-7:])):  
             self.banner = banner.Banner()
@@ -527,12 +523,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         #if self.model and not self.model['case_sensitive']:
         #    decaybranch = decaybranch.lower()
 
-        if self.options['mode'] not in  ['full','madspin', 'madspin_v1'] and '{' in decaybranch:
-            if self.options['mode'] == 'none':
-                logger.warning("polarization option used with mode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
+        if self.options['spinmode'] not in  ['full','madspin', 'madspin_v1'] and '{' in decaybranch:
+            if self.options['spinmode'] == 'none':
+                logger.warning("polarization option used with spinmode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
             else:
-                logger.warning("polarization option used with mode=onshell. This combination is not validated and is by construction using sub-optimal method which can likely lead to bias in some situation. Use at your own risk.")
-        if "=" in decaybranch and self.options['mode'] in['madspin_v1']:
+                logger.warning("polarization option used with spinmode=%s. This combination is not validated and is by construction using sub-optimal method which can likely lead to bias in some situation. Use at your own risk." % self.options['spinmode'])
+        if "=" in decaybranch and self.options['spinmode'] in ['full', 'madspin_v1']:
             logger.warning("Note that coupling order restriction are not associated to specific Branching Ratio. The total cross-section might therefore use the wrong branching ratio.")
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if init_part not in self.list_branches:
@@ -557,7 +553,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if args[1].strip() == '=':
             args.pop(1)
         
-        valid = ['max_weight','seed','curr_dir', 'spinmode', 'mode', 'run_card', 'mode']
+        valid = ['max_weight','seed','curr_dir', 'spinmode', 'run_card']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
@@ -571,16 +567,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             if not os.path.isdir(args[1]):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
         elif args[0] == "spinmode":
-            if args[1].lower() not in ["full", "onshell", "none", "madspin"]:
-                raise self.InvalidCmd("spinmode can only take one of those 4 values: full/onshell/none/madspin")
-            args[0] = "mode"      
-        elif args[0] == "mode":
-            if args[1].lower() not in ["full", "onshell", "none", "madspin", "pa", "madspin_v1", "onshell_v1"]:
-                raise self.InvalidCmd("mode can only take one of those values: full/madspin/onshell/none/PA/madspin_v1/onshell_v1")
-             
+            allowed = [mode.lower() for mode in self.options.allowed_value['spinmode']]
+            if args[1].lower() not in allowed:
+                raise self.InvalidCmd("spinmode can only take one of those values: full/madspin/onshell/none/PA/madspin_v1/onshell_v1")
+
         elif args[0] == "run_card":
-            if self.options['mode'] == "madspin_v1":
-                raise self.InvalidCmd("edition of the run_card is not allowed within normal mode")
+            if self.options['spinmode'] in ["madspin_v1"]:
+                raise self.InvalidCmd("edition of the run_card is not allowed within spinmode=madspin_v1")
             if "=" in args:
                 args.remove("=")
             if len(args)==2 and "=" in args[1]:
@@ -607,7 +600,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Format
         if len(args) == 1:
-            opts = list(self.options.keys()) + ['seed', "mode"]
+            opts = list(self.options.keys()) + ['seed']
             return self.list_completion(text, opts) 
         elif len(args) == 2:
             if args[1] == 'ms_dir':
@@ -616,8 +609,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             curr_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
             return self.path_completion(text, curr_path, only_dirs = True)
-        elif args[1] == "mode":
-            return self.list_completion(text, ["full","onshell", "none", "madspin", "pa", "madspin_v1", "onshell_v1"], line)
+        elif args[1] == "spinmode":
+            return self.list_completion(text, ["full", "madspin", "none", "onshell", "PA", "madspin_v1", "onshell_v1"], line)
          
     def help_set(self):
         """help the set command"""
@@ -632,11 +625,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         print('       It has a period of 2**19937-1.')
         print('   - set max_running_process VALUE: allow to limit the number of open file used by the code')
         print('       The number of running is raising like 2*VALUE')
-        print('   - set mode=XXX: different approximation/implementation are available')
+        print('   - set spinmode=XXX: different approximation/implementation are available')
         print('        none: no spin correlation no offshell effects.')
         print('        onshell: spin correlation but no offshell effects.')
         print('        PA: spin correlation and offshell effects with a pure Breit-Wigner.')
-        print('        madspin: spin correlation and offshell effects (default)')
+        print('        madspin: spin correlation and offshell effects with offshell matrix-elements.')
+        print('        full: resolves to madspin.')
         print('        madspin_v1: legacy MadSpin implementation (different reshuffling and no density matrix)')
         print('        onshell_v1: legacy MadSpin implementation (no density matrix) --for debugging only--')
     
@@ -728,47 +722,43 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             self.me_run_name = ''
 
-        misc.sprint(self.options['onlyhelicity'], self.options['mode'])
+        misc.sprint(self.options['onlyhelicity'], self.options['spinmode'])
         if self.options['onlyhelicity']:
-            self.options['mode'] = 'madspin_v1'
+            self.options['spinmode'] = 'madspin_v1'
 
-        misc.sprint("Running MadSpin in mode %s" % self.options['mode'])
+        spinmode = self.options['spinmode']
+        if spinmode == 'full':
+            spinmode = 'madspin'
+            self.options['spinmode'] = spinmode
 
+        logger.info("Running MadSpin in spinmode %s" % spinmode)
 
-        if self.options["mode"] in ["none"]:
+        if spinmode in ["none"]:
             out = self.run_bridge(line)
             self._log_lhe_timers()
             return out
-        elif self.options["mode"].startswith("onshell"):
-            if self.options["mode"] == "onshell_v1":
+        elif spinmode.startswith("onshell"):
+            if spinmode == "onshell_v1":
                 out = self.run_onshell(line)
             else:
-                # pure onshell kinematics: pole approximation with no Breit-Wigner
-                # resampling (keep the resonances at their production mass).
-                self.options['density_pole_approximation'] = True
-                self.options['density_do_reshuffle'] = False
                 out = self.run_onshell(line, density_method=True)
             self._log_lhe_timers()
             return out
-        elif self.options["mode"] == "PA":
-            self.options['density_pole_approximation'] = True
-            self.options['density_do_reshuffle'] = True
+        elif spinmode == "PA":
             out = self.run_onshell(line, density_method=True)
             self._log_lhe_timers()
             return out
-        elif self.options["mode"] == "madspin_v1":
+        elif spinmode == "madspin_v1":
             # legacy MadSpin / decay-chain path: fall through to decay_all_events below
             pass
-        elif self.options["mode"] in ["full", "madspin"]:
-            self.options['density_pole_approximation'] = False 
-            self.options['density_do_reshuffle'] = True
+        elif spinmode == "madspin":
             out = self.run_onshell(line, density_method=True)
             self._log_lhe_timers()
             return out
-        elif self.options["mode"] == "bridge":
+        elif spinmode == "bridge":
             raise Exception("Bridge mode not available.")
         else:
-            raise Exception("mode %s not supported" % self.options["mode"])
+            raise Exception("spinmode %s not supported" % spinmode)
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             out = self.run_from_pickle()
@@ -1286,7 +1276,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             continue
 
                         if helicity == decay[0].helicity or helicity==9 or \
-                                            self.options["mode"] == "none":
+                                            self.options["spinmode"] == "none":
                             break # use that event
                         # not valid event store it for later
                         if helicity not in bufferedEvents:
@@ -1733,11 +1723,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.error *= self.branching_ratio
         
 
+        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+        density_do_reshuffle = self.options['spinmode'] == 'PA'
         density_needs_reshuffle = (
-        density_method
-        and (not self.options['density_pole_approximation']
-        or self.options['density_do_reshuffle'])
-)
+            density_method
+            and (not density_pole_approximation
+                 or density_do_reshuffle)
+        )
 
         # 3. generate the various matrix-elements
         time_me_generation = time.time()
@@ -1814,7 +1806,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # In density mode do not do full event construction before accept/reject
                 build_event = (not density_method) or self.options['fixed_order']
                 
-                if prod_density_cached is None or not self.options['density_pole_approximation']:
+                if prod_density_cached is None or not density_pole_approximation:
                     full_evt, wgt, prod_density_cached = self.get_onshell_evt_and_wgt(
                         production, decays, decay_dict, build_event=build_event)
                 else:
@@ -1822,7 +1814,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         production, decays, decay_dict, prod_density_cached, build_event=build_event)
                 jac = 1
                 if density_needs_reshuffle and (
-                        not self.options['density_pole_approximation']
+                        not density_pole_approximation
                         or self.options['density_keep_jacobian']):
                     # Reshuffle BEFORE accept/reject so the reshuffling jacobian
                     # enters the accept/reject weight (wgt*jac). This is the
@@ -1836,7 +1828,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
                 if random.random()*maxwgt < wgt*jac:
                     if (density_needs_reshuffle
-                            and self.options['density_pole_approximation']
+                            and density_pole_approximation
                             and not self.options['density_keep_jacobian']):
                         # PA (default): reshuffle AFTER acceptance. The reshuffle is
                         # a kinematic dressing of the accepted event; the Breit-Wigner
@@ -1849,7 +1841,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         jac = full_evt.reshuffle_production()
                     elif full_evt is None:
                         # No-reshuffle density mode still needs a concrete event to write out.
-                        if density_method and self.options['density_pole_approximation']:
+                        if density_method and density_pole_approximation:
                             full_evt = lhe_parser.Event(str(production))
                         else:
                             full_evt = production
@@ -2118,12 +2110,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # in the max-weight estimate whenever the reshuffle is applied
                 # *before* accept/reject (full/madspin offshell, or PA with
                 # jacobian tracking). PA-after-acceptance keeps jac = 1 here.
+                density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+                density_do_reshuffle = self.options['spinmode'] == 'PA'
                 density_needs_reshuffle = (
                     self.generate_all.mode == 'density'
-                    and (not self.options['density_pole_approximation']
-                         or self.options['density_do_reshuffle']))
+                    and (not density_pole_approximation
+                         or density_do_reshuffle))
                 if density_needs_reshuffle and (
-                        not self.options['density_pole_approximation']
+                        not density_pole_approximation
                         or self.options['density_keep_jacobian']):
                     full_evt = lhe_parser.Event(str(base_event))
                     full_evt = full_evt.add_decays(decays)
@@ -2155,6 +2149,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             Carefull this modifies production event (pass to the full one)
             build_event: if False (density mode) compute weight without building event"""
         #print("\n\n\n\n\n======== debug get_onshell_evt_and_wgt =========")
+        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+        density_do_reshuffle = self.options['spinmode'] == 'PA'
         decay_me = 1.0
         decay_me_debug = 1.0
         jac = 1.0
@@ -2199,8 +2195,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             # onshell at the production-determined mass (no reshuffling) instead
             # of building kinematically inconsistent momenta.
             nb_prod_final = sum(1 for p in production if int(p.status) == 1)
-            if nb_prod_final > 1 and (not self.options['density_pole_approximation'] or
-                    self.options['density_do_reshuffle']):
+            if nb_prod_final > 1 and (not density_pole_approximation or
+                    density_do_reshuffle):
                 for pdg in decays:
                     for dec in decays[pdg]:
                         pole = self.banner.get('param', 'mass', abs(pdg)).value
@@ -2227,7 +2223,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event = None
             if build_event or self.options['density_debug']:
                 # Create full event from production and decays
-                if self.options['density_pole_approximation']:
+                if density_pole_approximation:
                     full_event = lhe_parser.Event(str(production))
                 else:
                     full_event = production          
@@ -2314,7 +2310,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         decays_key = tuple(decays.keys())
         MEdenom_prod, MEdenom_decay = None, None
         prod_static = getattr(production, '_ms_density_static', None)
-        if not self.options['density_pole_approximation'] or \
+        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        if not density_pole_approximation or \
             (not prod_static or prod_static.get('decays_key') != decays_key):
             # Production averaging factor (spin/color initial state) from standalone
             iden_p = self.get_iden(production)
@@ -2344,8 +2342,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             helicities = [hel_dict[i] for i in decaying_spins]
 
             use_new_mass = (
-                not self.options['density_pole_approximation'] or
-                self.options['density_do_reshuffle']
+                not density_pole_approximation or
+                density_do_reshuffle
             )
             if use_new_mass:
                 new_mass = {}
@@ -2374,7 +2372,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         del particle.reshuffle_info
 
             MEdenom_prod, MEdenom_decay = None, None
-            if not self.options['density_pole_approximation']:
+            if not density_pole_approximation:
                 # compute the denominator and then reshuffle the event before 
                 # computing the numerator 
                 MEdenom_prod = self.calculate_matrix_element(production)  

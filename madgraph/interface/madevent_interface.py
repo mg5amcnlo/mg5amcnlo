@@ -825,31 +825,34 @@ class AskRun(cmd.ControlSwitch):
 #   MADSPIN handling
 #
     def get_allowed_madspin(self):
-        """ ON|OFF|onshell """
+        """ ON|OFF|onshell|madspin|full|PA|none """
         
         if hasattr(self, 'allowed_madspin'):
             return self.allowed_madspin
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell',"full", "PA"]
+            self.allowed_madspin = ['OFF', 'ON', 'onshell', 'madspin',
+                                    'full', 'PA', 'none',
+                                    'madspin_v1', 'onshell_v1']
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
         """handle alias and valid option not present in get_allowed_madspin"""
         
         if value.upper() in self.get_allowed_madspin():
-            return True
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
         elif value.lower() in self.get_allowed_madspin():
-            return True
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
         
         if 'MadSpin' not in self.available_module:
             return False
-             
-        if value.lower() in ['madspin', 'full']:
-            return 'full'
-        elif value.lower() in ['none']:
-            return 'none'
         
     
     def set_default_madspin(self):
@@ -866,10 +869,9 @@ class AskRun(cmd.ControlSwitch):
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if value in  ['onshell', 'none', 'density']:
+        if value in ['onshell', 'madspin', 'full', 'PA', 'none',
+                     'madspin_v1', 'onshell_v1']:
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value ]
-        elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
         else:
             return []
         

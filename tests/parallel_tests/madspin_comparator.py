@@ -16,7 +16,7 @@
 
 The :class:`MadSpinFactory` generates a production sample once for a given
 (process, multiparticle, model) triple, then runs MadSpin against the *same*
-events under several ``(spinmode, ME_mode, density_do_reshuffle)`` configurations.
+events under several ``spinmode`` configurations.
 Each configuration returns a :class:`MadSpinResult` carrying the branching
 ratio, unweighting efficiency, log path, and decayed-LHE path.
 
@@ -72,21 +72,21 @@ def _read_lhe_cross(path):
 # Reasonable defaults for the dispatcher table. Each entry must be unique by
 # label so the factory can key result dicts on it.
 SpinModeConfig = collections.namedtuple(
-    'SpinModeConfig', ['label', 'mode']
+    'SpinModeConfig', ['label', 'spinmode']
 )
 
 
-# These are the five modes spelled out in the MadSpin density-mode table:
-#  - full + decay_chain  : old default, mass smearing, no 3-body, identical part. only
-#  - onshell + decay_chain : traditional onshell decay chain
-#  - onshell + density   : "PA without reshuffling" (pure onshell kinematics, density ME)
-#  - full + density      : off-shell ME + density (BW shape from ME)
-#  - PA + density        : PA reshuffling with BW + density ME (new MadSpin default)
+# These are the five modes spelled out in the MadSpin spinmode table:
+#  - madspin_v1 : old default, mass smearing, no 3-body, identical part. only
+#  - onshell_v1 : traditional onshell decay chain
+#  - onshell    : "PA without reshuffling" (pure onshell kinematics, density ME)
+#  - madspin    : off-shell ME + density (BW shape from ME)
+#  - PA         : PA reshuffling with BW + density ME (new MadSpin default)
 DEFAULT_MODES = [
     SpinModeConfig('full_decay_chain',    'madspin_v1'),  
     SpinModeConfig('onshell_decay_chain', 'onshell_v1'),
     SpinModeConfig('onshell_density',     'onshell'),
-    SpinModeConfig('full_density',        'full'),
+    SpinModeConfig('madspin_density',     'madspin'),
     SpinModeConfig('PA_density',          'PA'),
 ]
 # Mode families: the two paths use fundamentally different BR computations
@@ -97,7 +97,7 @@ DEFAULT_MODES = [
 DEFAULT_FAMILIES = {
     'legacy':      ('full_decay_chain',),
     'run_onshell': ('onshell_decay_chain', 'onshell_density',
-                    'full_density',       'PA_density'),
+                    'madspin_density',    'PA_density'),
 }
 
 
@@ -351,13 +351,10 @@ class MadSpinFactory(object):
     # ------------------------------------------------------------------
     def _write_madspin_card(self, card_path, evt_path, config):
         lines = [
-            'set mode %s' % config.mode,
+            'set spinmode %s' % config.spinmode,
             'set seed %d' % self.seed,
             'set max_running_process 4',
         ]
-        #if config.ME_mode == 'density':
-        #    lines.append('set density_do_reshuffle %s'
-        #                 % ('True' if config.density_do_reshuffle else 'False'))
         for key, val in self.extra_madspin_settings.items():
             lines.append('set %s %s' % (key, val))
         for mp_name, mp_def in self.multiparticles.items():
@@ -631,14 +628,14 @@ def assert_efficiency_close(test, result_a, result_b, rel_tol=0.15):
 def assert_efficiency_ordering(test, results,
                                close_rel_tol=0.10,
                                slack=0.02,
-                               full_density_slack=0.05):
+                               madspin_density_slack=0.05):
     """Physics-motivated ordering of unweighting efficiencies across modes.
 
     The relations -- per MadSpin author intent -- are:
 
     1. (dropped) ``full_decay_chain`` was originally expected to be the
        smallest efficiency of any mode, but the 10k-event ttbar run on PR #292
-       showed that the *new* off-shell path (``full_density``) is currently
+       showed that the *new* off-shell path (``madspin_density``) is currently
        even less efficient than the legacy Fortran one (0.124 vs 0.145). The
        relative ordering between the two off-shell paths is a tuning question,
        not a physics invariant, so it's no longer enforced here. Rule (3)
@@ -646,8 +643,8 @@ def assert_efficiency_ordering(test, results,
     2. ``onshell_decay_chain`` and ``onshell_density`` agree with each other
        within ``close_rel_tol`` (relative), and both are *better* (higher
        efficiency) than the pole approximation ``PA_density``.
-    3. ``full_density`` sits *between* ``full_decay_chain`` and
-       ``PA_density``. Uses ``full_density_slack`` (default 0.05, absolute)
+    3. ``madspin_density`` sits *between* ``full_decay_chain`` and
+       ``PA_density``. Uses ``madspin_density_slack`` (default 0.05, absolute)
        rather than ``slack`` because the same ttbar 10k run showed the new
        density off-shell unweighting can dip a few percent below the legacy
        Fortran's efficiency -- the same tuning-gap that motivated dropping
@@ -662,7 +659,7 @@ def assert_efficiency_ordering(test, results,
     drops the rules that mention it; the surviving rules still run.
     """
     needed = ['full_decay_chain', 'onshell_decay_chain', 'onshell_density',
-              'full_density', 'PA_density']
+              'madspin_density', 'PA_density']
     eff = {}
     for label in needed:
         if label in results and results[label].efficiency is not None:
@@ -693,22 +690,22 @@ def assert_efficiency_ordering(test, results,
                 '(eff dump: %s)'
                 % (label, eff[label], pa, slack, eff))
 
-    # 3. full_density between full_decay_chain and PA_density (weakened slack).
-    if all(k in eff for k in ('full_decay_chain', 'full_density', 'PA_density')):
-        lo = min(eff['full_decay_chain'], eff['PA_density']) - full_density_slack
-        hi = max(eff['full_decay_chain'], eff['PA_density']) + full_density_slack
+    # 3. madspin_density between full_decay_chain and PA_density (weakened slack).
+    if all(k in eff for k in ('full_decay_chain', 'madspin_density', 'PA_density')):
+        lo = min(eff['full_decay_chain'], eff['PA_density']) - madspin_density_slack
+        hi = max(eff['full_decay_chain'], eff['PA_density']) + madspin_density_slack
         test.assertGreaterEqual(
-            eff['full_density'], lo,
-            'full_density (%g) below [full_decay_chain=%g, PA_density=%g] '
-            'interval within full_density_slack %g (eff dump: %s)'
-            % (eff['full_density'], eff['full_decay_chain'],
-               eff['PA_density'], full_density_slack, eff))
+            eff['madspin_density'], lo,
+            'madspin_density (%g) below [full_decay_chain=%g, PA_density=%g] '
+            'interval within madspin_density_slack %g (eff dump: %s)'
+            % (eff['madspin_density'], eff['full_decay_chain'],
+               eff['PA_density'], madspin_density_slack, eff))
         test.assertLessEqual(
-            eff['full_density'], hi,
-            'full_density (%g) above [full_decay_chain=%g, PA_density=%g] '
-            'interval within full_density_slack %g (eff dump: %s)'
-            % (eff['full_density'], eff['full_decay_chain'],
-               eff['PA_density'], full_density_slack, eff))
+            eff['madspin_density'], hi,
+            'madspin_density (%g) above [full_decay_chain=%g, PA_density=%g] '
+            'interval within madspin_density_slack %g (eff dump: %s)'
+            % (eff['madspin_density'], eff['full_decay_chain'],
+               eff['PA_density'], madspin_density_slack, eff))
 
 
 def _resonance_masses(result, parent_pdg, child_pdgs=None):

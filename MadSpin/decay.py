@@ -2067,8 +2067,7 @@ class decay_all_events(object):
                                           (self.all_ME,self.all_decay,self.width_estimator))                
         
         if not self.options["onlyhelicity"] and \
-            self.options['spinmode'] not in  ['PA', 'onshell', 'density'] and \
-            self.options['ME_mode'] == 'decay_chain':
+            self.options['spinmode'] in  ['madspin_v1']:
             
             resonances = self.width_estimator.resonances
             logger.debug('List of resonances: %s' % resonances)
@@ -4270,9 +4269,9 @@ class decay_all_events_onshell(decay_all_events):
         if self.mode == "onshell" or (self.mode == "density" and self.options['density_debug']):
             commandline += self.get_full_matrix_command(processes)
             #misc.sprint(commandline)
-            logger.critical("Full ME calculation") 
+            logger.debug("Full ME calculation") 
         else:
-            logger.critical("Skipping full ME calculation")        
+            logger.debug("Skipping full ME calculation")        
 
         # 5. add the decay information to the all_topology object --------------                        
 #        for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
@@ -4498,7 +4497,7 @@ class decay_all_events_density(decay_all_events_onshell):
         must be left as-is, otherwise MG5 receives an invalid process string
         of the form ``... > t* j* ;`` and "Skipping full ME calculation"."""
 
-        if self.options['density_pole_approximation']:
+        if self.options['spinmode'] in ['PA', 'onshell']:
              return line
 
         to_decay = set()
@@ -4537,7 +4536,7 @@ class decay_all_events_density(decay_all_events_onshell):
     
     def adapt_decay(self, line):
         '''If allowing offshell matrix element add * to the decaying particle.'''
-        if self.options['density_pole_approximation']:
+        if self.options['spinmode'] in ['PA', 'onshell']:
              return line
         
         out = []

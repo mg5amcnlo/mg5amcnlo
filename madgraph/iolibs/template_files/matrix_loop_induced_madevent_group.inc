@@ -178,6 +178,7 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 
 
     ANS = 0D0
+    IVEC= 1
 
     DO I=1,NCOMB
        TS(I)=0d0

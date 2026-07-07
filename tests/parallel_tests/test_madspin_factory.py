@@ -154,7 +154,7 @@ class MadSpinFactoryTest(unittest.TestCase):
         2. ``onshell_decay_chain`` and ``onshell_density`` are close to each
            other (within ``EFF_TOL``) and both are higher than ``PA_density``
            (the pole approximation).
-        3. ``full_density`` lies between ``full_decay_chain`` and
+        3. ``madspin_density`` lies between ``full_decay_chain`` and
            ``PA_density``.
 
         Missing modes (e.g. ``skip_modes`` opt-outs) are tolerated; the rules
@@ -196,7 +196,7 @@ class MadSpinFactoryTest(unittest.TestCase):
         # Use only the modes that can actually produce off-shell mass.
         offshell_results = {
             k: v for k, v in results.items()
-            if k in ('full_decay_chain', 'full_density', 'PA_density')
+            if k in ('full_decay_chain', 'madspin_density', 'PA_density')
         }
         if len(offshell_results) >= 2:
             assert_offshell_mass_distribution(
@@ -247,7 +247,7 @@ class MadSpinFactoryTest(unittest.TestCase):
         self._check_efficiency_pairs(results)
         offshell_results = {
             k: v for k, v in results.items()
-            if k in ('full_decay_chain', 'full_density', 'PA_density')
+            if k in ('full_decay_chain', 'madspin_density', 'PA_density')
         }
         if len(offshell_results) >= 2:
             # Z is narrow; tighten the constant tolerance.
