@@ -5419,8 +5419,12 @@ class TestDiagramFlavorCheckQQG(unittest.TestCase):
         discriminate: some match the fermion-line flavor routing and some do
         not, depending on which IS quark pairs with which FS quark."""
         # d u > g d u : flavor d on one line, u on the other.
+        #for diag in self.diagrams:
+        #    diag.check_flavor((1, 2, 21, 1, 2), self.model)
         pattern_a = [d.check_flavor((1, 2, 21, 1, 2), self.model)
                      for d in self.t_diagrams]
+        #for diag in self.diagrams:
+        #    diag.check_flavor((1, 2, 21, 1, 2), self.model)        
         pattern_b = [d.check_flavor((1, 2, 21, 2, 1), self.model)
                      for d in self.t_diagrams]
         # Each mixed assignment is accepted by at least one t-channel diagram
@@ -5437,6 +5441,10 @@ class TestDiagramFlavorCheckQQG(unittest.TestCase):
             self.assertNotEqual(a, b,
                                 "a t-channel diagram cannot be valid for both "
                                 "flavor routings of d u > g d u")
+
+
+
+
 
     def test_matrix_element_flavor_conservation(self):
         """The matrix-element-level check accepts every flavor-conserving
@@ -5545,5 +5553,96 @@ class TestDiagramFlavorCheckQQbarG(unittest.TestCase):
         for flv in [(1, 2, 21, 2, 1), (1, 2, 21, 2, 2)]:
             self.assertFalse(self.me.check_flavor(flv, self.model),
                              "q q~ > q q~ g must reject %r" % (flv,))
+
+
+#===============================================================================
+# TestExternalFlavorsQGTTXQG
+#===============================================================================
+class TestExternalFlavorsQGTTXQG(unittest.TestCase):
+    """Regression test for the flavor grouping of _quark g > t t~ _quark g.
+
+    With flavor grouping (the u/d/s/c quarks merged into ``_quark``, pdg 81),
+    a t-channel/s-channel gluon exchange conserves the quark flavor along the
+    fermion line: the incoming and outgoing merged quark MUST carry the same
+    flavor.  The only physical external-flavor assignments are therefore the
+    four diagonal ones (u g > t t~ u g, d g > t t~ d g, ...):
+
+        (1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 2, 1),
+        (3, 1, 1, 1, 3, 1), (4, 1, 1, 1, 4, 1)
+
+    where the tuple indexes the six external legs
+    ``(_quark, g, t, t~, _quark, g)`` (a value of 1 for the gluon/top legs, and
+    the merged-quark flavor index 1..4 for the two ``_quark`` legs).
+
+    All of these share the same coupling structure, so
+    ``get_external_flavors_with_iden`` must collapse them into a SINGLE group.
+    The bug this pins down is a spurious second group made of the
+    flavor-violating assignments (e.g. u g > t t~ d g), which must never appear.
+    """
+
+    # The single physically-allowed group (incoming and outgoing quark share
+    # their flavor); every entry is flavor-conserving.
+    EXPECTED_GROUP = [(1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 2, 1),
+                      (3, 1, 1, 1, 3, 1), (4, 1, 1, 1, 4, 1)]
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q_id = 81
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [21],   'state': False}),
+                base_objects.MultiLeg({'ids': [6],    'state': True}),
+                base_objects.MultiLeg({'ids': [-6],   'state': True}),
+                base_objects.MultiLeg({'ids': [q_id], 'state': True}),
+                base_objects.MultiLeg({'ids': [21],   'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 4, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+
+    def test_external_flavors_are_flavor_conserving(self):
+        """get_external_flavors must return exactly the four diagonal
+        (flavor-conserving) assignments and no flavor-violating ones."""
+        flavors = sorted(self.me.get_external_flavors())
+        self.assertEqual(flavors, sorted(self.EXPECTED_GROUP),
+            "_quark g > t t~ _quark g must only allow same-flavor quark "
+            "assignments, got %r" % flavors)
+
+    def test_external_flavors_with_iden_single_group(self):
+        """get_external_flavors_with_iden must collapse the four diagonal
+        assignments into a SINGLE coupling group.  The unphysical
+        flavor-violating assignments (e.g. u g > t t~ d g) must not create a
+        spurious second group."""
+        self.assertTrue(self.me.check_flavor((1, 1, 1, 1, 1, 1), self.model))
+        self.assertFalse(self.me.check_flavor((3, 1, 1, 1, 4, 1), self.model))
+        groups = list(self.me.get_external_flavors_with_iden())
+        self.assertEqual(len(groups), 1,
+            "expected a single flavor group for _quark g > t t~ _quark g, got "
+            "%d groups: %r" % (len(groups), groups))
+        self.assertEqual(sorted(groups[0]), sorted(self.EXPECTED_GROUP),
+            "the single flavor group must be the four same-flavor assignments, "
+            "got %r" % (groups[0],))
+        
+        for diag in self.me.get('diagrams'):
+            for flv in self.EXPECTED_GROUP:
+                self.assertTrue(diag.check_flavor(flv, self.model),
+                                "diagram %s must accept flavor %r" %
+                                (diag, flv))
+            for flv in [(1, 1, 1, 1, 2, 1), (3, 1, 1, 1, 4, 1)]:
+                self.assertFalse(diag.check_flavor(flv, self.model),
+                                 "diagram %s must reject flavor %r" %
+                                 (diag, flv))
 
 

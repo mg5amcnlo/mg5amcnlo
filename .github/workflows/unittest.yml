@@ -506,6 +506,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore_ufomodel
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_generate_helas_diagrams_WWWWA test_generate_helas_diagrams_WWZA test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_enu_enu test_generate_helas_diagrams_epem_elpelmepem test_generate_helas_diagrams_gb_t1go_tttxn1x1m test_generate_helas_diagrams_gg_gg test_generate_helas_diagrams_gg_gogo test_generate_helas_diagrams_uu_susu test_generate_helas_diagrams_uu_susug test_generate_helas_diagrams_uux_gepem_no_optimization test_generate_helas_diagrams_uux_uuxuux test_generate_helas_diagrams_zz_n1n1 test_generate_ufo_helas_diagrams_gg_gogo test_get_color_pdg_antipdg test_helas_diagrams_gg_gogo_go_tt1x_t_wpb test_majorana_conjugate_process test_matrix_4g_decay_chain_process test_matrix_multistage_decay_chain_process test_multiple_lorentz_structures test_multiple_lorentz_structures_with_decay_chain test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow test_multiple_lorentz_structures_with_fermion_flow_clash test_vector_clash_majorana_process test_madevent_template_uses_decay_aware_broken_symmetry_metadata
