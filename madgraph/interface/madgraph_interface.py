@@ -2708,7 +2708,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'cpp_compiler':
                 return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
-            elif args[1] == 'nb_core':
+            elif args[1] in ['nb_core', 'nb_core_pythia8', 'nb_core_delphes']:
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
                 return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
@@ -3118,6 +3118,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'nb_core': None,
+                         'nb_core_pythia8': None,
+                         'nb_core_delphes': None,
                          'notification_center': True
                          }
 
@@ -8831,8 +8833,22 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)   
-    
+        return self.set_default('nb_core', args, log=log)
+
+    def set2_nb_core_pythia8(self, args, log=True):
+        """Set the number of cores/jobs used by the Pythia8 step only.
+        Falls back to the global nb_core option when left to None.
+        Example: set nb_core_pythia8 8
+        """
+        return self.set_default('nb_core_pythia8', args, log=log)
+
+    def set2_nb_core_delphes(self, args, log=True):
+        """Set the number of cores/jobs used by the Delphes step only.
+        Falls back to the global nb_core option when left to None.
+        Example: set nb_core_delphes 8
+        """
+        return self.set_default('nb_core_delphes', args, log=log)
+
     def set2_cluster_type(self, args, log=True):
         """Set the cluster type to be used for cluster jobs submission.
         Example: set cluster_type condor

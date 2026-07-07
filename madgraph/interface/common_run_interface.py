@@ -21,6 +21,7 @@ from __future__ import division
 
 from __future__ import absolute_import
 import ast
+import contextlib
 import logging
 import math
 import copy
@@ -689,6 +690,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'cluster_size':100,
                          'cluster_memory':None,
                          'nb_core': None,
+                         'nb_core_pythia8': None,
+                         'nb_core_delphes': None,
                          'cluster_temp_path':None}
 
 
@@ -3592,6 +3595,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('nb_core should be a positive number')
             self.nb_core = int(args[1])
             self.options['nb_core'] = self.nb_core
+        elif args[0] in ['nb_core_pythia8', 'nb_core_delphes']:
+            # Per-step override of the number of cores/jobs used by do_pythia8/
+            # do_delphes. 'None' means fall back to the global nb_core option.
+            if args[1] == 'None':
+                self.options[args[0]] = None
+                return
+            if not args[1].isdigit():
+                raise self.InvalidCmd('%s should be a positive number' % args[0])
+            self.options[args[0]] = int(args[1])
         elif args[0] == 'timeout':
             self.options[args[0]] = int(args[1])
         elif args[0] == 'cluster_status_update':
@@ -3667,6 +3679,88 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return stop
         except self.InvalidCmd:
             return stop
+
+    def get_nb_core_override(self, step):
+        """Return the user-specified number of cores/jobs for a given step
+        (e.g. 'pythia8' or 'delphes') through the nb_core_<step> option, or
+        None when it is unset (in which case the caller keeps its default
+        parallelization based on the global nb_core option).
+        The value is allowed to exceed the global nb_core: for the Pythia8 step
+        it directly fixes the number of (statistically equivalent) split jobs."""
+
+        value = self.options.get('nb_core_%s' % step, None)
+        if value in (None, 'None', ''):
+            return None
+        return max(int(value), 1)
+
+    def resolve_nb_core(self, step):
+        """Return the effective number of cores/jobs for a given step: the
+        per-step nb_core_<step> option when set, otherwise the global nb_core
+        option (falling back to the number of available CPUs when that is also
+        unset). Unlike get_nb_core_override this never returns None."""
+
+        value = self.get_nb_core_override(step)
+        if value is not None:
+            return value
+        value = self.options.get('nb_core', None)
+        if value in (None, 'None', ''):
+            import multiprocessing
+            return multiprocessing.cpu_count()
+        return max(int(value), 1)
+
+    @contextlib.contextmanager
+    def multicore_concurrency(self, nb_core):
+        """Temporarily set the multicore scheduler concurrency
+        (self.cluster.nb_core) to nb_core for the duration of the block, always
+        restoring the previous value afterwards (even if the block raises).
+
+        A no-op when nb_core is None or when not running in multicore mode
+        (run_mode != 2), so callers can wrap their submit/wait unconditionally."""
+
+        if nb_core is None or self.options.get('run_mode') != 2:
+            yield
+            return
+        original = self.cluster.nb_core
+        self.cluster.nb_core = nb_core
+        try:
+            yield
+        finally:
+            self.cluster.nb_core = original
+
+    def is_delphes_fusion_active(self):
+        """Decide whether Delphes should run on the individual Pythia8 split
+        files (before the HepMC files are merged) and the resulting ROOT files
+        be combined with hadd, instead of running a single Delphes pass on the
+        merged HepMC file.
+
+        This is the opt-in rule for the fused parallel-Delphes path. It is
+        active when:
+          - Delphes is going to run, i.e. delphes_path is set and a
+            delphes_card.dat is present (this mirrors the post-Pythia8
+            'delphes --no_default' call which is a no-op without the card);
+          - the run is parallel (run_mode != 0) so Pythia8 splits exist to run
+            Delphes on;
+          - event_norm is 'average', which guarantees that the per-split HepMC
+            event weights are absolute and therefore combinable (the same
+            restriction already enforced for the Pythia8 splitting itself);
+          - nb_core_delphes has been explicitly set. Parallel Delphes is opt-in:
+            when nb_core_delphes is left unset Delphes runs on a single core
+            (the standard single pass on the merged HepMC file), which is the
+            default. nb_core_delphes then also sets the concurrency of the
+            per-split Delphes jobs.
+        """
+
+        if not self.options.get('delphes_path'):
+            return False
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            return False
+        if self.options.get('run_mode', 0) == 0:
+            return False
+        if self.run_card['event_norm'] != 'average':
+            return False
+        if self.get_nb_core_override('delphes') is None:
+            return False
+        return True
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
