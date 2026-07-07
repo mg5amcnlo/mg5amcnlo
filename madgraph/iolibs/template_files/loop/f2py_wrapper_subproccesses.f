@@ -79,6 +79,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
       RETURN
       END
 
+      SUBROUTINE %(f2py_prefix)sGET_IDENS(idens)
+      IMPLICIT NONE
+CF2PY integer, intent(out) :: idens(%(nb_me)i)
+      integer idens(%(nb_me)i)
+      %(idens_value)s
+      RETURN
+      END
+
 
 
       SUBROUTINE %(f2py_prefix)sREFCHOICEP(PREF, PHI, THETA)

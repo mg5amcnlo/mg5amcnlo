@@ -5937,7 +5937,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[-1].lower() in self.run_card.shortcut_values:
                     allowed_for_run += self.run_card.shortcut_values[args[-1].lower()]
                 opts += [str(i) for i in  allowed_for_run]
-                
+            if args[-1] in list(self.reweight_card.keys()):
+                if args[-1] == 'symmetrise_initial_state' or args[-1] == 'matrix_normalisation':
+                    opts = ["True", "False"]
+                # the other options are too complicated because they depend on the pdgs in the model. We do not make autocompletion for these    
+
 
             possibilities['Special Value'] = self.list_completion(text, opts)
 

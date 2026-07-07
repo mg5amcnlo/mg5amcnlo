@@ -460,9 +460,17 @@ C     consider. POLARIZATIONS(0,0) is -1 if there is not such requirement.
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/%(proc_prefix)sBEAM_POL/POLARIZATIONS
 
+C     This array specifies which external particles' mass should be kept offshell according to the 'generate' command
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+
 C ----------
 C BEGIN CODE
 C ----------
+
+C     If KEEP_OFFSHELL_MASS is .true., then its mass is computed as m**2 = p**2
+C     If KEEP_OFFSHELL_MASS is .false., then its mass is taken from pmass.inc
+%(keep_offshell_mass)s
 
 IF(ML_INIT) THEN
   ML_INIT = .FALSE.
@@ -861,7 +869,7 @@ CALL %(proc_prefix)sSET_COLLIER_GLOBAL_CACHE(.TRUE.)
 
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
-  CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(PS)
+  CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS, PS)
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -2136,26 +2144,26 @@ C For some architectures, it is necessary to initialize all the elements of full
 C Beware that if the length provided is incorrect, then this can corrup the fulllist given in argument.
         do j=0,NSQUAREDSO
           do k=1,3
-		    fulllist(k,j,i)=0.0d0
-		  enddo
-		enddo
+		        fulllist(k,j,i)=0.0d0
+		      enddo
+		    enddo
       enddo
 
       do k=0,NSQUAREDSO
 
-	    do i=1,3
-	      do j=1,maxstabilitylength
-		    list(j)=fulllist(i,k,j)
-		  enddo
+        do i=1,3
+          do j=1,maxstabilitylength
+            list(j)=fulllist(i,k,j)
+          enddo
           diff=maxval(list,1,mask)-minval(list,1,mask)
           avg=(maxval(list,1,mask)+minval(list,1,mask))/2.0d0
-		  estimate(i,k)=avg
+          estimate(i,k)=avg
           if (avg.eq.0.0d0) then
             accuracies(i)=diff
           else
             accuracies(i)=diff/abs(avg)
           endif
-	    enddo
+        enddo
 
 C       The technique below is too sensitive, typically to
 C       unstablities in very small poles
@@ -2167,23 +2175,23 @@ C       The following is used instead
           acc(k) = acc(k) + ACCURACIES(I)*ABS(ESTIMATE(I,K))
           AVG = AVG + ESTIMATE(I,K)
         ENDDO
-		if (avg.ne.0.0d0) then
-          acc(k)  = acc(k) / ( ABS(AVG) / 3.0d0)
-		endif
+        if (avg.ne.0.0d0) then
+              acc(k)  = acc(k) / ( ABS(AVG) / 3.0d0)
+        endif
         
 C       When using COLLIER with the internal stability test, the first evaluation is typically more reliable so we do not want to use the average but rather the first evaluation.
-		IF (MLREDUCTIONLIB(I_LIB).eq.7.and.COLLIERUseInternalStabilityTest) THEN
-		  DO I=1,3
-		    estimate(i,k) = fulllist(i,k,1)
-		  ENDDO
-		ENDIF
+        IF (MLREDUCTIONLIB(I_LIB).eq.7.and.COLLIERUseInternalStabilityTest) THEN
+          DO I=1,3
+            estimate(i,k) = fulllist(i,k,1)
+          ENDDO
+        ENDIF
 
 c       Make sure to hard-set to zero accuracies of coupling orders not included
         if (K.ne.0) THEN
-		  IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
-		    acc(k) = 0.0d0
-		  ENDIF
-		ENDIF
+          IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+            acc(k) = 0.0d0
+          ENDIF
+		    ENDIF
 
 c       If NaN are present in the evaluation, automatically set the accuracy to 1.0d99.
         DO I=1,3
@@ -2194,7 +2202,7 @@ c       If NaN are present in the evaluation, automatically set the accuracy to 
           ENDDO
         ENDDO
 
-	  enddo
+	    enddo
 
       end
 
@@ -2228,6 +2236,10 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 	    %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
 	    common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
   	    %(real_dp_format)s P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+      %(keep_offshell_mass)s
+
 
 	    DO I=1,NEXTERNAL
 	      DO J=0,3

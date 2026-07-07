@@ -172,8 +172,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         # file path.
         if self._ms_run_id == 1:
             self.ms_me_subdir = 'madspin_me'
+            self.ms_me_decay_subdir = 'madspin_decay'
         else:
             self.ms_me_subdir = 'madspin_me_%d' % self._ms_run_id
+            self.ms_me_decay_subdir = 'madspin_decay_%d' % self._ms_run_id
 
         self.decay = madspin.decay_misc()
         self.model = None
@@ -2280,30 +2282,78 @@ class MadSpinInterface(extended_cmd.Cmd):
         # ------------------------------------------------------------------
         # Load f2py module and build pdg2prefix map if needed (unchanged logic)
         # ------------------------------------------------------------------
-        if not hasattr(self, 'f2py_module'):
-            sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+        # Since we need to compute the density matrix for both the production and the decay, we need to import two fortran modules
+
+        def initialise_f2py_module(self, mymod, sp_path, prod_or_decay):
+            """ Internal routine to initialise the fortran module with module.initialise(param_card_path).
+                If one the process is at loop-induced level, it is also needed to call module.set_madloop_path(path_to_MadLoop5_resources)
+            """
+            if prod_or_decay == 'prod':
+                folder_name = self.ms_me_subdir
+            elif prod_or_decay == 'decay':
+                folder_name = self.ms_me_decay_subdir
+            else:
+                raise ValueError("prod_or_decay only accepts values as 'prod' or 'decay'.")
+
+            with misc.chdir(sp_path): #changed the search of the card to the subdirectories madspin_me and madspin_decay
+                if (not os.path.exists(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
+                        and os.path.exists(pjoin(self.path_me, folder_name, 'param_card.dat'))):
+                    mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
+                else:
+                    mymod.initialise(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
+                # If the module is loop-induced, we also need to set the directory in which the MadLoop param card is present
+                MadLoopCardPath = pjoin(self.path_me, folder_name, 'SubProcesses', 'MadLoop5_resources')
+                if os.path.exists(MadLoopCardPath):
+                    MLCard = banner.MadLoopParam(pjoin(MadLoopCardPath, 'MadLoopParams.dat'))
+                    MLCard.set("HelicityFilterLevel", 0) # HelicityFilterLevel is set to 0 because the computation of density matrices loop-induced requires it.
+                    MLCard.set("MLStabThres", 0.001)
+                    # MLCard.set("ImprovePSPoint", -1) # for now we keep ImprovePSPoint = 2
+
+                    MLCard.write(pjoin(MadLoopCardPath, 'MadLoopParams.dat'))                     
+                    mymod.set_madloop_path(MadLoopCardPath)
+        
+        def create_f2py_module(self, sp_path, prod_or_decay):
+            """ Internal routine to setup self.f2py_module independtly for the production side and the decay side"""
             if sys.path[0] != sp_path:
                 sys.path.insert(0, sp_path)
-
+            
+            if prod_or_decay == "prod":
+                i = 0
+            elif prod_or_decay == "decay":
+                i = 1
+            else:
+                raise ValueError("The only acceptable values of prod_or_decay are 'prod' and 'decay'")
+            
             mymod = self._load_f2py_matrix_module(sp_path)
-            self.f2py_module = mymod
+            self.f2py_module[i] = mymod
 
-            all_prefix = self.f2py_module.get_prefix()
-            all_pdg, all_procid = self.f2py_module.get_pdg_order()
-            self.pdg2prefix = {}
-            for i, pdg in enumerate(all_pdg):
+            all_prefix[i] = self.f2py_module[i].get_prefix()
+            all_pdg[i], all_procid[i] = self.f2py_module[i].get_pdg_order()
+            self.pdg2prefix[i] = {}
+            for j, pdg in enumerate(all_pdg[i]):
                 pdg = tuple([x for x in pdg if x != 0])
-                self.pdg2prefix[pdg] = (str(all_prefix[i].decode()).strip(), i)
+                self.pdg2prefix[i][pdg] = (str(all_prefix[i][j].decode()).strip(), j)
+            
 
-            if self.model_init:
-                self.model_init = False
-                with misc.chdir(sp_path):
-                    if (not os.path.exists(pjoin(self.path_me, 'Cards', 'param_card.dat'))
-                            and os.path.exists(pjoin(self.path_me, 'param_card.dat'))):
-                        mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
-                    else:
-                        mymod.initialise(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+            if self.model_init_prod and prod_or_decay == 'prod':
+                self.model_init_prod = False
+                initialise_f2py_module(self, mymod, sp_path, prod_or_decay='prod')
+    
+            if self.model_init_decay and prod_or_decay == 'decay':
+                self.model_init_decay = False
+                initialise_f2py_module(self, mymod, sp_path, prod_or_decay='decay')
+         
+        if not hasattr(self, 'f2py_module'):
+            self.f2py_module = [0, 0] # first index is production, second is decay
+            self.pdg2prefix = [0, 0]
+            all_prefix = [0, 0]
+            all_pdg = [0, 0]
+            all_procid = [0, 0]
 
+            sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+            create_f2py_module(self, sp_path_prod, 'prod')
+            sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
+            create_f2py_module(self, sp_path_decay, 'decay')
         # ------------------------------------------------------------------
         # Cache production-only metadata reused across rejection retries
         # ------------------------------------------------------------------
@@ -2371,6 +2421,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if hasattr(particle, 'reshuffle_info'):
                         del particle.reshuffle_info
 
+            #VALENTIN: except for the mode "full", we should not compute the matrix element here
             MEdenom_prod, MEdenom_decay = None, None
             if not density_pole_approximation:
                 # compute the denominator and then reshuffle the event before 
@@ -2587,8 +2638,11 @@ class MadSpinInterface(extended_cmd.Cmd):
     def get_density(self, event, position, allow_hel, ncomb, dimension):
         orig_order = getattr(event, '_ms_orig_order_for_density', None)
         if orig_order is None:
-            _, orig_order, _, _ = self.get_pdir(event)
+            _, orig_order, _, _, tag = self.get_pdir(event)
             event._ms_orig_order_for_density = orig_order
+        else: #in any case, we need tag to differentiate between production and decay
+            tag, _ = event.get_tag_and_order()
+
 
         # Fast path: single-point momentum extraction without permutation construction.
         try:
@@ -2605,14 +2659,31 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise ValueError("Error in get_density: 'position' must contain at least one position index")
         if len(allow_hel) % n_changing != 0:
             raise ValueError("Error in get_density: inconsistent 'allow_hel' and 'position' lengths")
+        
         # PY_GET_DENSITY(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2)
-        density_array = self.f2py_module.py_get_density(pdgs=pdgs, 
-                                                        procid=-1, 
-                                                        p=P, 
-                                                        pos=position, 
-                                                        allow_hel=allow_hel, 
-                                                        alphas=event.aqcd,
-                                                        scale2=event.scale**2)
+        if self.all_me[tag]['type'] == 'production':
+            # misc.sprint("Computation of the production density matrix")
+            density_array = self.f2py_module[0].py_get_density(pdgs=pdgs, 
+                                                                procid=-1, 
+                                                                p=P, 
+                                                                pos=position, 
+                                                                allow_hel=allow_hel, 
+                                                                alphas=event.aqcd,
+                                                                scale2=event.scale**2)
+
+        elif self.all_me[tag]['type'] == 'decay':
+            # misc.sprint("Computation of the decay density matrix")
+            density_array = self.f2py_module[1].py_get_density(pdgs=pdgs, 
+                                                                procid=-1, 
+                                                                p=P, 
+                                                                pos=position, 
+                                                                allow_hel=allow_hel, 
+                                                                alphas=event.aqcd,
+                                                                scale2=event.scale**2)
+        else:
+            raise ValueError("The key 'type' of sel.all_me can only take as values 'production' or 'decay'.")
+
+
         #print(f"density_array = {density_array}") 
         density_matrix = madspin.DensityMatrix(density_array, 
                                                n_changing, 
@@ -2654,7 +2725,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def get_nhel(self,event,position):
 
-        pdir,orig_order, prefix, pos = self.get_pdir(event)
+        pdir,orig_order, prefix, pos, tag = self.get_pdir(event)
         if pdir in self.all_nhel:
             iden,NHEL = self.all_nhel[pdir]
             if position == -1:
@@ -2693,9 +2764,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         #print("--- END")
         # END REMOVE
 
-        # get_pdir returns (pdir, orig_order, prefix, pos)
-        _, _, _, pos = self.get_pdir(event)
-        idens = self.f2py_module.get_idens()
+        # get_pdir returns (pdir, orig_order, prefix, pos, tag)
+        _, _, _, pos, tag = self.get_pdir(event)
+
+        if self.all_me[tag]['type'] == 'production':
+            idens = self.f2py_module[0].get_idens()
+        elif self.all_me[tag]['type'] == 'decay':
+            idens = self.f2py_module[1].get_idens()
+        else:
+            raise ValueError("The key 'type' of self.all_me can only take as values 'production' or 'decay'.")
+
         #print(f"idens = {idens} , pos = {pos}")
         return idens[pos]
     
@@ -2723,10 +2801,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             tag = (init, final)
             orig_order = self.all_me[tag]['order']
         pdir = self.all_me[tag]['pdir']
-        prefix, pos = self.pdg2prefix[tuple(list(orig_order[0]) + list(orig_order[1]))]
-        #misc.sprint(f"get_pdir: pdir = {pdir} , orig_order = {orig_order} , prefix = {prefix}")
-        return pdir,orig_order, prefix, pos
 
+        if self.all_me[tag]['type'] == 'production':
+            prefix, pos = self.pdg2prefix[0][tuple(list(orig_order[0]) + list(orig_order[1]))]
+        elif self.all_me[tag]['type'] == 'decay':
+            prefix, pos = self.pdg2prefix[1][tuple(list(orig_order[0]) + list(orig_order[1]))]
+        else:
+            raise ValueError("The key 'type' of self.all_me can only take as values 'production' or 'decay'.")
+        #misc.sprint(f"get_pdir: pdir = {pdir} , orig_order = {orig_order} , prefix = {prefix}")
+        return pdir,orig_order, prefix, pos, tag
+
+    # Two model_init are used, one for the production and one the decay (to support LO decay + NLO production or different models for each side)
+    model_init_prod = True
+    model_init_decay = True
     model_init = True
     def calculate_matrix_element(self, event):
         """routine to return the matrix element"""        
@@ -2762,6 +2849,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                     new_value = self.all_f2py[pdir](p, 0.113, 0)
                 else:
                     new_value = self.all_f2py[pdir](p, event.aqcd, event.scale, -1)
+                #if the process is Loop-Induced, smatrixhel returns the tuple (value, returncode), we need to keep only the value
+                if isinstance(new_value, tuple):
+                    new_value = new_value[0]
                 if self.options['identical_particle_in_prod_and_decay'] == "average":
                     out += new_value
                 else:
@@ -2817,7 +2907,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             # ctypes.CDLL(me_library)
 
             pdg = list(orig_order[0]) + list(orig_order[1])
-            self.all_f2py[pdir] = lambda *args : mymod.smatrixhel(pdg, 0, *args)
+
+            if self.all_me[tag]['type'] == 'production':
+                self.all_f2py[pdir] = lambda *args : mymod[0].smatrixhel(pdg, 0, *args)
+            elif self.all_me[tag]['type'] == 'decay':
+                self.all_f2py[pdir] = lambda *args : mymod[1].smatrixhel(pdg, 0, *args)
+            else:
+                raise ValueError("The key 'type' of sel.all_me can only take as values 'production' or 'decay'.")
+
             return self.calculate_matrix_element(event)
         
         

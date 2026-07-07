@@ -4242,8 +4242,13 @@ class decay_all_events_onshell(decay_all_events):
         # (so dlopen cannot return a cached library handle across runs in
         # the same process — see MadSpinInterface._ms_run_counter).
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
+        ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         try:
             shutil.rmtree(pjoin(path_me, ms_me_subdir))
+        except Exception:
+            pass
+        try:
+            shutil.rmtree(pjoin(path_me, ms_me_decay_subdir))
         except Exception:
             pass
         
@@ -4302,34 +4307,48 @@ class decay_all_events_onshell(decay_all_events):
 #            return
 
         # 6. generate decay only part ------------------------------------------
-        commandline += self.get_decay_command()
+        def fill_all_me(self, prod_or_decay):
+            # store information about matrix element
+            if prod_or_decay not in ["production", "decay"]:
+                raise ValueError("The input prod_or_decay of fill_all_me only accepts values in 'production' or 'decay'.")
+            for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
+                me_string = matrix_element.get('processes')[0].shell_string()
+                for me in matrix_element.get('processes'):
+                    # get the orignal order:
+                    initial = []
+                    final = [l.get('id') for l in me.get_legs_with_decays()\
+                                if l.get('state') or initial.append(l.get('id'))]
+                    order = (tuple(initial), tuple(final))
+                    initial.sort(), final.sort()
+                    tag = (tuple(initial), tuple(final))
+                    self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order, 'type': prod_or_decay}
 
-
-
-        commandline = commandline.replace('add process', 'generate',1)
+        #here the commandline does not have the decays yet
+        
         mgcmd = self.mgcmd
-        mgcmd.exec_cmd(commandline, precmd=True)
-        # remove decay with 0 branching ratio.
-        #mgcmd.remove_pointless_decay(self.banner.param_card)
-        #
-        commandline = 'output standalone %s --prefix=int' % pjoin(path_me, ms_me_subdir)
-        logger.info(commandline)
-        mgcmd.exec_cmd(commandline, precmd=True)
-        logger.info('Done %.4g' % (time.time()-start))
+
         self.all_me = {}
-        # store information about matrix element
-        for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
-            me_string = matrix_element.get('processes')[0].shell_string()
-            for me in matrix_element.get('processes'):
-                dirpath = pjoin(path_me, ms_me_subdir, 'SubProcesses', "P%s" % me_string)
-                # get the orignal order:
-                initial = []
-                final = [l.get('id') for l in me.get_legs_with_decays()\
-                          if l.get('state') or initial.append(l.get('id'))]
-                order = (tuple(initial), tuple(final))
-                initial.sort(), final.sort()
-                tag = (tuple(initial), tuple(final))
-                self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order}
+
+        commandline_production = commandline.replace('add process', 'generate',1)
+        commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
+
+        logger.info(commandline_production)
+        mgcmd.exec_cmd(commandline_production, precmd=True)
+
+        # store information about the production matrix elements
+        fill_all_me(self, "production")
+
+        commandline_decay = self.get_decay_command()
+        commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+        commandline_decay = commandline_decay.replace('add process', 'generate',1)
+
+        logger.info(commandline_decay)
+        mgcmd.exec_cmd(commandline_decay, precmd=True)
+
+        # store information about the decay matrix elements
+        fill_all_me(self, "decay")
+
+        logger.info('Done %.4g' % (time.time()-start))
 
         return self.all_me
 
@@ -4438,6 +4457,7 @@ class decay_all_events_onshell(decay_all_events):
     def compile(self):
         logger.info('Compiling code')
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
+        ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         # Per-instance suffix for the f2py-linked shared library: with the
         # default ``PROCNAME=`` the makefile produces ``liball_2me.{so,dylib}``
         # regardless of which madspin_me_<N> subdir we are in, and the
@@ -4460,6 +4480,13 @@ class decay_all_events_onshell(decay_all_events):
         misc.compile(make_args,
                      cwd=pjoin(self.path_me, ms_me_subdir, 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
+        #Valentin: not sure the decay_folder exists in all cases, so I check
+        if os.path.exists(pjoin(self.path_me, ms_me_decay_subdir)):
+            misc.compile(cwd=pjoin(self.path_me, ms_me_decay_subdir, 'Source'),
+                        nb_core=self.mgcmd.options['nb_core'])
+            misc.compile(make_args,
+                        cwd=pjoin(self.path_me, ms_me_decay_subdir, 'SubProcesses'),
+                        nb_core=self.mgcmd.options['nb_core'])
 
     def save_to_file(self, *args):
         import sys
