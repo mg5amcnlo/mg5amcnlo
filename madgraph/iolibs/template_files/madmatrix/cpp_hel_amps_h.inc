@@ -59,11 +59,16 @@ namespace mg5amcCpu
       : partner1(p1), partner2(p2), value(v) {}
   };
 
-  template<int SIZE, int STRIDE>
+  // FSTRIDE is the number of fptype's used to store one flavor slot of the value buffer:
+  //  - independent (fixed) flavored couplings: FSTRIDE = nx2 = 2 (a single scalar complex, broadcast across the SIMD vector)
+  //  - dependent (event-by-event, running-alphas) flavored couplings: FSTRIDE = nx2*neppC (an AOSOA SIMD record)
+  // It must match C_ACCESS::flv_stride of the access type the consuming vertex routine is instantiated with.
+  template<int SIZE, int STRIDE, int FSTRIDE = 2>
   class FLV_COUPLING_ARRAY {
 
       static_assert(SIZE >= 0, "flvCOUPs SIZE must be non-negative");
       static_assert(STRIDE > 0, "flvCOUPs STRIDE must be positive");
+      static_assert(FSTRIDE > 0, "flvCOUPs FSTRIDE must be positive");
       const int* const partner1;
       const int* const partner2;
       const fptype* const value;
@@ -78,7 +83,7 @@ namespace mg5amcCpu
         return FLV_COUPLING_VIEW{
           partner1 + i*STRIDE,
           partner2 + i*STRIDE,
-          value + i*2*STRIDE
+          value + i*FSTRIDE*STRIDE
         };
       }
   };

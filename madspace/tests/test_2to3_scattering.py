@@ -96,8 +96,8 @@ def fixed_input_points(rng, request):
     r2 = rng.random(N)
     p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pA, pB])
 
-    # Randoms for the 2->3 mapper
-    r_choice = rng.random(N)
+    # Discrete two-solution choice (int 0/1) + continuous randoms for the 2->3
+    r_choice = rng.integers(0, 2, size=N).astype(np.int32)
     r_s23 = rng.random(N)
     r_t1 = rng.random(N)
 
@@ -150,7 +150,7 @@ def input_points(rng, request):
     p12, p3, det_22 = map_22.map_forward([r1, r2, m12, m3], [pa, pb])
 
     # Randoms for the 2->3 mapper
-    r_choice = rng.random(N)  # decide branch (emitter choice)
+    r_choice = rng.integers(0, 2, size=N).astype(np.int32)
     r_s23 = rng.random(N)
     r_t1 = rng.random(N)
 
@@ -204,7 +204,10 @@ def test_inverse(input_points):
 
     for i, (inp, inv_inp) in enumerate(zip(inputs, inv_inputs)):
         if i == 0:
-            assert ((inp < 0.5) == (inv_inp < 0.5)).all()
+            # discrete two-solution choice: recovered exactly as an int
+            assert (
+                np.asarray(inv_inp).astype(np.int64) == np.asarray(inp).astype(np.int64)
+            ).all()
             continue
         assert inp == approx(inv_inp), f"mismatch in input index {i}"
 
@@ -254,6 +257,10 @@ def test_phase_space_compare(rng, input_points):
     p1, p2, det23 = mapping23.map_forward(inputs, conditions)
     p1s, p2s, det22 = mapping22.map_forward(inputs22, conditions22)
 
+    # det23 is now the per-branch Jacobian; the 2-solution multiplicity is owned
+    # externally, so apply it here to compare against the 2->2 phase-space element.
+    det23 = det23 * 2.0
+
     # Outgoing masses must match m1, m2; spectator stays whatever it was.
     std_error_23 = np.std(det23) / np.sqrt(N)
     assert np.mean(det23) == approx(np.mean(det22), abs=3 * std_error_23, rel=1e-6)
@@ -273,6 +280,8 @@ def test_phase_space_volume(fixed_input_points):
     conditions = [fixed_input_points.pa, fixed_input_points.pb, fixed_input_points.p3]
 
     p1, p2, det = mapping23.map_forward(inputs, conditions)
+    # per-branch Jacobian; apply the 2-solution multiplicity externally
+    det = det * 2.0
 
     s = fixed_input_points.m12**2
     m1_2 = fixed_input_points.m1**2

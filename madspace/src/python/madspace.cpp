@@ -432,11 +432,12 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TwoToTwoParticleScattering, Mapping>(m, "TwoToTwoParticleScattering")
         .def(
-            py::init<bool, double, double, double>(),
+            py::init<bool, double, double, double, bool>(),
             py::arg("com"),
             py::arg("invariant_power") = 0.,
             py::arg("mass") = 0.,
-            py::arg("width") = 0.
+            py::arg("width") = 0.,
+            py::arg("has_cut") = false
         );
 
     py::classh<DoubleT, Mapping>(m, "DoubleT")
@@ -455,13 +456,14 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TwoToThreeParticleScattering, Mapping>(m, "TwoToThreeParticleScattering")
         .def(
-            py::init<double, double, double, double, double, double>(),
+            py::init<double, double, double, double, double, double, bool>(),
             py::arg("t_invariant_power") = 0.,
             py::arg("t_mass") = 0.,
             py::arg("t_width") = 0.,
             py::arg("s_invariant_power") = 0.,
             py::arg("s_mass") = 0.,
-            py::arg("s_width") = 0.
+            py::arg("s_width") = 0.,
+            py::arg("has_cut") = false
         );
 
     py::classh<Propagator>(m, "Propagator")
@@ -483,20 +485,31 @@ PYBIND11_MODULE(_madspace_py, m) {
 
     py::classh<TPropagatorMapping, Mapping>(m, "TPropagatorMapping")
         .def(
-            py::init<std::vector<std::size_t>, double>(),
+            py::init<std::vector<std::size_t>, double, std::vector<double>>(),
             py::arg("integration_order"),
-            py::arg("invariant_power") = 0.
+            py::arg("invariant_power") = 0.,
+            py::arg("pt_min") = std::vector<double>{}
         )
         .def("random_dim", &TPropagatorMapping::random_dim);
 
     py::classh<ColorOrderedMapping, Mapping>(m, "ColorOrderedMapping")
         .def(
-            py::init<std::vector<std::size_t>, double, double>(),
+            py::init<
+                std::vector<std::size_t>,
+                double,
+                double,
+                std::vector<double>,
+                std::vector<std::vector<double>>,
+                std::vector<std::vector<double>>>(),
             py::arg("color_order"),
             py::arg("t_invariant_power") = 0.,
-            py::arg("s_invariant_power") = 0.
+            py::arg("s_invariant_power") = 0.,
+            py::arg("pt_min") = std::vector<double>{},
+            py::arg("m_inv_min") = std::vector<std::vector<double>>{},
+            py::arg("dr_min") = std::vector<std::vector<double>>{}
         )
-        .def("random_dim", &ColorOrderedMapping::random_dim);
+        .def("random_dim", &ColorOrderedMapping::random_dim)
+        .def("discrete_dim", &ColorOrderedMapping::discrete_dim);
 
     py::classh<VegasHistogram, FunctionGenerator>(m, "VegasHistogram")
         .def(
@@ -602,7 +615,9 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def(py::init<std::size_t>(), py::arg("particle_count"))
         .def("sqrt_s_min", &Cuts::sqrt_s_min)
         .def("eta_max", &Cuts::eta_max)
-        .def("pt_min", &Cuts::pt_min);
+        .def("pt_min", &Cuts::pt_min)
+        .def("m_inv_min", &Cuts::m_inv_min)
+        .def("dr_min", &Cuts::dr_min);
 
     py::classh<ObservableHistograms::HistItem>(m, "HistItem")
         .def(
@@ -685,6 +700,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             {"propagator", PhaseSpaceMapping::propagator},
             {"rambo", PhaseSpaceMapping::rambo},
             {"chili", PhaseSpaceMapping::chili},
+            {"color_ordered", PhaseSpaceMapping::color_ordered},
         }
     );
     psmap
@@ -696,14 +712,16 @@ PYBIND11_MODULE(_madspace_py, m) {
                 double,
                 PhaseSpaceMapping::TChannelMode,
                 const std::optional<Cuts>&,
-                const nested_vector2<std::size_t>&>(),
+                const nested_vector2<std::size_t>&,
+                const std::optional<std::vector<std::size_t>>&>(),
             py::arg("topology"),
             py::arg("cm_energy"),
             py::arg("leptonic") = false,
             py::arg("invariant_power") = 0.8,
             py::arg("t_channel_mode") = PhaseSpaceMapping::propagator,
             py::arg("cuts") = std::nullopt,
-            py::arg("permutations") = std::vector<Topology>{}
+            py::arg("permutations") = std::vector<Topology>{},
+            py::arg("color_order") = std::nullopt
         )
         .def(
             py::init<
@@ -712,15 +730,18 @@ PYBIND11_MODULE(_madspace_py, m) {
                 bool,
                 double,
                 PhaseSpaceMapping::TChannelMode,
-                std::optional<Cuts>>(),
+                std::optional<Cuts>,
+                const std::optional<std::vector<std::size_t>>&>(),
             py::arg("masses"),
             py::arg("cm_energy"),
             py::arg("leptonic") = false,
             py::arg("invariant_power") = 0.8,
             py::arg("mode") = PhaseSpaceMapping::rambo,
-            py::arg("cuts") = std::nullopt
+            py::arg("cuts") = std::nullopt,
+            py::arg("color_order") = std::nullopt
         )
         .def("random_dim", &PhaseSpaceMapping::random_dim)
+        .def("discrete_dim", &PhaseSpaceMapping::discrete_dim)
         .def("particle_count", &PhaseSpaceMapping::particle_count)
         .def("channel_count", &PhaseSpaceMapping::channel_count);
 

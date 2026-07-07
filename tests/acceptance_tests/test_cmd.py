@@ -1580,6 +1580,140 @@ class TestCmdShell2(unittest.TestCase,
         mg7 = get_values('standalone_mg7', './check_sa.exe')
         self._assert_me_lists_close(mg7, cpp)
 
+    def test_standalone_mg7_mssm_single_leg(self):
+        """Single-merged-leg flavored couplings must give the same per-flavor
+        |M|^2 in standalone_mg7 (madmatrix) as in the Fortran standalone.
+
+        p p > n1 n1 QCD=0 is a t-channel-squark process with single-merged-leg
+        vertices (one merged light quark + an unmerged neutralino + a squark)
+        whose flavored couplings are *independent* (electroweak), isolating the
+        single-leg consumer-gating fix (the get_coupling_def merged-leg
+        selection) from the still-guarded dependent-coupling case. Without the
+        fix only the first flavor matches; with it all flavors do.
+        """
+        energy = '1000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > n1 n1 QCD=0')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > n1 n1')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_standalone_mg7_mssm_gogo(self):
+        """Dependent (event-by-event, running-alphas) flavored couplings must
+        give the same per-flavor |M|^2 in standalone_mg7 (madmatrix) as in the
+        Fortran standalone.
+
+        MSSM 'p p > go go' has single-merged-leg squark/gluino-quark vertices
+        (one merged light quark + an unmerged gluino + a squark) whose flavored
+        couplings are *dependent* (SUSY-QCD, running-alphas): the squark-quark-
+        gluino coupling GC_106/GC_110 ~ g_s changes per event. These are not
+        addressable as fixed value[] pointers, so they are gathered event-by-
+        event into cDPF_* / flvCOUPs_dep (Step 3 of
+        docs/mg7_merged_flavor_mssm_design.md). This is the dependent-coupling
+        counterpart of test_standalone_mg7_mssm_single_leg (independent flavored
+        couplings) and the consistency check matching test_madevent_mssm_gogo.
+
+        The energy (sqrt(s)) is chosen above the gluino-pair threshold (Mgo ~
+        608 GeV) so neither check driver auto-bumps it, i.e. both evaluate the
+        same phase-space point.
+        """
+        energy = '3000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > go go')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_madevent_mssm_gogo(self):
+        """The Fortran madevent output supports MSSM 'p p > go go' (merged-flavor
+        squark/gluino vertices with single-merged-leg / event-by-event flavored
+        couplings). The mg7/madmatrix C++ output now also supports it and is
+        checked to agree per-flavor in test_standalone_mg7_mssm_gogo; this acts
+        as the madevent counterpart.
+        """
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        self.do('output madevent %s -f' % self.out_dir)
+        self.assertTrue(
+            os.path.isdir(os.path.join(self.out_dir, 'SubProcesses')),
+            'madevent output should support MSSM p p > go go')
+        proc_root = os.path.join(self.out_dir, 'SubProcesses')
+        proc_dirs = [d for d in os.listdir(proc_root)
+                     if d.startswith('P') and
+                     os.path.isdir(os.path.join(proc_root, d))]
+        self.assertTrue(proc_dirs,
+                        'madevent produced no subprocess for p p > go go')
+
     def test_standalone_density(self):
         """test that standalone density is working"""
 

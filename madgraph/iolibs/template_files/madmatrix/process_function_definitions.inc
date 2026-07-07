@@ -109,11 +109,14 @@ namespace mg5amcCpu
   // nIPF are the number of SM independent flavor couplings, of type FLV_COUPLING
   constexpr int nMF = FLV_COUPLING::max_flavor;
   constexpr int nIPF = %(nipf)i;
+  // nDPF are the number of dependent (event-by-event, running-alphas) flavor couplings
+  constexpr int nDPF = %(ndpf)i;
   static_assert( nIPC <= nicoup );
   static_assert( nIPD >= 0 ); // Hack to avoid build warnings when nIPD==0 is unused
   static_assert( nIPC >= 0 ); // Hack to avoid build warnings when nIPC==0 is unused
   static_assert( nMF >= 0 );  // Hack to avoid build warnings when nMF ==0 is unused
   static_assert( nIPF >= 0 ); // Hack to avoid build warnings when nIPF==0 is unused
+  static_assert( nDPF >= 0 ); // Hack to avoid build warnings when nDPF==0 is unused
 #ifdef MGONGPU_HARDCODE_PARAM
   %(cipdhrdcod)s
   %(cipchrdcod)s
@@ -129,6 +132,12 @@ namespace mg5amcCpu
   %(cipfstatic)s
 #endif
 #endif
+
+  // Dependent (event-by-event, running-alphas) flavor couplings: partner indices and
+  // the per-flavor idcoup are pure compile-time constants (the complex values are
+  // gathered per event page in calculate_jamps), so they are emitted the same way in
+  // all build modes (no CUDA constant memory copy needed).
+  %(cdpfdecl)s
 
   // AV Jan 2024 (PR #625): this ugly #define was the only way I found to avoid creating arrays[nBsm] in CPPProcess.cc if nBsm is 0
   // The problem is that nBsm is determined when generating Parameters.h, which happens after CPPProcess.cc has already been generated

@@ -164,6 +164,11 @@ namespace mg5amcCpu
     static constexpr auto idcoupAccessBuffer = MemoryAccessCouplingsBase::idcoupAccessBuffer;
     static constexpr auto idcoupAccessBufferConst = MemoryAccessCouplingsBase::idcoupAccessBufferConst;
 
+    // Per-flavor stride (in fptype's) between two consecutive flavor slots of a flavored coupling value buffer.
+    // For dependent (event-by-event, running-alphas) couplings the value is an AOSOA record [nx2][neppC]
+    // (real and imaginary SIMD lanes), so consecutive flavor slots are nx2*neppC fptype's apart.
+    static constexpr int flv_stride = MemoryAccessCouplingsBase::neppC * mgOnGpu::nx2;
+
     // Expose selected functions from MemoryAccessCouplings
     static constexpr auto ieventAccessRecordConst = MemoryAccessCouplings::ieventAccessRecordConst;
 

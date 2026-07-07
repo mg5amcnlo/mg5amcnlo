@@ -397,7 +397,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # We must change some files to their version for NLO computations
         cpfiles= ["Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
-                  "SubProcesses/MadLoopParams.inc"]
+                  "SubProcesses/MadLoopParams.inc",
+                  "SubProcesses/mg5_citation.f"]
         if copy_Source_makefile:
             cpfiles.append("Source/makefile")
         
@@ -957,7 +958,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
                      'MadLoopParamReader.f','MadLoopCommons.f',
-                     'MadLoopParams.inc','global_specs.inc']
+                     'MadLoopParams.inc','global_specs.inc',
+                     'mg5_citation.f']
         
         for file in linkfiles:
             ln('../%s' % file)
