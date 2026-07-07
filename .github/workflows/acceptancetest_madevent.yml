@@ -981,3 +981,18 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             ./tests/test_manager.py test_density_mode_doublettbar -pA -t0 -l INFO
+
+  acceptancetest_mssm_gogo:
+    # Fortran madevent supports MSSM p p > go go (merged-flavor squark/gluino
+    # vertices); the mg7/madmatrix counterpart now also supports it and is
+    # checked per-flavor (test_standalone_mg7_mssm_gogo in acceptancetest_mg7.yml).
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test one of the test test_madevent_mssm_gogo
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madevent_mssm_gogo -pA -t0 -l INFO
