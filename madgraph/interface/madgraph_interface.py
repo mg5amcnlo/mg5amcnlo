@@ -7436,7 +7436,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3', 'lhapdf']:
                     self.options[name] = value
                 elif hasattr(self, 'set2_%s' % name) and value:
-                    misc.sprint('set configuration option %s to %s' % (name, value) )
                     func = getattr(self, 'set2_%s' % name)
                     func(value.split())
                 if value.lower() == "none" or value=="":
