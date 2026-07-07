@@ -61,6 +61,7 @@ C     INITIALIZE CUTTOOLS IF NEEDED
       IF (CTINIT) THEN
         CTINIT=.FALSE.
         CALL ML5_0_INITCT()
+        CALL CITE('Ossola:2007ax','one-loop reduction with CutTools')
       ENDIF
 
 C     YOU CAN FIND THE DETAILS ABOUT THE DIFFERENT CTMODE AT THE

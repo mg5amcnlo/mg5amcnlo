@@ -4,6 +4,8 @@
 #include "madspace/phasespace/base.hpp"
 #include "madspace/phasespace/observable.hpp"
 
+#include <functional>
+#include <utility>
 #include <vector>
 
 namespace madspace {
@@ -23,11 +25,19 @@ public:
     double sqrt_s_min() const;
     std::vector<double> eta_max() const;
     std::vector<double> pt_min() const;
+    std::vector<std::vector<double>> m_inv_min() const;
+    std::vector<std::vector<double>> dr_min() const;
 
 private:
     NamedVector<Value> build_function_impl(
         FunctionBuilder& fb, const NamedVector<Value>& args
     ) const override;
+
+    std::vector<std::vector<double>> pairwise_min(
+        Observable::ObservableOption obs,
+        const std::function<
+            std::vector<std::pair<std::size_t, std::size_t>>(const Observable&)>& pairs
+    ) const;
 
     std::vector<CutItem> _cut_data;
 };
