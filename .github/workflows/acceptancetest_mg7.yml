@@ -177,4 +177,44 @@ jobs:
             export PATH="$HOME/.cache/HEPtools/bin:$PATH"
             ./tests/test_manager.py test_generation_heft_mg7 -pA -t0 -l INFO
 
+  acceptancetest_mg7_mssm_gogo:
+    # mg7/madmatrix now generates the MSSM merged-flavor squark/gluino vertices
+    # (single-merged-leg / event-by-event flavored couplings); standalone_mg7
+    # reproduces the Fortran standalone per-flavor |M|^2 (~1e-4). This is a
+    # matrix-element (standalone) check only -- full mg7 event generation for
+    # merged-flavor processes is not wired up yet (see test_madevent_merged_
+    # flavor_uq_mg7). The madevent counterpart is test_madevent_mssm_gogo in
+    # acceptancetest_madevent.yml.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test one of the test test_standalone_mg7_mssm_gogo
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_mg7_mssm_gogo -pA -t0 -l INFO
+
+  acceptancetest_mg7_mssm_gogo_xsec:
+    # KNOWN-FAILING (not xfail): standalone_mg7 reproduces the per-flavor |M|^2
+    # for MSSM p p > go go (test_standalone_mg7_mssm_gogo), but full mg7 event
+    # generation for merged-flavor processes is not wired up yet -- the madspace
+    # integrator does not produce the cross-section. This pins the mg7 result to
+    # the madevent reference (4.541638 pb, run_01 of test_generation_from_file_1)
+    # and is expected to be red until the mg7 integrator handles merged-flavor
+    # p p > go go. Self-skips if the madspace + LHAPDF(NNPDF23) stack is absent.
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools_lhapdf
+      - name: test one of the test test_generation_from_file_1_mg7
+        run: |
+            cd $GITHUB_WORKSPACE
+            export PATH="$HOME/.cache/HEPtools/bin:$PATH"
+            ./tests/test_manager.py test_generation_from_file_1_mg7 -pA -t0 -l INFO
+
 

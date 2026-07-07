@@ -91,3 +91,53 @@ std::vector<double> Cuts::pt_min() const {
     }
     return pt_min;
 }
+
+std::vector<std::vector<double>> Cuts::pairwise_min(
+    Observable::ObservableOption obs,
+    const std::function<
+        std::vector<std::pair<std::size_t, std::size_t>>(const Observable&)>& pairs
+) const {
+    std::size_t n = arg_types().at(0).shape.at(0) - 2;
+    std::vector<std::vector<double>> out(n, std::vector<double>(n, 0.));
+    for (auto& item : _cut_data) {
+        if (item.observable.observable() != obs) {
+            continue;
+        }
+        for (auto [i, j] : pairs(item.observable)) {
+            if (i < 2 || j < 2) {
+                continue;
+            }
+            i -= 2;
+            j -= 2;
+            if (i < n && j < n && item.min > out.at(i).at(j)) {
+                out.at(i).at(j) = item.min;
+                out.at(j).at(i) = item.min;
+            }
+        }
+    }
+    return out;
+}
+
+std::vector<std::vector<double>> Cuts::m_inv_min() const {
+    return pairwise_min(Observable::obs_mass, [](const Observable& o) {
+        std::vector<std::pair<std::size_t, std::size_t>> pairs;
+        const auto& idx = o.indices();
+        if (o.sum_momenta() && idx.size() == 1 && idx.at(0).size() == 2) {
+            pairs.emplace_back(idx.at(0).at(0), idx.at(0).at(1));
+        }
+        return pairs;
+    });
+}
+
+std::vector<std::vector<double>> Cuts::dr_min() const {
+    return pairwise_min(Observable::obs_delta_r, [](const Observable& o) {
+        std::vector<std::pair<std::size_t, std::size_t>> pairs;
+        const auto& idx = o.indices();
+        if (idx.size() == 2) {
+            for (std::size_t k = 0; k < idx.at(0).size(); ++k) {
+                pairs.emplace_back(idx.at(0).at(k), idx.at(1).at(k));
+            }
+        }
+        return pairs;
+    });
+}

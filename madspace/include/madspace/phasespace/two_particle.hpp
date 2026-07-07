@@ -28,7 +28,11 @@ private:
 class TwoToTwoParticleScattering : public Mapping {
 public:
     TwoToTwoParticleScattering(
-        bool com, double invariant_power = 0, double mass = 0, double width = 0
+        bool com,
+        double invariant_power = 0,
+        double mass = 0,
+        double width = 0,
+        bool has_cut = false
     );
 
 private:
@@ -45,6 +49,7 @@ private:
 
     bool _com;
     Invariant _invariant;
+    bool _has_cut;
 };
 
 class DoubleT : public Mapping {
@@ -55,7 +60,8 @@ public:
         double t1_width = 0,
         double t2_invariant_power = 0,
         double t2_mass = 0,
-        double t2_width = 0
+        double t2_width = 0,
+        bool has_cut = false
     );
 
 private:
@@ -72,6 +78,7 @@ private:
 
     Invariant _t1_invariant;
     Invariant _t2_invariant;
+    bool _has_cut;
 };
 
 } // namespace madspace

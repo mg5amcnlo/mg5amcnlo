@@ -453,7 +453,17 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
             out.write('      return;\n')
             out.write('    }\n')
             if nb_coupling == 1:
-                out.write('    if(MCOUP.partner1[flv_index1] != flv_index2) {\n')
+                # A flavored coupling is indexed by the *merged* fermion leg; for
+                # a single merged leg the unmerged partner carries flavor index 0
+                # and the merged leg can be either F1 or F2 (the cudacpp argument
+                # order is not guaranteed to put the merged leg first, unlike the
+                # Fortran side). Pick whichever leg is the merged (partner-
+                # populated) one. For the two-leg case partner1[flv1]==flv2 holds
+                # and flv_sel==flv_index1, reproducing the old behaviour.
+                out.write('    int flv_sel = -1;\n')
+                out.write('    if(MCOUP.partner1[flv_index1] == flv_index2) flv_sel = flv_index1;\n')
+                out.write('    else if(MCOUP.partner1[flv_index2] == flv_index1) flv_sel = flv_index2;\n')
+                out.write('    if(flv_sel == -1) {\n')
                 out.write('      %s\n' % fail)
                 out.write('      return;\n')
                 out.write('    }\n')
@@ -467,13 +477,16 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
                 # the coupling is a complex number but in this case it is represented as a sequence of real numbers
                 # so, when we need to shift within the array, we need to double the shift width to account for
                 # both real and imaginary parts
-                out.write('    COUP = C_ACCESS::kernelAccessConst( MCOUP.value + 2*flv_index1 );\n')
+                # the per-flavor stride is C_ACCESS::flv_stride (nx2 for independent
+                # couplings = scalar broadcast; nx2*neppC for dependent ones = AOSOA
+                # SIMD record), so the same routine body works for both instantiations
+                out.write('    COUP = C_ACCESS::kernelAccessConst( MCOUP.value + C_ACCESS::flv_stride*flv_sel );\n')
             else:
                 for i in range(1,nb_coupling+1):
                     # the coupling is a complex number but in this case it is represented as a sequence of real numbers
                     # so, when we need to shift within the array, we need to double the shift width to account for
                     # both real and imaginary parts
-                    out.write('    if(zero_coup%i ==0) { COUP%i = C_ACCESS::kernelAccessConst( MCOUP%i.value + 2*flv_index1 ); }\n' % (i,i,i))
+                    out.write('    if(zero_coup%i ==0) { COUP%i = C_ACCESS::kernelAccessConst( MCOUP%i.value + C_ACCESS::flv_stride*flv_index1 ); }\n' % (i,i,i))
         else:
             incoming = [i+1 for i in range(len(self.particles)) if i+1 != self.outgoing and self.particles[self.outgoing-1] == 'F'][0]
             if incoming %2 == 1:
@@ -522,7 +535,7 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
                     # the coupling is a complex number but in this case it is represented as a sequence of real numbers
                     # so, when we need to shift within the array, we need to double the shift width to account for
                     # both real and imaginary parts
-                    out.write('    %s = C_ACCESS::kernelAccessConst( M%s.value + 2*flv_index1 );\n' % (name, name))
+                    out.write('    %s = C_ACCESS::kernelAccessConst( M%s.value + C_ACCESS::flv_stride*flv_index1 );\n' % (name, name))
         return out.getvalue()
 
     # AV - modify aloha_writers.ALOHAWriterForCPP method (improve formatting)
@@ -934,12 +947,24 @@ class MadMatrixUFOModelConverter(export_cpp.UFOModelConverterGPU):
     def write_flv_couplings(self, params):
         """Write out the lines of independent parameters"""
 
+        # Refuse merged-flavor structures this backend cannot yet generate
+        # correctly (single-merged-leg vertices, e.g. MSSM
+        # gluino/chargino-squark-quark; event-by-event flavored couplings) with
+        # a clear message rather than crashing or emitting wrong/uncompilable
+        # code. See docs/mg7_merged_flavor_mssm_design.md.
+        self._assert_flv_couplings_supported(params)
+
         def_flv = []
         # For each parameter, write name = expr;
         for coupl in params:
             for key, c in coupl.flavors.items():
-                # get first/second index
-                k1, k2 = [i for i in key if i!=0]
+                nonzero = [i for i in key if i != 0]
+                if len(nonzero) == 2:
+                    k1, k2 = nonzero
+                else:
+                    # single merged leg: unmerged partner has flavor index 1
+                    # (mirror Fortran flavor_couplings.f)
+                    k1 = nonzero[0]; k2 = 1
                 def_flv.append('%(name)s.partner1[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.value[%(in)i] = &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})
@@ -1143,7 +1168,12 @@ class MadMatrixUFOModelConverter(export_cpp.UFOModelConverterGPU):
         replace_dict['set_independent_parameters'] = '\n'.join( set_params_indep )
         replace_dict['set_independent_parameters'] += self.super_write_set_parameters_onlyfixMajorana( hardcoded=False ) # add fixes for Majorana particles only in the aS-indep parameters #622
         replace_dict['set_independent_parameters'] += '\n  // BSM parameters that do not depend on alphaS but are needed in the computation of alphaS-dependent couplings;' # NB this is now done also for 'sm' processes (no check on model name, see PR #824)
-        replace_dict['set_flv_couplings'] = self.write_flv_couplings(self.coups_flv_dep+self.coups_flv_indep)    
+        # Only the independent flavored couplings are serialized via the FLV_COUPLING
+        # value[] pointer mechanism in setIndependentCouplings: a dependent (running-alphas)
+        # coupling is not addressable as a fixed pointer here (it is computed event-by-event).
+        # Dependent flavored couplings are handled separately via cDPF_* + the per-event
+        # gather in calculate_jamps (see get_process_function_definitions / Step 3).
+        replace_dict['set_flv_couplings'] = self.write_flv_couplings(self.coups_flv_indep)
         if len(bsmparam_indep_real_used) + len(bsmparam_indep_complex_used) > 0:
             for ipar, par in enumerate( bsmparam_indep_real_used ):
                 replace_dict['set_independent_parameters'] += '\n  mdl_bsmIndepParam[%i] = %s;' % ( ipar, par )
@@ -1638,6 +1668,52 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
             replace_dict['cipfhrdcod'] = """__device__ const int* cIPF_partner1 = nullptr; // unused as nIPF=0'
     __device__ const int* cIPF_partner2 = nullptr; // unused as nIPF=0'
     __device__ const fptype* cIPF_value = nullptr; // unused as nIPF=0'"""
+
+        # dependent (running-alphas, event-by-event) flavor couplings -> cDPF_* (Step 3).
+        # Unlike cIPF, these have NO baked-in value array: partner1/partner2 and the
+        # per-flavor idcoup (the index of the underlying dependent coupling in the
+        # event-by-event allcouplings buffer) are pure codegen constants. The actual
+        # complex values are gathered per event page in calculate_jamps (see
+        # super_get_matrix_element_calls). The single-leg serialization mirrors the
+        # Fortran side / write_flv_couplings (the unmerged partner has flavor index 1).
+        flv_couplings_dep = [''] * len(self.couporderflv_dep)
+        for flv_coup, pos in self.couporderflv_dep.items():
+            flv_couplings_dep[pos] = flv_coup
+        replace_dict['ndpf'] = len(flv_couplings_dep)
+        if len(flv_couplings_dep):
+            nMF = max(len(ids) for ids in self.model['merged_particles'].values())
+            flv_map = self.helas_call_writer.flv_couplings_map
+            partner1_vals, partner2_vals, idcoup_vals = [], [], []
+            for name in flv_couplings_dep:
+                coupl = flv_map[name]
+                p1 = [-1] * nMF
+                p2 = [-1] * nMF
+                idc = ['-1'] * nMF
+                for key, gc in coupl.flavors.items():
+                    nonzero = [i for i in key if i != 0]
+                    if len(nonzero) == 2:
+                        k1, k2 = nonzero
+                    else:
+                        # single merged leg: unmerged partner has flavor index 1
+                        k1 = nonzero[0]; k2 = 1
+                    p1[k1-1] = k2-1
+                    p2[k2-1] = k1-1
+                    # symbolic idcoup: resolves to the position of this dependent coupling
+                    # in the event-by-event allcouplings buffer (== COUPs index), defined in
+                    # Parameters_dependentCouplings (Parameters_<model>.h)
+                    idc[k1-1] = '(int)Parameters_dependentCouplings::idcoup_%s' % gc
+                partner1_vals += [str(v) for v in p1]
+                partner2_vals += [str(v) for v in p2]
+                idcoup_vals += idc
+            cdpfdecl = '__device__ const int cDPF_partner1[nMF * nDPF] = { %s };\n' % ', '.join(partner1_vals)
+            cdpfdecl += '  __device__ const int cDPF_partner2[nMF * nDPF] = { %s };\n' % ', '.join(partner2_vals)
+            cdpfdecl += '  __device__ const int cDPF_idcoup[nMF * nDPF] = { %s };' % ', '.join(idcoup_vals)
+            replace_dict['cdpfdecl'] = cdpfdecl
+        else:
+            replace_dict['cdpfdecl'] = """__device__ const int* cDPF_partner1 = nullptr; // unused as nDPF=0
+  __device__ const int* cDPF_partner2 = nullptr; // unused as nDPF=0
+  __device__ const int* cDPF_idcoup = nullptr; // unused as nDPF=0"""
+
         # FIXME! Here there should be different code generated depending on MGONGPUCPP_NBSMINDEPPARAM_GT_0 (issue #827)
         replace_dict['all_helicities'] = self.get_helicity_matrix(self.matrix_elements[0])
         replace_dict['all_helicities'] = replace_dict['all_helicities'] .replace('helicities', 'tHel')
@@ -1710,6 +1786,7 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
             assert len(self.matrix_elements) == 1 or len(self.matrix_elements) == 2 # how to handle if this is not true?
             self.couplings2order = self.helas_call_writer.couplings2order
             self.couporderflv = self.helas_call_writer.couporderflv
+            self.couporderflv_dep = self.helas_call_writer.couporderflv_dep
             self.params2order = self.helas_call_writer.params2order
             ret_lines.append("""
   // Evaluate QCD partial amplitudes jamps for this given helicity from Feynman diagrams
@@ -2195,7 +2272,8 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter):
         if not hasattr(self, 'couporderdep'):
             self.couporderdep = {}
             self.couporderindep = {}
-            self.couporderflv = {}
+            self.couporderflv = {}      # independent (fixed) flavored couplings -> flvCOUPs
+            self.couporderflv_dep = {}  # dependent (running-alphas) flavored couplings -> flvCOUPs_dep
         for coup in re.findall(self.findcoupling, call):
             if coup == 'ZERO':
                 ###call = call.replace('pars->ZERO', '0.')
@@ -2220,15 +2298,31 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter):
                 aliastxt = 'COUPD'
                 name = 'cIPC'
             elif coup.startswith("FLV"):
-                if coup not in [coup.name for coup in self.wanted_ordered_flv_couplings]:
-                    flv_coup = self.flv_couplings_map[coup]
+                flv_coup = self.flv_couplings_map[coup]
+                # Classify the whole flavored coupling as dependent (running-alphas,
+                # event-by-event) or independent, mirroring export_cpp.prepare_couplings
+                # (which buckets it into coups_flv_dep/coups_flv_indep using one of its
+                # underlying couplings).
+                is_flv_dep = model.is_running_coupling(flv_coup.get_one_coupling())
+                if coup not in [c.name for c in self.wanted_ordered_flv_couplings]:
                     self.wanted_ordered_flv_couplings.append(flv_coup)
-                    for indep_coup in set(flv_coup.flavors.values()):
-                        if indep_coup not in self.wanted_ordered_indep_couplings:
-                            self.wanted_ordered_indep_couplings.append(indep_coup)
-                alias = self.couporderflv
-                aliastxt = 'flvCOUP'
-                name = 'flvCOUPs'
+                    # NB: the underlying couplings are added to the *independent* wanted
+                    # list even when they are running. prepare_couplings still routes the
+                    # running ones into coups_dep (by the 'aS' model key), but keeping
+                    # them out of wanted_ordered_dep_couplings preserves the alignment
+                    # between couporderdep and the coups_dep/idcoup ordering used by the
+                    # ordinary (non-flavored) dependent couplings.
+                    for ud_coup in set(flv_coup.flavors.values()):
+                        if ud_coup not in self.wanted_ordered_indep_couplings:
+                            self.wanted_ordered_indep_couplings.append(ud_coup)
+                if is_flv_dep:
+                    alias = self.couporderflv_dep
+                    aliastxt = 'flvCOUPdep'
+                    name = 'flvCOUPs_dep'
+                else:
+                    alias = self.couporderflv
+                    aliastxt = 'flvCOUP'
+                    name = 'flvCOUPs'
             else:
                 if coup not in self.wanted_ordered_indep_couplings: 
                     self.wanted_ordered_indep_couplings.append(coup)
@@ -2262,6 +2356,14 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter):
                 call = call.replace('CI_ACCESS', 'CD_ACCESS')
                 call = call.replace('m_pars->%s%s' % (sign, coup),
                                     'COUPs[%s], %s' % (alias[coup], '1.0' if not sign else '-1.0')) 
+            elif name == 'flvCOUPs_dep':
+                # dependent (running-alphas) flavored coupling: instantiate the vertex
+                # routine with CD_ACCESS (the default in the call is CI_ACCESS, as for the
+                # ordinary running couplings) so get_coupling_def reads the per-event AOSOA
+                # values gathered into flvCOUPs_dep with the right per-flavor stride.
+                call = call.replace('CI_ACCESS', 'CD_ACCESS')
+                call = call.replace('m_pars->%s%s' % (sign, coup),
+                                    '%s[%s], %s' % (name, alias[coup], '1.0' if not sign else '-1.0'))
             elif name == 'flvCOUPs':
                 call = call.replace('CD_ACCESS', 'CI_ACCESS')
                 call = call.replace('m_pars->%s%s' % (sign, coup),
@@ -2342,6 +2444,27 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter):
 #endif
       // Create an array of views over the Flavor Couplings
       FLV_COUPLING_ARRAY<nIPF, nMF> flvCOUPs{ cIPF_partner1, cIPF_partner2, cIPF_value };
+
+      // Dependent (event-by-event, running-alphas) flavor couplings (Step 3): the per-flavor
+      // values are NOT baked in (they run per event). Gather the current values of the
+      // underlying dependent couplings for this event page into an AOSOA buffer dpf_value
+      // (one nx2*neppC SIMD record per (coupling,flavor) slot, matching CD_ACCESS), then build
+      // an ordinary value-based view over it. The flavor index is constant across a SIMD lane
+      // (guaranteed by the phase-space integrator), so each lane gets its own running value
+      // while sharing the same flavor selection. This is the direct analogue of Fortran's
+      // FLV_xx%VAL(k)%P => GC_yyy(J). The vertex routines are instantiated with CD_ACCESS so
+      // get_coupling_def reads dpf_value with the right per-flavor stride (CD_ACCESS::flv_stride).
+      constexpr int ndpfbuf = ( nDPF > 0 ? nDPF * nMF * CD_ACCESS::flv_stride : 1 );
+      alignas( mgOnGpu::cppAlign ) fptype dpf_value[ndpfbuf]{};
+      for( int idpf = 0; idpf < nDPF; idpf++ )
+        for( int imf = 0; imf < nMF; imf++ )
+        {
+          const int idc = cDPF_idcoup[idpf * nMF + imf];
+          if( idc >= 0 )
+            CD_ACCESS::kernelAccess( dpf_value + ( idpf * nMF + imf ) * CD_ACCESS::flv_stride ) =
+              CD_ACCESS::kernelAccessConst( COUPs[idc] );
+        }
+      FLV_COUPLING_ARRAY<nDPF, nMF, CD_ACCESS::flv_stride> flvCOUPs_dep{ cDPF_partner1, cDPF_partner2, dpf_value };
 
       // Reset color flows (reset jamp_sv) at the beginning of a new event or event page
       for( int i = 0; i < ncolor; i++ ) { jamp_sv[i] = cxzero_sv(); }

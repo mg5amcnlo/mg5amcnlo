@@ -60,6 +60,10 @@ namespace mg5amcCpu
     // Expose selected functions from MemoryAccessCouplingsFixedBase
     static constexpr auto iicoupAccessBufferConst = MemoryAccessCouplingsFixedBase::iicoupAccessBufferConst;
 
+    // Per-flavor stride (in fptype's) between two consecutive flavor slots of a flavored coupling value buffer.
+    // For fixed (independent) couplings the value is a single scalar complex (real,imag): nx2 fptype's, broadcast across the SIMD vector.
+    static constexpr int flv_stride = mgOnGpu::nx2;
+
     // Locate a field (output) in a memory buffer (input) from a kernel event-indexing mechanism (internal) and the given field indexes (input)
     // [Signature (const, SCALAR OR VECTOR) ===> cxtype_sv kernelAccessConst( const fptype* buffer ) <===]
     static __host__ __device__ inline const cxtype_sv

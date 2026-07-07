@@ -95,38 +95,66 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
     double t_width,
     double s_invariant_power,
     double s_mass,
-    double s_width
+    double s_width,
+    bool has_cut
 ) :
     Mapping(
         "TwoToThreeParticleScattering",
-        {{"random_choice", batch_float},
+        {{"discrete_choice", batch_int},
          {"random_s23", batch_float},
          {"random_t1", batch_float},
          {"mass1", batch_float},
          {"mass2", batch_float}},
         {{"momentum1", batch_four_vec}, {"momentum2", batch_four_vec}},
-        {{"momentum_in1", batch_four_vec},
-         {"momentum_in2", batch_four_vec},
-         {"momentum3", batch_four_vec}}
+        [&] {
+            NamedVector<Type> cond{
+                {"momentum_in1", batch_four_vec},
+                {"momentum_in2", batch_four_vec},
+                {"momentum3", batch_four_vec}
+            };
+            if (has_cut) {
+                cond.push_back("etmin_1", batch_float);
+                cond.push_back("etmin_2", batch_float);
+                cond.push_back("drcut", batch_float);
+                cond.push_back("s23_min_cut", batch_float);
+            }
+            return cond;
+        }()
     ),
     _t_invariant(t_invariant_power, t_mass, t_width),
-    _s_invariant(s_invariant_power, s_mass, s_width) {}
+    _s_invariant(s_invariant_power, s_mass, s_width),
+    _has_cut(has_cut) {}
 
 Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
     FunctionBuilder& fb,
     const NamedVector<Value>& inputs,
     const NamedVector<Value>& conditions
 ) const {
-    auto r_choice = inputs.at(0), r_s23 = inputs.at(1), r_t1 = inputs.at(2),
+    auto index_choice = inputs.at(0), r_s23 = inputs.at(1), r_t1 = inputs.at(2),
          m1 = inputs.at(3), m2 = inputs.at(4);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
-    auto [t1_min, t1_max] = fb.t_inv_min_max(p_a, fb.sub(p_b, p_3), m1, m2);
+    auto [t1_min, t1_max] = _has_cut
+        ? fb.t_inv_min_max_cut(
+              p_a, fb.sub(p_b, p_3), m1, m2, conditions.at(3), conditions.at(4)
+          )
+        : fb.t_inv_min_max(p_a, fb.sub(p_b, p_3), m1, m2);
     auto t_inv_result = _t_invariant.build_forward(fb, {r_t1}, {t1_min, t1_max});
-    auto [s23_min, s23_max] =
-        fb.s23_min_max(p_a, p_b, p_3, t_inv_result["invariant"], m1, m2);
+    auto [s23_min, s23_max] = _has_cut
+        ? fb.s23_min_max_cut(
+              p_a,
+              p_b,
+              p_3,
+              t_inv_result["invariant"],
+              m1,
+              m2,
+              conditions.at(3),
+              conditions.at(4),
+              conditions.at(5),
+              conditions.at(6)
+          )
+        : fb.s23_min_max(p_a, p_b, p_3, t_inv_result["invariant"], m1, m2);
     auto s23_inv_result = _s_invariant.build_forward(fb, {r_s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
-    auto [index_choice, index_det] = fb.sample_discrete(r_choice, 2);
     auto [p1, p2, det_scatter] = fb.two_to_three_particle_scattering(
         index_choice,
         p_a,
@@ -137,8 +165,7 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
         m1,
         m2
     );
-    auto det_scatter_23 = fb.mul(index_det, det_scatter);
-    return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter_23)};
+    return {{{"momentum1", p1}, {"momentum2", p2}}, fb.mul(det_inv, det_scatter)};
 }
 
 Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
@@ -148,23 +175,36 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
 ) const {
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_a = conditions.at(0), p_b = conditions.at(1), p_3 = conditions.at(2);
-    auto [t1_abs, t1_min, t1_max] =
-        fb.t_inv_value_and_min_max(p_a, fb.sub(p_b, p_3), p1, p2);
+    auto [t1_abs, t1_min, t1_max] = _has_cut
+        ? fb.t_inv_value_and_min_max_cut(
+              p_a, fb.sub(p_b, p_3), p1, p2, conditions.at(3), conditions.at(4)
+          )
+        : fb.t_inv_value_and_min_max(p_a, fb.sub(p_b, p_3), p1, p2);
     auto t_inv_result = _t_invariant.build_inverse(fb, {t1_abs}, {t1_min, t1_max});
-    auto [s23, s23_min, s23_max] =
-        fb.s23_value_and_min_max(p_a, p_b, p_3, t1_abs, p1, p2);
+    auto [s23, s23_min, s23_max] = _has_cut
+        ? fb.s23_value_and_min_max_cut(
+              p_a,
+              p_b,
+              p_3,
+              t1_abs,
+              p1,
+              p2,
+              conditions.at(3),
+              conditions.at(4),
+              conditions.at(5),
+              conditions.at(6)
+          )
+        : fb.s23_value_and_min_max(p_a, p_b, p_3, t1_abs, p1, p2);
     auto s23_inv_result = _s_invariant.build_inverse(fb, {s23}, {s23_min, s23_max});
     auto det_inv = fb.mul(t_inv_result["det"], s23_inv_result["det"]);
     auto [m1, m2, index_choice, det_scatter] =
         fb.two_to_three_particle_scattering_inverse(p1, p2, p_3, p_a, p_b, t1_abs, s23);
-    auto [r_choice, index_det] = fb.sample_discrete_inverse(index_choice, 2);
-    auto det_scatter_23 = fb.mul(index_det, det_scatter);
     return {
-        {{"random_choice", r_choice},
+        {{"discrete_choice", index_choice},
          {"random_s23", s23_inv_result["random"]},
          {"random_t1", t_inv_result["random"]},
          {"mass1", m1},
          {"mass2", m2}},
-        fb.mul(det_inv, det_scatter_23)
+        fb.mul(det_inv, det_scatter)
     };
 }

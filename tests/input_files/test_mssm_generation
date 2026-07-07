@@ -2,7 +2,7 @@ import model MSSM_SLHA2
 set automatic_html_opening False --no-save
 set notification_center False --no-save
 generate p p > go go
-output %(dir_name)s
+output madevent %(dir_name)s
 launch -i
 set automatic_html_opening False --no-save
 set madanalysis_path None --no_save
