@@ -52,7 +52,7 @@ start_batch_size = 1000
 max_batch_size = 32000
 
 [phasespace]
-mode = "both" #options: multichannel, flat, both
+mode = "multichannel" #options: multichannel, flat, both
 sde_strategy = "diagrams" #options: diagrams, denominators
 decays = "all" # options: all, massive, none
 t_channel = "propagator" # options: propagator, rambo, chili
