@@ -4,14 +4,19 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
-3.7.2 (XX/XX/XX):
+3.7.2 (07/07/26):
     MZ: negative seed are now allowed and strictly pin (so no automatic reset to 0 for the following run).
         negative seed are identical to positive one (both produce exactly same sample)
     RF: Fixed the writing of LHE files in fixed-order computations that was broken since previous release (3.7.1).
     OM: Ensure that goldstone are merged with SM coupling for FD gauge. 
         Note that FD needs model that are built such that the renormalization does not induced a shift of the SM values
+    OM: Allow the possibility to run Delphes in multicore. Compatible with the hepmc mode of pythia8 of autoremove
+        to avoid the costly merging of hepmc file.
+    OM: introduce two options nb_core_pythia8 nb_core_delphes
+    OM: Fix systematics.py for pdf variation for pdf set different than the original (thanks to Z. Marschall)
+    OM: (Try) to automatically update pdf set if pdf set have missing keys (like AlphaS_NumFlavors)
     Team: include all bug fix from 3.5.16 (see below)
-        Note slightly different handling of default parameter when a parameter is not within the run_card
+
 3.7.1 (29/04/26):
     OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
         to 0 (automatic) meaning that the next run in the directory will be with a different seed. 
