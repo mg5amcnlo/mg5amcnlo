@@ -24,6 +24,7 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
         self.color_basis = self.matrix_element.get("color_basis")
         self.set_topology()
         self.set_flavor_indices()
+        self.set_active_flavors()
         self.set_channels_colors_map()
 
     def generate_process_files(self):
@@ -55,6 +56,19 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
                 self.all_flavors_same_initial.append((i, flv))
             self.all_flavors_indices.append(indices)
 
+    def set_active_flavors(self):
+        self.active_flavors = [[] for d in self.diagrams]
+        for indices, flavors in zip(self.all_flavors_indices, self.all_flavors):
+            self.matrix_element.reset_has_flavor()
+            diag_mask = self.matrix_element.check_flavor_for_all_diagrams(
+                list(flavors[0]), self.model
+            )
+            for active_flavors, diag in zip(
+                self.active_flavors, self.matrix_element.get('diagrams')
+            ):
+                if diag.has_flavor:
+                    active_flavors.extend(indices)
+
     def set_channels_colors_map(self):
         if self.color_basis:
             diag_jamps = defaultdict(list)
@@ -74,13 +88,7 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
                 continue
 
             active_colors = diag_jamps[diagram_index] if self.color_basis else [0]
-            helas_diagram = self.helas_diagrams[diagram_index]
-            active_flavors = [
-                flav_id
-                for indices, flavors in zip(self.all_flavors_indices, self.all_flavors)
-                if helas_diagram.check_flavor(list(flavors[0]), self.model)
-                for flav_id in indices
-            ]
+            active_flavors = self.active_flavors[diagram_index]
             if sym_index < 0:
                 self.channels[self.channel_indices[-sym_index - 1]]["diagrams"].append(
                     {

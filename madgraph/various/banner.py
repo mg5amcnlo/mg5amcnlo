@@ -6449,8 +6449,12 @@ class RunCardMG7(RunCard):
         self.add_toml_param('run', 'verbosity', "pretty", gridpack=True,
             allowed=['silent', 'pretty', 'log'])
         self.add_toml_param('run', 'dummy_matrix_element', False)
-        self.add_toml_param('run', 'save_gridpack', False)
-        self.add_toml_param('run', 'gridpack_include_source', False)
+
+        # ---------------------------- [gridpack] ----------------------
+        self.add_toml_param('gridpack', 'save_gridpack', False)
+        self.add_toml_param('gridpack', 'include_source', False)
+        self.add_toml_param('gridpack', 'include_madspace', True)
+        self.add_toml_param('gridpack', 'include_madspace_source', False)
 
         # ----------------------------- [beam] -------------------------
         self.add_toml_param('beam', 'e_cm', 13000.0)
@@ -6488,7 +6492,7 @@ class RunCardMG7(RunCard):
         self.add_toml_param('vegas', 'max_batch_size', 32000)
 
         # -------------------------- [phasespace] ----------------------
-        self.add_toml_param('phasespace', 'mode', "both",
+        self.add_toml_param('phasespace', 'mode', "multichannel",
             allowed=['multichannel', 'flat', 'both'])
         self.add_toml_param('phasespace', 'sde_strategy', "diagrams",
             allowed=['diagrams', 'denominators'])
@@ -6987,7 +6991,7 @@ class RunCardMG7(RunCard):
     # LO scalar parameter -> MG7 "section.key" (same meaning, maybe renamed)
     _LO_SCALAR_MAP = {
         'nevents': 'generation.events',
-        'gridpack': 'run.save_gridpack',
+        'gridpack': 'gridpack.save_gridpack',
         'fixed_ren_scale': 'beam.fixed_ren_scale',
         'scale': 'beam.ren_scale',
         'dsqrt_q2fact1': 'beam.fact_scale1',

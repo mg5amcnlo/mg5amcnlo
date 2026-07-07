@@ -54,7 +54,7 @@ Legend for the mapping:
 | LO parameter(s) | MG7 target | class | notes |
 |---|---|---|---|
 | `nevents` | `generation.events` | [=] | rename |
-| `gridpack` | `run.save_gridpack` | [=] | |
+| `gridpack` | `gridpack.save_gridpack` | [=] | |
 | `run_tag` | `run.run_name` | [!] | close but not identical semantics (tag vs run name). |
 | `bwcutoff` | `phasespace.bw_cutoff` | [=] | rename |
 | `SDE_strategy` (int 1/2) | `phasespace.sde_strategy` (str) | [~] | `1`(single-diagram enhanced)→`diagrams`, `2`(product of denominators)→`denominators`. |
@@ -125,7 +125,8 @@ Cuts that are **not representable** in the current MG7 cut engine ([x] unless no
 
 `run.devices`, `run.simd_vector_size`, `run.{cpu,gpu,combine}_thread_pool_size`,
 `run.output_format`, `run.verbosity`, `run.dummy_matrix_element`,
-`run.gridpack_include_source`, `generation.{cpu,gpu}_batch_size`,
+`gridpack.{include_source,include_madspace,include_madspace_source}`,
+`generation.{cpu,gpu}_batch_size`,
 `generation.freeze_max_weight_after`, `generation.max_overweight_truncation`,
 `generation.cut_efficiency_threshold`, `generation.max_cut_repetitions`,
 all of `[vegas]`, `phasespace.{mode,t_channel,flat_mode,invariant_power,

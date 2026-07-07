@@ -1298,7 +1298,7 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(rc['beam']['e_cm'], 13000.0)
         self.assertIs(rc['vegas']['enable'], True)
         self.assertIs(rc['madnis']['enable'], False)
-        self.assertEqual(rc['phasespace']['mode'], 'both')
+        self.assertEqual(rc['phasespace']['mode'], 'multichannel')
         # the "enable" key colliding between [vegas] and [madnis] is stored
         # independently, so editing one does not affect the other
         rc['madnis']['enable'] = True
@@ -1341,9 +1341,9 @@ class TestRunCardMG7(unittest.TestCase):
         """allowed-value enforcement preserves the previous value on bad input"""
         rc = bannermod.RunCardMG7()
         rc.set('phasespace.mode', 'not_a_mode', raiseerror=False)
-        self.assertEqual(rc['phasespace']['mode'], 'both')
-        rc.set('phasespace.mode', 'multichannel', raiseerror=False)
         self.assertEqual(rc['phasespace']['mode'], 'multichannel')
+        rc.set('phasespace.mode', 'flat', raiseerror=False)
+        self.assertEqual(rc['phasespace']['mode'], 'flat')
 
     def test_create_default_for_process(self):
         """process dependent defaults: lepton collider drops jet cuts"""

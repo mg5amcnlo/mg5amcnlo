@@ -14,8 +14,12 @@ combine_thread_pool_size = %(run.combine_thread_pool_size)s
 output_format = %(run.output_format)s # options: compact_npy, lhe_npy, lhe
 verbosity = %(run.verbosity)s # options: silent, pretty, log
 dummy_matrix_element = %(run.dummy_matrix_element)s
-save_gridpack = %(run.save_gridpack)s
-gridpack_include_source = %(run.gridpack_include_source)s
+
+[gridpack]
+save_gridpack = %(gridpack.save_gridpack)s
+include_source = %(gridpack.include_source)s
+include_madspace = %(gridpack.include_madspace)s
+include_madspace_source = %(gridpack.include_madspace_source)s
 
 [beam]
 e_cm = %(beam.e_cm)s

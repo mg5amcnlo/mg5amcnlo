@@ -432,3 +432,25 @@ python_add_library(
 target_link_libraries(_madspace_py PRIVATE pybind11::headers)
 target_link_libraries(_madspace_py PUBLIC madspace)
 install(TARGETS _madspace_py DESTINATION madspace)
+
+########################################################################################
+# Source hash                                                                          #
+########################################################################################
+
+# Runs at install time (after everything has been compiled), so the embedded
+# hash always reflects exactly what was just built rather than what was on
+# disk when CMake was configured.
+install(CODE "
+    execute_process(
+        COMMAND \"${Python_EXECUTABLE}\" \"${CMAKE_CURRENT_SOURCE_DIR}/source_hash.py\"
+        OUTPUT_VARIABLE MADSPACE_SOURCE_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE MADSPACE_SOURCE_HASH_RESULT
+    )
+    if(NOT \${MADSPACE_SOURCE_HASH_RESULT} EQUAL 0)
+        message(FATAL_ERROR \"Failed to compute madspace source hash\")
+    endif()
+    file(WRITE \"\${CMAKE_INSTALL_PREFIX}/madspace/_source_hash.py\"
+        \"SOURCE_HASH = \\\"\${MADSPACE_SOURCE_HASH}\\\"\\n\"
+    )
+")
