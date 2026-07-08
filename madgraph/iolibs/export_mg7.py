@@ -57,16 +57,16 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
             self.all_flavors_indices.append(indices)
 
     def set_active_flavors(self):
+        # Per-diagram flavor validity is precomputed in the diagram flavor store
+        # (populate_flavor_validity, triggered via get_external_flavors_with_iden
+        # in __init__), so this is a pure read through HelasDiagram.has_flavor.
         self.active_flavors = [[] for d in self.diagrams]
         for indices, flavors in zip(self.all_flavors_indices, self.all_flavors):
-            self.matrix_element.reset_has_flavor()
-            diag_mask = self.matrix_element.check_flavor_for_all_diagrams(
-                list(flavors[0]), self.model
-            )
+            flavor = tuple(flavors[0])
             for active_flavors, diag in zip(
                 self.active_flavors, self.matrix_element.get('diagrams')
             ):
-                if diag.has_flavor:
+                if diag.has_flavor(flavor):
                     active_flavors.extend(indices)
 
     def set_channels_colors_map(self):

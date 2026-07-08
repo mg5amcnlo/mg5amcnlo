@@ -651,6 +651,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #
         self['polarization'] = []
         self['flavor'] = []
+        # Set of external-flavor assignments (representative per-leg flavor-index
+        # tuples) for which this wavefunction contributes. Populated from the
+        # diagram flavor store (see HelasMatrixElement.compute_flavor_masks);
+        # read through has_flavor(). Not part of get_sorted_keys (runtime cache).
+        self.valid_flavors = set()
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -1509,7 +1514,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if name == 'state':
             return list([state for state in ['incoming', 'outgoing'] if state != self.get('state')])[0]
         return self.get(name)
-    
+
+    def has_flavor(self, flavor):
+        """Return True if this wavefunction contributes for the given
+        external-flavor assignment. Pure reader over the precomputed
+        'valid_flavors' store (filled by HelasMatrixElement.compute_flavor_masks);
+        does no recomputation."""
+        return tuple(flavor) in getattr(self, 'valid_flavors', ())
+
 
     def tag_external_flavor(self, flavor_id, model, tag_name='flavortag'):
 
@@ -2815,6 +2827,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # conjugate_indices is a list [1,2,...] with fermion lines
         # that need conjugates. Default is "None"
         self['conjugate_indices'] = None
+        # Set of external-flavor assignments (representative per-leg flavor-index
+        # tuples) for which this amplitude contributes. Populated from the
+        # diagram flavor store (see HelasMatrixElement.compute_flavor_masks);
+        # read through has_flavor(). Not part of get_sorted_keys (runtime cache).
+        self.valid_flavors = set()
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -3061,6 +3078,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    external_wavefunctions,
                                    None,
                                    wf_number)
+
+    def has_flavor(self, flavor):
+        """Return True if this amplitude contributes for the given external-flavor
+        assignment. Pure reader over the precomputed 'valid_flavors' store (filled
+        by HelasMatrixElement.compute_flavor_masks); does no recomputation."""
+        return tuple(flavor) in getattr(self, 'valid_flavors', ())
 
     def propagate_flavor_tag(self, model, debug=False, fct=None, tag_name='flavortag'):
 
@@ -3634,6 +3657,14 @@ class HelasDiagram(base_objects.PhysicsObject):
         # diagram
         self['amplitudes'] = HelasAmplitudeList()
         self['number'] = 0
+        # Set of external-flavor assignments (representative per-leg flavor-index
+        # tuples, e.g. (1, 1, 1, 1)) for which this diagram is valid. This is the
+        # single source of truth for per-diagram flavor validity: it is populated
+        # by check_flavor() during HelasMatrixElement.populate_flavor_validity()
+        # and read back through the cheap has_flavor() accessor. flavor_mask,
+        # diagram trimming and check_flavor_for_all_diagrams all derive from it.
+        # Not part of get_sorted_keys (runtime cache).
+        self.valid_flavors = set()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -3694,8 +3725,22 @@ class HelasDiagram(base_objects.PhysicsObject):
         
         return self['amplitudes']
 
+    def has_flavor(self, flavor):
+        """Return True if this diagram is valid for the given external-flavor
+        assignment. Pure O(1) reader over the precomputed 'valid_flavors' store
+        (populated by check_flavor() during
+        HelasMatrixElement.populate_flavor_validity()); does no recomputation.
+        This is the API every other routine should use to query flavor validity.
+        """
+        return tuple(flavor) in getattr(self, 'valid_flavors', ())
+
     def check_flavor(self, flavor_id, model, debug=False, clear_flavor_tag=True):
-        """ check if the real_pdg is compatible with the diagram"""
+        """ check if the real_pdg is compatible with the diagram.
+
+        This is the *populator* of the diagram flavor store: on success the
+        flavor is recorded in self.valid_flavors so that later has_flavor()
+        queries are pure lookups. It is driven for every candidate flavor by
+        HelasMatrixElement.populate_flavor_validity()."""
 
         #flavor_status = {}
         #pdg_for_number = {}
@@ -3785,16 +3830,18 @@ class HelasDiagram(base_objects.PhysicsObject):
                     # question do we need to compute the flavor of the following wfct? or we do just have to trash the old assigned flavor?
                     return valid
 
-        for wfct in self['amplitudes']:  
+        for wfct in self['amplitudes']:
             valid = wfct.propagate_flavor_tag(model)
             if valid:
+                # record the validity so has_flavor() can answer without recompute
+                self.valid_flavors.add(tuple(flavor_id))
                 return True
         else:
             return False
 
 
         return True
-    
+
     def check_iden_flavors(self, flavor_id1, flavor_id2, model):
         """ check if the real_pdg is compatible with the diagram"""
 
@@ -3913,6 +3960,16 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self['allowed_flavors'] = [] # list of all allowed flavors for the process
         self['allowed_flavors_with_iden'] = [] # list of all allowed flavors for the process but grouped by identical matrix-element
         self['allowed_flavors_with_iden_sign'] = [] # list of all allowed flavors for the process but grouped by identical matrix-element
+        # Multi-flavor generation bookkeeping (single definition point; see
+        # populate_flavor_validity()).  Stored as plain attributes (not object
+        # properties) so they stay out of dict-equality/serialisation, exactly
+        # like the per-object valid_flavors store they govern.
+        #   _flavor_populated      -- the valid_flavors store is up to date
+        #   _flavor_allow_trimming -- a per-leg flavor restriction is active
+        #   _flavor_trimmed        -- restricted-flavor diagram trimming has run
+        self._flavor_populated = False
+        self._flavor_allow_trimming = False
+        self._flavor_trimmed = False
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -4313,6 +4370,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for amp in self.get_all_amplitudes():
             amp.set('mothers', HelasMatrixElement.sorted_mothers(amp))
             amp.set('color_indices', amp.get_color_indices())
+
+        # Eagerly populate the per-diagram flavor store (the single source of
+        # truth read by has_flavor()) now that the diagram structure is final.
+        # For decay-chain matrix elements the structure is rewritten later by
+        # insert_decay_chains(), so defer the population to that point instead
+        # (see HelasDecayChainProcess.generate_matrix_elements).
+        if not process.get('decay_chains'):
+            self.populate_flavor_validity(model)
 
               
     def reuse_outdated_wavefunctions(self, helas_diagrams):
@@ -5314,128 +5379,191 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return allowed_helicity
 
 
-    def get_external_flavors(self, all_perm=False, return_pdgs=False):
-        """If merged particles are used, determine the list of possible flavor that are not zero """
+    def _flavor_is_populated(self):
+        """True once populate_flavor_validity() has run for the current diagram
+        set (i.e. the per-diagram 'valid_flavors' store is up to date)."""
+        return getattr(self, '_flavor_populated', False)
 
-        if self['allowed_flavors']:
-            if return_pdgs:
-                return self['allowed_flavors'], self['allowed_flavors_pdgs']
-            else:
-                return self['allowed_flavors']
-        pdgs=[]
+    def _flavor_enumeration_context(self, model):
+        """Per-external-leg data used to enumerate external-flavor assignments.
+
+        Returns (pdgs, pdg_signs, to_map, restricted_flavor, ninit) where, indexed
+        by external leg: pdgs[i] is the (merged) pdg code, pdg_signs[i] the sign
+        to apply when reporting the physical pdg, and restricted_flavor[i] the
+        list of pdgs the leg is restricted to (or None if unconstrained).  to_map
+        maps a merged pdg to its constituent pdgs; ninit is the number of initial
+        legs.  This is the single place that reads the external wavefunctions.
+        """
+        pdgs = []
         pdg_signs = []
-        external_wfs = sorted([wf for wf in self.get_all_wavefunctions() if len(wf.get('mothers')) == 0],
+        external_wfs = sorted([wf for wf in self.get_all_wavefunctions()
+                               if len(wf.get('mothers')) == 0],
                               key=lambda w: w['number_external'])
-        external_number=1
-        id_to_wf =collections.defaultdict(list)
+        external_number = 1
+        id_to_wf = collections.defaultdict(list)
         next, ninit = self.get_nexternal_ninitial()
         for wf in external_wfs:
-            if wf.get('number_external')==external_number:
+            if wf.get('number_external') == external_number:
                 id_to_wf[external_number].append(wf)
-                external_number=external_number+1
+                external_number = external_number + 1
                 particle = wf.get('particle')
                 pdgs.append(particle.get_pdg_code())
                 if len(pdg_signs) < ninit:
                     pdg_signs.append(-1 if particle.get_anti_pdg_code() < 0 else 1)
                 else:
                     pdg_signs.append(-1 if particle.get_pdg_code() < 0 else 1)
-        
+
         to_map = {}
-        model = self.get('processes')[0].get('model')
         for key in model.get('merged_particles'):
             to_map[key] = model.get('merged_particles')[key]
-            
-        flavor_list = []
-        pdg_list = []
 
-        restricted_flavor = [None]*len(pdgs)
+        restricted_flavor = [None] * len(pdgs)
         for i in range(len(pdgs)):
-            wf = id_to_wf[i+1][0]
+            wf = id_to_wf[i + 1][0]
             if wf.get('flavor'):
-                restricted_flavor[i] = wf.get('flavor') 
+                restricted_flavor[i] = wf.get('flavor')
 
-        # need to avoid to compute for the permutation(?)
-        checked = {}
+        return pdgs, pdg_signs, to_map, restricted_flavor, ninit
 
-        allow_triming = False
-        if restricted_flavor != [None]*len(external_wfs):
-            allow_triming = True
-            self.reset_has_flavor()
+    def _iter_candidate_flavors(self, pdgs, pdg_signs, to_map,
+                                restricted_flavor, ninit):
+        """Yield (one_flavor, signed_pdg, signature) for every external-flavor
+        assignment permitted by the merged-particle expansion and the per-leg
+        restriction.
 
-        # The init/final-sorted dedup signature built below is only a sound
-        # equivalence key when every leg sharing a signature slot is genuinely
-        # interchangeable.  In a decay-chain matrix element the final legs
-        # belong to distinct decay sub-trees, so two assignments can share the
-        # same sorted final-state multiset yet describe different sub-tree
-        # content (e.g. WW->4j: `w+ > c s~, w- > d u~` vs `w+ > d s~` [invalid]
-        # collapse to one signature).  A cached *False* must therefore not be
-        # trusted to skip a sibling assignment for decay-chain ME (see below).
-        is_decay_chain = bool(self.get('processes')[0].get('decay_chains'))
+        - one_flavor : per-leg merged-flavor-index tuple (the value passed to
+          HelasDiagram.check_flavor and stored in valid_flavors).
+        - signed_pdg : per-leg signed physical pdg codes (for allowed_flavors_pdgs).
+        - signature  : the initial/final-sorted signed-pdg tuple callers use to
+          deduplicate permutation-equivalent assignments.
 
+        This is the single place that knows how to enumerate flavor candidates
+        and apply the per-leg restriction; callers layer their own dedup and
+        validity checking on top of the signature.
+        """
         for one_flavor, one_flavor_pdg in zip(
             itertools.product(*[to_map.get(abs(id), [1]) for id in pdgs]),
             itertools.product(*[to_map.get(abs(id), [abs(id)]) for id in pdgs]),
         ):
-            # get the actual pdg code (with the sign)
-            pdg = [one_flavor[i] if id > 0 else -one_flavor[i] for i,id in enumerate(pdgs)]
+            # actual pdg codes (with the sign), before the initial-state flip
+            pdg = [one_flavor[i] if id > 0 else -one_flavor[i]
+                   for i, id in enumerate(pdgs)]
 
-            #check if restricted flavor
-            if restricted_flavor != [None]*len(external_wfs):
-                skip = False
-                for i,rf in enumerate(restricted_flavor):
-                    if rf is not None and pdg[i] not in rf:
-                        skip = True
-                        break
-                if skip:
-                    continue
+            # apply the per-leg flavor restriction (None => leg unconstrained)
+            if any(rf is not None and pdg[i] not in rf
+                   for i, rf in enumerate(restricted_flavor)):
+                continue
 
+            signed_pdg = [flav * sign
+                          for flav, sign in zip(one_flavor_pdg, pdg_signs)]
 
-            # flip initial states
+            # dedup signature: flip initial states, then sort init/final apart
             for i in range(ninit):
                 pdg[i] = -pdg[i]
-            init, final = pdg[:ninit], pdg[ninit:]
-            init.sort()
-            final.sort()
-            pdg = tuple(init + final)
-            # check if we already computed this one
-            if pdg in checked:
-                if checked[pdg]:
+            signature = tuple(sorted(pdg[:ninit]) + sorted(pdg[ninit:]))
+
+            yield one_flavor, signed_pdg, signature
+
+    def populate_flavor_validity(self, model=None):
+        """Eager, single-source-of-truth pass for multi-flavor generation.
+
+        For every candidate external-flavor assignment (representative per-leg
+        flavor-index tuple), run HelasDiagram.check_flavor on *every* diagram so
+        that each diagram records the flavors it supports in its 'valid_flavors'
+        store.  Afterwards has_flavor(), compute_flavor_masks(),
+        check_flavor_for_all_diagrams() and remove_diagrams_without_flavor() are
+        all pure reads over that store.
+
+        Also builds self['allowed_flavors'] / self['allowed_flavors_pdgs'] (the
+        flavors supported by at least one diagram).  This method does NOT remove
+        any diagram: restricted-flavor trimming is left to get_external_flavors()
+        so that it keeps happening lazily, after color-basis construction, which
+        preserves the historical diagram/wavefunction numbering.
+
+        Idempotent: it resets the store on every call, so it is safe to re-run
+        after the diagram structure changes (e.g. decay-chain insertion).
+        """
+        if not self.get('processes'):
+            return
+        if model is None:
+            model = self.get('processes')[0].get('model')
+
+        # reset the per-diagram store (this is the authoritative source)
+        for diag in self.get('diagrams'):
+            diag.valid_flavors = set()
+
+        pdgs, pdg_signs, to_map, restricted_flavor, ninit = \
+            self._flavor_enumeration_context(model)
+
+        # A per-leg flavor restriction means some diagrams may be incompatible
+        # with every allowed flavor and must be trimmed.  Record the flag; the
+        # actual trimming is deferred to get_external_flavors() (see docstring).
+        self._flavor_allow_trimming = (restricted_flavor != [None] * len(pdgs))
+
+        # Fast path: if no external leg carries a merged (flavor-grouped) pdg and
+        # there is no flavor restriction, then there is a single external-flavor
+        # assignment -- the identity (all flavor-index 1) -- and every generated
+        # diagram is valid for it by construction (external flavors are fully
+        # fixed).  Skip the per-diagram check_flavor sweep entirely; this is the
+        # common case for models without flavor grouping.
+        if not self._flavor_allow_trimming and \
+                not any(abs(pdg) in to_map for pdg in pdgs):
+            identity = tuple([1] * len(pdgs))
+            identity_pdg = [abs(pdg) * sign
+                            for pdg, sign in zip(pdgs, pdg_signs)]
+            for diag in self.get('diagrams'):
+                diag.valid_flavors = {identity}
+            self['allowed_flavors'] = [identity]
+            self['allowed_flavors_pdgs'] = [identity_pdg]
+            self._flavor_populated = True
+            self._flavor_trimmed = False
+            return
+
+        flavor_list = []
+        pdg_list = []
+        # signature -> whether some diagram is valid for it, used to skip
+        # permutation-equivalent assignments we have already decided on.
+        checked = {}
+
+        # The init/final-sorted dedup signature (from _iter_candidate_flavors) is
+        # only a sound equivalence key when every leg sharing a signature slot is
+        # genuinely interchangeable.  In a decay-chain matrix element the final
+        # legs belong to distinct decay sub-trees, so two assignments can share
+        # the same sorted final-state multiset yet describe different sub-tree
+        # content (e.g. WW->4j: `w+ > c s~, w- > d u~` vs `w+ > d s~` [invalid]
+        # collapse to one signature).  A cached *False* must therefore not be
+        # trusted to skip a sibling assignment for a decay-chain ME.
+        is_decay_chain = bool(self.get('processes')[0].get('decay_chains'))
+
+        for one_flavor, signed_pdg, signature in self._iter_candidate_flavors(
+                pdgs, pdg_signs, to_map, restricted_flavor, ninit):
+            if signature in checked:
+                if checked[signature]:
                     # genuine permutation duplicate of a validated flavor
-                    if all_perm:
-                        flavor_list.append(one_flavor)
                     continue
                 elif not is_decay_chain:
                     # known-invalid signature; sound to skip for a plain ME
-                    if all_perm:
-                        flavor_list.append(one_flavor)
                     continue
                 # decay-chain ME: a cached False may hide a valid sibling
-                # assignment that shares this (too coarse) signature, so fall
+                # assignment sharing this (too coarse) signature, so fall
                 # through and re-check this specific flavor assignment.
 
-            # do the computation
-            if self.check_flavor(one_flavor, self.get('processes')[0].get('model')):
+            # populate every diagram's store for this flavor
+            if self.check_flavor_for_all_diagrams(one_flavor, model):
                 flavor_list.append(one_flavor)
-                pdg_list.append([flav * sign for flav, sign in zip(one_flavor_pdg, pdg_signs)])
-                #misc.sprint('checking flavor:', pdg, one_flavor, True)
-                checked[pdg] = True
-                if allow_triming:
-                    self.check_flavor_for_all_diagrams(one_flavor, model)
+                pdg_list.append(signed_pdg)
+                checked[signature] = True
             else:
-                #misc.sprint('checking flavor:', pdg, one_flavor, False)
-                checked[pdg] = False
+                checked[signature] = False
 
-        if allow_triming:
-            self.remove_diagrams_without_flavor()
-            # this should not happen since that error should be raised in the check_flavor function, but just to be sure
-            if len(self.get('diagrams')) == 0:
-                raise self.NoFlavorError("No diagram left after trimming for flavor!")
-             
         self['allowed_flavors'] = flavor_list
         self['allowed_flavors_pdgs'] = pdg_list
+        self._flavor_populated = True
+        # a fresh population invalidates any previous trimming decision
+        self._flavor_trimmed = False
 
         # Clean up temporary 'flavortag' attributes left on wavefunctions by
-        # the last check_flavor call.  These dynamic dict keys are only valid
+        # the check_flavor calls.  These dynamic dict keys are only valid
         # during flavor checking; leaving them on the wavefunction objects
         # breaks replace_single_wavefunction (which iterates old_wf.keys() and
         # looks up the same key on new_wf).
@@ -5445,11 +5573,36 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             except Exception:
                 pass
 
+    def get_external_flavors(self, all_perm=False, return_pdgs=False):
+        """Return the list of allowed external-flavor assignments (representative
+        per-leg flavor-index tuples) when merged particles are used.
+
+        Thin reader over populate_flavor_validity(): it triggers the eager flavor
+        pass on first use (a no-op if generation already ran it), then applies
+        restricted-flavor diagram trimming lazily.  Trimming is kept here rather
+        than in populate_flavor_validity() so it happens after color-basis
+        construction, preserving historical diagram/wavefunction numbering.
+
+        The `all_perm` argument is accepted for backward compatibility but is now
+        a no-op: only the representative (deduplicated) flavors are returned.
+        """
+        if not self._flavor_is_populated():
+            self.populate_flavor_validity()
+
+        if getattr(self, '_flavor_allow_trimming', False) and \
+                not getattr(self, '_flavor_trimmed', False):
+            self.remove_diagrams_without_flavor()
+            self._flavor_trimmed = True
+            # this should not happen since the error should be raised earlier,
+            # but just to be sure
+            if len(self.get('diagrams')) == 0:
+                raise self.NoFlavorError("No diagram left after trimming for flavor!")
+
         if return_pdgs:
             return self['allowed_flavors'], self['allowed_flavors_pdgs']
         else:
             return self['allowed_flavors']
-    
+
     def get_external_flavors_with_iden(self, return_pdgs=False):
         if self['allowed_flavors_with_iden']:
             if return_pdgs:
@@ -5477,57 +5630,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         else:
             return self['allowed_flavors_with_iden']
 
-    def check_flavor(self, real_pdgs, model, debug=False):
-        """check if any feynman diagram is compatible with the pdg codes replaced by the real_pdgs
-        """
-        HelasDiagram.done_flavor = []
-
-        # remove the information from previous check.
-        # NB: self['wavefunctions'] only lists the wavefunctions *introduced*
-        # by this diagram.  In a HELAS-optimised matrix element a diagram also
-        # reuses wavefunctions (and their sub-trees) introduced by earlier
-        # diagrams; those appear here only as mothers.  If we cleared the tag
-        # for self['wavefunctions'] alone, such shared mothers would keep a
-        # stale flavortag computed for a *different* flavor, and
-        # propagate_flavor_tag would silently reuse it instead of recomputing
-        # it -- wrongly rejecting (or accepting) this diagram depending on the
-        # order in which flavors are checked.  Clear the whole ancestor closure
-        # of every wavefunction and amplitude instead.
-        _seen_clear = set()
-        def _clear_flavor_tag(wf):
-            if id(wf) in _seen_clear:
-                return
-            _seen_clear.add(id(wf))
-            try:
-                del wf['flavortag']
-            except Exception:
-                pass
-            for m in wf.get('mothers'):
-                _clear_flavor_tag(m)
-        
-        for diag in self.get('diagrams'):
-            for wf in diag.get('wavefunctions'):
-                _clear_flavor_tag(wf)
-            for amp in diag.get('amplitudes'):
-                _clear_flavor_tag(amp)
-
-
-        for i, diag in enumerate(self.get('diagrams')):
-            if diag.check_flavor(real_pdgs, model, debug=debug, clear_flavor_tag=False):
-                if debug: misc.sprint('diag', i, 'is ok')
-                return True
-        if debug: misc.sprint('no diag for ', real_pdgs)
-        return False
-    
-    def reset_has_flavor(self):
-        """reset the has_flavor attribute for all diagrams"""
-        for diag in self.get('diagrams'):
-            diag.has_flavor = False
-    
     def check_flavor_for_all_diagrams(self, real_pdgs, model, debug=False):
-        """check which feynman diagram is compatible with the pdg codes replaced by the real_pdgs
-           flag those diagrams with has_flavor attribute set to True.
-           Such that all those with has_flavor = False can be trimmed later on.
+        """Populate every diagram's flavor store for the flavor `real_pdgs`.
+
+        Runs HelasDiagram.check_flavor on *all* diagrams (no short-circuit); each
+        valid diagram records `real_pdgs` in its 'valid_flavors' set as a side
+        effect.  Returns True if at least one diagram is valid for this flavor.
+
+        This is the per-flavor populator driven by populate_flavor_validity().
         """
         if debug: misc.sprint('checking flavor for all diagrams:', real_pdgs)
         # Drop any stale `flavortag` left on wavefunctions/amplitudes by a
@@ -5538,25 +5648,27 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         # shared mothers stay tagged with the previous flavor, and
         # propagate_flavor_tag will then silently reuse the stale tag instead
         # of recomputing it -- causing valid diagrams for the new flavor to be
-        # rejected (and trimmed) by remove_diagrams_without_flavor.
+        # rejected (and trimmed) by remove_diagrams_without_flavor.  A single
+        # up-front clear (rather than per diagram) lets diagrams reuse each
+        # other's freshly computed tags within this flavor.
         for wfct in self.get_all_wavefunctions() + self.get_all_amplitudes():
             try:
                 del wfct['flavortag']
             except Exception:
                 pass
+        any_valid = False
         for i, diag in enumerate(self.get('diagrams')):
-            if not diag.has_flavor:
-                if diag.check_flavor(real_pdgs, model, debug=debug, clear_flavor_tag=False):
-                    diag.has_flavor = True
-                    if debug: misc.sprint('diag', i, 'is ok')
-                else:
-                    if debug: misc.sprint('diag', i, 'not ok')
+            if diag.check_flavor(real_pdgs, model, debug=debug, clear_flavor_tag=False):
+                any_valid = True
+                if debug: misc.sprint('diag', i, 'is ok')
             else:
-                if debug: misc.sprint('diag', i, 'already ok')
+                if debug: misc.sprint('diag', i, 'not ok')
+        return any_valid
 
     def remove_diagrams_without_flavor(self):
-        """remove all diagrams which do not have has_flavor attribute set to True.
-           This is used after check_flavor_for_all_diagrams to trim the ME.
+        """remove all diagrams whose flavor store ('valid_flavors') is empty,
+           i.e. diagrams that support none of the allowed external flavors.
+           This is used after populate_flavor_validity() to trim the ME.
         """
 
         # helper functions to recursively store and restore dropped wfcts
@@ -5606,7 +5718,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 misc.sprint('new amp')
                 for amp in diag['amplitudes']:
                     misc.sprint(amp.nice_string(), [wf.get('number') for wf in amp['mothers']], amp.get('number'))
-            if not diag.has_flavor:
+            if not diag.valid_flavors:
                 if debug: misc.sprint('dropping diagram')
                 for wf in diag['wavefunctions']:
                     if debug: misc.sprint('dropping wfct number %d'%(wf.get('number')))
@@ -5623,7 +5735,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         initial_len = len(self.get('diagrams'))
 
-        self['diagrams'] = HelasDiagramList([diag for diag in self.get('diagrams') if diag.has_flavor])
+        self['diagrams'] = HelasDiagramList([diag for diag in self.get('diagrams') if diag.valid_flavors])
         final_len = len(self.get('diagrams'))
         if final_len < initial_len:
             logger.info('removed %d diagrams which were incompatible with flavor restriction: remain %d'%(initial_len - final_len, final_len))
@@ -5657,43 +5769,25 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if not self.get('processes'):
             return []
-        model = self.get('processes')[0].get('model')
         allowed_flavors = self.get_external_flavors()
         if not allowed_flavors:
             return []
 
-        # 1) Per-diagram mask.
-        # We never call HelasDiagram.check_flavor directly here: that primitive
-        # re-clears (and recomputes) the flavortag of its whole ancestor closure
-        # on every call, which is wasteful when the same wavefunctions and
-        # propagators are shared across diagrams.  Instead we go through the
-        # HelasMatrixElement-level check_flavor_for_all_diagrams, which clears the
-        # flavortag state exactly once per flavor and then tags every compatible
-        # diagram (has_flavor=True), letting diagrams reuse each other's
-        # already-computed flavor information within a given flavor.
-        #
-        # check_flavor_for_all_diagrams is cumulative (it skips diagrams already
-        # flagged), so to recover the *per-flavor* active-diagram set we reset the
-        # has_flavor flags before each flavor and read them back afterwards.
+        # 1) Per-diagram mask, derived purely from the precomputed flavor store.
+        # populate_flavor_validity() (triggered by get_external_flavors above)
+        # has already recorded, for every diagram, the flavors it supports in
+        # diag.valid_flavors.  So the per-diagram bitmask is just a lookup via
+        # has_flavor(); no flavortag recomputation happens here.
         for diag in self.get('diagrams'):
-            diag['flavor_mask'] = 0
-
-        for flav_idx, flavor in enumerate(allowed_flavors):
-            self.reset_has_flavor()
-            self.check_flavor_for_all_diagrams(flavor, model)
-            bit = 1 << flav_idx
-            for diag in self.get('diagrams'):
-                if diag.has_flavor:
-                    diag['flavor_mask'] |= bit
-
-        # The per-flavor loop above leaves has_flavor reflecting only the last
-        # flavor.  This is not a trimming pass, so restore has_flavor to the
-        # union state (a diagram is active iff it contributes to some flavor) to
-        # keep it consistent for any later remove_diagrams_without_flavor call.
-        for diag in self.get('diagrams'):
-            diag.has_flavor = bool(diag['flavor_mask'])
+            mask = 0
+            for flav_idx, flavor in enumerate(allowed_flavors):
+                if diag.has_flavor(flavor):
+                    mask |= (1 << flav_idx)
+            diag['flavor_mask'] = mask
+            # amplitudes of a diagram share the diagram's flavor validity
             for amp in diag.get('amplitudes'):
-                amp['flavor_mask'] = diag['flavor_mask']
+                amp['flavor_mask'] = mask
+                amp.valid_flavors = set(diag.valid_flavors)
 
         # 2) Initialise every wavefunction mask to 0, then OR each amplitude's
         # mask into all reachable ancestor wavefunctions via the 'mothers'
@@ -5735,6 +5829,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             sinks = wf_amp_sinks.get(id(wf))
             if sinks and len(sinks) == 1:
                 wf['guard_amp_number'] = next(iter(sinks))
+
+        # Mirror the wavefunction masks into per-wavefunction 'valid_flavors'
+        # sets so HelasWavefunction.has_flavor() answers consistently with the
+        # bitmasks (a wf contributes for flavor f iff bit f of its mask is set).
+        for wf in self.get_all_wavefunctions():
+            mask = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+            wf.valid_flavors = set(flavor for flav_idx, flavor
+                                   in enumerate(allowed_flavors)
+                                   if mask & (1 << flav_idx))
 
         # 3) Clean up the 'flavortag' side effect left by diag.check_flavor on
         # wavefunctions and amplitudes. Same cleanup pattern as
@@ -6602,6 +6705,10 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         
                     
                 matrix_element.insert_decay_chains(decay_dict)
+                # The diagram structure is now final for this decay-chain matrix
+                # element; populate the per-diagram flavor store (deferred from
+                # generate_helas_diagrams, which ran before decay insertion).
+                matrix_element.populate_flavor_validity()
                 if combine:
                     me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
