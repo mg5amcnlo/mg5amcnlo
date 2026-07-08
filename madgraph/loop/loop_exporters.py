@@ -1740,6 +1740,18 @@ C               ENDIF""")%replace_dict
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
+
+        #In loop-induced, particles are put onshell to get a better precision on PS points. If we want to study processes with external off-shell particles we need
+        #it to consider the offshell mass m^2 = p^2 to the on-shell mass.
+        #KEEP_OFFSHELL_MASS contains the information based on the generation string of which external particle should be kept off-shell.
+        base_process_string = matrix_element.get('processes')[0].base_string()
+        particles_process = base_process_string.replace(">", "", 1).split()
+        offshell_or_not = ['.true.' if '*' in elem else '.false.' for elem in particles_process]
+        logger.info("Particles with .true. are generated off-shell: " + str(offshell_or_not))
+
+        replace_dict["keep_offshell_mass"] = ""
+        for i in range(len(offshell_or_not)):
+            replace_dict["keep_offshell_mass"] += f"KEEP_OFFSHELL_MASS({i + 1}) = {offshell_or_not[i]}\n"
         
         file = file % replace_dict
 
@@ -3120,7 +3132,7 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
             replace_dict['include_vector'] = '' 
 
         #In loop-induced, particles are put onshell to get a better precision on PS points. If we want to study processes with external off-shell particles we need
-        #it to consider the offshell mass m^2 = p^2 to the on-shell mass. 
+        #it to consider the offshell mass m^2 = p^2 to the on-shell mass.
         #KEEP_OFFSHELL_MASS contains the information based on the generation string of which external particle should be kept off-shell.
         base_process_string = matrix_element.get('processes')[0].base_string()
         particles_process = base_process_string.replace(">", "", 1).split()
