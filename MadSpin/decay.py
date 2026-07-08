@@ -4470,21 +4470,36 @@ class decay_all_events_onshell(decay_all_events):
         # call so the resulting library gets a unique SONAME /
         # install_name and the loader keeps both copies live.
         ms_run_id = getattr(self.mscmd, '_ms_run_id', 1)
-        make_args = ['all_matrix2py.so']
+        # The production (madspin_me) and decay (madspin_decay) matrix elements
+        # are compiled into two separate standalone trees but are loaded into
+        # the *same* Python process to build the density matrix. They must NOT
+        # share the f2py extension-module name (all_matrix<MENUM>py) nor the
+        # dependent Fortran shared library name (liball<PROCNAME>_<MENUM>me):
+        # with the empty default PROCNAME both sides otherwise produce
+        # ``all_matrix2py`` + ``@rpath/liball_2me.dylib``, and two identically
+        # named f2py modules (sharing the same Fortran COMMON blocks / global
+        # symbols) co-existing in one process corrupt memory and segfault
+        # during the density evaluation. Build the decay side with a distinct
+        # MENUM so both the module and the dependent library get unique names.
+        # (see MadSpinInterface._load_f2py_matrix_module / create_f2py_module,
+        # which load madspin_me with MENUM=2 and madspin_decay with MENUM=1).
+        prod_args = ['MENUM=2', 'all_matrix2py.so']
+        decay_args = ['MENUM=1', 'all_matrix1py.so']
         if ms_run_id > 1:
-            make_args.insert(0, 'PROCNAME=_ms%d' % ms_run_id)
+            prod_args.insert(0, 'PROCNAME=_ms%d' % ms_run_id)
+            decay_args.insert(0, 'PROCNAME=_ms%d' % ms_run_id)
         #my_env = os.environ.copy()
         #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me, ms_me_subdir, 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])
-        misc.compile(make_args,
+        misc.compile(prod_args,
                      cwd=pjoin(self.path_me, ms_me_subdir, 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
         #Valentin: not sure the decay_folder exists in all cases, so I check
         if os.path.exists(pjoin(self.path_me, ms_me_decay_subdir)):
             misc.compile(cwd=pjoin(self.path_me, ms_me_decay_subdir, 'Source'),
                         nb_core=self.mgcmd.options['nb_core'])
-            misc.compile(make_args,
+            misc.compile(decay_args,
                         cwd=pjoin(self.path_me, ms_me_decay_subdir, 'SubProcesses'),
                         nb_core=self.mgcmd.options['nb_core'])
 

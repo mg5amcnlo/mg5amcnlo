@@ -212,37 +212,45 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.prod_branches = ''
         self.final_state = set()
 
-    def _load_f2py_matrix_module(self, sp_path):
-        """Load the freshly-compiled ``all_matrix2py`` extension under
+    def _load_f2py_matrix_module(self, sp_path, menum=2):
+        """Load the freshly-compiled ``all_matrix<menum>py`` extension under
         ``sp_path``.
 
         Each MadSpin run compiles its matrix elements into its own
         ``madspin_me_<N>`` subdir, and (from the second call onwards)
         ``decay.compile()`` overrides the makefile's ``PROCNAME`` so the
         resulting Fortran shared library
-        (``liball<PROCNAME>_2me.{so,dylib}``) has a unique SONAME /
+        (``liball<PROCNAME>_<MENUM>me.{so,dylib}``) has a unique SONAME /
         install_name. The combination of a unique wrapper path *and* a
         unique dependent-library identity is what stops the dynamic
         loader from returning the first call's already-loaded matrix
         elements on the second call.
 
+        Within a single run the production (madspin_me) and decay
+        (madspin_decay) modules are both loaded into this process; they are
+        built with distinct ``MENUM`` values (2 for production, 1 for decay)
+        so the f2py module name (``all_matrix<MENUM>py``) and the dependent
+        library (``liball_<MENUM>me``) differ — otherwise the two identically
+        named Fortran extensions clash and segfault. ``menum`` selects which
+        one to load.
+
         This helper just picks the loadable ``.so`` and loads it via
         ``importlib.util.spec_from_file_location`` to bypass the
         ``sys.modules`` cache (which would otherwise short-circuit
-        ``__import__('all_matrix2py')`` to the first call's module
-        object).
+        ``__import__`` to the first call's module object).
         """
         import importlib.util
         import glob
 
+        modname = 'all_matrix%dpy' % menum
         # The actual loadable file is the cpython-tagged ``.so``; on some
-        # builds the unsuffixed ``all_matrix2py.so`` is a 0-byte stub. Pick
-        # the largest matching file so we always load real code.
+        # builds the unsuffixed ``all_matrix<menum>py.so`` is a 0-byte stub.
+        # Pick the largest matching file so we always load real code.
         patterns = [
-            'all_matrix2py.cpython*.so',
-            'all_matrix2py.cpython*.dylib',
-            'all_matrix2py.so',
-            'all_matrix2py.dylib',
+            '%s.cpython*.so' % modname,
+            '%s.cpython*.dylib' % modname,
+            '%s.so' % modname,
+            '%s.dylib' % modname,
         ]
         candidates = []
         for pat in patterns:
@@ -252,16 +260,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not candidates:
             # Fall back to the historical ``__import__`` so we at least
             # produce a meaningful error if nothing got compiled.
-            return __import__('all_matrix2py')
+            return __import__(modname)
         candidates.sort(key=os.path.getsize, reverse=True)
         so_path = candidates[0]
 
         # Load via spec_from_file_location to bypass the sys.modules cache
-        # while keeping the module name as ``all_matrix2py`` (the .so's
-        # PyInit_all_matrix2py init symbol is baked in at compile time).
-        spec = importlib.util.spec_from_file_location('all_matrix2py', so_path)
+        # while keeping the module name as ``all_matrix<menum>py`` (the .so's
+        # PyInit_all_matrix<menum>py init symbol is baked in at compile time).
+        spec = importlib.util.spec_from_file_location(modname, so_path)
         if spec is None or spec.loader is None:
-            return __import__('all_matrix2py')
+            return __import__(modname)
         mymod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mymod)
         return mymod
@@ -2319,12 +2327,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             
             if prod_or_decay == "prod":
                 i = 0
+                menum = 2
             elif prod_or_decay == "decay":
                 i = 1
+                menum = 1
             else:
                 raise ValueError("The only acceptable values of prod_or_decay are 'prod' and 'decay'")
-            
-            mymod = self._load_f2py_matrix_module(sp_path)
+
+            # production and decay are built with distinct MENUM (2 vs 1) so
+            # their f2py modules / dependent libraries don't clash in-process
+            # (see decay_all_events_onshell.compile).
+            mymod = self._load_f2py_matrix_module(sp_path, menum=menum)
             self.f2py_module[i] = mymod
 
             all_prefix[i] = self.f2py_module[i].get_prefix()
