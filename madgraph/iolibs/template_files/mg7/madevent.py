@@ -702,6 +702,34 @@ class MadgraphProcess:
             raise ValueError("Unknown output format")
         self.save_gridpack()
 
+    @staticmethod
+    def _histogram_mean(hist):
+        """Cross-section-weighted mean of a histogrammed observable."""
+        values = list(hist.bin_values)
+        n = len(values)
+        total = sum(values)
+        if n == 0 or total == 0:
+            return None
+        width = (hist.max - hist.min) / n
+        return sum(v * (hist.min + (i + 0.5) * width)
+                   for i, v in enumerate(values)) / total
+
+    def get_result(self) -> dict:
+        """Return the run result: cross-section (pb) with MC error, the number
+        of (unweighted) events, and the mean of every observable declared in the
+        [histograms] section. Used to build the scan summary."""
+        status = self.event_generator.status()
+        result = {'cross(pb)': status.mean, 'error(pb)': status.error,
+                  'nb_event': status.count_unweighted}
+        try:
+            for hist in self.event_generator.histograms():
+                mean = self._histogram_mean(hist)
+                if mean is not None:
+                    result['<%s>' % hist.name] = mean
+        except Exception as err:
+            logger.warning("could not extract observable means: %s", err)
+        return result
+
     def build_lhe_completer(self):
         subproc_args = []
         for subproc, meta in zip(self.subprocesses, self.subprocess_data):
@@ -1447,6 +1475,8 @@ def ask_edit_cards() -> None:
     # generic editor recognised run_card.toml (older common_run_interface, an
     # unexpected me_dir, ...). Without this self.run_card can stay {} and every
     # "set <param>" is rejected as an invalid command.
+    from madgraph.various import banner as _banner_mod
+    from madgraph.various import misc as _misc
     old_init_run = AskforEditCard.init_run
     def init_run(self, cards):
         out = old_init_run(self, cards)
@@ -1455,10 +1485,16 @@ def ask_edit_cards() -> None:
                 self.me_dir, "Cards", "run_card.toml")
             if os.path.exists(toml_path):
                 try:
-                    self.run_card = RunCardMG7(toml_path, consistency="warning")
+                    # allow_scan so a run_card that already holds scan:[...]
+                    # values loads instead of failing the type conversion
+                    with _misc.TMP_variable(_banner_mod.RunCard, "allow_scan", True):
+                        self.run_card = RunCardMG7(toml_path, consistency="warning")
                     self.run_set = list(self.run_card.keys())
                 except Exception as err:
                     logger.warning("could not load %s: %s", toml_path, err)
+        # let "set <param> scan:[...]" be accepted for the toml run_card
+        if isinstance(getattr(self, "run_card", None), RunCardMG7):
+            self.run_card.allow_scan = True
         return getattr(self, "run_set", out)
     AskforEditCard.init_run = init_run
 
@@ -1521,6 +1557,89 @@ def ask_edit_cards() -> None:
         plot=False
     )
 
+def run_single() -> "MadgraphProcess":
+    """Run a single generation and return the process (for its result)."""
+    process = MadgraphProcess()
+    process.survey()
+    process.train_madnis()
+    process.generate_events()
+    return process
+
+
+def detect_run_scan(run_card_path):
+    """Return a banner.RunCardIterator if the run_card contains scan:[...]
+    values, else None."""
+    from madgraph.various import banner as banner_mod
+    from madgraph.various import misc as _misc
+    with _misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+        rc = banner_mod.RunCard(run_card_path, consistency=False)
+    if getattr(rc, 'scan_set', None):
+        return banner_mod.RunCardIterator(run_card_path)
+    return None
+
+
+def detect_param_scan(param_card_path):
+    """Return a ParamCardIterator if the param_card contains scan:[...] values,
+    else None."""
+    if not os.path.exists(param_card_path):
+        return None
+    from models import check_param_card as param_card_mod
+    it = param_card_mod.ParamCardIterator(param_card_path)
+    for block in it.order:
+        for param in block:
+            if isinstance(param.value, str) and param.value.strip().lower().startswith('scan'):
+                return it
+    return None
+
+
+def run_scan(iterator, card_path) -> None:
+    """Iterate over all scan points, running a full generation for each and
+    accumulating the results, then write the scan summary. Works for both the
+    run_card (RunCardIterator) and the param_card (ParamCardIterator); their
+    interface (__iter__/write/store_entry/get_next_name/write_summary) is the
+    same. The scan card is restored afterwards."""
+    import tomllib
+    with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
+        run_name = tomllib.load(f).get("run", {}).get("run_name", "run")
+
+    backup = card_path + ".scan_bak"
+    shutil.copy(card_path, backup)
+    try:
+        for i, point in enumerate(iterator):
+            point.write(card_path)
+            logger.info("=== scan point %d ===", i + 1)
+            process = run_single()
+            # use the run directory the process actually created, so the
+            # per-point params.dat written by write_summary has a home
+            name = os.path.basename(process.run_path)
+            iterator.store_entry(name, process.get_result())
+        os.makedirs("Events", exist_ok=True)
+        summary = os.path.join("Events", "scan_%s.txt" % run_name)
+        iterator.write_summary(summary)
+        logger.info("scan results written to %s", summary)
+    finally:
+        shutil.move(backup, card_path)
+
+
+def run_generation() -> None:
+    """Run the generation, expanding a scan over the run_card or the param_card
+    when one is present (scanning both simultaneously is not allowed)."""
+    run_card_path = os.path.join("Cards", "run_card.toml")
+    param_card_path = os.path.join("Cards", "param_card.dat")
+    run_iter = detect_run_scan(run_card_path)
+    param_iter = detect_param_scan(param_card_path)
+    if run_iter and param_iter:
+        raise RuntimeError(
+            "Scanning simultaneously over the run_card and the param_card is "
+            "not allowed. Please keep the scan:[...] entries in only one card.")
+    if run_iter:
+        run_scan(run_iter, run_card_path)
+    elif param_iter:
+        run_scan(param_iter, param_card_path)
+    else:
+        run_single()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", action="store_false", dest="ask_edit_cards")
@@ -1532,7 +1651,4 @@ def main() -> None:
     soft_lim, hard_lim = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_lim, hard_lim))
 
-    process = MadgraphProcess()
-    process.survey()
-    process.train_madnis()
-    process.generate_events()
+    run_generation()

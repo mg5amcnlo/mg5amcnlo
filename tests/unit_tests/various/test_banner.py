@@ -1258,6 +1258,28 @@ class TestRunCardMG7(unittest.TestCase):
         rc.remove_all_cut()
         self.assertEqual(dict(rc['cuts']), {})
 
+    def test_run_card_scan_expansion(self):
+        """scan:[...] / correlated scanN:[...] values expand via RunCardIterator"""
+        rc = bannermod.RunCardMG7()
+        out = io.StringIO()
+        rc.write(out, template=self.template)
+        text = out.getvalue()
+        text = text.replace('e_cm = 13000.0', 'e_cm = "scan:[7000, 13000]"')
+        text = text.replace('ren_scale = 91.188', 'ren_scale = "scan1:[91.0, 172.0]"')
+        text = text.replace('fact_scale1 = 91.188', 'fact_scale1 = "scan1:[45.5, 86.0]"')
+        # valid TOML, and detected as a scan
+        import tomllib
+        tomllib.loads(text)
+        it = bannermod.RunCardIterator(text)
+        points = [(c['beam']['e_cm'], c['beam']['ren_scale'], c['beam']['fact_scale1'])
+                  for c in it]
+        # e_cm (2 values) x correlated scan-1 group (2 values) = 4 points
+        self.assertEqual(len(points), 4)
+        for e_cm, ren, fac in points:
+            self.assertIn(e_cm, (7000.0, 13000.0))
+            # ren_scale and fact_scale1 share scan-id 1 -> always move together
+            self.assertIn((ren, fac), [(91.0, 45.5), (172.0, 86.0)])
+
     def test_from_LO_conversion(self):
         """RunCardMG7.from_LO ports the supported LO settings and reports the rest"""
         lo = bannermod.RunCardLO()
