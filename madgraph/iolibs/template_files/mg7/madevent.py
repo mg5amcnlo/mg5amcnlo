@@ -1461,6 +1461,17 @@ def ask_edit_cards() -> None:
             CommonRunCmd.do_open(self, line)
         def check_open(self, args):
             CommonRunCmd.check_open(self, args)
+        def do_compute_widths(self, line):
+            # The interactive card editor delegates 'auto' width computation to
+            # the mother interface. Reuse the runtime helper (mg5_aMC subprocess
+            # + the model stored at output time). ``line`` looks like
+            # "<pdgs> --path=<param_card> [--nlo]"; we only need the card path.
+            m = re.search(r'--path=(\S+)', line or "")
+            path = m.group(1) if m else os.path.join("Cards", "param_card.dat")
+            compute_auto_widths(path)
+            # return an empty mapping: the caller iterates out.items() for the
+            # small-width treatment, which mg7 does not apply.
+            return {}
     old_define_paths = AskforEditCard.define_paths
     def define_paths(self, **opt):
         old_define_paths(self, **opt)
