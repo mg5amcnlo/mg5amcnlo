@@ -1557,8 +1557,63 @@ def ask_edit_cards() -> None:
         plot=False
     )
 
+def compute_auto_widths(param_card_path=os.path.join("Cards", "param_card.dat")) -> None:
+    """Fill any width set to ``auto`` in the param_card, using mg5_aMC and the
+    model stored at output time (``SubProcesses/model.txt``), and write the
+    result back into the card. A no-op when the card has no ``auto`` width.
+
+    Called before every generation, so a single run and each scan point (whose
+    param_card is rewritten just before ``run_single``) both get model-computed
+    widths."""
+    try:
+        with open(param_card_path) as f:
+            text = f.read()
+    except OSError:
+        return
+    # matches "DECAY <pdg> auto" (optionally "auto@NLO"), as in
+    # common_run_interface.static_check_param_card
+    pdgs = re.findall(r"(?im)^\s*decay\s+([+-]?\d+)\s+auto", text)
+    if not pdgs:
+        return
+    pdgs = list(dict.fromkeys(pdgs))  # de-duplicate, keep order
+
+    model_file = os.path.join("SubProcesses", "model.txt")
+    if not os.path.exists(model_file):
+        logger.warning(
+            "The param_card requests 'auto' width(s) for %s but the model was "
+            "not stored with this process; leaving them as-is.", " ".join(pdgs))
+        return
+    with open(model_file) as f:
+        model = f.read().strip()
+
+    mg5 = str(_MG_ROOT / "bin" / "mg5_aMC")
+    if not os.path.exists(mg5):
+        logger.warning("Cannot find mg5_aMC at %s; 'auto' widths not computed.", mg5)
+        return
+
+    import tempfile
+    cmds = "import model %s\ncompute_widths %s --path=%s\n" % (
+        model, " ".join(pdgs), os.path.abspath(param_card_path))
+    with tempfile.NamedTemporaryFile("w", suffix=".mg5", delete=False) as fh:
+        fh.write(cmds)
+        cmdfile = fh.name
+    try:
+        logger.info("Computing 'auto' width(s) for %s ...", " ".join(pdgs))
+        proc = subprocess.run([mg5, cmdfile])
+        if proc.returncode != 0:
+            logger.warning(
+                "compute_widths returned a non-zero exit code; the param_card "
+                "may still contain 'auto' entries.")
+    finally:
+        try:
+            os.remove(cmdfile)
+        except OSError:
+            pass
+
+
 def run_single() -> "MadgraphProcess":
     """Run a single generation and return the process (for its result)."""
+    compute_auto_widths()
     process = MadgraphProcess()
     process.survey()
     process.train_madnis()
@@ -1602,6 +1657,9 @@ def run_scan(iterator, card_path) -> None:
     with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
         run_name = tomllib.load(f).get("run", {}).get("run_name", "run")
 
+    from models import check_param_card as param_card_mod
+    is_param_scan = isinstance(iterator, param_card_mod.ParamCardIterator)
+
     backup = card_path + ".scan_bak"
     shutil.copy(card_path, backup)
     try:
@@ -1612,7 +1670,13 @@ def run_scan(iterator, card_path) -> None:
             # use the run directory the process actually created, so the
             # per-point params.dat written by write_summary has a home
             name = os.path.basename(process.run_path)
-            iterator.store_entry(name, process.get_result())
+            if is_param_scan:
+                # pass the (possibly auto-width-updated) card so the summary
+                # records the model-computed width for each 'auto' entry
+                iterator.store_entry(name, process.get_result(),
+                                     param_card_path=card_path)
+            else:
+                iterator.store_entry(name, process.get_result())
         os.makedirs("Events", exist_ok=True)
         summary = os.path.join("Events", "scan_%s.txt" % run_name)
         iterator.write_summary(summary)

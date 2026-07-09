@@ -3293,6 +3293,16 @@ class ProcessExporterMG7(ProcessExporterCPP):
         if processes:
             run_card.create_default_for_process(self.proc_characteristic,
                                                 history, processes)
+            # persist the model so the runtime can compute widths set to 'auto'
+            # in the param_card (and recompute them at each scan point).
+            try:
+                model = processes[0][0].get('model')
+                model_ref = model.get('modelpath') or model.get('name')
+                if model_ref:
+                    with open(pjoin(self.dir_path, 'SubProcesses', 'model.txt'), 'w') as f:
+                        f.write(model_ref)
+            except Exception:
+                pass
 
         template = pjoin(_file_path, 'iolibs', 'template_files',
                          'mg7', 'run_card.toml')
