@@ -386,7 +386,7 @@ std::vector<Topology> Topology::topologies(const Diagram& diagram) {
                 continue;
             }
             if ((i >> j) & 1) {
-                if (e_min_item >= decay.mass) {
+                if (e_min_item > decay.mass) {
                     possible = false;
                     break;
                 } else {
