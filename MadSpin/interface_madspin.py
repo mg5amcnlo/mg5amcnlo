@@ -733,6 +733,21 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.me_run_name = ''
 
         misc.sprint(self.options['onlyhelicity'], self.options['spinmode'])
+
+        try:
+            if 'noborn' in self.banner.get_detail('proc_card', 'generate'):
+                process_LI = True
+            else:
+                process_LI = False
+        except: #this exception is added because the test 'test_hepmc_decay' does not present a proc_card. Maybe there is a way to have this information under this format ?
+            logger.warning("The proc_card has not been found. It is unknown whether the process is at tree-level or loop-induced")
+            logger.warning("The process is now considered as tree-level")
+            process_LI = False
+
+        # the legacy modes 'madspin_v1' and 'onshell_v1' are not compatible with loop-induced processes
+        if self.options['spinmode'] in ['madspin_v1', 'onshell_v1'] and process_LI:
+            raise ValueError("The MadSpin modes 'madspin_v1' and 'onshell_v1' are are not compatible with loop-induced processes. Please choose a mode among 'none', 'PA', 'madspin' or 'onshell'.")
+
         if self.options['onlyhelicity']:
             self.options['spinmode'] = 'madspin_v1'
 
@@ -2365,8 +2380,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
             create_f2py_module(self, sp_path_prod, 'prod')
-            sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
-            create_f2py_module(self, sp_path_decay, 'decay')
+
+            # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
+            if self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
+                sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
+                create_f2py_module(self, sp_path_decay, 'decay')
         # ------------------------------------------------------------------
         # Cache production-only metadata reused across rejection retries
         # ------------------------------------------------------------------
@@ -2876,7 +2894,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 return out/len(all_p)
             else:
                 return out
-        else:
+        else:            
             # First time we see a new ``pdir`` for this MadSpin instance:
             # load the freshly-compiled f2py extension once and cache a
             # smatrixhel lambda per pdir. The .so / pdg2prefix only need
@@ -2885,6 +2903,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             # the spec-from-file-location load (which is fine on Linux
             # but wasteful, and on macOS would re-walk the install_name
             # bookkeeping every time).
+
+            # Valentin: we only pass here with the options 'onshell_v1' and 'madspin_v1' for which I kept only one madspin_me directory
+            # it is not adapted to modes where the directories for production and decays are separated
             if not hasattr(self, 'f2py_module'):
                 sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
                 if sys.path[0] != sp_path:
@@ -2921,12 +2942,15 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             pdg = list(orig_order[0]) + list(orig_order[1])
 
-            if self.all_me[tag]['type'] == 'production':
-                self.all_f2py[pdir] = lambda *args : mymod[0].smatrixhel(pdg, 0, *args)
-            elif self.all_me[tag]['type'] == 'decay':
-                self.all_f2py[pdir] = lambda *args : mymod[1].smatrixhel(pdg, 0, *args)
+            if self.options['spinmode'] in ['onshell_v1', 'madspin_v1']:
+                self.all_f2py[pdir] = lambda *args : mymod.smatrixhel(pdg, 0, *args)
             else:
-                raise ValueError("The key 'type' of sel.all_me can only take as values 'production' or 'decay'.")
+                if self.all_me[tag]['type'] == 'production':
+                    self.all_f2py[pdir] = lambda *args : mymod[0].smatrixhel(pdg, 0, *args)
+                elif self.all_me[tag]['type'] == 'decay':
+                    self.all_f2py[pdir] = lambda *args : mymod[1].smatrixhel(pdg, 0, *args)
+                else:
+                    raise ValueError("The key 'type' of sel.all_me can only take as values 'production' or 'decay'.")
 
             return self.calculate_matrix_element(event)
         

@@ -4323,30 +4323,39 @@ class decay_all_events_onshell(decay_all_events):
                     tag = (tuple(initial), tuple(final))
                     self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order, 'type': prod_or_decay}
 
-        #here the commandline does not have the decays yet
-        
-        mgcmd = self.mgcmd
 
+        mgcmd = self.mgcmd
         self.all_me = {}
 
-        commandline_production = commandline.replace('add process', 'generate',1)
-        commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
+        # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
+        if self.options['spinmode'] in ['onshell_v1', 'madspin_v1']:
+            commandline += self.get_decay_command()
+            commandline = commandline.replace('add process', 'generate',1)
+            mgcmd.exec_cmd(commandline, precmd=True)
 
-        logger.info(commandline_production)
-        mgcmd.exec_cmd(commandline_production, precmd=True)
+            commandline = 'output standalone %s --prefix=int' % pjoin(path_me, ms_me_subdir)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            fill_all_me(self, "production")
+        else:
+            commandline_production = commandline.replace('add process', 'generate',1)
+            commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
 
-        # store information about the production matrix elements
-        fill_all_me(self, "production")
+            logger.info(commandline_production)
+            mgcmd.exec_cmd(commandline_production, precmd=True)
 
-        commandline_decay = self.get_decay_command()
-        commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
-        commandline_decay = commandline_decay.replace('add process', 'generate',1)
+            # store information about the production matrix elements
+            fill_all_me(self, "production")
 
-        logger.info(commandline_decay)
-        mgcmd.exec_cmd(commandline_decay, precmd=True)
+            commandline_decay = self.get_decay_command()
+            commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
-        # store information about the decay matrix elements
-        fill_all_me(self, "decay")
+            logger.info(commandline_decay)
+            mgcmd.exec_cmd(commandline_decay, precmd=True)
+
+            # store information about the decay matrix elements
+            fill_all_me(self, "decay")
 
         logger.info('Done %.4g' % (time.time()-start))
 
