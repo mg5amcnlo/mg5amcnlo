@@ -1045,9 +1045,12 @@ class ParamCardIterator(ParamCard):
         if path:
             ff = open(path, 'w')
             path_events = path.rsplit("/", 1)[0]
-            identCard = open(pjoin(path.rsplit("/", 2)[0], "Cards", "ident_card.dat"))
-            identLines = identCard.readlines()
-            identCard.close()
+            try:
+                identCard = open(pjoin(path.rsplit("/", 2)[0], "Cards", "ident_card.dat"))
+                identLines = identCard.readlines()
+                identCard.close()
+            except FileNotFoundError:
+                identLines = []
         else:
             ff = io.StringIO()        
         if order:
@@ -1101,7 +1104,8 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple([name] + bench + data))
             ff_single = open(pjoin(path_events, name, "params.dat"), "w")
             for i_bench in range(0, len(bench)):
-                ff_single.write(ident[self.param_order[i_bench]] + " = " + str(bench[i_bench]) +"\n")
+                var_name = ident.get(self.param_order[i_bench], self.param_order[i_bench])
+                ff_single.write(var_name + " = " + str(bench[i_bench]) +"\n")
             ff_single.close()
 
         if not path:
