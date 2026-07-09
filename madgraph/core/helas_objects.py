@@ -1793,6 +1793,33 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             output['bwcutoff'] = ''
 
+        # FIXP2 argument of the standard offshell propagator routines
+        # (_1/_2/_3). By default 0d0, which means the routine recomputes p^2
+        # from the momenta. When this offshell current is the fusion of
+        # exactly two external particles, point instead to the phase-space
+        # generated (squared) invariant mass of that pair so the propagator
+        # denominator is evaluated from the exact value. Both particles may be
+        # final state (s-channel invariant), or involve an initial-state leg
+        # (initial+final gives a t-channel invariant, initial+initial gives
+        # s_hat); the phase-space generator fills all of these. Composite
+        # mothers (more than one particle) are skipped. This value is only
+        # consumed in the madevent output (where the call template references
+        # %(fixp2)s and GENERATED_INV_MASS/IVEC exist); everywhere else the
+        # template keeps the literal 0d0 and this entry is simply ignored.
+        output['fixp2'] = '0d0'
+        if not self.get('is_loop'):
+            mothers = self.get('mothers')
+            if len(mothers) == 2:
+                legs = []
+                for mother in mothers:
+                    if mother.get('mothers'):
+                        # composite (more than one particle)
+                        break
+                    legs.append(mother.get('number_external'))
+                else:
+                    output['fixp2'] = 'GENERATED_INV_MASS(%d,%d,IVEC)' % \
+                                      (legs[0], legs[1])
+
         output['propa'] = self.get('particle').get('propagator')
 
         if output['propa'] not in ['', None]:

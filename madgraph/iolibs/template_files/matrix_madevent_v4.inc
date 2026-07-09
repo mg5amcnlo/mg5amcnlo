@@ -246,6 +246,7 @@ C
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
+    include 'genps_inv_mass.inc'
     INTEGER    NWAVEFUNCS,     NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO

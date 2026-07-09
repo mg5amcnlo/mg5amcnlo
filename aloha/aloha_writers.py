@@ -501,8 +501,49 @@ class ALOHAWriterForFortran(WriteALOHA):
             
 
     
+    def use_fixp2(self):
+        """The offshell propagator routines (those ending in _1/_2/_3 that build
+        an outgoing wavefunction from a standard Breit-Wigner propagator) take an
+        extra FIXP2 argument. When FIXP2 is non-zero the routine uses it in place
+        of the computed p^2 in the propagator denominator. This is restricted to
+        the standard denominator: custom propagators (self.routine.denominator)
+        and the P1N numerator variant are excluded."""
+
+        return bool(self.offshell) and 'P1N' not in self.tag \
+                                   and not self.routine.denominator
+
+    def define_argument_list(self, couplings=None):
+        """Same as the base routine but append the extra FIXP2 argument for the
+        standard offshell propagator routines (see use_fixp2)."""
+
+        call_arg = WriteALOHA.define_argument_list(self, couplings)
+        if self.use_fixp2():
+            extra = ('double', 'FIXP2')
+            call_arg.append(extra)
+            self.declaration.add(extra)
+            self.call_arg = call_arg
+        return call_arg
+
+    def write_denominator_txt(self, out, coup_name, mass_term):
+        """Write the propagator denominator line. When this routine carries the
+        FIXP2 argument, branch so that FIXP2 replaces the computed p^2 whenever
+        FIXP2 is non-zero."""
+
+        p2 = 'P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2' % {'i': self.outgoing}
+        if self.use_fixp2():
+            out.write('    if (FIXP2.eq.%s) then\n' % self.change_number_format(0))
+            out.write('    denom = %(COUP)s/(%(p2)s - %(mass)s)\n' % {
+                'COUP': coup_name, 'p2': p2, 'mass': mass_term})
+            out.write('    else\n')
+            out.write('    denom = %(COUP)s/(FIXP2 - %(mass)s)\n' % {
+                'COUP': coup_name, 'mass': mass_term})
+            out.write('    endif\n')
+        else:
+            out.write('    denom = %(COUP)s/(%(p2)s - %(mass)s)\n' % {
+                'COUP': coup_name, 'p2': p2, 'mass': mass_term})
+
     def get_header_txt(self, name=None, couplings=None, **opt):
-        """Define the Header of the fortran file. 
+        """Define the Header of the fortran file.
         """
         if name is None:
             name = self.name
@@ -949,22 +990,22 @@ class ALOHAWriterForFortran(WriteALOHA):
                     is_loop = True
                     
             if not is_loop:
-                coeff = 'denom*'    
+                coeff = 'denom*'
                 if not aloha.complex_mass:
                     if self.routine.denominator:
                         if 'P1N' not in self.tag:
                             out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
-                                'denom':self.write_obj(self.routine.denominator)}) 
+                                'denom':self.write_obj(self.routine.denominator)})
                     else:
-                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
-                                  {'i': self.outgoing, 'COUP': coup_name})
+                        self.write_denominator_txt(out, coup_name,
+                            'M%(i)s * (M%(i)s -CI* W%(i)s)' % {'i': self.outgoing})
                 else:
                     if self.routine.denominator:
                         if 'P1N' not in self.tag:
-                            raise Exception('modify denominator are not compatible with complex mass scheme', self.tag)                
+                            raise Exception('modify denominator are not compatible with complex mass scheme', self.tag)
                     if 'P1N' not in self.tag:
-                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
-                      {'i': self.outgoing, 'COUP': coup_name})
+                        self.write_denominator_txt(out, coup_name,
+                            'M%(i)s**2' % {'i': self.outgoing})
                 if 'P1N' not in self.tag:
                     self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1571,8 +1612,30 @@ class ALOHAWriterForCPP(WriteALOHA):
     realoperator = '.real()'
     imagoperator = '.imag()'
     ci_definition = 'static std::complex<double> cI = std::complex<double>(0.,1.);\n'
-    
-    
+
+    def use_fixp2(self):
+        """The offshell propagator routines (those ending in _1/_2/_3 that build
+        an outgoing wavefunction from a standard Breit-Wigner propagator) take an
+        extra FIXP2 argument. When FIXP2 is non-zero the routine uses it in place
+        of the computed p^2 in the propagator denominator. This mirrors the
+        Fortran writer; it is restricted to the standard denominator (custom
+        propagators and the P1N numerator variant are excluded)."""
+
+        return bool(self.offshell) and 'P1N' not in self.tag \
+                                   and not self.routine.denominator
+
+    def define_argument_list(self, couplings=None):
+        """Same as the base routine but append the extra FIXP2 argument for the
+        standard offshell propagator routines (see use_fixp2)."""
+
+        call_arg = WriteALOHA.define_argument_list(self, couplings)
+        if self.use_fixp2():
+            extra = ('double', 'FIXP2')
+            call_arg.append(extra)
+            self.declaration.add(extra)
+            self.call_arg = call_arg
+        return call_arg
+
     def change_number_format(self, number):
         """Formating the number"""
 
@@ -2040,24 +2103,43 @@ class ALOHAWriterForCPP(WriteALOHA):
                     mydict['post_coup'] = ''
                 mydict['coup'] = coup_name
                 mydict['i'] = self.outgoing
+                # p^2 of the outgoing momentum and the mass term of the standard
+                # propagator denominator; kept separate so the FIXP2 branch can
+                # swap p^2 for the externally supplied invariant mass.
+                mydict['p2'] = '(P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3])' % mydict
                 if not aloha.complex_mass:
+                    mydict['massterm'] = 'M%(i)s * (M%(i)s -cI* W%(i)s)' % mydict
                     if self.routine.denominator:
                         if self.routine.denominator == "1":
                             out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s;\n' % \
-                                  mydict) 
+                                  mydict)
                         else:
                             mydict['denom'] = self.write_obj(self.routine.denominator)
                             out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s);\n' % \
-                                  mydict) 
+                                  mydict)
+                    elif self.use_fixp2():
+                        out.write('    if (FIXP2 == %s){\n' % self.change_number_format(0))
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((%(p2)s) - %(massterm)s);\n' % mydict)
+                        out.write('    }else{\n')
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(FIXP2 - %(massterm)s);\n' % mydict)
+                        out.write('    }\n')
                     else:
-                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((%(p2)s) - %(massterm)s);\n' % \
                                   mydict)
                 else:
                     if self.routine.denominator:
-                        raise Exception('modify denominator are not compatible with complex mass scheme')                
+                        raise Exception('modify denominator are not compatible with complex mass scheme')
 
-                    out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
-                              mydict)
+                    mydict['massterm'] = 'M%(i)s*M%(i)s' % mydict
+                    if self.use_fixp2():
+                        out.write('    if (FIXP2 == %s){\n' % self.change_number_format(0))
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((%(p2)s) - (%(massterm)s));\n' % mydict)
+                        out.write('    }else{\n')
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(FIXP2 - (%(massterm)s));\n' % mydict)
+                        out.write('    }\n')
+                    else:
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((%(p2)s) - (%(massterm)s));\n' % \
+                                  mydict)
 
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -2260,12 +2342,17 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         
 class ALOHAWriterForGPU(ALOHAWriterForCPP):
-    
+
     extension = '.cu'
     prefix ='__device__'
     realoperator = '.real()'
     imagoperator = '.imag()'
     ci_definition = 'cxtype cI = cxtype(0., 1.);\n'
+
+    def use_fixp2(self):
+        """The cudacpp/GPU helas-call generation lives in an external plugin that
+        does not pass the FIXP2 argument, so keep the original signature here."""
+        return False
     
     type2def = {}
     type2def['int'] = 'int '

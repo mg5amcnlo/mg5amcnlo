@@ -345,6 +345,7 @@ C
    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
+    include 'genps_inv_mass.inc' ! needs nexternal and VECSIZE_MEMMAX
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment

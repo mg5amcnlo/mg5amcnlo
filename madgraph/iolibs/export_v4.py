@@ -5486,6 +5486,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         arg['coup'] = re.sub(r'coup(\d+)\)s',r'coup\g<1>)s%(vec\g<1>)s', arg['coup'])
 
+        # Turn the hardcoded FIXP2=0d0 of the offshell propagator routines into
+        # a per-wavefunction reference, so that an offshell current built from
+        # exactly two final-state external particles uses the phase-space
+        # generated invariant mass (GENERATED_INV_MASS, see get_helas_call_dict)
+        # instead of recomputing p^2 from the momenta.
+        if 'extra' in arg:
+            arg['extra'] = arg['extra'].replace('0d0,', '%(fixp2)s,')
+
         return call, arg
     
     def copy_template(self, model):
@@ -5829,6 +5837,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'cuts.inc',
                      'genps.f',
                      'genps.inc',
+                     'genps_inv_mass.inc',
                      'idenparts.f',
                      'initcluster.f',
                      'makefile',
