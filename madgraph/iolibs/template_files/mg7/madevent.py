@@ -1584,7 +1584,22 @@ def compute_auto_widths(param_card_path=os.path.join("Cards", "param_card.dat"))
             "not stored with this process; leaving them as-is.", " ".join(pdgs))
         return
     with open(model_file) as f:
-        model = f.read().strip()
+        lines = f.read().splitlines()
+    model = lines[0].strip() if lines else ""
+    stored_hash = lines[1].strip() if len(lines) > 1 else ""
+    if not model:
+        logger.warning("SubProcesses/model.txt is empty; 'auto' widths not computed.")
+        return
+
+    # verify the model on disk still matches the one used at output time
+    if stored_hash and os.path.isdir(model):
+        current_hash = misc.hash_model_files(model)
+        if current_hash and current_hash != stored_hash:
+            logger.warning(
+                "The model at %s has changed since this process was generated "
+                "(hash mismatch); the 'auto' width(s) will be computed with the "
+                "current model, which may be inconsistent with the matrix "
+                "element.", model)
 
     mg5 = str(_MG_ROOT / "bin" / "mg5_aMC")
     if not os.path.exists(mg5):

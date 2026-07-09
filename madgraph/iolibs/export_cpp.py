@@ -3294,13 +3294,17 @@ class ProcessExporterMG7(ProcessExporterCPP):
             run_card.create_default_for_process(self.proc_characteristic,
                                                 history, processes)
             # persist the model so the runtime can compute widths set to 'auto'
-            # in the param_card (and recompute them at each scan point).
+            # in the param_card (and recompute them at each scan point). A hash
+            # of the model's python source is stored on the second line so the
+            # runtime can detect a model that changed since output.
             try:
                 model = processes[0][0].get('model')
-                model_ref = model.get('modelpath') or model.get('name')
+                model_path = model.get('modelpath')
+                model_ref = model_path or model.get('name')
                 if model_ref:
+                    model_hash = misc.hash_model_files(model_path) if model_path else None
                     with open(pjoin(self.dir_path, 'SubProcesses', 'model.txt'), 'w') as f:
-                        f.write(model_ref)
+                        f.write(model_ref + '\n' + (model_hash or '') + '\n')
             except Exception:
                 pass
 
