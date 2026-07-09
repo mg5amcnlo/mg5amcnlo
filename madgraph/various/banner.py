@@ -1736,7 +1736,7 @@ class ProcCharacteristic(ConfigFile):
      
     def default_setup(self):
         """initialize the directory to the default value"""
-        
+
         self.add_param('loop_induced', False)
         self.add_param('has_isr', False)
         self.add_param('has_fsr', False)
@@ -2687,7 +2687,8 @@ class RunCard(ConfigFile):
 
     blocks = []
     parameter_in_block = {}
-    allowed_lep_densities = {}    
+    allowed_had_densities = {}
+    allowed_lep_densities = {}
     default_include_file = 'run_card.inc'
     default_autodef_file = 'run.inc'
     donewarning = []
@@ -2710,6 +2711,7 @@ class RunCard(ConfigFile):
     def __new__(cls, finput=None, **opt):
 
         cls.fill_post_set_from_blocks()
+        RunCard.get_hadron_densities()
         RunCard.get_lepton_densities()
 
         if cls is RunCard:
@@ -2794,6 +2796,29 @@ class RunCard(ConfigFile):
 
 
         super(RunCard, self).__init__(*args, **opts)
+
+    @classmethod
+    def get_hadron_densities(cls,allow_all_sets=False):
+        """built-in hadron densities"""
+
+        if cls.allowed_had_densities:
+            return
+
+        #setNames = ['cteq6_m', 'cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo']
+        setNames = ['mrs02nl','mrs02nn','cteq4_m','cteq4_l','cteq4_d',
+                    'cteq5_m','cteq5_d','cteq5_l','cteq5m1','cteq6_m',
+                    'cteq6_l','cteq6l1','nn23lo','nn23lo1','nn23nlo']
+        setIdent = [20250,20270,19150,19170,19160,
+                    19050,19060,19070,19051,10000,
+                    10041,10042,246800,247000,244800]
+
+        if not allow_all_sets: # to match valid pdfs in 3.7.x
+            setNames = setNames[-6:]
+            setIdent = setIdent[-6:]
+
+        for pair in zip(setNames,setIdent):
+            if pair[0] not in cls.allowed_had_densities:
+                cls.allowed_had_densities[pair[0]] = pair[1]
 
     @classmethod
     def get_lepton_densities(cls):
@@ -3272,10 +3297,11 @@ class RunCard(ConfigFile):
                     return 'python'
 
             # RR (June 2026):
-            # The following if-statement has a bug
+            # The following if-statement might have a bug
             # if  running for first launch, looks for ..._default_default.dat,
             # exception thrown and pulls last (?) value of __getitem__()
-            # @sourcery-ai, please flag this for @oliviermattelaer during pull request
+            # @sourcery-ai, please propose a solution to @oliviermattelaer during pull request
+            #
             # RR (June 2026):
             # info = '' moved up to fix bug in case of passing 'default' value
             if not default:
@@ -3297,6 +3323,7 @@ class RunCard(ConfigFile):
  
             logger.log(log_level, '%s missed argument %s. Takes default: %s%s'
                                    % (self.filename, name, default, info))
+
             self[name] = default
             return default
         else:
@@ -3553,7 +3580,7 @@ class RunCard(ConfigFile):
         for name in self.includepath[False]:
             to_bypass = self.hidden_param + list(self.legacy_parameter.keys())
             if name not in to_bypass:
-                self.get_default(name, log_level=log_level) 
+                self.get_default(name, log_level=log_level)
 
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
@@ -4056,13 +4083,13 @@ class PDLabelBlock(RunBlock):
     def check_validity(self, card):
         """check which template is active and fill the parameter in the inactive one. """
 
-        if self.status(card):
+        if self.status(card): # True = template_on
             if card['pdlabel'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel1','lhapdf')
                 dict.__setitem__(card, 'pdlabel2','lhapdf')
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
-            if card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
+            elif card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
                 if card['pdlabel1'] != card['pdlabel2']:
                     if card['pdlabel1'] in ['edff','chff']:
                         dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
@@ -4088,9 +4115,11 @@ class PDLabelBlock(RunBlock):
                     dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
                 else:
                     dict.__setitem__(card, 'pdlabel', 'mixed')
-        else:
+
+        else: # False = template_off
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
+
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used"""
@@ -4137,49 +4166,59 @@ class LHALabelBlock(RunBlock):
 
     def status(self, card):
         """return False if template_off to be used, True if template_on to be used
-        inverted mode of display if the block is in card.display_block"""
-
-        if card['lhaid1'] != card['lhaid2']:
-            return True
-
-        return super(LHALabelBlock, self).status(card)
+        inverted mode of display if the block is in card.display_block;
+        return X to always force template_X"""
+        return True
 
     @staticmethod
     def post_set_lhaid(card, value, change_userdefine, raiseerror, **opt):
-        """if lhaid is set, remove lhaid1 and lhaid2 from run_card"""
+        """if lhaid is set, add lhaid1 and lhaid2 to run_card"""
 
-        if 'lhaid1' in card.user_set:
-            card.user_set.remove('lhaid1')
-        if 'lhaid2' in card.user_set:
-            card.user_set.remove('lhaid2')
-        if 'multi_lhaid_alphas_scheme' in card.user_set:
-            card.user_set.remove('multi_lhaid_alphas_scheme')
+        # if called by user, listen to user
+        if change_userdefine:
+            if 'lhaid' in card.user_set:
+                card.user_set.remove('lhaid')
+            if 'lhaid1' not in card.user_set:
+                card.user_set.add('lhaid1')
+            if 'lhaid2' not in card.user_set:
+                card.user_set.add('lhaid2')
+            dict.__setitem__(card, 'lhaid1', card['lhaid'])
+            dict.__setitem__(card, 'lhaid2', card['lhaid'])
 
-        # update for consistency
-        dict.__setitem__(card,'pdlabel','lhapdf')
-        dict.__setitem__(card,'lhaid1',card['lhaid'])
-        dict.__setitem__(card,'lhaid2',card['lhaid'])
+            # update pdlabel if needed
+            if card['pdlabel'] != 'lhapdf':
+                dict.__setitem__(card,'pdlabel','lhapdf')
+            if card['pdlabel1'] != 'lhapdf':
+                dict.__setitem__(card,'pdlabel1','lhapdf')
+            if card['pdlabel2'] != 'lhapdf':
+                dict.__setitem__(card,'pdlabel2','lhapdf')
+
+        # if called internally, only do something if nothing ever set
+        else:
+            lhaList = ['lhaid','lhaid1','lhaid2']
+            if not any(xx in card.user_set for xx in lhaList):
+                LHALabelBlock.post_set_lhaid(card, value, True, raiseerror)
 
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
         """call if lhaid1 or lhaid2 is set --do not know which one--"""
 
-        if name in card.user_set:
-            if 'lhaid' in card.user_set:
-                card.user_set.remove('lhaid')
+        # check if missing other lhaidX
+        if name == 'lhaid1' and 'lhaid2' not in card.user_set:
+            card.user_set.add('lhaid2')
+            dict.__setitem__(card, 'lhaid2', card['lhaid'])
+        if name == 'lhaid2' and 'lhaid1' not in card.user_set:
+            card.user_set.add('lhaid1')
+            dict.__setitem__(card, 'lhaid1', card['lhaid'])
 
-        # update for consistency
-        if card['lhaid2'] == card['lhaid1']:
-            dict.__setitem__(card, 'lhaid', card['lhaid2'])
-        if name == 'lhaid1' and not (card['pdlabel1'] == 'lhapdf'):
-            dict.__setitem__(card, 'pdlabel1','lhapdf')
-        if name == 'lhaid2' and not (card['pdlabel2'] == 'lhapdf'):
-            dict.__setitem__(card, 'pdlabel2','lhapdf')
+        # let lhaidX supersede lhaid
+        if 'lhaid' in card.user_set:
+            card.user_set.remove('lhaid')
 
 template_on = \
 """     %(lhaid1)s    = lhaid1     ! lhapdf number for beam #1
      %(lhaid2)s    = lhaid2     ! lhapdf number for beam #2
-     %(multi_lhaid_alphas_scheme)s = multi_lhaid_alphas_scheme ! 1(2) = alphas from lhaid1(2), 0 = geometric avg"""
+     %(multi_lhaid_alphas_scheme)s = multi_lhaid_alphas_scheme ! 1(2) = alphas from lhaid1(2), 0 = sqrt(alphas1*alphas2)"""
 template_off = \
 """     %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number """
 
@@ -4267,6 +4306,10 @@ class RunCardLO(RunCard):
     
     def default_setup(self):
         """default value for the run_card.dat"""
+
+        valid_had_pdf = ['lhapdf'] + list(self.allowed_had_densities.keys())
+        valid_pdf = valid_had_pdf+['iww','eva','edff','chff','none','mixed']+\
+                       sum(self.allowed_lep_densities.values(),[])
         
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
@@ -4300,16 +4343,15 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
-                       sum(self.allowed_lep_densities.values(),[])
-        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
-        self.add_param("pdlabel1", "nn23lo1", hidden=False, allowed=valid_pdf, fortran_name="pdsublabel(1)")
-        self.add_param("pdlabel2", "nn23lo1", hidden=False, allowed=valid_pdf, fortran_name="pdsublabel(2)")
-        self.add_param("lhaid", 230000, hidden=True)
-        self.add_param('lhaid1', -1,hidden=False, fortran_name='lhasubid(1)')
-        self.add_param('lhaid2', -1,hidden=False, fortran_name='lhasubid(2)')
+
         self.add_param('multi_lhaid_alphas_scheme', 1, hidden=False, fortran_name='multi_lhaid_alphas_scheme',
-                       allowed = [0,1,2], comment="1(2) = alphas extracted from lhaid1(2); 0 = geometric avg of 1,2")
+                       allowed = [0,1,2], comment="1(2) = alphas extracted from lhaid1(2); 0 = sqrt(alphas1*alphas2)")
+        self.add_param("pdlabel",  "nn23lo1", hidden=True, allowed=valid_pdf)
+        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
+        self.add_param("lhaid",  230000,hidden=True)
+        self.add_param("lhaid1", 230000,hidden=True, fortran_name='lhasubid(1)')
+        self.add_param("lhaid2", 230000,hidden=True, fortran_name='lhasubid(2)')
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
         self.add_param("fixed_fac_scale1", False, hidden=True)
@@ -4364,7 +4406,7 @@ class RunCardLO(RunCard):
         self.add_param("pta", 10.0, cut='a')
         self.add_param("ptl", 10.0, cut='l')
         self.add_param("misset", 0.0, cut='n')
-        self.add_param("ptheavy", 0.0, cut='H',                                comment='this cut apply on particle heavier than 10 GeV')
+        self.add_param("ptheavy", 0.0, cut='H', comment='this cut apply on particle heavier than 10 GeV')
         self.add_param("ptonium", 1.0, legacy=True)
         self.add_param("ptjmax", -1.0, cut='j')
         self.add_param("ptbmax", -1.0, cut='b')
@@ -4619,9 +4661,29 @@ class RunCardLO(RunCard):
     
         # check validity of the pdf set 
         # note that pdlabel is automatically set to lhapdf if pdlabel1 or pdlabel2 is set to lhapdf
-        if self['pdlabel'] == 'lhapdf':
-            #add warning if lhaid not define, update lhaid1(2) to default of 'lhaid'
-            self.get_default('lhaid', log_level=20)
+        mod = False
+        had_pdfs = list(self.allowed_had_densities.keys())
+        if self['pdlabel1'] in had_pdfs and self['pdlabel2'] in had_pdfs:
+            if self['pdlabel1'] != self['pdlabel2']:
+                logger.error('For asymmetric hadron beams, ' \
+                'please run with pdlabel=lhapdf, not pdlabel1(2) = %s (%s). '\
+                'Trying to recover...' % (self['pdlabel1'],self['pdlabel2']))
+                try:
+                    self.set('pdlabel','lhapdf')
+                    self.set('lhaid1', self.allowed_had_densities[self['pdlabel1']])
+                    self.set('lhaid2', self.allowed_had_densities[self['pdlabel2']])
+                    logger.warning('Recovered. Now running with pdlabel=lhapdf and lhaid1(2) = %s (%s)' % (self['lhaid1'],self['lhaid2']))
+                    mod = True
+                except KeyError as err:
+                    raise InvalidRunCard("Failed to recover. For asymmetric hadron beams, please run with pdlabel=lhapdf.")
+
+        mod = False
+        for i in [1,2]:
+            lhaidX = 'lhaid%i' % i
+            if self[lhaidX] == 'lhapdf' or self['pdlabel'] == 'lhapdf':
+                if self[lhaidX] < 1:
+                    logger.warning('Since lhaid%i<1, changing to default value in run_card' % (i,self[lhaidX]))
+                    self.get_default(lhaidX, log_level=20)
 
         mod = False
         for i in [1,2]:
@@ -4645,10 +4707,17 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'edff')
                     mod = True
 
+        if self['pdlabel1'] == 'none' == self['pdlabel2']:
+            if self['pdlabel'] != 'none':
+                self.set('pdlabel', 'none')
+
         if mod:
             if 'pdlabel' in self.user_set:
                 self.user_set.remove('pdlabel')
-            self.user_set.add('pdlabel1')
+            if 'pdlabel1' not in self.user_set:
+                self.user_set.add('pdlabel1')
+            if 'pdlabel2' not in self.user_set:
+                self.user_set.add('pdlabel2')
             #force rerun of consistency of lhapdf block
             super(RunCardLO, self).check_validity()
 
@@ -5656,6 +5725,9 @@ class RunCardNLO(RunCard):
     def default_setup(self):
         """define the default value"""
         
+        valid_pdf_nlo = ['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+             sum(self.allowed_lep_densities.values(),[])
+
         self.add_param('run_tag', 'tag_1', include=False)
         self.add_param('nevents', 10000)
         self.add_param('req_acc', -1.0, include=False)
@@ -5674,15 +5746,14 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
-             sum(self.allowed_lep_densities.values(),[]) )
-        self.add_param("pdlabel1", "nn23nlo", hidden=True, fortran_name="pdsublabel(1)")
-        self.add_param("pdlabel2", "nn23nlo", hidden=True, fortran_name="pdsublabel(2)")
-        self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
-        self.add_param('lhaid1', [-1],fortran_name='lhasubid(1)')
-        self.add_param('lhaid2', [-1],fortran_name='lhasubid(2)')
-        self.add_param('multi_lhaid_alphas_scheme', 0, fortran_name='multi_lhaid_alphas_scheme',
-                       allowed = [0,1,2], comment="0 = alphas extracted from geometric avg; 1(2) = from lhaid1(2)")
+        self.add_param('pdlabel',  'nn23nlo', hidden=True, allowed=valid_pdf_nlo)
+        self.add_param('pdlabel1', 'nn23nlo', hidden=True, allowed=valid_pdf_nlo, fortran_name="pdsublabel(1)")
+        self.add_param('pdlabel2', 'nn23nlo', hidden=True, allowed=valid_pdf_nlo, fortran_name="pdsublabel(2)")
+        self.add_param('lhaid',  [244600], hidden=True, fortran_name='lhaPDFid')
+        self.add_param('lhaid1', [244600], hidden=True, fortran_name='lhasubid(1)')
+        self.add_param('lhaid2', [244600], hidden=True, fortran_name='lhasubid(2)')
+        self.add_param('multi_lhaid_alphas_scheme', 1, fortran_name='multi_lhaid_alphas_scheme',
+                       allowed = [0,1,2], comment="1(2) = alphas extracted from lhaid1(2); 0 = sqrt(alphas1*alphas2)")
         self.add_param('pdfscheme', 0)
         # whether to include or not photon-initiated processes in lepton collisions
         self.add_param('photons_from_lepton', True)
@@ -5879,16 +5950,19 @@ class RunCardNLO(RunCard):
            (self['rw_fscale_up'] != -1.0 and ['rw_fscale_up'] not in self['rw_fscale']):
             self['rw_fscale']=[1.0,self['rw_fscale_up'],self['rw_fscale_down']]
     
-        # PDF reweighting check
-        if any(self['reweight_pdf']):
-            # check that we use lhapdf if reweighting is ON
-            if self['pdlabel'] != "lhapdf":
-                raise InvalidRunCard('Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel to use LHAPDF or set reweight_pdf to False.')
+        for i in [1,2]:
+            pdlabelX = 'pdlabel%i' % i
+            lhaidX = 'lhaid%i' % i
+            # PDF reweighting check
+            if any(self['reweight_pdf']):
+                # check that we use lhapdf if reweighting is ON
+                if self[pdlabelX] != "lhapdf":
+                    raise InvalidRunCard('Reweight PDF option requires using pdf sets associated with lhapdf. Please either change pdlabel%i to use LHAPDF or set reweight_pdf to False.' % i)
 
-        # make sure set have reweight_pdf and lhaid of length 1 when not including lhapdf
-        if self['pdlabel'] != "lhapdf":
-            self['reweight_pdf']=[self['reweight_pdf'][0]]
-            self['lhaid']=[self['lhaid'][0]]
+            # make sure set have reweight_pdf and lhaid of length 1 when not including lhapdf
+            if self[pdlabelX] != "lhapdf":
+                self['reweight_pdf']=[self['reweight_pdf'][0]]
+                self[lhaidX]=[self[lhaidX][0]]
             
         # make sure set have reweight_scale and dyn_scale_choice of length 1 when fixed scales:
         if self['fixed_ren_scale'] and self['fixed_fac_scale']:
