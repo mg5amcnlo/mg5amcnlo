@@ -77,7 +77,7 @@ if _source_hash != ms.SOURCE_HASH:
     print(
         "\033[1m\033[31mWARNING\033[39m: madspace source and installed binaries "
         "are not compatible (source hash mismatch) — consider recompiling "
-        "madspace\033[0m"
+        "madspace (e.g. `install madspace -y`)\033[0m"
     )
     print()
 
