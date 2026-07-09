@@ -934,6 +934,8 @@ class MadgraphSubprocess:
             )
             chan_topologies = ms.Topology.topologies(diag)
             topo_count = len(chan_topologies)
+            if topo_count > 1:
+                print(f"chan {channel_id}, diags {diagrams}, topos {topo_count}")
 
             amp2_remap[diagrams[0]["diagram"]] = channel_index
             channel_index_first = channel_index

@@ -99,6 +99,7 @@ public:
     const std::vector<double>& outgoing_masses() const { return _outgoing_masses; }
     std::vector<std::tuple<std::vector<int>, double, double>>
     propagator_momentum_terms(bool only_decays = false) const;
+    std::string to_string() const;
 
 private:
     Topology() = default;
