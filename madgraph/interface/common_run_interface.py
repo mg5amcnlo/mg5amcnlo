@@ -5325,15 +5325,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if isinstance(cards, list):
             if name in cards:
                 return True
-            elif '%s_card.dat' % name in cards:
+            elif '%s_card.dat' % name in cards or '%s_card.toml' % name in cards:
                 return True
             elif name in self.paths and self.paths[name] in cards:
                 return True
             else:
                 cardnames = [os.path.basename(p) for p in cards]
-                if '%s_card.dat' % name in cardnames:
+                if '%s_card.dat' % name in cardnames or '%s_card.toml' % name in cardnames:
                     return True
-                else:       
+                else:
                     return False
             
         elif isinstance(cards, dict) and name in cards:
@@ -5960,10 +5960,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             possibilities['special values'] = self.list_completion(text, list(self.special_shortcut.keys())+['qcut', 'showerkt'])
 
         if 'run_card' in list(allowed.keys()):
-            opts = self.run_set
+            opts = list(self.run_set)
             if allowed['run_card'] == 'default':
                 opts.append('default')
-
+            # For RunCardMG7, also offer bare key names that are unambiguous
+            # (appear in exactly one section), so `set events <tab>` works.
+            if hasattr(self.run_card, 'toml_sections'):
+                seen = {}
+                for sec, keys in self.run_card.toml_sections.items():
+                    for key in keys:
+                        seen[key] = seen.get(key, 0) + 1
+                opts += [key for key, count in seen.items() if count == 1]
 
             possibilities['Run Card'] = self.list_completion(text, opts)
 
@@ -6321,6 +6328,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
+        # For mg7 TOML run cards, resolve bare keys (e.g. 'events' -> 'generation.events')
+        # before the membership check below.
+        if card in ('', 'run_card') and hasattr(self.run_card, 'toml_sections') \
+                and '.' not in args[start]:
+            matches = ['%s.%s' % (sec, args[start])
+                       for sec, keys in self.run_card.toml_sections.items()
+                       if args[start] in keys]
+            if len(matches) == 1:
+                args[start] = matches[0]
+            elif len(matches) > 1:
+                logger.warning(
+                    "Ambiguous key %r — use the full section.key form, e.g.: %s",
+                    args[start], ' or '.join(matches))
+                return
+
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
 
             if args[start] not in self.run_set:
@@ -7231,7 +7253,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             log_level=20
 
-        if run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+        if run_card and 'lpp1' in run_card and (run_card['lpp1'] !=0 or run_card['lpp2'] !=0):
+            # The beam-dependent alpha_s/PDF reset only applies to the LO/NLO
+            # run_card (which defines lpp1/lpp2). Other run_card flavours (e.g.
+            # the TOML run_card of the mg7 mode) skip this block.
             # They are likely case like lpp=+-3, where alpas not need reset
             # but those have dedicated name of pdf avoid the reset
             as_for_pdf = {'cteq6_m': 0.118,
@@ -8067,8 +8092,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if answer in self.modified_card:
             self.write_card(answer)
-        elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
-            self.write_card(os.path.basename(answer.replace('_card.dat','')))
+        else:
+            short = os.path.basename(
+                answer.replace('_card.dat', '').replace('_card.toml', ''))
+            if short in self.modified_card:
+                self.write_card(short)
 
         start = time.time()
         try:

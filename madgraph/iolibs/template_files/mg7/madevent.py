@@ -12,22 +12,38 @@ import re
 import logging
 from dataclasses import dataclass
 from typing import Literal, NamedTuple
-import tomllib
 import resource
 
 # Locate the madspace installation bundled alongside MadGraph.
 # madgraph/__init__.py lives one level below the MadGraph root, so .parents[1]
 # reaches the root and then "madspace/install" is the local install prefix.
 import madgraph as _mg_pkg
-_MADSPACE_DIR = Path(_mg_pkg.__file__).parents[1] / "madspace"
+_MG_ROOT = Path(_mg_pkg.__file__).parents[1]
+_MADSPACE_DIR = _MG_ROOT / "madspace"
 _INSTALL_DIR = _MADSPACE_DIR / "install"
 if not (_INSTALL_DIR / "madspace").is_dir():
     print()
     print("You don't have madspace installed for this madgraph instance")
-    print("Running interactive madspace installation script")
+    print("Running the madspace installation script")
     print()
 
-    _result = subprocess.run([sys.executable, str(_MADSPACE_DIR / "install.py")])
+    _install_cmd = [sys.executable, str(_MADSPACE_DIR / "install.py")]
+    # Expose madgraph on PYTHONPATH so the installer subprocess can import
+    # cmd.ask for its prompts.
+    _noninteractive = "-f" in sys.argv or not sys.stdin.isatty()
+    # When the run is non-interactive (scripted / piped), install
+    # non-interactively with a source build and default options (--source --yes),
+    # and keep the installer away from our stdin (which may carry the run's
+    # scripted card-editing commands); when interactive, let it share the
+    # terminal so the user can answer.
+    _install_stdin = subprocess.DEVNULL if _noninteractive else None
+    if _noninteractive:
+        _install_cmd += ["--source", "--yes"]
+    _install_env = os.environ.copy()
+    _install_env["PYTHONPATH"] = os.pathsep.join(
+        [str(_MG_ROOT)] + ([_install_env["PYTHONPATH"]] if _install_env.get("PYTHONPATH") else [])
+    )
+    _result = subprocess.run(_install_cmd, env=_install_env, stdin=_install_stdin)
     if _result.returncode != 0:
         raise RuntimeError("madspace installation failed — see output above")
 if str(_INSTALL_DIR) not in sys.path:
@@ -49,6 +65,7 @@ else:
 
 import madspace as ms
 from models.check_param_card import ParamCard
+from madgraph.various.banner import RunCardMG7
 from madgraph.various import misc
 
 _source_hash = subprocess.run(
@@ -60,7 +77,7 @@ if _source_hash != ms.SOURCE_HASH:
     print(
         "\033[1m\033[31mWARNING\033[39m: madspace source and installed binaries "
         "are not compatible (source hash mismatch) — consider recompiling "
-        "madspace\033[0m"
+        "madspace (e.g. `install madspace -y`)\033[0m"
     )
     print()
 
@@ -144,8 +161,7 @@ class MadgraphProcess:
         self.init_subprocesses()
 
     def load_cards(self) -> None:
-        with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
-            self.run_card = tomllib.load(f)
+        self.run_card = RunCardMG7(os.path.join("Cards", "run_card.toml"))
         self.param_card_path = os.path.join("Cards", "param_card.dat")
         self.param_card = ParamCard(self.param_card_path)
         with open(os.path.join("SubProcesses", "subprocesses.json")) as f:
@@ -276,6 +292,32 @@ class MadgraphProcess:
             if key != "order_by"
         ]
 
+    def ensure_pdf_set(self, pdf_set: str) -> None:
+        """Make sure the requested LHAPDF set is available, downloading it if
+        needed. The destination follows LHAPDF_DATA_PATH, otherwise the data
+        dir of the configured lhapdf (e.g. lhapdf6 in HEPTools), otherwise a
+        local directory -- and PDF_PATH is pointed at it so madspace uses it.
+        Both LHAPDF_DATA_PATH and MADGRAPH_LHAPDF_CONFIG are provided by
+        do_launch; nothing is downloaded when the set is already present."""
+        global PDF_PATH
+        data_path = os.environ.get("LHAPDF_DATA_PATH") or PDF_PATH
+        if data_path and os.path.isdir(os.path.join(data_path, pdf_set)):
+            PDF_PATH = data_path
+            return
+        lhapdf_config = os.environ.get("MADGRAPH_LHAPDF_CONFIG")
+        if not lhapdf_config:
+            return  # can't download; the missing-PDF error is raised below
+        if not data_path:
+            data_path = os.path.join(os.getcwd(), "lhapdf_pdfsets")
+        try:
+            from madgraph.interface.common_run_interface import CommonRunCmd
+            os.makedirs(data_path, exist_ok=True)
+            logger.info("PDF set %s not found; downloading into %s", pdf_set, data_path)
+            CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, data_path, pdf_set)
+            PDF_PATH = data_path
+        except Exception as err:
+            logger.warning("Could not download PDF set %s: %s", pdf_set, err)
+
     def init_beam(self) -> None:
         beam_args = self.run_card["beam"]
 
@@ -302,6 +344,7 @@ class MadgraphProcess:
         )
 
         pdf_set = beam_args["pdf"]
+        self.ensure_pdf_set(pdf_set)
         if PDF_PATH is None:
             raise RuntimeError("Can't load lhapdf module. Please set LHAPDF_DATA_PATH manually")
         self.pdf_grid = ms.PdfGrid(os.path.join(PDF_PATH, pdf_set, f"{pdf_set}_0000.dat"))
@@ -659,6 +702,34 @@ class MadgraphProcess:
             raise ValueError("Unknown output format")
         self.save_gridpack()
 
+    @staticmethod
+    def _histogram_mean(hist):
+        """Cross-section-weighted mean of a histogrammed observable."""
+        values = list(hist.bin_values)
+        n = len(values)
+        total = sum(values)
+        if n == 0 or total == 0:
+            return None
+        width = (hist.max - hist.min) / n
+        return sum(v * (hist.min + (i + 0.5) * width)
+                   for i, v in enumerate(values)) / total
+
+    def get_result(self) -> dict:
+        """Return the run result: cross-section (pb) with MC error, the number
+        of (unweighted) events, and the mean of every observable declared in the
+        [histograms] section. Used to build the scan summary."""
+        status = self.event_generator.status()
+        result = {'cross(pb)': status.mean, 'error(pb)': status.error,
+                  'nb_event': status.count_unweighted}
+        try:
+            for hist in self.event_generator.histograms():
+                mean = self._histogram_mean(hist)
+                if mean is not None:
+                    result['<%s>' % hist.name] = mean
+        except Exception as err:
+            logger.warning("could not extract observable means: %s", err)
+        return result
+
     def build_lhe_completer(self):
         subproc_args = []
         for subproc, meta in zip(self.subprocesses, self.subprocess_data):
@@ -746,32 +817,20 @@ class MadgraphProcess:
         cards_path = os.path.join(gridpack_path, "Cards")
         os.mkdir(cards_path)
         shutil.copy(os.path.join("Cards", "param_card.dat"), cards_path)
-        device_list = ",".join(f'"{device}"' for device in self.run_card["run"]["devices"])
-        with open(os.path.join(cards_path, "run_card.toml"), "w") as f:
-            f.write(f"""[run]
-run_name = "{self.run_card["run"]["run_name"]}"
-devices = [{device_list}] # options: cpu, cuda
-# options:
-#   -1 to choose automatically
-#   on x86: 1, 4, 8
-#   on Apple silicon: 1, 2
-simd_vector_size = {self.run_card["run"]["simd_vector_size"]}
-# pool sizes: -1 sets count automatically based on number of CPUs
-cpu_thread_pool_size = {self.run_card["run"]["cpu_thread_pool_size"]}
-gpu_thread_pool_size = {self.run_card["run"]["gpu_thread_pool_size"]}
-combine_thread_pool_size = {self.run_card["run"]["combine_thread_pool_size"]}
-output_format = "{self.run_card["run"]["output_format"]}" # options: compact_npy, lhe_npy, lhe
-verbosity = "{self.run_card["run"]["verbosity"]}" # options: silent, pretty, log
-
-[generation]
-events = {self.run_card["generation"]["events"]}
-max_overweight_truncation = {self.run_card["generation"]["max_overweight_truncation"]}
-freeze_max_weight_after = {self.run_card["generation"]["freeze_max_weight_after"]}
-cpu_batch_size = {self.run_card["generation"]["cpu_batch_size"]}
-gpu_batch_size = {self.run_card["generation"]["gpu_batch_size"]}
-cut_efficiency_threshold = {self.run_card["generation"]["cut_efficiency_threshold"]}
-max_cut_repetitions = {self.run_card["generation"]["max_cut_repetitions"]}
-""")
+        # Full run card with a header noting it is read-only in gridpack context.
+        import io as _io
+        _buf = _io.StringIO()
+        self.run_card.write(_buf)
+        _header = (
+            "# This is the run card used to generate this gridpack.\n"
+            "# Modifying this file will have no effect on gridpack execution.\n"
+            "# To change event-generation settings, edit grid_run_card.toml.\n\n"
+        )
+        with open(os.path.join(cards_path, "run_card.toml"), 'w') as _f:
+            _f.write(_header + _buf.getvalue())
+        # Minimal card containing only the settings used by generate_events.
+        self.run_card.write_gridpack_card(
+            os.path.join(cards_path, "grid_run_card.toml"))
 
         bin_path = os.path.join(gridpack_path, "bin")
         os.mkdir(bin_path)
@@ -1402,13 +1461,104 @@ def ask_edit_cards() -> None:
             CommonRunCmd.do_open(self, line)
         def check_open(self, args):
             CommonRunCmd.check_open(self, args)
+        def do_compute_widths(self, line):
+            # The interactive card editor delegates 'auto' width computation to
+            # the mother interface. Reuse the runtime helper (mg5_aMC subprocess
+            # + the model stored at output time). ``line`` looks like
+            # "<pdgs> --path=<param_card> [--nlo]"; we only need the card path.
+            m = re.search(r'--path=(\S+)', line or "")
+            path = m.group(1) if m else os.path.join("Cards", "param_card.dat")
+            compute_auto_widths(path)
+            # return an empty mapping: the caller iterates out.items() for the
+            # small-width treatment, which mg7 does not apply.
+            return {}
     old_define_paths = AskforEditCard.define_paths
     def define_paths(self, **opt):
         old_define_paths(self, **opt)
         self.paths["run"] = os.path.join(self.me_dir, "Cards", "run_card.toml")
         self.paths["run_card.toml"] = os.path.join(self.me_dir, "Cards", "run_card.toml")
+        # the TOML run_card uses its own default file (concrete defaults written
+        # at output time); this powers "set <param> default".
+        self.paths["run_default"] = os.path.join(self.me_dir, "Cards", "run_card_default.toml")
     AskforEditCard.define_paths = define_paths
-    AskforEditCard.reload_card = lambda self, path: None
+
+    # Make sure the run_card is loaded as a RunCardMG7 regardless of whether the
+    # generic editor recognised run_card.toml (older common_run_interface, an
+    # unexpected me_dir, ...). Without this self.run_card can stay {} and every
+    # "set <param>" is rejected as an invalid command.
+    from madgraph.various import banner as _banner_mod
+    from madgraph.various import misc as _misc
+    old_init_run = AskforEditCard.init_run
+    def init_run(self, cards):
+        out = old_init_run(self, cards)
+        if not isinstance(getattr(self, "run_card", None), RunCardMG7):
+            toml_path = self.paths.get("run") or os.path.join(
+                self.me_dir, "Cards", "run_card.toml")
+            if os.path.exists(toml_path):
+                try:
+                    # allow_scan so a run_card that already holds scan:[...]
+                    # values loads instead of failing the type conversion
+                    with _misc.TMP_variable(_banner_mod.RunCard, "allow_scan", True):
+                        self.run_card = RunCardMG7(toml_path, consistency="warning")
+                    self.run_set = list(self.run_card.keys())
+                except Exception as err:
+                    logger.warning("could not load %s: %s", toml_path, err)
+        # let "set <param> scan:[...]" be accepted for the toml run_card
+        if isinstance(getattr(self, "run_card", None), RunCardMG7):
+            self.run_card.allow_scan = True
+        return getattr(self, "run_set", out)
+    AskforEditCard.init_run = init_run
+
+    # Extra "set" handling for the TOML run_card: madevent-style shortcuts
+    # (lhc/lep/fixed_scale/no_parton_cut), cut editing, energy units and
+    # arithmetic/mass expressions. The generic editor only knows the fixed
+    # [section] parameters, so these are intercepted before delegating.
+    old_do_set = AskforEditCard.do_set
+    def do_set(self, line, *args, **kwargs):
+        targs = self.split_arg(line)
+        run_card = getattr(self, "run_card", None)
+        if isinstance(run_card, RunCardMG7) and targs:
+            start = 1 if targs[0] == "run_card" else 0
+            if len(targs) > start:
+                name = targs[start]
+                nlow = name.lower()
+                rest = " ".join(targs[start + 1:]).split("#")[0].strip()
+                masses = run_card.get_mass_shortcuts(getattr(self, "param_card", None))
+
+                # --- shortcuts ---
+                if nlow in ("no_parton_cut", "nocut", "no_cut"):
+                    run_card.remove_all_cut()
+                    logger.info("removing all cuts from the run_card.toml")
+                    self.modified_card.add("run")
+                    return
+                if nlow in ("lhc", "lep", "ilc", "lcc") and rest:
+                    ecm = run_card.set_collider(nlow, rest, masses)
+                    logger.info("set %s collider: e_cm = %s GeV", nlow, ecm)
+                    self.modified_card.add("run")
+                    return
+                if nlow == "fixed_scale" and rest:
+                    val = run_card.set_fixed_scale(rest, masses)
+                    logger.info("set fixed scales to %s GeV", val)
+                    self.modified_card.add("run")
+                    return
+
+                # --- cut editing (with units/math/mass) ---
+                if rest and run_card.is_cut_name(name):
+                    cut, bound, val = run_card.set_cut(name, run_card.evaluate(rest, masses))
+                    logger.info("modify cut %s.%s of the run_card.toml to %s", cut, bound, val)
+                    self.modified_card.add("run")
+                    return
+
+                # --- numeric params: resolve units/arithmetic/masses ---
+                if rest and nlow in [k.lower() for k in run_card.keys()]:
+                    current = run_card[nlow]
+                    if isinstance(current, (int, float)) and not isinstance(current, bool):
+                        resolved = run_card.evaluate(rest, masses)
+                        if not isinstance(resolved, str):
+                            prefix = "run_card " if start == 1 else ""
+                            line = "%s%s %s" % (prefix, name, resolved)
+        return old_do_set(self, line, *args, **kwargs)
+    AskforEditCard.do_set = do_set
 
     cmd = MG7Cmd()
     CommonRunCmd.ask_edit_card_static(
@@ -1417,6 +1567,168 @@ def ask_edit_cards() -> None:
         ask=cmd.ask,
         plot=False
     )
+
+def compute_auto_widths(param_card_path=os.path.join("Cards", "param_card.dat")) -> None:
+    """Fill any width set to ``auto`` in the param_card, using mg5_aMC and the
+    model stored at output time (``SubProcesses/model.txt``), and write the
+    result back into the card. A no-op when the card has no ``auto`` width.
+
+    Called before every generation, so a single run and each scan point (whose
+    param_card is rewritten just before ``run_single``) both get model-computed
+    widths."""
+    try:
+        with open(param_card_path) as f:
+            text = f.read()
+    except OSError:
+        return
+    # matches "DECAY <pdg> auto" (optionally "auto@NLO"), as in
+    # common_run_interface.static_check_param_card
+    pdgs = re.findall(r"(?im)^\s*decay\s+([+-]?\d+)\s+auto", text)
+    if not pdgs:
+        return
+    pdgs = list(dict.fromkeys(pdgs))  # de-duplicate, keep order
+
+    model_file = os.path.join("SubProcesses", "model.txt")
+    if not os.path.exists(model_file):
+        logger.warning(
+            "The param_card requests 'auto' width(s) for %s but the model was "
+            "not stored with this process; leaving them as-is.", " ".join(pdgs))
+        return
+    with open(model_file) as f:
+        lines = f.read().splitlines()
+    model = lines[0].strip() if lines else ""
+    stored_hash = lines[1].strip() if len(lines) > 1 else ""
+    if not model:
+        logger.warning("SubProcesses/model.txt is empty; 'auto' widths not computed.")
+        return
+
+    # verify the model on disk still matches the one used at output time
+    if stored_hash and os.path.isdir(model):
+        current_hash = misc.hash_model_files(model)
+        if current_hash and current_hash != stored_hash:
+            logger.warning(
+                "The model at %s has changed since this process was generated "
+                "(hash mismatch); the 'auto' width(s) will be computed with the "
+                "current model, which may be inconsistent with the matrix "
+                "element.", model)
+
+    mg5 = str(_MG_ROOT / "bin" / "mg5_aMC")
+    if not os.path.exists(mg5):
+        logger.warning("Cannot find mg5_aMC at %s; 'auto' widths not computed.", mg5)
+        return
+
+    import tempfile
+    cmds = "import model %s\ncompute_widths %s --path=%s\n" % (
+        model, " ".join(pdgs), os.path.abspath(param_card_path))
+    with tempfile.NamedTemporaryFile("w", suffix=".mg5", delete=False) as fh:
+        fh.write(cmds)
+        cmdfile = fh.name
+    try:
+        logger.info("Computing 'auto' width(s) for %s ...", " ".join(pdgs))
+        proc = subprocess.run([mg5, cmdfile])
+        if proc.returncode != 0:
+            logger.warning(
+                "compute_widths returned a non-zero exit code; the param_card "
+                "may still contain 'auto' entries.")
+    finally:
+        try:
+            os.remove(cmdfile)
+        except OSError:
+            pass
+
+
+def run_single() -> "MadgraphProcess":
+    """Run a single generation and return the process (for its result)."""
+    compute_auto_widths()
+    process = MadgraphProcess()
+    process.survey()
+    process.train_madnis()
+    process.generate_events()
+    return process
+
+
+def detect_run_scan(run_card_path):
+    """Return a banner.RunCardIterator if the run_card contains scan:[...]
+    values, else None."""
+    from madgraph.various import banner as banner_mod
+    from madgraph.various import misc as _misc
+    with _misc.TMP_variable(banner_mod.RunCard, 'allow_scan', True):
+        rc = banner_mod.RunCard(run_card_path, consistency=False)
+    if getattr(rc, 'scan_set', None):
+        return banner_mod.RunCardIterator(run_card_path)
+    return None
+
+
+def detect_param_scan(param_card_path):
+    """Return a ParamCardIterator if the param_card contains scan:[...] values,
+    else None."""
+    if not os.path.exists(param_card_path):
+        return None
+    from models import check_param_card as param_card_mod
+    it = param_card_mod.ParamCardIterator(param_card_path)
+    for block in it.order:
+        for param in block:
+            if isinstance(param.value, str) and param.value.strip().lower().startswith('scan'):
+                return it
+    return None
+
+
+def run_scan(iterator, card_path) -> None:
+    """Iterate over all scan points, running a full generation for each and
+    accumulating the results, then write the scan summary. Works for both the
+    run_card (RunCardIterator) and the param_card (ParamCardIterator); their
+    interface (__iter__/write/store_entry/get_next_name/write_summary) is the
+    same. The scan card is restored afterwards."""
+    import tomllib
+    with open(os.path.join("Cards", "run_card.toml"), "rb") as f:
+        run_name = tomllib.load(f).get("run", {}).get("run_name", "run")
+
+    from models import check_param_card as param_card_mod
+    is_param_scan = isinstance(iterator, param_card_mod.ParamCardIterator)
+
+    backup = card_path + ".scan_bak"
+    shutil.copy(card_path, backup)
+    try:
+        for i, point in enumerate(iterator):
+            point.write(card_path)
+            logger.info("=== scan point %d ===", i + 1)
+            process = run_single()
+            # use the run directory the process actually created, so the
+            # per-point params.dat written by write_summary has a home
+            name = os.path.basename(process.run_path)
+            if is_param_scan:
+                # pass the (possibly auto-width-updated) card so the summary
+                # records the model-computed width for each 'auto' entry
+                iterator.store_entry(name, process.get_result(),
+                                     param_card_path=card_path)
+            else:
+                iterator.store_entry(name, process.get_result())
+        os.makedirs("Events", exist_ok=True)
+        summary = os.path.join("Events", "scan_%s.txt" % run_name)
+        iterator.write_summary(summary)
+        logger.info("scan results written to %s", summary)
+    finally:
+        shutil.move(backup, card_path)
+
+
+def run_generation() -> None:
+    """Run the generation, expanding a scan over the run_card or the param_card
+    when one is present (scanning both simultaneously is not allowed)."""
+    run_card_path = os.path.join("Cards", "run_card.toml")
+    param_card_path = os.path.join("Cards", "param_card.dat")
+    run_iter = detect_run_scan(run_card_path)
+    param_iter = detect_param_scan(param_card_path)
+    if run_iter and param_iter:
+        raise RuntimeError(
+            "Scanning simultaneously over the run_card and the param_card is "
+            "not allowed. Please keep the scan:[...] entries in only one card.")
+    if run_iter:
+        run_scan(run_iter, run_card_path)
+    elif param_iter:
+        run_scan(param_iter, param_card_path)
+    else:
+        run_single()
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -1429,7 +1741,4 @@ def main() -> None:
     soft_lim, hard_lim = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_lim, hard_lim))
 
-    process = MadgraphProcess()
-    process.survey()
-    process.train_madnis()
-    process.generate_events()
+    run_generation()

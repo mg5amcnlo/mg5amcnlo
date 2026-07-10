@@ -7672,6 +7672,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         if not os.path.exists(pjoin(MG5DIR,'input','default_run_card_lo.dat')) and madgraph.ReadWrite:
             files.cp(pjoin(MG5DIR,'input','.default_run_card_lo.dat'), pjoin(MG5DIR,'input','default_run_card_lo.dat'))
             files.cp(pjoin(MG5DIR,'input','.default_run_card_nlo.dat'), pjoin(MG5DIR,'input','default_run_card_nlo.dat'))
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_mg7.toml'), pjoin(MG5DIR,'input','default_run_card_mg7.toml'))
 
         config_file = open(config_path)
 
@@ -7962,12 +7963,90 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                  shell = isinstance(self, cmd.CmdShell),
                                                  options=self.options,**options)            
         elif args[0] == 'mg7':
+            me_dir = args[1]
+            # When MG5 runs non-interactively (a command file / piped input),
+            # drive bin/generate_events from the card-editing commands that
+            # follow `launch` in the script. Feeding them on stdin also makes
+            # the subprocess non-interactive, so the one-off madspace install
+            # runs with defaults instead of blocking on a prompt.
+            scripted = not self.use_rawinput
+            feed_lines = []
+            if scripted and self.inputfile is not None:
+                stop_prefixes = ('generate', 'add process', 'define', 'output',
+                                 'launch', 'import', 'quit', 'exit')
+                while True:
+                    try:
+                        nxt = next(self.inputfile)
+                    except (StopIteration, TypeError):
+                        break
+                    stripped = nxt.replace('\n', '').strip()
+                    if not stripped:
+                        continue
+                    if stripped.lower().startswith(stop_prefixes):
+                        self.store_line(nxt)  # belongs to MG5, hand it back
+                        break
+                    feed_lines.append(stripped)
+                    if stripped.lower() in ('done', '0'):
+                        break
+
+            # Expose the configured HEPTools location so that the one-off
+            # madspace build can pick up a cmake installed there via MG5's
+            # 'install cmake' (heptools_install_dir may point outside MG5DIR).
+            gen_env = os.environ.copy()
+            heptools_dir = self.options.get('heptools_install_dir')
+            if heptools_dir:
+                if not os.path.isabs(heptools_dir):
+                    heptools_dir = os.path.join(MG5DIR, heptools_dir)
+                gen_env['MADGRAPH_HEPTOOLS_DIR'] = os.path.abspath(heptools_dir)
+
+            # Point the run at the LHAPDF data directory where PDF sets live
+            # (and where a missing one can be downloaded on the fly), following:
+            #   1. $LHAPDF_DATA_PATH if the user set it;
+            #   2. the data dir of the configured lhapdf (e.g. lhapdf6 installed
+            #      via 'install lhapdf6', which lives inside HEPTools);
+            #   3. a local writable directory otherwise.
+            # The lhapdf-config executable is forwarded (MADGRAPH_LHAPDF_CONFIG)
+            # so the run can download the requested PDF set (see madevent
+            # init_beam / ensure_pdf_set).
+            lhapdf_exe = None
+            for _opt in ('lhapdf', 'lhapdf_py3'):
+                _val = self.options.get(_opt)
+                if not _val:
+                    continue
+                _exe = _val.split()[0]  # strip any '--python=' suffix
+                try:
+                    _datadir = subprocess.check_output(
+                        [_exe, '--datadir'], text=True,
+                        stderr=subprocess.DEVNULL).strip()
+                except Exception:
+                    continue
+                lhapdf_exe = _exe
+                if 'LHAPDF_DATA_PATH' not in gen_env and _datadir and os.path.isdir(_datadir):
+                    gen_env['LHAPDF_DATA_PATH'] = _datadir
+                break
+            if 'LHAPDF_DATA_PATH' not in gen_env:
+                # local fallback (inside HEPTools if configured, else MG5DIR)
+                local_pdf = os.path.join(
+                    gen_env.get('MADGRAPH_HEPTOOLS_DIR', MG5DIR), 'lhapdf_pdfsets')
+                try:
+                    os.makedirs(local_pdf, exist_ok=True)
+                    gen_env['LHAPDF_DATA_PATH'] = local_pdf
+                except OSError:
+                    pass
+            if lhapdf_exe:
+                gen_env['MADGRAPH_LHAPDF_CONFIG'] = lhapdf_exe
+
             class ext_program:
                 @staticmethod
                 def run():
-                    os.chdir(args[1])
+                    os.chdir(me_dir)
+                    gen = os.path.join("bin", "generate_events")
                     try:
-                        subprocess.run(os.path.join("bin", "generate_events"))
+                        if scripted:
+                            stdin_text = "\n".join(feed_lines + ["done"]) + "\n"
+                            subprocess.run([gen], input=stdin_text, text=True, env=gen_env)
+                        else:
+                            subprocess.run(gen, env=gen_env)
                     except KeyboardInterrupt:
                         pass
 
