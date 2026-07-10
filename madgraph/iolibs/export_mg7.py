@@ -89,6 +89,10 @@ class OneProcessExporterMG7(export_cpp.OneProcessExporterCPP):
 
             active_colors = diag_jamps[diagram_index] if self.color_basis else [0]
             active_flavors = self.active_flavors[diagram_index]
+            if len(active_flavors) == 0:
+                raise RuntimeError(
+                    f"no valid flavor configurations found for diagram {diagram_index+1}"
+                )
             if sym_index < 0:
                 self.channels[self.channel_indices[-sym_index - 1]]["diagrams"].append(
                     {
