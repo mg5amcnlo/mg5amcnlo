@@ -37,7 +37,8 @@ import array
 
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
-import MadSpin.decay as madspin 
+import MadSpin.decay as madspin
+import MadSpin.interface_madspin as interface_madspin
 import models.import_ufo as import_ufo
 
 
@@ -423,4 +424,83 @@ class TestEvent(unittest.TestCase):
 #        os.remove(pjoin(path_for_me,'param_card.dat'))
 #        os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
-        
+
+class _FakeDecayFile(object):
+    """Minimal stand-in for a decay-pool EventFile: a list-backed iterator that
+    also exposes .cross and .name, i.e. exactly the surface _StridedEvents wraps
+    and get_decay_from_file reads."""
+    def __init__(self, events, cross=1.0, name='fake'):
+        self._it = iter(events)
+        self._cross = cross
+        self._name = name
+    def __iter__(self):
+        return self
+    def __next__(self):
+        return next(self._it)
+    next = __next__
+    @property
+    def cross(self):
+        return self._cross
+    @property
+    def name(self):
+        return self._name
+
+
+class TestStridedEvents(unittest.TestCase):
+    """Unit tests for the parallel-MadSpin decay-pool striping helper.
+    These are pure-Python (no matrix-element / physics), so they validate the
+    lock-free disjoint-consumption invariant that the process-parallel
+    unweighting relies on."""
+
+    def _drain(self, strided):
+        out = []
+        while True:
+            try:
+                out.append(next(strided))
+            except StopIteration:
+                break
+        return out
+
+    def test_partition_is_disjoint_and_complete(self):
+        """K workers striping over N events must together consume every event
+        exactly once, with no overlap and no loss."""
+        for n in (0, 1, 7, 100, 101):
+            for k in (1, 2, 3, 5):
+                events = list(range(n))
+                collected = []
+                for shard_id in range(k):
+                    src = _FakeDecayFile(list(events))
+                    collected.extend(self._drain(
+                        interface_madspin._StridedEvents(src, shard_id, k)))
+                self.assertEqual(sorted(collected), events,
+                                 'n=%s k=%s partition wrong' % (n, k))
+
+    def test_phase_offset(self):
+        """Worker `offset` must yield events offset, offset+stride, ..."""
+        events = list(range(20))
+        for shard_id in range(4):
+            src = _FakeDecayFile(list(events))
+            got = self._drain(
+                interface_madspin._StridedEvents(src, shard_id, 4))
+            self.assertEqual(got, list(range(shard_id, 20, 4)))
+
+    def test_single_worker_is_identity(self):
+        """stride==1 must reproduce the full sequence unchanged."""
+        events = list(range(13))
+        src = _FakeDecayFile(list(events))
+        got = self._drain(interface_madspin._StridedEvents(src, 0, 1))
+        self.assertEqual(got, events)
+
+    def test_cross_and_name_proxied(self):
+        """Channel selection reads .cross; reopening reads .name."""
+        src = _FakeDecayFile([1, 2, 3], cross=42.5, name='chan0')
+        strided = interface_madspin._StridedEvents(src, 0, 2)
+        self.assertEqual(strided.cross, 42.5)
+        self.assertEqual(strided.name, 'chan0')
+
+    def test_offset_beyond_end_is_empty(self):
+        """A worker whose phase is past EOF yields nothing (over-sharding)."""
+        src = _FakeDecayFile([0, 1])
+        strided = interface_madspin._StridedEvents(src, 3, 4)
+        self.assertEqual(self._drain(strided), [])
+

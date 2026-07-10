@@ -64,6 +64,10 @@ NEVENTS = int(os.environ.get('MADSPIN_TEST_NEVENTS', '10000'))
 # real ratios stay below ~10%.
 EFF_TOL = float(os.environ.get('MADSPIN_TEST_EFF_TOL', '0.15'))
 
+# Number of cores exercised by test_short_madspin_multicore (the process-
+# parallel unweighting path is enabled for nb_core > 1).
+MULTICORE_NB = int(os.environ.get('MADSPIN_TEST_NB_CORE', '8'))
+
 # Smoke knob: lower max_weight_ps_point shortens MadSpin's max-weight probing
 # stage at the cost of statistical precision. Leave the production default
 # (400) alone unless explicitly overridden -- the CI tests want trustworthy
@@ -257,3 +261,58 @@ class MadSpinFactoryTest(unittest.TestCase):
                 pole_mass=91.1876, width=2.4952,
                 tolerance_const=0.05, tolerance_offshell=3.0,
             )
+
+    def test_short_madspin_multicore(self):
+        """Process-parallel unweighting (``set nb_core %d``) must reproduce the
+        serial result on the SAME production sample: identical event count, an
+        identical decayed cross-section (same BR, banner-derived), and a
+        statistically consistent unweighting efficiency. Also a regression guard
+        against the fork / read-only-gridpack segfault that motivated the
+        parallel path.
+        """ % MULTICORE_NB
+        factory = self._make_factory(
+            name='multicore',
+            production_process='p p > t t~',
+            decays=[
+                't > b w+, w+ > l+ vl',
+                't~ > b~ w-, w- > j j',
+            ],
+            multiparticles={'p': 'g u d s c u~ d~ s~ c~',
+                            'j': 'g u d s c u~ d~ s~ c~',
+                            'l+': 'e+ mu+',
+                            'vl': 've vm'},
+            extra_run_card={'ebeam1': 6500, 'ebeam2': 6500},
+        )
+        # Same default (PA) mode, same production events, serial vs multi-core.
+        cfg = SpinModeConfig('PA_density', 'PA')
+        serial = factory.run_mode(cfg, extra_settings={'nb_core': 1},
+                                  run_tag='serial')
+        parallel = factory.run_mode(cfg, extra_settings={'nb_core': MULTICORE_NB},
+                                    run_tag='nb%d' % MULTICORE_NB)
+
+        assert_lhe_well_formed(self, serial)
+        assert_lhe_well_formed(self, parallel)
+
+        # 1. Every production event yields exactly one decayed event in PA mode,
+        #    so the parallel shard-split + merge must preserve the event count
+        #    exactly (this catches merge/accounting bugs).
+        n_serial, _ = serial.count_pdgs()
+        n_parallel, _ = parallel.count_pdgs()
+        self.assertEqual(
+            n_serial, n_parallel,
+            'decayed event count differs: serial=%d, nb_core=%d -> %d'
+            % (n_serial, MULTICORE_NB, n_parallel))
+
+        # 2. Decayed cross-section (banner: cross_in * BR) is computed pre-fork,
+        #    so it must match essentially exactly.
+        self.assertIsNotNone(serial.cross_out, 'serial cross-section missing')
+        self.assertIsNotNone(parallel.cross_out, 'parallel cross-section missing')
+        rel = abs(parallel.cross_out - serial.cross_out) / abs(serial.cross_out)
+        self.assertLess(
+            rel, 1e-2,
+            'decayed cross-section differs: serial=%s, nb_core=%d -> %s (rel=%.3g)'
+            % (serial.cross_out, MULTICORE_NB, parallel.cross_out, rel))
+
+        # 3. Unweighting efficiency should be statistically consistent (the two
+        #    runs use independent RNG streams).
+        assert_efficiency_close(self, serial, parallel, rel_tol=EFF_TOL)
