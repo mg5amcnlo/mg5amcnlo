@@ -312,15 +312,6 @@ c dump momenta in a fort.80 file
       integer i
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
-c$$$      write (*,*) wgt,x(1:ndim)
-c$$$      write (*,*) xbjrk_ev
-c$$$      do i=1,nexternal
-c$$$         write (*,*) p(0:3,i)
-c$$$      enddo
-c$$$      wgt=1d0
-c$$$      call generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p)
-c$$$      write (*,*) wgt,x(1:ndim)
-c$$$      stop 1
       
       calculatedBorn=.false.
       call set_cms_stuff(-100)
@@ -328,19 +319,12 @@ c$$$      stop 1
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
       elseif (ilim.eq.1) then
          amp=0d0
-         nFKSprocess_save=nFKSprocess
-         do iFKS=1,fks_configs
-            nFKSprocess=iFKS
-            call fks_inc_chooser()
-            call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-            if ( i_fks.ne.FKS_I_D(nFKSprocess_save) .or.
-     &           j_fks.ne.FKS_J_D(nFKSprocess_save) ) cycle
-            call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-            do iamp=1,amp_split_size
-               amp(iamp) = amp(iamp)+amp_split(iamp)*born_flow_factor
-            enddo
+         call fks_inc_chooser()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+         do iamp=1,amp_split_size
+            amp(iamp) = amp(iamp)+amp_split(iamp)*born_flow_factor
          enddo
-         nFKSprocess=nFKSprocess_save
          call fks_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
          call compute_MC_subt_term_test(p,p_cms,p_lab,wgt
@@ -353,7 +337,6 @@ c$$$      stop 1
                   amp(iamp) = 1d0
                endif
             else
-c$$$               continue
                amp(iamp)=amp_split(iamp)
             endif
          enddo
@@ -468,10 +451,13 @@ c$$$               continue
       include 'fks_info.inc'
       logical include_gfun
       integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp,nFKSprocess_save
+     $     ,ii,jj
       double precision p(0:3,nexternal),xi,y,z(2),born_flow_factor
      $     ,amp_split_gfunc(amp_split_size),dummy
      $     ,amp_split_xmcxsec(amp_split_size,2),p_cms(0:3,nexternal)
-     $     ,p_lab(0:3,nexternal) ,xx(99),wgt,jac
+     $     ,p_lab(0:3,nexternal) ,xx(99),wgt,jac,mass,p_cms_flipped(0:3
+     $     ,nexternal),p_lab_flipped(0:3,nexternal),p_flipped(0:3
+     $     ,nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision amp_split_mc(1:amp_split_size)
@@ -483,65 +469,115 @@ c$$$               continue
       common/ccalculatedBorn/calculatedBorn
       ! use local amp_split_mc, since, compute_MCsubtraction_kl will overwrite amp_split:
       amp_split_mc(1:amp_split_size)=0d0
+      include_gfun=.true. ! to set gfactsf. 
+      xi=get_xi_from_p(i_fks,j_fks,p_cms)
+      y=get_yij_from_p(i_fks,j_fks,p_cms)
+      call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
+     $     ,p_cms,p_born,include_gfun,z,n_connect
+     $     ,amp_split_xmcxsec)
+      ! include_gfun will be false here if in dead zone.
+      do iconnect=1,n_connect
+         amp_split_mc(1:amp_split_size) =
+     $        amp_split_mc(1:amp_split_size) +
+     $        amp_split_xmcxsec(1:amp_split_size,iconnect)
+      enddo
+      amp_split_gfunc=0d0
+      if (include_gfun) then
+         call compute_MCsubtraction_from_gfun_test(xi,y,amp_split_gfunc)
+         amp_split_mc(1:amp_split_size) = amp_split_mc(1:amp_split_size)
+     $        + amp_split_gfunc(1:amp_split_size) * born_flow_factor
+      endif
+      include_gfun=.false.
+      
       nFKSprocess_save=nFKSprocess
+
+      
       do iFKS=1,fks_configs
-         ! TODO: check if we should skip massive j-fks in collinear test.
-         
          nFKSprocess=iFKS
+         ! only include the ones compatible with the real-emission process
+         if (any(pdg_type_d(iFKS,:).ne.pdg_type_d(nFKSprocess_save,:)))
+     $        cycle
          ! This sets i_fks and j_fks to correspond to the ones in
          ! nFKSprocess (which here is iFKS).
          call fks_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
-     &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
-c$$$         if ( nFKSprocess.eq.nFKSprocess_save ) then
-            include_gfun=.true.
-         else
-            include_gfun=.false.
-         endif
+         
+!     1. include do-loop over identical particless for i-fks and j-fks
+!     2. flip all momenta (p, p_lab and p_cms) among the possible i-fks and j-fks
+!     3. do NOT update i-fks and j-fks.
+         do ii=3,nexternal
+            if (pdg_type_d(nFKSprocess_save,ii).ne.
+     &           pdg_type_d(nFKSprocess_save,i_fks)) cycle
+            do jj=1,nexternal
+               if (ii.eq.jj) cycle
+               if (j_fks.le.nincoming .and. j_fks.ne.jj) cycle
+               if (pdg_type_d(nFKSprocess_save,jj).ne.
+     &              pdg_type_d(nFKSprocess_save,j_fks)) cycle
+               if (pdg_type_d(nFKSprocess_save,ii).eq.
+     $              pdg_type_d(nFKSprocess_save,jj) .and.
+     $              ii.lt.jj) cycle
+               if ( nFKSprocess.eq.nFKSprocess_save .and. 
+     &              ii.eq.i_fks .and. jj.eq.j_fks) cycle ! this is already included above
+
+               call flip_momenta(i_fks,ii,j_fks,jj,p,p_flipped)
+               call flip_momenta(i_fks,ii,j_fks,jj,p_cms,p_cms_flipped)
+               call flip_momenta(i_fks,ii,j_fks,jj,p_lab,p_lab_flipped)
+               
 !     compute kinematic variables
-         xi=get_xi_from_p(i_fks,j_fks,p_cms)
-         y=get_yij_from_p(i_fks,j_fks,p_cms)
-
-         ! call the inverse phase-space. This will update the Born
-         ! momenta, and the corresponding phase-space jacobian for the
-         ! n+1-body. Note: if the random numbers are not generated flat
-         ! (they are flat here), also the jacobian from importance
-         ! sampling should be included.
-c$$$
-c$$$         write (*,*) '1',p_lab(:,1)
-c$$$         write (*,*) '2',p_lab(:,2)
-
-         jac=1d0
-         !     inputs are: ndim,iconfig,p
-         !     outputs are: xx,jac (also updates pborn common block)
-         call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
-         CalculatedBorn=.false.
-         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,p_born
-     $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
-         do iconnect=1,n_connect
-            amp_split_mc(1:amp_split_size)=amp_split_mc(1:amp_split_size)
-     $           +amp_split_xmcxsec(1:amp_split_size,iconnect)*jac/wgt
+               xi=get_xi_from_p(i_fks,j_fks,p_cms_flipped)
+               y=get_yij_from_p(i_fks,j_fks,p_cms_flipped)
+               
+! call the inverse phase-space. This will update the Born
+! momenta, and the corresponding phase-space jacobian for the
+! n+1-body. Note: if the random numbers are not generated flat
+! (they are flat here), also the jacobian from importance
+! sampling should be included.
+               jac=1d0
+!     inputs are: ndim,iconfig,p
+!     outputs are: xx,jac (also updates pborn common block)
+               call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
+     $              ,p_lab_flipped)
+               CalculatedBorn=.false.
+               ! include_gfun must be .false., because we do not want to
+               ! update gfactsf
+               call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p_flipped
+     $              ,p_cms_flipped,p_born,include_gfun,z,n_connect
+     $              ,amp_split_xmcxsec)
+               do iconnect=1,n_connect
+                  amp_split_mc(1:amp_split_size) =
+     $                 amp_split_mc(1:amp_split_size) +
+     $                 amp_split_xmcxsec(1:amp_split_size,iconnect) *
+     $                 jac/wgt
+               enddo
+            enddo
          enddo
-         amp_split_gfunc=0d0
-         if (include_gfun) then
-            call compute_MCsubtraction_from_gfun_for_tests(xi,y,amp_split_gfunc)
-            amp_split_mc(1:amp_split_size)=amp_split_mc(1:amp_split_size)
-     $           +amp_split_gfunc(1:amp_split_size)*born_flow_factor*jac/wgt
-         endif
       enddo
       nFKSprocess=nFKSprocess_save
       call fks_inc_chooser()
       call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-      ! Set amp_split to amp_split_mc (see comment above)
       xi=get_xi_from_p(i_fks,j_fks,p_cms) ! these correspond to ij, not kl
       y=get_yij_from_p(i_fks,j_fks,p_cms)
       amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
       end
 
-      
-      subroutine compute_MCsubtraction_from_gfun_for_tests(xi,y
-     $     ,amp_split_gfunc)
+      subroutine flip_momenta(i,ii,j,jj,p,p_flipped)
+      implicit none
+      include 'nexternal.inc'
+      integer i,ii,j,jj
+      double precision p(0:3,nexternal),p_flipped(0:3,nexternal)
+      p_flipped=p
+      if (ii.ne.i) then
+         p_flipped(0:3,ii)=p(0:3,i)
+         p_flipped(0:3,i)=p(0:3,ii)
+      endif
+      if (jj.ne.j) then
+         p_flipped(0:3,jj)=p(0:3,j)
+         p_flipped(0:3,j)=p(0:3,jj)
+      endif
+      end
+
+
+      subroutine compute_MCsubtraction_from_gfun_test(xi,y,amp_split_gfunc)
       use kinematics_module
       implicit none
       include "nexternal.inc"
@@ -571,14 +607,13 @@ c$$$         write (*,*) '2',p_lab(:,2)
       call sreal(p1_cnt(0,1,2),zero,one,dum)
       amp_split_sc(1:amp_split_size) = amp_split(1:amp_split_size)
       amp_split_gfunc(1:amp_split_size) = (1d0-gfactsf)
-     $     *(amp_split_s(1:amp_split_size)+(1d0-gfactcl)
-     $     *(amp_split_c(1:amp_split_size)
-     $     -amp_split_sc(1:amp_split_size)))
+     $     *( amp_split_s(1:amp_split_size) + (1d0-gfactcl)
+     $      *(amp_split_c(1:amp_split_size)
+     $        -amp_split_sc(1:amp_split_size)) )
      $     /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they should
                             ! not depend on 'kl', but rather on 'ij'
       return
       end
-
 
       subroutine generate_valid_momenta(wgt,x,p)
       use mint_module

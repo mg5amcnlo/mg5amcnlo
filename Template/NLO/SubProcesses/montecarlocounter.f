@@ -1009,6 +1009,13 @@ c     Compute MC subtraction terms
       else
          xkern(1:2)=0d0
          xkernazi(1:2)=0d0
+         ! include_gfun is only .true. if kl==ij. If we are in the
+         ! deadzone, we do not want to include the MC counter terms (and
+         ! therefore also not the gfun contributions)
+         include_gfun=.false.
+         gfactsf=1d0
+         gfactcl=1d0
+         gfactazi=0d0
       endif
 c     
       if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
@@ -1016,11 +1023,13 @@ c
          xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
       endif
 
-      if (include_gfun) then
-         xkern(1:2)=xkern(1:2)*gfactsf
-         xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
-      endif
-      
+      ! For ij-fks, we include gfactazi to remove power corrections (due
+      ! to gluon-correlations) away from the limit---for another sectors
+      ! we can do whatever, since kinematic configurations for which
+      ! that is relevant are damped by the S-function.
+      xkern(1:2)=xkern(1:2)*gfactsf
+      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+         
       ione=0
       amp_split_xmcxsec(1:amp_split_size)=0d0
       do iord = 1, nsplitorders

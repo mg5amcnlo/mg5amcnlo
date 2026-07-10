@@ -2943,7 +2943,11 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
 
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
-         xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+         if (.not.colltest) then
+            xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+         else
+            continue ! do not include jacobian for y in tests
+         endif
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
          if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
@@ -3125,7 +3129,11 @@ c$$$      xjac=xjac*2d0*x(1)
 
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
-         xjac=xjac*2d0*x(1)
+         if (.not.softtest) then
+            xjac=xjac*2d0*x(1)
+         else
+            continue ! no jacobian for xi in tests
+         endif
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix
          if(xi_i_fks_fix.gt.xiimax)then
