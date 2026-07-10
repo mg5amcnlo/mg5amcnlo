@@ -35,8 +35,8 @@ dynamical_scale_choice = "half_transverse_mass"
 
 [generation]
 events = 100000
-max_overweight_truncation = 0.01
-freeze_max_weight_after = 10000
+max_overweight_truncation = 0.001
+freeze_max_weight_after = 100000
 cpu_batch_size = 1000
 gpu_batch_size = 64000
 survey_min_iters = 3
