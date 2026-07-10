@@ -3025,7 +3025,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(line[0:begidx])
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._install_opts + self._advanced_install_opts)
+            return self.list_completion(text, sorted(set(self._install_opts) | set(self._advanced_install_opts)))
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
         elif len(args) >= 2 and args[1] == 'madspace':
