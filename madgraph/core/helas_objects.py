@@ -5751,7 +5751,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         
         
         if final_len == 0:
-            raise self.NoFlavorError("No diagram left after trimming for flavor!")
+            raise self.NoFlavorError("No diagram left after trimming for flavor! \n Please check the diagram generated and change the QCD/QED restriction to allow more diagrams to be generated.")
 
 
     def compute_flavor_masks(self):
