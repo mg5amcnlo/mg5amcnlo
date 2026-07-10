@@ -547,7 +547,7 @@ void ChannelEventGenerator::update_max_weight(Tensor weights) {
     }
     std::sort(_large_weights.begin(), _large_weights.end(), std::greater{});
 
-    double w_sum = 0, w_prev = 0;
+    double w_sum = 0;
     double max_truncation = _config.max_overweight_truncation *
         std::min(_status.count_target,
                  static_cast<double>(_config.freeze_max_weight_after));
@@ -558,15 +558,14 @@ void ChannelEventGenerator::update_max_weight(Tensor weights) {
         }
         w_sum += w;
         ++count;
-        if (w_sum / w - count > max_truncation) {
+        if (w_sum / w > max_truncation) {
             if (_max_weight < w) {
-                _status.count_unweighted *= _max_weight / w_prev;
-                _max_weight = w_prev;
+                _status.count_unweighted *= _max_weight / w;
+                _max_weight = w;
                 _unweighted_count = 0;
             }
             break;
         }
-        w_prev = w;
     }
     _large_weights.erase(_large_weights.begin() + count, _large_weights.end());
 }

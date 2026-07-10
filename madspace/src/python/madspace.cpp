@@ -691,7 +691,8 @@ PYBIND11_MODULE(_madspace_py, m) {
             .def_property_readonly("outgoing_indices", &Topology::outgoing_indices)
             .def_property_readonly("incoming_masses", &Topology::incoming_masses)
             .def_property_readonly("outgoing_masses", &Topology::outgoing_masses)
-            .def("propagator_momentum_terms", &Topology::propagator_momentum_terms);
+            .def("propagator_momentum_terms", &Topology::propagator_momentum_terms)
+            .def("__str__", &Topology::to_string);
     py::classh<PhaseSpaceMapping, Mapping> psmap(m, "PhaseSpaceMapping");
     add_enum<PhaseSpaceMapping::TChannelMode>(
         psmap,

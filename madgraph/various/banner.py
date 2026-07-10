@@ -6444,7 +6444,7 @@ class RunCardMG7(RunCard):
             comment="-1 sets count automatically based on number of CPUs")
         self.add_toml_param('run', 'gpu_thread_pool_size', 1, gridpack=True)
         self.add_toml_param('run', 'combine_thread_pool_size', -1, gridpack=True)
-        self.add_toml_param('run', 'output_format', "compact_npy", gridpack=True,
+        self.add_toml_param('run', 'output_format', "lhe", gridpack=True,
             allowed=['compact_npy', 'lhe_npy', 'lhe'])
         self.add_toml_param('run', 'verbosity', "pretty", gridpack=True,
             allowed=['silent', 'pretty', 'log'])
@@ -6471,8 +6471,8 @@ class RunCardMG7(RunCard):
 
         # -------------------------- [generation] ----------------------
         self.add_toml_param('generation', 'events', 100000, gridpack=True)
-        self.add_toml_param('generation', 'max_overweight_truncation', 0.01, gridpack=True)
-        self.add_toml_param('generation', 'freeze_max_weight_after', 10000, gridpack=True)
+        self.add_toml_param('generation', 'max_overweight_truncation', 0.001, gridpack=True)
+        self.add_toml_param('generation', 'freeze_max_weight_after', 100000, gridpack=True)
         self.add_toml_param('generation', 'cpu_batch_size', 1000, gridpack=True)
         self.add_toml_param('generation', 'gpu_batch_size', 64000, gridpack=True)
         self.add_toml_param('generation', 'survey_min_iters', 3)
