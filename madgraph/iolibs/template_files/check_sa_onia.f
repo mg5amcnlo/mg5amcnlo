@@ -30,7 +30,7 @@ C     LOCAL
 C     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 PRESHUFFLED(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+      REAL*8 P_RESH(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
@@ -82,7 +82,6 @@ c
 c	  write the information on the four momenta 
 c
       write (*,*)
-      write (*,'(a,1x,1e13.7,1x,a)') "Centre-of-mass energy:",SQRTS,"GeV"
       write (*,*) " Phase space point:"
       write (*,*) "-----------------------------------------------------------------------------"
       write (*,*)  "n        E             px             py              pz               m "
@@ -95,14 +94,15 @@ c
 c     
 c     Now we can call the matrix element!
 c
-      CALL SMATRIX(P,PRESHUFFLED,MATELEM)
+      CALL SMATRIX(P,P_RESH,MATELEM)
 c
       write (*,*) " Reshuffled momenta:"
       write (*,*) "-----------------------------------------------------------------------------"
       write (*,*)  "n        E             px             py              pz               m "
       do i=1,nexternal
-         write (*,'(i2,1x,5e15.7)') i, PRESHUFFLED(0,i),PRESHUFFLED(1,i),PRESHUFFLED(2,i),PRESHUFFLED(3,i), 
-     .dsqrt(dabs(DOT(PRESHUFFLED(0,i),PRESHUFFLED(0,i))))
+         write (*,'(i2,1x,5e15.7)') i, P_RESH(0,i), P_RESH(1,i),
+     .     P_RESH(2,i), P_RESH(3,i), dsqrt(dabs(DOT(P_RESH(0,i),
+     .     P_RESH(0,i))))
       enddo
       write (*,*) "-----------------------------------------------------------------------------"
 
