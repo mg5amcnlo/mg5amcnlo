@@ -925,7 +925,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if wf.get('onium'):
                 if onium == -1:
                     onium = wf.get('onium').get('index')
-                    mass = "mdl_M%i"%wf.get('onium').get('id')
+                    mass = "mdl_M%i"%abs(wf.get('onium').get('id'))
                 elif onium == wf.get('onium').get('index'):
                     onium = -1
                     counter += 1
@@ -2852,6 +2852,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                     leg.get('onium').get('L')==0 and \
                                     leg.get('onium').get('J')==1):
                                     state = '3S1'
+                                elif (leg.get('onium').get('S')==0 and \
+                                    leg.get('onium').get('L')==1 and \
+                                    leg.get('onium').get('J')==1):
+                                    state = '1P1'
+                                elif (leg.get('onium').get('S')==1 and \
+                                    leg.get('onium').get('L')==1 and \
+                                    leg.get('onium').get('J')==0):
+                                    state = '3P0'
+                                elif (leg.get('onium').get('S')==1 and \
+                                    leg.get('onium').get('L')==1 and \
+                                    leg.get('onium').get('J')==1):
+                                    state = '3P1'
+                                elif (leg.get('onium').get('S')==1 and \
+                                    leg.get('onium').get('L')==1 and \
+                                    leg.get('onium').get('J')==2):
+                                    state = '3P2'
                                 id = abs((leg.get('onium').get('id')))
                                 particles = [onia[leg.get('onium').get('index')],abs(leg.get('id'))]
                                 ldmes.append((id,min(particles),max(particles),state,leg.get('onium').get('N')))
@@ -2882,9 +2898,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 ldme_perturbative += 'LDME_{id} = 9D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
             elif ldme[3]=='3S1':
                 ldme_perturbative += 'LDME_{id} = 27D0*({alpha})**3/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**3'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+            elif (ldme[3]=='1P1' or ldme[3]=='3P1'):
+                ldme_perturbative += 'LDME_{id} = 9D0*({alpha})**5/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**5'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+            elif ldme[3]=='3P0':
+                ldme_perturbative += 'LDME_{id} = 3D0*({alpha})**5/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**5'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
+            elif ldme[3]=='3P2':
+                ldme_perturbative += 'LDME_{id} = 15D0*({alpha})**5/2D0/ATAN(1D0)*({mass1}*{mass2}/({mass1}+{mass2}))**5'.format(alpha=alpha,id=ldme[0],mass1=mass1,mass2=mass2)
 
-            if ldme[4]>1:
+            if ('S' in ldme[3] and ldme[4]>1):
                 ldme_perturbative += '/{n}D0\n'.format(n=ldme[4]**3)
+            elif ('P' in ldme[3] and ldme[4]>1):
+                ldme_perturbative += '*{num}D0/{den}D0\n'.format(num=ldme[4]**2-1,den=ldme[4]**5)
             else:
                 ldme_perturbative += '\n'
 
