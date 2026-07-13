@@ -155,14 +155,15 @@ std::string decay_label(
     }
     return std::format(
         "decay: order={}, mass={}, width={}, e_min={}, e_max={}, pdg_id={}, "
-        "on_shell={}",
+        "on_shell={}, on_shell_boundary={}",
         decay_order.at(decay.index),
         decay.mass,
         decay.width,
         decay.e_min,
         decay.e_max,
         decay.pdg_id,
-        decay.on_shell
+        decay.on_shell,
+        decay.on_shell_boundary
     );
 }
 
@@ -389,6 +390,8 @@ std::vector<Topology> Topology::topologies(const Diagram& diagram) {
                 if (e_min_item > decay.mass) {
                     possible = false;
                     break;
+                } else if (e_min_item == decay.mass) {
+                    decay.on_shell_boundary = true;
                 } else {
                     decay.on_shell = true;
                     e_min_item = decay.mass;
@@ -404,7 +407,8 @@ std::vector<Topology> Topology::topologies(const Diagram& diagram) {
         for (auto& other_topo : topos) {
             bool subset = true;
             for (auto [this_decay, other_decay] : zip(decays, other_topo.decays())) {
-                if (this_decay.on_shell > other_decay.on_shell) {
+                if ((this_decay.on_shell || this_decay.on_shell_boundary) >
+                    (other_decay.on_shell || other_decay.on_shell_boundary)) {
                     subset = false;
                     break;
                 }

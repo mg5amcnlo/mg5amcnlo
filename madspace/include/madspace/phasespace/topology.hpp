@@ -73,6 +73,7 @@ public:
         double e_max;
         int pdg_id;
         bool on_shell;
+        bool on_shell_boundary;
     };
 
     static std::vector<Topology> topologies(const Diagram& diagram);

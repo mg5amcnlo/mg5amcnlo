@@ -669,7 +669,8 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def_readonly("e_min", &Topology::Decay::e_min)
         .def_readonly("e_max", &Topology::Decay::e_max)
         .def_readonly("pdg_id", &Topology::Decay::pdg_id)
-        .def_readonly("on_shell", &Topology::Decay::on_shell);
+        .def_readonly("on_shell", &Topology::Decay::on_shell)
+        .def_readonly("on_shell_boundary", &Topology::Decay::on_shell_boundary);
     auto& topology =
         py::classh<Topology>(m, "Topology")
             .def(py::init<const Diagram&>(), py::arg("diagram"))
