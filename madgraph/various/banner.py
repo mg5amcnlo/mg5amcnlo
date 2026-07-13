@@ -3923,6 +3923,21 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 
 
+# Momentum reshuffling ------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Type of momentum reshuffling algorithm                             *
+# This algorithm is currently implemented only for onium states      *
+# [0] for initial-state reshuffling                                  *
+# [1-3] for final-state reshuffling                                  *
+#*********************************************************************
+  %(mom_resh_type)s  = mom_resh_type  ! variable is not currently implemented. Work in progress.
+"""
+template_off = ""
+mom_resh_block = RunBlock('mom_resh', template_on=template_on, template_off=template_off)
+
+
+
 # EVA PDF PRECISION ------------------------------------------------------------------------------------
 template_on = \
 """     %(evaorder)s = evaorder         ! 0=EVA@LLA, 1=full LP, 2=NLP [2502.07878]
@@ -4145,7 +4160,7 @@ class RunCardLO(RunCard):
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
-              pdlabel_block, fixedfacscale, running_block]
+              pdlabel_block, fixedfacscale, running_block, mom_resh_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
@@ -4220,7 +4235,7 @@ class RunCardLO(RunCard):
                         comment='eva order: 0=EVA, 1=iEVA, 2=iEVA@nlp')
         self.add_param("eva_xcut",1,hidden=True, allowed=[0,1],fortran_name="eva_xcut",
                         comment='eva_xcut: 1 = impose x > MV/Ebeam restriction; set to 1 (0) to recover results of [2502.07878 (2111.02442)]')
-        
+                
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
         self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc', hidden=True)
@@ -4246,6 +4261,8 @@ class RunCardLO(RunCard):
         self.add_param("keep_log", "normal", include=False, hidden=True,
                        comment="none: all log send to /dev/null.\n minimal: keep only log for survey of the last run.\n normal: keep only log for survey of all run. \n debug: keep all log (survey and refine)",
                        allowed=['none', 'minimal', 'normal', 'debug'])
+        #momentum reshuffling
+        self.add_param("mom_resh_type", 1, hidden=True)
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
@@ -4434,7 +4451,7 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], system=True)   
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
-                     
+                    
         
              
     def check_validity(self):
@@ -4871,6 +4888,7 @@ class RunCardLO(RunCard):
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
+
         # Check if need matching
         min_particle = 99
         max_particle = 0
@@ -5052,6 +5070,8 @@ class RunCardLO(RunCard):
         if model['running_elements']:
             self.display_block.append('RUNNING') 
 
+        if model['mass_imbalance']:
+          self.display_block.append('mom_resh')
 
         # Read file input/default_run_card_lo.dat
         # This has to be LAST !!
@@ -5546,7 +5566,7 @@ class RunCardNLO(RunCard):
      
     LO = False
     
-    blocks = [heavy_ion_block, running_block_nlo]
+    blocks = [heavy_ion_block, running_block_nlo, mom_resh_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
@@ -5612,6 +5632,8 @@ class RunCardNLO(RunCard):
         self.add_param('ndnq_run', -1, system=True)
         # w contribution included or not in the running of alpha
         self.add_param('w_run', 1, system=True)
+        #momentum reshuffling
+        self.add_param("mom_resh_type", 1, hidden=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
@@ -6013,6 +6035,9 @@ class RunCardNLO(RunCard):
         model = proc_def[0].get('model')
         if model['running_elements']:
             self.display_block.append('RUNNING') 
+
+        if model['mass_imbalance']:
+          self.display_block.append('mom_resh')
 
         # Check if need matching
         min_particle = 99
